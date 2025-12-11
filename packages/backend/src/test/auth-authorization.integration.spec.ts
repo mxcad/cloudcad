@@ -11,6 +11,7 @@ import {
 } from '../common/enums/permissions.enum';
 import { PermissionService } from '../common/services/permission.service';
 import { DatabaseService } from '../database/database.service';
+import { RedisTestingModule } from '../redis/redis-testing.module';
 import { UsersService } from '../users/users.service';
 
 describe('Authentication & Authorization Integration Tests', () => {
@@ -30,7 +31,22 @@ describe('Authentication & Authorization Integration Tests', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+    .overrideProvider('REDIS_CLIENT')
+    .useValue({
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+      setex: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
+      exists: jest.fn().mockResolvedValue(0),
+      expire: jest.fn().mockResolvedValue(1),
+      keys: jest.fn().mockResolvedValue([]),
+      flushdb: jest.fn().mockResolvedValue('OK'),
+      on: jest.fn(),
+      once: jest.fn(),
+      emit: jest.fn(),
+    })
+    .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());

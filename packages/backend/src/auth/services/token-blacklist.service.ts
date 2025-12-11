@@ -1,24 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Redis } from 'ioredis';
 
 @Injectable()
-export class TokenBlacklistService {
+export class TokenBlacklistService implements OnModuleInit {
   private readonly logger = new Logger(TokenBlacklistService.name);
-  private readonly redis: Redis;
   private readonly blacklistPrefix = 'token:blacklist:';
   private readonly defaultTTL = 7 * 24 * 60 * 60; // 7天
 
-  constructor(private configService: ConfigService) {
-    this.redis = new Redis({
-      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-      port: this.configService.get<number>('REDIS_PORT', 6379),
-      password: this.configService.get<string>('REDIS_PASSWORD') || undefined,
-      db: this.configService.get<number>('REDIS_DB', 0),
-      enableReadyCheck: false,
-      maxRetriesPerRequest: null,
-    });
+  constructor(
+    private configService: ConfigService,
+    @Inject('REDIS_CLIENT') private readonly redis: Redis,
+  ) {}
 
+  onModuleInit() {
     this.redis.on('error', (error) => {
       this.logger.error('Redis连接错误:', error);
     });
