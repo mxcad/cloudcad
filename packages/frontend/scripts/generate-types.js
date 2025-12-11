@@ -4,9 +4,9 @@
  * 从后端 Swagger API 生成前端类型定义
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const SWAGGER_URL = 'http://localhost:3001/api-docs';
 const OUTPUT_FILE = path.join(__dirname, '../src/types/api.ts');
@@ -46,8 +46,8 @@ async function generateTypes() {
 }
 
 // 如果直接运行此脚本
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   generateTypes();
 }
 
-module.exports = { generateTypes };
+export { generateTypes };

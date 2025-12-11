@@ -1,44 +1,69 @@
-/**
- * API 类型定义
- * 此文件由脚本自动生成，请勿手动修改
- * 运行 `pnpm generate:types` 重新生成
- */
+// 认证相关类型
+export interface LoginDto {
+  email: string;
+  password: string;
+}
 
-// 临时类型定义，等待后端启动后自动生成
+export interface RegisterDto {
+  email: string;
+  password: string;
+  username: string;
+  nickname?: string;
+}
+
+export interface AuthResponseDto {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    nickname?: string;
+    role: 'ADMIN' | 'USER';
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface RefreshTokenDto {
+  refreshToken: string;
+}
+
+// 用户相关类型
 export interface User {
   id: string;
   email: string;
   username: string;
   nickname?: string;
-  avatar?: string;
-  role: string;
-  status: string;
+  role: 'ADMIN' | 'USER';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
+export interface CreateUserDto {
+  email: string;
+  password: string;
+  username: string;
+  nickname?: string;
+  role?: 'ADMIN' | 'USER';
 }
 
-export interface File {
-  id: string;
-  name: string;
-  originalName?: string;
-  path: string;
-  size: number;
-  mimeType: string;
-  status: string;
-  ownerId: string;
-  projectId?: string;
-  createdAt: string;
-  updatedAt: string;
+export interface UpdateUserDto {
+  email?: string;
+  username?: string;
+  nickname?: string;
+  role?: 'ADMIN' | 'USER';
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+}
+
+export interface QueryUsersDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: 'ADMIN' | 'USER';
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
 
 // API 响应类型
@@ -46,15 +71,55 @@ export interface ApiResponse<T = any> {
   data: T;
   message?: string;
   statusCode: number;
-  timestamp: string;
 }
 
 export interface PaginatedResponse<T> {
   data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// 错误类型
+export interface ApiError {
+  message: string;
+  error?: string;
+  statusCode: number;
+}
+
+// 文件上传类型
+export interface FileUploadResponse {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  path: string;
+  projectId?: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 项目相关类型
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProjectDto {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateProjectDto {
+  name?: string;
+  description?: string;
+  status?: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
 }
