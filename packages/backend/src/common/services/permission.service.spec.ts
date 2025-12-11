@@ -124,7 +124,7 @@ describe('PermissionService', () => {
     });
 
     it('should check project permissions when projectId provided', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
       cacheService.getProjectPermissions.mockReturnValue(null);
 
       const result = await service.hasPermission(
@@ -134,7 +134,7 @@ describe('PermissionService', () => {
       );
 
       expect(result).toBe(true);
-      expect(prisma.projectMember.findUnique).toHaveBeenCalledWith({
+      expect(prisma.projectMember.findFirst).toHaveBeenCalledWith({
         where: {
           userId_projectId: {
             userId: mockUser.id,
@@ -146,7 +146,7 @@ describe('PermissionService', () => {
     });
 
     it('should check file permissions when fileId provided', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
+      prisma.fileAccess.findFirst.mockResolvedValue(mockFileAccess);
       prisma.file.findUnique.mockResolvedValue(mockFile);
       cacheService.getFilePermissions.mockReturnValue(null);
 
@@ -160,7 +160,7 @@ describe('PermissionService', () => {
     });
 
     it('should return false when project member not found', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
+      prisma.projectMember.findFirst.mockResolvedValue(null);
       cacheService.getProjectPermissions.mockReturnValue(null);
 
       const result = await service.hasPermission(
@@ -183,11 +183,11 @@ describe('PermissionService', () => {
       );
 
       expect(result).toBe(true);
-      expect(prisma.projectMember.findUnique).not.toHaveBeenCalled();
+      expect(prisma.projectMember.findFirst).not.toHaveBeenCalled();
     });
 
     it('should handle errors gracefully', async () => {
-      prisma.projectMember.findUnique.mockRejectedValue(
+      prisma.projectMember.findFirst.mockRejectedValue(
         new Error('Database error')
       );
       cacheService.getProjectPermissions.mockReturnValue(null);
@@ -244,7 +244,7 @@ describe('PermissionService', () => {
     });
 
     it('should return true when user has one of multiple required roles', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
 
       const result = await service.hasProjectRole(mockUser, 'project-id', [
         ProjectMemberRole.ADMIN,
@@ -255,7 +255,7 @@ describe('PermissionService', () => {
     });
 
     it('should handle database errors', async () => {
-      prisma.projectMember.findUnique.mockRejectedValue(
+      prisma.projectMember.findFirst.mockRejectedValue(
         new Error('Database error')
       );
 
@@ -269,7 +269,7 @@ describe('PermissionService', () => {
 
   describe('hasFileRole', () => {
     it('should return true when user has required file access role', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
+      prisma.fileAccess.findFirst.mockResolvedValue(mockFileAccess);
 
       const result = await service.hasFileRole(mockUser, 'file-id', [
         FileAccessRole.EDITOR,
@@ -279,7 +279,7 @@ describe('PermissionService', () => {
     });
 
     it('should return true when user is file owner', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(mockFile);
 
       const result = await service.hasFileRole(mockUser, 'file-id', [
@@ -291,7 +291,7 @@ describe('PermissionService', () => {
 
     it('should return false when user is not file owner', async () => {
       const otherUserFile = { ...mockFile, creatorId: 'other-user-id' };
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(otherUserFile);
 
       const result = await service.hasFileRole(mockUser, 'file-id', [
@@ -302,7 +302,7 @@ describe('PermissionService', () => {
     });
 
     it('should return false when file not found', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(null);
 
       const result = await service.hasFileRole(mockUser, 'file-id', [
@@ -313,7 +313,7 @@ describe('PermissionService', () => {
     });
 
     it('should handle database errors', async () => {
-      prisma.fileAccess.findUnique.mockRejectedValue(
+      prisma.fileAccess.findFirst.mockRejectedValue(
         new Error('Database error')
       );
 
@@ -327,7 +327,7 @@ describe('PermissionService', () => {
 
   describe('getProjectPermissions', () => {
     it('should return project member permissions', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
 
       const result = await service.getProjectPermissions(
         mockUser,
@@ -340,7 +340,7 @@ describe('PermissionService', () => {
     });
 
     it('should return empty array when user is not project member', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
+      prisma.projectMember.findFirst.mockResolvedValue(null);
 
       const result = await service.getProjectPermissions(
         mockUser,
@@ -351,7 +351,7 @@ describe('PermissionService', () => {
     });
 
     it('should handle database errors', async () => {
-      prisma.projectMember.findUnique.mockRejectedValue(
+      prisma.projectMember.findFirst.mockRejectedValue(
         new Error('Database error')
       );
 
@@ -366,7 +366,7 @@ describe('PermissionService', () => {
 
   describe('getFilePermissions', () => {
     it('should return file access permissions', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
+      prisma.fileAccess.findFirst.mockResolvedValue(mockFileAccess);
 
       const result = await service.getFilePermissions(mockUser, 'file-id');
 
@@ -374,7 +374,7 @@ describe('PermissionService', () => {
     });
 
     it('should return owner permissions when user is file creator', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(mockFile);
 
       const result = await service.getFilePermissions(mockUser, 'file-id');
@@ -383,9 +383,9 @@ describe('PermissionService', () => {
     });
 
     it('should return project permissions when file belongs to project', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(mockFile);
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
 
       const result = await service.getFilePermissions(mockUser, 'file-id');
 
@@ -395,7 +395,7 @@ describe('PermissionService', () => {
     });
 
     it('should return empty array when file not found', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(null);
 
       const result = await service.getFilePermissions(mockUser, 'file-id');
@@ -405,9 +405,9 @@ describe('PermissionService', () => {
 
     it('should return empty array when user is not file owner and no project access', async () => {
       const otherUserFile = { ...mockFile, creatorId: 'other-user-id' };
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(otherUserFile);
-      prisma.projectMember.findUnique.mockResolvedValue(null);
+      prisma.projectMember.findFirst.mockResolvedValue(null);
 
       const result = await service.getFilePermissions(mockUser, 'file-id');
 
@@ -415,7 +415,7 @@ describe('PermissionService', () => {
     });
 
     it('should handle database errors', async () => {
-      prisma.fileAccess.findUnique.mockRejectedValue(
+      prisma.fileAccess.findFirst.mockRejectedValue(
         new Error('Database error')
       );
 
@@ -427,7 +427,7 @@ describe('PermissionService', () => {
 
   describe('checkProjectPermission', () => {
     it('should cache project permissions after checking', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
       cacheService.getProjectPermissions.mockReturnValue(null);
 
       await service['checkProjectPermission'](
@@ -444,7 +444,7 @@ describe('PermissionService', () => {
     });
 
     it('should return false for non-existent project member', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
+      prisma.projectMember.findFirst.mockResolvedValue(null);
       cacheService.getProjectPermissions.mockReturnValue(null);
 
       const result = await service['checkProjectPermission'](
@@ -459,7 +459,7 @@ describe('PermissionService', () => {
 
   describe('checkFilePermission', () => {
     it('should cache file permissions after checking', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
+      prisma.fileAccess.findFirst.mockResolvedValue(mockFileAccess);
       cacheService.getFilePermissions.mockReturnValue(null);
 
       await service['checkFilePermission'](
@@ -477,9 +477,9 @@ describe('PermissionService', () => {
 
     it('should check project permissions when file belongs to project and user is not owner', async () => {
       const otherUserFile = { ...mockFile, creatorId: 'other-user-id' };
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(otherUserFile);
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
       cacheService.getFilePermissions.mockReturnValue(null);
 
       const result = await service['checkFilePermission'](
@@ -497,7 +497,7 @@ describe('PermissionService', () => {
     });
 
     it('should return false for non-existent file', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
+      prisma.fileAccess.findFirst.mockResolvedValue(null);
       prisma.file.findUnique.mockResolvedValue(null);
       cacheService.getFilePermissions.mockReturnValue(null);
 
