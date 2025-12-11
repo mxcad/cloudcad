@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // API 基础配置
 const API_BASE_URL =
-  (import.meta.env?.VITE_API_BASE_URL as string) || 'http://localhost:3001/api';
+  (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
 
 class ApiService {
   private client: AxiosInstance;

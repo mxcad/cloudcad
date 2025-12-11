@@ -57,7 +57,10 @@ describe('UsersController', () => {
       ],
     })
     .overrideGuard(require('../auth/guards/jwt-auth.guard').JwtAuthGuard)
-    .useValue({ canActivate: () => true })
+    .useValue({
+      canActivate: () => true,
+      constructor: jest.fn(),
+    })
     .overrideGuard(require('../common/guards/roles.guard').RolesGuard)
     .useValue({ canActivate: () => true })
     .compile();

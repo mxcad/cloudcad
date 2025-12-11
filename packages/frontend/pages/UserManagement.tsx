@@ -48,7 +48,7 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
@@ -66,10 +66,10 @@ export const UserManagement = () => {
   const handleOpenEdit = (user: User) => {
     setEditingUser(user);
     setFormData({
-      name: user.name,
+      name: user.username,
       email: user.email,
-      roleId: user.roleId,
-      storageGB: user.totalStorage / (1024 * 1024 * 1024),
+      roleId: user.role,
+      storageGB: 1, // Default value
     });
     setIsModalOpen(true);
   };

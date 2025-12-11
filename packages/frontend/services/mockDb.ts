@@ -41,30 +41,27 @@ const MOCK_ROLES: Role[] = [
 const MOCK_USERS: User[] = [
   {
     id: 'u1',
-    name: '管理员',
+    username: 'admin',
     email: 'admin@cloudcad.com',
-    roleId: 'role_admin',
+    role: 'ADMIN',
     avatar: 'https://picsum.photos/100/100',
-    usedStorage: 2.4 * 1024 * 1024 * 1024,
-    totalStorage: 10 * 1024 * 1024 * 1024,
+    status: 'ACTIVE',
   },
   {
     id: 'u2',
-    name: '李工程师',
+    username: 'li',
     email: 'li@design.com',
-    roleId: 'role_manager',
+    role: 'USER',
     avatar: 'https://picsum.photos/101/101',
-    usedStorage: 1.2 * 1024 * 1024 * 1024,
-    totalStorage: 5 * 1024 * 1024 * 1024,
+    status: 'ACTIVE',
   },
   {
     id: 'u3',
-    name: '张实习',
+    username: 'zhang',
     email: 'zhang@intern.com',
-    roleId: 'role_engineer',
+    role: 'USER',
     avatar: 'https://picsum.photos/102/102',
-    usedStorage: 0.5 * 1024 * 1024 * 1024,
-    totalStorage: 2 * 1024 * 1024 * 1024,
+    status: 'ACTIVE',
   },
 ];
 
@@ -202,7 +199,7 @@ class MockDB {
   }
 
   async getCurrentUserRole() {
-    return this.roles.find((r) => r.id === this.currentUser.roleId);
+    return this.roles.find((r) => r.id === this.currentUser.role);
   }
 
   async getUsers() {
@@ -214,12 +211,11 @@ class MockDB {
     await delay(300);
     const newUser: User = {
       id: `u_${Date.now()}`,
-      name: data.name || 'New User',
+      username: data.username || data.email || 'newuser',
       email: data.email || '',
-      roleId: data.roleId || this.roles[this.roles.length - 1].id,
-      avatar: `https://ui-avatars.com/api/?name=${data.name}&background=random`,
-      totalStorage: data.totalStorage || 1 * 1024 * 1024 * 1024,
-      usedStorage: 0,
+      role: data.role || 'USER',
+      avatar: `https://ui-avatars.com/api/?name=${data.username || 'user'}&background=random`,
+      status: 'ACTIVE',
     };
     this.users.push(newUser);
     this.save('users', this.users);
@@ -279,7 +275,7 @@ class MockDB {
   // --- Projects/Files (With Permissions) ---
   async getFiles(parentId: string | null) {
     await delay(300);
-    const userRole = this.roles.find((r) => r.id === this.currentUser.roleId);
+    const userRole = this.roles.find((r) => r.id === this.currentUser.role);
     const hasViewAll = userRole?.permissions.includes(
       Permission.PROJECT_VIEW_ALL
     );
@@ -364,7 +360,7 @@ class MockDB {
     };
 
     this.files.push(newFile);
-    this.currentUser.usedStorage += file.size;
+    // this.currentUser.usedStorage += file.size; // Storage tracking removed
     this.save('files', this.files);
     return newFile;
   }
@@ -417,10 +413,7 @@ class MockDB {
 
       const target = this.files.find((f) => f.id === id);
       if (target && target.type !== 'folder') {
-        this.currentUser.usedStorage = Math.max(
-          0,
-          this.currentUser.usedStorage - target.size
-        );
+        // File deleted
       }
       this.files = this.files.filter((f) => f.id !== id);
     };
@@ -436,10 +429,7 @@ class MockDB {
 
     deletedFiles.forEach((f) => {
       if (f.type !== 'folder') {
-        this.currentUser.usedStorage = Math.max(
-          0,
-          this.currentUser.usedStorage - f.size
-        );
+        // File permanently deleted
       }
     });
 
@@ -459,7 +449,7 @@ class MockDB {
   // --- Libraries ---
   async getLibraries(type: 'block' | 'font') {
     await delay(300);
-    const userRole = this.roles.find((r) => r.id === this.currentUser.roleId);
+    const userRole = this.roles.find((r) => r.id === this.currentUser.role);
     const canManage = userRole?.permissions.includes(Permission.LIBRARY_MANAGE);
 
     const updatedLibraries = this.libraries.map((lib) => ({
@@ -546,8 +536,8 @@ class MockDB {
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         )
         .slice(0, 5),
-      storageUsed: this.currentUser.usedStorage,
-      storageTotal: this.currentUser.totalStorage,
+      storageUsed: 0, // Storage tracking removed
+      storageTotal: 0, // Storage tracking removed
     };
   }
 }
