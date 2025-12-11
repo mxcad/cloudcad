@@ -69,17 +69,17 @@ export class FilePermissionGuard implements CanActivate {
 
   private extractFileId(request: any): string | null {
     // 从路由参数中获取
-    if (request.params?.fileId) {
+    if (request.params?.fileId !== undefined && request.params?.fileId !== null) {
       return request.params.fileId;
     }
 
     // 从查询参数中获取
-    if (request.query?.fileId) {
+    if (request.query?.fileId !== undefined && request.query?.fileId !== null) {
       return request.query.fileId;
     }
 
     // 从请求体中获取
-    if (request.body?.fileId) {
+    if (request.body?.fileId !== undefined && request.body?.fileId !== null) {
       return request.body.fileId;
     }
 

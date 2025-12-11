@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcryptjs';
 import { DatabaseService } from '../database/database.service';
 import { AuthService } from './auth.service';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 
 describe('AuthService', () => {
@@ -12,6 +13,7 @@ describe('AuthService', () => {
   let prisma: jest.Mocked<DatabaseService>;
   let jwtService: jest.Mocked<JwtService>;
   let configService: jest.Mocked<ConfigService>;
+  let tokenBlacklistService: jest.Mocked<TokenBlacklistService>;
 
   const mockUser = {
     id: 'user-id',
@@ -27,17 +29,23 @@ describe('AuthService', () => {
   };
 
   const mockConfig = {
-    get: jest.fn((key: string) => {
-      const configs = {
+    get: jest.fn().mockImplementation((key: string) => {
+      console.log('ConfigService.get called with:', key);
+      const configs: Record<string, string> = {
         'jwt.secret': 'test-secret',
         'jwt.expiresIn': '1h',
         'jwt.refreshExpiresIn': '7d',
       };
-      return configs[key];
+      const result = configs[key];
+      console.log('ConfigService.get returning:', result);
+      return result;
     }),
   };
 
   beforeEach(async () => {
+    // Reset mocks
+    jest.clearAllMocks();
+    
     const mockPrisma = {
       user: {
         findUnique: jest.fn(),
@@ -49,6 +57,11 @@ describe('AuthService', () => {
     const mockJwtService = {
       signAsync: jest.fn(),
       verify: jest.fn(),
+    } as any;
+
+    const mockTokenBlacklistService = {
+      addToBlacklist: jest.fn(),
+      isUserBlacklisted: jest.fn().mockResolvedValue(false),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -66,6 +79,10 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: mockConfig,
         },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
+        },
       ],
     }).compile();
 
@@ -73,6 +90,7 @@ describe('AuthService', () => {
     prisma = module.get(DatabaseService);
     jwtService = module.get(JwtService);
     configService = module.get(ConfigService);
+    tokenBlacklistService = module.get(TokenBlacklistService);
   });
 
   afterEach(() => {

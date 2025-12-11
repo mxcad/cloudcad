@@ -4,7 +4,7 @@
  */
 
 // 导入从后端生成的 API 类型
-export * from './src/types/api';
+export * from './types/api';
 
 // ==================== 前端特定类型 ====================
 

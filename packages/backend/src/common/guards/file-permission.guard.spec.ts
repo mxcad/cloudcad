@@ -7,6 +7,7 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FILE_PERMISSION_KEY } from '../decorators/file-permission.decorator';
 import { FileAccessRole } from '../enums/permissions.enum';
+import { PermissionCacheService } from '../services/permission-cache.service';
 import {
   PermissionService,
   UserWithPermissions,
@@ -17,6 +18,7 @@ describe('FilePermissionGuard', () => {
   let guard: FilePermissionGuard;
   let reflector: jest.Mocked<Reflector>;
   let permissionService: jest.Mocked<PermissionService>;
+  let cacheService: jest.Mocked<PermissionCacheService>;
   let mockContext: ExecutionContext;
 
   const mockUser: UserWithPermissions = {
@@ -38,6 +40,10 @@ describe('FilePermissionGuard', () => {
       hasFileRole: jest.fn(),
     } as any;
 
+    const mockCacheService = {
+      getFileAccessRole: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FilePermissionGuard,
@@ -49,12 +55,17 @@ describe('FilePermissionGuard', () => {
           provide: PermissionService,
           useValue: mockPermissionService,
         },
+        {
+          provide: PermissionCacheService,
+          useValue: mockCacheService,
+        },
       ],
     }).compile();
 
     guard = module.get<FilePermissionGuard>(FilePermissionGuard);
     reflector = module.get(Reflector);
     permissionService = module.get(PermissionService);
+    cacheService = module.get(PermissionCacheService);
 
     // Create mock execution context
     mockContext = {

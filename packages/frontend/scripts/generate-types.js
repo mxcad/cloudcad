@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 
 const SWAGGER_URL = 'http://localhost:3001/api-docs';
-const OUTPUT_FILE = path.join(__dirname, '../src/types/api.ts');
+const OUTPUT_FILE = path.join(__dirname, '../types/api.ts');
 
 async function generateTypes() {
   try {

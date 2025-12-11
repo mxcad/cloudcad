@@ -2,11 +2,13 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { DatabaseService } from '../../database/database.service';
 import { JwtStrategy } from './jwt.strategy';
+import { TokenBlacklistService } from '../services/token-blacklist.service';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let configService: jest.Mocked<ConfigService>;
   let prisma: jest.Mocked<DatabaseService>;
+  let tokenBlacklistService: jest.Mocked<TokenBlacklistService>;
 
   const mockUser = {
     id: 'user-id',
@@ -40,6 +42,10 @@ describe('JwtStrategy', () => {
       },
     } as any;
 
+    const mockTokenBlacklistService = {
+      isUserBlacklisted: jest.fn().mockResolvedValue(false),
+    } as any;
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         JwtStrategy,
@@ -51,12 +57,17 @@ describe('JwtStrategy', () => {
           provide: DatabaseService,
           useValue: mockPrisma,
         },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
+        },
       ],
     }).compile();
 
     strategy = moduleRef.get<JwtStrategy>(JwtStrategy);
     configService = moduleRef.get(ConfigService);
     prisma = moduleRef.get(DatabaseService);
+    tokenBlacklistService = moduleRef.get(TokenBlacklistService);
   });
 
   afterEach(() => {
@@ -69,29 +80,34 @@ describe('JwtStrategy', () => {
       expect(configService.get).toHaveBeenCalledWith('jwt.secret');
     });
 
-    it('should use default secret when config is missing', async () => {
+    it('should throw error when config is missing', async () => {
       const mockConfigServiceNoSecret = {
         get: jest.fn().mockReturnValue(null),
       } as any;
 
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          JwtStrategy,
-          {
-            provide: ConfigService,
-            useValue: mockConfigServiceNoSecret,
-          },
-          {
-            provide: DatabaseService,
-            useValue: {
-              user: { findUnique: jest.fn() },
+      await expect(
+        Test.createTestingModule({
+          providers: [
+            JwtStrategy,
+            {
+              provide: ConfigService,
+              useValue: mockConfigServiceNoSecret,
             },
-          },
-        ],
-      }).compile();
-
-      const strategyWithDefaultSecret = moduleRef.get<JwtStrategy>(JwtStrategy);
-      expect(strategyWithDefaultSecret).toBeDefined();
+            {
+              provide: DatabaseService,
+              useValue: {
+                user: { findUnique: jest.fn() },
+              },
+            },
+            {
+              provide: TokenBlacklistService,
+              useValue: {
+                isUserBlacklisted: jest.fn().mockResolvedValue(false),
+              },
+            },
+          ],
+        }).compile()
+      ).rejects.toThrow('JWT_SECRET environment variable is required');
     });
   });
 

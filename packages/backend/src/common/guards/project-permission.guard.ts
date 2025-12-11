@@ -69,17 +69,17 @@ export class ProjectPermissionGuard implements CanActivate {
 
   private extractProjectId(request: any): string | null {
     // 从路由参数中获取
-    if (request.params?.projectId) {
+    if (request.params?.projectId !== undefined && request.params?.projectId !== null) {
       return request.params.projectId;
     }
 
     // 从查询参数中获取
-    if (request.query?.projectId) {
+    if (request.query?.projectId !== undefined && request.query?.projectId !== null) {
       return request.query.projectId;
     }
 
     // 从请求体中获取
-    if (request.body?.projectId) {
+    if (request.body?.projectId !== undefined && request.body?.projectId !== null) {
       return request.body.projectId;
     }
 
