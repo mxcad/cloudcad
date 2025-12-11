@@ -8,6 +8,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../common/types/request.types';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -77,7 +78,7 @@ export class AuthController {
   @ApiOperation({ summary: '用户登出' })
   @ApiResponse({ status: 200, description: '登出成功' })
   @ApiBearerAuth()
-  async logout(@Request() req: any): Promise<{ message: string }> {
+  async logout(@Request() req: AuthenticatedRequest): Promise<{ message: string }> {
     await this.authService.logout(req.user.id);
     return { message: '登出成功' };
   }
@@ -90,7 +91,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiBearerAuth()
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: AuthenticatedRequest) {
     return req.user;
   }
 }

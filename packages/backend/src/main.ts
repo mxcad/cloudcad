@@ -3,6 +3,7 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
+import multipart from '@fastify/multipart';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -14,6 +15,13 @@ async function bootstrap() {
       bodyLimit: 50 * 1024 * 1024, // 50MB for file uploads
     })
   );
+
+  // 注册 multipart 插件
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  });
 
   // 启用CORS
   app.enableCors({
