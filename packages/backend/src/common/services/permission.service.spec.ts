@@ -54,9 +54,11 @@ describe('PermissionService', () => {
     const mockPrisma = {
       projectMember: {
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
       },
       fileAccess: {
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
       },
       file: {
         findUnique: jest.fn(),
@@ -222,7 +224,7 @@ describe('PermissionService', () => {
 
   describe('hasProjectRole', () => {
     it('should return true when user has required project role', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
+      prisma.projectMember.findFirst.mockResolvedValue(mockProjectMember);
 
       const result = await service.hasProjectRole(mockUser, 'project-id', [
         ProjectMemberRole.MEMBER,
@@ -232,7 +234,7 @@ describe('PermissionService', () => {
     });
 
     it('should return false when user is not project member', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
+      prisma.projectMember.findFirst.mockResolvedValue(null);
 
       const result = await service.hasProjectRole(mockUser, 'project-id', [
         ProjectMemberRole.MEMBER,

@@ -29,18 +29,20 @@ describe('AuthService', () => {
   };
 
   const mockConfig = {
-    get: jest.fn().mockImplementation((key: string) => {
-      console.log('ConfigService.get called with:', key);
+    get: jest.fn(),
+  };
+
+  // 设置默认的配置返回值
+  beforeEach(() => {
+    mockConfig.get.mockImplementation((key: string) => {
       const configs: Record<string, string> = {
         'jwt.secret': 'test-secret',
         'jwt.expiresIn': '1h',
         'jwt.refreshExpiresIn': '7d',
       };
-      const result = configs[key];
-      console.log('ConfigService.get returning:', result);
-      return result;
-    }),
-  };
+      return configs[key];
+    });
+  });
 
   beforeEach(async () => {
     // Reset mocks
@@ -52,11 +54,19 @@ describe('AuthService', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
       },
+      refreshToken: {
+        deleteMany: jest.fn(),
+        create: jest.fn(),
+        findFirst: jest.fn(),
+      },
     } as any;
 
     const mockJwtService = {
       signAsync: jest.fn(),
-      verify: jest.fn(),
+      verify: jest.fn().mockReturnValue({
+        sub: 'user-id',
+        exp: Date.now() / 1000 + 604800, // 7天后过期
+      }),
     } as any;
 
     const mockTokenBlacklistService = {
@@ -265,6 +275,13 @@ describe('AuthService', () => {
     it('should successfully refresh token', async () => {
       const payload = { sub: mockUser.id, type: 'refresh' };
       jwtService.verify.mockReturnValue(payload);
+      
+      // Mock valid refresh token in database
+      prisma.refreshToken.findFirst.mockResolvedValue({
+        token: refreshToken,
+        userId: mockUser.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7天后过期
+      });
 
       const userWithoutPassword = { ...mockUser };
       delete (userWithoutPassword as any).password;
@@ -327,7 +344,18 @@ describe('AuthService', () => {
   describe('logout', () => {
     it('should logout successfully', async () => {
       const userId = 'user-id';
+      
+      // Mock TokenBlacklistService methods
+      tokenBlacklistService.blacklistUserTokens = jest.fn().mockResolvedValue(undefined);
+      
+      // Mock deleteAllRefreshTokens
+      prisma.refreshToken.deleteMany = jest.fn().mockResolvedValue({ count: 1 });
+      
       await expect(service.logout(userId)).resolves.toBeUndefined();
+      expect(tokenBlacklistService.blacklistUserTokens).toHaveBeenCalledWith(userId);
+      expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
+        where: { userId },
+      });
     });
   });
 
