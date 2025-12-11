@@ -1,9 +1,9 @@
 import { AlertCircle, Check, Plus, Shield, Trash2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Api } from '../services/api';
-import { Permission, type Role } from '../types';
+import { Permission, Role } from '../types';
+import { mockApi } from '../services/api';
 
 const PERMISSION_GROUPS = [
   {
@@ -47,7 +47,7 @@ export const RoleManagement = () => {
   }, []);
 
   const checkAccess = async () => {
-    const role = await Api.auth.getRole();
+    const role = await mockApi.auth.getRole();
     if (!role?.permissions.includes(Permission.MANAGE_ROLES)) {
       setHasPermission(false);
       return;
@@ -56,7 +56,7 @@ export const RoleManagement = () => {
   };
 
   const loadRoles = async () => {
-    const data = await Api.roles.list();
+    const data = await mockApi.roles.list();
     setRoles(data);
   };
 
@@ -80,13 +80,13 @@ export const RoleManagement = () => {
     if (!roleName) return;
 
     if (editingRole) {
-      await Api.roles.update(editingRole.id, {
+      await mockApi.roles.update(editingRole.id, {
         name: roleName,
         description: roleDesc,
         permissions: selectedPerms,
       });
     } else {
-      await Api.roles.create(roleName, roleDesc, selectedPerms);
+      await mockApi.roles.create(roleName, roleDesc, selectedPerms);
     }
 
     setIsModalOpen(false);
@@ -100,7 +100,7 @@ export const RoleManagement = () => {
       )
     ) {
       try {
-        await Api.roles.delete(id);
+        await mockApi.roles.delete(id);
         loadRoles();
       } catch (e: any) {
         alert(e.message);

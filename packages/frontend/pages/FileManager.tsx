@@ -16,11 +16,15 @@ import {
   Upload,
   XCircle,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
-import { PromptModal } from '../components/ui/Modal';
-import { Api } from '../services/api';
-import type { FileNode } from '../types';
+import { Modal } from '../components/ui/Modal';
+import {
+  type FileNode,
+  MAX_UPLOAD_SIZE,
+  type User,
+} from '../types';
+import { mockApi } from '../services/api';
 
 interface FileCardProps {
   file: FileNode;
@@ -134,7 +138,7 @@ const FileCard: React.FC<FileCardProps> = ({
       {!inTrash && file.shared && (
         <div
           className="absolute top-3 left-3 w-2 h-2 rounded-full bg-green-500 ring-2 ring-white"
-          title="已分享"
+          title="已分�?
         ></div>
       )}
     </div>
@@ -199,9 +203,9 @@ export const FileManager = () => {
     try {
       let data;
       if (viewMode === 'trash') {
-        data = await Api.files.getTrash();
+        data = await mockApi.files.getTrash();
       } else {
-        data = await Api.files.list(currentFolderId);
+        data = await mockApi.files.list(currentFolderId);
       }
       setFiles(data);
     } finally {
@@ -233,9 +237,9 @@ export const FileManager = () => {
   };
 
   const handleCreateFolder = async (name: string) => {
-    await Api.files.createFolder(currentFolderId, name);
+    await mockApi.files.createFolder(currentFolderId, name);
     setIsCreateFolderOpen(false);
-    showToast('文件夹创建成功');
+    showToast('文件夹创建成�?);
     loadFiles();
   };
 
@@ -246,7 +250,7 @@ export const FileManager = () => {
     try {
       // Handle multiple files sequentially for mock
       for (let i = 0; i < fileList.length; i++) {
-        await Api.files.upload(currentFolderId, fileList[i]);
+        await mockApi.files.upload(currentFolderId, fileList[i]);
       }
       showToast(`${fileList.length} 个文件上传成功`);
       loadFiles();
@@ -259,38 +263,38 @@ export const FileManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('确定要删除吗？文件将被移至回收站。')) {
-      await Api.files.delete(id);
+    if (window.confirm('确定要删除吗？文件将被移至回收站�?)) {
+      await mockApi.files.delete(id);
       showToast('文件已移至回收站');
       loadFiles();
     }
   };
 
   const handleRestore = async (id: string) => {
-    await Api.files.restore(id);
-    showToast('文件已还原');
+    await mockApi.files.restore(id);
+    showToast('文件已还�?);
     loadFiles();
   };
 
   const handlePermanentDelete = async (id: string) => {
-    if (window.confirm('确定要永久删除吗？此操作无法撤销。')) {
-      await Api.files.permanentlyDelete(id);
-      showToast('文件已永久删除');
+    if (window.confirm('确定要永久删除吗？此操作无法撤销�?)) {
+      await mockApi.files.permanentlyDelete(id);
+      showToast('文件已永久删�?);
       loadFiles();
     }
   };
 
   const handleEmptyTrash = async () => {
     if (window.confirm('确定要清空回收站吗？')) {
-      await Api.files.emptyTrash();
+      await mockApi.files.emptyTrash();
       showToast('回收站已清空');
       loadFiles();
     }
   };
 
   const handleShare = async (id: string) => {
-    await Api.files.toggleShare(id);
-    showToast('分享设置已更新');
+    await mockApi.files.toggleShare(id);
+    showToast('分享设置已更�?);
     loadFiles();
   };
 
@@ -348,7 +352,7 @@ export const FileManager = () => {
           <div className="p-6 bg-white rounded-full shadow-lg mb-4 animate-bounce">
             <Upload size={48} />
           </div>
-          <h3 className="text-2xl font-bold">释放文件以上传</h3>
+          <h3 className="text-2xl font-bold">释放文件以上�?/h3>
           <p className="mt-2 text-indigo-500 font-medium">
             支持批量上传到当前文件夹
           </p>
@@ -378,7 +382,7 @@ export const FileManager = () => {
           <nav className="flex items-center text-sm font-medium text-slate-500">
             {viewMode === 'trash' ? (
               <span className="flex items-center text-slate-900 font-bold gap-2">
-                <Trash2 size={18} /> 回收站
+                <Trash2 size={18} /> 回收�?
               </span>
             ) : (
               currentPath.map((folder, index) => (
@@ -405,7 +409,7 @@ export const FileManager = () => {
             }
             icon={Trash2}
           >
-            {viewMode === 'trash' ? '返回文件' : '回收站'}
+            {viewMode === 'trash' ? '返回文件' : '回收�?}
           </Button>
 
           {viewMode === 'trash' ? (
@@ -415,7 +419,7 @@ export const FileManager = () => {
               onClick={handleEmptyTrash}
               disabled={files.length === 0}
             >
-              清空回收站
+              清空回收�?
             </Button>
           ) : (
             <>
@@ -431,14 +435,14 @@ export const FileManager = () => {
                 icon={Plus}
                 onClick={() => setIsCreateFolderOpen(true)}
               >
-                新建文件夹
+                新建文件�?
               </Button>
               <Button
                 icon={uploading ? Loader2 : Upload}
                 disabled={uploading}
                 onClick={() => fileInputRef.current?.click()}
               >
-                {uploading ? '上传中...' : '上传文件'}
+                {uploading ? '上传�?..' : '上传文件'}
               </Button>
             </>
           )}
@@ -448,7 +452,7 @@ export const FileManager = () => {
       {/* File Grid */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-slate-400">
-          <Loader2 className="animate-spin mr-2" /> 加载中...
+          <Loader2 className="animate-spin mr-2" /> 加载�?..
         </div>
       ) : files.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl m-1 bg-slate-50/50">
@@ -458,11 +462,11 @@ export const FileManager = () => {
             <Folder size={48} className="text-slate-300 mb-4" />
           )}
           <p className="font-medium">
-            {viewMode === 'trash' ? '回收站为空' : '此文件夹为空'}
+            {viewMode === 'trash' ? '回收站为�? : '此文件夹为空'}
           </p>
           <p className="text-sm mt-2">
             {viewMode === 'trash'
-              ? '删除的文件将显示在这里'
+              ? '删除的文件将显示在这�?
               : '拖拽文件到此处，或点击右上角上传'}
           </p>
         </div>
@@ -487,8 +491,8 @@ export const FileManager = () => {
       <PromptModal
         isOpen={isCreateFolderOpen}
         onClose={() => setIsCreateFolderOpen(false)}
-        title="新建文件夹"
-        label="文件夹名称"
+        title="新建文件�?
+        label="文件夹名�?
         defaultValue="新建项目"
         onSubmit={handleCreateFolder}
       />

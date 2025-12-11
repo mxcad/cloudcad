@@ -81,6 +81,54 @@ export class RefreshTokenDto {
   refreshToken: string;
 }
 
+export class UserDto {
+  @ApiProperty({
+    description: '用户ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: '用户邮箱',
+    example: 'user@example.com',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: '用户名',
+    example: 'username',
+  })
+  username: string;
+
+  @ApiProperty({
+    description: '昵称',
+    example: '用户昵称',
+    required: false,
+  })
+  nickname?: string;
+
+  @ApiProperty({
+    description: '头像URL',
+    example: 'https://example.com/avatar.jpg',
+    required: false,
+  })
+  avatar?: string;
+
+  @ApiProperty({
+    description: '用户角色',
+    enum: ['ADMIN', 'USER'],
+    example: 'USER',
+  })
+  role: string;
+
+  @ApiProperty({
+    description: '用户状态',
+    enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+    example: 'ACTIVE',
+  })
+  status: string;
+}
+
 export class AuthResponseDto {
   @ApiProperty({
     description: '访问Token',
@@ -96,14 +144,7 @@ export class AuthResponseDto {
 
   @ApiProperty({
     description: '用户信息',
+    type: () => UserDto,
   })
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    nickname?: string;
-    avatar?: string;
-    role: string;
-    status: string;
-  };
+  user: UserDto;
 }

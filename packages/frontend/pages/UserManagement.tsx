@@ -7,12 +7,11 @@ import {
   Trash2,
   User as UserIcon,
 } from 'lucide-react';
-import type React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Api } from '../services/api';
 import { Permission, type Role, type User } from '../types';
+import { mockApi } from '../services/api';
 
 export const UserManagement = () => {
   const [hasPermission, setHasPermission] = useState(true);
@@ -34,21 +33,23 @@ export const UserManagement = () => {
   }, []);
 
   const checkAccess = async () => {
-    const role = await Api.auth.getRole();
-    if (!role?.permissions.includes(Permission.MANAGE_USERS)) {
-      setHasPermission(false);
-      return;
-    }
-    loadData();
+    const role = await mockApi.auth.getRole();
+    setHasPermission(role.permissions.includes(Permission.MANAGE_USERS));
   };
 
   const loadData = async () => {
-    const [userData, roleData] = await Promise.all([
-      Api.users.list(),
-      Api.roles.list(),
-    ]);
-    setUsers(userData);
-    setRoles(roleData);
+    try {
+      const [usersData, rolesData] = await Promise.all([
+        mockApi.users.list(),
+        mockApi.roles.list(),
+      ]);
+      setUsers(usersData);
+      setRoles(rolesData);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenCreate = () => {
@@ -83,9 +84,9 @@ export const UserManagement = () => {
     };
 
     if (editingUser) {
-      await Api.users.update(editingUser.id, payload);
+      await mockApi.users.update(editingUser.id, payload);
     } else {
-      await Api.users.create(payload);
+      await mockApi.users.create(payload);
     }
 
     setIsModalOpen(false);
@@ -94,7 +95,7 @@ export const UserManagement = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('确定要删除该用户吗？相关数据可能无法恢复。')) {
-      await Api.users.delete(id);
+      await mockApi.users.delete(id);
       loadData();
     }
   };

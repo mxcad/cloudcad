@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcryptjs';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import {
@@ -45,6 +45,7 @@ describe('Authentication & Authorization Integration Tests', () => {
       on: jest.fn(),
       once: jest.fn(),
       emit: jest.fn(),
+      quit: jest.fn().mockResolvedValue('OK'),
     })
     .compile();
 
@@ -78,18 +79,42 @@ describe('Authentication & Authorization Integration Tests', () => {
   });
 
   async function cleanupTestData() {
-    await prisma.fileAccess.deleteMany();
-    await prisma.file.deleteMany();
-    await prisma.projectMember.deleteMany();
-    await prisma.project.deleteMany();
-    await prisma.user.deleteMany({
-      where: {
-        OR: [
-          { email: { contains: 'test-integration' } },
-          { username: { contains: 'test-integration' } },
-        ],
-      },
-    });
+    try {
+      await prisma.fileAccess.deleteMany();
+    } catch (error) {
+      console.log('Error cleaning up fileAccess:', error.message);
+    }
+    
+    try {
+      await prisma.file.deleteMany();
+    } catch (error) {
+      console.log('Error cleaning up file:', error.message);
+    }
+    
+    try {
+      await prisma.projectMember.deleteMany();
+    } catch (error) {
+      console.log('Error cleaning up projectMember:', error.message);
+    }
+    
+    try {
+      await prisma.project.deleteMany();
+    } catch (error) {
+      console.log('Error cleaning up project:', error.message);
+    }
+    
+    try {
+      await prisma.user.deleteMany({
+        where: {
+          OR: [
+            { email: { contains: 'test-integration' } },
+            { username: { contains: 'test-integration' } },
+          ],
+        },
+      });
+    } catch (error) {
+      console.log('Error cleaning up user:', error.message);
+    }
   }
 
   async function createTestUsers() {
@@ -142,20 +167,29 @@ describe('Authentication & Authorization Integration Tests', () => {
         nickname: 'New Test User',
       };
 
-      const response = await request(app.getHttpServer())
-        .post('/auth/register')
-        .send(userData)
-        .expect(201);
+      try {
+        const response = await request(app.getHttpServer())
+          .post('/auth/register')
+          .send(userData)
+          .expect(201);
 
-      expect(response.body).toHaveProperty('accessToken');
-      expect(response.body).toHaveProperty('refreshToken');
-      expect(response.body.user).toMatchObject({
-        email: userData.email,
-        username: userData.username,
-        nickname: userData.nickname,
-        role: UserRole.USER,
-        status: 'ACTIVE',
-      });
+        expect(response.body).toHaveProperty('accessToken');
+        expect(response.body).toHaveProperty('refreshToken');
+        expect(response.body.user).toMatchObject({
+          email: userData.email,
+          username: userData.username,
+          nickname: userData.nickname,
+          role: UserRole.USER,
+          status: 'ACTIVE',
+        });
+      } catch (error) {
+        console.error('Registration test error:', error.message);
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response body:', error.response.body);
+        }
+        throw error;
+      }
     });
 
     it('should login with valid credentials', async () => {

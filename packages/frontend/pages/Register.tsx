@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RegisterDto } from '../types/api';
+import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
+
+type RegisterDto = components['schemas']['RegisterDto'];
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ export const Register: React.FC = () => {
     if (name === 'confirmPassword') {
       setConfirmPassword(value);
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
@@ -88,7 +90,10 @@ export const Register: React.FC = () => {
           )}
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700"
+              >
                 用户名 <span className="text-red-500">*</span>
               </label>
               <input
@@ -104,7 +109,10 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="nickname" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="nickname"
+                className="block text-sm font-medium text-gray-700"
+              >
                 昵称
               </label>
               <input
@@ -119,7 +127,10 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 邮箱地址 <span className="text-red-500">*</span>
               </label>
               <input
@@ -136,7 +147,10 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 密码 <span className="text-red-500">*</span>
               </label>
               <input
@@ -153,7 +167,10 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700"
+              >
                 确认密码 <span className="text-red-500">*</span>
               </label>
               <input

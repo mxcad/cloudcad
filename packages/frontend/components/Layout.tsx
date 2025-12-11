@@ -17,8 +17,11 @@ import {
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Api } from '../services/api';
-import { Permission, type Role, type User } from '../types';
+import { components } from '../types/api';
+import { Permission, type Role } from '../types';
+import { mockApi } from '../services/api';
+
+type User = components['schemas']['UserDto'];
 
 interface NavItemProps {
   to: string;
@@ -57,9 +60,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [hookTest, setHookTest] = useState(false);
 
   useEffect(() => {
-    Api.auth.getCurrentUser().then((u) => {
+    mockApi.auth.getCurrentUser().then((u) => {
       setUser(u);
-      Api.auth.getRole().then(setRole);
+      mockApi.auth.getRole().then(setRole);
     });
   }, []);
 
@@ -184,7 +187,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               />
               <input
                 type="text"
-                placeholder="搜索项目、图纸、图块..."
+                placeholder="搜索项目、图纸、图�?.."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-100 border-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
@@ -228,7 +231,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                           项目《商业中心》已归档
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          10分钟前
+                          10分钟�?
                         </p>
                       </div>
                     </div>
@@ -270,7 +273,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   </button>
                   <div className="h-px bg-slate-100 my-1"></div>
                   <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                    退出登录
+                    退出登�?
                   </button>
                 </div>
               )}

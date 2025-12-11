@@ -94,19 +94,19 @@ const ProjectMembersModal: React.FC<MemberModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title=""
+      title="项目成员权限"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            
+            取消
           </Button>
-          <Button onClick={handleSave}></Button>
+          <Button onClick={handleSave}>保存更改</Button>
         </>
       }
     >
       <div className="space-y-4">
         <p className="text-sm text-slate-500">
-          ?        </p>
+          选择可以访问该项目的成员。如果不选，则对所有团队成员开放�?        </p>
         <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
           {users.map((u) => (
             <div
@@ -132,10 +132,10 @@ const ProjectMembersModal: React.FC<MemberModalProps> = ({
           ))}
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Lock size={16} /> ?{' '}
+          <Lock size={16} /> 当前状�?{' '}
           {selectedIds.length === 0
-            ? ' ()'
-            : ` (${selectedIds.length} ?`}
+            ? '公开项目 (全员可见)'
+            : `私有项目 (${selectedIds.length} 人可�?`}
         </div>
       </div>
     </Modal>
@@ -201,14 +201,14 @@ const FileCard: React.FC<FileCardProps> = ({
     >
       {/* Visual Badges */}
       {isRoot && isPrivate && !inTrash && (
-        <div className="absolute top-3 left-3 text-amber-500" title="">
+        <div className="absolute top-3 left-3 text-amber-500" title="私有项目">
           <Lock size={14} />
         </div>
       )}
       {!isRoot && file.shared && !inTrash && (
         <div
           className="absolute top-3 left-3 text-emerald-500 bg-emerald-50 rounded-full p-0.5"
-          title="?
+          title="已开启分享"
         >
           <Link size={12} />
         </div>
@@ -245,11 +245,11 @@ const FileCard: React.FC<FileCardProps> = ({
         <p className="text-xs text-slate-400 mt-1">
           {isFolder
             ? isRoot
-              ? '?
-              : '?
+              ? '项目文件夹'
+              : '文件夹'
             : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
         </p>
-        {inTrash && <p className="text-[10px] text-red-400 mt-0.5">?/p>}
+        {inTrash && <p className="text-[10px] text-red-400 mt-0.5">已删除</p>}
       </div>
 
       {/* Action Overlay (Bottom) - z-20 */}
@@ -261,9 +261,9 @@ const FileCard: React.FC<FileCardProps> = ({
               e.stopPropagation();
               onRestore();
             }}
-            title=""
+            title="还原"
           >
-            <RefreshCw size={14} /> 
+            <RefreshCw size={14} /> 还原
           </button>
         ) : (
           <>
@@ -274,7 +274,7 @@ const FileCard: React.FC<FileCardProps> = ({
                   e.stopPropagation();
                   onManageMembers();
                 }}
-                title=""
+                title="成员权限"
               >
                 <Users size={16} />
               </button>
@@ -285,7 +285,7 @@ const FileCard: React.FC<FileCardProps> = ({
                   e.stopPropagation();
                   onShare();
                 }}
-                title=""
+                title="分享"
               >
                 <Share2 size={16} />
               </button>
@@ -296,7 +296,7 @@ const FileCard: React.FC<FileCardProps> = ({
                 e.stopPropagation();
                 onRename();
               }}
-              title="?
+              title="重命�?
             >
               <Edit2 size={16} />
             </button>
@@ -332,7 +332,7 @@ const FileCard: React.FC<FileCardProps> = ({
                     onRename();
                   }}
                 >
-                  <Edit2 size={14} /> ?                </button>
+                  <Edit2 size={14} /> 重命�?                </button>
                 <button
                   className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 w-full text-left"
                   onClick={(e) => {
@@ -341,7 +341,7 @@ const FileCard: React.FC<FileCardProps> = ({
                     onShare();
                   }}
                 >
-                  <Share2 size={14} /> 
+                  <Share2 size={14} /> 分享链接
                 </button>
                 {isRoot && (
                   <button
@@ -352,7 +352,7 @@ const FileCard: React.FC<FileCardProps> = ({
                       onManageMembers();
                     }}
                   >
-                    <Users size={14} /> 
+                    <Users size={14} /> 成员权限
                   </button>
                 )}
                 {canDelete && (
@@ -366,7 +366,7 @@ const FileCard: React.FC<FileCardProps> = ({
                         onDelete();
                       }}
                     >
-                      <Trash2 size={14} /> 
+                      <Trash2 size={14} /> 删除
                     </button>
                   </>
                 )}
@@ -381,7 +381,7 @@ const FileCard: React.FC<FileCardProps> = ({
                     onRestore();
                   }}
                 >
-                  <RefreshCw size={14} /> 
+                  <RefreshCw size={14} /> 恢复文件
                 </button>
                 <div className="h-px bg-slate-100 my-1"></div>
                 <button
@@ -392,7 +392,7 @@ const FileCard: React.FC<FileCardProps> = ({
                     onPermanentDelete();
                   }}
                 >
-                  <XCircle size={14} /> 
+                  <XCircle size={14} /> 永久删除
                 </button>
               </>
             )}
@@ -406,7 +406,7 @@ const FileCard: React.FC<FileCardProps> = ({
 export const ProjectManager = () => {
   const [currentPath, setCurrentPath] = useState<
     { id: string | null; name: string }[]
-  >([{ id: null, name: '' }]);
+  >([{ id: null, name: '项目大厅' }]);
   const [files, setFiles] = useState<FileNode[]>([]);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(false);
@@ -474,7 +474,7 @@ export const ProjectManager = () => {
     // If in trash mode, navigating breadcrumbs resets to active mode
     if (viewMode === 'trash') {
       setViewMode('active');
-      setCurrentPath([{ id: null, name: '' }]);
+      setCurrentPath([{ id: null, name: '项目大厅' }]);
       return;
     }
     setCurrentPath(currentPath.slice(0, index + 1));
@@ -483,7 +483,7 @@ export const ProjectManager = () => {
   const handleCreateFolder = async (name: string) => {
     await mockApi.files.createFolder(currentFolderId, name);
     setIsCreateFolderOpen(false);
-    showToast(`${isRoot ? '' : '?} "${name}" `);
+    showToast(`${isRoot ? '项目' : '文件夹'} "${name}" 创建成功`);
     loadFiles();
   };
 
@@ -494,7 +494,7 @@ export const ProjectManager = () => {
       for (let i = 0; i < fileList.length; i++) {
         await mockApi.files.upload(currentFolderId, fileList[i]);
       }
-      showToast(`${fileList.length} );
+      showToast(`${fileList.length} 个文件上传成功`);
       loadFiles();
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -506,31 +506,31 @@ export const ProjectManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('?)) {
+    if (window.confirm('确定要删除吗？该项将被移至回收站�?)) {
       await mockApi.files.delete(id);
-      showToast('');
+      showToast('已移至回收站');
       loadFiles();
     }
   };
 
   const handleRestore = async (id: string) => {
     await mockApi.files.restore(id);
-    showToast('?);
+    showToast('文件已还�?);
     loadFiles();
   };
 
   const handlePermanentDelete = async (id: string) => {
-    if (window.confirm('?)) {
+    if (window.confirm('此操作将永久删除文件且无法恢复。确定继续吗�?)) {
       await mockApi.files.permanentlyDelete(id);
-      showToast('?);
+      showToast('文件已永久删�?);
       loadFiles();
     }
   };
 
   const handleEmptyTrash = async () => {
-    if (window.confirm('?)) {
+    if (window.confirm('确定要清空回收站吗？所有文件将无法找回�?)) {
       await mockApi.files.emptyTrash();
-      showToast('');
+      showToast('回收站已清空');
       loadFiles();
     }
   };
@@ -540,7 +540,7 @@ export const ProjectManager = () => {
     await mockApi.files.rename(renamingFile.id, newName);
     setIsRenameModalOpen(false);
     setRenamingFile(null);
-    showToast('?);
+    showToast('重命名成�?);
     loadFiles();
   };
 
@@ -548,7 +548,7 @@ export const ProjectManager = () => {
     await mockApi.files.toggleShare(file.id);
     // Simulate clipboard copy
     navigator.clipboard.writeText(`https://cloudcad.com/s/${file.id}`);
-    showToast('?);
+    showToast('分享链接已复制到剪贴�?);
     loadFiles();
   };
 
@@ -595,7 +595,7 @@ export const ProjectManager = () => {
       {isDragging && !isRoot && viewMode === 'active' && (
         <div className="absolute inset-0 z-50 bg-indigo-50/90 border-2 border-dashed border-indigo-500 rounded-xl flex flex-col items-center justify-center text-indigo-600 backdrop-blur-sm pointer-events-none">
           <Upload size={48} className="mb-4 animate-bounce" />
-          <h3 className="text-xl font-bold">?/h3>
+          <h3 className="text-xl font-bold">释放文件以上�?/h3>
         </div>
       )}
 
@@ -622,7 +622,7 @@ export const ProjectManager = () => {
           <nav className="flex items-center text-sm font-medium text-slate-500">
             {viewMode === 'trash' ? (
               <span className="flex items-center text-slate-900 font-bold gap-2">
-                <Trash2 size={18} /> ?              </span>
+                <Trash2 size={18} /> 回收�?              </span>
             ) : (
               currentPath.map((folder, index) => (
                 <React.Fragment key={index}>
@@ -649,7 +649,7 @@ export const ProjectManager = () => {
             }}
             icon={Trash2}
           >
-            {viewMode === 'trash' ? '' : '?}
+            {viewMode === 'trash' ? '返回文件' : '回收�?}
           </Button>
 
           {viewMode === 'trash' ? (
@@ -659,7 +659,7 @@ export const ProjectManager = () => {
               onClick={handleEmptyTrash}
               disabled={files.length === 0}
             >
-              ?            </Button>
+              清空回收�?            </Button>
           ) : (
             <>
               <input
@@ -675,7 +675,7 @@ export const ProjectManager = () => {
                   icon={Plus}
                   onClick={() => setIsCreateFolderOpen(true)}
                 >
-                  {isRoot ? '' : '?}
+                  {isRoot ? '新建项目' : '新建文件�?}
                 </Button>
               )}
               {!isRoot && (
@@ -684,7 +684,7 @@ export const ProjectManager = () => {
                   disabled={uploading}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  {uploading ? '?..' : ''}
+                  {uploading ? '上传�?..' : '上传文件'}
                 </Button>
               )}
             </>
@@ -695,7 +695,7 @@ export const ProjectManager = () => {
       {/* Grid */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-slate-400">
-          <Loader2 className="animate-spin mr-2" /> ?..
+          <Loader2 className="animate-spin mr-2" /> 加载�?..
         </div>
       ) : files.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl m-1 bg-slate-50/50">
@@ -705,14 +705,14 @@ export const ProjectManager = () => {
             <Folder size={48} className="text-slate-300 mb-4" />
           )}
           <p className="font-medium">
-            {viewMode === 'trash' ? '? : ''}
+            {viewMode === 'trash' ? '回收站为�? : '暂无内容'}
           </p>
           <p className="text-sm mt-2">
             {viewMode === 'trash'
-              ? '?
+              ? '删除的文件将显示在这�?
               : isRoot
-                ? '?
-                : ''}
+                ? '创建一个新项目开始协�?
+                : '拖拽文件到此处，或点击右上角上传'}
           </p>
         </div>
       ) : (
@@ -742,17 +742,17 @@ export const ProjectManager = () => {
       <PromptModal
         isOpen={isCreateFolderOpen}
         onClose={() => setIsCreateFolderOpen(false)}
-        title={isRoot ? '? : '?}
-        label={isRoot ? '' : '?}
-        defaultValue={isRoot ? '? : '?}
+        title={isRoot ? '创建新项�? : '新建文件�?}
+        label={isRoot ? '项目名称' : '文件夹名�?}
+        defaultValue={isRoot ? '新工程项�? : '新建文件�?}
         onSubmit={handleCreateFolder}
       />
 
       <PromptModal
         isOpen={isRenameModalOpen}
         onClose={() => setIsRenameModalOpen(false)}
-        title="?
-        label="?
+        title="重命�?
+        label="新名�?
         defaultValue={renamingFile?.name}
         onSubmit={handleRename}
       />
@@ -768,4 +768,3 @@ export const ProjectManager = () => {
     </div>
   );
 };
-

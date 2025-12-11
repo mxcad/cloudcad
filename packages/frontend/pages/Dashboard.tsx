@@ -1,5 +1,7 @@
 import { ArrowUpRight, Clock, FileText, HardDrive, Layers } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Button } from '../components/ui/Button';
+import { mockApi } from '../services/api';
 import {
   Bar,
   BarChart,
@@ -12,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Api } from '../services/api';
+
 import { FileType } from '../types';
 
 const StatCard = ({ title, value, subtext, icon: Icon, color }: any) => (
@@ -42,7 +44,7 @@ export const Dashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const data = await Api.dashboard.getStats();
+      const data = await mockApi.dashboard.getStats();
       setStats(data);
       setLoading(false);
     };

@@ -18,14 +18,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Api } from '../services/api';
 import {
   type Asset,
   type Library,
+  MAX_UPLOAD_SIZE,
   Permission,
-  type Role,
+  Role,
   type User,
 } from '../types';
+import { mockApi } from '../services/api';
 
 // --- Library Members Modal ---
 interface LibraryMemberModalProps {
@@ -44,14 +45,14 @@ const LibraryMembersModal: React.FC<LibraryMemberModalProps> = ({
 
   useEffect(() => {
     if (isOpen && library) {
-      Api.users.list().then(setUsers);
+      mockApi.users.list().then(setUsers);
       setSelectedIds(library.allowedUserIds || []);
     }
   }, [isOpen, library]);
 
   const handleSave = async () => {
     if (!library) return;
-    await Api.libraries.updateMembers(library.id, selectedIds);
+    await mockApi.libraries.updateMembers(library.id, selectedIds);
     onClose();
   };
 
@@ -140,7 +141,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ type }) => {
 
   // Initial Load
   useEffect(() => {
-    Api.auth.getRole().then(setRole);
+    mockApi.auth.getRole().then(setRole);
     loadData();
   }, [type, libraryId]);
 
@@ -149,13 +150,12 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ type }) => {
     try {
       if (libraryId) {
         // Load specific library details and assets
-        const lib = await Api.libraries.get(libraryId);
-        if (lib) setCurrentLibrary(lib);
-        const assetData = await Api.assets.listByLibrary(libraryId);
+        const lib = await mockApi.libraries.get(libraryId);
+        const assetData = await mockApi.assets.listByLibrary(libraryId);
         setAssets(assetData);
       } else {
         // Load list of libraries
-        const libData = await Api.libraries.list(type);
+        const libData = await mockApi.libraries.list(type);
         setLibraries(libData);
         setCurrentLibrary(null);
       }
@@ -175,7 +175,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ type }) => {
     e.preventDefault();
     if (!newLibName) return;
 
-    await Api.libraries.create(newLibName, type, newLibDesc);
+    await mockApi.libraries.create(newLibName, type, newLibDesc);
     setIsCreateModalOpen(false);
     setNewLibName('');
     setNewLibDesc('');
@@ -192,7 +192,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ type }) => {
     setUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
-        await Api.assets.add(libraryId, files[i], type);
+        await mockApi.assets.add(libraryId, files[i], type);
       }
       await loadData(); // Reload assets
     } catch (error: any) {

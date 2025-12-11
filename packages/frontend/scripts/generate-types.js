@@ -19,31 +19,51 @@ const OUTPUT_FILE = path.join(__dirname, '../types/api.ts');
 async function generateTypes() {
   try {
     console.log('🚀 开始生成前端类型定义...');
-    
+    console.log(`📍 输出文件路径: ${OUTPUT_FILE}`);
+
     // 确保输出目录存在
     const outputDir = path.dirname(OUTPUT_FILE);
+    console.log(`📁 输出目录: ${outputDir}`);
     if (!fs.existsSync(outputDir)) {
+      console.log('📁 创建输出目录...');
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
     // 检查后端服务是否运行
     console.log('📡 检查后端服务状态...');
+    console.log(`🔗 Swagger URL: ${SWAGGER_URL}-json`);
     try {
-      await fetch(`${SWAGGER_URL}-json`);
+      const response = await fetch(`${SWAGGER_URL}-json`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      console.log('✅ 后端服务正常运行');
     } catch (error) {
       console.error('❌ 后端服务未运行，请先启动后端: pnpm dev');
+      console.error('错误详情:', error.message);
       process.exit(1);
     }
 
     // 生成类型定义
     console.log('📝 正在生成类型定义...');
     const command = `npx openapi-typescript ${SWAGGER_URL}-json -o ${OUTPUT_FILE}`;
-    
-    execSync(command, { stdio: 'inherit' });
-    
-    console.log('✅ 类型定义生成完成!');
-    console.log(`📁 输出文件: ${OUTPUT_FILE}`);
-    
+
+    try {
+      execSync(command, { stdio: 'inherit' });
+      console.log('✅ 类型定义生成完成!');
+      console.log(`📁 输出文件: ${OUTPUT_FILE}`);
+
+      // 验证文件是否生成成功
+      if (fs.existsSync(OUTPUT_FILE)) {
+        const stats = fs.statSync(OUTPUT_FILE);
+        console.log(`📊 文件大小: ${stats.size} 字节`);
+      } else {
+        throw new Error('类型文件未生成');
+      }
+    } catch (execError) {
+      console.error('❌ 生成命令执行失败:', execError.message);
+      throw execError;
+    }
   } catch (error) {
     console.error('❌ 生成类型定义失败:', error.message);
     process.exit(1);
@@ -51,8 +71,6 @@ async function generateTypes() {
 }
 
 // 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
-  generateTypes();
-}
+generateTypes();
 
 export { generateTypes };

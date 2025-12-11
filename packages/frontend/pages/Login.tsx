@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LoginDto } from '../types/api';
+import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
+
+type LoginDto = components['schemas']['LoginDto'];
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState<LoginDto>({
-    email: '',
+    account: '',
     password: '',
   });
   const [loading, setLoading] = useState(false);
@@ -15,7 +17,7 @@ export const Login: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -28,11 +30,11 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      await login(formData.email, formData.password);
+      await login(formData.account, formData.password);
       // 跳转到首页
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || '登录失败，请检查邮箱和密码');
+      setError(err.response?.data?.message || '登录失败，请检查账号和密码');
     } finally {
       setLoading(false);
     }
@@ -63,18 +65,18 @@ export const Login: React.FC = () => {
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="email" className="sr-only">
-                邮箱地址
+              <label htmlFor="account" className="sr-only">
+                邮箱或用户名
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="account"
+                name="account"
+                type="text"
+                autoComplete="email username"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="邮箱地址"
-                value={formData.email}
+                placeholder="邮箱或用户名"
+                value={formData.account}
                 onChange={handleChange}
               />
             </div>

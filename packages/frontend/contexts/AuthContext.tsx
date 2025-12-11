@@ -1,12 +1,25 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User } from '../types/api';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
+import { components } from '../types/api';
 import { authApi } from '../services/apiService';
+
+type User = components['schemas']['UserDto'];
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; username: string; nickname?: string }) => Promise<void>;
+  login: (account: string, password: string) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    username: string;
+    nickname?: string;
+  }) => Promise<void>;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
@@ -41,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
-          
+
           // 验证 token 是否仍然有效
           const response = await authApi.getProfile();
           setUser(response.data);
@@ -54,36 +67,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
         }
       }
-      
+
       setLoading(false);
     };
 
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await authApi.login({ email, password });
+  const login = async (account: string, password: string) => {
+    const response = await authApi.login({ account, password });
     const { accessToken, refreshToken, user: userData } = response.data;
-    
+
     // 存储到本地存储
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
-    
+
     // 更新状态
     setToken(accessToken);
     setUser(userData);
   };
 
-  const register = async (data: { email: string; password: string; username: string; nickname?: string }) => {
+  const register = async (data: {
+    email: string;
+    password: string;
+    username: string;
+    nickname?: string;
+  }) => {
     const response = await authApi.register(data);
     const { accessToken, refreshToken, user: userData } = response.data;
-    
+
     // 存储到本地存储
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
-    
+
     // 更新状态
     setToken(accessToken);
     setUser(userData);
@@ -99,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      
+
       // 更新状态
       setToken(null);
       setUser(null);
