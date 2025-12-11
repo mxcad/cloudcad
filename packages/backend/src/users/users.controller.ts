@@ -1,0 +1,85 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../common/enums/permissions.enum';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { CreateUserDto } from './dto/create-user.dto';
+import { QueryUsersDto } from './dto/query-users.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UsersService } from './users.service';
+
+@Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @Get()
+  @Roles(UserRole.ADMIN)
+  findAll(@Query() query: QueryUsersDto) {
+    return this.usersService.findAll(query);
+  }
+
+  @Get(':id')
+  @Roles(UserRole.ADMIN)
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
+  }
+
+  @Patch(':id/status')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+  ) {
+    return this.usersService.updateStatus(id, status);
+  }
+
+  @Get('profile/me')
+  @HttpCode(HttpStatus.OK)
+  getProfile(@Param('id') id: string) {
+    // 这里应该从JWT token中获取用户ID
+    // 暂时使用参数，实际实现中需要从request.user获取
+    return this.usersService.findOne(id);
+  }
+
+  @Patch('profile/me')
+  @HttpCode(HttpStatus.OK)
+  updateProfile(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    // 用户只能更新自己的信息，排除角色和状态字段
+    const { role, status, ...profileData } = updateUserDto;
+    return this.usersService.update(id, profileData);
+  }
+}

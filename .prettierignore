@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+coverage
+*.min.js
+*.bundle.js
+package-lock.json
+pnpm-lock.yaml
+.git
+.vscode
+.idea
+DS_Store
+Thumbs.db
+*.log
+tmp
+temp

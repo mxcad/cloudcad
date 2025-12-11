@@ -1,0 +1,774 @@
+import {
+  AlertCircle,
+  ArrowLeft,
+  Box,
+  CheckCircle,
+  Edit2,
+  File as FileIcon,
+  Folder,
+  Image as ImageIcon,
+  Link,
+  Loader2,
+  Lock,
+  MoreVertical,
+  Plus,
+  RefreshCw,
+  Share2,
+  Trash2,
+  Upload,
+  Users,
+  XCircle,
+} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Button } from '../components/ui/Button';
+import { Modal, PromptModal } from '../components/ui/Modal';
+import { Api } from '../services/api';
+import { type FileNode, Permission, type Role, type User } from '../types';
+
+// --- Toast Component ---
+interface ToastProps {
+  message: string;
+  type?: 'success' | 'error';
+  onClose: () => void;
+}
+
+const Toast: React.FC<ToastProps> = ({
+  message,
+  type = 'success',
+  onClose,
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div
+      className={`fixed bottom-6 right-6 z-[60] px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 transform transition-all animate-fade-in-up ${type === 'success' ? 'bg-indigo-600 text-white' : 'bg-red-500 text-white'}`}
+    >
+      {type === 'success' ? (
+        <CheckCircle size={18} />
+      ) : (
+        <AlertCircle size={18} />
+      )}
+      <span className="font-medium text-sm">{message}</span>
+    </div>
+  );
+};
+
+// --- Subcomponent: Project Settings Modal ---
+interface MemberModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  project: FileNode | null;
+}
+
+const ProjectMembersModal: React.FC<MemberModalProps> = ({
+  isOpen,
+  onClose,
+  project,
+}) => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isOpen && project) {
+      Api.users.list().then(setUsers);
+      setSelectedIds(project.allowedUserIds || []);
+    }
+  }, [isOpen, project]);
+
+  const handleSave = async () => {
+    if (!project) return;
+    await Api.files.updateMembers(project.id, selectedIds);
+    onClose();
+  };
+
+  const toggleUser = (id: string) => {
+    if (selectedIds.includes(id))
+      setSelectedIds(selectedIds.filter((uid) => uid !== id));
+    else setSelectedIds([...selectedIds, id]);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="项目成员权限"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            取消
+          </Button>
+          <Button onClick={handleSave}>保存更改</Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-slate-500">
+          选择可以访问该项目的成员。如果不选，则对所有团队成员开放。
+        </p>
+        <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
+          {users.map((u) => (
+            <div
+              key={u.id}
+              className="flex items-center justify-between p-3 hover:bg-slate-50 cursor-pointer"
+              onClick={() => toggleUser(u.id)}
+            >
+              <div className="flex items-center gap-3">
+                <img src={u.avatar} className="w-8 h-8 rounded-full" />
+                <div>
+                  <p className="text-sm font-medium">{u.name}</p>
+                  <p className="text-xs text-slate-400">{u.email}</p>
+                </div>
+              </div>
+              <div
+                className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedIds.includes(u.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}
+              >
+                {selectedIds.includes(u.id) && (
+                  <Users size={12} className="text-white" />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <Lock size={16} /> 当前状态:{' '}
+          {selectedIds.length === 0
+            ? '公开项目 (全员可见)'
+            : `私有项目 (${selectedIds.length} 人可见)`}
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// --- Main Component ---
+
+interface FileCardProps {
+  file: FileNode;
+  activeMenuId: string | null;
+  onNavigate: (id: string, name: string) => void;
+  onDelete: () => void;
+  onShare: () => void;
+  onRename: () => void;
+  onManageMembers: () => void;
+  onRestore: () => void;
+  onPermanentDelete: () => void;
+  onToggleMenu: (id: string | null) => void;
+  isRoot: boolean;
+  canDelete: boolean;
+  inTrash: boolean;
+}
+
+const FileCard: React.FC<FileCardProps> = ({
+  file,
+  activeMenuId,
+  onNavigate,
+  onDelete,
+  onShare,
+  onRename,
+  onManageMembers,
+  onRestore,
+  onPermanentDelete,
+  onToggleMenu,
+  isRoot,
+  canDelete,
+  inTrash,
+}) => {
+  const isFolder = file.type === 'folder';
+  const isPrivate = file.allowedUserIds && file.allowedUserIds.length > 0;
+  const isMenuOpen = activeMenuId === file.id;
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onToggleMenu(null);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen, onToggleMenu]);
+
+  return (
+    <div
+      className={`group relative p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center gap-3 select-none ${inTrash ? 'opacity-80' : ''} ${isMenuOpen ? 'z-50' : 'z-0'}`}
+      onClick={() => isFolder && !inTrash && onNavigate(file.id, file.name)}
+    >
+      {/* Visual Badges */}
+      {isRoot && isPrivate && !inTrash && (
+        <div className="absolute top-3 left-3 text-amber-500" title="私有项目">
+          <Lock size={14} />
+        </div>
+      )}
+      {!isRoot && file.shared && !inTrash && (
+        <div
+          className="absolute top-3 left-3 text-emerald-500 bg-emerald-50 rounded-full p-0.5"
+          title="已开启分享"
+        >
+          <Link size={12} />
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div
+        className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 ${inTrash ? 'grayscale bg-slate-100 text-slate-400' : isFolder ? 'bg-indigo-50 text-indigo-500' : 'bg-slate-50 text-slate-500'}`}
+      >
+        {isFolder ? (
+          <Folder size={32} fill="currentColor" className="opacity-20" />
+        ) : file.type === 'cad' ? (
+          <Box
+            size={32}
+            className={`${inTrash ? 'text-slate-400' : 'text-indigo-500'}`}
+          />
+        ) : file.type === 'image' ? (
+          <ImageIcon
+            size={32}
+            className={`${inTrash ? 'text-slate-400' : 'text-emerald-500'}`}
+          />
+        ) : (
+          <FileIcon size={32} />
+        )}
+      </div>
+
+      <div className="text-center w-full relative z-0">
+        <p
+          className="font-medium text-slate-700 text-sm truncate w-full px-2"
+          title={file.name}
+        >
+          {file.name}
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          {isFolder
+            ? isRoot
+              ? '项目文件夹'
+              : '文件夹'
+            : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
+        </p>
+        {inTrash && <p className="text-[10px] text-red-400 mt-0.5">已删除</p>}
+      </div>
+
+      {/* Action Overlay (Bottom) - z-20 */}
+      <div className="absolute inset-x-0 bottom-0 p-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all flex justify-around rounded-b-xl z-20">
+        {inTrash ? (
+          <button
+            className="flex-1 p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded text-xs flex items-center justify-center gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRestore();
+            }}
+            title="还原"
+          >
+            <RefreshCw size={14} /> 还原
+          </button>
+        ) : (
+          <>
+            {isRoot ? (
+              <button
+                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onManageMembers();
+                }}
+                title="成员权限"
+              >
+                <Users size={16} />
+              </button>
+            ) : (
+              <button
+                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShare();
+                }}
+                title="分享"
+              >
+                <Share2 size={16} />
+              </button>
+            )}
+            <button
+              className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+              }}
+              title="重命名"
+            >
+              <Edit2 size={16} />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Menu Button (Top Right) - z-40. Placed AFTER overlay in DOM to ensure stacking. */}
+      <div
+        className={`absolute top-3 right-3 transition-opacity z-40 ${isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        ref={menuRef}
+      >
+        <button
+          className={`p-1 hover:bg-slate-100 rounded-full ${isMenuOpen ? 'bg-slate-100 text-slate-900 opacity-100' : 'text-slate-400'}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMenu(isMenuOpen ? null : file.id);
+          }}
+        >
+          <MoreVertical size={16} />
+        </button>
+
+        {/* Dropdown Menu */}
+        {isMenuOpen && (
+          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-50 flex flex-col text-left">
+            {!inTrash ? (
+              <>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 w-full text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleMenu(null);
+                    onRename();
+                  }}
+                >
+                  <Edit2 size={14} /> 重命名
+                </button>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 w-full text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleMenu(null);
+                    onShare();
+                  }}
+                >
+                  <Share2 size={14} /> 分享链接
+                </button>
+                {isRoot && (
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 w-full text-left"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleMenu(null);
+                      onManageMembers();
+                    }}
+                  >
+                    <Users size={14} /> 成员权限
+                  </button>
+                )}
+                {canDelete && (
+                  <>
+                    <div className="h-px bg-slate-100 my-1"></div>
+                    <button
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleMenu(null);
+                        onDelete();
+                      }}
+                    >
+                      <Trash2 size={14} /> 删除
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 w-full text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleMenu(null);
+                    onRestore();
+                  }}
+                >
+                  <RefreshCw size={14} /> 恢复文件
+                </button>
+                <div className="h-px bg-slate-100 my-1"></div>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleMenu(null);
+                    onPermanentDelete();
+                  }}
+                >
+                  <XCircle size={14} /> 永久删除
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const ProjectManager = () => {
+  const [currentPath, setCurrentPath] = useState<
+    { id: string | null; name: string }[]
+  >([{ id: null, name: '项目大厅' }]);
+  const [files, setFiles] = useState<FileNode[]>([]);
+  const [role, setRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // View Mode: 'active' or 'trash'
+  const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
+
+  // UI States
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: 'success' | 'error';
+  } | null>(null);
+
+  // Modals
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+
+  // Selection references
+  const [selectedProject, setSelectedProject] = useState<FileNode | null>(null);
+  const [renamingFile, setRenamingFile] = useState<FileNode | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentFolderId = currentPath[currentPath.length - 1].id;
+  const isRoot = currentFolderId === null;
+
+  useEffect(() => {
+    Api.auth.getRole().then(setRole);
+    loadFiles();
+  }, [currentFolderId, viewMode]);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+  };
+
+  const loadFiles = async () => {
+    setLoading(true);
+    try {
+      let data;
+      if (viewMode === 'trash') {
+        data = await Api.files.getTrash();
+      } else {
+        data = await Api.files.list(currentFolderId);
+      }
+      setFiles(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNavigate = (id: string, name: string) => {
+    setCurrentPath([...currentPath, { id, name }]);
+  };
+
+  const handleNavigateUp = () => {
+    if (currentPath.length > 1) {
+      setCurrentPath(currentPath.slice(0, -1));
+    }
+  };
+
+  const handleBreadcrumbClick = (index: number) => {
+    // If in trash mode, navigating breadcrumbs resets to active mode
+    if (viewMode === 'trash') {
+      setViewMode('active');
+      setCurrentPath([{ id: null, name: '项目大厅' }]);
+      return;
+    }
+    setCurrentPath(currentPath.slice(0, index + 1));
+  };
+
+  const handleCreateFolder = async (name: string) => {
+    await Api.files.createFolder(currentFolderId, name);
+    setIsCreateFolderOpen(false);
+    showToast(`${isRoot ? '项目' : '文件夹'} "${name}" 创建成功`);
+    loadFiles();
+  };
+
+  const handleFileUpload = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    setUploading(true);
+    try {
+      for (let i = 0; i < fileList.length; i++) {
+        await Api.files.upload(currentFolderId, fileList[i]);
+      }
+      showToast(`${fileList.length} 个文件上传成功`);
+      loadFiles();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setUploading(false);
+      setIsDragging(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('确定要删除吗？该项将被移至回收站。')) {
+      await Api.files.delete(id);
+      showToast('已移至回收站');
+      loadFiles();
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    await Api.files.restore(id);
+    showToast('文件已还原');
+    loadFiles();
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    if (window.confirm('此操作将永久删除文件且无法恢复。确定继续吗？')) {
+      await Api.files.permanentlyDelete(id);
+      showToast('文件已永久删除');
+      loadFiles();
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (window.confirm('确定要清空回收站吗？所有文件将无法找回。')) {
+      await Api.files.emptyTrash();
+      showToast('回收站已清空');
+      loadFiles();
+    }
+  };
+
+  const handleRename = async (newName: string) => {
+    if (!renamingFile || !newName.trim()) return;
+    await Api.files.rename(renamingFile.id, newName);
+    setIsRenameModalOpen(false);
+    setRenamingFile(null);
+    showToast('重命名成功');
+    loadFiles();
+  };
+
+  const handleShare = async (file: FileNode) => {
+    await Api.files.toggleShare(file.id);
+    // Simulate clipboard copy
+    navigator.clipboard.writeText(`https://cloudcad.com/s/${file.id}`);
+    showToast('分享链接已复制到剪贴板');
+    loadFiles();
+  };
+
+  const openRenameModal = (file: FileNode) => {
+    setRenamingFile(file);
+    setIsRenameModalOpen(true);
+  };
+
+  const openMemberManagement = (file: FileNode) => {
+    setSelectedProject(file);
+    setIsMembersModalOpen(true);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (viewMode === 'active') setIsDragging(true);
+  };
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (viewMode === 'active') handleFileUpload(e.dataTransfer.files);
+  };
+
+  // Permissions
+  const canCreate =
+    role?.permissions.includes(Permission.PROJECT_CREATE) ||
+    (!isRoot && role?.permissions.includes(Permission.ASSET_UPLOAD));
+  const canDelete =
+    role?.permissions.includes(Permission.PROJECT_DELETE) || !isRoot; // Strict delete for projects, looser for files inside
+
+  return (
+    <div
+      className="h-full flex flex-col relative"
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onClick={() => setActiveMenuId(null)}
+    >
+      {/* Drag Overlay */}
+      {isDragging && !isRoot && viewMode === 'active' && (
+        <div className="absolute inset-0 z-50 bg-indigo-50/90 border-2 border-dashed border-indigo-500 rounded-xl flex flex-col items-center justify-center text-indigo-600 backdrop-blur-sm pointer-events-none">
+          <Upload size={48} className="mb-4 animate-bounce" />
+          <h3 className="text-xl font-bold">释放文件以上传</h3>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.msg}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          {currentPath.length > 1 && viewMode === 'active' && (
+            <button
+              onClick={handleNavigateUp}
+              className="p-2 hover:bg-slate-100 rounded-full mr-2 text-slate-500"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          <nav className="flex items-center text-sm font-medium text-slate-500">
+            {viewMode === 'trash' ? (
+              <span className="flex items-center text-slate-900 font-bold gap-2">
+                <Trash2 size={18} /> 回收站
+              </span>
+            ) : (
+              currentPath.map((folder, index) => (
+                <React.Fragment key={index}>
+                  {index > 0 && <span className="mx-2 text-slate-300">/</span>}
+                  <button
+                    onClick={() => handleBreadcrumbClick(index)}
+                    className={`hover:text-indigo-600 transition-colors ${index === currentPath.length - 1 ? 'text-slate-900 font-bold' : ''}`}
+                  >
+                    {folder.name}
+                  </button>
+                </React.Fragment>
+              ))
+            )}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            variant={viewMode === 'trash' ? 'secondary' : 'ghost'}
+            className={`${viewMode === 'trash' ? 'bg-slate-200 text-slate-900' : 'text-slate-500'}`}
+            onClick={() => {
+              setViewMode(viewMode === 'active' ? 'trash' : 'active');
+              setActiveMenuId(null);
+            }}
+            icon={Trash2}
+          >
+            {viewMode === 'trash' ? '返回文件' : '回收站'}
+          </Button>
+
+          {viewMode === 'trash' ? (
+            <Button
+              variant="danger"
+              icon={XCircle}
+              onClick={handleEmptyTrash}
+              disabled={files.length === 0}
+            >
+              清空回收站
+            </Button>
+          ) : (
+            <>
+              <input
+                type="file"
+                multiple
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => handleFileUpload(e.target.files)}
+              />
+              {canCreate && (
+                <Button
+                  variant="outline"
+                  icon={Plus}
+                  onClick={() => setIsCreateFolderOpen(true)}
+                >
+                  {isRoot ? '新建项目' : '新建文件夹'}
+                </Button>
+              )}
+              {!isRoot && (
+                <Button
+                  icon={uploading ? Loader2 : Upload}
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? '上传中...' : '上传文件'}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Grid */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center text-slate-400">
+          <Loader2 className="animate-spin mr-2" /> 加载中...
+        </div>
+      ) : files.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl m-1 bg-slate-50/50">
+          {viewMode === 'trash' ? (
+            <Trash2 size={48} className="text-slate-300 mb-4" />
+          ) : (
+            <Folder size={48} className="text-slate-300 mb-4" />
+          )}
+          <p className="font-medium">
+            {viewMode === 'trash' ? '回收站为空' : '暂无内容'}
+          </p>
+          <p className="text-sm mt-2">
+            {viewMode === 'trash'
+              ? '删除的文件将显示在这里'
+              : isRoot
+                ? '创建一个新项目开始协作'
+                : '拖拽文件到此处，或点击右上角上传'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-10 content-start">
+          {files.map((file) => (
+            <FileCard
+              key={file.id}
+              file={file}
+              activeMenuId={activeMenuId}
+              onNavigate={handleNavigate}
+              onDelete={() => handleDelete(file.id)}
+              onShare={() => handleShare(file)}
+              onRename={() => openRenameModal(file)}
+              onManageMembers={() => openMemberManagement(file)}
+              onRestore={() => handleRestore(file.id)}
+              onPermanentDelete={() => handlePermanentDelete(file.id)}
+              onToggleMenu={(id) => setActiveMenuId(id)}
+              isRoot={isRoot}
+              canDelete={canDelete}
+              inTrash={viewMode === 'trash'}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Modals */}
+      <PromptModal
+        isOpen={isCreateFolderOpen}
+        onClose={() => setIsCreateFolderOpen(false)}
+        title={isRoot ? '创建新项目' : '新建文件夹'}
+        label={isRoot ? '项目名称' : '文件夹名称'}
+        defaultValue={isRoot ? '新工程项目' : '新建文件夹'}
+        onSubmit={handleCreateFolder}
+      />
+
+      <PromptModal
+        isOpen={isRenameModalOpen}
+        onClose={() => setIsRenameModalOpen(false)}
+        title="重命名"
+        label="新名称"
+        defaultValue={renamingFile?.name}
+        onSubmit={handleRename}
+      />
+
+      <ProjectMembersModal
+        isOpen={isMembersModalOpen}
+        onClose={() => {
+          setIsMembersModalOpen(false);
+          loadFiles(); // Refresh to update lock icon
+        }}
+        project={selectedProject}
+      />
+    </div>
+  );
+};
