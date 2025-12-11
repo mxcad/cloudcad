@@ -13,7 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-fastify';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FilePermission } from '../common/decorators/file-permission.decorator';
 import { ProjectPermission } from '../common/decorators/project-permission.decorator';
