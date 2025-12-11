@@ -13,10 +13,10 @@
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm format:check && pnpm type-check",
     "check:fix": "pnpm lint:fix && pnpm format",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "generate:types": "node scripts/generate-types.js"
   },
   "dependencies": {
-    "@cloudcad/shared-types": "workspace:*",
     "lucide-react": "^0.556.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

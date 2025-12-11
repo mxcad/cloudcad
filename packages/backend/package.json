@@ -42,7 +42,6 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@cloudcad/shared-types": "workspace:*",
     "@fastify/static": "^8.3.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
