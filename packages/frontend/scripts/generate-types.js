@@ -7,8 +7,13 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const SWAGGER_URL = 'http://localhost:3001/api-docs';
+// ES 模块中获取 __dirname 的等效方法
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const SWAGGER_URL = 'http://localhost:3001/api/docs';
 const OUTPUT_FILE = path.join(__dirname, '../types/api.ts');
 
 async function generateTypes() {
@@ -24,7 +29,7 @@ async function generateTypes() {
     // 检查后端服务是否运行
     console.log('📡 检查后端服务状态...');
     try {
-      await fetch(`${SWAGGER_URL}/json`);
+      await fetch(`${SWAGGER_URL}-json`);
     } catch (error) {
       console.error('❌ 后端服务未运行，请先启动后端: pnpm dev');
       process.exit(1);
@@ -32,7 +37,7 @@ async function generateTypes() {
 
     // 生成类型定义
     console.log('📝 正在生成类型定义...');
-    const command = `npx openapi-typescript ${SWAGGER_URL} -o ${OUTPUT_FILE}`;
+    const command = `npx openapi-typescript ${SWAGGER_URL}-json -o ${OUTPUT_FILE}`;
     
     execSync(command, { stdio: 'inherit' });
     

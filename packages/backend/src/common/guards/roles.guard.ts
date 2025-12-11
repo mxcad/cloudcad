@@ -22,8 +22,8 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()]
     );
 
-    if (!requiredRoles) {
-      return true; // 没有角色要求，允许访问
+    if (!requiredRoles || requiredRoles.length === 0) {
+      return true; // 没有角色要求或空数组，允许访问
     }
 
     const request = context.switchToHttp().getRequest();

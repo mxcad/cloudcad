@@ -136,10 +136,8 @@ describe('PermissionService', () => {
       expect(result).toBe(true);
       expect(prisma.projectMember.findFirst).toHaveBeenCalledWith({
         where: {
-          userId_projectId: {
-            userId: mockUser.id,
-            projectId: 'project-id',
-          },
+          userId: mockUser.id,
+          projectId: 'project-id',
         },
         select: { role: true },
       });
