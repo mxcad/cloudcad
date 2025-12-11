@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { Redis } from 'ioredis';
 
@@ -38,14 +39,14 @@ describe('TokenBlacklistService', () => {
           useValue: mockConfigService,
         },
         {
-          provide: 'REDIS_CLIENT',
+          provide: getRedisConnectionToken(),
           useValue: mockRedis,
         },
       ],
     }).compile();
 
     service = module.get<TokenBlacklistService>(TokenBlacklistService);
-    redis = module.get<Redis>('REDIS_CLIENT');
+    redis = module.get<Redis>(getRedisConnectionToken());
     configService = module.get<ConfigService>(ConfigService);
   });
 

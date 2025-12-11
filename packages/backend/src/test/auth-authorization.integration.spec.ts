@@ -13,6 +13,7 @@ import { PermissionService } from '../common/services/permission.service';
 import { DatabaseService } from '../database/database.service';
 import { RedisTestingModule } from '../redis/redis-testing.module';
 import { UsersService } from '../users/users.service';
+import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
 
 describe('Authentication & Authorization Integration Tests', () => {
   let app: INestApplication;
@@ -32,7 +33,7 @@ describe('Authentication & Authorization Integration Tests', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-    .overrideProvider('REDIS_CLIENT')
+    .overrideProvider(getRedisConnectionToken())
     .useValue({
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),

@@ -1,6 +1,7 @@
-import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Redis } from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class TokenBlacklistService implements OnModuleInit {
@@ -10,7 +11,7 @@ export class TokenBlacklistService implements OnModuleInit {
 
   constructor(
     private configService: ConfigService,
-    @Inject('REDIS_CLIENT') private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
   onModuleInit() {

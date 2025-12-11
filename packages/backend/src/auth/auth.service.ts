@@ -1,13 +1,11 @@
 import { Injectable, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 
 @Injectable()

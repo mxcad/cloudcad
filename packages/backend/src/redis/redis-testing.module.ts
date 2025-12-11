@@ -1,4 +1,5 @@
 import { Module, Global } from '@nestjs/common';
+import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
 
 // Mock Redis for testing
 const mockRedis = {
@@ -19,10 +20,10 @@ const mockRedis = {
 @Module({
   providers: [
     {
-      provide: 'REDIS_CLIENT',
+      provide: getRedisConnectionToken(),
       useValue: mockRedis,
     },
   ],
-  exports: ['REDIS_CLIENT'],
+  exports: [getRedisConnectionToken()],
 })
 export class RedisTestingModule {}
