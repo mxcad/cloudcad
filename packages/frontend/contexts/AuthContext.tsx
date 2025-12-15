@@ -3,6 +3,8 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import { components } from '../types/api';
@@ -40,41 +42,55 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // 检查本地存储的 token 和用户信息
-  useEffect(() => {
-    const initAuth = async () => {
+  // 同步初始化，避免闪烁
+  const getInitialAuthState = () => {
+    try {
       const storedToken = localStorage.getItem('accessToken');
       const storedUser = localStorage.getItem('user');
-
+      
       if (storedToken && storedUser) {
-        try {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-
-          // 验证 token 是否仍然有效
-          const response = await authApi.getProfile();
-          setUser(response.data);
-        } catch (error) {
-          // Token 无效，清除本地存储
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
-        }
+        return {
+          token: storedToken,
+          user: JSON.parse(storedUser),
+          loading: false
+        };
       }
-
-      setLoading(false);
+    } catch (error) {
+      console.error('[AuthContext] 初始化认证状态失败:', error);
+    }
+    
+    return {
+      token: null,
+      user: null,
+      loading: false
     };
+  };
 
-    initAuth();
-  }, []);
+  const initialState = getInitialAuthState();
+  const [user, setUser] = useState<User | null>(initialState.user);
+  const [token, setToken] = useState<string | null>(initialState.token);
+  const [loading, setLoading] = useState<boolean>(initialState.loading);
 
-  const login = async (account: string, password: string) => {
+  // 异步验证 token
+  useEffect(() => {
+    if (token && user) {
+      console.log('[AuthContext] 验证 token 有效性');
+      authApi.getProfile().then((response) => {
+        setUser(response.data);
+        console.log('[AuthContext] Token验证成功');
+      }).catch((error) => {
+        console.error('[AuthContext] Token验证失败:', error);
+        // Token 无效，清除本地存储
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      });
+    }
+  }, []); // 只在组件挂载时执行一次
+
+  const login = useCallback(async (account: string, password: string) => {
     const response = await authApi.login({ account, password });
     const { accessToken, refreshToken, user: userData } = response.data;
 
@@ -86,28 +102,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // 更新状态
     setToken(accessToken);
     setUser(userData);
-  };
+  }, []);
 
-  const register = async (data: {
+  const register = useCallback(async (data: {
     email: string;
     password: string;
     username: string;
     nickname?: string;
   }) => {
-    const response = await authApi.register(data);
-    const { accessToken, refreshToken, user: userData } = response.data;
+    try {
+      const response = await authApi.register(data);
+      const { accessToken, refreshToken, user: userData } = response.data;
 
-    // 存储到本地存储
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+      // 存储到本地存储
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(userData));
 
-    // 更新状态
-    setToken(accessToken);
-    setUser(userData);
-  };
+      // 更新状态
+      setToken(accessToken);
+      setUser(userData);
+    } catch (error) {
+      console.error('[AuthContext] 注册失败:', error);
+      throw error;
+    }
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch (error) {
@@ -122,9 +143,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(null);
       setUser(null);
     }
-  };
+  }, []);
 
-  const value: AuthContextType = {
+  const value = useMemo<AuthContextType>(() => ({
     user,
     token,
     login,
@@ -132,7 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     loading,
     isAuthenticated: !!token && !!user,
-  };
+  }), [user, token, login, register, logout, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
