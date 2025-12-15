@@ -30,9 +30,24 @@ class ApiService {
       }
     );
 
-    // 响应拦截器 - 处理 token 刷新
+    // 响应拦截器 - 自动解包后端响应格式和处理 token 刷新
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        console.log('[ApiService] API响应:', {
+          url: response.config.url,
+          status: response.status,
+          data: response.data,
+        });
+        
+        // 自动解包：后端返回 {code, message, data, timestamp} -> 前端使用 data
+        if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+          const originalData = response.data;
+          response.data = originalData.data;
+          console.log('[ApiService] 自动解包:', { originalData, extractedData: response.data });
+        }
+        
+        return response;
+      },
       async (error) => {
         const originalRequest = error.config;
 
@@ -50,7 +65,9 @@ class ApiService {
                 }
               );
 
-              const { accessToken } = response.data;
+              // 注意：这里不会经过拦截器自动解包，需要手动处理
+              const responseData = response.data.data || response.data;
+              const { accessToken } = responseData;
               localStorage.setItem('accessToken', accessToken);
 
               // 重新发送原始请求
@@ -115,26 +132,12 @@ class ApiService {
     return this.client.delete(url, config);
   }
 
-  // 文件上传
+  // 文件上传（已改为JSON格式）
   async upload<T = any>(
     url: string,
-    file: File,
-    additionalData?: Record<string, any>
+    data: any
   ): Promise<AxiosResponse<T>> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    if (additionalData) {
-      Object.entries(additionalData).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-    }
-
-    return this.client.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return this.client.post(url, data);
   }
 }
 
@@ -188,27 +191,86 @@ export const usersApi = {
   delete: (id: string) => apiService.delete(`/users/${id}`),
 };
 
-// 项目相关的 API 方法
+// 项目相关的 API 方法（基于 FileSystemNode 统一模型）
 export const projectsApi = {
-  list: () => apiService.get('/projects'),
+  // 项目管理
+  list: () => apiService.get('/file-system/projects'),
 
   create: (data: { name: string; description?: string }) =>
-    apiService.post('/projects', data),
+    apiService.post('/file-system/projects', data),
+
+  get: (projectId: string) => 
+    apiService.get(`/file-system/projects/${projectId}`),
 
   update: (
-    id: string,
+    projectId: string,
     data: { name?: string; description?: string; status?: string }
-  ) => apiService.patch(`/projects/${id}`, data),
+  ) => apiService.patch(`/file-system/projects/${projectId}`, data),
 
-  delete: (id: string) => apiService.delete(`/projects/${id}`),
+  delete: (projectId: string) => apiService.delete(`/file-system/projects/${projectId}`),
+
+  // 文件夹管理
+  createFolder: (parentId: string, data: { name: string }) =>
+    apiService.post(`/file-system/nodes/${parentId}/folders`, data),
+
+  // 节点管理
+  getNode: (nodeId: string) => 
+    apiService.get(`/file-system/nodes/${nodeId}`),
+
+  getChildren: (nodeId: string) => 
+    apiService.get(`/file-system/nodes/${nodeId}/children`),
+
+  updateNode: (
+    nodeId: string,
+    data: { name?: string; description?: string }
+  ) => apiService.patch(`/file-system/nodes/${nodeId}`, data),
+
+  deleteNode: (nodeId: string) => 
+    apiService.delete(`/file-system/nodes/${nodeId}`),
+
+  moveNode: (nodeId: string, targetParentId: string) =>
+    apiService.post(`/file-system/nodes/${nodeId}/move`, { targetParentId }),
+
+  // 存储空间信息
+  getStorageInfo: () => apiService.get('/file-system/storage'),
+
+  // 项目成员管理（保留旧的 API 路径，如果后端有实现的话）
+  getMembers: (projectId: string) => 
+    apiService.get(`/projects/${projectId}/members`),
+
+  addMember: (projectId: string, data: { userId: string; role: string }) =>
+    apiService.post(`/projects/${projectId}/members`, data),
+
+  removeMember: (projectId: string, userId: string) =>
+    apiService.delete(`/projects/${projectId}/members/${userId}`),
+
+  updateMember: (projectId: string, userId: string, data: { role: string }) =>
+    apiService.patch(`/projects/${projectId}/members/${userId}`, data),
 };
 
 // 文件相关的 API 方法
 export const filesApi = {
   list: () => apiService.get('/files'),
 
-  upload: (file: File, projectId: string) =>
-    apiService.upload('/files/upload', file, { projectId }),
+  upload: async (file: File, projectId: string) => {
+    // 将文件转换为 base64 编码
+    const fileContent = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1]; // 移除 data:*/*;base64, 前缀
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    
+    return apiService.post('/file-system/files/upload', {
+      fileName: file.name,
+      fileContent,
+      projectId,
+    });
+  },
 
   get: (id: string) => apiService.get(`/files/${id}`),
 
@@ -229,4 +291,25 @@ export const filesApi = {
 
   removeAccess: (id: string, userId: string) =>
     apiService.delete(`/files/${id}/access/${userId}`),
+};
+
+// 管理员相关的 API 方法
+export const adminApi = {
+  getStats: () => apiService.get('/admin/stats'),
+  
+  getCacheStats: () => apiService.get('/admin/permissions/cache'),
+  
+  cleanupCache: () => apiService.post('/admin/permissions/cache/cleanup'),
+  
+  clearUserCache: (userId: string) => 
+    apiService.delete(`/admin/permissions/cache/user/${userId}`),
+  
+  clearProjectCache: (projectId: string) => 
+    apiService.delete(`/admin/permissions/cache/project/${projectId}`),
+  
+  clearFileCache: (fileId: string) => 
+    apiService.delete(`/admin/permissions/cache/file/${fileId}`),
+  
+  getUserPermissions: (userId: string) => 
+    apiService.get(`/admin/permissions/user/${userId}`),
 };

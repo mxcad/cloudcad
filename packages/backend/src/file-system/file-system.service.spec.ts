@@ -1,0 +1,738 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { FileSystemService } from './file-system.service';
+import { DatabaseService } from '../database/database.service';
+import { FileStatus, ProjectStatus } from '@prisma/client';
+
+describe('FileSystemService', () => {
+  let service: FileSystemService;
+  let prisma: DatabaseService;
+
+  const mockPrisma = {
+    fileSystemNode: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FileSystemService,
+        {
+          provide: DatabaseService,
+          useValue: mockPrisma,
+        },
+      ],
+    }).compile();
+
+    service = module.get<FileSystemService>(FileSystemService);
+    prisma = module.get<DatabaseService>(DatabaseService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('createProject', () => {
+    it('应该成功创建项目', async () => {
+      const userId = 'user-123';
+      const dto = { name: '测试项目', description: '描述' };
+      const mockProject = {
+        id: 'project-123',
+        ...dto,
+        isFolder: true,
+        isRoot: true,
+        projectStatus: ProjectStatus.ACTIVE,
+        ownerId: userId,
+        members: [{ userId, role: 'OWNER', user: { id: userId, username: 'test' } }],
+      };
+
+      mockPrisma.fileSystemNode.create.mockResolvedValue(mockProject);
+
+      const result = await service.createProject(userId, dto);
+
+      expect(result).toEqual(mockProject);
+      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith({
+        data: {
+          name: dto.name,
+          description: dto.description,
+          isFolder: true,
+          isRoot: true,
+          projectStatus: ProjectStatus.ACTIVE,
+          ownerId: userId,
+          members: {
+            create: {
+              userId,
+              role: 'OWNER',
+            },
+          },
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  username: true,
+                  nickname: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it('应该处理创建失败的情况', async () => {
+      const userId = 'user-123';
+      const dto = { name: '测试项目' };
+
+      mockPrisma.fileSystemNode.create.mockRejectedValue(new Error('数据库错误'));
+
+      await expect(service.createProject(userId, dto)).rejects.toThrow('数据库错误');
+    });
+  });
+
+  describe('getUserProjects', () => {
+    it('应该返回用户的所有项目', async () => {
+      const userId = 'user-123';
+      const mockProjects = [
+        {
+          id: 'project-1',
+          name: '项目1',
+          isRoot: true,
+          members: [],
+          _count: { children: 5, members: 2 },
+        },
+      ];
+
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue(mockProjects);
+
+      const result = await service.getUserProjects(userId);
+
+      expect(result).toEqual(mockProjects);
+      expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledWith({
+        where: {
+          isRoot: true,
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+        include: expect.any(Object),
+        orderBy: {
+          updatedAt: 'desc',
+        },
+      });
+    });
+  });
+
+  describe('getProject', () => {
+    it('应该返回项目详情', async () => {
+      const projectId = 'project-123';
+      const mockProject = {
+        id: projectId,
+        name: '项目',
+        isRoot: true,
+        members: [],
+        children: [],
+      };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockProject);
+
+      const result = await service.getProject(projectId);
+
+      expect(result).toEqual(mockProject);
+    });
+
+    it('应该在项目不存在时抛出异常', async () => {
+      const projectId = 'nonexistent';
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(service.getProject(projectId)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateProject', () => {
+    it('应该成功更新项目', async () => {
+      const projectId = 'project-123';
+      const dto = { name: '新名称', description: '新描述', status: 'ARCHIVED' };
+      const mockUpdated = { id: projectId, ...dto };
+
+      mockPrisma.fileSystemNode.update.mockResolvedValue(mockUpdated);
+
+      const result = await service.updateProject(projectId, dto);
+
+      expect(result).toEqual(mockUpdated);
+      expect(mockPrisma.fileSystemNode.update).toHaveBeenCalledWith({
+        where: { id: projectId, isRoot: true },
+        data: {
+          name: dto.name,
+          description: dto.description,
+          projectStatus: dto.status,
+        },
+        include: expect.any(Object),
+      });
+    });
+
+    it('应该处理更新错误', async () => {
+      const projectId = 'project-123';
+      const dto = { name: '新名称' };
+
+      mockPrisma.fileSystemNode.update.mockRejectedValue(new Error('Update failed'));
+
+      await expect(service.updateProject(projectId, dto)).rejects.toThrow('Update failed');
+    });
+  });
+
+  describe('deleteProject', () => {
+    it('应该成功删除项目', async () => {
+      const projectId = 'project-123';
+
+      mockPrisma.fileSystemNode.delete.mockResolvedValue({});
+
+      const result = await service.deleteProject(projectId);
+
+      expect(result).toEqual({ message: '项目删除成功' });
+      expect(mockPrisma.fileSystemNode.delete).toHaveBeenCalledWith({
+        where: { id: projectId, isRoot: true },
+      });
+    });
+
+    it('应该处理删除错误', async () => {
+      const projectId = 'project-123';
+
+      mockPrisma.fileSystemNode.delete.mockRejectedValue(new Error('Delete failed'));
+
+      await expect(service.deleteProject(projectId)).rejects.toThrow('Delete failed');
+    });
+  });
+
+  describe('createFolder', () => {
+    it('应该成功创建文件夹', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const dto = { name: '新文件夹' };
+      const mockParent = { isFolder: true, isRoot: false };
+      const mockFolder = {
+        id: 'folder-123',
+        name: dto.name,
+        isFolder: true,
+        parentId,
+      };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockResolvedValue(mockFolder);
+
+      const result = await service.createFolder(userId, parentId, dto);
+
+      expect(result).toEqual(mockFolder);
+    });
+
+    it('应该在父节点不存在时抛出异常', async () => {
+      const userId = 'user-123';
+      const parentId = 'nonexistent';
+      const dto = { name: '新文件夹' };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('应该在父节点不是文件夹时抛出异常', async () => {
+      const userId = 'user-123';
+      const parentId = 'file-123';
+      const dto = { name: '新文件夹' };
+      const mockParent = { isFolder: false };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+
+      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('应该处理创建文件夹时的数据库错误', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const dto = { name: '新文件夹' };
+      const mockParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow('Database error');
+    });
+  });
+
+  describe('getNodeTree', () => {
+    it('应该返回节点树结构', async () => {
+      const nodeId = 'node-123';
+      const mockNode = {
+        id: nodeId,
+        name: '节点',
+        children: [],
+        owner: { id: 'user-123', username: 'test' },
+      };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+
+      const result = await service.getNodeTree(nodeId);
+
+      expect(result).toEqual(mockNode);
+    });
+
+    it('应该在节点不存在时抛出异常', async () => {
+      const nodeId = 'nonexistent';
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(service.getNodeTree(nodeId)).rejects.toThrow(NotFoundException);
+    });
+
+    it('应该处理查询节点树时的错误', async () => {
+      const nodeId = 'node-123';
+
+      mockPrisma.fileSystemNode.findUnique.mockRejectedValue(new Error('Query error'));
+
+      await expect(service.getNodeTree(nodeId)).rejects.toThrow('Query error');
+    });
+  });
+
+  describe('getChildren', () => {
+    it('应该返回子节点列表', async () => {
+      const nodeId = 'node-123';
+      const mockChildren = [
+        { id: 'child-1', name: '子节点1', isFolder: true },
+        { id: 'child-2', name: '子节点2', isFolder: false },
+      ];
+
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue(mockChildren);
+
+      const result = await service.getChildren(nodeId);
+
+      expect(result).toEqual(mockChildren);
+      expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledWith({
+        where: { parentId: nodeId },
+        include: expect.any(Object),
+        orderBy: [{ isFolder: 'desc' }, { name: 'asc' }],
+      });
+    });
+
+    it('应该处理查询子节点时的错误', async () => {
+      const nodeId = 'node-123';
+
+      mockPrisma.fileSystemNode.findMany.mockRejectedValue(new Error('Query error'));
+
+      await expect(service.getChildren(nodeId)).rejects.toThrow('Query error');
+    });
+  });
+
+  describe('updateNode', () => {
+    it('应该成功更新节点', async () => {
+      const nodeId = 'node-123';
+      const dto = { name: '新名称' };
+      const mockUpdated = { id: nodeId, ...dto };
+
+      mockPrisma.fileSystemNode.update.mockResolvedValue(mockUpdated);
+
+      const result = await service.updateNode(nodeId, dto);
+
+      expect(result).toEqual(mockUpdated);
+    });
+
+    it('应该处理更新节点时的错误', async () => {
+      const nodeId = 'node-123';
+      const dto = { name: '新名称' };
+
+      mockPrisma.fileSystemNode.update.mockRejectedValue(new Error('Update error'));
+
+      await expect(service.updateNode(nodeId, dto)).rejects.toThrow('Update error');
+    });
+  });
+
+  describe('deleteNode', () => {
+    it('应该成功删除非根节点', async () => {
+      const nodeId = 'node-123';
+      const mockNode = { isRoot: false };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockPrisma.fileSystemNode.delete.mockResolvedValue({});
+
+      const result = await service.deleteNode(nodeId);
+
+      expect(result).toEqual({ message: '节点删除成功' });
+    });
+
+    it('应该禁止删除根节点', async () => {
+      const nodeId = 'root-123';
+      const mockNode = { isRoot: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+
+      await expect(service.deleteNode(nodeId)).rejects.toThrow(BadRequestException);
+    });
+
+    it('应该处理删除节点时的错误', async () => {
+      const nodeId = 'node-123';
+      const mockNode = { isRoot: false };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockPrisma.fileSystemNode.delete.mockRejectedValue(new Error('Delete error'));
+
+      await expect(service.deleteNode(nodeId)).rejects.toThrow('Delete error');
+    });
+  });
+
+  describe('moveNode', () => {
+    it('应该成功移动节点', async () => {
+      const nodeId = 'node-123';
+      const targetParentId = 'target-123';
+      const mockNode = { isRoot: false, parentId: 'old-parent' };
+      const mockTargetParent = { isFolder: true };
+      const mockMoved = { id: nodeId, parentId: targetParentId };
+
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(mockNode)
+        .mockResolvedValueOnce(mockTargetParent);
+      mockPrisma.fileSystemNode.update.mockResolvedValue(mockMoved);
+
+      const result = await service.moveNode(nodeId, targetParentId);
+
+      expect(result).toEqual(mockMoved);
+    });
+
+    it('应该在节点不存在时抛出异常', async () => {
+      const nodeId = 'nonexistent';
+      const targetParentId = 'target-123';
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('应该禁止移动根节点', async () => {
+      const nodeId = 'root-123';
+      const targetParentId = 'target-123';
+      const mockNode = { isRoot: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('应该禁止移动到非文件夹节点', async () => {
+      const nodeId = 'node-123';
+      const targetParentId = 'file-123';
+      const mockNode = { isRoot: false, parentId: 'old-parent' };
+      const mockTargetParent = { isFolder: false };
+
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(mockNode)
+        .mockResolvedValueOnce(mockTargetParent);
+
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('应该禁止移动到自身', async () => {
+      const nodeId = 'node-123';
+      const mockNode = { isRoot: false, parentId: 'old-parent' };
+      const mockTargetParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(mockNode)
+        .mockResolvedValueOnce(mockTargetParent);
+
+      await expect(service.moveNode(nodeId, nodeId)).rejects.toThrow(BadRequestException);
+    });
+
+    it('应该在目标父节点不存在时抛出异常', async () => {
+      const nodeId = 'node-123';
+      const targetParentId = 'nonexistent';
+      const mockNode = { isRoot: false, parentId: 'old-parent' };
+
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(mockNode)
+        .mockResolvedValueOnce(null);
+
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('应该处理移动节点时的错误', async () => {
+      const nodeId = 'node-123';
+      const targetParentId = 'target-123';
+      const mockNode = { isRoot: false, parentId: 'old-parent' };
+      const mockTargetParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(mockNode)
+        .mockResolvedValueOnce(mockTargetParent);
+      mockPrisma.fileSystemNode.update.mockRejectedValue(new Error('Move error'));
+
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow('Move error');
+    });
+  });
+
+  describe('uploadFile', () => {
+    it('应该成功上传文件', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const file = {
+        originalname: 'test.dwg',
+        filename: 'upload-123.dwg',
+        mimetype: 'application/acad',
+        size: 1024,
+      } as Express.Multer.File;
+      const mockParent = { isFolder: true };
+      const mockFileNode = {
+        id: 'file-123',
+        name: file.originalname,
+        size: file.size,
+      };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockResolvedValue(mockFileNode);
+
+      const result = await service.uploadFile(userId, parentId, file);
+
+      expect(result).toEqual(mockFileNode);
+      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith({
+        data: {
+          name: file.originalname,
+          originalName: file.originalname,
+          isFolder: false,
+          isRoot: false,
+          parentId,
+          extension: 'dwg',
+          mimeType: file.mimetype,
+          size: file.size,
+          path: `/uploads/${file.filename}`,
+          fileStatus: FileStatus.COMPLETED,
+          ownerId: userId,
+        },
+        include: expect.any(Object),
+      });
+    });
+
+    it('应该在父节点不存在时抛出异常', async () => {
+      const userId = 'user-123';
+      const parentId = 'nonexistent';
+      const file = { originalname: 'test.dwg' } as Express.Multer.File;
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(service.uploadFile(userId, parentId, file)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('应该在父节点不是文件夹时抛出异常', async () => {
+      const userId = 'user-123';
+      const parentId = 'file-123';
+      const file = { originalname: 'test.dwg' } as Express.Multer.File;
+      const mockParent = { isFolder: false };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+
+      await expect(service.uploadFile(userId, parentId, file)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('应该处理上传文件时的错误', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const file = {
+        originalname: 'test.dwg',
+        filename: 'upload-123.dwg',
+        mimetype: 'application/acad',
+        size: 1024,
+      } as Express.Multer.File;
+      const mockParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockRejectedValue(new Error('Upload error'));
+
+      await expect(service.uploadFile(userId, parentId, file)).rejects.toThrow('Upload error');
+    });
+  });
+
+  describe('getRootNode', () => {
+    it('应该返回根节点', async () => {
+      const nodeId = 'child-123';
+      const mockNode = { id: nodeId, isRoot: false, parentId: 'parent-123' };
+      const mockParent = { id: 'parent-123', isRoot: false, parentId: 'root-123' };
+      const mockRoot = { id: 'root-123', isRoot: true, parentId: null };
+
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(mockNode)
+        .mockResolvedValueOnce(mockParent)
+        .mockResolvedValueOnce(mockRoot);
+
+      const result = await service.getRootNode(nodeId);
+
+      expect(result).toEqual(mockRoot);
+    });
+
+    it('应该在节点不存在时抛出异常', async () => {
+      const nodeId = 'nonexistent';
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(service.getRootNode(nodeId)).rejects.toThrow(NotFoundException);
+    });
+
+    it('应该在未找到根节点时抛出异常', async () => {
+      const nodeId = 'orphan-123';
+      const mockNode = { id: nodeId, isRoot: false, parentId: null };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+
+      await expect(service.getRootNode(nodeId)).rejects.toThrow(NotFoundException);
+    });
+
+    it('应该处理节点本身就是根节点的情况', async () => {
+      const nodeId = 'root-123';
+      const mockRoot = { id: nodeId, isRoot: true, parentId: null };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockRoot);
+
+      const result = await service.getRootNode(nodeId);
+
+      expect(result).toEqual(mockRoot);
+    });
+  });
+
+  describe('边界情况测试', () => {
+    it('应该处理数据库查询错误', async () => {
+      const userId = 'user-123';
+      const dto = { name: '项目' };
+
+      mockPrisma.fileSystemNode.create.mockRejectedValue(
+        new Error('Connection refused')
+      );
+
+      await expect(service.createProject(userId, dto)).rejects.toThrow();
+    });
+
+    it('应该处理文件名包含路径分隔符', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const file = {
+        originalname: 'path/to/file.dwg',
+        filename: 'upload-123.dwg',
+        mimetype: 'application/acad',
+        size: 1024,
+      } as Express.Multer.File;
+      const mockParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockResolvedValue({
+        id: 'file-123',
+        name: file.originalname,
+      });
+
+      const result = await service.uploadFile(userId, parentId, file);
+
+      expect(result.name).toBe('path/to/file.dwg');
+    });
+
+    it('应该处理没有扩展名的文件', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const file = {
+        originalname: 'noextension',
+        filename: 'upload-123',
+        mimetype: 'application/octet-stream',
+        size: 1024,
+      } as Express.Multer.File;
+      const mockParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockResolvedValue({
+        id: 'file-123',
+        extension: 'noextension',
+      });
+
+      const result = await service.uploadFile(userId, parentId, file);
+
+      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            extension: 'noextension',
+          }),
+        })
+      );
+    });
+
+    it('应该处理空字符串文件名的扩展名', async () => {
+      const userId = 'user-123';
+      const parentId = 'parent-123';
+      const file = {
+        originalname: '',
+        filename: 'upload-123',
+        mimetype: 'application/octet-stream',
+        size: 1024,
+      } as Express.Multer.File;
+      const mockParent = { isFolder: true };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.create.mockResolvedValue({
+        id: 'file-123',
+        extension: '',
+      });
+
+      const result = await service.uploadFile(userId, parentId, file);
+
+      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            extension: '',
+          }),
+        })
+      );
+    });
+
+    it('应该处理空描述的项目更新', async () => {
+      const projectId = 'project-123';
+      const dto = { name: '名称', description: undefined };
+
+      mockPrisma.fileSystemNode.update.mockResolvedValue({
+        id: projectId,
+        name: dto.name,
+      });
+
+      const result = await service.updateProject(projectId, dto);
+
+      expect(result.name).toBe(dto.name);
+    });
+
+    it('应该处理查询错误', async () => {
+      const userId = 'user-123';
+
+      mockPrisma.fileSystemNode.findMany.mockRejectedValue(
+        new Error('Query timeout')
+      );
+
+      await expect(service.getUserProjects(userId)).rejects.toThrow();
+    });
+  });
+});

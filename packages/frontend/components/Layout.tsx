@@ -12,13 +12,14 @@ import {
   Type,
   Users,
   X,
+  HardDrive,
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
 import { Permission, type Role } from '../types';
-import { mockApi } from '../services/api';
+import { projectsApi, mockApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
@@ -63,6 +64,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [hookTest, setHookTest] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  // 存储空间状态
+  const [storageInfo, setStorageInfo] = useState<{
+    totalUsed: number;
+    totalLimit: number;
+    available: number;
+    usagePercentage: number;
+    formatted: {
+      totalUsed: string;
+      totalLimit: string;
+      available: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
     // 只有在用户已认证且加载完成时才获取角色信息
@@ -70,6 +84,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       mockApi.auth.getRole().then(setRole).catch(() => {
         // 如果获取角色失败，设置默认角色
         setRole({ name: '用户', permissions: [] });
+      });
+      
+      // 获取存储空间信息
+      projectsApi.getStorageInfo().then((response) => {
+        console.log('存储空间完整响应:', response);
+        console.log('存储空间信息:', response.data);
+        if (response.data) {
+          setStorageInfo(response.data);
+        }
+      }).catch((error) => {
+        console.error('获取存储空间信息失败:', error);
+        console.error('错误详情:', error.response?.data || error.message);
       });
     }
   }, [user, loading]);
@@ -166,20 +192,63 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
           <div className="p-4 border-t border-slate-200">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
-                {user?.avatar && (
+              <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
+                {user?.avatar ? (
                   <img
                     src={user.avatar}
                     alt="User"
                     className="w-full h-full object-cover"
                   />
+                ) : (
+                  <span className="text-sm font-medium text-slate-600">
+                    {(user?.nickname || user?.username || user?.email || 'U').charAt(0).toUpperCase()}
+                  </span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">
-                  {user?.name}
+                  {user?.nickname || user?.username || user?.email}
                 </p>
                 <p className="text-xs text-slate-500 truncate">{role?.name}</p>
+                
+                {/* 存储空间信息 */}
+                {storageInfo && storageInfo.formatted ? (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <HardDrive size={12} className="text-slate-400" />
+                      <span className="text-xs text-slate-600">
+                        {storageInfo.formatted.totalUsed} / {storageInfo.formatted.totalLimit}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div 
+                        className={`h-1.5 rounded-full ${
+                          storageInfo.usagePercentage > 90 
+                            ? 'bg-red-500' 
+                            : storageInfo.usagePercentage > 70 
+                            ? 'bg-yellow-500' 
+                            : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(storageInfo.usagePercentage, 100)}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      剩余 {storageInfo.formatted.available}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <HardDrive size={12} className="text-slate-400" />
+                      <span className="text-xs text-slate-400">
+                        加载中...
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full bg-slate-300" style={{ width: '0%' }}></div>
+                    </div>
+                  </div>
+                )}
               </div>
               <button 
                 className="text-slate-400 hover:text-slate-600"
