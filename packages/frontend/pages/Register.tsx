@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
+import { validateField, validateRegisterForm } from '../utils/validation';
 
 type RegisterDto = components['schemas']['RegisterDto'];
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, isAuthenticated, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState<RegisterDto>({
     email: '',
     password: '',
@@ -17,48 +18,141 @@ export const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
     if (name === 'confirmPassword') {
       setConfirmPassword(value);
+      // 实时验证确认密码
+      if (touched.confirmPassword) {
+        if (value && formData.password !== value) {
+          setFieldErrors(prev => ({
+            ...prev,
+            confirmPassword: '两次输入的密码不一致'
+          }));
+        } else {
+          setFieldErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.confirmPassword;
+            return newErrors;
+          });
+        }
+      }
     } else {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
+      
+      // 实时验证字段（仅在该字段已触碰后）
+      if (touched[name]) {
+        const fieldError = validateField(name as keyof typeof import('../utils/validation').ValidationRules, value);
+        
+        if (fieldError) {
+          setFieldErrors(prev => ({
+            ...prev,
+            [name]: fieldError
+          }));
+        } else {
+          setFieldErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[name];
+            return newErrors;
+          });
+        }
+      }
     }
+    
     if (error) setError(null);
   };
 
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    
+    // 失焦时验证
+    if (name === 'confirmPassword') {
+      if (value && formData.password !== value) {
+        setFieldErrors(prev => ({
+          ...prev,
+          confirmPassword: '两次输入的密码不一致'
+        }));
+      } else {
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.confirmPassword;
+          return newErrors;
+        });
+      }
+    } else {
+      const fieldError = validateField(name as keyof typeof import('../utils/validation').ValidationRules, value);
+      
+      if (fieldError) {
+        setFieldErrors(prev => ({
+          ...prev,
+          [name]: fieldError
+        }));
+      } else {
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    }
+  };
+
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.username) {
-      setError('请填写所有必填字段');
+    const error = validateRegisterForm({
+      ...formData,
+      confirmPassword,
+    });
+
+    if (error) {
+      setError(error);
       return false;
     }
-    if (formData.password.length < 6) {
-      setError('密码长度至少为6位');
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      setError('请修正表单错误');
       return false;
     }
-    if (formData.password !== confirmPassword) {
-      setError('两次输入的密码不一致');
-      return false;
-    }
+    
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    console.log('[Register] 提交注册表单:', formData.email, formData.username);
+    if (!validateForm()) {
+      console.log('[Register] 表单验证失败');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      console.log('[Register] 调用registerUser函数');
       await registerUser(formData);
-      // 跳转到首页
-      navigate('/');
+      console.log('[Register] 注册成功，准备跳转到邮箱验证页面');
+      // 跳转到邮箱验证页面
+      navigate('/verify-email', { 
+        state: { email: formData.email },
+        replace: true 
+      });
     } catch (err: any) {
+      console.error('[Register] 注册失败:', err);
+      console.error('[Register] 错误详情:', err.response?.data);
       setError(err.response?.data?.message || '注册失败，请稍后重试');
     } finally {
       setLoading(false);
@@ -101,11 +195,17 @@ export const Register: React.FC = () => {
                 name="username"
                 type="text"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  fieldErrors.username ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                 placeholder="请输入用户名"
                 value={formData.username}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
+              {fieldErrors.username && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.username}</p>
+              )}
             </div>
 
             <div>
@@ -119,11 +219,17 @@ export const Register: React.FC = () => {
                 id="nickname"
                 name="nickname"
                 type="text"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  fieldErrors.nickname ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                 placeholder="请输入昵称（可选）"
                 value={formData.nickname || ''}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
+              {fieldErrors.nickname && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.nickname}</p>
+              )}
             </div>
 
             <div>
@@ -139,11 +245,17 @@ export const Register: React.FC = () => {
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  fieldErrors.email ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                 placeholder="请输入邮箱地址"
                 value={formData.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -159,11 +271,17 @@ export const Register: React.FC = () => {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="请输入密码（至少6位）"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  fieldErrors.password ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                placeholder="至少8位，包含大小写字母、数字和特殊字符"
                 value={formData.password}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div>
@@ -179,11 +297,17 @@ export const Register: React.FC = () => {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  fieldErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                 placeholder="请再次输入密码"
                 value={confirmPassword}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
+              {fieldErrors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
           </div>
 

@@ -3,8 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthModule } from '../auth/auth.module';
 import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
-import { FilesModule } from '../files/files.module';
-import { ProjectsModule } from '../projects/projects.module';
+import { FileSystemModule } from '../file-system/file-system.module';
 import { UsersModule } from '../users/users.module';
 
 export const createTestModule = async (): Promise<TestingModule> => {
@@ -18,8 +17,7 @@ export const createTestModule = async (): Promise<TestingModule> => {
       AuthModule,
       UsersModule,
       CommonModule,
-      ProjectsModule,
-      FilesModule,
+      FileSystemModule,
     ],
   }).compile();
 };

@@ -162,6 +162,13 @@ export const authApi = {
   logout: () => apiService.post('/auth/logout'),
 
   getProfile: () => apiService.get('/auth/profile'),
+
+  // 邮箱验证相关
+  sendVerification: (email: string) => apiService.post('/auth/send-verification', { email }),
+
+  verifyEmail: (data: { email: string; code: string }) => apiService.post('/auth/verify-email', data),
+
+  resendVerification: (email: string) => apiService.post('/auth/resend-verification', { email }),
 };
 
 // 用户相关的 API 方法

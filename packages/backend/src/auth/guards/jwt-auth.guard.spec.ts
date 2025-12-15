@@ -100,8 +100,8 @@ describe('JwtAuthGuard', () => {
       (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(() => token);
       mockTokenBlacklistService.isBlacklisted.mockResolvedValue(false);
       
-      // Mock the parent AuthGuard to throw an error
-      jest.spyOn(AuthGuard('jwt').prototype, 'canActivate').mockRejectedValue(new Error('Invalid token'));
+      // Mock super.canActivate to throw an error
+      jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate').mockRejectedValue(new Error('Invalid token'));
       
       const context = mockExecutionContext({ authorization: `Bearer ${token}` });
 

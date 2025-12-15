@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AssetLibrary } from './pages/AssetLibrary';
+import { EmailVerification } from './pages/EmailVerification';
 
 import FileManager from './pages/FileManager';
 import { Login } from './pages/Login';
@@ -48,6 +49,7 @@ function App() {
           {/* 公开路由 - 不需要 Layout */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<EmailVerification />} />
 
           {/* 受保护的路由 - 需要 Layout */}
           <Route

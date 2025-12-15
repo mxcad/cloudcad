@@ -21,7 +21,8 @@ interface AuthContextType {
     password: string;
     username: string;
     nickname?: string;
-  }) => Promise<void>;
+  }) => Promise<{ message: string; email: string }>;
+  verifyEmailAndLogin: (token: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
@@ -112,18 +113,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }) => {
     try {
       const response = await authApi.register(data);
-      const { accessToken, refreshToken, user: userData } = response.data;
-
-      // 存储到本地存储
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
-
-      // 更新状态
-      setToken(accessToken);
-      setUser(userData);
+      // 注册成功但不自动登录，返回注册成功信息
+      console.log('[AuthContext] 注册成功，等待邮箱验证:', response.data);
+      return response.data; // { message: string; email: string }
     } catch (error) {
       console.error('[AuthContext] 注册失败:', error);
+      throw error;
+    }
+  }, []);
+
+  const verifyEmailAndLogin = useCallback(async (email: string, code: string) => {
+    try {
+      const response = await authApi.verifyEmail({ email, code });
+      console.log('[AuthContext] 邮箱验证成功:', response.data);
+      // 注意：现在验证邮箱不再返回 tokens，只是验证成功
+      // 用户需要重新登录
+    } catch (error) {
+      console.error('[AuthContext] 邮箱验证失败:', error);
       throw error;
     }
   }, []);
@@ -150,10 +156,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     register,
+    verifyEmailAndLogin,
     logout,
     loading,
     isAuthenticated: !!token && !!user,
-  }), [user, token, login, register, logout, loading]);
+  }), [user, token, login, register, verifyEmailAndLogin, logout, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

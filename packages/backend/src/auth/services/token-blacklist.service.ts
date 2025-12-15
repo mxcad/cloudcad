@@ -54,8 +54,8 @@ export class TokenBlacklistService implements OnModuleInit {
       return result === 1;
     } catch (error) {
       this.logger.error('检查Token黑名单失败:', error);
-      // 如果Redis不可用，为了安全起见，返回true
-      return true;
+      // 如果Redis不可用，记录错误但不阻止正常使用
+      return false;
     }
   }
 
@@ -91,7 +91,8 @@ export class TokenBlacklistService implements OnModuleInit {
       return result === 1;
     } catch (error) {
       this.logger.error('检查用户黑名单失败:', error);
-      return true;
+      // 如果Redis不可用，记录错误但不阻止正常使用
+      return false;
     }
   }
 
@@ -145,6 +146,49 @@ export class TokenBlacklistService implements OnModuleInit {
     } catch (error) {
       this.logger.error('获取黑名单统计失败:', error);
       return { totalTokens: 0, blacklistedUsers: 0 };
+    }
+  }
+
+  /**
+   * 存储临时数据
+   * @param key 键名
+   * @param value 值
+   * @param ttl 过期时间（秒）
+   */
+  async setTempData(key: string, value: string, ttl: number): Promise<void> {
+    try {
+      await this.redis.setex(key, ttl, value);
+      this.logger.log(`临时数据已存储: ${key}`);
+    } catch (error) {
+      this.logger.error('存储临时数据失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取临时数据
+   * @param key 键名
+   */
+  async getTempData(key: string): Promise<string | null> {
+    try {
+      const result = await this.redis.get(key);
+      return result;
+    } catch (error) {
+      this.logger.error('获取临时数据失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 删除临时数据
+   * @param key 键名
+   */
+  async deleteTempData(key: string): Promise<void> {
+    try {
+      await this.redis.del(key);
+      this.logger.log(`临时数据已删除: ${key}`);
+    } catch (error) {
+      this.logger.error('删除临时数据失败:', error);
     }
   }
 

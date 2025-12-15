@@ -2,24 +2,31 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { ApiResponseDto } from '../../common/dto/api-response.dto';
 
 export class RegisterDto {
   @ApiProperty({
     description: '用户邮箱',
     example: 'user@example.com',
+    format: 'email',
   })
   @IsEmail({}, { message: '请输入有效的邮箱地址' })
   @IsNotEmpty({ message: '邮箱不能为空' })
   email: string;
 
   @ApiProperty({
+    type: String,
     description: '用户名',
     example: 'username',
+    minLength: 3,
+    maxLength: 20,
+    pattern: '^[a-zA-Z0-9_]+$',
   })
   @IsString({ message: '用户名必须是字符串' })
   @IsNotEmpty({ message: '用户名不能为空' })
@@ -31,23 +38,25 @@ export class RegisterDto {
   username: string;
 
   @ApiProperty({
+    type: String,
     description: '密码',
-    example: 'Password123!',
+    example: 'password123',
+    minLength: 8,
+    maxLength: 50,
   })
   @IsString({ message: '密码必须是字符串' })
   @IsNotEmpty({ message: '密码不能为空' })
   @MinLength(8, { message: '密码至少8个字符' })
   @MaxLength(50, { message: '密码最多50个字符' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-    message: '密码必须包含至少1个大写字母、1个小写字母、1个数字和1个特殊字符',
-  })
   password: string;
 
   @ApiProperty({
     description: '昵称',
     example: '用户昵称',
     required: false,
+    maxLength: 50,
   })
+  @IsOptional()
   @IsString({ message: '昵称必须是字符串' })
   @MaxLength(50, { message: '昵称最多50个字符' })
   nickname?: string;
@@ -147,4 +156,12 @@ export class AuthResponseDto {
     type: () => UserDto,
   })
   user: UserDto;
+}
+
+export class AuthApiResponseDto extends ApiResponseDto<AuthResponseDto> {
+  @ApiProperty({
+    description: '认证响应数据',
+    type: () => AuthResponseDto,
+  })
+  declare data: AuthResponseDto;
 }

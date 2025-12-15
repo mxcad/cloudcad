@@ -15,6 +15,9 @@ import { RedisTestingModule } from '../redis/redis-testing.module';
 import { UsersService } from '../users/users.service';
 import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
 
+// Restore real bcrypt for integration tests
+jest.unmock('bcryptjs');
+
 describe('Authentication & Authorization Integration Tests', () => {
   let app: INestApplication;
   let prisma: DatabaseService;
@@ -109,7 +112,7 @@ describe('Authentication & Authorization Integration Tests', () => {
         where: {
           OR: [
             { email: { contains: 'test-integration' } },
-            { username: { contains: 'test-integration' } },
+            { username: { contains: 'test_int' } },
           ],
         },
       });
@@ -123,8 +126,8 @@ describe('Authentication & Authorization Integration Tests', () => {
     const hashedAdminPassword = await bcrypt.hash('admin123', 12);
     adminUser = await prisma.user.create({
       data: {
-        email: 'admin-test-integration@example.com',
-        username: 'admin-test-integration',
+        email: 'admin-test-int@example.com',
+        username: 'admin_test_int',
         password: hashedAdminPassword,
         nickname: 'Admin Test User',
         role: UserRole.ADMIN,
@@ -136,8 +139,8 @@ describe('Authentication & Authorization Integration Tests', () => {
     const hashedUserPassword = await bcrypt.hash('user123', 12);
     regularUser = await prisma.user.create({
       data: {
-        email: 'user-test-integration@example.com',
-        username: 'user-test-integration',
+        email: 'user-test-int@example.com',
+        username: 'user_test_int',
         password: hashedUserPassword,
         nickname: 'Regular Test User',
         role: UserRole.USER,
@@ -147,13 +150,13 @@ describe('Authentication & Authorization Integration Tests', () => {
 
     // Get tokens
     const adminLogin = await authService.login({
-      account: 'admin-test-integration@example.com',
+      account: 'admin-test-int@example.com',
       password: 'admin123',
     });
     adminToken = adminLogin.accessToken;
 
     const userLogin = await authService.login({
-      account: 'user-test-integration@example.com',
+      account: 'user-test-int@example.com',
       password: 'user123',
     });
     userToken = userLogin.accessToken;
@@ -162,42 +165,38 @@ describe('Authentication & Authorization Integration Tests', () => {
   describe('Authentication Flow', () => {
     it('should register a new user', async () => {
       const userData = {
-        email: 'newuser-test-integration@example.com',
-        username: 'newuser-test-integration',
+        email: 'newuser-test-int@example.com',
+        username: 'newuser_test_int',
         password: 'newuser123',
         nickname: 'New Test User',
       };
 
-      try {
-        const response = await request(app.getHttpServer())
-          .post('/auth/register')
-          .send(userData)
-          .expect(201);
+      const response = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(userData);
 
-        expect(response.body).toHaveProperty('accessToken');
-        expect(response.body).toHaveProperty('refreshToken');
-        expect(response.body.user).toMatchObject({
-          email: userData.email,
-          username: userData.username,
-          nickname: userData.nickname,
-          role: UserRole.USER,
-          status: 'ACTIVE',
-        });
-      } catch (error) {
-        console.error('Registration test error:', error.message);
-        if (error.response) {
-          console.error('Response status:', error.response.status);
-          console.error('Response body:', error.response.body);
-        }
-        throw error;
+      if (response.status !== 201) {
+        console.error('Registration failed with status:', response.status);
+        console.error('Response body:', JSON.stringify(response.body, null, 2));
       }
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('accessToken');
+      expect(response.body).toHaveProperty('refreshToken');
+      expect(response.body.user).toMatchObject({
+        email: userData.email,
+        username: userData.username,
+        nickname: userData.nickname,
+        role: UserRole.USER,
+        status: 'ACTIVE',
+      });
     });
 
     it('should login with valid credentials', async () => {
       const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
-          account: 'user-test-integration@example.com',
+          account: 'user-test-int@example.com',
           password: 'user123',
         })
         .expect(200);
@@ -267,8 +266,8 @@ describe('Authentication & Authorization Integration Tests', () => {
   describe('User Management Authorization', () => {
     it('should allow admin to create users', async () => {
       const userData = {
-        email: 'admin-created-test-integration@example.com',
-        username: 'admin-created-test-integration',
+        email: 'admin_created_int@example.com',
+        username: 'admin_created_int',
         password: 'password123',
         nickname: 'Admin Created User',
         role: UserRole.USER,
@@ -283,8 +282,8 @@ describe('Authentication & Authorization Integration Tests', () => {
 
     it('should deny regular user to create users', async () => {
       const userData = {
-        email: 'user-created-test-integration@example.com',
-        username: 'user-created-test-integration',
+        email: 'user_created_int@example.com',
+        username: 'user_created_int',
         password: 'password123',
         nickname: 'User Created User',
         role: UserRole.USER,
@@ -341,8 +340,8 @@ describe('Authentication & Authorization Integration Tests', () => {
 
     it('should allow admin to delete users', async () => {
       const tempUser = await usersService.create({
-        email: 'temp-test-integration@example.com',
-        username: 'temp-test-integration',
+        email: 'temp_test_int@example.com',
+        username: 'temp_test_int',
         password: 'temp123',
         nickname: 'Temp User',
         role: UserRole.USER,
@@ -393,15 +392,15 @@ describe('Authentication & Authorization Integration Tests', () => {
     it('should deny non-member to access project', async () => {
       // Create another user
       const otherUser = await usersService.create({
-        email: 'other-test-integration@example.com',
-        username: 'other-test-integration',
+        email: 'other_test_int@example.com',
+        username: 'other_test_int',
         password: 'other123',
         nickname: 'Other User',
         role: UserRole.USER,
       });
 
       const otherLogin = await authService.login({
-        account: 'other-test-integration@example.com',
+        account: 'other_test_int@example.com',
         password: 'other123',
       });
 
@@ -422,8 +421,8 @@ describe('Authentication & Authorization Integration Tests', () => {
       });
 
       const newMember = await usersService.create({
-        email: 'member-test-integration@example.com',
-        username: 'member-test-integration',
+        email: 'member_test_int@example.com',
+        username: 'member_test_int',
         password: 'member123',
         nickname: 'Member User',
         role: UserRole.USER,
@@ -454,8 +453,8 @@ describe('Authentication & Authorization Integration Tests', () => {
       });
 
       const newMember = await usersService.create({
-        email: 'member2-test-integration@example.com',
-        username: 'member2-test-integration',
+        email: 'member2_test_int@example.com',
+        username: 'member2_test_int',
         password: 'member2123',
         nickname: 'Member2 User',
         role: UserRole.USER,
@@ -533,8 +532,8 @@ describe('Authentication & Authorization Integration Tests', () => {
     it('should allow file viewer to read file', async () => {
       // Create another user
       const viewerUser = await usersService.create({
-        email: 'viewer-test-integration@example.com',
-        username: 'viewer-test-integration',
+        email: 'viewer_test_int@example.com',
+        username: 'viewer_test_int',
         password: 'viewer123',
         nickname: 'Viewer User',
         role: UserRole.USER,
@@ -550,7 +549,7 @@ describe('Authentication & Authorization Integration Tests', () => {
       });
 
       const viewerLogin = await authService.login({
-        account: 'viewer-test-integration@example.com',
+        account: 'viewer_test_int@example.com',
         password: 'viewer123',
       });
 
@@ -563,8 +562,8 @@ describe('Authentication & Authorization Integration Tests', () => {
     it('should deny file viewer to modify file', async () => {
       // Create another user
       const viewerUser = await usersService.create({
-        email: 'viewer2-test-integration@example.com',
-        username: 'viewer2-test-integration',
+        email: 'viewer2_test_int@example.com',
+        username: 'viewer2_test_int',
         password: 'viewer2123',
         nickname: 'Viewer2 User',
         role: UserRole.USER,
@@ -580,7 +579,7 @@ describe('Authentication & Authorization Integration Tests', () => {
       });
 
       const viewerLogin = await authService.login({
-        account: 'viewer2-test-integration@example.com',
+        account: 'viewer2_test_int@example.com',
         password: 'viewer2123',
       });
 
@@ -595,15 +594,15 @@ describe('Authentication & Authorization Integration Tests', () => {
 
     it('should deny unauthorized user to access file', async () => {
       const unauthorizedUser = await usersService.create({
-        email: 'unauthorized-test-integration@example.com',
-        username: 'unauthorized-test-integration',
+        email: 'unauthorized_int@example.com',
+        username: 'unauthorized_int',
         password: 'unauthorized123',
         nickname: 'Unauthorized User',
         role: UserRole.USER,
       });
 
       const unauthorizedLogin = await authService.login({
-        account: 'unauthorized-test-integration@example.com',
+        account: 'unauthorized_int@example.com',
         password: 'unauthorized123',
       });
 
@@ -694,8 +693,8 @@ describe('Authentication & Authorization Integration Tests', () => {
 
       // Add another user as file viewer
       const viewerUser = await usersService.create({
-        email: 'file-viewer-test-integration@example.com',
-        username: 'file-viewer-test-integration',
+        email: 'file-viewer_test_int@example.com',
+        username: 'file-viewer_test_int',
         password: 'viewer123',
         nickname: 'File Viewer',
         role: UserRole.USER,

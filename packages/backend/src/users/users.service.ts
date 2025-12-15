@@ -53,8 +53,12 @@ export class UsersService {
 
       const user = await this.prisma.user.create({
         data: {
-          ...createUserDto,
+          email: createUserDto.email,
+          username: createUserDto.username,
           password: hashedPassword,
+          nickname: createUserDto.nickname,
+          avatar: createUserDto.avatar,
+          role: UserRole.USER, // 强制新用户为普通用户角色
         },
         select: {
           id: true,

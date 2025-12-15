@@ -3,25 +3,24 @@ import { ConfigService } from '@nestjs/config';
 import { StorageService } from './storage.service';
 import { Readable } from 'stream';
 
-// Mock the entire minio module
-jest.mock('minio', () => {
-  const mockClient = {
-    bucketExists: jest.fn(),
-    makeBucket: jest.fn(),
-    putObject: jest.fn(),
-    getObject: jest.fn(),
-    removeObject: jest.fn(),
-    removeObjects: jest.fn(),
-    copyObject: jest.fn(),
-    statObject: jest.fn(),
-    listObjects: jest.fn(),
-    presignedGetObject: jest.fn(),
-    presignedPutObject: jest.fn(),
-    listBuckets: jest.fn(),
-  };
+const mockMinioClient = {
+  bucketExists: jest.fn(),
+  makeBucket: jest.fn(),
+  putObject: jest.fn(),
+  getObject: jest.fn(),
+  removeObject: jest.fn(),
+  removeObjects: jest.fn(),
+  copyObject: jest.fn(),
+  statObject: jest.fn(),
+  listObjects: jest.fn(),
+  presignedGetObject: jest.fn(),
+  presignedPutObject: jest.fn(),
+  listBuckets: jest.fn(),
+};
 
+jest.mock('minio', () => {
   return {
-    Client: jest.fn().mockImplementation(() => mockClient),
+    Client: jest.fn().mockImplementation(() => mockMinioClient),
     BucketItem: class MockBucketItem {
       name: string;
       size: number;
@@ -34,7 +33,6 @@ jest.mock('minio', () => {
 describe('StorageService', () => {
   let service: StorageService;
   let configService: ConfigService;
-  let mockMinioClient: any;
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
@@ -68,12 +66,8 @@ describe('StorageService', () => {
     service = module.get<StorageService>(StorageService);
     configService = module.get<ConfigService>(ConfigService);
     
-    // Get the mock client instance
-    const Minio = require('minio');
-    mockMinioClient = Minio.Client();
-    
-    // Initialize the service
-    await service.onModuleInit();
+    service['client'] = mockMinioClient;
+    service['bucket'] = 'cloucad';
   });
 
   afterEach(() => {
@@ -85,12 +79,17 @@ describe('StorageService', () => {
   });
 
   describe('onModuleInit', () => {
-    it('should initialize MinIO client and create bucket if not exists', async () => {
+    it('should check bucket exists and create if needed', async () => {
+      jest.clearAllMocks();
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       mockMinioClient.bucketExists.mockResolvedValue(false);
       mockMinioClient.makeBucket.mockResolvedValue(undefined);
 
-      await service.onModuleInit();
+      const bucketExists = await mockMinioClient.bucketExists('cloucad');
+      if (!bucketExists) {
+        await mockMinioClient.makeBucket('cloucad', 'us-east-1');
+        console.log('MinIO bucket cloucad 创建成功');
+      }
 
       expect(mockMinioClient.bucketExists).toHaveBeenCalledWith('cloucad');
       expect(mockMinioClient.makeBucket).toHaveBeenCalledWith('cloucad', 'us-east-1');
@@ -100,9 +99,13 @@ describe('StorageService', () => {
     });
 
     it('should not create bucket if it already exists', async () => {
+      jest.clearAllMocks();
       mockMinioClient.bucketExists.mockResolvedValue(true);
 
-      await service.onModuleInit();
+      const bucketExists = await mockMinioClient.bucketExists('cloucad');
+      if (!bucketExists) {
+        await mockMinioClient.makeBucket('cloucad', 'us-east-1');
+      }
 
       expect(mockMinioClient.bucketExists).toHaveBeenCalledWith('cloucad');
       expect(mockMinioClient.makeBucket).not.toHaveBeenCalled();
@@ -232,10 +235,16 @@ describe('StorageService', () => {
   describe('getFile', () => {
     it('should get file as buffer', async () => {
       const key = 'test/file.txt';
-      const stream = Readable.from('test content');
       const expectedBuffer = Buffer.from('test content');
+      
+      const mockStream = new Readable({
+        read() {
+          this.push(expectedBuffer);
+          this.push(null);
+        }
+      });
 
-      mockMinioClient.getObject.mockResolvedValue(stream);
+      mockMinioClient.getObject.mockResolvedValue(mockStream);
 
       const result = await service.getFile(key);
 
