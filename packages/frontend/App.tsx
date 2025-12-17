@@ -8,7 +8,9 @@ import {
 import { Layout } from './components/Layout';
 import { AssetLibrary } from './pages/AssetLibrary';
 import { EmailVerification } from './pages/EmailVerification';
-
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
+import { Profile } from './pages/Profile';
 import FileManager from './pages/FileManager';
 import { Login } from './pages/Login';
 import { ProjectManager } from './pages/ProjectManager';
@@ -50,6 +52,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* 受保护的路由 - 需要 Layout */}
           <Route
@@ -85,6 +89,7 @@ function App() {
 
                     <Route path="/users" element={<UserManagement />} />
                     <Route path="/roles" element={<RoleManagement />} />
+                    <Route path="/profile" element={<Profile />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

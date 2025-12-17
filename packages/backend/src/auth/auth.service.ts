@@ -255,12 +255,11 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     try {
-      // 将用户添加到黑名单，这样该用户的所有Token都会失效
-      await this.tokenBlacklistService.blacklistUserTokens(userId);
-
       // 删除用户的所有刷新Token
       await this.deleteAllRefreshTokens(userId);
+      this.logger.log(`用户退出登录，已删除刷新令牌: ${userId}`);
     } catch (error) {
+      this.logger.error(`登出失败: ${error.message}`);
       throw new UnauthorizedException('登出失败');
     }
   }
@@ -432,5 +431,62 @@ export class AuthService {
       }
     }
     return null;
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    this.logger.log(`忘记密码请求: ${email}`);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('该邮箱未注册');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('账号已被禁用，无法重置密码');
+    }
+
+    await this.emailVerificationService.sendVerificationEmail(email);
+    this.logger.log(`密码重置验证码已发送: ${email}`);
+
+    return {
+      message: '密码重置验证码已发送到您的邮箱',
+    };
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<{ message: string }> {
+    this.logger.log(`重置密码请求: ${email}`);
+
+    const isValid = await this.emailVerificationService.verifyEmail(email, code);
+    if (!isValid) {
+      this.logger.error(`验证码验证失败: ${email}`);
+      throw new UnauthorizedException('验证码无效或已过期');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('用户不存在');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+
+    await this.deleteAllRefreshTokens(user.id);
+    await this.tokenBlacklistService.removeUserFromBlacklist(user.id);
+
+    this.logger.log(`密码重置成功: ${email}`);
+
+    return {
+      message: '密码重置成功，请使用新密码登录',
+    };
   }
 }

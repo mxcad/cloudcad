@@ -61,7 +61,7 @@ describe('StorageService', () => {
           useValue: mockConfigService,
         },
       ],
-    }).compile();
+    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
 
     service = module.get<StorageService>(StorageService);
     configService = module.get<ConfigService>(ConfigService);

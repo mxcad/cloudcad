@@ -48,7 +48,7 @@ describe('JwtAuthGuard', () => {
           useValue: mockTokenBlacklistService,
         },
       ],
-    }).compile();
+    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
 
     guard = module.get<JwtAuthGuard>(JwtAuthGuard);
     tokenBlacklistService = module.get<TokenBlacklistService>(TokenBlacklistService);

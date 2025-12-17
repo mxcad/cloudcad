@@ -48,6 +48,7 @@ model FileSystemNode {
   mimeType     String?   // MIME类型
   extension    String?   // 文件扩展名（.dwg, .dxf）
   fileStatus   FileStatus? // 文件状态
+  fileHash     String?   // 文件SHA-256哈希值（用于去重）
   
   // 项目专属字段（仅根节点使用）
   description    String?          // 项目描述
@@ -138,6 +139,25 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+model UploadSession {
+  id          String   @id @default(cuid())
+  uploadId    String   @unique  // MinIO返回的上传ID
+  storageKey  String   // 存储键名
+  fileName    String   // 原始文件名
+  fileSize    Int      // 文件总大小
+  fileId      String?  // 关联的文件ID（完成后设置）
+  projectId   String?  // 项目ID
+  parentId    String?  // 父节点ID
+  ownerId     String   // 上传者ID
+  status      String   @default("INITIATED") // INITIATED, UPLOADING, COMPLETED, FAILED, ABORTED
+  totalParts  Int?     // 总分片数
+  uploadedParts Int    @default(0) // 已上传分片数
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("upload_sessions")
 }
 
 // 枚举类型

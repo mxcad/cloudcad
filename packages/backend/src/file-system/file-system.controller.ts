@@ -12,6 +12,9 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 
@@ -22,6 +25,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { MoveNodeDto } from './dto/move-node.dto';
+
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard)
@@ -84,8 +88,8 @@ export class FileSystemController {
 
   @Get('nodes/:nodeId/children')
   @ApiResponse({ status: 200, description: '获取子节点列表成功' })
-  async getChildren(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.getChildren(nodeId);
+  async getChildren(@Param('nodeId') nodeId: string, @Request() req) {
+    return this.fileSystemService.getChildren(nodeId, req.user.id);
   }
 
   @Patch('nodes/:nodeId')
@@ -122,10 +126,31 @@ export class FileSystemController {
     const { projectId, fileName, fileContent } = body;
     
     if (!fileName) {
-      throw new Error('缺少文件名称');
+      throw new BadRequestException('缺少文件名称');
     }
     
-    // 临时方案：将文件内容转为 buffer
+    if (!projectId) {
+      throw new BadRequestException('缺少项目ID');
+    }
+    
+    // 验证项目是否存在且用户有权限
+    const project = await this.fileSystemService.getProject(projectId);
+    if (!project) {
+      throw new NotFoundException('项目不存在');
+    }
+    
+    // 检查用户是否是项目成员
+    const hasPermission = await this.fileSystemService.checkProjectPermission(
+      projectId, 
+      req.user.id, 
+      ['OWNER', 'ADMIN', 'MEMBER']
+    );
+    
+    if (!hasPermission) {
+      throw new ForbiddenException('没有权限上传文件到此项目');
+    }
+    
+    // 将文件内容转为 buffer
     let buffer: Buffer;
     if (fileContent) {
       // 如果是 base64 编码的内容
@@ -143,7 +168,7 @@ export class FileSystemController {
       buffer: buffer,
     } as any;
     
-    return this.fileSystemService.uploadFile(req.user.id, projectId || '', mockFile);
+    return this.fileSystemService.uploadFile(req.user.id, projectId, mockFile);
   }
 
   @Get('storage')
@@ -151,6 +176,8 @@ export class FileSystemController {
   async getStorageInfo(@Request() req) {
     return this.fileSystemService.getUserStorageInfo(req.user.id);
   }
+
+  
 
   private getMimeType(fileName: string): string {
     const ext = fileName.split('.').pop()?.toLowerCase();

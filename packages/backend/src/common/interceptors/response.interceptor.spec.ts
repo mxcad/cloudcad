@@ -1,0 +1,182 @@
+import { ExecutionContext, CallHandler } from '@nestjs/common';
+import { of } from 'rxjs';
+import { ResponseInterceptor } from './response.interceptor';
+
+describe('ResponseInterceptor', () => {
+  let interceptor: ResponseInterceptor<any>;
+  let mockExecutionContext: ExecutionContext;
+  let mockCallHandler: CallHandler;
+
+  beforeEach(() => {
+    interceptor = new ResponseInterceptor();
+
+    mockExecutionContext = {} as ExecutionContext;
+
+    mockCallHandler = {
+      handle: jest.fn(),
+    } as any;
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('intercept', () => {
+    it('should wrap response data with standard format', (done) => {
+      const testData = { id: '1', name: 'Test' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: testData,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should handle null data', (done) => {
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(null));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: null,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should handle undefined data', (done) => {
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(undefined));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: undefined,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should handle array data', (done) => {
+      const testData = [
+        { id: '1', name: 'Test1' },
+        { id: '2', name: 'Test2' },
+      ];
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: testData,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should handle string data', (done) => {
+      const testData = 'Success message';
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: testData,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should handle number data', (done) => {
+      const testData = 42;
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: testData,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should handle boolean data', (done) => {
+      const testData = true;
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response).toEqual({
+            code: 'SUCCESS',
+            message: '操作成功',
+            data: testData,
+            timestamp: expect.any(String),
+          });
+          done();
+        },
+      });
+    });
+
+    it('should include valid ISO timestamp', (done) => {
+      const testData = { test: 'data' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+          const timestamp = new Date(response.timestamp);
+          expect(timestamp.getTime()).not.toBeNaN();
+          done();
+        },
+      });
+    });
+
+    it('should preserve nested object structure', (done) => {
+      const testData = {
+        user: {
+          id: '1',
+          profile: {
+            name: 'Test',
+            settings: {
+              theme: 'dark',
+            },
+          },
+        },
+      };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(testData));
+
+      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+        next: (response) => {
+          expect(response.data).toEqual(testData);
+          expect(response.data.user.profile.settings.theme).toBe('dark');
+          done();
+        },
+      });
+    });
+  });
+});

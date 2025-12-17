@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { FileStatus, ProjectStatus } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
+import { MinioStorageProvider } from '../storage/minio-storage.provider';
+import { FileHashService } from './file-hash.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
@@ -15,7 +17,11 @@ import { UpdateNodeDto } from './dto/update-node.dto';
 export class FileSystemService {
   private readonly logger = new Logger(FileSystemService.name);
 
-  constructor(private readonly prisma: DatabaseService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly storage: MinioStorageProvider,
+    private readonly fileHashService: FileHashService,
+  ) {}
 
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
@@ -290,8 +296,16 @@ export class FileSystemService {
     }
   }
 
-  async getChildren(nodeId: string) {
+  async getChildren(nodeId: string, userId?: string) {
     try {
+      // 如果提供了userId，检查权限
+      if (userId) {
+        const hasPermission = await this.checkNodeAccess(nodeId, userId);
+        if (!hasPermission) {
+          throw new ForbiddenException('没有权限访问此节点');
+        }
+      }
+
       const children = await this.prisma.fileSystemNode.findMany({
         where: { parentId: nodeId },
         include: {
@@ -437,6 +451,33 @@ export class FileSystemService {
         throw new BadRequestException('只能在文件夹下上传文件');
       }
 
+      // 计算文件哈希
+      const fileBuffer = file.buffer;
+      const fileHash = await this.fileHashService.calculateHash(fileBuffer);
+
+      // 检查是否已存在相同文件
+      const existingFile = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          fileHash,
+          isFolder: false,
+          fileStatus: FileStatus.COMPLETED,
+        },
+      });
+
+      let storageKey: string;
+      if (existingFile) {
+        // 文件已存在，创建引用
+        this.logger.log(`文件已存在，创建引用: ${file.originalname} -> ${existingFile.id}`);
+        storageKey = existingFile.path || '';
+      } else {
+        // 上传新文件到MinIO
+        const fileName = `${Date.now()}-${file.originalname}`;
+        storageKey = `files/${userId}/${fileName}`;
+        
+        await this.storage.uploadFile(storageKey, fileBuffer);
+        this.logger.log(`文件上传到MinIO成功: ${storageKey}`);
+      }
+
       const fileNode = await this.prisma.fileSystemNode.create({
         data: {
           name: file.originalname,
@@ -447,7 +488,8 @@ export class FileSystemService {
           extension: file.originalname.split('.').pop()?.toLowerCase() || '',
           mimeType: file.mimetype,
           size: file.size,
-          path: `/uploads/${file.filename}`,
+          path: storageKey,
+          fileHash,
           fileStatus: FileStatus.COMPLETED,
           ownerId: userId,
         },
@@ -469,6 +511,75 @@ export class FileSystemService {
       throw error;
     }
   }
+
+  async checkProjectPermission(projectId: string, userId: string, roles: string[]): Promise<boolean> {
+    try {
+      const membership = await this.prisma.projectMember.findFirst({
+        where: {
+          nodeId: projectId,
+          userId,
+        },
+      });
+
+      if (!membership) {
+        return false;
+      }
+
+      return roles.includes(membership.role);
+    } catch (error) {
+      this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
+    try {
+      // 获取节点
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { ownerId: true, isRoot: true, parentId: true },
+      });
+
+      if (!node) {
+        return false;
+      }
+
+      // 如果是节点所有者，直接允许访问
+      if (node.ownerId === userId) {
+        return true;
+      }
+
+      // 如果是根节点，检查项目成员权限
+      if (node.isRoot) {
+        const membership = await this.prisma.projectMember.findFirst({
+          where: {
+            nodeId,
+            userId,
+          },
+        });
+        return !!membership;
+      }
+
+      // 如果不是根节点，向上查找根节点并检查项目权限
+      const rootNode = await this.getRootNode(nodeId);
+      if (rootNode) {
+        const membership = await this.prisma.projectMember.findFirst({
+          where: {
+            nodeId: rootNode.id,
+            userId,
+          },
+        });
+        return !!membership;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`检查节点访问权限失败: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  
 
   async getRootNode(nodeId: string) {
     try {

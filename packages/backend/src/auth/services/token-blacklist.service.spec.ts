@@ -43,7 +43,15 @@ describe('TokenBlacklistService', () => {
           useValue: mockRedis,
         },
       ],
-    }).compile();
+    })
+    .setLogger({
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    })
+    .compile();
 
     service = module.get<TokenBlacklistService>(TokenBlacklistService);
     redis = module.get<Redis>(getRedisConnectionToken());
@@ -120,12 +128,12 @@ describe('TokenBlacklistService', () => {
       expect(redis.exists).toHaveBeenCalledWith(`token:blacklist:${testToken}`);
     });
 
-    it('should return true when Redis operation fails', async () => {
+    it('should return false when Redis operation fails (graceful degradation)', async () => {
       mockRedis.exists.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.isBlacklisted(testToken);
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 
@@ -171,12 +179,12 @@ describe('TokenBlacklistService', () => {
       expect(redis.exists).toHaveBeenCalledWith(`user:blacklist:${userId}`);
     });
 
-    it('should return true when Redis operation fails', async () => {
+    it('should return false when Redis operation fails (graceful degradation)', async () => {
       mockRedis.exists.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.isUserBlacklisted(userId);
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 

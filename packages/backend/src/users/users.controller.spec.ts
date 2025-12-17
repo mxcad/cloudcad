@@ -45,6 +45,7 @@ describe('UsersController', () => {
       update: jest.fn(),
       remove: jest.fn(),
       updateStatus: jest.fn(),
+      changePassword: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -63,6 +64,13 @@ describe('UsersController', () => {
     })
     .overrideGuard(require('../common/guards/roles.guard').RolesGuard)
     .useValue({ canActivate: () => true })
+    .setLogger({
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    })
     .compile();
 
     controller = module.get<UsersController>(UsersController);
@@ -444,6 +452,92 @@ describe('UsersController', () => {
       await controller.findAll(query as any);
 
       expect(usersService.findAll).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('should update user status', async () => {
+      const updatedUser = { ...mockUser, status: 'INACTIVE' };
+      usersService.updateStatus.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateStatus('user-id', 'INACTIVE');
+
+      expect(result).toEqual(updatedUser);
+      expect(usersService.updateStatus).toHaveBeenCalledWith('user-id', 'INACTIVE');
+    });
+
+    it('should suspend user', async () => {
+      const updatedUser = { ...mockUser, status: 'SUSPENDED' };
+      usersService.updateStatus.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateStatus('user-id', 'SUSPENDED');
+
+      expect(result).toEqual(updatedUser);
+      expect(usersService.updateStatus).toHaveBeenCalledWith('user-id', 'SUSPENDED');
+    });
+  });
+
+  describe('getProfile', () => {
+    it('should return user profile', async () => {
+      usersService.findOne.mockResolvedValue(mockUser);
+
+      const result = await controller.getProfile('user-id');
+
+      expect(result).toEqual(mockUser);
+      expect(usersService.findOne).toHaveBeenCalledWith('user-id');
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('should update user profile', async () => {
+      const updateData = {
+        nickname: 'New Nickname',
+        avatar: 'new-avatar-url',
+      };
+      const updatedUser = { ...mockUser, ...updateData };
+      usersService.update.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateProfile('user-id', updateData as any);
+
+      expect(result).toEqual(updatedUser);
+      expect(usersService.update).toHaveBeenCalledWith('user-id', updateData);
+    });
+
+    it('should exclude role and status when updating profile', async () => {
+      const updateData = {
+        nickname: 'New Nickname',
+        role: UserRole.ADMIN, // Should be excluded
+        status: 'INACTIVE', // Should be excluded
+      };
+      const expectedData = {
+        nickname: 'New Nickname',
+      };
+      usersService.update.mockResolvedValue(mockUser);
+
+      await controller.updateProfile('user-id', updateData as any);
+
+      expect(usersService.update).toHaveBeenCalledWith('user-id', expectedData);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should change user password', async () => {
+      const mockRequest = { user: { id: 'user-id' } };
+      const changePasswordDto = {
+        oldPassword: 'oldPassword123',
+        newPassword: 'newPassword123',
+      };
+      const mockResponse = { message: '密码修改成功' };
+      usersService.changePassword.mockResolvedValue(mockResponse);
+
+      const result = await controller.changePassword(mockRequest, changePasswordDto);
+
+      expect(result).toEqual(mockResponse);
+      expect(usersService.changePassword).toHaveBeenCalledWith(
+        'user-id',
+        changePasswordDto.oldPassword,
+        changePasswordDto.newPassword
+      );
     });
   });
 });

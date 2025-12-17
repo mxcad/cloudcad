@@ -8,7 +8,7 @@ describe('FileValidationService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [FileValidationService],
-    }).compile();
+    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
 
     service = module.get<FileValidationService>(FileValidationService);
   });
@@ -199,7 +199,7 @@ describe('FileValidationService', () => {
   });
 
   describe('MIME type validation', () => {
-    it('应该对 octet-stream 类型给出警告', () => {
+    it('应该为 octet-stream 类型给出警告', () => {
       const logSpy = jest.spyOn(service['logger'], 'warn');
       const file = {
         originalname: 'test.dwg',
@@ -286,3 +286,4 @@ describe('FileValidationService', () => {
     });
   });
 });
+

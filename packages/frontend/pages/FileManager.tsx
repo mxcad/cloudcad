@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, FolderPlus } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { FileUploader } from '../components/FileUploader';
 import { filesApi, projectsApi } from '../services/apiService';
 import type { components } from '../types/api';
 
@@ -55,13 +56,10 @@ const FileManager: React.FC = () => {
   const [files, setFiles] = useState<FileDto[]>([]);
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>(projectId || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [dragActive, setDragActive] = useState(false);
 
   // 文件操作相关状态
   const [showFileModal, setShowFileModal] = useState(false);
@@ -84,9 +82,19 @@ const FileManager: React.FC = () => {
     
     try {
       setLoading(true);
+      console.log(`[FileManager] 正在获取项目 ${projectId} 的文件列表...`);
       const response = await projectsApi.getChildren(projectId);
-      const fileData = response.data as any[];
-      setFiles(fileData);
+      console.log(`[FileManager] API响应:`, response);
+      
+      // 检查响应数据结构
+      const fileData = response.data || [];
+      console.log(`[FileManager] 解析到的文件数据:`, fileData);
+      
+      // 过滤出文件（非文件夹）
+      const filesOnly = Array.isArray(fileData) ? fileData.filter(item => !item.isFolder) : [];
+      console.log(`[FileManager] 过滤后的文件列表:`, filesOnly);
+      
+      setFiles(filesOnly);
     } catch (error) {
       console.error('获取文件列表失败:', error);
       setFiles([]);
@@ -132,71 +140,23 @@ const FileManager: React.FC = () => {
   };
 
   // 文件上传处理
-  const handleFileUpload = async (files: FileList) => {
-    setUploading(true);
-    try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const fileId = Math.random().toString(36).substring(7);
-        setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
-
-        try {
-          // 创建FormData
-          const formData = new FormData();
-          formData.append('file', file);
-          if (selectedProject !== 'all') {
-            formData.append('projectId', selectedProject);
-          }
-
-          const response = await filesApi.upload(file, selectedProject === 'all' ? '' : selectedProject);
-          const uploadedFile = response.data as FileDto;
-
-          setFiles(prev => [uploadedFile, ...prev]);
-          setUploadProgress(prev => ({ ...prev, [fileId]: 100 }));
-          
-          // 清除进度
-          setTimeout(() => {
-            setUploadProgress(prev => {
-              const newProgress = { ...prev };
-              delete newProgress[fileId];
-              return newProgress;
-            });
-          }, 1000);
-
-          return uploadedFile;
-        } catch (error) {
-          console.error(`上传文件 ${file.name} 失败:`, error);
-          throw error;
-        }
-      });
-
-      await Promise.all(uploadPromises);
-    } catch (error) {
-      console.error('文件上传失败:', error);
-    } finally {
-      setUploading(false);
-    }
+  const handleFileUpload = async (file: File, result: any) => {
+    console.log(`[FileManager] 文件上传成功:`, { fileName: file.name, result });
+    
+    // 添加到文件列表
+    const uploadedFile = result as FileDto;
+    setFiles(prev => [uploadedFile, ...prev]);
+    
+    // 重新加载文件列表以确保数据同步
+    await loadFiles();
   };
 
-  // 拖拽处理
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, []);
+  // 文件上传错误处理
+  const handleUploadError = (file: File, error: Error) => {
+    console.error(`上传文件 ${file.name} 失败:`, error);
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files);
-    }
-  }, []);
+  
 
   // 文件下载
   const handleDownload = async (fileId: string, fileName: string) => {
@@ -352,25 +312,22 @@ const FileManager: React.FC = () => {
         <p className="text-gray-600">管理和组织您的项目文件</p>
       </div>
 
+      {/* 文件上传区域 */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <FileUploader
+          projectId={projectId || ''}
+          onUploadComplete={handleFileUpload}
+          onUploadError={handleUploadError}
+          maxFiles={10}
+          accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg"
+        />
+      </div>
+
       {/* 操作栏 */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* 左侧操作 */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* 文件上传 */}
-            <div className="relative">
-              <input
-                type="file"
-                multiple
-                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                disabled={uploading}
-              />
-              <Button variant="primary" disabled={uploading}>
-                {uploading ? '上传中...' : '上传文件'}
-              </Button>
-            </div>
-
             {/* 创建文件夹 */}
             {projectId && (
               <Button 
@@ -441,40 +398,9 @@ const FileManager: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* 上传进度 */}
-        {Object.keys(uploadProgress).length > 0 && (
-          <div className="mt-4 space-y-2">
-            {Object.entries(uploadProgress).map(([fileId, progress]) => (
-              <div key={fileId} className="flex items-center gap-2 text-sm">
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-indigo-600 h-2 rounded-full transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <span className="text-gray-600">{progress}%</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* 拖拽上传区域 */}
-      {dragActive && (
-        <div
-          className="fixed inset-0 bg-indigo-500 bg-opacity-20 flex items-center justify-center z-50"
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-            <div className="text-4xl mb-4">📁</div>
-            <p className="text-lg font-medium text-gray-900">释放文件到此处上传</p>
-          </div>
-        </div>
-      )}
+      
 
       {/* 文件列表 */}
       <div className="bg-white rounded-lg shadow-sm">

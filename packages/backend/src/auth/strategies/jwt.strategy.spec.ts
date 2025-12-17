@@ -62,7 +62,15 @@ describe('JwtStrategy', () => {
           useValue: mockTokenBlacklistService,
         },
       ],
-    }).compile();
+    })
+    .setLogger({
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    })
+    .compile();
 
     strategy = moduleRef.get<JwtStrategy>(JwtStrategy);
     configService = moduleRef.get(ConfigService);
@@ -106,7 +114,15 @@ describe('JwtStrategy', () => {
               },
             },
           ],
-        }).compile()
+        })
+        .setLogger({
+          log: jest.fn(),
+          error: jest.fn(),
+          warn: jest.fn(),
+          debug: jest.fn(),
+          verbose: jest.fn(),
+        })
+        .compile()
       ).rejects.toThrow('JWT_SECRET environment variable is required');
     });
   });
@@ -136,7 +152,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(strategy.validate(mockPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户不存在'
       );
     });
 
@@ -145,7 +161,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(inactiveUser);
 
       await expect(strategy.validate(mockPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户已被禁用'
       );
     });
 
@@ -154,7 +170,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(suspendedUser);
 
       await expect(strategy.validate(mockPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户已被禁用'
       );
     });
 
@@ -239,7 +255,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(strategy.validate(malformedPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户不存在'
       );
     });
 
@@ -295,7 +311,7 @@ describe('JwtStrategy', () => {
           expect(result.status).toBe(status);
         } else {
           await expect(strategy.validate(mockPayload)).rejects.toThrow(
-            '用户不存在或已被禁用'
+            '用户已被禁用'
           );
         }
       }

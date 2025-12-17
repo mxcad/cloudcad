@@ -97,6 +97,21 @@ export class TokenBlacklistService implements OnModuleInit {
   }
 
   /**
+   * 从黑名单中移除用户
+   * @param userId 用户ID
+   */
+  async removeUserFromBlacklist(userId: string): Promise<void> {
+    try {
+      const key = `user:blacklist:${userId}`;
+      await this.redis.del(key);
+      this.logger.log(`用户已从黑名单移除: ${userId}`);
+    } catch (error) {
+      this.logger.error('从黑名单移除用户失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 从黑名单中移除Token
    * @param token JWT Token
    */

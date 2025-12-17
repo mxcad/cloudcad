@@ -340,4 +340,52 @@ export class UsersService {
   ): Promise<boolean> {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
+
+  /**
+   * 修改密码
+   */
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('用户不存在');
+      }
+
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+      if (!isPasswordValid) {
+        throw new ConflictException('旧密码不正确');
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, this.saltRounds);
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      await this.prisma.refreshToken.deleteMany({
+        where: { userId },
+      });
+      this.logger.log(`已删除用户的所有刷新令牌: ${user.email}`);
+
+      this.logger.log(`用户密码修改成功: ${user.email}`);
+
+      return { message: '密码修改成功，请重新登录' };
+    } catch (error) {
+      this.logger.error(`用户密码修改失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
 }

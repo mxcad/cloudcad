@@ -27,7 +27,7 @@ describe('FileSystemService', () => {
           useValue: mockPrisma,
         },
       ],
-    }).compile();
+    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
 
     service = module.get<FileSystemService>(FileSystemService);
     prisma = module.get<DatabaseService>(DatabaseService);
@@ -89,18 +89,18 @@ describe('FileSystemService', () => {
       });
     });
 
-    it('应该处理创建失败的情况', async () => {
+    it('应该处理创建失败的情�?, async () => {
       const userId = 'user-123';
       const dto = { name: '测试项目' };
 
-      mockPrisma.fileSystemNode.create.mockRejectedValue(new Error('数据库错误'));
+      mockPrisma.fileSystemNode.create.mockRejectedValue(new Error('数据库错�?));
 
-      await expect(service.createProject(userId, dto)).rejects.toThrow('数据库错误');
+      await expect(service.createProject(userId, dto)).rejects.toThrow('数据库错�?);
     });
   });
 
   describe('getUserProjects', () => {
-    it('应该返回用户的所有项目', async () => {
+    it('应该返回用户的所有项�?, async () => {
       const userId = 'user-123';
       const mockProjects = [
         {
@@ -152,7 +152,7 @@ describe('FileSystemService', () => {
       expect(result).toEqual(mockProject);
     });
 
-    it('应该在项目不存在时抛出异常', async () => {
+    it('应该在项目不存在时抛出异�?, async () => {
       const projectId = 'nonexistent';
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
@@ -164,7 +164,7 @@ describe('FileSystemService', () => {
   describe('updateProject', () => {
     it('应该成功更新项目', async () => {
       const projectId = 'project-123';
-      const dto = { name: '新名称', description: '新描述', status: 'ARCHIVED' };
+      const dto = { name: '新名�?, description: '新描�?, status: 'ARCHIVED' };
       const mockUpdated = { id: projectId, ...dto };
 
       mockPrisma.fileSystemNode.update.mockResolvedValue(mockUpdated);
@@ -185,7 +185,7 @@ describe('FileSystemService', () => {
 
     it('应该处理更新错误', async () => {
       const projectId = 'project-123';
-      const dto = { name: '新名称' };
+      const dto = { name: '新名�? };
 
       mockPrisma.fileSystemNode.update.mockRejectedValue(new Error('Update failed'));
 
@@ -217,7 +217,7 @@ describe('FileSystemService', () => {
   });
 
   describe('createFolder', () => {
-    it('应该成功创建文件夹', async () => {
+    it('应该成功创建文件�?, async () => {
       const userId = 'user-123';
       const parentId = 'parent-123';
       const dto = { name: '新文件夹' };
@@ -276,7 +276,7 @@ describe('FileSystemService', () => {
   });
 
   describe('getNodeTree', () => {
-    it('应该返回节点树结构', async () => {
+    it('应该返回节点树结�?, async () => {
       const nodeId = 'node-123';
       const mockNode = {
         id: nodeId,
@@ -292,7 +292,7 @@ describe('FileSystemService', () => {
       expect(result).toEqual(mockNode);
     });
 
-    it('应该在节点不存在时抛出异常', async () => {
+    it('应该在节点不存在时抛出异�?, async () => {
       const nodeId = 'nonexistent';
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
@@ -300,7 +300,7 @@ describe('FileSystemService', () => {
       await expect(service.getNodeTree(nodeId)).rejects.toThrow(NotFoundException);
     });
 
-    it('应该处理查询节点树时的错误', async () => {
+    it('应该处理查询节点树时的错�?, async () => {
       const nodeId = 'node-123';
 
       mockPrisma.fileSystemNode.findUnique.mockRejectedValue(new Error('Query error'));
@@ -310,11 +310,11 @@ describe('FileSystemService', () => {
   });
 
   describe('getChildren', () => {
-    it('应该返回子节点列表', async () => {
+    it('应该返回子节点列�?, async () => {
       const nodeId = 'node-123';
       const mockChildren = [
-        { id: 'child-1', name: '子节点1', isFolder: true },
-        { id: 'child-2', name: '子节点2', isFolder: false },
+        { id: 'child-1', name: '子节�?', isFolder: true },
+        { id: 'child-2', name: '子节�?', isFolder: false },
       ];
 
       mockPrisma.fileSystemNode.findMany.mockResolvedValue(mockChildren);
@@ -329,7 +329,7 @@ describe('FileSystemService', () => {
       });
     });
 
-    it('应该处理查询子节点时的错误', async () => {
+    it('应该处理查询子节点时的错�?, async () => {
       const nodeId = 'node-123';
 
       mockPrisma.fileSystemNode.findMany.mockRejectedValue(new Error('Query error'));
@@ -341,7 +341,7 @@ describe('FileSystemService', () => {
   describe('updateNode', () => {
     it('应该成功更新节点', async () => {
       const nodeId = 'node-123';
-      const dto = { name: '新名称' };
+      const dto = { name: '新名�? };
       const mockUpdated = { id: nodeId, ...dto };
 
       mockPrisma.fileSystemNode.update.mockResolvedValue(mockUpdated);
@@ -353,7 +353,7 @@ describe('FileSystemService', () => {
 
     it('应该处理更新节点时的错误', async () => {
       const nodeId = 'node-123';
-      const dto = { name: '新名称' };
+      const dto = { name: '新名�? };
 
       mockPrisma.fileSystemNode.update.mockRejectedValue(new Error('Update error'));
 
@@ -374,7 +374,7 @@ describe('FileSystemService', () => {
       expect(result).toEqual({ message: '节点删除成功' });
     });
 
-    it('应该禁止删除根节点', async () => {
+    it('应该禁止删除根节�?, async () => {
       const nodeId = 'root-123';
       const mockNode = { isRoot: true };
 
@@ -412,7 +412,7 @@ describe('FileSystemService', () => {
       expect(result).toEqual(mockMoved);
     });
 
-    it('应该在节点不存在时抛出异常', async () => {
+    it('应该在节点不存在时抛出异�?, async () => {
       const nodeId = 'nonexistent';
       const targetParentId = 'target-123';
 
@@ -423,7 +423,7 @@ describe('FileSystemService', () => {
       );
     });
 
-    it('应该禁止移动根节点', async () => {
+    it('应该禁止移动根节�?, async () => {
       const nodeId = 'root-123';
       const targetParentId = 'target-123';
       const mockNode = { isRoot: true };
@@ -435,7 +435,7 @@ describe('FileSystemService', () => {
       );
     });
 
-    it('应该禁止移动到非文件夹节点', async () => {
+    it('应该禁止移动到非文件夹节�?, async () => {
       const nodeId = 'node-123';
       const targetParentId = 'file-123';
       const mockNode = { isRoot: false, parentId: 'old-parent' };
@@ -450,7 +450,7 @@ describe('FileSystemService', () => {
       );
     });
 
-    it('应该禁止移动到自身', async () => {
+    it('应该禁止移动到自�?, async () => {
       const nodeId = 'node-123';
       const mockNode = { isRoot: false, parentId: 'old-parent' };
       const mockTargetParent = { isFolder: true };
@@ -576,7 +576,7 @@ describe('FileSystemService', () => {
   });
 
   describe('getRootNode', () => {
-    it('应该返回根节点', async () => {
+    it('应该返回根节�?, async () => {
       const nodeId = 'child-123';
       const mockNode = { id: nodeId, isRoot: false, parentId: 'parent-123' };
       const mockParent = { id: 'parent-123', isRoot: false, parentId: 'root-123' };
@@ -592,7 +592,7 @@ describe('FileSystemService', () => {
       expect(result).toEqual(mockRoot);
     });
 
-    it('应该在节点不存在时抛出异常', async () => {
+    it('应该在节点不存在时抛出异�?, async () => {
       const nodeId = 'nonexistent';
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
@@ -622,7 +622,7 @@ describe('FileSystemService', () => {
   });
 
   describe('边界情况测试', () => {
-    it('应该处理数据库查询错误', async () => {
+    it('应该处理数据库查询错�?, async () => {
       const userId = 'user-123';
       const dto = { name: '项目' };
 
@@ -683,7 +683,7 @@ describe('FileSystemService', () => {
       );
     });
 
-    it('应该处理空字符串文件名的扩展名', async () => {
+    it('应该处理空字符串文件名的扩展�?, async () => {
       const userId = 'user-123';
       const parentId = 'parent-123';
       const file = {
@@ -735,4 +735,67 @@ describe('FileSystemService', () => {
       await expect(service.getUserProjects(userId)).rejects.toThrow();
     });
   });
+
+  describe('getUserStorageInfo', () => {
+    it('应该返回用户存储信息', async () => {
+      const userId = 'user-123';
+      const mockFiles = [
+        { size: 1024 },
+        { size: 2048 },
+        { size: 0 },
+      ];
+
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue(mockFiles);
+
+      const result = await service.getUserStorageInfo(userId);
+
+      expect(result.totalUsed).toBe(3072);
+      expect(result.totalLimit).toBe(5 * 1024 * 1024 * 1024);
+      expect(result.available).toBe(5 * 1024 * 1024 * 1024 - 3072);
+      expect(result.usagePercentage).toBe(0);
+      expect(result.formatted.totalUsed).toBe('3 KB');
+      expect(result.formatted.totalLimit).toBe('5 GB');
+      expect(result.formatted.available).toBe('5 GB');
+    });
+
+    it('应该处理用户没有文件的情况', async () => {
+      const userId = 'user-123';
+
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+
+      const result = await service.getUserStorageInfo(userId);
+
+      expect(result.totalUsed).toBe(0);
+      expect(result.available).toBe(5 * 1024 * 1024 * 1024);
+      expect(result.usagePercentage).toBe(0);
+      expect(result.formatted.totalUsed).toBe('0 B');
+    });
+
+    it('应该正确计算存储使用百分比', async () => {
+      const userId = 'user-123';
+      const mockFiles = [
+        { size: 1024 * 1024 * 1024 }, // 1GB
+        { size: 1024 * 1024 * 1024 }, // 1GB
+      ];
+
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue(mockFiles);
+
+      const result = await service.getUserStorageInfo(userId);
+
+      expect(result.totalUsed).toBe(2 * 1024 * 1024 * 1024);
+      expect(result.usagePercentage).toBe(40);
+      expect(result.formatted.totalUsed).toBe('2 GB');
+    });
+
+    it('应该处理查询错误', async () => {
+      const userId = 'user-123';
+
+      mockPrisma.fileSystemNode.findMany.mockRejectedValue(
+        new Error('Database error')
+      );
+
+      await expect(service.getUserStorageInfo(userId)).rejects.toThrow('Database error');
+    });
+  });
 });
+

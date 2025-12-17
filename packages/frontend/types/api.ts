@@ -156,6 +156,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 忘记密码 */
+        post: operations["AuthController_forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 重置密码 */
+        post: operations["AuthController_resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users": {
         parameters: {
             query?: never;
@@ -218,6 +252,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["UsersController_updateProfile"];
+        trace?: never;
+    };
+    "/api/users/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 修改密码 */
+        post: operations["UsersController_changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/file-system/projects": {
@@ -538,6 +589,18 @@ export interface components {
              */
             nickname?: string;
         };
+        LoginDto: {
+            /**
+             * @description 邮箱或用户名
+             * @example user@example.com
+             */
+            account: string;
+            /**
+             * @description 密码
+             * @example Password123!
+             */
+            password: string;
+        };
         UserDto: {
             /**
              * @description 用户ID
@@ -611,18 +674,6 @@ export interface components {
              */
             timestamp: string;
         };
-        LoginDto: {
-            /**
-             * @description 邮箱或用户名
-             * @example user@example.com
-             */
-            account: string;
-            /**
-             * @description 密码
-             * @example Password123!
-             */
-            password: string;
-        };
         RefreshTokenDto: {
             /**
              * @description 刷新Token
@@ -645,10 +696,15 @@ export interface components {
         };
         VerifyEmailDto: {
             /**
-             * @description 邮箱验证token
-             * @example a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
+             * @description 邮箱地址
+             * @example user@example.com
              */
-            token: string;
+            email: string;
+            /**
+             * @description 6位数字验证码
+             * @example 123456
+             */
+            code: string;
         };
         VerifyEmailResponseDto: {
             /**
@@ -661,6 +717,78 @@ export interface components {
             code: components["schemas"]["VerifyEmailResponseDto"];
             message: string;
             data: components["schemas"]["VerifyEmailResponseDto"];
+            timestamp: string;
+        };
+        ForgotPasswordDto: {
+            /**
+             * @description 邮箱地址
+             * @example user@example.com
+             */
+            email: string;
+        };
+        ForgotPasswordResponseDto: {
+            /** @description 消息 */
+            message: string;
+        };
+        ForgotPasswordApiResponseDto: {
+            /**
+             * @description 响应状态码
+             * @example SUCCESS
+             * @enum {string}
+             */
+            code: "SUCCESS" | "ERROR";
+            /**
+             * @description 响应消息
+             * @example 操作成功
+             */
+            message: string;
+            /** @description 响应数据 */
+            data: components["schemas"]["ForgotPasswordResponseDto"];
+            /**
+             * @description 响应时间戳
+             * @example 2025-12-12T03:34:55.801Z
+             */
+            timestamp: string;
+        };
+        ResetPasswordDto: {
+            /**
+             * @description 邮箱地址
+             * @example user@example.com
+             */
+            email: string;
+            /**
+             * @description 验证码
+             * @example 123456
+             */
+            code: string;
+            /**
+             * @description 新密码
+             * @example NewPassword123!
+             */
+            newPassword: string;
+        };
+        ResetPasswordResponseDto: {
+            /** @description 消息 */
+            message: string;
+        };
+        ResetPasswordApiResponseDto: {
+            /**
+             * @description 响应状态码
+             * @example SUCCESS
+             * @enum {string}
+             */
+            code: "SUCCESS" | "ERROR";
+            /**
+             * @description 响应消息
+             * @example 操作成功
+             */
+            message: string;
+            /** @description 响应数据 */
+            data: components["schemas"]["ResetPasswordResponseDto"];
+            /**
+             * @description 响应时间戳
+             * @example 2025-12-12T03:34:55.801Z
+             */
             timestamp: string;
         };
         CreateUserDto: {
@@ -712,6 +840,42 @@ export interface components {
              * @enum {string}
              */
             status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+        };
+        ChangePasswordDto: {
+            /**
+             * @description 旧密码
+             * @example OldPassword123!
+             */
+            oldPassword: string;
+            /**
+             * @description 新密码
+             * @example NewPassword123!
+             */
+            newPassword: string;
+        };
+        ChangePasswordResponseDto: {
+            /** @description 消息 */
+            message: string;
+        };
+        ChangePasswordApiResponseDto: {
+            /**
+             * @description 响应状态码
+             * @example SUCCESS
+             * @enum {string}
+             */
+            code: "SUCCESS" | "ERROR";
+            /**
+             * @description 响应消息
+             * @example 操作成功
+             */
+            message: string;
+            /** @description 响应数据 */
+            data: components["schemas"]["ChangePasswordResponseDto"];
+            /**
+             * @description 响应时间戳
+             * @example 2025-12-12T03:34:55.801Z
+             */
+            timestamp: string;
         };
         CreateProjectDto: {
             /**
@@ -780,13 +944,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 注册成功 */
+            /** @description 注册成功，请查收验证邮件 */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthApiResponseDto"];
+                    "application/json": unknown;
                 };
             };
             /** @description 请求参数错误 */
@@ -928,15 +1092,8 @@ export interface operations {
                     "application/json": components["schemas"]["SendVerificationApiResponseDto"];
                 };
             };
-            /** @description 请求参数错误或邮箱已验证 */
+            /** @description 请求参数错误或发送过于频繁 */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description 未授权 */
-            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -966,7 +1123,7 @@ export interface operations {
                     "application/json": components["schemas"]["VerifyEmailApiResponseDto"];
                 };
             };
-            /** @description 验证链接无效或已过期 */
+            /** @description 验证码无效或已过期 */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1000,7 +1157,76 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 未授权 */
+        };
+    };
+    AuthController_forgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordDto"];
+            };
+        };
+        responses: {
+            /** @description 密码重置验证码已发送 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordApiResponseDto"];
+                };
+            };
+            /** @description 请求参数错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 该邮箱未注册或账号已禁用 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordDto"];
+            };
+        };
+        responses: {
+            /** @description 密码重置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetPasswordApiResponseDto"];
+                };
+            };
+            /** @description 请求参数错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 验证码无效或已过期 */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1175,6 +1401,51 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            /** @description 密码修改成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordApiResponseDto"];
+                };
+            };
+            /** @description 请求参数错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 未授权或旧密码不正确 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 旧密码不正确 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

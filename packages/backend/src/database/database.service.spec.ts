@@ -40,7 +40,7 @@ describe('DatabaseService', () => {
           useValue: mockConfigService,
         },
       ],
-    }).compile();
+    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
 
     service = module.get<DatabaseService>(DatabaseService);
     configService = module.get<ConfigService>(ConfigService);
@@ -70,7 +70,7 @@ describe('DatabaseService', () => {
       await service.onModuleInit();
 
       expect(service.$connect).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('数据库连接成功');
+      expect(consoleSpy).toHaveBeenCalledWith('数据库连接成�?);
       
       consoleSpy.mockRestore();
     });
@@ -110,7 +110,7 @@ describe('DatabaseService', () => {
       expect(service.$queryRaw).toHaveBeenCalled();
       expect(result).toEqual({
         status: 'healthy',
-        message: '数据库连接正常',
+        message: '数据库连接正�?,
       });
     });
 
@@ -122,7 +122,7 @@ describe('DatabaseService', () => {
 
       expect(result).toEqual({
         status: 'unhealthy',
-        message: '数据库连接失败',
+        message: '数据库连接失�?,
         error: 'Database connection failed',
       });
     });

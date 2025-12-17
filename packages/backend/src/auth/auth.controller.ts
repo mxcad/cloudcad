@@ -32,6 +32,14 @@ import {
   VerifyEmailApiResponseDto,
   SendVerificationApiResponseDto,
 } from './dto/email-verification.dto';
+import {
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ForgotPasswordResponseDto,
+  ResetPasswordResponseDto,
+  ForgotPasswordApiResponseDto,
+  ResetPasswordApiResponseDto,
+} from './dto/password-reset.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('认证')
@@ -155,5 +163,35 @@ export class AuthController {
   async resendVerification(@Body() dto: { email: string }): Promise<SendVerificationResponseDto> {
     await this.emailVerificationService.resendVerificationEmail(dto.email);
     return { message: '验证邮件已重新发送' };
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '忘记密码' })
+  @ApiResponse({
+    status: 200,
+    description: '密码重置验证码已发送',
+    type: ForgotPasswordApiResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '该邮箱未注册或账号已禁用' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<ForgotPasswordResponseDto> {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '重置密码' })
+  @ApiResponse({
+    status: 200,
+    description: '密码重置成功',
+    type: ResetPasswordApiResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '验证码无效或已过期' })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<ResetPasswordResponseDto> {
+    return this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
   }
 }

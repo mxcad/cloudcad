@@ -363,9 +363,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </button>
               {showSettings && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50">
-                  <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600">
+                  <Link 
+                    to="/profile"
+                    className="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
+                    onClick={() => setShowSettings(false)}
+                  >
                     个人资料
-                  </button>
+                  </Link>
                   <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600">
                     系统设置
                   </button>

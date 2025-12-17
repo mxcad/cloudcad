@@ -2,6 +2,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { EmailVerificationService } from './services/email-verification.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 
 describe('AuthController', () => {
@@ -38,6 +39,15 @@ describe('AuthController', () => {
       login: jest.fn(),
       refreshToken: jest.fn(),
       logout: jest.fn(),
+      forgotPassword: jest.fn(),
+      resetPassword: jest.fn(),
+      verifyEmailAndActivate: jest.fn(),
+    } as any;
+
+    const mockEmailVerificationService = {
+      sendVerificationEmail: jest.fn(),
+      verifyEmail: jest.fn(),
+      resendVerificationEmail: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -47,11 +57,24 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: mockAuthService,
         },
+        {
+          provide: EmailVerificationService,
+          useValue: mockEmailVerificationService,
+        },
       ],
-    }).compile();
+    })
+    .setLogger({
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    })
+    .compile();
 
     controller = module.get<AuthController>(AuthController);
     authService = module.get(AuthService);
+    emailVerificationService = module.get(EmailVerificationService);
   });
 
   afterEach(() => {
@@ -378,4 +401,50 @@ describe('AuthController', () => {
       });
     });
   });
-});
+
+  describe('refreshToken', () => {
+          it('should refresh token successfully', async () => {
+            const refreshTokenDto = {
+              refreshToken: 'refresh-token',
+            };
+            authService.refreshToken.mockResolvedValue(mockAuthResponse);
+      
+            const result = await controller.refreshToken(refreshTokenDto);
+      
+            expect(result).toEqual(mockAuthResponse);
+            expect(authService.refreshToken).toHaveBeenCalledWith(refreshTokenDto.refreshToken);
+          });
+        });
+      
+        describe('logout', () => {
+          it('should logout successfully', async () => {
+            const mockRequest = { user: { id: 'user-id' } };
+            authService.logout.mockResolvedValue(undefined);
+      
+            await controller.logout(mockRequest);
+      
+            expect(authService.logout).toHaveBeenCalledWith('user-id');
+          });
+  });
+
+  describe('getProfile', () => {
+    it('should return user profile', async () => {
+      const user = {
+        id: 'user-id',
+        email: 'test@example.com',
+        username: 'testuser',
+        nickname: 'Test User',
+        avatar: 'avatar-url',
+        role: 'USER',
+        status: 'ACTIVE',
+      };
+      const mockRequest = { user };
+
+      const result = await controller.getProfile(mockRequest);
+
+      expect(result).toEqual(user);
+    });
+  });
+
+  
+      });

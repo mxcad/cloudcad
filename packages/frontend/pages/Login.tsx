@@ -113,12 +113,13 @@ export const Login: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
                 className="font-medium text-indigo-600 hover:text-indigo-500"
               >
                 忘记密码？
-              </a>
+              </button>
             </div>
           </div>
 

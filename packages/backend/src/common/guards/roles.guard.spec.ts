@@ -62,7 +62,7 @@ describe('RolesGuard', () => {
           useValue: mockCacheService,
         },
       ],
-    }).compile();
+    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
 
     guard = module.get<RolesGuard>(RolesGuard);
     reflector = module.get(Reflector);
@@ -331,3 +331,4 @@ describe('RolesGuard', () => {
     });
   });
 });
+
