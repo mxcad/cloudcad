@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm format:check && pnpm type-check",
-    "check:fix": "pnpm lint:fix && pnpm format",
+    "check:fix": "pnpm lint:fix && pnpm format && pnpm type-check",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -39,7 +39,8 @@
     "docker:logs": "docker-compose logs -f",
     "deploy:prod": "docker-compose up -d postgres redis minio && docker build -t cloucad-backend . && docker-compose up -d backend",
     "deploy:stop": "docker-compose down",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "verify": "pnpm check:fix && pnpm test && pnpm build"
   },
   "dependencies": {
     "@fastify/multipart": "^9.3.0",
