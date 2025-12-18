@@ -1,10 +1,13 @@
-import { Injectable, Logger, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
-import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailVerificationService } from './services/email-verification.service';
@@ -21,10 +24,12 @@ export class AuthService {
     private configService: ConfigService,
     private tokenBlacklistService: TokenBlacklistService,
     private emailVerificationService: EmailVerificationService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<{ message: string; email: string }> {
+  async register(
+    registerDto: RegisterDto
+  ): Promise<{ message: string; email: string }> {
     const { email, username, password, nickname } = registerDto;
 
     // 检查邮箱是否已存在
@@ -73,12 +78,18 @@ export class AuthService {
     };
   }
 
-  async verifyEmailAndActivate(email: string, code: string): Promise<{ message: string }> {
+  async verifyEmailAndActivate(
+    email: string,
+    code: string
+  ): Promise<{ message: string }> {
     this.logger.log(`开始验证邮箱: ${email}`);
-    
+
     // 验证验证码
-    const isValid = await this.emailVerificationService.verifyEmail(email, code);
-    
+    const isValid = await this.emailVerificationService.verifyEmail(
+      email,
+      code
+    );
+
     if (!isValid) {
       this.logger.error(`验证码验证失败: ${email}`);
       throw new Error('验证码验证失败');
@@ -129,7 +140,7 @@ export class AuthService {
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
-    
+
     this.logger.log(`用户登录尝试: ${account}`);
 
     // 查找用户（支持邮箱或用户名登录）
@@ -160,7 +171,9 @@ export class AuthService {
         this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
         throw new UnauthorizedException('请先验证邮箱后再登录');
       }
-      this.logger.warn(`登录失败 - 账号已禁用: ${account} (状态: ${user.status})`);
+      this.logger.warn(
+        `登录失败 - 账号已禁用: ${account} (状态: ${user.status})`
+      );
       throw new UnauthorizedException('账号已被禁用');
     }
 
@@ -183,7 +196,9 @@ export class AuthService {
     // 生成Token
     const tokens = await this.generateTokens(userWithoutPassword);
 
-    this.logger.log(`用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`);
+    this.logger.log(
+      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`
+    );
 
     return {
       ...tokens,
@@ -456,10 +471,17 @@ export class AuthService {
     };
   }
 
-  async resetPassword(email: string, code: string, newPassword: string): Promise<{ message: string }> {
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
     this.logger.log(`重置密码请求: ${email}`);
 
-    const isValid = await this.emailVerificationService.verifyEmail(email, code);
+    const isValid = await this.emailVerificationService.verifyEmail(
+      email,
+      code
+    );
     if (!isValid) {
       this.logger.error(`验证码验证失败: ${email}`);
       throw new UnauthorizedException('验证码无效或已过期');

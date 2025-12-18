@@ -12,7 +12,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/permissions.enum';
@@ -106,6 +106,10 @@ export class UsersController {
     @Request() req: AuthenticatedRequest,
     @Body() dto: ChangePasswordDto
   ): Promise<ChangePasswordResponseDto> {
-    return this.usersService.changePassword(req.user.id, dto.oldPassword, dto.newPassword);
+    return this.usersService.changePassword(
+      req.user.id,
+      dto.oldPassword,
+      dto.newPassword
+    );
   }
 }

@@ -10,8 +10,6 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  UseInterceptors,
-  UploadedFile,
   BadRequestException,
   NotFoundException,
   ForbiddenException,
@@ -25,7 +23,6 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { MoveNodeDto } from './dto/move-node.dto';
-
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard)
@@ -110,10 +107,7 @@ export class FileSystemController {
 
   @Post('nodes/:nodeId/move')
   @ApiResponse({ status: 200, description: '移动节点成功' })
-  async moveNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: MoveNodeDto
-  ) {
+  async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
     return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
   }
 
@@ -121,35 +115,36 @@ export class FileSystemController {
   @ApiResponse({ status: 201, description: '文件上传成功' })
   async uploadFile(
     @Request() req,
-    @Body() body: { projectId?: string; fileName?: string; fileContent?: string }
+    @Body()
+    body: { projectId?: string; fileName?: string; fileContent?: string }
   ) {
     const { projectId, fileName, fileContent } = body;
-    
+
     if (!fileName) {
       throw new BadRequestException('缺少文件名称');
     }
-    
+
     if (!projectId) {
       throw new BadRequestException('缺少项目ID');
     }
-    
+
     // 验证项目是否存在且用户有权限
     const project = await this.fileSystemService.getProject(projectId);
     if (!project) {
       throw new NotFoundException('项目不存在');
     }
-    
+
     // 检查用户是否是项目成员
     const hasPermission = await this.fileSystemService.checkProjectPermission(
-      projectId, 
-      req.user.id, 
+      projectId,
+      req.user.id,
       ['OWNER', 'ADMIN', 'MEMBER']
     );
-    
+
     if (!hasPermission) {
       throw new ForbiddenException('没有权限上传文件到此项目');
     }
-    
+
     // 将文件内容转为 buffer
     let buffer: Buffer;
     if (fileContent) {
@@ -159,7 +154,7 @@ export class FileSystemController {
       // 如果没有内容，创建一个空的文本文件作为占位符
       buffer = Buffer.from(`文件内容: ${fileName}`, 'utf-8');
     }
-    
+
     const mockFile = {
       originalname: fileName,
       filename: `${Date.now()}-${fileName}`,
@@ -167,7 +162,7 @@ export class FileSystemController {
       size: buffer.length,
       buffer: buffer,
     } as any;
-    
+
     return this.fileSystemService.uploadFile(req.user.id, projectId, mockFile);
   }
 
@@ -177,18 +172,16 @@ export class FileSystemController {
     return this.fileSystemService.getUserStorageInfo(req.user.id);
   }
 
-  
-
   private getMimeType(fileName: string): string {
     const ext = fileName.split('.').pop()?.toLowerCase();
     const mimeTypes: Record<string, string> = {
-      'dwg': 'application/acad',
-      'dxf': 'application/dxf',
-      'pdf': 'application/pdf',
-      'png': 'image/png',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'txt': 'text/plain',
+      dwg: 'application/acad',
+      dxf: 'application/dxf',
+      pdf: 'application/pdf',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      txt: 'text/plain',
     };
     return mimeTypes[ext || ''] || 'application/octet-stream';
   }

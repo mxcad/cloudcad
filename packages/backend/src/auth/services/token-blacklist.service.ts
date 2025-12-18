@@ -11,7 +11,7 @@ export class TokenBlacklistService implements OnModuleInit {
 
   constructor(
     private configService: ConfigService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
   onModuleInit() {

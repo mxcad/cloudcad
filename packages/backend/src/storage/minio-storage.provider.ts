@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
-import { StorageProvider, UploadResult, Part } from './storage.interface';
+import { StorageProvider, UploadResult } from './storage.interface';
 
 @Injectable()
 export class MinioStorageProvider implements StorageProvider {
@@ -54,7 +54,7 @@ export class MinioStorageProvider implements StorageProvider {
     try {
       const stream = await this.client.getObject(this.bucket, key);
       const chunks: Buffer[] = [];
-      
+
       return new Promise((resolve, reject) => {
         stream.on('data', (chunk) => chunks.push(chunk));
         stream.on('end', () => resolve(Buffer.concat(chunks)));
@@ -87,8 +87,6 @@ export class MinioStorageProvider implements StorageProvider {
       throw error;
     }
   }
-
-  
 
   // 预签名 URL
   async getPresignedUrl(key: string, expiry = 3600): Promise<string> {

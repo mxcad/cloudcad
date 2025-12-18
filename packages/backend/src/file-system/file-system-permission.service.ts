@@ -65,9 +65,8 @@ export class FileSystemPermissionService {
     });
 
     if (nodeAccess) {
-      const hasPermission = FILE_ACCESS_PERMISSIONS[nodeAccess.role].includes(
-        requiredPermission
-      );
+      const hasPermission =
+        FILE_ACCESS_PERMISSIONS[nodeAccess.role].includes(requiredPermission);
       this.cache.set(cacheKey, hasPermission, 300000);
       return hasPermission;
     }
@@ -78,9 +77,10 @@ export class FileSystemPermissionService {
         where: { userId_nodeId: { userId, nodeId: rootNode.id } },
       });
       if (membership) {
-        const hasPermission = PROJECT_MEMBER_PERMISSIONS[
-          membership.role
-        ].includes(requiredPermission);
+        const hasPermission =
+          PROJECT_MEMBER_PERMISSIONS[membership.role].includes(
+            requiredPermission
+          );
         this.cache.set(cacheKey, hasPermission, 300000);
         return hasPermission;
       }

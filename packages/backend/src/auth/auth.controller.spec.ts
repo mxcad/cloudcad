@@ -63,14 +63,14 @@ describe('AuthController', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
     authService = module.get(AuthService);
@@ -403,28 +403,30 @@ describe('AuthController', () => {
   });
 
   describe('refreshToken', () => {
-          it('should refresh token successfully', async () => {
-            const refreshTokenDto = {
-              refreshToken: 'refresh-token',
-            };
-            authService.refreshToken.mockResolvedValue(mockAuthResponse);
-      
-            const result = await controller.refreshToken(refreshTokenDto);
-      
-            expect(result).toEqual(mockAuthResponse);
-            expect(authService.refreshToken).toHaveBeenCalledWith(refreshTokenDto.refreshToken);
-          });
-        });
-      
-        describe('logout', () => {
-          it('should logout successfully', async () => {
-            const mockRequest = { user: { id: 'user-id' } };
-            authService.logout.mockResolvedValue(undefined);
-      
-            await controller.logout(mockRequest);
-      
-            expect(authService.logout).toHaveBeenCalledWith('user-id');
-          });
+    it('should refresh token successfully', async () => {
+      const refreshTokenDto = {
+        refreshToken: 'refresh-token',
+      };
+      authService.refreshToken.mockResolvedValue(mockAuthResponse);
+
+      const result = await controller.refreshToken(refreshTokenDto);
+
+      expect(result).toEqual(mockAuthResponse);
+      expect(authService.refreshToken).toHaveBeenCalledWith(
+        refreshTokenDto.refreshToken
+      );
+    });
+  });
+
+  describe('logout', () => {
+    it('should logout successfully', async () => {
+      const mockRequest = { user: { id: 'user-id' } };
+      authService.logout.mockResolvedValue(undefined);
+
+      await controller.logout(mockRequest);
+
+      expect(authService.logout).toHaveBeenCalledWith('user-id');
+    });
   });
 
   describe('getProfile', () => {
@@ -445,6 +447,4 @@ describe('AuthController', () => {
       expect(result).toEqual(user);
     });
   });
-
-  
-      });
+});

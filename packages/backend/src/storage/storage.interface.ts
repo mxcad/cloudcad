@@ -15,7 +15,7 @@ export interface StorageProvider {
   downloadFile(key: string): Promise<Buffer>;
   deleteFile(key: string): Promise<void>;
   fileExists(key: string): Promise<boolean>;
-  
+
   // 预签名 URL
   getPresignedUrl(key: string, expiry?: number): Promise<string>;
   getPresignedPutUrl(key: string, expiry?: number): Promise<string>;

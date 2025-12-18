@@ -5,7 +5,6 @@ import {
   ProjectMemberRole,
   UserRole,
 } from '../enums/permissions.enum';
-import { UserWithPermissions } from './permission.service';
 
 @Injectable()
 export class PermissionCacheService {

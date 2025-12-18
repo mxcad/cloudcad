@@ -36,14 +36,14 @@ describe('EmailService', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<EmailService>(EmailService);
     mailerService = module.get(MailerService);
@@ -82,9 +82,9 @@ describe('EmailService', () => {
       const error = new Error('Mailer service error');
       mailerService.sendMail.mockRejectedValue(error);
 
-      await expect(
-        service.sendVerificationEmail(email, token)
-      ).rejects.toThrow('Mailer service error');
+      await expect(service.sendVerificationEmail(email, token)).rejects.toThrow(
+        'Mailer service error'
+      );
     });
 
     it('should use correct configuration values', async () => {

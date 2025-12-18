@@ -52,7 +52,7 @@ describe('StorageService', () => {
   beforeEach(async () => {
     // Reset the mock
     jest.clearAllMocks();
-    
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageService,
@@ -61,11 +61,19 @@ describe('StorageService', () => {
           useValue: mockConfigService,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<StorageService>(StorageService);
     configService = module.get<ConfigService>(ConfigService);
-    
+
     service['client'] = mockMinioClient;
     service['bucket'] = 'cloucad';
   });
@@ -92,7 +100,10 @@ describe('StorageService', () => {
       }
 
       expect(mockMinioClient.bucketExists).toHaveBeenCalledWith('cloucad');
-      expect(mockMinioClient.makeBucket).toHaveBeenCalledWith('cloucad', 'us-east-1');
+      expect(mockMinioClient.makeBucket).toHaveBeenCalledWith(
+        'cloucad',
+        'us-east-1'
+      );
       expect(consoleSpy).toHaveBeenCalledWith('MinIO bucket cloucad 创建成功');
 
       consoleSpy.mockRestore();
@@ -236,12 +247,12 @@ describe('StorageService', () => {
     it('should get file as buffer', async () => {
       const key = 'test/file.txt';
       const expectedBuffer = Buffer.from('test content');
-      
+
       const mockStream = new Readable({
         read() {
           this.push(expectedBuffer);
           this.push(null);
-        }
+        },
       });
 
       mockMinioClient.getObject.mockResolvedValue(mockStream);
@@ -287,7 +298,10 @@ describe('StorageService', () => {
 
       await service.deleteFiles(keys);
 
-      expect(mockMinioClient.removeObjects).toHaveBeenCalledWith('cloucad', keys);
+      expect(mockMinioClient.removeObjects).toHaveBeenCalledWith(
+        'cloucad',
+        keys
+      );
     });
   });
 
@@ -369,7 +383,7 @@ describe('StorageService', () => {
       const mockStream = {
         on: jest.fn((event, callback) => {
           if (event === 'data') {
-            expectedItems.forEach(item => callback(item));
+            expectedItems.forEach((item) => callback(item));
           } else if (event === 'end') {
             callback();
           }
@@ -380,7 +394,11 @@ describe('StorageService', () => {
 
       const result = await service.listFiles(prefix);
 
-      expect(mockMinioClient.listObjects).toHaveBeenCalledWith('cloucad', prefix, true);
+      expect(mockMinioClient.listObjects).toHaveBeenCalledWith(
+        'cloucad',
+        prefix,
+        true
+      );
       expect(result).toEqual(expectedItems);
     });
   });
@@ -395,7 +413,11 @@ describe('StorageService', () => {
 
       const result = await service.getPresignedUrl(key, expiry);
 
-      expect(mockMinioClient.presignedGetObject).toHaveBeenCalledWith('cloucad', key, expiry);
+      expect(mockMinioClient.presignedGetObject).toHaveBeenCalledWith(
+        'cloucad',
+        key,
+        expiry
+      );
       expect(result).toBe(expectedUrl);
     });
   });
@@ -410,7 +432,11 @@ describe('StorageService', () => {
 
       const result = await service.getPresignedPutUrl(key, expiry);
 
-      expect(mockMinioClient.presignedPutObject).toHaveBeenCalledWith('cloucad', key, expiry);
+      expect(mockMinioClient.presignedPutObject).toHaveBeenCalledWith(
+        'cloucad',
+        key,
+        expiry
+      );
       expect(result).toBe(expectedUrl);
     });
   });

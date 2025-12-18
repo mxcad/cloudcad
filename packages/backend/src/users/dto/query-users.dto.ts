@@ -21,7 +21,13 @@ export class QueryUsersDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiProperty({ description: '每页数量', required: false, minimum: 10, maximum: 100, default: 20 })
+  @ApiProperty({
+    description: '每页数量',
+    required: false,
+    minimum: 10,
+    maximum: 100,
+    default: 20,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -29,16 +35,20 @@ export class QueryUsersDto {
   @Max(100)
   limit?: number = 20;
 
-  @ApiProperty({ description: '排序字段', required: false, default: 'createdAt' })
+  @ApiProperty({
+    description: '排序字段',
+    required: false,
+    default: 'createdAt',
+  })
   @IsOptional()
   @IsString()
   sortBy?: string = 'createdAt';
 
-  @ApiProperty({ 
-    description: '排序方向', 
-    required: false, 
-    enum: ['asc', 'desc'], 
-    default: 'desc' 
+  @ApiProperty({
+    description: '排序方向',
+    required: false,
+    enum: ['asc', 'desc'],
+    default: 'desc',
   })
   @IsOptional()
   @IsString()

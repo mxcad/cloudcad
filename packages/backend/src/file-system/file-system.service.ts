@@ -20,7 +20,7 @@ export class FileSystemService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storage: MinioStorageProvider,
-    private readonly fileHashService: FileHashService,
+    private readonly fileHashService: FileHashService
   ) {}
 
   async createProject(userId: string, dto: CreateProjectDto) {
@@ -436,7 +436,11 @@ export class FileSystemService {
     }
   }
 
-  async uploadFile(userId: string, parentId: string, file: Express.Multer.File) {
+  async uploadFile(
+    userId: string,
+    parentId: string,
+    file: Express.Multer.File
+  ) {
     try {
       const parent = await this.prisma.fileSystemNode.findUnique({
         where: { id: parentId },
@@ -467,13 +471,15 @@ export class FileSystemService {
       let storageKey: string;
       if (existingFile) {
         // 文件已存在，创建引用
-        this.logger.log(`文件已存在，创建引用: ${file.originalname} -> ${existingFile.id}`);
+        this.logger.log(
+          `文件已存在，创建引用: ${file.originalname} -> ${existingFile.id}`
+        );
         storageKey = existingFile.path || '';
       } else {
         // 上传新文件到MinIO
         const fileName = `${Date.now()}-${file.originalname}`;
         storageKey = `files/${userId}/${fileName}`;
-        
+
         await this.storage.uploadFile(storageKey, fileBuffer);
         this.logger.log(`文件上传到MinIO成功: ${storageKey}`);
       }
@@ -512,7 +518,11 @@ export class FileSystemService {
     }
   }
 
-  async checkProjectPermission(projectId: string, userId: string, roles: string[]): Promise<boolean> {
+  async checkProjectPermission(
+    projectId: string,
+    userId: string,
+    roles: string[]
+  ): Promise<boolean> {
     try {
       const membership = await this.prisma.projectMember.findFirst({
         where: {
@@ -579,8 +589,6 @@ export class FileSystemService {
     }
   }
 
-  
-
   async getRootNode(nodeId: string) {
     try {
       let currentNode = await this.prisma.fileSystemNode.findUnique({
@@ -625,7 +633,7 @@ export class FileSystemService {
       });
 
       const totalUsed = files.reduce((sum, file) => sum + (file.size || 0), 0);
-      
+
       // 设置存储限制为 5GB (5 * 1024 * 1024 * 1024 bytes)
       const totalLimit = 5 * 1024 * 1024 * 1024;
       const available = totalLimit - totalUsed;
@@ -650,11 +658,11 @@ export class FileSystemService {
 
   private formatBytes(bytes: number): string {
     if (bytes === 0) return '0 B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }

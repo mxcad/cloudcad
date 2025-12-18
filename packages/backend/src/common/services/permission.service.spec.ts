@@ -85,14 +85,14 @@ describe('PermissionService', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<PermissionService>(PermissionService);
     prisma = module.get(DatabaseService);
@@ -183,8 +183,6 @@ describe('PermissionService', () => {
       expect(result).toBe(false);
     });
   });
-
-
 
   describe('getProjectPermissions', () => {
     it('should return empty array as method is deprecated', async () => {

@@ -36,29 +36,29 @@ describe('Authentication & Authorization Integration Tests', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-    .overrideProvider(getRedisConnectionToken())
-    .useValue({
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      setex: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
-      exists: jest.fn().mockResolvedValue(0),
-      expire: jest.fn().mockResolvedValue(1),
-      keys: jest.fn().mockResolvedValue([]),
-      flushdb: jest.fn().mockResolvedValue('OK'),
-      on: jest.fn(),
-      once: jest.fn(),
-      emit: jest.fn(),
-      quit: jest.fn().mockResolvedValue('OK'),
-    })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .overrideProvider(getRedisConnectionToken())
+      .useValue({
+        get: jest.fn().mockResolvedValue(null),
+        set: jest.fn().mockResolvedValue('OK'),
+        setex: jest.fn().mockResolvedValue('OK'),
+        del: jest.fn().mockResolvedValue(1),
+        exists: jest.fn().mockResolvedValue(0),
+        expire: jest.fn().mockResolvedValue(1),
+        keys: jest.fn().mockResolvedValue([]),
+        flushdb: jest.fn().mockResolvedValue('OK'),
+        on: jest.fn(),
+        once: jest.fn(),
+        emit: jest.fn(),
+        quit: jest.fn().mockResolvedValue('OK'),
+      })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
@@ -86,7 +86,7 @@ describe('Authentication & Authorization Integration Tests', () => {
     await prisma.fileAccess.deleteMany();
     await prisma.projectMember.deleteMany();
     await prisma.fileSystemNode.deleteMany();
-    
+
     // Clean up temporary test users (keep admin and regular user)
     await prisma.user.deleteMany({
       where: {
@@ -103,19 +103,19 @@ describe('Authentication & Authorization Integration Tests', () => {
     } catch (error) {
       console.log('Error cleaning up fileAccess:', error.message);
     }
-    
+
     try {
       await prisma.projectMember.deleteMany();
     } catch (error) {
       console.log('Error cleaning up projectMember:', error.message);
     }
-    
+
     try {
       await prisma.fileSystemNode.deleteMany();
     } catch (error) {
       console.log('Error cleaning up fileSystemNode:', error.message);
     }
-    
+
     try {
       await prisma.user.deleteMany({
         where: {

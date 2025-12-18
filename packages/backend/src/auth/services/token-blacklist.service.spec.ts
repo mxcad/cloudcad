@@ -21,10 +21,10 @@ describe('TokenBlacklistService', () => {
   const mockConfigService = {
     get: jest.fn((key: string) => {
       const config = {
-        'REDIS_HOST': 'localhost',
-        'REDIS_PORT': 6379,
-        'REDIS_PASSWORD': '',
-        'REDIS_DB': 0,
+        REDIS_HOST: 'localhost',
+        REDIS_PORT: 6379,
+        REDIS_PASSWORD: '',
+        REDIS_DB: 0,
       };
       return config[key];
     }),
@@ -44,14 +44,14 @@ describe('TokenBlacklistService', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<TokenBlacklistService>(TokenBlacklistService);
     redis = module.get<Redis>(getRedisConnectionToken());
@@ -69,7 +69,7 @@ describe('TokenBlacklistService', () => {
   describe('onModuleInit', () => {
     it('should set up Redis event listeners', () => {
       service.onModuleInit();
-      
+
       expect(redis.on).toHaveBeenCalledWith('error', expect.any(Function));
       expect(redis.on).toHaveBeenCalledWith('connect', expect.any(Function));
     });
@@ -103,7 +103,9 @@ describe('TokenBlacklistService', () => {
       const errorMessage = 'Redis connection failed';
       mockRedis.setex.mockRejectedValueOnce(new Error(errorMessage));
 
-      await expect(service.addToBlacklist(testToken)).rejects.toThrow(errorMessage);
+      await expect(service.addToBlacklist(testToken)).rejects.toThrow(
+        errorMessage
+      );
     });
   });
 
@@ -154,7 +156,9 @@ describe('TokenBlacklistService', () => {
       const errorMessage = 'Redis connection failed';
       mockRedis.setex.mockRejectedValueOnce(new Error(errorMessage));
 
-      await expect(service.blacklistUserTokens(userId)).rejects.toThrow(errorMessage);
+      await expect(service.blacklistUserTokens(userId)).rejects.toThrow(
+        errorMessage
+      );
     });
   });
 
@@ -201,7 +205,9 @@ describe('TokenBlacklistService', () => {
       const errorMessage = 'Redis connection failed';
       mockRedis.del.mockRejectedValueOnce(new Error(errorMessage));
 
-      await expect(service.removeFromBlacklist(testToken)).rejects.toThrow(errorMessage);
+      await expect(service.removeFromBlacklist(testToken)).rejects.toThrow(
+        errorMessage
+      );
     });
   });
 
@@ -225,7 +231,10 @@ describe('TokenBlacklistService', () => {
   describe('getBlacklistStats', () => {
     it('should return blacklist statistics', async () => {
       mockRedis.keys
-        .mockResolvedValueOnce(['token:blacklist:token1', 'token:blacklist:token2'])
+        .mockResolvedValueOnce([
+          'token:blacklist:token1',
+          'token:blacklist:token2',
+        ])
         .mockResolvedValueOnce(['user:blacklist:user1']);
 
       const result = await service.getBlacklistStats();

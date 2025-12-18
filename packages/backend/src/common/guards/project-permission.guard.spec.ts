@@ -60,7 +60,15 @@ describe('ProjectPermissionGuard', () => {
           useValue: mockCacheService,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     guard = module.get<ProjectPermissionGuard>(ProjectPermissionGuard);
     reflector = module.get(Reflector);
@@ -129,7 +137,7 @@ describe('ProjectPermissionGuard', () => {
         ForbiddenException
       );
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
-        '用户未认�?
+        '用户未认证'
       );
     });
 
@@ -156,7 +164,7 @@ describe('ProjectPermissionGuard', () => {
         ForbiddenException
       );
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
-        '用户没有足够的项目权�?
+        '用户没有足够的项目权限'
       );
     });
 
@@ -457,4 +465,3 @@ describe('ProjectPermissionGuard', () => {
     });
   });
 });
-

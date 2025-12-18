@@ -73,14 +73,14 @@ describe('UsersService', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<UsersService>(UsersService);
     prisma = module.get(DatabaseService);
@@ -88,7 +88,9 @@ describe('UsersService', () => {
 
     // Mock bcrypt
     jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword');
-    bcryptCompare = jest.spyOn(bcrypt, 'compare') as jest.MockedFunction<typeof bcrypt.compare>;
+    bcryptCompare = jest.spyOn(bcrypt, 'compare') as jest.MockedFunction<
+      typeof bcrypt.compare
+    >;
   });
 
   afterEach(() => {
@@ -165,7 +167,9 @@ describe('UsersService', () => {
     it('should handle database errors', async () => {
       prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.create(createUserDto)).rejects.toThrow('Database error');
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Database error'
+      );
     });
   });
 
@@ -315,7 +319,9 @@ describe('UsersService', () => {
     it('should handle database errors', async () => {
       prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.findOne('user-id')).rejects.toThrow('Database error');
+      await expect(service.findOne('user-id')).rejects.toThrow(
+        'Database error'
+      );
     });
   });
 
@@ -512,7 +518,10 @@ describe('UsersService', () => {
     it('should return true for correct password', async () => {
       bcryptCompare.mockResolvedValue(true);
 
-      const result = await service.validatePassword('password', 'hashedPassword');
+      const result = await service.validatePassword(
+        'password',
+        'hashedPassword'
+      );
 
       expect(result).toBe(true);
       expect(bcryptCompare).toHaveBeenCalledWith('password', 'hashedPassword');
@@ -521,7 +530,10 @@ describe('UsersService', () => {
     it('should return false for incorrect password', async () => {
       bcryptCompare.mockResolvedValue(false);
 
-      const result = await service.validatePassword('wrongpassword', 'hashedPassword');
+      const result = await service.validatePassword(
+        'wrongpassword',
+        'hashedPassword'
+      );
 
       expect(result).toBe(false);
     });
@@ -541,27 +553,34 @@ describe('UsersService', () => {
       const oldPassword = 'oldPassword123';
       const newPassword = 'newPassword123';
       const hashedNewPassword = 'hashedNewPassword';
-      
+
       prisma.user.findUnique.mockResolvedValue({
         id: userId,
         email: 'test@example.com',
         password: 'hashedOldPassword',
       });
-      
+
       bcryptCompare.mockResolvedValue(true);
       jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedNewPassword);
-      
+
       prisma.user.update.mockResolvedValue({});
       prisma.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
 
-      const result = await service.changePassword(userId, oldPassword, newPassword);
+      const result = await service.changePassword(
+        userId,
+        oldPassword,
+        newPassword
+      );
 
       expect(result).toEqual({ message: '密码修改成功，请重新登录' });
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
         select: { id: true, email: true, password: true },
       });
-      expect(bcrypt.compare).toHaveBeenCalledWith(oldPassword, 'hashedOldPassword');
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        oldPassword,
+        'hashedOldPassword'
+      );
       expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 12);
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: userId },
@@ -574,7 +593,7 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException when user does not exist', async () => {
       const userId = 'non-existent-user';
-      
+
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -584,13 +603,13 @@ describe('UsersService', () => {
 
     it('should throw ConflictException when old password is incorrect', async () => {
       const userId = 'user-id';
-      
+
       prisma.user.findUnique.mockResolvedValue({
         id: userId,
         email: 'test@example.com',
         password: 'hashedOldPassword',
       });
-      
+
       bcryptCompare.mockResolvedValue(false);
 
       await expect(
@@ -600,13 +619,13 @@ describe('UsersService', () => {
 
     it('should handle bcrypt hash errors', async () => {
       const userId = 'user-id';
-      
+
       prisma.user.findUnique.mockResolvedValue({
         id: userId,
         email: 'test@example.com',
         password: 'hashedOldPassword',
       });
-      
+
       bcryptCompare.mockResolvedValue(true);
       jest.spyOn(bcrypt, 'hash').mockRejectedValue(new Error('Hash error'));
 

@@ -168,10 +168,6 @@ declare global {
   }
 }
 
-
-
-
-
 // Mock external dependencies
 jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),

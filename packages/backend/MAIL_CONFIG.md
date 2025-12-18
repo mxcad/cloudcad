@@ -9,6 +9,7 @@
    - 生成16位密码
 
 3. 配置环境变量：
+
 ```env
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
@@ -21,6 +22,7 @@ MAIL_FROM=CloudCAD <noreply@cloucad.com>
 ## 企业/其他 SMTP 配置
 
 ### Outlook/Hotmail
+
 ```env
 MAIL_HOST=smtp-mail.outlook.com
 MAIL_PORT=587
@@ -31,6 +33,7 @@ MAIL_FROM=CloudCAD <noreply@cloucad.com>
 ```
 
 ### 企业邮箱
+
 ```env
 MAIL_HOST=smtp.your-company.com
 MAIL_PORT=587
@@ -58,12 +61,15 @@ MAIL_FROM=CloudCAD <noreply@your-company.com>
 ## 故障排查
 
 ### 常见错误：
+
 - "535 Authentication failed" - 检查邮箱密码是否正确
 - "Timeout" - 检查网络连接和防火墙设置
 - "Connection refused" - 检查 SMTP 主机和端口配置
 
 ### 调试方法：
+
 在开发环境中，可以通过添加日志查看详细错误信息：
+
 ```typescript
 this.logger.log(`发送邮件到: ${email}`);
 this.logger.error(`邮件发送失败: ${error}`);

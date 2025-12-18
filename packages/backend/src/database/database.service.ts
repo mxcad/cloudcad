@@ -15,13 +15,13 @@ export class DatabaseService
     const dbUser = configService.get('DB_USERNAME', 'postgres');
     const dbPassword = configService.get('DB_PASSWORD', 'password');
     const dbDatabase = configService.get('DB_DATABASE', 'cloucad');
-    
+
     // 确保密码是字符串类型并进行URL编码
     const encodedPassword = encodeURIComponent(String(dbPassword));
     const databaseUrl = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbDatabase}`;
-    
+
     console.log('数据库连接URL:', databaseUrl.replace(/:[^:@]*@/, ':***@')); // 隐藏密码的日志
-    
+
     const adapter = new PrismaPg({
       connectionString: databaseUrl,
     });

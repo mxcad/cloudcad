@@ -63,14 +63,14 @@ describe('JwtStrategy', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     strategy = moduleRef.get<JwtStrategy>(JwtStrategy);
     configService = moduleRef.get(ConfigService);
@@ -115,14 +115,14 @@ describe('JwtStrategy', () => {
             },
           ],
         })
-        .setLogger({
-          log: jest.fn(),
-          error: jest.fn(),
-          warn: jest.fn(),
-          debug: jest.fn(),
-          verbose: jest.fn(),
-        })
-        .compile()
+          .setLogger({
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+          })
+          .compile()
       ).rejects.toThrow('JWT_SECRET environment variable is required');
     });
   });

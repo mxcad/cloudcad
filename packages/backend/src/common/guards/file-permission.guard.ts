@@ -57,8 +57,10 @@ export class FilePermissionGuard implements CanActivate {
 
     // 文件权限检查已迁移到 FileSystemPermissionService
     // TODO: 更新为使用 FileSystemPermissionService.checkNodePermission
-    this.logger.warn('FilePermissionGuard 已废弃，请使用 FileSystemPermissionService');
-    
+    this.logger.warn(
+      'FilePermissionGuard 已废弃，请使用 FileSystemPermissionService'
+    );
+
     // 暂时允许通过（待迁移）
     const hasPermission = true;
 
@@ -73,7 +75,10 @@ export class FilePermissionGuard implements CanActivate {
 
   private extractFileId(request: any): string | null {
     // 从路由参数中获取
-    if (request.params?.fileId !== undefined && request.params?.fileId !== null) {
+    if (
+      request.params?.fileId !== undefined &&
+      request.params?.fileId !== null
+    ) {
       return request.params.fileId;
     }
 

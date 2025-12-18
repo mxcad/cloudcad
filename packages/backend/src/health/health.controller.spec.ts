@@ -39,7 +39,15 @@ describe('HealthController', () => {
           useValue: mockStorageService,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     controller = module.get<HealthController>(HealthController);
     healthCheckService = module.get<HealthCheckService>(HealthCheckService);

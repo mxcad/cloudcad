@@ -32,17 +32,25 @@ export class PermissionService {
     permission: Permission,
     resourceId?: { projectId?: string; fileId?: string }
   ): Promise<boolean> {
-    const resourceInfo = resourceId ? ` (资源: ${JSON.stringify(resourceId)})` : '';
-    this.logger.debug(`检查用户权限: ${user.id} (${user.username}) - ${permission}${resourceInfo}`);
-    
+    const resourceInfo = resourceId
+      ? ` (资源: ${JSON.stringify(resourceId)})`
+      : '';
+    this.logger.debug(
+      `检查用户权限: ${user.id} (${user.username}) - ${permission}${resourceInfo}`
+    );
+
     try {
       const userPermissions = ROLE_PERMISSIONS[user.role] || [];
       if (userPermissions.includes(permission)) {
-        this.logger.debug(`用户 ${user.id} 通过基础角色权限检查: ${permission}`);
+        this.logger.debug(
+          `用户 ${user.id} 通过基础角色权限检查: ${permission}`
+        );
         return true;
       }
 
-      this.logger.warn('项目和文件权限检查已迁移到 FileSystemPermissionService');
+      this.logger.warn(
+        '项目和文件权限检查已迁移到 FileSystemPermissionService'
+      );
       return false;
     } catch (error) {
       this.logger.error(`权限检查失败: ${error.message}`, error.stack);
@@ -58,7 +66,9 @@ export class PermissionService {
     projectId: string,
     permission: Permission
   ): Promise<boolean> {
-    this.logger.warn('checkProjectPermission 已废弃，请使用 FileSystemPermissionService.checkNodePermission');
+    this.logger.warn(
+      'checkProjectPermission 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
+    );
     return false;
   }
 
@@ -70,7 +80,9 @@ export class PermissionService {
     fileId: string,
     permission: Permission
   ): Promise<boolean> {
-    this.logger.warn('checkFilePermission 已废弃，请使用 FileSystemPermissionService.checkNodePermission');
+    this.logger.warn(
+      'checkFilePermission 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
+    );
     return false;
   }
 
@@ -86,7 +98,9 @@ export class PermissionService {
     projectId: string,
     roles: ProjectMemberRole[]
   ): Promise<boolean> {
-    this.logger.warn('hasProjectRole 已废弃，请使用 FileSystemPermissionService');
+    this.logger.warn(
+      'hasProjectRole 已废弃，请使用 FileSystemPermissionService'
+    );
     return false;
   }
 
@@ -95,9 +109,11 @@ export class PermissionService {
    */
   async getProjectPermissions(
     user: UserWithPermissions,
-    projectId: string,
+    projectId: string
   ): Promise<Permission[]> {
-    this.logger.warn('getProjectPermissions 已废弃，请使用 FileSystemPermissionService.checkNodePermission');
+    this.logger.warn(
+      'getProjectPermissions 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
+    );
     return [];
   }
 
@@ -106,9 +122,11 @@ export class PermissionService {
    */
   async getFilePermissions(
     user: UserWithPermissions,
-    fileId: string,
+    fileId: string
   ): Promise<Permission[]> {
-    this.logger.warn('getFilePermissions 已废弃，请使用 FileSystemPermissionService.checkNodePermission');
+    this.logger.warn(
+      'getFilePermissions 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
+    );
     return [];
   }
 
@@ -119,7 +137,9 @@ export class PermissionService {
     user: UserWithPermissions,
     fileId: string
   ): Promise<Permission[]> {
-    this.logger.warn('getFileAccessPermissions 已废弃，请使用 FileSystemPermissionService');
+    this.logger.warn(
+      'getFileAccessPermissions 已废弃，请使用 FileSystemPermissionService'
+    );
     return [];
   }
 
