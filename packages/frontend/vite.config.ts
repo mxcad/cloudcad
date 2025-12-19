@@ -17,23 +17,18 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/mxcad': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/mxcad/, '/api/mxcad'),
+        },
       },
     },
     plugins: [
       tailwindcss(),
       react(),
-      mxcadAssetsPlugin({
-        // 修改服务器配置，指向 CloudCAD 后端
-        transformMxServerConfig: (config) => {
-          config.serverUrl = '/api/mxcad';
-          return config;
-        },
-        // 修改 UI 配置
-        transformMxcadUiConfig: (config) => {
-          config.title = 'CloudCAD';
-          return config;
-        },
-      }),
+      mxcadAssetsPlugin(),
     ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

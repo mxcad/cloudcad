@@ -1,14 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { MxCADView } from 'mxcad-app';
+import { mxcadApp, MxCADView } from 'mxcad-app';
 import 'mxcad-app/style';
 
 
 interface CADEditorDirectProps {
   fileUrl?: string;
 }
-
+mxcadApp.initConfig({
+    uiConfig: "ini/myUiConfig.json", sketchesUiConfig: "ini/mySketchesAndNotesUiConfig.json",
+    serverConfig: "ini/myServerConfig.json", quickCommandConfig: "ini/myQuickCommand.json", themeConfig: "ini/myVuetifyThemeConfig.json"
+});
 export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);

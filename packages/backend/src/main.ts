@@ -1,27 +1,17 @@
 import { NestFactory } from '@nestjs/core';
-import {
-  FastifyAdapter,
-  NestFastifyApplication,
-} from '@nestjs/platform-fastify';
-import multipart from '@fastify/multipart';
+import { ExpressAdapter, NestExpressApplication } from '@nestjs/platform-express';
+import express from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(
+  const server = express();
+  server.use(express.json({ limit: '50mb' }));
+  server.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  
+  const app = await NestFactory.create<NestExpressApplication>(
     AppModule,
-    new FastifyAdapter({
-      logger: true,
-      trustProxy: true,
-      bodyLimit: 50 * 1024 * 1024, // 50MB for file uploads
-    })
+    new ExpressAdapter(server)
   );
-
-  // 注册 multipart 插件
-  await app.register(multipart, {
-    limits: {
-      fileSize: 50 * 1024 * 1024, // 50MB
-    },
-  });
 
   // 启用CORS
   app.enableCors({
