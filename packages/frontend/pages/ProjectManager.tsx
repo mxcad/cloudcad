@@ -11,6 +11,7 @@ import {
   Filter,
   MoreHorizontal,
   FolderOpen,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -265,10 +266,19 @@ export const ProjectManager = () => {
             创建和管理您的项目，组织文件和协作
           </p>
         </div>
-        <Button onClick={handleOpenCreate} disabled={loading}>
-          <FolderPlus size={16} className="mr-2" />
-          新建项目
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/cad-editor')}
+          >
+            <Pencil size={16} className="mr-2" />
+            测试 CAD 编辑器
+          </Button>
+          <Button onClick={handleOpenCreate} disabled={loading}>
+            <FolderPlus size={16} className="mr-2" />
+            新建项目
+          </Button>
+        </div>
       </div>
 
       {/* 搜索和筛选 */}
