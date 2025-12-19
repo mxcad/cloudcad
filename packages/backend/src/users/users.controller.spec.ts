@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -20,7 +20,7 @@ describe('UsersController', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: UserRole.USER,
     status: 'ACTIVE',
     createdAt: new Date(),

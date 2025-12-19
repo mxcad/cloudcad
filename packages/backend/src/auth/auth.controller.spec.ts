@@ -8,6 +8,7 @@ import { LoginDto, RegisterDto } from './dto/auth.dto';
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: jest.Mocked<AuthService>;
+  let emailVerificationService: jest.Mocked<EmailVerificationService>;
 
   const mockAuthResponse = {
     accessToken: 'access-token',
@@ -17,7 +18,7 @@ describe('AuthController', () => {
       email: 'test@example.com',
       username: 'testuser',
       nickname: 'Test User',
-      avatar: null,
+      avatar: undefined,
       role: 'USER',
       status: 'ACTIVE',
     },
@@ -27,10 +28,15 @@ describe('AuthController', () => {
     id: 'user-id',
     email: 'test@example.com',
     username: 'testuser',
+    password: 'hashed-password',
     nickname: 'Test User',
-    avatar: null,
-    role: 'USER',
-    status: 'ACTIVE',
+    avatar: undefined,
+    role: 'USER' as const,
+    status: 'ACTIVE' as const,
+    emailVerified: true,
+    emailVerifiedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   beforeEach(async () => {
@@ -229,23 +235,22 @@ describe('AuthController', () => {
       expect(result).toEqual(mockUser);
     });
 
-    it('should handle user with null avatar', async () => {
-      const userWithNullAvatar = { ...mockUser, avatar: null };
-      const mockRequest = { user: userWithNullAvatar };
+    it('should handle user with undefined avatar', async () => {
+      const userWithUndefinedAvatar = { ...mockUser, avatar: undefined };
+      const mockRequest = { user: userWithUndefinedAvatar };
 
       const result = await controller.getProfile(mockRequest);
 
-      expect(result.avatar).toBeNull();
+      expect(result.avatar).toBeUndefined();
     });
 
-    it('should handle user with undefined nickname', async () => {
-      const userWithoutNickname = { ...mockUser };
-      delete userWithoutNickname.nickname;
+    it('should handle user with null nickname', async () => {
+      const userWithoutNickname = { ...mockUser, nickname: null };
       const mockRequest = { user: userWithoutNickname };
 
       const result = await controller.getProfile(mockRequest);
 
-      expect(result.nickname).toBeUndefined();
+      expect(result.nickname).toBeNull();
     });
   });
 

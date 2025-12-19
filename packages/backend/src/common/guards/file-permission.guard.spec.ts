@@ -25,7 +25,7 @@ describe('FilePermissionGuard (Deprecated)', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: 'USER',
     status: 'ACTIVE',
   };

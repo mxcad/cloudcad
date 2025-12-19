@@ -22,7 +22,7 @@ describe('PermissionService', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: UserRole.USER,
     status: 'ACTIVE',
   };
@@ -142,8 +142,7 @@ describe('PermissionService', () => {
     });
 
     it('should handle errors gracefully', async () => {
-      // 创建一个无效的用户对象来触发错误
-      const invalidUser = { ...mockUser, role: null as any };
+      // 创建一个无效的用户对象来触发错�?      const invalidUser = { ...mockUser, role: null as any };
 
       const result = await service.hasPermission(
         invalidUser,

@@ -21,5 +21,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "exclude": ["**/*.spec.ts", "**/*.e2e-spec.ts", "test/**/*"]
 }

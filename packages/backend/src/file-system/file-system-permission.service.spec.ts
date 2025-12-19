@@ -44,9 +44,19 @@ describe('FileSystemPermissionService', () => {
           useValue: mockCache,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
-    service = module.get<FileSystemPermissionService>(FileSystemPermissionService);
+    service = module.get<FileSystemPermissionService>(
+      FileSystemPermissionService
+    );
     prisma = module.get<DatabaseService>(DatabaseService);
     cache = module.get<PermissionCacheService>(PermissionCacheService);
   });
@@ -63,7 +73,11 @@ describe('FileSystemPermissionService', () => {
     it('应该从缓存返回权限结果', async () => {
       mockCache.get.mockReturnValue(true);
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.get).toHaveBeenCalledWith(
@@ -79,7 +93,11 @@ describe('FileSystemPermissionService', () => {
         role: UserRole.ADMIN,
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -101,7 +119,11 @@ describe('FileSystemPermissionService', () => {
         parentId: 'parent-123',
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -141,7 +163,11 @@ describe('FileSystemPermissionService', () => {
         role: 'EDITOR',
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -211,7 +237,11 @@ describe('FileSystemPermissionService', () => {
         role: 'MEMBER',
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -241,7 +271,11 @@ describe('FileSystemPermissionService', () => {
       mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
       mockPrisma.projectMember.findUnique.mockResolvedValue(null);
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(false);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -472,7 +506,11 @@ describe('FileSystemPermissionService', () => {
         });
       mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(false);
     });
@@ -487,4 +525,3 @@ describe('FileSystemPermissionService', () => {
     });
   });
 });
-

@@ -37,7 +37,15 @@ describe('FileSystemController', () => {
           useValue: mockFileSystemService,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     controller = module.get<FileSystemController>(FileSystemController);
     service = module.get<FileSystemService>(FileSystemService);
@@ -57,7 +65,10 @@ describe('FileSystemController', () => {
       const result = await controller.createProject(mockRequest, dto);
 
       expect(result).toEqual(mockResult);
-      expect(service.createProject).toHaveBeenCalledWith(mockRequest.user.id, dto);
+      expect(service.createProject).toHaveBeenCalledWith(
+        mockRequest.user.id,
+        dto
+      );
     });
   });
 
@@ -183,10 +194,13 @@ describe('FileSystemController', () => {
 
       mockFileSystemService.getChildren.mockResolvedValue(mockChildren);
 
-      const result = await controller.getChildren(nodeId);
+      const result = await controller.getChildren(nodeId, mockRequest);
 
       expect(result).toEqual(mockChildren);
-      expect(service.getChildren).toHaveBeenCalledWith(nodeId);
+      expect(service.getChildren).toHaveBeenCalledWith(
+        nodeId,
+        mockRequest.user.id
+      );
     });
 
     it('应该返回空数组当节点无子节点', async () => {
@@ -194,7 +208,7 @@ describe('FileSystemController', () => {
 
       mockFileSystemService.getChildren.mockResolvedValue([]);
 
-      const result = await controller.getChildren(nodeId);
+      const result = await controller.getChildren(nodeId, mockRequest);
 
       expect(result).toEqual([]);
     });
@@ -275,12 +289,14 @@ describe('FileSystemController', () => {
 
       mockFileSystemService.createProject.mockRejectedValue(error);
 
-      await expect(controller.createProject(mockRequest, dto)).rejects.toThrow(error);
+      await expect(controller.createProject(mockRequest, dto)).rejects.toThrow(
+        error
+      );
     });
 
-    it('删除节点时应该传递权限错�?, async () => {
+    it('删除节点时应该传递权限错误', async () => {
       const nodeId = 'restricted-node';
-      const error = new Error('无权限删�?);
+      const error = new Error('无权限删除');
 
       mockFileSystemService.deleteNode.mockRejectedValue(error);
 
@@ -306,7 +322,7 @@ describe('FileSystemController', () => {
       expect(service.createProject).toHaveBeenCalledTimes(2);
     });
 
-    it('应该处理项目更新后立即查�?, async () => {
+    it('应该处理项目更新后立即查询', async () => {
       const projectId = 'project-123';
       const updateDto = { name: '更新后的名称' };
       const mockUpdated = { id: projectId, ...updateDto };
@@ -322,7 +338,7 @@ describe('FileSystemController', () => {
 
     it('应该处理文件夹重命名', async () => {
       const folderId = 'folder-123';
-      const dto = { name: '重命名的文件�? };
+      const dto = { name: '重命名的文件夹' };
       const mockResult = { id: folderId, ...dto, isFolder: true };
 
       mockFileSystemService.updateNode.mockResolvedValue(mockResult);
@@ -359,7 +375,7 @@ describe('FileSystemController', () => {
       expect(result.name).toBe(dto.name);
     });
 
-    it('应该处理极长的项目描�?, async () => {
+    it('应该处理极长的项目描述', async () => {
       const dto = {
         name: '项目',
         description: 'A'.repeat(500),
@@ -374,4 +390,3 @@ describe('FileSystemController', () => {
     });
   });
 });
-
