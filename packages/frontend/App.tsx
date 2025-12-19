@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AssetLibrary } from './pages/AssetLibrary';
+import { CADEditor } from './pages/CADEditor';
 import { EmailVerification } from './pages/EmailVerification';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
@@ -54,6 +55,24 @@ function App() {
           <Route path="/verify-email" element={<EmailVerification />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* CAD 编辑器 - 全屏显示，不使用 Layout */}
+          <Route
+            path="/cad-editor"
+            element={
+              <ProtectedRoute>
+                <CADEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cad-editor/:fileId"
+            element={
+              <ProtectedRoute>
+                <CADEditor />
+              </ProtectedRoute>
+            }
+          />
 
           {/* 受保护的路由 - 需要 Layout */}
           <Route
