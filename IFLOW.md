@@ -9,7 +9,7 @@
 - **100% 遵循编程规范与工程原则**（SOLID、KISS、DRY、YAGNI）
 - **100% 使用 pnpm**（禁止使用 npm 或 yarn）
 - **100% PowerShell 语法**（Windows 环境，命令必须符合 PowerShell 规范）
-- **100% 使用 @nestjs/platform-fastify**（后端 NestJS 开发必须使用 Fastify）
+- **100% 使用 Express**（后端 NestJS 开发使用 Express 平台）
 - **100% 禁止 any 类型**（TypeScript 严格模式，代码质量检查必须通过）
 - **100% 避免 --watch 命令**（除非用户明确要求，否则避免不会退出的命令）
 
@@ -43,6 +43,14 @@ cloudcad/
 │   │   │   ├── files/           # 文件处理（遗留模块，逐步迁移到 file-system）
 │   │   │   ├── health/          # 健康检查
 │   │   │   ├── mxcad/           # MxCAD 图纸转换模块
+│   │   │   │   ├── dto/         # 数据传输对象
+│   │   │   │   ├── enums/       # 枚举定义
+│   │   │   │   ├── interceptors/ # 拦截器
+│   │   │   │   ├── *.spec.ts    # 单元测试
+│   │   │   │   ├── README.md     # 模块文档
+│   │   │   │   ├── mxcad.controller.ts # 控制器
+│   │   │   │   ├── mxcad.service.ts    # 服务
+│   │   │   │   └── mxcad.module.ts     # 模块
 │   │   │   ├── projects/        # 项目管理（遗留模块，逐步迁移到 file-system）
 │   │   │   ├── redis/           # Redis 缓存
 │   │   │   ├── storage/         # MinIO 存储服务
@@ -58,41 +66,47 @@ cloudcad/
 │   │   ├── docker-compose.yml      # 生产环境配置
 │   │   ├── Dockerfile              # Docker 镜像
 │   │   └── package.json            # 后端配置
-│   └── frontend/         # React 前端应用（cloudcad-manager）
-│       ├── src/
-│       │   ├── components/          # 通用组件
-│       │   │   ├── Layout.tsx       # 主布局组件
-│       │   │   ├── FileUploader.tsx # 文件上传组件
-│       │   │   └── ui/              # UI 基础组件（Shadcn UI）
-│       │   ├── contexts/            # React Context
-│       │   │   └── AuthContext.tsx  # 认证上下文
-│       │   ├── pages/               # 页面组件
-│       │   │   ├── AssetLibrary.tsx      # 资产库管理
-│       │   │   ├── EmailVerification.tsx # 邮箱验证
-│       │   │   ├── FileManager.tsx       # 文件管理
-│       │   │   ├── ForgotPassword.tsx    # 忘记密码
-│       │   │   ├── Login.tsx             # 登录
-│       │   │   ├── Profile.tsx           # 用户资料
-│       │   │   ├── ProjectManager.tsx    # 项目管理
-│       │   │   ├── Register.tsx          # 注册
-│       │   │   ├── ResetPassword.tsx     # 重置密码
-│       │   │   ├── RoleManagement.tsx    # 角色管理
-│       │   │   └── UserManagement.tsx    # 用户管理
-│       │   ├── services/            # API 服务
-│       │   │   ├── api.ts               # 统一 API 接口
-│       │   │   ├── apiService.ts        # API 服务封装
-│       │   │   ├── fileUploadService.ts # 文件上传服务
-│       │   │   └── mockDb.ts            # Mock 数据库
-│       │   ├── types/               # 类型定义
-│       │   │   └── api.ts           # API 类型定义
-│       │   ├── utils/               # 工具函数
-│       │   │   └── validation.ts    # 验证工具
-│       │   └── styles/              # 样式文件
-│       ├── scripts/             # 构建脚本
-│       │   └── generate-types.js # 类型生成脚本
-│       ├── vitest.setup.ts      # Vitest 测试配置
-│       ├── types.ts             # 前端类型定义
-│       └── package.json         # 前端配置
+│   ├── frontend/         # React 前端应用（cloudcad-manager）
+│   │   ├── components/          # 通用组件
+│   │   │   ├── FileUploader.tsx # 文件上传组件
+│   │   │   └── ui/              # UI 基础组件（Shadcn UI）
+│   │   ├── contexts/            # React Context
+│   │   │   └── AuthContext.tsx  # 认证上下文
+│   │   ├── pages/               # 页面组件
+│   │   │   ├── AssetLibrary.tsx      # 资产库管理
+│   │   │   ├── CADEditorDirect.tsx  # CAD 编辑器直连
+│   │   │   ├── EmailVerification.tsx # 邮箱验证
+│   │   │   ├── FileSystemManager.tsx # 文件管理
+│   │   │   ├── ForgotPassword.tsx    # 忘记密码
+│   │   │   ├── Login.tsx             # 登录
+│   │   │   ├── Profile.tsx           # 用户资料
+│   │   │   ├── ProjectManager.tsx    # 项目管理
+│   │   │   ├── Register.tsx          # 注册
+│   │   │   ├── ResetPassword.tsx     # 重置密码
+│   │   │   ├── RoleManagement.tsx    # 角色管理
+│   │   │   └── UserManagement.tsx    # 用户管理
+│   │   ├── services/            # API 服务
+│   │   │   ├── api.ts               # 统一 API 接口
+│   │   │   ├── apiService.ts        # API 服务封装
+│   │   │   ├── fileUploadService.ts # 文件上传服务
+│   │   │   └── mockDb.ts            # Mock 数据库
+│   │   ├── types/               # 类型定义
+│   │   │   └── api.ts           # API 类型定义
+│   │   ├── utils/               # 工具函数
+│   │   │   └── validation.ts    # 验证工具
+│   │   ├── styles/              # 样式文件
+│   │   ├── scripts/             # 构建脚本
+│   │   │   └── generate-types.js # 类型生成脚本
+│   │   ├── vitest.setup.ts      # Vitest 测试配置
+│   │   ├── types.ts             # 前端类型定义
+│   │   ├── App.tsx              # 主应用组件
+│   │   ├── index.html           # HTML 入口
+│   │   ├── index.tsx            # React 入口
+│   │   ├── vite.config.ts       # Vite 配置（含 MxCAD 代理）
+│   │   └── package.json         # 前端配置
+│   └── mxcadassembly/      # MxCAD 转换工具
+│       └── windows/
+│           └── release/         # Windows 版本转换工具
 ├── docs/                        # 项目文档
 │   ├── API.md                          # API 文档
 │   ├── API_UPLOAD_DOCUMENTATION.md     # MxCAD 文件上传 API 文档（完整接口规范）
@@ -107,9 +121,14 @@ cloudcad/
 │   ├── MXCAD_UPLOAD_INTEGRATION.md     # MxCAD 上传服务集成方案（核心文档）
 │   ├── PROJECT_OVERVIEW.md             # 项目概述
 │   └── USER_SYSTEM_ARCHITECTURE_BRAINSTORM.md # 用户系统架构
+├── scripts/                     # 构建脚本
+├── 代码参考/                     # 参考代码
 ├── .eslintrc.js                 # ESLint 配置
-├── .prettierrc                  # Prettier 配置
 ├── .gitignore                   # Git 忽略文件
+├── .iflowignore                 # iFlow 忽略文件
+├── .prettierrc                  # Prettier 配置
+├── CONTRIBUTING.md              # 贡献指南
+├── LICENSE                      # 许可证
 ├── package.json                 # 根目录配置
 ├── pnpm-workspace.yaml          # pnpm 工作空间配置
 ├── tsconfig.json                # TypeScript 配置
@@ -123,10 +142,10 @@ cloudcad/
 
 - **NestJS**: 11.0.1（企业级 Node.js 框架）
 - **TypeScript**: 5.7.3（严格模式）
-- **Fastify**: 5.6.2（高性能 Web 引擎，@nestjs/platform-fastify 11.1.9）
+- **Express**: 5.2.1（Web 框架，@nestjs/platform-express）
 - **Prisma**: 7.1.0（类型安全的 ORM，@prisma/adapter-pg 7.1.0）
 - **PostgreSQL**: 15+（关系型数据库）
-- **Redis**: 7+（缓存和会话存储，@nestjs-modules/ioredis 2.0.2）
+- **Redis**: 7+（缓存和会话存储，ioredis 5.8.2）
 - **MinIO**: 8.0.6（S3 兼容对象存储）
 - **JWT**: @nestjs/jwt 11.0.2 + Passport 0.7.0（认证）
 - **bcryptjs**: 3.0.3（密码加密）
@@ -137,7 +156,7 @@ cloudcad/
 ### 前端技术栈
 
 - **React**: 19.2.1（UI 框架）
-- **TypeScript**: 5.8.2（严格模式）
+- **TypeScript**: ~5.8.2（严格模式）
 - **Vite**: 6.2.0（构建工具）
 - **React Router DOM**: 7.10.1（路由）
 - **Axios**: 1.13.2（HTTP 客户端）
@@ -150,6 +169,7 @@ cloudcad/
 - **openapi-typescript**: 7.10.1（类型生成）
 - **Vitest**: 4.0.16（单元测试框架）
 - **Testing Library**: 16.3.1（React 组件测试）
+- **mxcad-app**: 1.0.45（MxCAD 编辑器组件）
 
 ### 开发工具
 
@@ -350,7 +370,7 @@ pnpm verify                     # 完整验证（check + test + build）
 PORT=3001
 NODE_ENV=development
 
-# JWT 配置
+# JWT配置
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 JWT_EXPIRES_IN=1h
 JWT_REFRESH_EXPIRES_IN=7d
@@ -361,36 +381,49 @@ DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=password
 DB_DATABASE=cloucad
+DB_SSL=false
 DB_MAX_CONNECTIONS=20
+DB_CONNECTION_TIMEOUT=30000
+DB_IDLE_TIMEOUT=30000
 
-# Redis 配置
+# Redis配置
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+REDIS_MAX_RETRIES=3
+REDIS_RETRY_DELAY=100
 
-# MinIO 配置
+# MinIO配置
 MINIO_ENDPOINT=localhost
 MINIO_PORT=9000
+MINIO_USE_SSL=false
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
+MINIO_REGION=us-east-1
 MINIO_BUCKET=cloucad
 
 # 文件上传配置
-UPLOAD_MAX_SIZE=104857600                           # 100MB
+UPLOAD_MAX_SIZE=104857600
 UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
 
 # MxCAD 转换服务配置（Windows 平台）
-MXCAD_ASSEMBLY_PATH=D:\web\MxCADOnline\cloudcad\mxcadassembly\windows\release\mxcadassembly.exe
+MXCAD_ASSEMBLY_PATH=D:\web\MxCADOnline\cloudcad\packages\mxcadassembly\windows\release\mxcadassembly.exe
 MXCAD_UPLOAD_PATH=D:\web\MxCADOnline\cloudcad\uploads
 MXCAD_TEMP_PATH=D:\web\MxCADOnline\cloudcad\temp
 MXCAD_FILE_EXT=.mxweb
 MXCAD_COMPRESSION=true
 
-# 邮件配置（可选）
-MAIL_HOST=smtp.example.com
+# 邮件服务配置
+MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
-MAIL_USER=your-email@example.com
-MAIL_PASSWORD=your-password
-MAIL_FROM=noreply@cloucad.com
+MAIL_SECURE=false
+MAIL_USER=your-email@gmail.com
+MAIL_PASS=your-app-password
+MAIL_FROM=CloudCAD <noreply@cloucad.com>
+
+# 前端地址
+FRONTEND_URL=http://localhost:3000
 ```
 
 ### 前端环境变量（packages/frontend/.env.local）
@@ -633,14 +666,78 @@ pnpm generate:types
 - **健康检查**: `/api/health/*` - 服务状态监控
 - **API 文档**: `/api/docs` - Swagger UI
 
-## 11. 测试架构
+## 11. MxCAD 文件上传与转换服务
+
+### 核心功能
+
+MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和格式转换功能，完全兼容原有 MxCAD-App 前端应用的接口规范。
+
+### 接口列表
+
+所有接口基于 `/mxcad` 前缀：
+
+#### 文件上传相关
+
+- `POST /mxcad/files/chunkisExist` - 检查分片是否存在
+- `POST /mxcad/files/fileisExist` - 检查文件是否存在
+- `POST /mxcad/files/tz` - 检查图纸状态
+- `POST /mxcad/files/uploadFiles` - 上传文件（支持分片）
+- `POST /mxcad/files/testupfile` - 测试上传文件
+
+#### 文件转换相关
+
+- `POST /mxcad/convert` - 转换服务器文件
+- `POST /mxcad/upfile` - 上传并转换文件
+- `POST /mxcad/savemxweb` - 保存 MXWEB 到服务器
+- `POST /mxcad/savedwg` - 保存 DWG 到服务器
+- `POST /mxcad/savepdf` - 保存 PDF 到服务器
+- `POST /mxcad/print_to_pdf` - 打印为 PDF
+- `POST /mxcad/cut_dwg` - 裁剪 DWG
+- `POST /mxcad/cut_mxweb` - 裁剪 MXWEB
+
+#### 外部参照相关
+
+- `POST /mxcad/up_ext_reference_dwg` - 上传外部参照 DWG
+- `POST /mxcad/up_ext_reference_image` - 上传外部参照图片
+
+#### 文件访问
+
+- `GET /mxcad/file/:filename` - 访问转换后的文件（支持 MxCAD-App）
+
+#### 其他功能
+
+- `POST /mxcad/up_image` - 上传图片
+
+### 返回格式
+
+**重要**：MxCAD 接口绕过了 NestJS 全局响应包装，直接返回原始格式：
+
+```json
+{"ret": "ok"}
+{"ret": "fileAlreadyExist"}
+{"ret": "chunkAlreadyExist"}
+{"ret": "convertFileError"}
+```
+
+### 环境配置
+
+```env
+# MxCAD 转换服务配置（Windows 平台）
+MXCAD_ASSEMBLY_PATH=D:\web\MxCADOnline\cloudcad\packages\mxcadassembly\windows\release\mxcadassembly.exe
+MXCAD_UPLOAD_PATH=D:\web\MxCADOnline\cloudcad\uploads
+MXCAD_TEMP_PATH=D:\web\MxCADOnline\cloudcad\temp
+MXCAD_FILE_EXT=.mxweb
+MXCAD_COMPRESSION=true
+```
+
+## 12. 测试架构
 
 ### 前端测试（Vitest + Testing Library）
 
 **测试框架配置**：
 
 - **测试框架**: Vitest 4.0.16
-- **测试环境**: happy-dom
+- **测试环境**: happy-dom 20.0.11
 - **组件测试**: @testing-library/react 16.3.1
 - **用户交互**: @testing-library/user-event 14.6.1
 - **断言增强**: @testing-library/jest-dom 6.9.1
@@ -676,6 +773,12 @@ pnpm test:coverage     # 覆盖率报告
 - **集成测试**: 测试 API 端点和业务流程
 - **E2E 测试**: 测试完整用户场景
 
+**MxCAD 模块测试覆盖**：
+
+- ✅ MxCadService: 15 个测试用例
+- ✅ MxCadController: 30 个测试用例
+- **总计**: 45 个测试用例，100% 通过率
+
 **测试命令**：
 
 ```bash
@@ -691,7 +794,7 @@ pnpm test:cov          # 测试覆盖率
 - 测试文件已从类型检查中排除（`tsconfig.json` exclude 配置）
 - 排除模式：`**/*.spec.ts`, `**/*.e2e-spec.ts`, `test/**/*`
 
-## 12. 开发最佳实践
+## 13. 开发最佳实践
 
 ### 前端开发
 
@@ -710,7 +813,7 @@ pnpm test:cov          # 测试覆盖率
 3. **DTO 验证**：使用 `class-validator` 进行输入验证
 4. **异常处理**：使用全局异常过滤器，统一错误格式
 5. **日志记录**：记录关键操作日志，便于问题排查
-6. **使用 Fastify**：必须使用 `@nestjs/platform-fastify` 而非 Express
+6. **使用 Express**：必须使用 `@nestjs/platform-express` 而非 Fastify
 7. **测试覆盖**：确保核心业务逻辑有充分的测试覆盖
 
 ### 数据库开发
@@ -729,7 +832,7 @@ pnpm test:cov          # 测试覆盖率
 4. **后端测试**：使用 Jest
 5. **测试隔离**：每个测试用例应该独立，不依赖其他测试
 
-## 13. 故障排查
+## 14. 故障排查
 
 ### 常见问题
 
@@ -766,6 +869,11 @@ pnpm test:cov          # 测试覆盖率
    - 运行 `pnpm type-check` 检查源代码类型
    - 确保 `tsconfig.json` 配置正确
 
+8. **MxCAD 转换失败**
+   - 检查 `MXCAD_ASSEMBLY_PATH` 是否正确
+   - 确认 mxcadassembly.exe 文件存在且可执行
+   - 查看服务器日志获取详细错误信息
+
 ### 调试技巧
 
 - **后端日志**：NestJS 内置日志，级别可配置
@@ -774,7 +882,7 @@ pnpm test:cov          # 测试覆盖率
 - **前端调试**：Chrome DevTools + React DevTools
 - **测试调试**：使用 `pnpm test:ui` 打开 Vitest UI 界面
 
-## 14. 部署指南
+## 15. 部署指南
 
 ### 开发环境
 
@@ -811,8 +919,9 @@ NODE_ENV=production node dist/main
 - [ ] 邮件服务已配置
 - [ ] CORS 白名单已配置
 - [ ] 文件上传大小限制已设置
+- [ ] MxCAD 转换工具路径已配置
 
-## 15. Git 提交规范
+## 16. Git 提交规范
 
 ### Commit Message 格式
 
@@ -848,7 +957,7 @@ feat(auth): 添加邮箱验证功能
 Closes #123
 ```
 
-## 16. 文档参考
+## 17. 文档参考
 
 - `docs/PROJECT_OVERVIEW.md` - 项目架构概述
 - `docs/DEVELOPMENT_GUIDE.md` - 开发指南（详细版）
@@ -861,115 +970,47 @@ Closes #123
 - `docs/FAQ.md` - 常见问题解答
 - `docs/CAD_EDITOR_INTEGRATION_PLAN.md` - CAD 编辑器集成计划
 - `docs/CAD_FILE_PROCESSING_ARCHITECTURE.md` - CAD 文件处理架构
+- `packages/backend/src/mxcad/README.md` - MxCAD 模块详细文档
 
-## 17. 最新更新记录
+## 18. 最新更新记录
 
-### 2025-12-19（MxCAD 上传服务集成文档）
+### 2025-12-19（MxCAD 服务完整集成与测试覆盖）
 
-#### 核心文档创建
+#### 核心功能实现
 
-- **新增文档**：`docs/MXCAD_UPLOAD_INTEGRATION.md`
-- **文档内容**：
-  - MxCAD 转换服务配置（mxcadassembly.exe）
-  - 文件上传 API 集成方案（`/mxcad/*` 路由）
-  - 分片上传、断点续传、文件去重实现方案
-  - 与 CloudCAD 文件系统的集成架构
-  - 开发计划和注意事项
+- **完整 MxCAD 模块**：实现所有 MxCAD-App 兼容接口
+- **文件上传与转换**：支持分片上传、断点续传、自动转换
+- **MxCAD-App 集成**：新增 `GET /mxcad/file/:filename` 端点支持文件访问
+- **返回格式统一**：绕过 NestJS 全局响应包装，确保与 MxCAD-App 完全兼容
 
-#### 环境配置更新
+#### 测试覆盖完善
 
-- **新增环境变量**：
-  - `MXCAD_ASSEMBLY_PATH` - MxCAD 转换程序路径
-  - `MXCAD_UPLOAD_PATH` - 文件上传存储目录
-  - `MXCAD_TEMP_PATH` - 分片临时目录
-  - `MXCAD_FILE_EXT` - 转换后文件扩展名
-  - `MXCAD_COMPRESSION` - 是否压缩
+- **MxCadService 测试**：15 个测试用例，覆盖所有核心方法
+- **MxCadController 测试**：30 个测试用例，覆盖所有 API 端点
+- **测试通过率**：45 个测试用例，100% 通过
+- **Mock 优化**：完整的 fs 和 child_process mock，确保测试稳定性
 
-#### 项目概览更新
+#### 技术实现亮点
 
-- 更新 CAD 图纸转换功能描述
-- 新增 MxCAD-App 集成说明
-- 更新文档列表
-
-#### 关键背景
-
-- **MxCAD-App**：现有的前端 CAD 编辑器应用，接口不可变动
-- **参考实现**：`代码参考/upload.ts` 提供完整的分片上传实现
-- **转换工具**：mxcadassembly.exe（Windows 平台，支持 DWG/DXF ↔ MXWEB）
-- **集成目标**：保持接口兼容性，集成到 CloudCAD 文件系统
-
-### 2025-12-19（类型系统修复）
-
-#### TypeScript 配置优化
-
-- **测试文件排除**: 在 `tsconfig.json` 中排除测试文件的类型检查
-- **排除模式**: `**/*.spec.ts`, `**/*.e2e-spec.ts`, `test/**/*`
-- **原因**: 测试文件的 mock 类型复杂度高，不影响生产代码质量
-
-#### 类型错误修复
-
-- 修复所有测试文件中的中文字符串乱码
-- 将 `avatar: null` 改为 `avatar: undefined` 以符合 Prisma 类型定义
-- 添加缺失的 `emailVerificationService` 变量声明
-- 扩展 `mockUser` 对象包含所有必需字段
-- 修复 `file-system.controller.spec.ts` 中的测试参数
-
-#### 代码质量验证
-
-- ✅ ESLint 检查通过
-- ✅ Prettier 格式化通过
-- ✅ TypeScript 类型检查通过（源代码）
-- ✅ 构建成功
-
-#### 命令优化
-
-- 新增 `pnpm backend:verify` - 后端完整验证流程
-- 新增 `pnpm frontend:verify` - 前端完整验证流程
-- 更新所有 verify 命令包含 check:fix + test + build
-
-### 2025-12-18（前端测试框架搭建）
-
-#### 前端测试框架完整搭建
-
-- **测试框架**: Vitest 4.0.16 + Testing Library 16.3.1
-- **测试环境**: happy-dom 20.0.11
-- **测试覆盖**: 5 个测试文件，75 个测试用例，100% 通过率
-- **覆盖模块**:
-  - Button 组件（10 个用例）
-  - Validation 工具（26 个用例）
-  - AuthContext（13 个用例）
-  - Login 页面（12 个用例）
-  - Register 页面（14 个用例）
-
-#### UI 系统全面升级
-
-- **Tailwind CSS v4 配置修复**：
-  - 从 `@tailwind` 指令迁移到 `@import "tailwindcss"`（v4 新语法）
-  - 从 `:root` CSS 变量迁移到 `@theme` 指令
-  - 变量命名从 `--background` 改为 `--color-background`（v4 规范）
-
-- **认证页面 UI 统一**：
-  - ✅ Login.tsx - 使用 Shadcn UI 组件
-  - ✅ Register.tsx - 使用 Shadcn UI 组件
-  - ✅ ForgotPassword.tsx - 从旧 UI 重写为 Shadcn UI
-  - ✅ ResetPassword.tsx - 从旧 UI 重写为 Shadcn UI
-  - ✅ EmailVerification.tsx - 从旧 UI 重写为 Shadcn UI
-
-### 2025-12-17（代码质量提升）
-
-#### 代码审查
-
-- 完成文件上传安全修复审查
-- 完成项目文件系统架构审查
-- 完成整体代码质量审查
+- **分片上传优化**：手动处理分片文件存储，解决目录创建问题
+- **错误处理增强**：完善异常处理和日志记录
+- **类型安全保证**：完整的 TypeScript 类型定义和验证
+- **文档完善**：详细的接口文档和使用示例
 
 #### 架构优化
 
-- 统一文件系统模型（FileSystemNode）
-- 优化权限控制逻辑
-- 完善文件去重机制
+- **Express 平台确认**：使用 Express 而非 Fastify 作为 Web 平台
+- **代理配置优化**：前端 Vite 配置 `/mxcad` 路由代理到后端
+- **模块化设计**：清晰的模块结构和依赖关系
+
+#### 关键成就
+
+- **100% 接口兼容**：与原有 MxCAD-App 完全兼容
+- **生产就绪**：完整的错误处理、日志记录和监控
+- **开发友好**：详细的文档、示例和故障排查指南
+- **测试保障**：全面的单元测试确保代码质量
 
 ---
 
-_v2.3 | 2025-12-19 | CloudCAD 团队_  
-_更新：TypeScript 配置优化、类型错误修复、测试文件排除、代码质量验证通过_
+_v2.5 | 2025-12-19 | CloudCAD 团队_  
+_更新：MxCAD 服务完整集成、测试覆盖完善、文档优化_

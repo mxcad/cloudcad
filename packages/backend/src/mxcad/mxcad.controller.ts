@@ -611,22 +611,14 @@ export class MxCadController {
       return res.json({ code: -1, message: '缺少文件' });
     }
 
-    // 生成新的文件名
-    const ext = file.originalname.split('.').pop();
-    const newFileName = `${uuidv4()}.${ext}`;
+    // 直接返回原始文件名，与参考代码保持一致
+    const fileName = file.filename;
     
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
-      const newPath = path.join(uploadPath, newFileName);
-      
-      fs.renameSync(file.path, newPath);
-      
       return res.json({
         code: 0,
         message: 'ok',
-        file: newFileName,
+        file: fileName,
       });
     } catch (error) {
       return res.json({ code: -1, message: 'catch error' });
