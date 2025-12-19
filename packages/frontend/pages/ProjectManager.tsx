@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  AlertCircle, 
-  FolderPlus, 
-  Edit, 
-  Trash2, 
-  Users, 
+import {
+  AlertCircle,
+  FolderPlus,
+  Edit,
+  Trash2,
+  Users,
   Calendar,
   Search,
   Filter,
   MoreHorizontal,
-  FolderOpen
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { projectsApi, authApi } from '../services/apiService';
-import { components } from '../types/api';
+import { projectsApi } from '../services/apiService';
 
 // 类型定义（基于后端 FileSystemNode 模型）
 type ProjectDto = {
@@ -62,19 +61,23 @@ type ProjectMember = {
 
 export const ProjectManager = () => {
   const navigate = useNavigate();
-  
+
   // 状态管理
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'ARCHIVED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<
+    'ALL' | 'ACTIVE' | 'ARCHIVED'
+  >('ALL');
 
   // Modal 状态
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectDto | null>(null);
-  const [selectedProject, setSelectedProject] = useState<ProjectDto | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectDto | null>(
+    null
+  );
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
 
   // 表单数据
@@ -104,10 +107,13 @@ export const ProjectManager = () => {
   };
 
   // 过滤项目
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = statusFilter === 'ALL' || project.projectStatus === statusFilter;
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (project.description &&
+        project.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus =
+      statusFilter === 'ALL' || project.projectStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -148,7 +154,7 @@ export const ProjectManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       if (editingProject) {
         const updateData: UpdateProjectDto = {
@@ -163,7 +169,7 @@ export const ProjectManager = () => {
         };
         await projectsApi.create(createData);
       }
-      
+
       setIsModalOpen(false);
       await loadProjects();
     } catch (error) {
@@ -193,10 +199,14 @@ export const ProjectManager = () => {
   // 获取状态显示文本
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return '活跃';
-      case 'ARCHIVED': return '已归档';
-      case 'DELETED': return '已删除';
-      default: return '未知';
+      case 'ACTIVE':
+        return '活跃';
+      case 'ARCHIVED':
+        return '已归档';
+      case 'DELETED':
+        return '已删除';
+      default:
+        return '未知';
     }
   };
 
@@ -219,7 +229,7 @@ export const ProjectManager = () => {
     return new Date(dateString).toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
@@ -238,7 +248,9 @@ export const ProjectManager = () => {
         <AlertCircle size={48} className="text-red-400 mb-4" />
         <h2 className="text-xl font-bold text-slate-800">加载失败</h2>
         <p>{error}</p>
-        <Button onClick={loadProjects} className="mt-4">重试</Button>
+        <Button onClick={loadProjects} className="mt-4">
+          重试
+        </Button>
       </div>
     );
   }
@@ -262,7 +274,10 @@ export const ProjectManager = () => {
       {/* 搜索和筛选 */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+          />
           <input
             type="text"
             placeholder="搜索项目..."
@@ -291,7 +306,9 @@ export const ProjectManager = () => {
           <FolderPlus size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">暂无项目</h3>
           <p className="text-slate-500 mb-4">
-            {searchTerm || statusFilter !== 'ALL' ? '没有找到匹配的项目' : '开始创建您的第一个项目'}
+            {searchTerm || statusFilter !== 'ALL'
+              ? '没有找到匹配的项目'
+              : '开始创建您的第一个项目'}
           </p>
           <Button onClick={handleOpenCreate} variant="outline">
             <FolderPlus size={16} className="mr-2" />
@@ -301,8 +318,8 @@ export const ProjectManager = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <div 
-              key={project.id} 
+            <div
+              key={project.id}
               className="bg-white rounded-xl border border-slate-200 hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => handleEnterProject(project.id)}
             >
@@ -318,7 +335,7 @@ export const ProjectManager = () => {
                     </p>
                   </div>
                   <div className="relative">
-                    <button 
+                    <button
                       className="p-1 text-slate-400 hover:text-slate-600 rounded"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -328,7 +345,9 @@ export const ProjectManager = () => {
                 </div>
 
                 <div className="flex items-center gap-2 mb-4">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(project.projectStatus || 'ACTIVE')}`}>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(project.projectStatus || 'ACTIVE')}`}
+                  >
                     {getStatusText(project.projectStatus || 'ACTIVE')}
                   </span>
                 </div>
@@ -338,7 +357,10 @@ export const ProjectManager = () => {
                   创建于 {formatDate(project.createdAt)}
                 </div>
 
-                <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="flex items-center justify-between"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Button
                     variant="ghost"
                     size="sm"
@@ -387,11 +409,15 @@ export const ProjectManager = () => {
         title={editingProject ? '编辑项目' : '创建新项目'}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={loading}>
+            <Button
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+              disabled={loading}
+            >
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? '处理中...' : (editingProject ? '保存' : '创建')}
+              {loading ? '处理中...' : editingProject ? '保存' : '创建'}
             </Button>
           </>
         }
@@ -405,7 +431,9 @@ export const ProjectManager = () => {
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
               placeholder="请输入项目名称"
             />
@@ -416,7 +444,9 @@ export const ProjectManager = () => {
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={3}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
               placeholder="请输入项目描述"
@@ -445,7 +475,10 @@ export const ProjectManager = () => {
           ) : (
             <div className="space-y-3">
               {projectMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
+                >
                   <div>
                     <div className="font-medium text-slate-900">
                       {member.user.nickname || member.user.username}
@@ -455,9 +488,13 @@ export const ProjectManager = () => {
                     </div>
                   </div>
                   <div className="text-sm text-slate-600">
-                    {member.role === 'OWNER' ? '所有者' : 
-                     member.role === 'ADMIN' ? '管理员' : 
-                     member.role === 'MEMBER' ? '成员' : '观察者'}
+                    {member.role === 'OWNER'
+                      ? '所有者'
+                      : member.role === 'ADMIN'
+                        ? '管理员'
+                        : member.role === 'MEMBER'
+                          ? '成员'
+                          : '观察者'}
                   </div>
                 </div>
               ))}

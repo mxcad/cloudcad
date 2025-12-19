@@ -1,8 +1,6 @@
 import {
   AlertCircle,
-  Database,
   Edit,
-  MoreHorizontal,
   Shield,
   Trash2,
   User as UserIcon,
@@ -10,7 +8,7 @@ import {
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Permission, type Role, type User } from '../types';
+import { Permission, type Role } from '../types';
 import { usersApi, authApi } from '../services/apiService';
 import { components } from '../types/api';
 
@@ -31,7 +29,11 @@ export const UserManagement = () => {
       id: 'ADMIN',
       name: '管理员',
       description: '系统管理员，拥有所有权限',
-      permissions: [Permission.MANAGE_USERS, Permission.MANAGE_ROLES, Permission.VIEW_DASHBOARD],
+      permissions: [
+        Permission.MANAGE_USERS,
+        Permission.MANAGE_ROLES,
+        Permission.VIEW_DASHBOARD,
+      ],
       isSystem: true,
     },
     {
@@ -121,7 +123,7 @@ export const UserManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       if (editingUser) {
         // 更新用户
@@ -147,7 +149,7 @@ export const UserManagement = () => {
         };
         await usersApi.create(createData);
       }
-      
+
       setIsModalOpen(false);
       await loadData();
     } catch (error) {
@@ -202,7 +204,9 @@ export const UserManagement = () => {
         <AlertCircle size={48} className="text-red-400 mb-4" />
         <h2 className="text-xl font-bold text-slate-800">加载失败</h2>
         <p>{error}</p>
-        <Button onClick={loadData} className="mt-4">重试</Button>
+        <Button onClick={loadData} className="mt-4">
+          重试
+        </Button>
       </div>
     );
   }
@@ -216,7 +220,9 @@ export const UserManagement = () => {
             管理团队成员、分配角色及存储配额
           </p>
         </div>
-        <Button onClick={handleOpenCreate} disabled={loading}>添加用户</Button>
+        <Button onClick={handleOpenCreate} disabled={loading}>
+          添加用户
+        </Button>
       </div>
 
       <div className="bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
@@ -257,9 +263,7 @@ export const UserManagement = () => {
                       <div className="text-sm font-medium text-slate-900">
                         {user.nickname || user.username}
                       </div>
-                      <div className="text-sm text-slate-500">
-                        {user.email}
-                      </div>
+                      <div className="text-sm text-slate-500">{user.email}</div>
                     </div>
                   </div>
                 </td>
@@ -269,15 +273,20 @@ export const UserManagement = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                    user.status === 'ACTIVE' 
-                      ? 'bg-green-100 text-green-700 border border-green-200'
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                      user.status === 'ACTIVE'
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : user.status === 'INACTIVE'
+                          ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}
+                  >
+                    {user.status === 'ACTIVE'
+                      ? '活跃'
                       : user.status === 'INACTIVE'
-                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                      : 'bg-red-100 text-red-700 border border-red-200'
-                  }`}>
-                    {user.status === 'ACTIVE' ? '活跃' : 
-                     user.status === 'INACTIVE' ? '非活跃' : '已暂停'}
+                        ? '非活跃'
+                        : '已暂停'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -311,11 +320,15 @@ export const UserManagement = () => {
         title={editingUser ? '编辑用户' : '添加新用户'}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={loading}>
+            <Button
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+              disabled={loading}
+            >
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? '处理中...' : (editingUser ? '保存' : '创建')}
+              {loading ? '处理中...' : editingUser ? '保存' : '创建'}
             </Button>
           </>
         }
@@ -363,7 +376,7 @@ export const UserManagement = () => {
                 setFormData({ ...formData, password: e.target.value })
               }
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
-              placeholder={editingUser ? "留空保持原密码" : "请输入密码"}
+              placeholder={editingUser ? '留空保持原密码' : '请输入密码'}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X, File, AlertCircle } from 'lucide-react';
-import { FileUploadService, FileUploadOptions } from '../services/fileUploadService';
+import {
+  FileUploadService,
+  FileUploadOptions,
+} from '../services/fileUploadService';
 
 interface FileUploadItem {
   file: File;
@@ -12,7 +15,7 @@ interface FileUploadItem {
 }
 
 interface FileUploaderProps {
-  projectId?: string;
+  parentId?: string;
   onUploadComplete?: (file: File, result: any) => void;
   onUploadError?: (file: File, error: Error) => void;
   maxFiles?: number;
@@ -22,7 +25,7 @@ interface FileUploaderProps {
 }
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
-  projectId,
+  parentId,
   onUploadComplete,
   onUploadError,
   maxFiles = 10,
@@ -33,16 +36,19 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const [files, setFiles] = useState<FileUploadItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
 
-    if (disabled) return;
+      if (disabled) return;
 
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    addFiles(droppedFiles);
-  }, [disabled]);
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      addFiles(droppedFiles);
+    },
+    [disabled]
+  );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -54,15 +60,18 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   }, []);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (disabled || !e.target.files) return;
-    
-    const selectedFiles = Array.from(e.target.files);
-    addFiles(selectedFiles);
-    
-    // 清空input值，允许重复选择同一文件
-    e.target.value = '';
-  }, [disabled]);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (disabled || !e.target.files) return;
+
+      const selectedFiles = Array.from(e.target.files);
+      addFiles(selectedFiles);
+
+      // 清空input值，允许重复选择同一文件
+      e.target.value = '';
+    },
+    [disabled]
+  );
 
   const addFiles = (newFiles: File[]) => {
     // 检查文件数量限制
@@ -72,10 +81,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
 
     // 检查文件类型
-    const allowedTypes = accept.split(',').map(type => type.trim());
-    const validFiles = newFiles.filter(file => {
+    const allowedTypes = accept.split(',').map((type) => type.trim());
+    const validFiles = newFiles.filter((file) => {
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-      return allowedTypes.some(type => {
+      return allowedTypes.some((type) => {
         if (type.startsWith('.')) {
           return fileExtension === type;
         }
@@ -88,41 +97,45 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
 
     // 添加到文件列表
-    const newFileItems: FileUploadItem[] = validFiles.map(file => ({
+    const newFileItems: FileUploadItem[] = validFiles.map((file) => ({
       file,
       id: Math.random().toString(36).substring(7),
       progress: 0,
       status: 'pending',
     }));
 
-    setFiles(prev => [...prev, ...newFileItems]);
+    setFiles((prev) => [...prev, ...newFileItems]);
 
     // 开始上传
-    newFileItems.forEach(item => uploadFile(item));
+    newFileItems.forEach((item) => uploadFile(item));
   };
 
   const uploadFile = async (item: FileUploadItem) => {
     // 更新状态为上传中
-    setFiles(prev => prev.map(f => 
-      f.id === item.id ? { ...f, status: 'uploading' } : f
-    ));
+    setFiles((prev) =>
+      prev.map((f) => (f.id === item.id ? { ...f, status: 'uploading' } : f))
+    );
 
     const options: FileUploadOptions = {
-      projectId,
+      parentId,
       onProgress: (progress) => {
-        setFiles(prev => prev.map(f => 
-          f.id === item.id ? { ...f, progress } : f
-        ));
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, progress } : f))
+        );
       },
       onStatusChange: (status) => {
-        setFiles(prev => prev.map(f => 
-          f.id === item.id ? { ...f, status } : f
-        ));
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, status } : f))
+        );
       },
       onError: (error) => {
-        setFiles(prev => prev.map(f => 
-          f.id === item.id ? { ...f, status: 'error', error: error.message } : f
-        ));
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id
+              ? { ...f, status: 'error', error: error.message }
+              : f
+          )
+        );
         onUploadError?.(item.file, error);
       },
     };
@@ -130,17 +143,19 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     try {
       const uploadService = new FileUploadService(options);
       const result = await uploadService.uploadFile(item.file);
-      
+
       // 上传成功
-      setFiles(prev => prev.map(f => 
-        f.id === item.id ? { ...f, status: 'completed', result } : f
-      ));
-      
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === item.id ? { ...f, status: 'completed', result } : f
+        )
+      );
+
       onUploadComplete?.(item.file, result);
 
       // 3秒后移除已完成的文件
       setTimeout(() => {
-        setFiles(prev => prev.filter(f => f.id !== item.id));
+        setFiles((prev) => prev.filter((f) => f.id !== item.id));
       }, 3000);
     } catch (error) {
       // 错误处理已在options.onError中完成
@@ -148,7 +163,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const removeFile = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
+    setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   const retryUpload = (item: FileUploadItem) => {
@@ -166,11 +181,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const getStatusIcon = (status: FileUploadItem['status']) => {
     switch (status) {
       case 'pending':
-        return <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />;
+        return (
+          <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+        );
       case 'uploading':
-        return <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />;
+        return (
+          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        );
       case 'processing':
-        return <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />;
+        return (
+          <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+        );
       case 'completed':
         return <div className="w-4 h-4 bg-green-500 rounded-full" />;
       case 'error':
@@ -180,11 +201,16 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
   const getStatusText = (status: FileUploadItem['status']) => {
     switch (status) {
-      case 'pending': return '等待中';
-      case 'uploading': return '上传中';
-      case 'processing': return '处理中';
-      case 'completed': return '完成';
-      case 'error': return '错误';
+      case 'pending':
+        return '等待中';
+      case 'uploading':
+        return '上传中';
+      case 'processing':
+        return '处理中';
+      case 'completed':
+        return '完成';
+      case 'error':
+        return '错误';
     }
   };
 
@@ -201,7 +227,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => !disabled && document.getElementById('file-input')?.click()}
+        onClick={() =>
+          !disabled && document.getElementById('file-input')?.click()
+        }
       >
         <input
           id="file-input"
@@ -212,7 +240,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           className="hidden"
           disabled={disabled}
         />
-        
+
         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <p className="text-lg font-medium text-gray-900 mb-2">
           {dragActive ? '释放文件到此处' : '点击或拖拽文件到此处'}
@@ -232,9 +260,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
               className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg"
             >
               {/* 文件图标 */}
-              <div className="flex-shrink-0">
-                {getStatusIcon(item.status)}
-              </div>
+              <div className="flex-shrink-0">{getStatusIcon(item.status)}</div>
 
               {/* 文件信息 */}
               <div className="flex-1 min-w-0">
@@ -242,11 +268,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                   {item.file.name}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {formatFileSize(item.file.size)} · {getStatusText(item.status)}
+                  {formatFileSize(item.file.size)} ·{' '}
+                  {getStatusText(item.status)}
                 </p>
-                
+
                 {/* 进度条 */}
-                {(item.status === 'uploading' || item.status === 'processing') && (
+                {(item.status === 'uploading' ||
+                  item.status === 'processing') && (
                   <div className="mt-2">
                     <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div
@@ -254,7 +282,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                         style={{ width: `${item.progress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{item.progress}%</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {item.progress}%
+                    </p>
                   </div>
                 )}
 

@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Plus, Shield, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';

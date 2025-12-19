@@ -253,6 +253,23 @@ export class FileSystemService {
     }
   }
 
+  async getNode(nodeId: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      return node;
+    } catch (error) {
+      this.logger.error(`获取节点失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   async getNodeTree(nodeId: string) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({

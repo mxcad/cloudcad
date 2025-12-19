@@ -7,7 +7,9 @@
 .page-transition-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+  transition:
+    opacity 200ms ease-in-out,
+    transform 200ms ease-in-out;
 }
 
 .page-transition-exit {
@@ -18,7 +20,9 @@
 .page-transition-exit-active {
   opacity: 0;
   transform: translateY(-10px);
-  transition: opacity 150ms ease-in-out, transform 150ms ease-in-out;
+  transition:
+    opacity 150ms ease-in-out,
+    transform 150ms ease-in-out;
 }
 
 /* 减少布局偏移 */

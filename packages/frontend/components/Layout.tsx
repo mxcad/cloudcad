@@ -64,7 +64,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [hookTest, setHookTest] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
+
   // 存储空间状态
   const [storageInfo, setStorageInfo] = useState<{
     totalUsed: number;
@@ -81,22 +81,28 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // 只有在用户已认证且加载完成时才获取角色信息
     if (user && !loading) {
-      mockApi.auth.getRole().then(setRole).catch(() => {
-        // 如果获取角色失败，设置默认角色
-        setRole({ name: '用户', permissions: [] });
-      });
-      
+      mockApi.auth
+        .getRole()
+        .then(setRole)
+        .catch(() => {
+          // 如果获取角色失败，设置默认角色
+          setRole({ name: '用户', permissions: [] });
+        });
+
       // 获取存储空间信息
-      projectsApi.getStorageInfo().then((response) => {
-        console.log('存储空间完整响应:', response);
-        console.log('存储空间信息:', response.data);
-        if (response.data) {
-          setStorageInfo(response.data);
-        }
-      }).catch((error) => {
-        console.error('获取存储空间信息失败:', error);
-        console.error('错误详情:', error.response?.data || error.message);
-      });
+      projectsApi
+        .getStorageInfo()
+        .then((response) => {
+          console.log('存储空间完整响应:', response);
+          console.log('存储空间信息:', response.data);
+          if (response.data) {
+            setStorageInfo(response.data);
+          }
+        })
+        .catch((error) => {
+          console.error('获取存储空间信息失败:', error);
+          console.error('错误详情:', error.response?.data || error.message);
+        });
     }
   }, [user, loading]);
 
@@ -201,7 +207,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   />
                 ) : (
                   <span className="text-sm font-medium text-slate-600">
-                    {(user?.nickname || user?.username || user?.email || 'U').charAt(0).toUpperCase()}
+                    {(user?.nickname || user?.username || user?.email || 'U')
+                      .charAt(0)
+                      .toUpperCase()}
                   </span>
                 )}
               </div>
@@ -210,26 +218,29 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   {user?.nickname || user?.username || user?.email}
                 </p>
                 <p className="text-xs text-slate-500 truncate">{role?.name}</p>
-                
+
                 {/* 存储空间信息 */}
                 {storageInfo && storageInfo.formatted ? (
                   <div className="mt-2">
                     <div className="flex items-center gap-1 mb-1">
                       <HardDrive size={12} className="text-slate-400" />
                       <span className="text-xs text-slate-600">
-                        {storageInfo.formatted.totalUsed} / {storageInfo.formatted.totalLimit}
+                        {storageInfo.formatted.totalUsed} /{' '}
+                        {storageInfo.formatted.totalLimit}
                       </span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-1.5">
-                      <div 
+                      <div
                         className={`h-1.5 rounded-full ${
-                          storageInfo.usagePercentage > 90 
-                            ? 'bg-red-500' 
-                            : storageInfo.usagePercentage > 70 
-                            ? 'bg-yellow-500' 
-                            : 'bg-green-500'
+                          storageInfo.usagePercentage > 90
+                            ? 'bg-red-500'
+                            : storageInfo.usagePercentage > 70
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
                         }`}
-                        style={{ width: `${Math.min(storageInfo.usagePercentage, 100)}%` }}
+                        style={{
+                          width: `${Math.min(storageInfo.usagePercentage, 100)}%`,
+                        }}
                       ></div>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
@@ -240,17 +251,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   <div className="mt-2">
                     <div className="flex items-center gap-1 mb-1">
                       <HardDrive size={12} className="text-slate-400" />
-                      <span className="text-xs text-slate-400">
-                        加载中...
-                      </span>
+                      <span className="text-xs text-slate-400">加载中...</span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-1.5">
-                      <div className="h-1.5 rounded-full bg-slate-300" style={{ width: '0%' }}></div>
+                      <div
+                        className="h-1.5 rounded-full bg-slate-300"
+                        style={{ width: '0%' }}
+                      ></div>
                     </div>
                   </div>
                 )}
               </div>
-              <button 
+              <button
                 className="text-slate-400 hover:text-slate-600"
                 onClick={(e) => {
                   e.preventDefault();
@@ -363,7 +375,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </button>
               {showSettings && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50">
-                  <Link 
+                  <Link
                     to="/profile"
                     className="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
                     onClick={() => setShowSettings(false)}
@@ -374,7 +386,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     系统设置
                   </button>
                   <div className="h-px bg-slate-100 my-1"></div>
-                  <button 
+                  <button
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     onClick={(e) => {
                       e.preventDefault();
@@ -402,15 +414,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         title="确认退出登录"
         footer={
           <>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => setShowLogoutConfirm(false)}
               disabled={isLoggingOut}
             >
               取消
             </Button>
-            <Button 
-              variant="danger" 
+            <Button
+              variant="danger"
               onClick={handleLogout}
               disabled={isLoggingOut}
             >

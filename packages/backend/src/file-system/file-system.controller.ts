@@ -116,22 +116,49 @@ export class FileSystemController {
   async uploadFile(
     @Request() req,
     @Body()
-    body: { projectId?: string; fileName?: string; fileContent?: string }
+    body: { parentId?: string; fileName?: string; fileContent?: string }
   ) {
-    const { projectId, fileName, fileContent } = body;
+    const { parentId, fileName, fileContent } = body;
+
+    console.log('[FileSystemController] 接收到上传请求:', {
+      parentId,
+      fileName,
+      fileContentLength: fileContent?.length || 0,
+      userId: req.user?.id,
+    });
 
     if (!fileName) {
       throw new BadRequestException('缺少文件名称');
     }
 
-    if (!projectId) {
-      throw new BadRequestException('缺少项目ID');
+    if (!parentId) {
+      throw new BadRequestException('缺少父节点ID');
     }
 
-    // 验证项目是否存在且用户有权限
-    const project = await this.fileSystemService.getProject(projectId);
-    if (!project) {
-      throw new NotFoundException('项目不存在');
+    // 验证父节点是否存在且是文件夹
+    const parentNode = await this.fileSystemService.getNode(parentId);
+    if (!parentNode) {
+      throw new NotFoundException('父节点不存在');
+    }
+
+    if (!parentNode.isFolder) {
+      throw new BadRequestException('只能上传文件到文件夹');
+    }
+
+    // 获取项目根节点ID（用于权限检查）
+    let projectId = parentId;
+    if (!parentNode.isRoot) {
+      // 如果不是根节点，需要向上查找项目根节点
+      let currentNode = parentNode;
+      while (currentNode.parentId) {
+        currentNode = await this.fileSystemService.getNode(
+          currentNode.parentId
+        );
+        if (currentNode.isRoot) {
+          projectId = currentNode.id;
+          break;
+        }
+      }
     }
 
     // 检查用户是否是项目成员
@@ -163,7 +190,7 @@ export class FileSystemController {
       buffer: buffer,
     } as any;
 
-    return this.fileSystemService.uploadFile(req.user.id, projectId, mockFile);
+    return this.fileSystemService.uploadFile(req.user.id, parentId, mockFile);
   }
 
   @Get('storage')

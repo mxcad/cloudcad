@@ -43,7 +43,9 @@ export const EmailVerification: React.FC = () => {
       }, 2000);
     } catch (err: any) {
       console.error('邮箱验证失败:', err);
-      setError(err.response?.data?.message || '验证失败，请检查验证码是否正确或已过期');
+      setError(
+        err.response?.data?.message || '验证失败，请检查验证码是否正确或已过期'
+      );
     } finally {
       setLoading(false);
     }
@@ -73,12 +75,24 @@ export const EmailVerification: React.FC = () => {
         <div className="max-w-md w-full text-center">
           <div className="mb-4">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-              <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              <svg
+                className="h-6 w-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M5 13l4 4L19 7"
+                ></path>
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">邮箱验证成功！</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            邮箱验证成功！
+          </h2>
           <p className="text-gray-600">账号已激活，即将自动跳转到登录页...</p>
         </div>
       </div>
@@ -91,13 +105,30 @@ export const EmailVerification: React.FC = () => {
         <div className="max-w-md w-full text-center">
           <div className="mb-4">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-              <svg className="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin h-6 w-6 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">正在验证邮箱...</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            正在验证邮箱...
+          </h2>
           <p className="text-gray-600">请稍候，我们正在验证您的邮箱</p>
         </div>
       </div>
@@ -110,17 +141,30 @@ export const EmailVerification: React.FC = () => {
         <div className="text-center">
           <div className="mb-4">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-              <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              <svg
+                className="h-6 w-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                ></path>
               </svg>
             </div>
           </div>
-          
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">验证您的邮箱</h2>
-          
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            验证您的邮箱
+          </h2>
+
           {email && (
             <p className="text-gray-600 mb-6">
-              我们已向 <span className="font-medium">{email}</span> 发送了验证邮件
+              我们已向 <span className="font-medium">{email}</span>{' '}
+              发送了验证邮件
             </p>
           )}
 
@@ -131,9 +175,7 @@ export const EmailVerification: React.FC = () => {
           )}
 
           {!email && (
-            <p className="text-gray-600 mb-6">
-              请输入您收到的6位数字验证码
-            </p>
+            <p className="text-gray-600 mb-6">请输入您收到的6位数字验证码</p>
           )}
 
           {error && (
@@ -144,7 +186,10 @@ export const EmailVerification: React.FC = () => {
 
           <div className="space-y-4 mb-6">
             <div>
-              <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="code"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 验证码
               </label>
               <input
@@ -166,7 +211,7 @@ export const EmailVerification: React.FC = () => {
                 验证码为6位数字，请查看邮件
               </p>
             </div>
-            
+
             <button
               onClick={handleVerifyCode}
               disabled={loading || verificationCode.length !== 6}
@@ -193,7 +238,7 @@ export const EmailVerification: React.FC = () => {
               >
                 重新发送验证邮件
               </button>
-              
+
               <button
                 onClick={() => navigate('/login')}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"

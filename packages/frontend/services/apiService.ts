@@ -38,14 +38,21 @@ class ApiService {
           status: response.status,
           data: response.data,
         });
-        
+
         // 自动解包：后端返回 {code, message, data, timestamp} -> 前端使用 data
-        if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        if (
+          response.data &&
+          typeof response.data === 'object' &&
+          'data' in response.data
+        ) {
           const originalData = response.data;
           response.data = originalData.data;
-          console.log('[ApiService] 自动解包:', { originalData, extractedData: response.data });
+          console.log('[ApiService] 自动解包:', {
+            originalData,
+            extractedData: response.data,
+          });
         }
-        
+
         return response;
       },
       async (error) => {
@@ -133,10 +140,7 @@ class ApiService {
   }
 
   // 文件上传（已改为JSON格式）
-  async upload<T = any>(
-    url: string,
-    data: any
-  ): Promise<AxiosResponse<T>> {
+  async upload<T = any>(url: string, data: any): Promise<AxiosResponse<T>> {
     return this.client.post(url, data);
   }
 }
@@ -164,11 +168,14 @@ export const authApi = {
   getProfile: () => apiService.get('/auth/profile'),
 
   // 邮箱验证相关
-  sendVerification: (email: string) => apiService.post('/auth/send-verification', { email }),
+  sendVerification: (email: string) =>
+    apiService.post('/auth/send-verification', { email }),
 
-  verifyEmail: (data: { email: string; code: string }) => apiService.post('/auth/verify-email', data),
+  verifyEmail: (data: { email: string; code: string }) =>
+    apiService.post('/auth/verify-email', data),
 
-  resendVerification: (email: string) => apiService.post('/auth/resend-verification', { email }),
+  resendVerification: (email: string) =>
+    apiService.post('/auth/resend-verification', { email }),
 };
 
 // 用户相关的 API 方法
@@ -206,7 +213,7 @@ export const projectsApi = {
   create: (data: { name: string; description?: string }) =>
     apiService.post('/file-system/projects', data),
 
-  get: (projectId: string) => 
+  get: (projectId: string) =>
     apiService.get(`/file-system/projects/${projectId}`),
 
   update: (
@@ -214,25 +221,23 @@ export const projectsApi = {
     data: { name?: string; description?: string; status?: string }
   ) => apiService.patch(`/file-system/projects/${projectId}`, data),
 
-  delete: (projectId: string) => apiService.delete(`/file-system/projects/${projectId}`),
+  delete: (projectId: string) =>
+    apiService.delete(`/file-system/projects/${projectId}`),
 
   // 文件夹管理
   createFolder: (parentId: string, data: { name: string }) =>
     apiService.post(`/file-system/nodes/${parentId}/folders`, data),
 
   // 节点管理
-  getNode: (nodeId: string) => 
-    apiService.get(`/file-system/nodes/${nodeId}`),
+  getNode: (nodeId: string) => apiService.get(`/file-system/nodes/${nodeId}`),
 
-  getChildren: (nodeId: string) => 
+  getChildren: (nodeId: string) =>
     apiService.get(`/file-system/nodes/${nodeId}/children`),
 
-  updateNode: (
-    nodeId: string,
-    data: { name?: string; description?: string }
-  ) => apiService.patch(`/file-system/nodes/${nodeId}`, data),
+  updateNode: (nodeId: string, data: { name?: string; description?: string }) =>
+    apiService.patch(`/file-system/nodes/${nodeId}`, data),
 
-  deleteNode: (nodeId: string) => 
+  deleteNode: (nodeId: string) =>
     apiService.delete(`/file-system/nodes/${nodeId}`),
 
   moveNode: (nodeId: string, targetParentId: string) =>
@@ -242,7 +247,7 @@ export const projectsApi = {
   getStorageInfo: () => apiService.get('/file-system/storage'),
 
   // 项目成员管理（保留旧的 API 路径，如果后端有实现的话）
-  getMembers: (projectId: string) => 
+  getMembers: (projectId: string) =>
     apiService.get(`/projects/${projectId}/members`),
 
   addMember: (projectId: string, data: { userId: string; role: string }) =>
@@ -271,7 +276,7 @@ export const filesApi = {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-    
+
     return apiService.post('/file-system/files/upload', {
       fileName: file.name,
       fileContent,
@@ -303,20 +308,20 @@ export const filesApi = {
 // 管理员相关的 API 方法
 export const adminApi = {
   getStats: () => apiService.get('/admin/stats'),
-  
+
   getCacheStats: () => apiService.get('/admin/permissions/cache'),
-  
+
   cleanupCache: () => apiService.post('/admin/permissions/cache/cleanup'),
-  
-  clearUserCache: (userId: string) => 
+
+  clearUserCache: (userId: string) =>
     apiService.delete(`/admin/permissions/cache/user/${userId}`),
-  
-  clearProjectCache: (projectId: string) => 
+
+  clearProjectCache: (projectId: string) =>
     apiService.delete(`/admin/permissions/cache/project/${projectId}`),
-  
-  clearFileCache: (fileId: string) => 
+
+  clearFileCache: (fileId: string) =>
     apiService.delete(`/admin/permissions/cache/file/${fileId}`),
-  
-  getUserPermissions: (userId: string) => 
+
+  getUserPermissions: (userId: string) =>
     apiService.get(`/admin/permissions/user/${userId}`),
 };

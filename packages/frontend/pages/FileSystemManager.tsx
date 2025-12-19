@@ -48,10 +48,10 @@ const ToastContainer: React.FC<{
             toast.type === 'success'
               ? 'bg-green-50 text-green-800 border border-green-200'
               : toast.type === 'error'
-              ? 'bg-red-50 text-red-800 border border-red-200'
-              : toast.type === 'warning'
-              ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
-              : 'bg-blue-50 text-blue-800 border border-blue-200'
+                ? 'bg-red-50 text-red-800 border border-red-200'
+                : toast.type === 'warning'
+                  ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                  : 'bg-blue-50 text-blue-800 border border-blue-200'
           }`}
         >
           {toast.type === 'success' && <CheckCircle size={20} />}
@@ -103,8 +103,8 @@ const ConfirmDialog: React.FC<{
                 type === 'danger'
                   ? 'bg-red-100 text-red-600'
                   : type === 'warning'
-                  ? 'bg-yellow-100 text-yellow-600'
-                  : 'bg-blue-100 text-blue-600'
+                    ? 'bg-yellow-100 text-yellow-600'
+                    : 'bg-blue-100 text-blue-600'
               }`}
             >
               <AlertCircle size={20} />
@@ -165,7 +165,10 @@ type BreadcrumbItem = {
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
-  const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
+  const { projectId, nodeId } = useParams<{
+    projectId: string;
+    nodeId?: string;
+  }>();
 
   // 当前节点ID（项目根或子文件夹）
   const currentNodeId = nodeId || projectId || '';
@@ -213,16 +216,13 @@ export const FileSystemManager: React.FC = () => {
   const dragCounterRef = useRef(0);
 
   // Toast 通知辅助函数
-  const showToast = useCallback(
-    (message: string, type: ToastType = 'info') => {
-      const id = Date.now().toString();
-      setToasts((prev) => [...prev, { id, type, message }]);
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      }, 3000);
-    },
-    []
-  );
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -407,7 +407,9 @@ export const FileSystemManager: React.FC = () => {
           setLoading(true);
           const count = selectedNodes.size;
           await Promise.all(
-            Array.from(selectedNodes).map((nodeId) => projectsApi.deleteNode(nodeId))
+            Array.from(selectedNodes).map((nodeId) =>
+              projectsApi.deleteNode(nodeId)
+            )
           );
           setSelectedNodes(new Set());
           closeConfirm();
@@ -455,7 +457,14 @@ export const FileSystemManager: React.FC = () => {
       if (files.length === 0) return;
 
       // 检查文件类型
-      const allowedExtensions = ['.dwg', '.dxf', '.pdf', '.png', '.jpg', '.jpeg'];
+      const allowedExtensions = [
+        '.dwg',
+        '.dxf',
+        '.pdf',
+        '.png',
+        '.jpg',
+        '.jpeg',
+      ];
       const invalidFiles = files.filter((file) => {
         const ext = '.' + file.name.split('.').pop()?.toLowerCase();
         return !allowedExtensions.includes(ext);
@@ -545,7 +554,10 @@ export const FileSystemManager: React.FC = () => {
       }
 
       // Backspace: 返回上级
-      if (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+      if (
+        e.key === 'Backspace' &&
+        !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)
+      ) {
         e.preventDefault();
         handleGoBack();
       }
@@ -556,7 +568,13 @@ export const FileSystemManager: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodes, handleBatchDelete, handleRefresh, handleGoBack, handleSelectAll]);
+  }, [
+    selectedNodes,
+    handleBatchDelete,
+    handleRefresh,
+    handleGoBack,
+    handleSelectAll,
+  ]);
 
   // 创建文件夹
   const handleCreateFolder = async () => {
@@ -572,8 +590,12 @@ export const FileSystemManager: React.FC = () => {
 
     try {
       setLoading(true);
-      console.log(`[FileSystemManager] 创建文件夹: ${folderName} 在节点 ${currentNodeId}`);
-      await projectsApi.createFolder(currentNodeId, { name: folderName.trim() });
+      console.log(
+        `[FileSystemManager] 创建文件夹: ${folderName} 在节点 ${currentNodeId}`
+      );
+      await projectsApi.createFolder(currentNodeId, {
+        name: folderName.trim(),
+      });
       setShowCreateFolderModal(false);
       setFolderName('');
       await loadChildren();
@@ -709,11 +731,17 @@ export const FileSystemManager: React.FC = () => {
 
   // 文件上传成功
   const handleFileUpload = async (file: File, result: any) => {
-    console.log(`[FileSystemManager] 文件上传成功:`, { fileName: file.name, result });
+    console.log(`[FileSystemManager] 文件上传成功:`, {
+      fileName: file.name,
+      result,
+    });
     showToast(`文件"${file.name}"上传成功`, 'success');
     setShowUploadModal(false);
     await loadChildren();
   };
+
+  // 调试：输出 currentNodeId
+  console.log('[FileSystemManager] currentNodeId:', currentNodeId);
 
   // 文件上传错误
   const handleUploadError = (file: File, error: Error) => {
@@ -845,7 +873,10 @@ export const FileSystemManager: React.FC = () => {
             </button>
             {breadcrumbs.map((crumb, index) => (
               <React.Fragment key={crumb.id}>
-                <ChevronRight size={14} className="text-slate-400 flex-shrink-0" />
+                <ChevronRight
+                  size={14}
+                  className="text-slate-400 flex-shrink-0"
+                />
                 <button
                   onClick={() => handleBreadcrumbClick(crumb)}
                   className={`hover:text-indigo-600 transition-colors whitespace-nowrap ${
@@ -863,9 +894,9 @@ export const FileSystemManager: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <Button 
-            variant="outline" 
-            onClick={handleRefresh} 
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
             disabled={loading}
             size="sm"
             className="flex-shrink-0"
@@ -873,18 +904,15 @@ export const FileSystemManager: React.FC = () => {
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             <span className="hidden sm:inline ml-2">刷新</span>
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setShowUploadModal(true)}
             size="sm"
           >
             <Upload size={16} />
             <span className="ml-2">上传</span>
           </Button>
-          <Button 
-            onClick={() => setShowCreateFolderModal(true)}
-            size="sm"
-          >
+          <Button onClick={() => setShowCreateFolderModal(true)} size="sm">
             <FolderPlus size={16} />
             <span className="ml-2">新建</span>
           </Button>
@@ -968,14 +996,11 @@ export const FileSystemManager: React.FC = () => {
                   没有找到匹配的文件
                 </h3>
                 <p className="text-slate-500 mb-6 text-center max-w-md">
-                  没有找到包含"{searchQuery}"的文件或文件夹
+                  没有找到包含&ldquo;{searchQuery}&rdquo;的文件或文件夹
                   <br />
                   尝试使用其他关键词搜索
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setSearchQuery('')}
-                >
+                <Button variant="outline" onClick={() => setSearchQuery('')}>
                   清除搜索
                 </Button>
               </>
@@ -993,7 +1018,10 @@ export const FileSystemManager: React.FC = () => {
                   </span>
                 </p>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setShowUploadModal(true)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowUploadModal(true)}
+                  >
                     <Upload size={16} className="mr-2" />
                     上传文件
                     <span className="ml-2 text-xs text-slate-400">Ctrl+U</span>
@@ -1009,12 +1037,42 @@ export const FileSystemManager: React.FC = () => {
                     💡 快捷键提示
                   </h4>
                   <div className="text-xs text-slate-600 space-y-1">
-                    <div><kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">Ctrl+N</kbd> 新建文件夹</div>
-                    <div><kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">Ctrl+U</kbd> 上传文件</div>
-                    <div><kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">Ctrl+A</kbd> 全选</div>
-                    <div><kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">Delete</kbd> 删除选中项</div>
-                    <div><kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">Backspace</kbd> 返回上级</div>
-                    <div><kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">F5</kbd> 刷新</div>
+                    <div>
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">
+                        Ctrl+N
+                      </kbd>{' '}
+                      新建文件夹
+                    </div>
+                    <div>
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">
+                        Ctrl+U
+                      </kbd>{' '}
+                      上传文件
+                    </div>
+                    <div>
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">
+                        Ctrl+A
+                      </kbd>{' '}
+                      全选
+                    </div>
+                    <div>
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">
+                        Delete
+                      </kbd>{' '}
+                      删除选中项
+                    </div>
+                    <div>
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">
+                        Backspace
+                      </kbd>{' '}
+                      返回上级
+                    </div>
+                    <div>
+                      <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded">
+                        F5
+                      </kbd>{' '}
+                      刷新
+                    </div>
                   </div>
                 </div>
               </>
@@ -1205,7 +1263,9 @@ export const FileSystemManager: React.FC = () => {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             {typeof getFileIcon(node) === 'string' ? (
-                              <span className="text-xl">{getFileIcon(node)}</span>
+                              <span className="text-xl">
+                                {getFileIcon(node)}
+                              </span>
                             ) : (
                               getFileIcon(node)
                             )}
@@ -1380,7 +1440,7 @@ export const FileSystemManager: React.FC = () => {
       >
         <div className="space-y-4">
           <FileUploader
-            projectId={currentNodeId}
+            parentId={currentNodeId}
             onUploadComplete={handleFileUpload}
             onUploadError={handleUploadError}
             maxFiles={10}

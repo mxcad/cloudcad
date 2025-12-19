@@ -11,7 +11,6 @@ import { EmailVerification } from './pages/EmailVerification';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { Profile } from './pages/Profile';
-import FileManager from './pages/FileManager';
 import FileSystemManager from './pages/FileSystemManager';
 import { Login } from './pages/Login';
 import { ProjectManager } from './pages/ProjectManager';
@@ -21,28 +20,28 @@ import { UserManagement } from './pages/UserManagement';
 import { useAuth } from './contexts/AuthContext';
 
 // 受保护的路由组件
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(({
-  children,
-}) => {
-  const { isAuthenticated, loading, user, token } = useAuth();
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
+  ({ children }) => {
+    const { isAuthenticated, loading, user, token } = useAuth();
 
-  // 如果已经有 token 或 user 信息，直接显示内容，避免闪烁
-  const shouldShowContent = token || user;
-  
-  if (loading && !shouldShowContent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-lg text-slate-600">加载中...</div>
-      </div>
-    );
+    // 如果已经有 token 或 user 信息，直接显示内容，避免闪烁
+    const shouldShowContent = token || user;
+
+    if (loading && !shouldShowContent) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="text-lg text-slate-600">加载中...</div>
+        </div>
+      );
+    }
+
+    if (!isAuthenticated && !loading) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return <>{children}</>;
   }
-
-  if (!isAuthenticated && !loading) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-});
+);
 
 function App() {
   return (
@@ -63,14 +62,21 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Routes>
-                    <Route path="/" element={<Navigate to="/projects" replace />} />
+                    <Route
+                      path="/"
+                      element={<Navigate to="/projects" replace />}
+                    />
                     <Route path="/projects" element={<ProjectManager />} />
-                    <Route path="/projects/:projectId" element={<FileManager />} />
-                    
-                    {/* 文件系统路由 - 支持项目根目录和子文件夹导航 */}
-                    <Route path="/file-system/:projectId" element={<FileSystemManager />} />
-                    <Route path="/file-system/:projectId/:nodeId" element={<FileSystemManager />} />
-                    
+                    {/* 文件系统管理 */}
+                    <Route
+                      path="/file-system/:projectId"
+                      element={<FileSystemManager />}
+                    />
+                    <Route
+                      path="/file-system/:projectId/:nodeId"
+                      element={<FileSystemManager />}
+                    />
+
                     <Route
                       path="/files"
                       element={<Navigate to="/projects" replace />}
@@ -87,7 +93,10 @@ function App() {
                     />
 
                     {/* Font Library Routes */}
-                    <Route path="/fonts" element={<AssetLibrary type="font" />} />
+                    <Route
+                      path="/fonts"
+                      element={<AssetLibrary type="font" />}
+                    />
                     <Route
                       path="/fonts/:libraryId"
                       element={<AssetLibrary type="font" />}

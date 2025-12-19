@@ -49,15 +49,15 @@ export const Profile: React.FC = () => {
         oldPassword: passwordForm.oldPassword,
         newPassword: passwordForm.newPassword,
       });
-      
+
       try {
         await logout();
       } catch (logoutErr) {
         console.error('退出登录失败:', logoutErr);
       }
-      
-      navigate('/login', { 
-        state: { message: '密码已修改，请使用新密码登录' } 
+
+      navigate('/login', {
+        state: { message: '密码已修改，请使用新密码登录' },
       });
     } catch (err: any) {
       setError(err.response?.data?.message || '密码修改失败');
@@ -100,9 +100,7 @@ export const Profile: React.FC = () => {
                 <h3 className="text-lg font-medium leading-6 text-gray-900">
                   个人信息
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  查看您的账户信息
-                </p>
+                <p className="mt-1 text-sm text-gray-500">查看您的账户信息</p>
               </div>
 
               <div className="grid grid-cols-1 gap-6">
@@ -156,15 +154,15 @@ export const Profile: React.FC = () => {
                         user?.status === 'ACTIVE'
                           ? 'bg-green-100 text-green-800'
                           : user?.status === 'INACTIVE'
-                          ? 'bg-gray-100 text-gray-800'
-                          : 'bg-red-100 text-red-800'
+                            ? 'bg-gray-100 text-gray-800'
+                            : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {user?.status === 'ACTIVE'
                         ? '正常'
                         : user?.status === 'INACTIVE'
-                        ? '未激活'
-                        : '已禁用'}
+                          ? '未激活'
+                          : '已禁用'}
                     </span>
                   </div>
                 </div>
