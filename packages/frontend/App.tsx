@@ -12,6 +12,7 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { Profile } from './pages/Profile';
 import FileManager from './pages/FileManager';
+import FileSystemManager from './pages/FileSystemManager';
 import { Login } from './pages/Login';
 import { ProjectManager } from './pages/ProjectManager';
 import { Register } from './pages/Register';
@@ -65,6 +66,11 @@ function App() {
                     <Route path="/" element={<Navigate to="/projects" replace />} />
                     <Route path="/projects" element={<ProjectManager />} />
                     <Route path="/projects/:projectId" element={<FileManager />} />
+                    
+                    {/* 文件系统路由 - 支持项目根目录和子文件夹导航 */}
+                    <Route path="/file-system/:projectId" element={<FileSystemManager />} />
+                    <Route path="/file-system/:projectId/:nodeId" element={<FileSystemManager />} />
+                    
                     <Route
                       path="/files"
                       element={<Navigate to="/projects" replace />}
