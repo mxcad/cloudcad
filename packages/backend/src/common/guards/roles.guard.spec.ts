@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../enums/permissions.enum';
+import { PermissionCacheService } from '../services/permission-cache.service';
 import {
   PermissionService,
   UserWithPermissions,
@@ -13,6 +14,7 @@ describe('RolesGuard', () => {
   let guard: RolesGuard;
   let reflector: jest.Mocked<Reflector>;
   let permissionService: jest.Mocked<PermissionService>;
+  let cacheService: jest.Mocked<PermissionCacheService>;
   let mockContext: ExecutionContext;
 
   const mockUser: UserWithPermissions = {
@@ -20,7 +22,7 @@ describe('RolesGuard', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: UserRole.USER,
     status: 'ACTIVE',
   };
@@ -39,6 +41,11 @@ describe('RolesGuard', () => {
       hasRole: jest.fn(),
     } as any;
 
+    const mockCacheService = {
+      getUserRole: jest.fn(),
+      cacheUserRole: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RolesGuard,
@@ -50,12 +57,25 @@ describe('RolesGuard', () => {
           provide: PermissionService,
           useValue: mockPermissionService,
         },
+        {
+          provide: PermissionCacheService,
+          useValue: mockCacheService,
+        },
       ],
-    }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     guard = module.get<RolesGuard>(RolesGuard);
     reflector = module.get(Reflector);
     permissionService = module.get(PermissionService);
+    cacheService = module.get(PermissionCacheService);
 
     // Create mock execution context
     mockContext = {

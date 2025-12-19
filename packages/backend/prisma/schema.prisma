@@ -15,84 +15,90 @@ model User {
   nickname  String?
   avatar    String?
   role      UserRole @default(USER)
-  status    UserStatus @default(ACTIVE)
+  status    UserStatus @default(INACTIVE)
+  emailVerified    Boolean  @default(false)
+  emailVerifiedAt  DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // 关联关系
   projectMemberships ProjectMember[]
-  createdFiles       File[]          @relation("FileCreator")
-  fileAccesses       FileAccess[]
-  ownedProjects     Project[]       @relation("ProjectOwner")
+  ownedNodes         FileSystemNode[] @relation("NodeOwner")
+  nodeAccesses       FileAccess[]
 
   @@map("users")
 }
 
-model Project {
-  id          String        @id @default(cuid())
+// ============ 文件系统统一模型 ============
+model FileSystemNode {
+  id          String   @id @default(cuid())
   name        String
-  description String?
-  status      ProjectStatus @default(ACTIVE)
+  isFolder    Boolean  @default(false)  // true=文件夹, false=文件
+  isRoot      Boolean  @default(false)  // true=项目根目录
+  
+  // 树形结构（自引用）
+  parentId    String?
+  parent      FileSystemNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    FileSystemNode[] @relation("NodeHierarchy")
+  
+  // 文件专属字段（文件夹时为null）
+  originalName String?   // 原始文件名
+  path         String?   // MinIO存储路径
+  size         Int?      // 文件大小（字节）
+  mimeType     String?   // MIME类型
+  extension    String?   // 文件扩展名（.dwg, .dxf）
+  fileStatus   FileStatus? // 文件状态
+  fileHash     String?   // 文件SHA-256哈希值（用于去重）
+  
+  // 项目专属字段（仅根节点使用）
+  description    String?          // 项目描述
+  projectStatus  ProjectStatus?   // 项目状态
+  
+  // 权限与审计
   ownerId     String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
+  owner       User     @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
   // 关联关系
-  owner    User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members  ProjectMember[]
-  files    File[]
-
-  @@map("projects")
+  members      ProjectMember[] @relation("ProjectNodes")
+  nodeAccesses FileAccess[]    @relation("NodeAccesses")
+  
+  // 索引优化
+  @@index([parentId])
+  @@index([ownerId])
+  @@index([isRoot])
+  @@index([isFolder])
+  @@map("file_system_nodes")
 }
 
 model ProjectMember {
   id        String            @id @default(cuid())
   userId    String
-  projectId String
+  nodeId    String            // 关联到FileSystemNode（根节点）
   role      ProjectMemberRole @default(MEMBER)
   joinedAt  DateTime          @default(now())
 
   // 关联关系
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node    FileSystemNode   @relation("ProjectNodes", fields: [nodeId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, projectId])
+  @@unique([userId, nodeId])
   @@map("project_members")
-}
-
-model File {
-  id          String     @id @default(cuid())
-  name        String
-  originalName String?
-  path        String
-  size        Int
-  mimeType    String
-  status      FileStatus @default(UPLOADING)
-  ownerId     String
-  projectId   String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // 关联关系
-  owner    User          @relation("FileCreator", fields: [ownerId], references: [id], onDelete: Cascade)
-  project  Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  fileAccesses FileAccess[]
-
-  @@map("files")
 }
 
 model FileAccess {
   id        String         @id @default(cuid())
   userId    String
-  fileId    String
+  nodeId    String         // 关联到FileSystemNode
   role      FileAccessRole @default(VIEWER)
   createdAt DateTime       @default(now())
 
   // 关联关系
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node FileSystemNode   @relation("NodeAccesses", fields: [nodeId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, fileId])
+  @@unique([userId, nodeId])
   @@map("file_accesses")
 }
 
@@ -133,6 +139,25 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+model UploadSession {
+  id          String   @id @default(cuid())
+  uploadId    String   @unique  // MinIO返回的上传ID
+  storageKey  String   // 存储键名
+  fileName    String   // 原始文件名
+  fileSize    Int      // 文件总大小
+  fileId      String?  // 关联的文件ID（完成后设置）
+  projectId   String?  // 项目ID
+  parentId    String?  // 父节点ID
+  ownerId     String   // 上传者ID
+  status      String   @default("INITIATED") // INITIATED, UPLOADING, COMPLETED, FAILED, ABORTED
+  totalParts  Int?     // 总分片数
+  uploadedParts Int    @default(0) // 已上传分片数
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("upload_sessions")
 }
 
 // 枚举类型

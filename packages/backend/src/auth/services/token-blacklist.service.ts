@@ -1,24 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Redis } from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 
 @Injectable()
-export class TokenBlacklistService {
+export class TokenBlacklistService implements OnModuleInit {
   private readonly logger = new Logger(TokenBlacklistService.name);
-  private readonly redis: Redis;
   private readonly blacklistPrefix = 'token:blacklist:';
   private readonly defaultTTL = 7 * 24 * 60 * 60; // 7天
 
-  constructor(private configService: ConfigService) {
-    this.redis = new Redis({
-      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-      port: this.configService.get<number>('REDIS_PORT', 6379),
-      password: this.configService.get<string>('REDIS_PASSWORD') || undefined,
-      db: this.configService.get<number>('REDIS_DB', 0),
-      enableReadyCheck: false,
-      maxRetriesPerRequest: null,
-    });
+  constructor(
+    private configService: ConfigService,
+    @InjectRedis() private readonly redis: Redis
+  ) {}
 
+  onModuleInit() {
     this.redis.on('error', (error) => {
       this.logger.error('Redis连接错误:', error);
     });
@@ -58,8 +54,8 @@ export class TokenBlacklistService {
       return result === 1;
     } catch (error) {
       this.logger.error('检查Token黑名单失败:', error);
-      // 如果Redis不可用，为了安全起见，返回true
-      return true;
+      // 如果Redis不可用，记录错误但不阻止正常使用
+      return false;
     }
   }
 
@@ -95,7 +91,23 @@ export class TokenBlacklistService {
       return result === 1;
     } catch (error) {
       this.logger.error('检查用户黑名单失败:', error);
-      return true;
+      // 如果Redis不可用，记录错误但不阻止正常使用
+      return false;
+    }
+  }
+
+  /**
+   * 从黑名单中移除用户
+   * @param userId 用户ID
+   */
+  async removeUserFromBlacklist(userId: string): Promise<void> {
+    try {
+      const key = `user:blacklist:${userId}`;
+      await this.redis.del(key);
+      this.logger.log(`用户已从黑名单移除: ${userId}`);
+    } catch (error) {
+      this.logger.error('从黑名单移除用户失败:', error);
+      throw error;
     }
   }
 
@@ -149,6 +161,49 @@ export class TokenBlacklistService {
     } catch (error) {
       this.logger.error('获取黑名单统计失败:', error);
       return { totalTokens: 0, blacklistedUsers: 0 };
+    }
+  }
+
+  /**
+   * 存储临时数据
+   * @param key 键名
+   * @param value 值
+   * @param ttl 过期时间（秒）
+   */
+  async setTempData(key: string, value: string, ttl: number): Promise<void> {
+    try {
+      await this.redis.setex(key, ttl, value);
+      this.logger.log(`临时数据已存储: ${key}`);
+    } catch (error) {
+      this.logger.error('存储临时数据失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取临时数据
+   * @param key 键名
+   */
+  async getTempData(key: string): Promise<string | null> {
+    try {
+      const result = await this.redis.get(key);
+      return result;
+    } catch (error) {
+      this.logger.error('获取临时数据失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 删除临时数据
+   * @param key 键名
+   */
+  async deleteTempData(key: string): Promise<void> {
+    try {
+      await this.redis.del(key);
+      this.logger.log(`临时数据已删除: ${key}`);
+    } catch (error) {
+      this.logger.error('删除临时数据失败:', error);
     }
   }
 

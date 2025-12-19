@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -14,9 +14,11 @@ import { CustomValidationPipe } from './common/pipes/validation.pipe';
 import { SchedulerModule } from './common/schedulers/scheduler.module';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
-import { FilesModule } from './files/files.module';
+// import { FilesModule } from './files/files.module'; // 已废弃
+import { FileSystemModule } from './file-system/file-system.module';
 import { HealthModule } from './health/health.module';
-import { ProjectsModule } from './projects/projects.module';
+// import { ProjectsModule } from './projects/projects.module'; // 已废弃
+import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 
@@ -28,11 +30,13 @@ import { UsersModule } from './users/users.module';
       envFilePath: ['.env.local', '.env'],
     }),
     DatabaseModule,
+    RedisModule,
     AuthModule,
     CommonModule,
     UsersModule,
-    ProjectsModule,
-    FilesModule,
+    // ProjectsModule, // 已废弃，功能迁移到 FileSystemModule
+    // FilesModule, // 已废弃，功能迁移到 FileSystemModule
+    FileSystemModule,
     AdminModule,
     SchedulerModule,
     StorageModule,

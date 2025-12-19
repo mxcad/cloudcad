@@ -28,10 +28,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     try {
       // 检查Token是否在黑名单中
-      const isBlacklisted = await this.tokenBlacklistService.isBlacklisted(token);
-      if (isBlacklisted) {
-        this.logger.warn('尝试使用已撤销的Token');
-        throw new UnauthorizedException('Token已被撤销');
+      if (this.tokenBlacklistService) {
+        const isBlacklisted =
+          await this.tokenBlacklistService.isBlacklisted(token);
+        if (isBlacklisted) {
+          this.logger.warn('尝试使用已撤销的Token');
+          throw new UnauthorizedException('Token已被撤销');
+        }
       }
 
       // 继续正常的JWT验证

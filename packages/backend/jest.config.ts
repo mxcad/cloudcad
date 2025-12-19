@@ -3,6 +3,7 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFiles: ['dotenv/config'],
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.spec.ts', '**/?(*.)+(spec|test).ts'],
   transform: {

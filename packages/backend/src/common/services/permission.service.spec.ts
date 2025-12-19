@@ -22,7 +22,7 @@ describe('PermissionService', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: UserRole.USER,
     status: 'ACTIVE',
   };
@@ -46,7 +46,7 @@ describe('PermissionService', () => {
 
   const mockFile = {
     id: 'file-id',
-    creatorId: 'user-id',
+    ownerId: 'user-id',
     projectId: 'project-id',
   };
 
@@ -54,9 +54,11 @@ describe('PermissionService', () => {
     const mockPrisma = {
       projectMember: {
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
       },
       fileAccess: {
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
       },
       file: {
         findUnique: jest.fn(),
@@ -82,7 +84,15 @@ describe('PermissionService', () => {
           useValue: mockCacheService,
         },
       ],
-    }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<PermissionService>(PermissionService);
     prisma = module.get(DatabaseService);
@@ -121,79 +131,22 @@ describe('PermissionService', () => {
       expect(result).toBe(false);
     });
 
-    it('should check project permissions when projectId provided', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-      cacheService.getProjectPermissions.mockReturnValue(null);
-
+    it('should return false when resourceId provided as project/file permissions are migrated', async () => {
       const result = await service.hasPermission(
         mockUser,
-        Permission.PROJECT_READ,
-        { projectId: 'project-id' }
-      );
-
-      expect(result).toBe(true);
-      expect(prisma.projectMember.findUnique).toHaveBeenCalledWith({
-        where: {
-          userId_projectId: {
-            userId: mockUser.id,
-            projectId: 'project-id',
-          },
-        },
-        select: { role: true },
-      });
-    });
-
-    it('should check file permissions when fileId provided', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
-      prisma.file.findUnique.mockResolvedValue(mockFile);
-      cacheService.getFilePermissions.mockReturnValue(null);
-
-      const result = await service.hasPermission(
-        mockUser,
-        Permission.FILE_READ,
-        { fileId: 'file-id' }
-      );
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when project member not found', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
-      cacheService.getProjectPermissions.mockReturnValue(null);
-
-      const result = await service.hasPermission(
-        mockUser,
-        Permission.PROJECT_READ,
+        Permission.PROJECT_DELETE,
         { projectId: 'project-id' }
       );
 
       expect(result).toBe(false);
     });
 
-    it('should use cached project permissions', async () => {
-      const cachedPermissions = [Permission.PROJECT_READ];
-      cacheService.getProjectPermissions.mockReturnValue(cachedPermissions);
-
-      const result = await service.hasPermission(
-        mockUser,
-        Permission.PROJECT_READ,
-        { projectId: 'project-id' }
-      );
-
-      expect(result).toBe(true);
-      expect(prisma.projectMember.findUnique).not.toHaveBeenCalled();
-    });
-
     it('should handle errors gracefully', async () => {
-      prisma.projectMember.findUnique.mockRejectedValue(
-        new Error('Database error')
-      );
-      cacheService.getProjectPermissions.mockReturnValue(null);
+      // 创建一个无效的用户对象来触发错�?      const invalidUser = { ...mockUser, role: null as any };
 
       const result = await service.hasPermission(
-        mockUser,
-        Permission.PROJECT_READ,
-        { projectId: 'project-id' }
+        invalidUser,
+        Permission.PROJECT_READ
       );
 
       expect(result).toBe(false);
@@ -221,102 +174,9 @@ describe('PermissionService', () => {
   });
 
   describe('hasProjectRole', () => {
-    it('should return true when user has required project role', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-
+    it('should return false as method is deprecated', async () => {
       const result = await service.hasProjectRole(mockUser, 'project-id', [
         ProjectMemberRole.MEMBER,
-      ]);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when user is not project member', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
-
-      const result = await service.hasProjectRole(mockUser, 'project-id', [
-        ProjectMemberRole.MEMBER,
-      ]);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true when user has one of multiple required roles', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-
-      const result = await service.hasProjectRole(mockUser, 'project-id', [
-        ProjectMemberRole.ADMIN,
-        ProjectMemberRole.MEMBER,
-      ]);
-
-      expect(result).toBe(true);
-    });
-
-    it('should handle database errors', async () => {
-      prisma.projectMember.findUnique.mockRejectedValue(
-        new Error('Database error')
-      );
-
-      const result = await service.hasProjectRole(mockUser, 'project-id', [
-        ProjectMemberRole.MEMBER,
-      ]);
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('hasFileRole', () => {
-    it('should return true when user has required file access role', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
-
-      const result = await service.hasFileRole(mockUser, 'file-id', [
-        FileAccessRole.EDITOR,
-      ]);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return true when user is file owner', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(mockFile);
-
-      const result = await service.hasFileRole(mockUser, 'file-id', [
-        FileAccessRole.OWNER,
-      ]);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when user is not file owner', async () => {
-      const otherUserFile = { ...mockFile, creatorId: 'other-user-id' };
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(otherUserFile);
-
-      const result = await service.hasFileRole(mockUser, 'file-id', [
-        FileAccessRole.OWNER,
-      ]);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when file not found', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(null);
-
-      const result = await service.hasFileRole(mockUser, 'file-id', [
-        FileAccessRole.OWNER,
-      ]);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle database errors', async () => {
-      prisma.fileAccess.findUnique.mockRejectedValue(
-        new Error('Database error')
-      );
-
-      const result = await service.hasFileRole(mockUser, 'file-id', [
-        FileAccessRole.EDITOR,
       ]);
 
       expect(result).toBe(false);
@@ -324,35 +184,7 @@ describe('PermissionService', () => {
   });
 
   describe('getProjectPermissions', () => {
-    it('should return project member permissions', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-
-      const result = await service.getProjectPermissions(
-        mockUser,
-        'project-id'
-      );
-
-      expect(result).toEqual(
-        PROJECT_MEMBER_PERMISSIONS[ProjectMemberRole.MEMBER]
-      );
-    });
-
-    it('should return empty array when user is not project member', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
-
-      const result = await service.getProjectPermissions(
-        mockUser,
-        'project-id'
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('should handle database errors', async () => {
-      prisma.projectMember.findUnique.mockRejectedValue(
-        new Error('Database error')
-      );
-
+    it('should return empty array as method is deprecated', async () => {
       const result = await service.getProjectPermissions(
         mockUser,
         'project-id'
@@ -363,60 +195,7 @@ describe('PermissionService', () => {
   });
 
   describe('getFilePermissions', () => {
-    it('should return file access permissions', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
-
-      const result = await service.getFilePermissions(mockUser, 'file-id');
-
-      expect(result).toEqual(FILE_ACCESS_PERMISSIONS[FileAccessRole.EDITOR]);
-    });
-
-    it('should return owner permissions when user is file creator', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(mockFile);
-
-      const result = await service.getFilePermissions(mockUser, 'file-id');
-
-      expect(result).toEqual(FILE_ACCESS_PERMISSIONS[FileAccessRole.OWNER]);
-    });
-
-    it('should return project permissions when file belongs to project', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(mockFile);
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-
-      const result = await service.getFilePermissions(mockUser, 'file-id');
-
-      expect(result).toEqual(
-        PROJECT_MEMBER_PERMISSIONS[ProjectMemberRole.MEMBER]
-      );
-    });
-
-    it('should return empty array when file not found', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(null);
-
-      const result = await service.getFilePermissions(mockUser, 'file-id');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when user is not file owner and no project access', async () => {
-      const otherUserFile = { ...mockFile, creatorId: 'other-user-id' };
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(otherUserFile);
-      prisma.projectMember.findUnique.mockResolvedValue(null);
-
-      const result = await service.getFilePermissions(mockUser, 'file-id');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should handle database errors', async () => {
-      prisma.fileAccess.findUnique.mockRejectedValue(
-        new Error('Database error')
-      );
-
+    it('should return empty array as method is deprecated', async () => {
       const result = await service.getFilePermissions(mockUser, 'file-id');
 
       expect(result).toEqual([]);
@@ -424,28 +203,8 @@ describe('PermissionService', () => {
   });
 
   describe('checkProjectPermission', () => {
-    it('should cache project permissions after checking', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-      cacheService.getProjectPermissions.mockReturnValue(null);
-
-      await service['checkProjectPermission'](
-        mockUser,
-        'project-id',
-        Permission.PROJECT_READ
-      );
-
-      expect(cacheService.cacheProjectPermissions).toHaveBeenCalledWith(
-        mockUser.id,
-        'project-id',
-        PROJECT_MEMBER_PERMISSIONS[ProjectMemberRole.MEMBER]
-      );
-    });
-
-    it('should return false for non-existent project member', async () => {
-      prisma.projectMember.findUnique.mockResolvedValue(null);
-      cacheService.getProjectPermissions.mockReturnValue(null);
-
-      const result = await service['checkProjectPermission'](
+    it('should return false as method is deprecated', async () => {
+      const result = await service.checkProjectPermission(
         mockUser,
         'project-id',
         Permission.PROJECT_READ
@@ -456,50 +215,8 @@ describe('PermissionService', () => {
   });
 
   describe('checkFilePermission', () => {
-    it('should cache file permissions after checking', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
-      cacheService.getFilePermissions.mockReturnValue(null);
-
-      await service['checkFilePermission'](
-        mockUser,
-        'file-id',
-        Permission.FILE_READ
-      );
-
-      expect(cacheService.cacheFilePermissions).toHaveBeenCalledWith(
-        mockUser.id,
-        'file-id',
-        FILE_ACCESS_PERMISSIONS[FileAccessRole.EDITOR]
-      );
-    });
-
-    it('should check project permissions when file belongs to project and user is not owner', async () => {
-      const otherUserFile = { ...mockFile, creatorId: 'other-user-id' };
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(otherUserFile);
-      prisma.projectMember.findUnique.mockResolvedValue(mockProjectMember);
-      cacheService.getFilePermissions.mockReturnValue(null);
-
-      const result = await service['checkFilePermission'](
-        mockUser,
-        'file-id',
-        Permission.PROJECT_READ
-      );
-
-      expect(result).toBe(true);
-      expect(cacheService.cacheFilePermissions).toHaveBeenCalledWith(
-        mockUser.id,
-        'file-id',
-        [Permission.PROJECT_READ]
-      );
-    });
-
-    it('should return false for non-existent file', async () => {
-      prisma.fileAccess.findUnique.mockResolvedValue(null);
-      prisma.file.findUnique.mockResolvedValue(null);
-      cacheService.getFilePermissions.mockReturnValue(null);
-
-      const result = await service['checkFilePermission'](
+    it('should return false as method is deprecated', async () => {
+      const result = await service.checkFilePermission(
         mockUser,
         'file-id',
         Permission.FILE_READ

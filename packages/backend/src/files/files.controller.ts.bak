@@ -9,11 +9,9 @@ import {
   Patch,
   Post,
   Request,
-  UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-fastify';
+import type { AuthenticatedRequest, FileUploadRequest } from '../common/types/request.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FilePermission } from '../common/decorators/file-permission.decorator';
 import { ProjectPermission } from '../common/decorators/project-permission.decorator';
@@ -40,19 +38,18 @@ export class FilesController {
     ProjectMemberRole.ADMIN,
     ProjectMemberRole.MEMBER
   )
-  @UseInterceptors(FileInterceptor('file'))
   @HttpCode(HttpStatus.CREATED)
-  uploadFile(
-    @Request() req,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('projectId') projectId: string
+  async uploadFile(
+    @Request() req: FileUploadRequest
   ) {
-    return this.filesService.upload(req.user.id, file, projectId);
+    const data = await req.file();
+    const projectId = req.body.projectId;
+    return this.filesService.upload(req.user.id, data, projectId);
   }
 
   @Get()
   @Roles(UserRole.USER, UserRole.ADMIN)
-  findAll(@Request() req) {
+  findAll(@Request() req: AuthenticatedRequest) {
     return this.filesService.findAll(req.user.id);
   }
 

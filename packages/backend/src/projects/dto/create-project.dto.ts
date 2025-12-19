@@ -12,11 +12,11 @@ export class CreateProjectDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ 
-    description: '项目状态', 
-    enum: ProjectStatus, 
+  @ApiProperty({
+    description: '项目状态',
+    enum: ProjectStatus,
     required: false,
-    default: ProjectStatus.ACTIVE 
+    default: ProjectStatus.ACTIVE,
   })
   @IsOptional()
   @IsEnum(ProjectStatus)

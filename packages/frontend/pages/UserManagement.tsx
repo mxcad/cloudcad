@@ -1,101 +1,177 @@
 import {
   AlertCircle,
-  Database,
   Edit,
-  MoreHorizontal,
   Shield,
   Trash2,
   User as UserIcon,
 } from 'lucide-react';
-import type React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Api } from '../services/api';
-import { Permission, type Role, type User } from '../types';
+import { Permission, type Role } from '../types';
+import { usersApi, authApi } from '../services/apiService';
+import { components } from '../types/api';
+
+// 使用API类型
+type UserDto = components['schemas']['UserDto'];
+type CreateUserDto = components['schemas']['CreateUserDto'];
+type UpdateUserDto = components['schemas']['UpdateUserDto'];
 
 export const UserManagement = () => {
-  const [hasPermission, setHasPermission] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [users, setUsers] = useState<UserDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 静态角色列表（后端只有ADMIN和USER两种角色）
+  const [roles] = useState<Role[]>([
+    {
+      id: 'ADMIN',
+      name: '管理员',
+      description: '系统管理员，拥有所有权限',
+      permissions: [
+        Permission.MANAGE_USERS,
+        Permission.MANAGE_ROLES,
+        Permission.VIEW_DASHBOARD,
+      ],
+      isSystem: true,
+    },
+    {
+      id: 'USER',
+      name: '用户',
+      description: '普通用户，基础权限',
+      permissions: [Permission.VIEW_DASHBOARD],
+      isSystem: true,
+    },
+  ]);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserDto | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
-    roleId: '',
-    storageGB: 1,
+    password: '',
+    roleId: 'USER',
+    nickname: '',
   });
 
   useEffect(() => {
-    checkAccess();
+    initialize();
   }, []);
 
-  const checkAccess = async () => {
-    const role = await Api.auth.getRole();
-    if (!role?.permissions.includes(Permission.MANAGE_USERS)) {
-      setHasPermission(false);
-      return;
+  const initialize = async () => {
+    const hasAccess = await checkAccess();
+    if (hasAccess) {
+      await loadData();
     }
-    loadData();
+  };
+
+  const checkAccess = async (): Promise<boolean> => {
+    try {
+      const response = await authApi.getProfile();
+      const currentUser = response.data;
+      // 只有ADMIN角色可以管理用户
+      const hasAccess = currentUser.role === 'ADMIN';
+      setHasPermission(hasAccess);
+      return hasAccess;
+    } catch (error) {
+      console.error('Failed to check access:', error);
+      setHasPermission(false);
+      return false;
+    }
   };
 
   const loadData = async () => {
-    const [userData, roleData] = await Promise.all([
-      Api.users.list(),
-      Api.roles.list(),
-    ]);
-    setUsers(userData);
-    setRoles(roleData);
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await usersApi.list();
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      setError('加载用户列表失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenCreate = () => {
     setEditingUser(null);
     setFormData({
-      name: '',
+      username: '',
       email: '',
-      roleId: roles[0]?.id || '',
-      storageGB: 1,
+      password: '',
+      roleId: 'USER',
+      nickname: '',
     });
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (user: User) => {
+  const handleOpenEdit = (user: UserDto) => {
     setEditingUser(user);
     setFormData({
-      name: user.name,
+      username: user.username,
       email: user.email,
-      roleId: user.roleId,
-      storageGB: user.totalStorage / (1024 * 1024 * 1024),
+      password: '', // 编辑时不显示密码
+      roleId: user.role,
+      nickname: user.nickname || '',
     });
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
-      name: formData.name,
-      email: formData.email,
-      roleId: formData.roleId,
-      totalStorage: formData.storageGB * 1024 * 1024 * 1024,
-    };
+    setLoading(true);
 
-    if (editingUser) {
-      await Api.users.update(editingUser.id, payload);
-    } else {
-      await Api.users.create(payload);
+    try {
+      if (editingUser) {
+        // 更新用户
+        const updateData: UpdateUserDto = {
+          username: formData.username,
+          email: formData.email,
+          role: formData.roleId as 'ADMIN' | 'USER',
+          nickname: formData.nickname,
+        };
+        // 只有在输入密码时才更新密码
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+        await usersApi.update(editingUser.id, updateData);
+      } else {
+        // 创建用户
+        const createData: CreateUserDto = {
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: formData.roleId as 'ADMIN' | 'USER',
+          nickname: formData.nickname,
+        };
+        await usersApi.create(createData);
+      }
+
+      setIsModalOpen(false);
+      await loadData();
+    } catch (error) {
+      console.error('Failed to save user:', error);
+      setError(editingUser ? '更新用户失败' : '创建用户失败');
+    } finally {
+      setLoading(false);
     }
-
-    setIsModalOpen(false);
-    loadData();
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('确定要删除该用户吗？相关数据可能无法恢复。')) {
-      await Api.users.delete(id);
-      loadData();
+      setLoading(true);
+      try {
+        await usersApi.delete(id);
+        await loadData();
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+        setError('删除用户失败');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -113,6 +189,28 @@ export const UserManagement = () => {
     );
   }
 
+  if (loading && users.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <p className="mt-4">加载中...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+        <AlertCircle size={48} className="text-red-400 mb-4" />
+        <h2 className="text-xl font-bold text-slate-800">加载失败</h2>
+        <p>{error}</p>
+        <Button onClick={loadData} className="mt-4">
+          重试
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -122,7 +220,9 @@ export const UserManagement = () => {
             管理团队成员、分配角色及存储配额
           </p>
         </div>
-        <Button onClick={handleOpenCreate}>添加用户</Button>
+        <Button onClick={handleOpenCreate} disabled={loading}>
+          添加用户
+        </Button>
       </div>
 
       <div className="bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
@@ -136,7 +236,7 @@ export const UserManagement = () => {
                 角色
               </th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                存储空间
+                状态
               </th>
               <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 操作
@@ -148,47 +248,46 @@ export const UserManagement = () => {
               <tr key={user.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <img
-                      className="h-10 w-10 rounded-full bg-slate-100"
-                      src={user.avatar}
-                      alt=""
-                    />
+                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                      {user.avatar ? (
+                        <img
+                          className="h-10 w-10 rounded-full"
+                          src={user.avatar}
+                          alt=""
+                        />
+                      ) : (
+                        <UserIcon size={20} className="text-slate-400" />
+                      )}
+                    </div>
                     <div className="ml-4">
                       <div className="text-sm font-medium text-slate-900">
-                        {user.name}
+                        {user.nickname || user.username}
                       </div>
-                      <div className="text-sm text-slate-500">
-                        {user.email || 'No email'}
-                      </div>
+                      <div className="text-sm text-slate-500">{user.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                    <Shield size={12} /> {getRoleName(user.roleId)}
+                    <Shield size={12} /> {getRoleName(user.role)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="w-full max-w-xs">
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-slate-600 font-medium">
-                        {(user.usedStorage / 1024 / 1024 / 1024).toFixed(2)} GB
-                        已用
-                      </span>
-                      <span className="text-slate-400">
-                        / {(user.totalStorage / 1024 / 1024 / 1024).toFixed(0)}{' '}
-                        GB
-                      </span>
-                    </div>
-                    <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${user.usedStorage / user.totalStorage > 0.9 ? 'bg-red-500' : 'bg-indigo-500'}`}
-                        style={{
-                          width: `${Math.min(100, (user.usedStorage / user.totalStorage) * 100)}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                      user.status === 'ACTIVE'
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : user.status === 'INACTIVE'
+                          ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}
+                  >
+                    {user.status === 'ACTIVE'
+                      ? '活跃'
+                      : user.status === 'INACTIVE'
+                        ? '非活跃'
+                        : '已暂停'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
@@ -221,11 +320,15 @@ export const UserManagement = () => {
         title={editingUser ? '编辑用户' : '添加新用户'}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+              disabled={loading}
+            >
               取消
             </Button>
-            <Button onClick={handleSubmit}>
-              {editingUser ? '保存' : '创建'}
+            <Button onClick={handleSubmit} disabled={loading}>
+              {loading ? '处理中...' : editingUser ? '保存' : '创建'}
             </Button>
           </>
         }
@@ -233,36 +336,56 @@ export const UserManagement = () => {
         <form className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              姓名
+              用户名 *
             </label>
             <input
               type="text"
-              value={formData.name}
+              required
+              value={formData.username}
               onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+                setFormData({ ...formData, username: e.target.value })
               }
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+              placeholder="请输入用户名"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              邮箱
+              邮箱 *
             </label>
             <input
               type="email"
+              required
               value={formData.email}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+              placeholder="请输入邮箱地址"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {editingUser ? '新密码（留空则不修改）' : '密码 *'}
+            </label>
+            <input
+              type="password"
+              required={!editingUser}
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+              placeholder={editingUser ? '留空保持原密码' : '请输入密码'}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                角色
+                角色 *
               </label>
               <select
+                required
                 value={formData.roleId}
                 onChange={(e) =>
                   setFormData({ ...formData, roleId: e.target.value })
@@ -278,19 +401,16 @@ export const UserManagement = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                存储配额 (GB)
+                昵称
               </label>
               <input
-                type="number"
-                min="1"
-                value={formData.storageGB}
+                type="text"
+                value={formData.nickname}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    storageGB: parseInt(e.target.value) || 1,
-                  })
+                  setFormData({ ...formData, nickname: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+                placeholder="请输入昵称"
               />
             </div>
           </div>

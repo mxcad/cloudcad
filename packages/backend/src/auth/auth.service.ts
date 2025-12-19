@@ -1,16 +1,18 @@
 import {
-  BadRequestException,
-  ConflictException,
   Injectable,
   Logger,
   UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { DatabaseService } from '../database/database.service';
-import { AuthResponseDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+import { EmailVerificationService } from './services/email-verification.service';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class AuthService {
@@ -20,10 +22,14 @@ export class AuthService {
     private prisma: DatabaseService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private tokenBlacklistService: TokenBlacklistService
+    private tokenBlacklistService: TokenBlacklistService,
+    private emailVerificationService: EmailVerificationService,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
+  async register(
+    registerDto: RegisterDto
+  ): Promise<{ message: string; email: string }> {
     const { email, username, password, nickname } = registerDto;
 
     // 检查邮箱是否已存在
@@ -42,47 +48,99 @@ export class AuthService {
       throw new ConflictException('用户名已被使用');
     }
 
-    // 密码哈希
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // 创建用户
-    const user = await this.prisma.user.create({
-      data: {
+    // 将注册信息临时存储到 Redis（15分钟过期）
+    const registerKey = `register:pending:${email}`;
+    await this.redis.setex(
+      registerKey,
+      15 * 60, // 15分钟
+      JSON.stringify({
         email,
         username,
-        password: hashedPassword,
+        password,
         nickname: nickname || username,
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        nickname: true,
-        avatar: true,
-        role: true,
-        status: true,
+      })
+    );
+
+    // 发送验证码
+    try {
+      await this.emailVerificationService.sendVerificationEmail(email);
+      this.logger.log(`验证码已发送: ${email}`);
+    } catch (error) {
+      this.logger.error(`发送验证码失败: ${error.message}`);
+      // 删除临时注册信息
+      await this.redis.del(registerKey);
+      throw new Error('发送验证码失败，请稍后重试');
+    }
+
+    return {
+      message: '验证码已发送到您的邮箱，请查收并完成验证',
+      email: email,
+    };
+  }
+
+  async verifyEmailAndActivate(
+    email: string,
+    code: string
+  ): Promise<{ message: string }> {
+    this.logger.log(`开始验证邮箱: ${email}`);
+
+    // 验证验证码
+    const isValid = await this.emailVerificationService.verifyEmail(
+      email,
+      code
+    );
+
+    if (!isValid) {
+      this.logger.error(`验证码验证失败: ${email}`);
+      throw new Error('验证码验证失败');
+    }
+
+    this.logger.log(`验证码验证成功: ${email}`);
+
+    // 从 Redis 获取注册信息
+    const registerKey = `register:pending:${email}`;
+    const registerDataStr = await this.redis.get(registerKey);
+
+    this.logger.log(`Redis 注册信息: ${registerDataStr ? '存在' : '不存在'}`);
+
+    if (!registerDataStr) {
+      this.logger.error(`注册信息已过期: ${email}`);
+      throw new Error('注册信息已过期，请重新注册');
+    }
+
+    const registerData = JSON.parse(registerDataStr);
+    this.logger.log(`解析注册信息成功: ${registerData.username}`);
+
+    // 加密密码
+    const hashedPassword = await bcrypt.hash(registerData.password, 12);
+    this.logger.log(`密码加密完成`);
+
+    // 创建用户（直接激活）
+    await this.prisma.user.create({
+      data: {
+        email: registerData.email,
+        username: registerData.username,
+        password: hashedPassword,
+        nickname: registerData.nickname,
+        status: 'ACTIVE',
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
       },
     });
 
-    // 生成Token
-    const tokens = await this.generateTokens(user);
+    this.logger.log(`用户创建成功: ${email}`);
+
+    // 删除临时注册信息
+    await this.redis.del(registerKey);
 
     return {
-      ...tokens,
-      user: {
-        ...user,
-        nickname: user.nickname || undefined,
-        avatar: user.avatar || undefined,
-        role: user.role,
-        status: user.status,
-      },
+      message: '邮箱验证成功，账号已创建',
     };
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
-    
+
     this.logger.log(`用户登录尝试: ${account}`);
 
     // 查找用户（支持邮箱或用户名登录）
@@ -98,6 +156,7 @@ export class AuthService {
         avatar: true,
         role: true,
         status: true,
+        emailVerified: true,
         password: true,
       },
     });
@@ -108,8 +167,20 @@ export class AuthService {
     }
 
     if (user.status !== 'ACTIVE') {
-      this.logger.warn(`登录失败 - 账号已禁用: ${account} (状态: ${user.status})`);
+      if (user.status === 'INACTIVE' && !user.emailVerified) {
+        this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
+        throw new UnauthorizedException('请先验证邮箱后再登录');
+      }
+      this.logger.warn(
+        `登录失败 - 账号已禁用: ${account} (状态: ${user.status})`
+      );
       throw new UnauthorizedException('账号已被禁用');
+    }
+
+    // 检查邮箱验证状态
+    if (!user.emailVerified) {
+      this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
+      throw new UnauthorizedException('请先验证邮箱后再登录');
     }
 
     // 验证密码
@@ -125,7 +196,9 @@ export class AuthService {
     // 生成Token
     const tokens = await this.generateTokens(userWithoutPassword);
 
-    this.logger.log(`用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`);
+    this.logger.log(
+      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`
+    );
 
     return {
       ...tokens,
@@ -197,12 +270,11 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     try {
-      // 将用户添加到黑名单，这样该用户的所有Token都会失效
-      await this.tokenBlacklistService.blacklistUserTokens(userId);
-
       // 删除用户的所有刷新Token
       await this.deleteAllRefreshTokens(userId);
+      this.logger.log(`用户退出登录，已删除刷新令牌: ${userId}`);
     } catch (error) {
+      this.logger.error(`登出失败: ${error.message}`);
       throw new UnauthorizedException('登出失败');
     }
   }
@@ -303,7 +375,7 @@ export class AuthService {
     }
   }
 
-  private async generateTokens(user: any): Promise<{
+  async generateTokens(user: any): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
@@ -374,5 +446,69 @@ export class AuthService {
       }
     }
     return null;
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    this.logger.log(`忘记密码请求: ${email}`);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('该邮箱未注册');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('账号已被禁用，无法重置密码');
+    }
+
+    await this.emailVerificationService.sendVerificationEmail(email);
+    this.logger.log(`密码重置验证码已发送: ${email}`);
+
+    return {
+      message: '密码重置验证码已发送到您的邮箱',
+    };
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
+    this.logger.log(`重置密码请求: ${email}`);
+
+    const isValid = await this.emailVerificationService.verifyEmail(
+      email,
+      code
+    );
+    if (!isValid) {
+      this.logger.error(`验证码验证失败: ${email}`);
+      throw new UnauthorizedException('验证码无效或已过期');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('用户不存在');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+
+    await this.deleteAllRefreshTokens(user.id);
+    await this.tokenBlacklistService.removeUserFromBlacklist(user.id);
+
+    this.logger.log(`密码重置成功: ${email}`);
+
+    return {
+      message: '密码重置成功，请使用新密码登录',
+    };
   }
 }

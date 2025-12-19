@@ -2,43 +2,116 @@ import React from 'react';
 import {
   Navigate,
   Route,
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AssetLibrary } from './pages/AssetLibrary';
-import { Dashboard } from './pages/Dashboard';
+import { EmailVerification } from './pages/EmailVerification';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
+import { Profile } from './pages/Profile';
+import FileSystemManager from './pages/FileSystemManager';
+import { Login } from './pages/Login';
 import { ProjectManager } from './pages/ProjectManager';
+import { Register } from './pages/Register';
 import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
+import { useAuth } from './contexts/AuthContext';
+
+// 受保护的路由组件
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
+  ({ children }) => {
+    const { isAuthenticated, loading, user, token } = useAuth();
+
+    // 如果已经有 token 或 user 信息，直接显示内容，避免闪烁
+    const shouldShowContent = token || user;
+
+    if (loading && !shouldShowContent) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="text-lg text-slate-600">加载中...</div>
+        </div>
+      );
+    }
+
+    if (!isAuthenticated && !loading) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return <>{children}</>;
+  }
+);
 
 function App() {
   return (
     <Router>
-      <Layout>
+      <div className="layout-container">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/projects" element={<ProjectManager />} />
-          <Route path="/files" element={<Navigate to="/projects" replace />} />
+          {/* 公开路由 - 不需要 Layout */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Block Library Routes */}
-          <Route path="/blocks" element={<AssetLibrary type="block" />} />
+          {/* 受保护的路由 - 需要 Layout */}
           <Route
-            path="/blocks/:libraryId"
-            element={<AssetLibrary type="block" />}
-          />
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Routes>
+                    <Route
+                      path="/"
+                      element={<Navigate to="/projects" replace />}
+                    />
+                    <Route path="/projects" element={<ProjectManager />} />
+                    {/* 文件系统管理 */}
+                    <Route
+                      path="/file-system/:projectId"
+                      element={<FileSystemManager />}
+                    />
+                    <Route
+                      path="/file-system/:projectId/:nodeId"
+                      element={<FileSystemManager />}
+                    />
 
-          {/* Font Library Routes */}
-          <Route path="/fonts" element={<AssetLibrary type="font" />} />
-          <Route
-            path="/fonts/:libraryId"
-            element={<AssetLibrary type="font" />}
-          />
+                    <Route
+                      path="/files"
+                      element={<Navigate to="/projects" replace />}
+                    />
 
-          <Route path="/users" element={<UserManagement />} />
-          <Route path="/roles" element={<RoleManagement />} />
+                    {/* Block Library Routes */}
+                    <Route
+                      path="/blocks"
+                      element={<AssetLibrary type="block" />}
+                    />
+                    <Route
+                      path="/blocks/:libraryId"
+                      element={<AssetLibrary type="block" />}
+                    />
+
+                    {/* Font Library Routes */}
+                    <Route
+                      path="/fonts"
+                      element={<AssetLibrary type="font" />}
+                    />
+                    <Route
+                      path="/fonts/:libraryId"
+                      element={<AssetLibrary type="font" />}
+                    />
+
+                    <Route path="/users" element={<UserManagement />} />
+                    <Route path="/roles" element={<RoleManagement />} />
+                    <Route path="/profile" element={<Profile />} />
+                  </Routes>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
-      </Layout>
+      </div>
     </Router>
   );
 }

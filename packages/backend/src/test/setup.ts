@@ -7,7 +7,7 @@ beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.DATABASE_URL =
-    'postgresql://test:test@localhost:5432/cloucad_test';
+    'postgresql://postgres:password@localhost:5432/cloucad_test';
   process.env.REDIS_URL = 'redis://localhost:6379/1';
   process.env.MINIO_ENDPOINT = 'localhost';
   process.env.MINIO_PORT = '9000';
@@ -19,6 +19,7 @@ beforeAll(async () => {
   jest.spyOn(console, 'debug').mockImplementation(() => {});
   jest.spyOn(console, 'info').mockImplementation(() => {});
   jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterAll(async () => {

@@ -1,3 +1,8 @@
+// 导出新的 API 服务
+export { apiService } from './apiService';
+export { authApi, usersApi, projectsApi, filesApi } from './apiService';
+
+// 保留原有的 Mock API 以备后用
 import {
   MAX_UPLOAD_SIZE,
   type Permission,
@@ -6,7 +11,7 @@ import {
 } from '../types';
 import { mockDb } from './mockDb';
 
-export const Api = {
+export const mockApi = {
   auth: {
     getCurrentUser: () => mockDb.getCurrentUser(),
     getRole: () => mockDb.getCurrentUserRole(),

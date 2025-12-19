@@ -9,8 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/permissions.enum';
@@ -19,6 +21,12 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
+import {
+  ChangePasswordDto,
+  ChangePasswordResponseDto,
+  ChangePasswordApiResponseDto,
+} from '../auth/dto/password-reset.dto';
+import type { AuthenticatedRequest } from '../common/types/request.types';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -81,5 +89,27 @@ export class UsersController {
     // 用户只能更新自己的信息，排除角色和状态字段
     const { role, status, ...profileData } = updateUserDto;
     return this.usersService.update(id, profileData);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '修改密码' })
+  @ApiResponse({
+    status: 200,
+    description: '密码修改成功',
+    type: ChangePasswordApiResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未授权或旧密码不正确' })
+  @ApiResponse({ status: 409, description: '旧密码不正确' })
+  async changePassword(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: ChangePasswordDto
+  ): Promise<ChangePasswordResponseDto> {
+    return this.usersService.changePassword(
+      req.user.id,
+      dto.oldPassword,
+      dto.newPassword
+    );
   }
 }

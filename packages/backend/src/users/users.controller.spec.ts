@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -20,7 +20,7 @@ describe('UsersController', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: UserRole.USER,
     status: 'ACTIVE',
     createdAt: new Date(),
@@ -45,6 +45,7 @@ describe('UsersController', () => {
       update: jest.fn(),
       remove: jest.fn(),
       updateStatus: jest.fn(),
+      changePassword: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -56,11 +57,21 @@ describe('UsersController', () => {
         },
       ],
     })
-    .overrideGuard(require('../auth/guards/jwt-auth.guard').JwtAuthGuard)
-    .useValue({ canActivate: () => true })
-    .overrideGuard(require('../common/guards/roles.guard').RolesGuard)
-    .useValue({ canActivate: () => true })
-    .compile();
+      .overrideGuard(require('../auth/guards/jwt-auth.guard').JwtAuthGuard)
+      .useValue({
+        canActivate: () => true,
+        constructor: jest.fn(),
+      })
+      .overrideGuard(require('../common/guards/roles.guard').RolesGuard)
+      .useValue({ canActivate: () => true })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     controller = module.get<UsersController>(UsersController);
     usersService = module.get(UsersService);
@@ -205,7 +216,10 @@ describe('UsersController', () => {
       const result = await controller.update('user-id', updateUserDto);
 
       expect(result).toEqual(updatedUser);
-      expect(usersService.update).toHaveBeenCalledWith('user-id', updateUserDto);
+      expect(usersService.update).toHaveBeenCalledWith(
+        'user-id',
+        updateUserDto
+      );
     });
 
     it('should handle not found exception', async () => {
@@ -213,9 +227,9 @@ describe('UsersController', () => {
         new NotFoundException('用户不存在')
       );
 
-      await expect(controller.update('invalid-id', updateUserDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('invalid-id', updateUserDto)
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should handle conflict exception', async () => {
@@ -236,7 +250,10 @@ describe('UsersController', () => {
       const result = await controller.update('user-id', partialUpdate);
 
       expect(result).toEqual(updatedUser);
-      expect(usersService.update).toHaveBeenCalledWith('user-id', partialUpdate);
+      expect(usersService.update).toHaveBeenCalledWith(
+        'user-id',
+        partialUpdate
+      );
     });
 
     it('should handle empty update object', async () => {
@@ -288,7 +305,10 @@ describe('UsersController', () => {
       const result = await controller.updateStatus('user-id', 'INACTIVE');
 
       expect(result).toEqual(updatedUser);
-      expect(usersService.updateStatus).toHaveBeenCalledWith('user-id', 'INACTIVE');
+      expect(usersService.updateStatus).toHaveBeenCalledWith(
+        'user-id',
+        'INACTIVE'
+      );
     });
 
     it('should handle not found exception', async () => {
@@ -296,9 +316,9 @@ describe('UsersController', () => {
         new NotFoundException('用户不存在')
       );
 
-      await expect(controller.updateStatus('invalid-id', 'ACTIVE')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.updateStatus('invalid-id', 'ACTIVE')
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should handle invalid status', async () => {
@@ -306,14 +326,14 @@ describe('UsersController', () => {
         new BadRequestException('无效的用户状态')
       );
 
-      await expect(controller.updateStatus('user-id', 'INVALID' as any)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        controller.updateStatus('user-id', 'INVALID' as any)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should handle all valid statuses', async () => {
       const statuses = ['ACTIVE', 'INACTIVE', 'SUSPENDED'] as const;
-      
+
       for (const status of statuses) {
         const updatedUser = { ...mockUser, status };
         usersService.updateStatus.mockResolvedValue(updatedUser);
@@ -321,7 +341,10 @@ describe('UsersController', () => {
         const result = await controller.updateStatus('user-id', status);
 
         expect(result).toEqual(updatedUser);
-        expect(usersService.updateStatus).toHaveBeenCalledWith('user-id', status);
+        expect(usersService.updateStatus).toHaveBeenCalledWith(
+          'user-id',
+          status
+        );
       }
     });
   });
@@ -330,19 +353,25 @@ describe('UsersController', () => {
     it('should handle service errors gracefully', async () => {
       usersService.findOne.mockRejectedValue(new Error('Database error'));
 
-      await expect(controller.findOne('user-id')).rejects.toThrow('Database error');
+      await expect(controller.findOne('user-id')).rejects.toThrow(
+        'Database error'
+      );
     });
 
     it('should handle database connection errors', async () => {
       usersService.findOne.mockRejectedValue(new Error('Connection refused'));
 
-      await expect(controller.findOne('user-id')).rejects.toThrow('Connection refused');
+      await expect(controller.findOne('user-id')).rejects.toThrow(
+        'Connection refused'
+      );
     });
 
     it('should handle timeout errors', async () => {
       usersService.findOne.mockRejectedValue(new Error('Request timeout'));
 
-      await expect(controller.findOne('user-id')).rejects.toThrow('Request timeout');
+      await expect(controller.findOne('user-id')).rejects.toThrow(
+        'Request timeout'
+      );
     });
   });
 
@@ -366,13 +395,16 @@ describe('UsersController', () => {
       const specialNickname = '测试用户!@#$%^&*()';
       const updateUserDto = { nickname: specialNickname };
       const updatedUser = { ...mockUser, ...updateUserDto };
-      
+
       usersService.update.mockResolvedValue(updatedUser);
 
       const result = await controller.update('user-id', updateUserDto);
 
       expect(result).toEqual(updatedUser);
-      expect(usersService.update).toHaveBeenCalledWith('user-id', updateUserDto);
+      expect(usersService.update).toHaveBeenCalledWith(
+        'user-id',
+        updateUserDto
+      );
     });
 
     it('should handle unicode characters', async () => {
@@ -441,6 +473,104 @@ describe('UsersController', () => {
       await controller.findAll(query as any);
 
       expect(usersService.findAll).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('should update user status', async () => {
+      const updatedUser = { ...mockUser, status: 'INACTIVE' };
+      usersService.updateStatus.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateStatus('user-id', 'INACTIVE');
+
+      expect(result).toEqual(updatedUser);
+      expect(usersService.updateStatus).toHaveBeenCalledWith(
+        'user-id',
+        'INACTIVE'
+      );
+    });
+
+    it('should suspend user', async () => {
+      const updatedUser = { ...mockUser, status: 'SUSPENDED' };
+      usersService.updateStatus.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateStatus('user-id', 'SUSPENDED');
+
+      expect(result).toEqual(updatedUser);
+      expect(usersService.updateStatus).toHaveBeenCalledWith(
+        'user-id',
+        'SUSPENDED'
+      );
+    });
+  });
+
+  describe('getProfile', () => {
+    it('should return user profile', async () => {
+      usersService.findOne.mockResolvedValue(mockUser);
+
+      const result = await controller.getProfile('user-id');
+
+      expect(result).toEqual(mockUser);
+      expect(usersService.findOne).toHaveBeenCalledWith('user-id');
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('should update user profile', async () => {
+      const updateData = {
+        nickname: 'New Nickname',
+        avatar: 'new-avatar-url',
+      };
+      const updatedUser = { ...mockUser, ...updateData };
+      usersService.update.mockResolvedValue(updatedUser);
+
+      const result = await controller.updateProfile(
+        'user-id',
+        updateData as any
+      );
+
+      expect(result).toEqual(updatedUser);
+      expect(usersService.update).toHaveBeenCalledWith('user-id', updateData);
+    });
+
+    it('should exclude role and status when updating profile', async () => {
+      const updateData = {
+        nickname: 'New Nickname',
+        role: UserRole.ADMIN, // Should be excluded
+        status: 'INACTIVE', // Should be excluded
+      };
+      const expectedData = {
+        nickname: 'New Nickname',
+      };
+      usersService.update.mockResolvedValue(mockUser);
+
+      await controller.updateProfile('user-id', updateData as any);
+
+      expect(usersService.update).toHaveBeenCalledWith('user-id', expectedData);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should change user password', async () => {
+      const mockRequest = { user: { id: 'user-id' } };
+      const changePasswordDto = {
+        oldPassword: 'oldPassword123',
+        newPassword: 'newPassword123',
+      };
+      const mockResponse = { message: '密码修改成功' };
+      usersService.changePassword.mockResolvedValue(mockResponse);
+
+      const result = await controller.changePassword(
+        mockRequest,
+        changePasswordDto
+      );
+
+      expect(result).toEqual(mockResponse);
+      expect(usersService.changePassword).toHaveBeenCalledWith(
+        'user-id',
+        changePasswordDto.oldPassword,
+        changePasswordDto.newPassword
+      );
     });
   });
 });

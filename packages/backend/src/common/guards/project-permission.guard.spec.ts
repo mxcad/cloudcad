@@ -7,6 +7,7 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PROJECT_PERMISSION_KEY } from '../decorators/project-permission.decorator';
 import { ProjectMemberRole } from '../enums/permissions.enum';
+import { PermissionCacheService } from '../services/permission-cache.service';
 import {
   PermissionService,
   UserWithPermissions,
@@ -17,6 +18,7 @@ describe('ProjectPermissionGuard', () => {
   let guard: ProjectPermissionGuard;
   let reflector: jest.Mocked<Reflector>;
   let permissionService: jest.Mocked<PermissionService>;
+  let cacheService: jest.Mocked<PermissionCacheService>;
   let mockContext: ExecutionContext;
 
   const mockUser: UserWithPermissions = {
@@ -24,7 +26,7 @@ describe('ProjectPermissionGuard', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: 'USER',
     status: 'ACTIVE',
   };
@@ -38,6 +40,10 @@ describe('ProjectPermissionGuard', () => {
       hasProjectRole: jest.fn(),
     } as any;
 
+    const mockCacheService = {
+      getProjectMemberRole: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectPermissionGuard,
@@ -49,12 +55,25 @@ describe('ProjectPermissionGuard', () => {
           provide: PermissionService,
           useValue: mockPermissionService,
         },
+        {
+          provide: PermissionCacheService,
+          useValue: mockCacheService,
+        },
       ],
-    }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     guard = module.get<ProjectPermissionGuard>(ProjectPermissionGuard);
     reflector = module.get(Reflector);
     permissionService = module.get(PermissionService);
+    cacheService = module.get(PermissionCacheService);
 
     // Create mock execution context
     mockContext = {

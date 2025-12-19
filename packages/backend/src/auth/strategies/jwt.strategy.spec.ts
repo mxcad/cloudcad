@@ -2,18 +2,20 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { DatabaseService } from '../../database/database.service';
 import { JwtStrategy } from './jwt.strategy';
+import { TokenBlacklistService } from '../services/token-blacklist.service';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let configService: jest.Mocked<ConfigService>;
   let prisma: jest.Mocked<DatabaseService>;
+  let tokenBlacklistService: jest.Mocked<TokenBlacklistService>;
 
   const mockUser = {
     id: 'user-id',
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: 'USER',
     status: 'ACTIVE',
   };
@@ -40,6 +42,10 @@ describe('JwtStrategy', () => {
       },
     } as any;
 
+    const mockTokenBlacklistService = {
+      isUserBlacklisted: jest.fn().mockResolvedValue(false),
+    } as any;
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         JwtStrategy,
@@ -51,12 +57,25 @@ describe('JwtStrategy', () => {
           provide: DatabaseService,
           useValue: mockPrisma,
         },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
+        },
       ],
-    }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     strategy = moduleRef.get<JwtStrategy>(JwtStrategy);
     configService = moduleRef.get(ConfigService);
     prisma = moduleRef.get(DatabaseService);
+    tokenBlacklistService = moduleRef.get(TokenBlacklistService);
   });
 
   afterEach(() => {
@@ -69,29 +88,42 @@ describe('JwtStrategy', () => {
       expect(configService.get).toHaveBeenCalledWith('jwt.secret');
     });
 
-    it('should use default secret when config is missing', async () => {
+    it('should throw error when config is missing', async () => {
       const mockConfigServiceNoSecret = {
         get: jest.fn().mockReturnValue(null),
       } as any;
 
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          JwtStrategy,
-          {
-            provide: ConfigService,
-            useValue: mockConfigServiceNoSecret,
-          },
-          {
-            provide: DatabaseService,
-            useValue: {
-              user: { findUnique: jest.fn() },
+      await expect(
+        Test.createTestingModule({
+          providers: [
+            JwtStrategy,
+            {
+              provide: ConfigService,
+              useValue: mockConfigServiceNoSecret,
             },
-          },
-        ],
-      }).compile();
-
-      const strategyWithDefaultSecret = moduleRef.get<JwtStrategy>(JwtStrategy);
-      expect(strategyWithDefaultSecret).toBeDefined();
+            {
+              provide: DatabaseService,
+              useValue: {
+                user: { findUnique: jest.fn() },
+              },
+            },
+            {
+              provide: TokenBlacklistService,
+              useValue: {
+                isUserBlacklisted: jest.fn().mockResolvedValue(false),
+              },
+            },
+          ],
+        })
+          .setLogger({
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+          })
+          .compile()
+      ).rejects.toThrow('JWT_SECRET environment variable is required');
     });
   });
 
@@ -120,7 +152,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(strategy.validate(mockPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户不存在'
       );
     });
 
@@ -129,7 +161,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(inactiveUser);
 
       await expect(strategy.validate(mockPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户已被禁用'
       );
     });
 
@@ -138,7 +170,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(suspendedUser);
 
       await expect(strategy.validate(mockPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户已被禁用'
       );
     });
 
@@ -186,7 +218,7 @@ describe('JwtStrategy', () => {
     });
 
     it('should handle user with null avatar', async () => {
-      const userWithNullAvatar = { ...mockUser, avatar: null };
+      const userWithNullAvatar = { ...mockUser, avatar: undefined };
       prisma.user.findUnique.mockResolvedValue(userWithNullAvatar);
 
       const result = await strategy.validate(mockPayload);
@@ -223,7 +255,7 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(strategy.validate(malformedPayload)).rejects.toThrow(
-        '用户不存在或已被禁用'
+        '用户不存在'
       );
     });
 
@@ -279,7 +311,7 @@ describe('JwtStrategy', () => {
           expect(result.status).toBe(status);
         } else {
           await expect(strategy.validate(mockPayload)).rejects.toThrow(
-            '用户不存在或已被禁用'
+            '用户已被禁用'
           );
         }
       }

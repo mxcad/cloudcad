@@ -16,7 +16,9 @@
     "clean": "pnpm -r clean",
     "backend:dev": "pnpm --filter backend start:dev",
     "backend:build": "pnpm --filter backend build",
-    "backend:start": "pnpm --filter backend start"
+    "backend:start": "pnpm --filter backend start",
+    "backend:verify": "pnpm --filter backend verify",
+    "frontend:verify": "pnpm --filter cloudcad-manager verify"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -25,6 +27,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-unused-imports": "^4.3.0",
     "prettier": "^3.2.0",
     "typescript": "^5.0.0"
   },

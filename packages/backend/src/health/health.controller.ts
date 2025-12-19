@@ -1,10 +1,9 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
   HealthCheckResult,
   HealthCheckService,
-  TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 import { DatabaseService } from '../database/database.service';
 import { StorageService } from '../storage/storage.service';

@@ -4,7 +4,6 @@ import {
   Box,
   CheckCircle,
   FolderOpen,
-  LayoutDashboard,
   LogOut,
   Menu,
   Search,
@@ -13,12 +12,19 @@ import {
   Type,
   Users,
   X,
+  HardDrive,
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Api } from '../services/api';
-import { Permission, type Role, type User } from '../types';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { components } from '../types/api';
+import { Permission, type Role } from '../types';
+import { projectsApi, mockApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
+
+type User = components['schemas']['UserDto'];
 
 interface NavItemProps {
   to: string;
@@ -45,7 +51,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const location = useLocation();
-  const [user, setUser] = useState<User | null>(null);
+  const navigate = useNavigate();
+  const { logout, user, loading } = useAuth();
   const [role, setRole] = useState<Role | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -55,13 +62,49 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hookTest, setHookTest] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // 存储空间状态
+  const [storageInfo, setStorageInfo] = useState<{
+    totalUsed: number;
+    totalLimit: number;
+    available: number;
+    usagePercentage: number;
+    formatted: {
+      totalUsed: string;
+      totalLimit: string;
+      available: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
-    Api.auth.getCurrentUser().then((u) => {
-      setUser(u);
-      Api.auth.getRole().then(setRole);
-    });
-  }, []);
+    // 只有在用户已认证且加载完成时才获取角色信息
+    if (user && !loading) {
+      mockApi.auth
+        .getRole()
+        .then(setRole)
+        .catch(() => {
+          // 如果获取角色失败，设置默认角色
+          setRole({ name: '用户', permissions: [] });
+        });
+
+      // 获取存储空间信息
+      projectsApi
+        .getStorageInfo()
+        .then((response) => {
+          console.log('存储空间完整响应:', response);
+          console.log('存储空间信息:', response.data);
+          if (response.data) {
+            setStorageInfo(response.data);
+          }
+        })
+        .catch((error) => {
+          console.error('获取存储空间信息失败:', error);
+          console.error('错误详情:', error.response?.data || error.message);
+        });
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -70,8 +113,21 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(timer);
   }, []);
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login');
+      console.log('退出登录成功');
+    } catch (error) {
+      console.error('退出登录失败:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
+  };
+
   const menuItems = [
-    { to: '/', icon: LayoutDashboard, label: '工作台', visible: true },
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
     { to: '/blocks', icon: Box, label: '图块库', visible: true },
     { to: '/fonts', icon: Type, label: '字体库', visible: true },
@@ -142,22 +198,79 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
           <div className="p-4 border-t border-slate-200">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
-                {user?.avatar && (
+              <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
+                {user?.avatar ? (
                   <img
                     src={user.avatar}
                     alt="User"
                     className="w-full h-full object-cover"
                   />
+                ) : (
+                  <span className="text-sm font-medium text-slate-600">
+                    {(user?.nickname || user?.username || user?.email || 'U')
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">
-                  {user?.name}
+                  {user?.nickname || user?.username || user?.email}
                 </p>
                 <p className="text-xs text-slate-500 truncate">{role?.name}</p>
+
+                {/* 存储空间信息 */}
+                {storageInfo && storageInfo.formatted ? (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <HardDrive size={12} className="text-slate-400" />
+                      <span className="text-xs text-slate-600">
+                        {storageInfo.formatted.totalUsed} /{' '}
+                        {storageInfo.formatted.totalLimit}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full ${
+                          storageInfo.usagePercentage > 90
+                            ? 'bg-red-500'
+                            : storageInfo.usagePercentage > 70
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(storageInfo.usagePercentage, 100)}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      剩余 {storageInfo.formatted.available}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <HardDrive size={12} className="text-slate-400" />
+                      <span className="text-xs text-slate-400">加载中...</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div
+                        className="h-1.5 rounded-full bg-slate-300"
+                        style={{ width: '0%' }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button className="text-slate-400 hover:text-slate-600">
+              <button
+                className="text-slate-400 hover:text-slate-600"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowLogoutConfirm(true);
+                }}
+                title="退出登录"
+              >
                 <LogOut size={18} />
               </button>
             </div>
@@ -184,7 +297,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               />
               <input
                 type="text"
-                placeholder="搜索项目、图纸、图块..."
+                placeholder="搜索项目、图纸、图�?.."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-100 border-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
@@ -228,7 +341,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                           项目《商业中心》已归档
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          10分钟前
+                          10分钟�?
                         </p>
                       </div>
                     </div>
@@ -262,15 +375,27 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </button>
               {showSettings && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50">
-                  <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600">
+                  <Link
+                    to="/profile"
+                    className="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
+                    onClick={() => setShowSettings(false)}
+                  >
                     个人资料
-                  </button>
+                  </Link>
                   <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600">
                     系统设置
                   </button>
                   <div className="h-px bg-slate-100 my-1"></div>
-                  <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                    退出登录
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowLogoutConfirm(true);
+                      setShowSettings(false);
+                    }}
+                  >
+                    退出登出
                   </button>
                 </div>
               )}
@@ -281,6 +406,43 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>
       </div>
+
+      {/* 退出登录确认对话框 */}
+      <Modal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        title="确认退出登录"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setShowLogoutConfirm(false)}
+              disabled={isLoggingOut}
+            >
+              取消
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? '退出中...' : '确认退出'}
+            </Button>
+          </>
+        }
+      >
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+            <LogOut className="w-6 h-6 text-red-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            确认退出登录
+          </h3>
+          <p className="text-sm text-gray-500">
+            您确定要退出CloudCAD吗？退出后需要重新登录才能访问系统功能。
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 };

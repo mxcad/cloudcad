@@ -4,7 +4,13 @@
  */
 
 // 导入从后端生成的 API 类型
-export * from './src/types/api';
+export * from './types/api';
+
+// 导入组件类型
+import { components } from './types/api';
+
+// 为了向后兼容，重新导出 User 类型
+export type User = components['schemas']['UserDto'];
 
 // ==================== 前端特定类型 ====================
 
