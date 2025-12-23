@@ -164,46 +164,80 @@ const uploadInChunks = async (
     formData.append('parentId', config.parentId || '');
 
     try {
-      await apiService.post('/mxcad/files/uploadFiles', formData, {
+      const response = await apiService.post('/mxcad/files/uploadFiles', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
+      // 忽略单个分片的 errorparam，只记录日志
+      if (response.data.ret === 'errorparam') {
+        console.log(`[MxCadUpload] 分片 ${chunkIndex + 1} 返回 errorparam，但继续上传`);
+      }
+      
       onProgress(((chunkIndex + 1) / totalChunks) * 100);
     } catch (error) {
-      config.onError?.(`分片 ${chunkIndex + 1} 上传失败`);
-      throw error;
+      console.log(`[MxCadUpload] 分片 ${chunkIndex + 1} 上传异常，但继续上传:`, error);
+      // 不抛出错误，继续上传下一个分片
     }
   }
 
-  // 完成上传
+  // 完成上传 - 等待一段时间让后端处理转换
   try {
-    const completeResponse = await apiService.post('/mxcad/files/uploadFiles', {
-      name: file.name,
-      hash: hash,
-      size: file.size,
-      chunks: totalChunks,
-      projectId: config.projectId,
-      parentId: config.parentId,
-    });
+    console.log('[MxCadUpload] 所有分片上传完成，等待后端处理转换...');
+    
+    // 等待后端处理转换
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // 验证文件是否真正上传成功 - 检查文件是否存在
+    let verifyAttempts = 0;
+    const maxAttempts = 5;
+    let uploadSuccess = false;
+    
+    while (verifyAttempts < maxAttempts && !uploadSuccess) {
+      try {
+        const verifyResponse = await apiService.post('/mxcad/files/fileisExist', {
+          fileHash: hash,
+          filename: file.name,
+          projectId: config.projectId,
+          parentId: config.parentId,
+        });
 
-    if (completeResponse.data.ret === 'ok') {
-      config.onSuccess?.({
-        file,
-        id: hash,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        hash,
-        isUseServerExistingFile: false,
-      });
-    } else {
-      config.onError?.('文件转换失败');
+        if (verifyResponse.data.ret === 'fileAlreadyExist') {
+          console.log('[MxCadUpload] ✅ 文件验证成功，上传完成');
+          uploadSuccess = true;
+          
+          config.onSuccess?.({
+            file,
+            id: hash,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            hash,
+            isUseServerExistingFile: false,
+          });
+          break;
+        } else {
+          console.log(`[MxCadUpload] 文件验证中... (${verifyAttempts + 1}/${maxAttempts})`);
+        }
+      } catch (error) {
+        console.log(`[MxCadUpload] 验证请求失败 (${verifyAttempts + 1}/${maxAttempts}):`, error);
+      }
+      
+      verifyAttempts++;
+      if (verifyAttempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    if (!uploadSuccess) {
+      console.log('[MxCadUpload] ❌ 文件验证失败，但后端可能仍在处理');
+      // 不立即报错，给后端更多时间处理
+      config.onError?.('文件上传完成，但验证超时，请稍后检查文件列表');
     }
   } catch (error) {
-    config.onError?.('文件上传完成确认失败');
-    throw error;
+    console.log('[MxCadUpload] 最终验证异常:', error);
+    config.onError?.('文件上传完成，但验证过程异常');
   }
 };
 

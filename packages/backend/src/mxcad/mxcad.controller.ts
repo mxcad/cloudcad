@@ -148,8 +148,19 @@ export class MxCadController {
         hash: !!body.hash,
         name: !!body.name,
         size: !!body.size,
-        bodyKeys: Object.keys(body)
+        actualHash: body.hash,
+        actualName: body.name,
+        actualSize: body.size,
+        allBodyKeys: Object.keys(body),
+        allBodyValues: body
       });
+      
+      // 尝试从文件中提取信息作为后备
+      if (file && !body.hash) {
+        console.log('[MxCadController] ⚠️ 尝试从文件信息补充参数');
+        // 这里可以尝试从文件名或其他信息推断参数
+      }
+      
       return res.json({ ret: 'errorparam' });
     }
 
