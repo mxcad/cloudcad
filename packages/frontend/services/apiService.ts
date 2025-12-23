@@ -39,8 +39,10 @@ class ApiService {
           data: response.data,
         });
 
-        // 自动解包：后端返回 {code, message, data, timestamp} -> 前端使用 data
-        if (
+        // 检查是否为 MxCAD 接口，如果是则跳过自动解包
+        const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
+        
+        if (!isMxCadEndpoint &&
           response.data &&
           typeof response.data === 'object' &&
           'data' in response.data
@@ -51,6 +53,8 @@ class ApiService {
             originalData,
             extractedData: response.data,
           });
+        } else if (isMxCadEndpoint) {
+          console.log('[ApiService] MxCAD接口跳过自动解包，保持原始格式');
         }
 
         return response;
