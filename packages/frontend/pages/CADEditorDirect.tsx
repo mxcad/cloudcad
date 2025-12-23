@@ -254,7 +254,7 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
   useEffect(() => {
     // 不进行清理，保持实例复用
     console.log('[CADEditorDirect] 🔄 保持 MxCADView 实例复用');
-  }, [mxcadView]);
+  }, [isMxCADReady]);
 
   if (!configInitialized) {
     return (
