@@ -55,7 +55,7 @@ export class MxCADManager {
   /**
    * 初始化 MxCADView 实例（只初始化一次，使用永不销毁的容器）
    */
-  async initializeMxCADView(): Promise<MxCADView> {
+  async initializeMxCADView(openFile?: string): Promise<MxCADView> {
     // 如果已经初始化，直接返回现有实例
     if (this.mxcadView && this.isInitialized) {
       console.log('[MxCADManager] 🔄 复用现有 MxCADView 实例');
@@ -70,7 +70,7 @@ export class MxCADManager {
     }
 
     // 开始初始化
-    this.initPromise = this.createMxCADView();
+    this.initPromise = this.createMxCADView(openFile);
     await this.initPromise;
     this.initPromise = null;
 
@@ -78,31 +78,70 @@ export class MxCADManager {
   }
 
   /**
-   * 创建新的 MxCADView 实例（使用永不销毁的容器）
-   */
-  private async createMxCADView(): Promise<void> {
-    if (!this.globalContainer) {
-      throw new Error('全局容器未创建');
-    }
 
-    try {
-      console.log('[MxCADManager] 🚀 创建新的 MxCADView 实例（永不销毁容器）');
-      
-      this.mxcadView = new MxCADView({
-        rootContainer: this.globalContainer,
-        // 不在这里打开文件，只创建实例
-      });
+     * 创建新的 MxCADView 实例（使用永不销毁的容器）
 
-      await this.mxcadView.create();
-      this.isInitialized = true;
-      console.log('[MxCADManager] ✅ MxCADView 实例创建完成');
-    } catch (error) {
-      console.error('[MxCADManager] ❌ MxCADView 实例创建失败:', error);
-      this.mxcadView = null;
-      this.isInitialized = false;
-      throw error;
+     */
+
+    private async createMxCADView(openFile?: string): Promise<void> {
+
+      if (!this.globalContainer) {
+
+        throw new Error('全局容器未创建');
+
+      }
+
+  
+
+      try {
+
+        console.log('[MxCADManager] 🚀 创建新的 MxCADView 实例（永不销毁容器）');
+
+        
+
+        const viewOptions: any = {
+
+          rootContainer: this.globalContainer,
+
+        };
+
+  
+
+        // 如果是首次初始化且提供了文件URL，直接传入openFile参数
+
+        if (openFile) {
+
+          viewOptions.openFile = openFile;
+
+          console.log('[MxCADManager] 📂 首次初始化时直接打开文件:', openFile);
+
+        }
+
+        
+
+        this.mxcadView = new MxCADView(viewOptions);
+
+  
+
+        await this.mxcadView.create();
+
+        this.isInitialized = true;
+
+        console.log('[MxCADManager] ✅ MxCADView 实例创建完成');
+
+      } catch (error) {
+
+        console.error('[MxCADManager] ❌ MxCADView 实例创建失败:', error);
+
+        this.mxcadView = null;
+
+        this.isInitialized = false;
+
+        throw error;
+
+      }
+
     }
-  }
 
   /**
    * 显示/隐藏 MxCAD 容器

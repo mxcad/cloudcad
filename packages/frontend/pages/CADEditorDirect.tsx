@@ -137,8 +137,26 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
 
     const initMxCAD = async () => {
       try {
-        // 使用全局管理器初始化或复用实例（不传递容器，使用永不销毁的容器）
-        const view = await mxcadManager.initializeMxCADView();
+        // 检查是否是首次初始化且有文件URL
+        const isFirstInit = !mxcadManager.isReady();
+        let initialFileUrl: string | undefined;
+
+        if (isFirstInit && urlFileId) {
+          try {
+            // 获取文件信息
+            const fileInfo = await getFileInfo(urlFileId);
+            if (fileInfo?.fileHash) {
+              const mxwebFileName = `${fileInfo.fileHash}.mxweb`;
+              initialFileUrl = `/mxcad/file/${mxwebFileName}`;
+              console.log('[CADEditorDirect] 📂 首次初始化，准备打开文件:', initialFileUrl);
+            }
+          } catch (error) {
+            console.error('[CADEditorDirect] ❌ 获取文件信息失败:', error);
+          }
+        }
+
+        // 使用全局管理器初始化或复用实例，首次初始化时直接传入文件URL
+        const view = await mxcadManager.initializeMxCADView(initialFileUrl);
         setIsMxCADReady(true);
         console.log('[CADEditorDirect] ✅ MxCADView 初始化完成');
       } catch (error) {
@@ -148,7 +166,7 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
     };
 
     initMxCAD();
-  }, [configInitialized]);
+  }, [configInitialized, urlFileId]);
 
   // 组件挂载时显示 MxCAD，卸载时隐藏（但不销毁）
   useEffect(() => {
@@ -239,7 +257,7 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
           console.log('[CADEditorDirect] 📄 原始文件:', fileInfo.originalName);
           console.log('[CADEditorDirect] 🔑 文件哈希:', fileInfo.fileHash);
 
-          // 使用全局管理器打开文件
+          // 使用全局管理器打开文件（这里不是首次初始化，所以直接调用openFile）
           await mxcadManager.openFile(mxcadFileUrl);
         } catch (error) {
           console.error('[CADEditorDirect] ❌ 打开文件失败:', error);
