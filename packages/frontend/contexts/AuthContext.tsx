@@ -103,6 +103,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
 
+    // 创建 Session（用于 mxcad 上传权限验证）
+    try {
+      const sessionResponse = await fetch('/api/session/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // 包含 cookies
+        body: JSON.stringify({ user: userData }),
+      });
+      
+      if (sessionResponse.ok) {
+        console.log('[AuthContext] Session 创建成功');
+      } else {
+        console.warn('[AuthContext] Session 创建失败');
+      }
+    } catch (error) {
+      console.warn('[AuthContext] Session 创建错误:', error);
+    }
+
     // 更新状态
     setToken(accessToken);
     setUser(userData);
@@ -146,6 +166,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
+      
+      // 清除 Session
+      try {
+        await fetch('/api/session/destroy', {
+          method: 'POST',
+          credentials: 'include', // 包含 cookies
+        });
+      } catch (error) {
+        console.warn('[AuthContext] Session 清除错误:', error);
+      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

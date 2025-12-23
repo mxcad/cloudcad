@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Navigate,
   Route,
   BrowserRouter as Router,
   Routes,
-  useLocation,
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AssetLibrary } from './pages/AssetLibrary';
@@ -14,7 +13,7 @@ import { EmailVerification } from './pages/EmailVerification';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { Profile } from './pages/Profile';
-import FileSystemManager from './pages/FileSystemManager';
+import { FileSystemManager } from './pages/FileSystemManager';
 import { Login } from './pages/Login';
 import { ProjectManager } from './pages/ProjectManager';
 import { Register } from './pages/Register';
@@ -46,40 +45,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
   }
 );
 
-// CAD 编辑器持久化包装组件
-const PersistentCADEditor: React.FC = () => {
-  const location = useLocation();
-  const [cadInitialized, setCadInitialized] = useState(false);
-  const [currentFileId, setCurrentFileId] = useState<string | undefined>();
-
-  const isCADRoute = location.pathname.startsWith('/cad-editor');
-
-  useEffect(() => {
-    if (isCADRoute && !cadInitialized) {
-      setCadInitialized(true);
-    }
-
-    if (isCADRoute) {
-      const fileId = location.pathname.split('/')[2];
-      setCurrentFileId(fileId);
-    }
-  }, [location, cadInitialized]);
-
-  if (!cadInitialized) return null;
-
-  return (
-    <div style={{ display: isCADRoute ? 'block' : 'none' }}>
-      <CADEditorDirect key="persistent-cad-editor" fileUrl={currentFileId} />
-    </div>
-  );
-};
-
 function AppContent() {
   return (
     <div className="layout-container">
-      {/* 持久化的 CAD 编辑器 */}
-      <PersistentCADEditor />
-
       <Routes>
           {/* 公开路由 - 不需要 Layout */}
           <Route path="/login" element={<Login />} />
@@ -88,14 +56,14 @@ function AppContent() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* CAD 编辑器路由占位（实际由 PersistentCADEditor 处理） */}
+          {/* CAD 编辑器路由 */}
           <Route
             path="/cad-editor"
-            element={<ProtectedRoute><div /></ProtectedRoute>}
+            element={<ProtectedRoute><CADEditorDirect /></ProtectedRoute>}
           />
           <Route
             path="/cad-editor/:fileId"
-            element={<ProtectedRoute><div /></ProtectedRoute>}
+            element={<ProtectedRoute><CADEditorDirect /></ProtectedRoute>}
           />
 
           {/* 受保护的路由 - 需要 Layout */}
@@ -112,11 +80,11 @@ function AppContent() {
                     <Route path="/projects" element={<ProjectManager />} />
                     {/* 文件系统管理 */}
                     <Route
-                      path="/file-system/:projectId"
+                      path="/projects/:projectId/files"
                       element={<FileSystemManager />}
                     />
                     <Route
-                      path="/file-system/:projectId/:nodeId"
+                      path="/projects/:projectId/files/:nodeId"
                       element={<FileSystemManager />}
                     />
 

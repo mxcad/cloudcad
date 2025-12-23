@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, IsOptional } from 'class-validator';
 
 export class ChunkExistDto {
   @ApiProperty({ description: '分片索引（从 0 开始）' })
@@ -21,4 +21,14 @@ export class ChunkExistDto {
   @ApiProperty({ description: '原始文件名' })
   @IsString()
   fileName: string;
+
+  @ApiProperty({ description: '项目ID（用于文件系统关联）', required: false })
+  @IsString()
+  @IsOptional()
+  projectId?: string;
+
+  @ApiProperty({ description: '父文件夹ID（用于文件系统关联）', required: false })
+  @IsString()
+  @IsOptional()
+  parentId?: string;
 }

@@ -2,14 +2,16 @@ import {
   Controller,
   Post,
   Get,
+  Head,
   Body,
   UploadedFile,
   UseInterceptors,
   HttpStatus,
   HttpCode,
-  BadRequestException,
   Param,
   Res,
+  Req,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -19,15 +21,20 @@ import { MxCadService } from './mxcad.service';
 import { ChunkExistDto } from './dto/chunk-exist.dto';
 import { FileExistDto } from './dto/file-exist.dto';
 import { ConvertDto } from './dto/convert.dto';
+import { DatabaseService } from '../database/database.service';
 import { TzDto } from './dto/tz.dto';
-import { v4 as uuidv4 } from 'uuid';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
 @Public()
 export class MxCadController {
-  constructor(private readonly mxCadService: MxCadService) {}
+  private readonly logger = new Logger(MxCadController.name);
+
+  constructor(
+    private readonly mxCadService: MxCadService,
+    private readonly prisma: DatabaseService,
+  ) {}
 
   /**
    * 检查分片是否存在
@@ -35,13 +42,14 @@ export class MxCadController {
   @Post('files/chunkisExist')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
-  async checkChunkExist(@Body() dto: ChunkExistDto, @Res() res: Response) {
+  async checkChunkExist(@Body() dto: ChunkExistDto, @Req() request: any, @Res() res: Response) {
     const result = await this.mxCadService.checkChunkExist(
       dto.chunk,
       dto.fileHash,
       dto.size,
       dto.chunks,
-      dto.fileName
+      dto.fileName,
+      request.mxcadContext
     );
     return res.json(result);
   }
@@ -52,8 +60,8 @@ export class MxCadController {
   @Post('files/fileisExist')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
-  async checkFileExist(@Body() dto: FileExistDto, @Res() res: Response) {
-    const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash);
+  async checkFileExist(@Body() dto: FileExistDto, @Req() request: any, @Res() res: Response) {
+    const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash, request.mxcadContext);
     return res.json(result);
   }
 
@@ -102,6 +110,14 @@ export class MxCadController {
           type: 'number',
           description: '总分片数量（分片上传时必填）',
         },
+        projectId: {
+          type: 'string',
+          description: '项目ID（用于文件系统关联）',
+        },
+        parentId: {
+          type: 'string',
+          description: '父文件夹ID（用于文件系统关联）',
+        },
       },
     },
   })
@@ -109,8 +125,13 @@ export class MxCadController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
+    @Req() request: any,
     @Res() res: Response
   ) {
+    // 添加调试日志
+    console.log('[MxCadController] uploadFile - body:', body);
+    console.log('[MxCadController] uploadFile - mxcadContext:', request.mxcadContext);
+    
     if (!file) {
       return res.json({ ret: 'errorparam' });
     }
@@ -123,8 +144,11 @@ export class MxCadController {
       return res.json({ ret: 'errorparam' });
     }
 
+    console.log('[MxCadController] 判断逻辑 - body.chunk:', body.chunk, 'body.chunks:', body.chunks, 'file存在:', !!file);
+    
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
+      console.log('[MxCadController] 执行分片上传逻辑');
       try {
         const fs = require('fs');
         const path = require('path');
@@ -150,26 +174,55 @@ export class MxCadController {
         // 移动文件
         fs.renameSync(file.path, chunkFilePath);
         
-        // 调用合并逻辑
-        const result = await this.mxCadService.uploadChunk(
+        // 确保项目上下文正确设置
+        const context = {
+          projectId: body.projectId || request.mxcadContext?.projectId,
+          parentId: body.parentId || request.mxcadContext?.parentId,
+          userId: request.mxcadContext?.userId,
+          userRole: request.mxcadContext?.userRole,
+        };
+        
+        console.log('[MxCadController] 手动构建的上下文:', context);
+        
+        // 调用合并逻辑（带权限验证）
+        const result = await this.mxCadService.uploadChunkWithPermission(
           body.hash,
           body.name,
           parseInt(body.size, 10),
           parseInt(body.chunk, 10),
-          parseInt(body.chunks, 10)
+          parseInt(body.chunks, 10),
+          context
         );
         return res.json(result);
       } catch (error) {
         this.mxCadService.logError(`分片文件处理失败: ${error.message}`, error);
         return res.json({ ret: 'convertFileError' });
       }
+    } else if (body.chunks !== undefined && !file) {
+      // 完成请求（没有文件，只有 chunks 信息）
+      console.log('[MxCadController] 执行完成请求逻辑');
+      try {
+        const result = await this.mxCadService.mergeChunksWithPermission(
+          body.hash,
+          body.name,
+          parseInt(body.size, 10),
+          parseInt(body.chunks, 10),
+          request.mxcadContext
+        );
+        console.log('[MxCadController] mergeChunksWithPermission 结果:', result);
+        return res.json(result);
+      } catch (error) {
+        this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
+        return res.json({ ret: 'convertFileError' });
+      }
     } else {
-      // 完整文件上传
-      const result = await this.mxCadService.uploadAndConvertFile(
+      // 完整文件上传（带权限验证）
+      const result = await this.mxCadService.uploadAndConvertFileWithPermission(
         file.path,
         body.hash,
         body.name,
-        parseInt(body.size, 10)
+        parseInt(body.size, 10),
+        request.mxcadContext
       );
       return res.json(result);
     }
@@ -628,12 +681,15 @@ export class MxCadController {
   /**
    * 访问转换后的文件 (.mxweb)
    * 支持 MxCAD-App 访问路径: /mxcad/file/{filename}
+   * 优先从 MinIO 读取，失败时降级到本地文件系统
+   * 支持 GET 和 HEAD 请求方法
    * 
    * @param filename 文件名，例如: 53c2fbd5c71f81794af465cc02a845e2.dwg.mxweb
    * @param res Express Response 对象
    * @returns 返回文件流或错误信息
    */
   @Get('file/:filename')
+  @Head('file/:filename')
   @ApiResponse({ 
     status: 200, 
     description: '成功获取文件',
@@ -676,17 +732,67 @@ export class MxCadController {
       },
     },
   })
-  async getFile(@Param('filename') filename: string, @Res() res: Response) {
+  async getFile(@Param('filename') filename: string, @Res() res: Response, @Req() req: any) {
     try {
       const fs = require('fs');
       const path = require('path');
+      
+      // 检查请求方法
+      const isHeadRequest = req.method === 'HEAD';
+      
+      // 从文件名中提取哈希值（处理 .dwg.mxweb 和 .mxweb 格式）
+      let fileHash = filename;
+      if (filename.endsWith('.dwg.mxweb')) {
+        fileHash = filename.replace('.dwg.mxweb', '');
+      } else if (filename.endsWith('.mxweb')) {
+        fileHash = filename.replace('.mxweb', '');
+      }
+      
+      // 尝试多种文件名格式（直接在 mxcad/file/ 路径下）：
+      const possiblePaths = [
+        // 1. 原始文件名（直接存储）
+        `mxcad/file/${filename}`,
+        // 2. 添加 .dwg 前缀（如果文件名是 .mxweb）
+        filename.endsWith('.mxweb') && !filename.includes('.dwg') 
+          ? `mxcad/file/${fileHash}.dwg.mxweb`
+          : null,
+        // 3. 其他可能的文件名变体
+        filename.endsWith('.mxweb') 
+          ? `mxcad/file/${fileHash}.dwg.mxweb`
+          : null,
+      ].filter(path => path !== null);
+      
+      this.logger.log(`访问文件 - 哈希: ${fileHash}, 文件名: ${filename}`);
+      
+      let minioUrl: string | null = null;
+      
+      // 尝试获取文件 URL
+      for (const mxcadPath of possiblePaths) {
+        try {
+          const url = await this.mxCadService['minioSyncService'].getFileUrl(mxcadPath);
+          if (url) {
+            minioUrl = url;
+            this.logger.log(`找到 MinIO 文件: ${mxcadPath}`);
+            break;
+          }
+        } catch (error) {
+          this.logger.log(`路径 ${mxcadPath} 不存在，尝试下一个路径`);
+        }
+      }
+      
+      if (minioUrl) {
+        // MinIO 中存在文件，重定向到预签名 URL
+        return res.redirect(302, minioUrl);
+      }
+      
+      // MinIO 中不存在，降级到本地文件系统
+      this.mxCadService.logWarn(`MinIO 文件不存在，降级到本地文件系统: ${filename}`);
       
       // 获取文件搜索路径列表，与参考代码保持一致
       const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const resFilePath: string[] = [uploadPath];
       
       // 如果配置了静态资源目录，也添加到搜索路径中
-      // 这里可以根据实际需要扩展静态资源路径配置
       const staticResDirs = process.env.MXCAD_STATIC_RES_DIRS ? 
         process.env.MXCAD_STATIC_RES_DIRS.split(',') : [];
       
@@ -754,7 +860,13 @@ export class MxCadController {
       res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存1小时
       res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
       
-      // 创建文件流并发送
+      // 如果是 HEAD 请求，只返回头部信息，不发送文件内容
+      if (isHeadRequest) {
+        res.end();
+        return;
+      }
+      
+      // 创建文件流并发送（仅对 GET 请求）
       const fileStream = fs.createReadStream(foundFilePath);
       fileStream.pipe(res);
       

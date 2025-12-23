@@ -1,12 +1,31 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
+import { MxCadPermissionService } from './mxcad-permission.service';
+import { MinioSyncService } from './minio-sync.service';
+import { MxCadContextInterceptor } from './interceptors/mxcad-context.interceptor';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
+import { DatabaseModule } from '../database/database.module';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    DatabaseModule,
+    ConfigModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService) => ({
+        secret: configService.get('jwt.secret'),
+        signOptions: {
+          expiresIn: configService.get('jwt.expiresIn'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     MulterModule.register({
       storage: diskStorage({
         destination: (req, file, cb) => {
@@ -35,10 +54,24 @@ import { join } from 'path';
           }
         },
       }),
+      // 确保所有字段都被解析，包括非文件字段
+      limits: {
+        fileSize: 100 * 1024 * 1024, // 100MB
+        fields: 20, // 允许最多20个字段
+        fieldSize: 1024 * 1024, // 每个字段最大1MB
+      },
     }),
   ],
   controllers: [MxCadController],
-  providers: [MxCadService],
+  providers: [
+    MxCadService,
+    MxCadPermissionService,
+    MinioSyncService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MxCadContextInterceptor,
+    },
+  ],
   exports: [MxCadService],
 })
 export class MxCadModule {}

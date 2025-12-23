@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DatabaseService } from '../database/database.service';
+import { MxCadPermissionService } from './mxcad-permission.service';
+import { MinioSyncService } from './minio-sync.service';
 import { MxUploadReturn } from './enums/mxcad-return.enum';
+import { FileStatus } from '@prisma/client';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -21,7 +25,12 @@ export class MxCadService {
   // 当前正在合并转换的文件，防止同一个文件同时多次进行转换合并调用
   private readonly mapCurrentFilesBeingMerged: Record<string, boolean> = {};
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: DatabaseService,
+    private readonly permissionService: MxCadPermissionService,
+    private readonly minioSyncService: MinioSyncService,
+  ) {
     this.uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
     this.tempPath = this.configService.get('MXCAD_TEMP_PATH') || path.join(process.cwd(), 'temp');
     this.mxCadAssemblyPath = this.configService.get('MXCAD_ASSEMBLY_PATH') || 
@@ -343,7 +352,8 @@ export class MxCadService {
     fileHash: string,
     size: number,
     chunks: number,
-    fileName: string
+    fileName: string,
+    context?: any
   ): Promise<{ ret: string }> {
     try {
       const cbfilename = `${chunk}_${fileHash}`;
@@ -377,13 +387,22 @@ export class MxCadService {
   /**
    * 检查文件是否存在
    */
-  public async checkFileExist(filename: string, fileHash: string): Promise<{ ret: string }> {
+  public async checkFileExist(filename: string, fileHash: string, context?: any): Promise<{ ret: string }> {
     try {
       const suffix = filename.substring(filename.lastIndexOf('.') + 1);
       const mxwebFile = `${fileHash}.${suffix}${this.mxCadFileExt}`;
       const mxwebPath = path.join(this.uploadPath, mxwebFile);
 
       if (fs.existsSync(mxwebPath)) {
+        // 文件已存在，创建文件系统节点记录（如果提供了上下文）
+        if (context && context.projectId && context.userId) {
+          try {
+            await this.createFileSystemNode(filename, fileHash, 0, context);
+            this.logger.log(`为已存在文件创建系统节点: ${filename}`);
+          } catch (error) {
+            this.logger.warn(`创建文件系统节点失败: ${error.message}`);
+          }
+        }
         return { ret: MxUploadReturn.kFileAlreadyExist };
       } else {
         return { ret: MxUploadReturn.kFileNoExist };
@@ -464,5 +483,170 @@ export class MxCadService {
   public async checkTzStatus(fileHash: string): Promise<{ code: number }> {
     // 这里应该实现 tz 状态检查逻辑，暂时返回成功
     return { code: 0 };
+  }
+
+  /**
+   * 创建文件系统节点记录
+   */
+  private async createFileSystemNode(
+    originalName: string,
+    fileHash: string,
+    fileSize: number,
+    context: any
+  ): Promise<void> {
+    try {
+      const extension = path.extname(originalName).toLowerCase();
+      const mimeType = this.getMimeType(extension);
+      
+      this.logger.log(`开始创建文件系统节点: ${originalName}, 大小: ${fileSize}字节, 项目: ${context.projectId}, 父目录: ${context.parentId}`);
+      
+      // 构建正确的 MinIO 路径：projects/{projectId}/files/{fileHash}
+      const minioPath = context.projectId 
+        ? `projects/${context.projectId}/files/${fileHash}`
+        : `mxcad/${fileHash}`; // 兼容旧数据
+
+      const fileNode = await this.prisma.fileSystemNode.create({
+        data: {
+          name: originalName,
+          isFolder: false,
+          isRoot: false,
+          parentId: context.parentId || null,
+          originalName: originalName,
+          path: minioPath, // MinIO 路径
+          size: fileSize,
+          mimeType: mimeType,
+          extension: extension,
+          fileStatus: FileStatus.COMPLETED,
+          fileHash: fileHash, // MD5 哈希
+          ownerId: context.userId,
+        },
+      });
+      
+      this.logger.log(`文件系统节点创建成功: ${originalName} (${fileHash}), 节点ID: ${fileNode.id}`);
+      
+      // 异步同步文件到 MinIO
+      this.syncFilesToMinioAsync(fileHash, context);
+    } catch (error) {
+      this.logger.error(`创建文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
+      // 不抛出错误，避免影响 mxcad 上传流程
+    }
+  }
+
+  /**
+   * 异步同步文件到 MinIO
+   */
+  private async syncFilesToMinioAsync(fileHash: string, context: any): Promise<void> {
+    // 使用 setTimeout 让同步操作不阻塞主流程
+    setTimeout(async () => {
+      try {
+        await this.minioSyncService.syncMxCadFiles(fileHash, context);
+      } catch (error) {
+        this.logger.error(`异步同步文件到 MinIO 失败: ${fileHash}: ${error.message}`, error.stack);
+      }
+    }, 1000); // 延迟 1 秒执行，确保文件转换完成
+  }
+
+  /**
+   * 根据文件扩展名获取 MIME 类型
+   */
+  private getMimeType(extension: string): string {
+    const mimeTypes: Record<string, string> = {
+      '.dwg': 'application/dwg',
+      '.dxf': 'application/dxf',
+      '.pdf': 'application/pdf',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.mxweb': 'application/octet-stream',
+    };
+    
+    return mimeTypes[extension] || 'application/octet-stream';
+  }
+
+  /**
+   * 修改后的上传分片文件方法，添加权限验证和文件节点创建
+   */
+  public async uploadChunkWithPermission(
+    hash: string,
+    name: string,
+    size: number,
+    chunk: number,
+    chunks: number,
+    context: any
+  ): Promise<{ ret: string; tz?: boolean }> {
+    console.log('[MxCadService] uploadChunkWithPermission - hash:', hash, 'name:', name, 'chunk:', chunk, 'chunks:', chunks);
+    
+    // 验证权限
+    await this.permissionService.validateUploadPermission(context);
+    
+    const result = await this.mergeConvertFile(hash, chunks, name, size);
+    
+    console.log('[MxCadService] mergeConvertFile 返回结果:', result);
+    
+    // 如果上传成功，创建文件系统节点
+    if (result.ret === MxUploadReturn.kOk) {
+      await this.createFileSystemNode(name, hash, size, context);
+    }
+    
+    console.log('[MxCadService] uploadChunkWithPermission 最终返回:', result);
+    return result;
+  }
+
+  /**
+   * 合并分片文件方法（用于完成请求）
+   */
+  public async mergeChunksWithPermission(
+    hash: string,
+    name: string,
+    size: number,
+    chunks: number,
+    context: any
+  ): Promise<{ ret: string; tz?: boolean }> {
+    console.log('[MxCadService] mergeChunksWithPermission 开始 - hash:', hash, 'name:', name, 'chunks:', chunks);
+    
+    // 验证权限
+    await this.permissionService.validateUploadPermission(context);
+    
+    const result = await this.mergeConvertFile(hash, chunks, name, size);
+    
+    console.log('[MxCadService] mergeConvertFile 结果:', result);
+    
+    // 如果上传成功，创建文件系统节点
+    if (result.ret === MxUploadReturn.kOk) {
+      await this.createFileSystemNode(name, hash, size, context);
+    }
+    
+    console.log('[MxCadService] mergeChunksWithPermission 最终返回:', result);
+    return result;
+  }
+
+  /**
+   * 修改后的上传完整文件方法，添加权限验证和文件节点创建
+   */
+  public async uploadAndConvertFileWithPermission(
+    filePath: string,
+    hash: string,
+    name: string,
+    size: number,
+    context: any
+  ): Promise<{ ret: string; tz?: boolean }> {
+    // 验证权限
+    await this.permissionService.validateUploadPermission(context);
+    
+    this.writeStatusFile(name, size, hash);
+    const { isOk, ret } = await this.convertFile(filePath, hash);
+    
+    if (isOk) {
+      // 创建文件系统节点
+      await this.createFileSystemNode(name, hash, size, context);
+      
+      if (ret.tz) {
+        return { ret: MxUploadReturn.kOk, tz: true };
+      } else {
+        return { ret: MxUploadReturn.kOk };
+      }
+    } else {
+      return { ret: MxUploadReturn.kConvertFileError };
+    }
   }
 }

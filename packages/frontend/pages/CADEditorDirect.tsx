@@ -1,35 +1,172 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { mxcadApp, MxCADView } from 'mxcad-app';
 import 'mxcad-app/style';
-
+import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/apiService';
 
 interface CADEditorDirectProps {
   fileUrl?: string;
 }
-mxcadApp.initConfig({
-    uiConfig: "ini/myUiConfig.json", sketchesUiConfig: "ini/mySketchesAndNotesUiConfig.json",
-    serverConfig: "ini/myServerConfig.json", quickCommandConfig: "ini/myQuickCommand.json", themeConfig: "ini/myVuetifyThemeConfig.json"
-});
+
+interface ProjectContext {
+  projectId?: string;
+  parentId?: string;
+}
+
+// 初始化 MxCAD 配置
+const initMxCadConfig = () => {
+  try {
+    // 使用绝对路径确保配置文件正确加载
+    const configUrl = window.location.origin;
+
+    mxcadApp.setStaticAssetPath("/mxcadAppAssets/")
+    mxcadApp.initConfig({
+      uiConfig: `${configUrl}/ini/myUiConfig.json`,
+      sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
+      serverConfig: `${configUrl}/ini/myServerConfig.json`,
+      quickCommandConfig: `${configUrl}/ini/myQuickCommand.json`,
+      themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`
+    });
+    console.log('[CADEditorDirect] ✅ MxCAD 配置初始化成功');
+    return true;
+  } catch (error) {
+    console.error('[CADEditorDirect] ❌ MxCAD 配置初始化失败:', error);
+    // 如果配置加载失败，尝试使用默认配置
+    try {
+      mxcadApp.initConfig({});
+      console.log('[CADEditorDirect] ✅ MxCAD 默认配置初始化成功');
+      return true;
+    } catch (defaultError) {
+      console.error('[CADEditorDirect] ❌ MxCAD 默认配置初始化也失败:', defaultError);
+      return false;
+    }
+  }
+};
+
 export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const [mxcadView, setMxcadView] = useState<MxCADView | null>(null);
   const [stylesLoaded, setStylesLoaded] = useState(false);
+  const [projectContext, setProjectContext] = useState<ProjectContext>({});
+  const [configInitialized, setConfigInitialized] = useState(false);
 
-  console.log('[CADEditorDirect] 组件渲染 - fileUrl:', fileUrl);
+  // 从 URL 参数获取文件 ID
+  const pathSegments = location.pathname.split('/');
+  console.log('[CADEditorDirect] 路径段:', pathSegments);
+
+  // 路由格式: /cad-editor/:fileId
+  const urlFileId = pathSegments[pathSegments.length - 1] || fileUrl;
+
+  console.log('[CADEditorDirect] 组件渲染 - fileUrl:', fileUrl, 'urlFileId:', urlFileId);
+  console.log('[CADEditorDirect] 完整路径:', location.pathname);
+
+  // 解析项目上下文
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const projectId = searchParams.get('project');
+    const parentId = searchParams.get('parent');
+
+    if (projectId || parentId) {
+      const context: ProjectContext = {
+        projectId: projectId || undefined,
+        parentId: parentId || undefined,
+      };
+      setProjectContext(context);
+      console.log('[CADEditorDirect] 📋 项目上下文:', context);
+    }
+  }, [location.search]);
+
+  // 创建 Session（如果用户已登录且有项目上下文）
+  useEffect(() => {
+    if (isAuthenticated && user && (projectContext.projectId || projectContext.parentId)) {
+      const createSession = async () => {
+        try {
+          await apiService.post('/session/create', { user });
+          console.log('[CADEditorDirect] ✅ Session 创建成功，项目上下文已设置');
+        } catch (error) {
+          console.error('[CADEditorDirect] ❌ Session 创建错误:', error);
+        }
+      };
+
+      createSession();
+    }
+  }, [isAuthenticated, user, projectContext]);
+
+  // 初始化 MxCAD 配置
+  useEffect(() => {
+    if (!configInitialized) {
+      const success = initMxCadConfig();
+      setConfigInitialized(success);
+    }
+  }, [configInitialized]);
+
+  // 通过文件系统节点ID获取文件信息
+  const getFileInfo = async (nodeId: string) => {
+    try {
+      const fileData = await apiService.get(`/file-system/nodes/${nodeId}`);
+      console.log('[CADEditorDirect] 📄 文件信息:', fileData);
+      console.log('[CADEditorDirect] 📄 文件详细信息:', fileData.data);
+      return fileData.data; // 返回实际的数据，而不是整个响应对象
+    } catch (error) {
+      console.error('[CADEditorDirect] ❌ 获取文件信息错误:', error);
+      return null;
+    }
+  };
+
   // 初始化 MxCADView
   useEffect(() => {
-    if (!containerRef.current || mxcadView) return;
+    if (!containerRef.current || mxcadView || !urlFileId || !configInitialized) return;
 
     console.log('[CADEditorDirect] 🚀 初始化 MxCADView');
 
     const initMxCAD = async () => {
       try {
+        // 获取文件信息
+        const fileInfo = await getFileInfo(urlFileId);
+        if (!fileInfo) {
+          console.error('[CADEditorDirect] ❌ 无法获取文件信息');
+          return;
+        }
+
+        // 检查文件状态，确保已转换完成
+        if (fileInfo.fileStatus && fileInfo.fileStatus !== 'COMPLETED') {
+          console.error('[CADEditorDirect] ❌ 文件尚未转换完成:', fileInfo.fileStatus);
+          // 显示文件状态信息
+          const statusText = {
+            'UPLOADING': '正在上传',
+            'PROCESSING': '正在处理',
+            'FAILED': '处理失败',
+            'DELETED': '已删除'
+          };
+          alert(`文件状态: ${statusText[fileInfo.fileStatus] || fileInfo.fileStatus}`);
+          return;
+        }
+
+        // 如果 fileStatus 为 null 或 undefined，可能是旧数据，尝试直接打开
+        if (!fileInfo.fileStatus) {
+          console.warn('[CADEditorDirect] ⚠️ 文件状态为空，尝试直接打开文件');
+        }
+
+        // 构建 MxCAD 文件 URL - 使用 fileHash 构建 mxweb 文件名
+        if (!fileInfo.fileHash) {
+          console.error('[CADEditorDirect] ❌ 文件哈希值不存在');
+          return;
+        }
+
+        const mxwebFileName = `${fileInfo.fileHash}.mxweb`;
+        const mxcadFileUrl = `/mxcad/file/${mxwebFileName}`;
+        console.log('[CADEditorDirect] 📂 MxCAD 文件 URL:', mxcadFileUrl);
+        console.log('[CADEditorDirect] 📄 原始文件:', fileInfo.originalName);
+        console.log('[CADEditorDirect] 🔑 文件哈希:', fileInfo.fileHash);
+
         const view = new MxCADView({
           rootContainer: containerRef.current!,
-          openFile: fileUrl,
+          openFile: mxcadFileUrl,
         });
 
         await view.create();
@@ -41,15 +178,59 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
     };
 
     initMxCAD();
-  }, [fileUrl, mxcadView]);
+  }, [urlFileId, mxcadView, configInitialized]);
 
   // 文件切换
   useEffect(() => {
-    if (mxcadView && fileUrl) {
-      console.log('[CADEditorDirect] 📂 打开文件:', fileUrl);
-      mxcadView.mxcad.openWebFile(fileUrl);
+    if (mxcadView && urlFileId) {
+      const openFile = async () => {
+        // 获取文件信息
+        const fileInfo = await getFileInfo(urlFileId);
+        if (!fileInfo) {
+          console.error('[CADEditorDirect] ❌ 无法获取文件信息');
+          return;
+        }
+
+        // 检查文件状态和哈希值
+        if (fileInfo.fileStatus && fileInfo.fileStatus !== 'COMPLETED') {
+          console.error('[CADEditorDirect] ❌ 文件尚未转换完成:', fileInfo.fileStatus);
+          const statusText = {
+            'UPLOADING': '正在上传',
+            'PROCESSING': '正在处理',
+            'FAILED': '处理失败',
+            'DELETED': '已删除'
+          };
+          alert(`文件状态: ${statusText[fileInfo.fileStatus] || fileInfo.fileStatus}`);
+          return;
+        }
+
+        if (!fileInfo.fileHash) {
+          console.error('[CADEditorDirect] ❌ 文件哈希值不存在');
+          alert('文件哈希值不存在，无法打开文件');
+          return;
+        }
+
+        // 构建正确的 MxCAD 文件访问 URL - 使用 fileHash 构建 mxweb 文件名
+        const mxwebFileName = `${fileInfo.fileHash}.mxweb`;
+        const mxcadFileUrl = `/mxcad/file/${mxwebFileName}`;
+        console.log('[CADEditorDirect] 📂 打开文件:', mxcadFileUrl);
+        console.log('[CADEditorDirect] 📄 原始文件:', fileInfo.originalName);
+
+        mxcadView.mxcad.openWebFile(mxcadFileUrl);
+      };
+
+      openFile();
     }
-  }, [fileUrl, mxcadView]);
+  }, [urlFileId, mxcadView]);
+
+  if (!configInitialized) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <p className="mt-4">正在初始化 CAD 编辑器...</p>
+      </div>
+    );
+  }
 
   return (
     <div

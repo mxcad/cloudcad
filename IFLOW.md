@@ -48,6 +48,8 @@ cloudcad/
 │   │   │   │   ├── interceptors/ # 拦截器
 │   │   │   │   ├── *.spec.ts    # 单元测试
 │   │   │   │   ├── README.md     # 模块文档
+│   │   │   │   ├── minio-sync.service.ts # MinIO 同步服务
+│   │   │   │   ├── mxcad-permission.service.ts # MxCAD 权限服务
 │   │   │   │   ├── mxcad.controller.ts # 控制器
 │   │   │   │   ├── mxcad.service.ts    # 服务
 │   │   │   │   └── mxcad.module.ts     # 模块
@@ -68,10 +70,20 @@ cloudcad/
 │   │   └── package.json            # 后端配置
 │   ├── frontend/         # React 前端应用（cloudcad-manager）
 │   │   ├── components/          # 通用组件
+│   │   │   ├── BreadcrumbNavigation.tsx # 面包屑导航
+│   │   │   ├── FileItem.tsx     # 文件项组件
 │   │   │   ├── FileUploader.tsx # 文件上传组件
+│   │   │   ├── Layout.tsx       # 布局组件
+│   │   │   ├── MxCadFileUploader.tsx # MxCAD 文件上传组件
+│   │   │   ├── Toolbar.tsx      # 工具栏组件
 │   │   │   └── ui/              # UI 基础组件（Shadcn UI）
+│   │   │       ├── ConfirmDialog.tsx # 确认对话框
+│   │   │       └── Toast.tsx    # 消息提示
 │   │   ├── contexts/            # React Context
 │   │   │   └── AuthContext.tsx  # 认证上下文
+│   │   ├── hooks/               # 自定义 Hooks
+│   │   │   ├── useFileSystem.ts # 文件系统 Hook
+│   │   │   └── useFileUpload.ts # 文件上传 Hook
 │   │   ├── pages/               # 页面组件
 │   │   │   ├── AssetLibrary.tsx      # 资产库管理
 │   │   │   ├── CADEditorDirect.tsx  # CAD 编辑器直连
@@ -93,11 +105,15 @@ cloudcad/
 │   │   ├── types/               # 类型定义
 │   │   │   └── api.ts           # API 类型定义
 │   │   ├── utils/               # 工具函数
+│   │   │   ├── baiduUploader.ts # 百度 WebUploader 封装
+│   │   │   ├── fileUtils.ts     # 文件处理工具
 │   │   │   └── validation.ts    # 验证工具
+│   │   ├── types/               # 类型定义
+│   │   │   ├── api.ts           # API 类型定义
+│   │   │   └── filesystem.ts    # 文件系统类型定义
 │   │   ├── styles/              # 样式文件
 │   │   ├── scripts/             # 构建脚本
 │   │   │   └── generate-types.js # 类型生成脚本
-│   │   ├── vitest.setup.ts      # Vitest 测试配置
 │   │   ├── types.ts             # 前端类型定义
 │   │   ├── App.tsx              # 主应用组件
 │   │   ├── index.html           # HTML 入口
@@ -118,6 +134,8 @@ cloudcad/
 │   ├── DEVELOPMENT_GUIDE.md            # 开发指南（详细版）
 │   ├── FAQ.md                          # 常见问题
 │   ├── GIT_WORKFLOW.md                 # Git 工作流
+│   ├── MXCAD_FILE_SYSTEM_UNIFICATION_PLAN.md # 文件系统统一架构方案
+│   ├── MXCAD_UNIFIED_UPLOAD_IMPLEMENTATION.md # MxCAD 统一上传实施方案
 │   ├── MXCAD_UPLOAD_INTEGRATION.md     # MxCAD 上传服务集成方案（核心文档）
 │   ├── PROJECT_OVERVIEW.md             # 项目概述
 │   └── USER_SYSTEM_ARCHITECTURE_BRAINSTORM.md # 用户系统架构
@@ -145,13 +163,15 @@ cloudcad/
 - **Express**: 5.2.1（Web 框架，@nestjs/platform-express）
 - **Prisma**: 7.1.0（类型安全的 ORM，@prisma/adapter-pg 7.1.0）
 - **PostgreSQL**: 15+（关系型数据库）
-- **Redis**: 7+（缓存和会话存储，ioredis 5.8.2）
+- **Redis**: 7+（缓存和会话存储，@nestjs-modules/ioredis 2.0.2）
 - **MinIO**: 8.0.6（S3 兼容对象存储）
 - **JWT**: @nestjs/jwt 11.0.2 + Passport 0.7.0（认证）
 - **bcryptjs**: 3.0.3（密码加密）
 - **Swagger**: @nestjs/swagger 11.2.3（API 文档）
 - **Jest**: 30.0.0（测试框架）
 - **Nodemailer**: 7.0.11 + Handlebars 4.7.8（邮件服务）
+- **Multer**: 2.0.2（文件上传处理）
+- **UUID**: 13.0.0（唯一标识符生成）
 
 ### 前端技术栈
 
@@ -163,13 +183,17 @@ cloudcad/
 - **Lucide React**: 0.556.0（图标库）
 - **Recharts**: 3.5.1（图表库）
 - **Radix UI**: 最新版本（无障碍 UI 组件库）
-- **Tailwind CSS**: 4.1.18（样式框架）
-- **React Hook Form**: 7.68.0（表单管理）
+- **Tailwind CSS**: 4.1.18（样式框架，@tailwindcss/vite 4.1.18）
+- **React Hook Form**: 7.68.0（表单管理，@hookform/resolvers 5.2.2）
 - **Zod**: 4.2.1（数据验证）
 - **openapi-typescript**: 7.10.1（类型生成）
 - **Vitest**: 4.0.16（单元测试框架）
 - **Testing Library**: 16.3.1（React 组件测试）
 - **mxcad-app**: 1.0.45（MxCAD 编辑器组件）
+- **webuploader**: 0.1.8（百度 WebUploader 文件上传）
+- **class-variance-authority**: 0.7.1（类变体权威）
+- **clsx**: 2.1.1（条件类名工具）
+- **tailwind-merge**: 3.4.0（Tailwind 类名合并）
 
 ### 开发工具
 
@@ -596,10 +620,10 @@ VITE_APP_NAME=CloudCAD
 
 ```typescript
 export const FILE_UPLOAD_CONFIG = {
-  allowedExtensions: ['.dwg', '.dxf'], // 白名单
+  allowedExtensions: ['.dwg', '.dxf', '.pdf', '.png', '.jpg', '.jpeg'], // 白名单
   maxFileSize: 104857600, // 100MB
   maxFilesPerUpload: 10, // 单次最多上传 10 个文件
-  blockedExtensions: ['.exe', '.bat', '.sh', '.cmd', '.ps1'], // 黑名单
+  blockedExtensions: ['.exe', '.bat', '.sh', '.cmd', '.ps1', '.scr', '.vbs'], // 黑名单
 };
 ```
 
@@ -708,6 +732,20 @@ MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和
 
 - `POST /mxcad/up_image` - 上传图片
 
+### 统一上传方案
+
+**新增功能**：MxCAD 文件上传已与文件系统完全集成
+
+- **自动同步**：文件上传成功后自动创建 FileSystemNode 记录
+- **项目上下文**：支持项目ID和父文件夹ID传递
+- **百度 WebUploader**：前端集成百度 WebUploader 实现分片上传
+- **权限集成**：上传文件自动继承项目权限设置
+
+**核心流程**：
+```
+用户选择文件 → WebUploader 分片上传 → MxCAD 转换服务 → 自动创建文件系统记录
+```
+
 ### 返回格式
 
 **重要**：MxCAD 接口绕过了 NestJS 全局响应包装，直接返回原始格式：
@@ -737,7 +775,7 @@ MXCAD_COMPRESSION=true
 **测试框架配置**：
 
 - **测试框架**: Vitest 4.0.16
-- **测试环境**: happy-dom 20.0.11
+- **测试环境**: happy-dom 20.0.11 + jsdom 27.3.0
 - **组件测试**: @testing-library/react 16.3.1
 - **用户交互**: @testing-library/user-event 14.6.1
 - **断言增强**: @testing-library/jest-dom 6.9.1
@@ -860,7 +898,7 @@ pnpm test:cov          # 测试覆盖率
    - 清理测试数据：`pnpm db:push --force-reset`
 
 6. **前端测试失败**
-   - 检查 Vitest 配置：`vitest.setup.ts`
+   - 检查 Vite 配置：`vite.config.ts`
    - 确保所有依赖已安装
    - 查看详细错误信息：`pnpm test --reporter=verbose`
 
@@ -964,15 +1002,47 @@ Closes #123
 - `docs/API.md` - API 文档
 - `docs/API_UPLOAD_DOCUMENTATION.md` - MxCAD 文件上传 API 文档（完整接口规范）
 - `docs/MXCAD_UPLOAD_INTEGRATION.md` - **MxCAD 上传服务集成方案（核心文档）**
+- `docs/MXCAD_FILE_SYSTEM_UNIFICATION_PLAN.md` - 文件系统统一架构方案
 - `docs/DEPLOYMENT.md` - 部署指南
 - `docs/GIT_WORKFLOW.md` - Git 工作流
 - `docs/AUTH_TROUBLESHOOTING.md` - 认证问题排查
 - `docs/FAQ.md` - 常见问题解答
 - `docs/CAD_EDITOR_INTEGRATION_PLAN.md` - CAD 编辑器集成计划
 - `docs/CAD_FILE_PROCESSING_ARCHITECTURE.md` - CAD 文件处理架构
+- `docs/USER_SYSTEM_ARCHITECTURE_BRAINSTORM.md` - 用户系统架构设计
 - `packages/backend/src/mxcad/README.md` - MxCAD 模块详细文档
 
 ## 18. 最新更新记录
+
+### 2025-12-22（项目架构与依赖优化）
+
+#### 架构完善
+
+- **文件系统统一模型**：FileSystemNode 树形结构完全实现，支持项目/文件夹/文件统一管理
+- **MxCAD 集成优化**：前端 Vite 配置完善，支持 `/mxcad` 路由代理到后端 API
+- **CADEditorDirect 组件**：实现直连模式 CAD 编辑器，支持项目上下文传递
+- **权限体系完善**：三层权限体系（用户角色、项目成员、文件访问）完整实现
+
+#### 依赖更新
+
+- **后端依赖**：新增 Multer 2.0.2 文件上传处理，UUID 13.0.0 唯一标识符
+- **前端依赖**：Tailwind CSS 升级至 4.1.18，React Hook Form 增强至 7.68.0
+- **测试框架**：Vitest 4.0.16 + Testing Library 16.3.1 完整测试覆盖
+- **构建工具**：Vite 6.2.0 支持，TypeScript 严格模式全面启用
+
+#### 文件验证增强
+
+- **扩展白名单**：新增 `.pdf`, `.png`, `.jpg`, `.jpeg` 文件类型支持
+- **安全黑名单**：扩展至 `.scr`, `.vbs` 等危险文件类型
+- **分片上传**：支持大文件分片上传和断点续传
+- **文件去重**：基于 SHA-256 哈希值检测重复文件
+
+#### 开发体验优化
+
+- **命令统一**：根目录和子包命令规范化，支持 `pnpm backend:verify` 和 `pnpm frontend:verify`
+- **类型安全**：前后端完全 TypeScript 严格模式，禁止 `any` 类型
+- **代码质量**：ESLint + Prettier 自动化代码格式化和检查
+- **测试驱动**：新增代码覆盖率 ≥ 90%，核心模块 ≥ 95%
 
 ### 2025-12-19（MxCAD 服务完整集成与测试覆盖）
 
@@ -1010,7 +1080,38 @@ Closes #123
 - **开发友好**：详细的文档、示例和故障排查指南
 - **测试保障**：全面的单元测试确保代码质量
 
+### 2025-12-23（前端组件完善与统一上传集成）
+
+#### 前端组件体系完善
+
+- **新增组件**：BreadcrumbNavigation、FileItem、Toolbar、ConfirmDialog、Toast 等组件
+- **MxCAD 上传组件**：MxCadFileUploader 专用组件，集成百度 WebUploader
+- **自定义 Hooks**：useFileSystem 和 useFileUpload 提供状态管理
+- **类型定义完善**：新增 filesystem.ts 类型定义文件
+- **工具函数扩展**：baiduUploader.ts 和 fileUtils.ts 提供完整文件处理能力
+
+#### 统一上传方案实施
+
+- **百度 WebUploader 集成**：完整集成百度 WebUploader 实现分片上传
+- **MxCAD 上下文增强**：修改 MxCadContextInterceptor 支持项目上下文
+- **DTO 扩展**：为 ChunkExistDto 和 FileExistDto 添加项目关联字段
+- **自动同步机制**：文件上传成功后自动创建 FileSystemNode 记录
+- **权限继承**：上传文件自动继承项目权限设置
+
+#### 技术实现亮点
+
+- **统一上传流程**：用户选择文件 → WebUploader 分片上传 → MxCAD 转换 → 文件系统记录
+- **项目上下文传递**：支持项目ID和父文件夹ID传递，确保文件归属正确
+- **错误处理优化**：完善的错误处理和用户反馈机制
+- **类型安全保证**：完整的 TypeScript 类型定义和验证
+
+#### 文档完善
+
+- **新增文档**：MXCAD_UNIFIED_UPLOAD_IMPLEMENTATION.md 详细记录实施方案
+- **模块文档**：MxCAD 模块 README.md 完善接口说明和使用示例
+- **架构文档**：文件系统统一架构方案文档完善
+
 ---
 
-_v2.5 | 2025-12-19 | CloudCAD 团队_  
-_更新：MxCAD 服务完整集成、测试覆盖完善、文档优化_
+_v2.7 | 2025-12-23 | CloudCAD 团队_  
+_更新：前端组件完善、统一上传方案集成、文档体系完善_

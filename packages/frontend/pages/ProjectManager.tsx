@@ -141,7 +141,7 @@ export const ProjectManager = () => {
 
   // 进入项目查看文件
   const handleEnterProject = (projectId: string) => {
-    navigate(`/file-system/${projectId}`);
+    navigate(`/projects/${projectId}/files`);
   };
 
   // 显示项目成员（使用项目数据中已包含的 members）
