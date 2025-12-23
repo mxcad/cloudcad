@@ -12,7 +12,7 @@ const getPickerEl = (): HTMLInputElement => {
     pickerEl = document.createElement('input');
     pickerEl.type = 'file';
     pickerEl.multiple = true;
-    pickerEl.accept = '.dwg,.DWG,.dxf,.DXF';
+    pickerEl.accept = '.dwg,.dxf,.DWG,.DXF,.Dwg,.dWg,.Dxf,.dXF';
     pickerEl.style.position = 'absolute';
     pickerEl.style.left = '-9999px';
     pickerEl.style.top = '-9999px';
@@ -262,11 +262,13 @@ export const useMxCadUploadNative = () => {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // 验证文件类型
-        const allowedExtensions = ['.dwg', '.DWG', '.dxf', '.DXF'];
+        // 验证文件类型 - 支持各种大小写组合
         const fileExtension = '.' + file.name.split('.').pop();
-        if (!allowedExtensions.includes(fileExtension)) {
-          config.onError?.(`文件类型不支持: ${file.name}`);
+        const allowedExtensions = ['dwg', 'dxf'];
+        const normalizedExtension = fileExtension.toLowerCase().substring(1);
+        
+        if (!allowedExtensions.includes(normalizedExtension)) {
+          config.onError?.(`文件类型不支持: ${file.name} (支持 .dwg, .dxf)`);
           continue;
         }
 
