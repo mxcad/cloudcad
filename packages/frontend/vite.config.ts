@@ -28,7 +28,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       react(),
-      mxcadAssetsPlugin(),
+      mxcadAssetsPlugin({
+        libraryNames: ['axios'],
+      }),
     ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
