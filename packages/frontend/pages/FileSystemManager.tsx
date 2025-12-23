@@ -87,6 +87,11 @@ export const FileSystemManager: React.FC = () => {
       onBeginUpload: () => {
         showToast('开始上传文件', 'info');
       },
+      onSuccess: (param) => {
+        showToast('文件上传成功', 'success');
+        // 刷新文件列表
+        loadChildren();
+      },
     });
   };
 
