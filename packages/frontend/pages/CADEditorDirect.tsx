@@ -6,6 +6,18 @@ import 'mxcad-app/style';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 
+// 全局类型定义
+declare global {
+  interface Window {
+    mxcadAppContext?: {
+      userId: string;
+      projectId: string;
+      parentId?: string;
+      userRole: string;
+    };
+  }
+}
+
 interface CADEditorDirectProps {
   fileUrl?: string;
 }
@@ -164,6 +176,29 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
         console.log('[CADEditorDirect] 📄 原始文件:', fileInfo.originalName);
         console.log('[CADEditorDirect] 🔑 文件哈希:', fileInfo.fileHash);
 
+        // 动态设置 MxCAD 服务器配置，添加上下文参数
+        if (user && projectContext.projectId) {
+          // 获取当前配置
+          const serverConfig = await ((window as any).MxPluginContext).getServerConfig();
+          
+          // 修改上传配置，添加项目上下文参数
+          if (serverConfig?.uploadFileConfig?.create) {
+            // 保存原始的 formData
+            const originalFormData = serverConfig.uploadFileConfig.create.formData || {};
+            
+            // 添加项目上下文到 formData
+            serverConfig.uploadFileConfig.create.formData = {
+              ...originalFormData,
+              mxcadUserId: user.id,
+              mxcadProjectId: projectContext.projectId,
+              mxcadParentId: projectContext.parentId || '',
+              mxcadUserRole: user.role,
+            };
+            
+            console.log('[CADEditorDirect] 📋 修改 MxCAD 服务器配置，添加上下文参数:', serverConfig.uploadFileConfig.create.formData);
+          }
+        }
+
         const view = new MxCADView({
           rootContainer: containerRef.current!,
           openFile: mxcadFileUrl,
@@ -215,7 +250,7 @@ export const CADEditorDirect: React.FC<CADEditorDirectProps> = ({ fileUrl }) => 
         const mxcadFileUrl = `/mxcad/file/${mxwebFileName}`;
         console.log('[CADEditorDirect] 📂 打开文件:', mxcadFileUrl);
         console.log('[CADEditorDirect] 📄 原始文件:', fileInfo.originalName);
-
+        console.log(mxcadView)
         mxcadView.mxcad.openWebFile(mxcadFileUrl);
       };
 

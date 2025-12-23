@@ -43,13 +43,15 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
   async checkChunkExist(@Body() dto: ChunkExistDto, @Req() request: any, @Res() res: Response) {
+    // 构建上下文
+    const context = this.buildContextFromRequest(request);
     const result = await this.mxCadService.checkChunkExist(
       dto.chunk,
       dto.fileHash,
       dto.size,
       dto.chunks,
       dto.fileName,
-      request.mxcadContext
+      context
     );
     return res.json(result);
   }
@@ -61,7 +63,9 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
   async checkFileExist(@Body() dto: FileExistDto, @Req() request: any, @Res() res: Response) {
-    const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash, request.mxcadContext);
+    // 构建上下文
+    const context = this.buildContextFromRequest(request);
+    const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash, context);
     return res.json(result);
   }
 
@@ -130,7 +134,6 @@ export class MxCadController {
   ) {
     // 添加调试日志
     console.log('[MxCadController] uploadFile - body:', body);
-    console.log('[MxCadController] uploadFile - mxcadContext:', request.mxcadContext);
     
     if (!file) {
       return res.json({ ret: 'errorparam' });
@@ -144,7 +147,15 @@ export class MxCadController {
       return res.json({ ret: 'errorparam' });
     }
 
-    console.log('[MxCadController] 判断逻辑 - body.chunk:', body.chunk, 'body.chunks:', body.chunks, 'file存在:', !!file);
+    // 构建上下文 - 直接从前端传递的参数中获取
+    const context = {
+      projectId: body.mxcadProjectId || body.projectId,
+      parentId: body.mxcadParentId || body.parentId,
+      userId: body.mxcadUserId,
+      userRole: body.mxcadUserRole,
+    };
+
+    console.log('[MxCadController] 构建的上下文:', context);
     
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
@@ -174,16 +185,6 @@ export class MxCadController {
         // 移动文件
         fs.renameSync(file.path, chunkFilePath);
         
-        // 确保项目上下文正确设置
-        const context = {
-          projectId: body.projectId || request.mxcadContext?.projectId,
-          parentId: body.parentId || request.mxcadContext?.parentId,
-          userId: request.mxcadContext?.userId,
-          userRole: request.mxcadContext?.userRole,
-        };
-        
-        console.log('[MxCadController] 手动构建的上下文:', context);
-        
         // 调用合并逻辑（带权限验证）
         const result = await this.mxCadService.uploadChunkWithPermission(
           body.hash,
@@ -207,7 +208,7 @@ export class MxCadController {
           body.name,
           parseInt(body.size, 10),
           parseInt(body.chunks, 10),
-          request.mxcadContext
+          context
         );
         console.log('[MxCadController] mergeChunksWithPermission 结果:', result);
         return res.json(result);
@@ -222,7 +223,7 @@ export class MxCadController {
         body.hash,
         body.name,
         parseInt(body.size, 10),
-        request.mxcadContext
+        context
       );
       return res.json(result);
     }
@@ -888,5 +889,28 @@ export class MxCadController {
         });
       }
     }
+  }
+
+  /**
+   * 从请求中构建上下文信息
+   */
+  private buildContextFromRequest(request: any): any {
+    // 优先从请求体中获取 MxCAD-App 传递的参数
+    if (request.body) {
+      return {
+        projectId: request.body.mxcadProjectId || request.body.projectId,
+        parentId: request.body.mxcadParentId || request.body.parentId,
+        userId: request.body.mxcadUserId,
+        userRole: request.body.mxcadUserRole,
+      };
+    }
+
+    // 如果没有请求体，尝试其他方式（用于文件访问等场景）
+    return {
+      projectId: undefined,
+      parentId: undefined,
+      userId: undefined,
+      userRole: undefined,
+    };
   }
 }

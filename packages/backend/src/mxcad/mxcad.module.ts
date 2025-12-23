@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
 import { MxCadPermissionService } from './mxcad-permission.service';
 import { MinioSyncService } from './minio-sync.service';
-import { MxCadContextInterceptor } from './interceptors/mxcad-context.interceptor';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -67,10 +65,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     MxCadService,
     MxCadPermissionService,
     MinioSyncService,
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: MxCadContextInterceptor,
-    },
   ],
   exports: [MxCadService],
 })

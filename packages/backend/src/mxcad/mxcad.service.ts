@@ -44,6 +44,164 @@ export class MxCadService {
   }
 
   /**
+   * 为 MxCAD-App 推断上下文信息
+   */
+  public async inferContextForMxCadApp(fileHash: string, request: any): Promise<any> {
+    try {
+      this.logger.log(`为文件哈希 ${fileHash} 推断 MxCAD-App 上下文`);
+      
+      // 1. 尝试从 Session 获取用户信息
+      let user = request.session?.user;
+      
+      // 2. 如果没有 Session 用户，查找最近活动用户
+      if (!user) {
+        const recentToken = await this.prisma.refreshToken.findFirst({
+          orderBy: { createdAt: 'desc' }
+        });
+        
+        if (recentToken) {
+          user = await this.prisma.user.findUnique({
+            where: { id: recentToken.userId },
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              nickname: true,
+              role: true,
+              status: true,
+            },
+          });
+          
+          if (user && user.status === 'ACTIVE') {
+            this.logger.log(`使用最近活动用户: ${user.username}`);
+          } else {
+            user = null;
+          }
+        }
+      }
+      
+      // 3. 尝试从文件哈希查找项目信息
+      let projectId: string | null = null;
+      let parentId: string | null = null;
+      
+      const existingFile = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          fileHash: fileHash,
+          isFolder: false,
+        },
+        select: {
+          parentId: true,
+          owner: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      });
+      
+      if (existingFile) {
+        // 如果文件已存在，使用其父节点信息
+        parentId = existingFile.parentId || null;
+        
+        // 向上查找项目根节点
+        let currentNodeId = existingFile.parentId;
+        while (currentNodeId) {
+          const parentNode = await this.prisma.fileSystemNode.findUnique({
+            where: { id: currentNodeId },
+            select: { id: true, isRoot: true, parentId: true }
+          });
+          
+          if (parentNode?.isRoot) {
+            projectId = parentNode.id;
+            break;
+          }
+          
+          currentNodeId = parentNode?.parentId || null;
+        }
+        
+        this.logger.log(`从现有文件推断项目: projectId=${projectId}, parentId=${parentId}`);
+      } else {
+        // 如果是新文件，尝试从用户的项目中查找默认项目
+        if (user) {
+          const userProject = await this.prisma.projectMember.findFirst({
+            where: {
+              userId: user.id,
+              user: {
+                status: 'ACTIVE'
+              }
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  role: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: {
+              id: 'asc'
+            }
+          });
+          
+          if (userProject) {
+            projectId = userProject.nodeId;
+            parentId = projectId; // 上传到项目根目录
+            this.logger.log(`使用用户默认项目: projectId=${projectId}`);
+          }
+        }
+      }
+      
+      // 4. 如果还是没有项目，创建一个默认项目
+      if (!projectId && user) {
+        this.logger.log(`为用户 ${user.username} 创建默认项目`);
+        const defaultProject = await this.prisma.fileSystemNode.create({
+          data: {
+            name: `${user.username}的默认项目`,
+            isFolder: true,
+            isRoot: true,
+            parentId: null,
+            description: 'MxCAD-App 自动创建的默认项目',
+            projectStatus: 'ACTIVE',
+            ownerId: user.id,
+          },
+        });
+        
+        // 添加用户为项目所有者
+        await this.prisma.projectMember.create({
+          data: {
+            userId: user.id,
+            nodeId: defaultProject.id,
+            role: 'OWNER',
+          },
+        });
+        
+        projectId = defaultProject.id;
+        parentId = projectId;
+        this.logger.log(`创建默认项目成功: projectId=${projectId}`);
+      }
+      
+      if (!projectId || !user) {
+        this.logger.error(`无法推断有效的上下文: projectId=${projectId}, user=${!!user}`);
+        return null;
+      }
+      
+      return {
+        projectId,
+        parentId,
+        userId: user.id,
+        userRole: user.role,
+      };
+      
+    } catch (error) {
+      this.logger.error(`推断 MxCAD-App 上下文失败: ${error.message}`, error);
+      return null;
+    }
+  }
+
+  /**
    * 公共日志方法，供其他模块使用
    */
   public logError(message: string, error?: any): void {

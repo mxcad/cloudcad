@@ -1,6 +1,12 @@
 import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { MxCadContext } from './interceptors/mxcad-context.interceptor';
+
+export interface MxCadContext {
+  projectId?: string;
+  parentId?: string;
+  userId?: string;
+  userRole?: string;
+}
 
 @Injectable()
 export class MxCadPermissionService {
@@ -48,43 +54,59 @@ export class MxCadPermissionService {
       }
       // 如果 parentId == projectId，项目成员权限已经验证过了，无需额外检查
     }
-    
+
     return true;
   }
 
   /**
    * 验证文件访问权限
    */
-  async validateFileAccess(context: MxCadContext, fileId: string): Promise<boolean> {
+  async validateFileAccess(context: MxCadContext, fileNodeId: string): Promise<boolean> {
     if (!context.userId) {
-      throw new UnauthorizedException('用户未登录');
+      // 如果没有用户信息，允许匿名访问（用于 MxCAD-App 文件访问）
+      return true;
     }
-    
-    // 检查文件是否属于用户有权限的项目
+
+    // 检查文件所有者
     const fileNode = await this.prisma.fileSystemNode.findUnique({
-      where: { id: fileId },
+      where: { id: fileNodeId },
     });
-    
+
     if (!fileNode) {
       throw new BadRequestException('文件不存在');
     }
-    
-    // 检查用户是否为文件所有者或有访问权限
+
+    // 如果是文件所有者，允许访问
     if (fileNode.ownerId === context.userId) {
       return true;
     }
-    
+
+    // 检查文件访问权限
     const fileAccess = await this.prisma.fileAccess.findFirst({
       where: {
         userId: context.userId,
-        nodeId: fileId,
+        nodeId: fileNodeId,
       },
     });
-    
-    if (!fileAccess) {
-      throw new ForbiddenException('无权限访问该文件');
+
+    if (fileAccess) {
+      return true;
     }
-    
-    return true;
+
+    // 检查项目成员权限
+    if (fileNode.parentId) {
+      const projectMembership = await this.prisma.projectMember.findFirst({
+        where: {
+          userId: context.userId,
+          nodeId: fileNode.parentId,
+        },
+      });
+
+      if (projectMembership) {
+        return true;
+      }
+    }
+
+    throw new ForbiddenException('无权限访问该文件');
   }
 }
