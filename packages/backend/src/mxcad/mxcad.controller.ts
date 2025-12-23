@@ -136,18 +136,32 @@ export class MxCadController {
   ) {
     // 添加调试日志
     console.log('[MxCadController] uploadFile - body:', body);
+    console.log('[MxCadController] uploadFile - file:', file ? `存在(${file.originalname})` : '不存在');
     
     if (!file) {
+      console.log('[MxCadController] ❌ 缺少文件参数');
       return res.json({ ret: 'errorparam' });
     }
 
     if (!body.hash || !body.name || !body.size) {
+      console.log('[MxCadController] ❌ 缺少必需参数:', {
+        hash: !!body.hash,
+        name: !!body.name,
+        size: !!body.size,
+        bodyKeys: Object.keys(body)
+      });
       return res.json({ ret: 'errorparam' });
     }
 
     if (body.chunk !== undefined && body.chunks === undefined) {
+      console.log('[MxCadController] ❌ 分片上传参数不完整:', {
+        chunk: body.chunk,
+        chunks: body.chunks
+      });
       return res.json({ ret: 'errorparam' });
     }
+
+    console.log('[MxCadController] ✅ 参数验证通过');
 
     // 构建上下文 - 从JWT token验证用户身份
     const context = await this.buildContextFromRequest(request);
