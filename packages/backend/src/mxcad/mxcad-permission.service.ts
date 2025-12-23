@@ -16,10 +16,12 @@ export class MxCadPermissionService {
    * 验证上传权限
    */
   async validateUploadPermission(context: MxCadContext): Promise<boolean> {
+    // 必须有用户身份验证（通过JWT token确认）
     if (!context.userId) {
-      throw new UnauthorizedException('用户未登录');
+      throw new UnauthorizedException('用户未认证，请先登录');
     }
     
+    // 必须有项目信息
     if (!context.projectId) {
       throw new BadRequestException('缺少项目信息');
     }
@@ -33,7 +35,7 @@ export class MxCadPermissionService {
     });
     
     if (!membership) {
-      throw new ForbiddenException('无权限访问该项目');
+      throw new ForbiddenException('您不是该项目的成员，无法上传文件');
     }
     
     // 如果有 parentId，验证是否有文件夹访问权限
@@ -49,7 +51,7 @@ export class MxCadPermissionService {
         });
         
         if (!folderAccess) {
-          throw new ForbiddenException('无权限访问该文件夹');
+          throw new ForbiddenException('您无权限访问该文件夹');
         }
       }
       // 如果 parentId == projectId，项目成员权限已经验证过了，无需额外检查
@@ -62,8 +64,8 @@ export class MxCadPermissionService {
    * 验证文件访问权限
    */
   async validateFileAccess(context: MxCadContext, fileNodeId: string): Promise<boolean> {
+    // 如果没有用户信息，允许匿名访问（用于 MxCAD-App 文件访问）
     if (!context.userId) {
-      // 如果没有用户信息，允许匿名访问（用于 MxCAD-App 文件访问）
       return true;
     }
 
@@ -107,6 +109,6 @@ export class MxCadPermissionService {
       }
     }
 
-    throw new ForbiddenException('无权限访问该文件');
+    throw new ForbiddenException('您无权限访问该文件');
   }
 }

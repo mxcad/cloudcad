@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
 
 import { ApiTags, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { MxCadService } from './mxcad.service';
@@ -34,6 +35,7 @@ export class MxCadController {
   constructor(
     private readonly mxCadService: MxCadService,
     private readonly prisma: DatabaseService,
+    private readonly jwtService: JwtService,
   ) {}
 
   /**
@@ -44,7 +46,7 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
   async checkChunkExist(@Body() dto: ChunkExistDto, @Req() request: any, @Res() res: Response) {
     // 构建上下文
-    const context = this.buildContextFromRequest(request);
+    const context = await this.buildContextFromRequest(request);
     const result = await this.mxCadService.checkChunkExist(
       dto.chunk,
       dto.fileHash,
@@ -64,7 +66,7 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
   async checkFileExist(@Body() dto: FileExistDto, @Req() request: any, @Res() res: Response) {
     // 构建上下文
-    const context = this.buildContextFromRequest(request);
+    const context = await this.buildContextFromRequest(request);
     const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash, context);
     return res.json(result);
   }
@@ -147,13 +149,8 @@ export class MxCadController {
       return res.json({ ret: 'errorparam' });
     }
 
-    // 构建上下文 - 直接从前端传递的参数中获取
-    const context = {
-      projectId: body.mxcadProjectId || body.projectId,
-      parentId: body.mxcadParentId || body.parentId,
-      userId: body.mxcadUserId,
-      userRole: body.mxcadUserRole,
-    };
+    // 构建上下文 - 从JWT token验证用户身份
+    const context = await this.buildContextFromRequest(request);
 
     console.log('[MxCadController] 构建的上下文:', context);
     
@@ -892,25 +889,88 @@ export class MxCadController {
   }
 
   /**
-   * 从请求中构建上下文信息
+   * 从请求中构建上下文信息，通过JWT验证用户身份
    */
-  private buildContextFromRequest(request: any): any {
-    // 优先从请求体中获取 MxCAD-App 传递的参数
-    if (request.body) {
+  private async buildContextFromRequest(request: any): Promise<any> {
+    try {
+      // 1. 优先从 Authorization header 获取 JWT token
+      let user: {
+        id: string;
+        email: string;
+        username: string;
+        nickname: string | null;
+        role: string;
+        status: string;
+      } | null = null;
+      
+      if (request.headers.authorization) {
+        const token = request.headers.authorization.replace('Bearer ', '');
+        const payload = this.jwtService.verify(token);
+        
+        const userData = await this.prisma.user.findUnique({
+          where: { id: payload.sub },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            nickname: true,
+            role: true,
+            status: true,
+          },
+        });
+        
+        if (userData && userData.status === 'ACTIVE') {
+          user = userData;
+          this.logger.log(`JWT 验证成功: ${user.username}`);
+        } else {
+          user = null;
+        }
+      }
+      
+      // 2. 如果没有 JWT token，尝试从 Session 获取
+      if (!user && request.session?.user) {
+        user = request.session.user;
+        if (user) {
+          this.logger.log(`从 Session 获取用户: ${user.username}`);
+        }
+      }
+      
+      // 3. 如果还是没有用户信息，返回空上下文（用于匿名访问）
+      if (!user) {
+        return {
+          projectId: undefined,
+          parentId: undefined,
+          userId: undefined,
+          userRole: undefined,
+        };
+      }
+      
+      // 4. 从请求体中获取项目信息
+      const projectId = request.body?.mxcadProjectId || request.body?.projectId;
+      const parentId = request.body?.mxcadParentId || request.body?.parentId;
+      
+      // 5. 构建上下文
+      const context = {
+        projectId,
+        parentId,
+        userId: user.id,
+        userRole: user.role,
+      };
+      
+      this.logger.log(`构建上下文: userId=${user.id}, projectId=${projectId}, parentId=${parentId}`);
+      
+      return context;
+      
+    } catch (error) {
+      this.logger.error(`构建上下文失败: ${error.message}`, error);
+      
+      // 验证失败时返回空上下文
       return {
-        projectId: request.body.mxcadProjectId || request.body.projectId,
-        parentId: request.body.mxcadParentId || request.body.parentId,
-        userId: request.body.mxcadUserId,
-        userRole: request.body.mxcadUserRole,
+        projectId: undefined,
+        parentId: undefined,
+        userId: undefined,
+        userRole: undefined,
       };
     }
-
-    // 如果没有请求体，尝试其他方式（用于文件访问等场景）
-    return {
-      projectId: undefined,
-      parentId: undefined,
-      userId: undefined,
-      userRole: undefined,
-    };
   }
 }
