@@ -74,7 +74,7 @@ cloudcad/
 │   │   │   ├── FileItem.tsx     # 文件项组件
 │   │   │   ├── FileUploader.tsx # 文件上传组件
 │   │   │   ├── Layout.tsx       # 布局组件
-│   │   │   ├── MxCadFileUploader.tsx # MxCAD 文件上传组件
+│   │   │   ├── MxCadUploader.tsx # MxCAD 文件上传组件（新版）
 │   │   │   ├── Toolbar.tsx      # 工具栏组件
 │   │   │   └── ui/              # UI 基础组件（Shadcn UI）
 │   │   │       ├── ConfirmDialog.tsx # 确认对话框
@@ -83,7 +83,7 @@ cloudcad/
 │   │   │   └── AuthContext.tsx  # 认证上下文
 │   │   ├── hooks/               # 自定义 Hooks
 │   │   │   ├── useFileSystem.ts # 文件系统 Hook
-│   │   │   └── useFileUpload.ts # 文件上传 Hook
+│   │   │   └── useMxCadUploadNative.ts # MxCAD 原生上传 Hook
 │   │   ├── pages/               # 页面组件
 │   │   │   ├── AssetLibrary.tsx      # 资产库管理
 │   │   │   ├── CADEditorDirect.tsx  # CAD 编辑器直连
@@ -101,16 +101,20 @@ cloudcad/
 │   │   │   ├── api.ts               # 统一 API 接口
 │   │   │   ├── apiService.ts        # API 服务封装
 │   │   │   ├── fileUploadService.ts # 文件上传服务
+│   │   │   ├── mxcadManager.ts      # MxCAD 全局管理器
 │   │   │   └── mockDb.ts            # Mock 数据库
-│   │   ├── types/               # 类型定义
-│   │   │   └── api.ts           # API 类型定义
-│   │   ├── utils/               # 工具函数
-│   │   │   ├── baiduUploader.ts # 百度 WebUploader 封装
-│   │   │   ├── fileUtils.ts     # 文件处理工具
-│   │   │   └── validation.ts    # 验证工具
 │   │   ├── types/               # 类型定义
 │   │   │   ├── api.ts           # API 类型定义
 │   │   │   └── filesystem.ts    # 文件系统类型定义
+│   │   ├── utils/               # 工具函数
+│   │   │   └── validation.ts    # 验证工具
+│   │   ├── config/              # 配置文件
+│   │   │   ├── getConfig.ts     # 配置获取
+│   │   │   └── serverConfig.ts  # 服务器配置
+│   │   ├── public/              # 静态资源
+│   │   │   ├── debug-mxcad.html # MxCAD 调试页面
+│   │   │   ├── webuploader-test.html # WebUploader 测试页面
+│   │   │   └── ini/             # 配置文件
 │   │   ├── styles/              # 样式文件
 │   │   ├── scripts/             # 构建脚本
 │   │   │   └── generate-types.js # 类型生成脚本
@@ -738,12 +742,50 @@ MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和
 
 - **自动同步**：文件上传成功后自动创建 FileSystemNode 记录
 - **项目上下文**：支持项目ID和父文件夹ID传递
-- **百度 WebUploader**：前端集成百度 WebUploader 实现分片上传
+- **原生上传实现**：前端使用 useMxCadUploadNative Hook 实现分片上传
+- **MxCAD 管理器**：全局 MxCADView 实例管理，支持实例复用和永不销毁容器
 - **权限集成**：上传文件自动继承项目权限设置
+
+**核心组件**：
+
+#### MxCadUploader 组件
+- **位置**：`packages/frontend/components/MxCadUploader.tsx`
+- **功能**：提供完整的 MxCAD 文件上传 UI 组件
+- **特性**：支持进度显示、错误处理、成功回调
+- **使用方式**：
+```tsx
+<MxCadUploader
+  projectId="project-123"
+  parentId="folder-456"
+  onSuccess={(param) => console.log('上传成功:', param)}
+  onError={(error) => console.error('上传失败:', error)}
+/>
+```
+
+#### useMxCadUploadNative Hook
+- **位置**：`packages/frontend/hooks/useMxCadUploadNative.ts`
+- **功能**：原生实现的 MxCAD 文件上传逻辑
+- **特性**：
+  - 文件类型验证（支持 .dwg, .dxf 各种大小写组合）
+  - 文件大小限制（100MB）
+  - 分片上传（5MB 每片）
+  - 文件哈希计算（用于去重）
+  - 自动重试和错误处理
+  - 秒传支持（文件已存在时）
+
+#### MxCADManager 管理器
+- **位置**：`packages/frontend/services/mxcadManager.ts`
+- **功能**：全局 MxCADView 实例管理
+- **特性**：
+  - 单例模式确保实例唯一性
+  - 永不销毁的全局容器
+  - 实例复用提高性能
+  - 支持显示/隐藏控制
+  - 文件打开和管理功能
 
 **核心流程**：
 ```
-用户选择文件 → WebUploader 分片上传 → MxCAD 转换服务 → 自动创建文件系统记录
+用户选择文件 → 原生分片上传 → MxCAD 转换服务 → 自动创建文件系统记录 → MxCADManager 管理
 ```
 
 ### 返回格式
@@ -1111,7 +1153,37 @@ Closes #123
 - **模块文档**：MxCAD 模块 README.md 完善接口说明和使用示例
 - **架构文档**：文件系统统一架构方案文档完善
 
+### 2025-12-24（前端架构优化与文档更新）
+
+#### 前端架构优化
+
+- **MxCAD 上传组件重构**：新增 MxCadUploader 组件，提供完整的上传 UI 和交互
+- **原生上传实现**：useMxCadUploadNative Hook 替代百度 WebUploader，实现更稳定的分片上传
+- **MxCAD 管理器**：新增 MxCADManager 全局管理器，支持实例复用和永不销毁容器
+- **配置管理优化**：新增 config 目录，统一管理前端配置文件
+
+#### 技术实现亮点
+
+- **文件验证增强**：支持各种大小写组合的文件扩展名（.dwg, .dxf, .DWG, .DXF 等）
+- **智能重试机制**：分片上传失败自动重试，最终验证超时优雅处理
+- **实例复用优化**：MxCADView 实例复用避免重复初始化，提升性能
+- **全局容器管理**：永不销毁的 MxCAD 容器，确保编辑器状态持久化
+
+#### 文档体系完善
+
+- **项目结构更新**：准确反映当前前端组件和服务结构
+- **新增组件文档**：详细说明 MxCadUploader、useMxCadUploadNative 和 MxCADManager
+- **配置说明补充**：添加前端配置目录和文件说明
+- **使用示例完善**：提供完整的组件使用示例和最佳实践
+
+#### 代码质量提升
+
+- **类型安全保证**：完整的 TypeScript 类型定义和接口规范
+- **错误处理优化**：完善的异常捕获和用户友好的错误提示
+- **日志记录增强**：详细的操作日志，便于问题排查和性能监控
+- **代码注释完善**：关键逻辑添加详细注释说明
+
 ---
 
-_v2.7 | 2025-12-23 | CloudCAD 团队_  
-_更新：前端组件完善、统一上传方案集成、文档体系完善_
+_v2.8 | 2025-12-24 | CloudCAD 团队_  
+_更新：前端架构优化、MxCAD 上传重构、文档体系完善_

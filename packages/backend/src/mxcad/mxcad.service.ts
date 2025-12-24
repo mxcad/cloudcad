@@ -434,7 +434,8 @@ export class MxCadService {
     hashFile: string,
     chunks: number,
     fileName: string,
-    fileSize: number
+    fileSize: number,
+    context?: any
   ): Promise<{ ret: string; tz?: boolean }> {
     const fileMd5 = hashFile;
     const tmpDir = this.getChunkTempDirPath(fileMd5);
@@ -478,6 +479,30 @@ export class MxCadService {
               
               if (isOk) {
                 this.delFileDir(tmpDir);
+                
+                // 只有在提供了上下文且转换成功时才创建文件系统节点
+                if (context && context.projectId && context.userId) {
+                  try {
+                    // 检查是否已存在相同文件哈希的节点，避免重复创建
+                    const existingNode = await this.prisma.fileSystemNode.findFirst({
+                      where: {
+                        fileHash: fileMd5,
+                        ownerId: context.userId,
+                        parentId: context.parentId,
+                      },
+                    });
+                    
+                    if (!existingNode) {
+                      await this.createFileSystemNode(fileName, fileMd5, fileSize, context);
+                      this.logger.log(`文件合并完成，创建文件系统节点: ${fileName}`);
+                    } else {
+                      this.logger.log(`文件系统节点已存在，跳过创建: ${fileName}`);
+                    }
+                  } catch (error) {
+                    this.logger.error(`创建文件系统节点失败: ${error.message}`, error);
+                  }
+                }
+                
                 if (convertRet.tz) {
                   resolve({ ret: MxUploadReturn.kOk, tz: true });
                 } else {
@@ -524,7 +549,7 @@ export class MxCadService {
         const stats = statSync(chunkPath);
         if (stats.size === size) {
           // 如果切片已经都齐全了，也需要进行合并操作
-          const mergeResult = await this.mergeConvertFile(fileHash, chunks, fileName, size);
+          const mergeResult = await this.mergeConvertFile(fileHash, chunks, fileName, size, context);
           if (mergeResult.ret === MxUploadReturn.kOk) {
             return { ret: MxUploadReturn.kChunkAlreadyExist };
           } else {
@@ -555,8 +580,21 @@ export class MxCadService {
         // 文件已存在，创建文件系统节点记录（如果提供了上下文）
         if (context && context.projectId && context.userId) {
           try {
-            await this.createFileSystemNode(filename, fileHash, 0, context);
-            this.logger.log(`为已存在文件创建系统节点: ${filename}`);
+            // 检查是否已存在相同文件哈希的节点，避免重复创建
+            const existingNode = await this.prisma.fileSystemNode.findFirst({
+              where: {
+                fileHash: fileHash,
+                ownerId: context.userId,
+                parentId: context.parentId,
+              },
+            });
+            
+            if (!existingNode) {
+              await this.createFileSystemNode(filename, fileHash, 0, context);
+              this.logger.log(`为已存在文件创建系统节点: ${filename}`);
+            } else {
+              this.logger.log(`文件系统节点已存在，跳过创建: ${filename}`);
+            }
           } catch (error) {
             this.logger.warn(`创建文件系统节点失败: ${error.message}`);
           }
@@ -579,9 +617,10 @@ export class MxCadService {
     name: string,
     size: number,
     chunk: number,
-    chunks: number
+    chunks: number,
+    context?: any
   ): Promise<{ ret: string; tz?: boolean }> {
-    return this.mergeConvertFile(hash, chunks, name, size);
+    return this.mergeConvertFile(hash, chunks, name, size, context);
   }
 
   /**
@@ -722,7 +761,8 @@ export class MxCadService {
   }
 
   /**
-   * 修改后的上传分片文件方法，添加权限验证和文件节点创建
+   * 修改后的上传分片文件方法，添加权限验证
+   * 注意：这里不创建文件节点，只在文件完全合并后才创建
    */
   public async uploadChunkWithPermission(
     hash: string,
@@ -737,14 +777,12 @@ export class MxCadService {
     // 验证权限
     await this.permissionService.validateUploadPermission(context);
     
-    const result = await this.mergeConvertFile(hash, chunks, name, size);
+    const result = await this.mergeConvertFile(hash, chunks, name, size, context);
     
     console.log('[MxCadService] mergeConvertFile 返回结果:', result);
     
-    // 如果上传成功，创建文件系统节点
-    if (result.ret === MxUploadReturn.kOk) {
-      await this.createFileSystemNode(name, hash, size, context);
-    }
+    // 注意：分片上传过程中不创建文件节点，避免重复记录
+    // 文件节点创建移至 mergeConvertFile 方法中的文件合并完成后
     
     console.log('[MxCadService] uploadChunkWithPermission 最终返回:', result);
     return result;
@@ -765,14 +803,11 @@ export class MxCadService {
     // 验证权限
     await this.permissionService.validateUploadPermission(context);
     
-    const result = await this.mergeConvertFile(hash, chunks, name, size);
+    const result = await this.mergeConvertFile(hash, chunks, name, size, context);
     
     console.log('[MxCadService] mergeConvertFile 结果:', result);
     
-    // 如果上传成功，创建文件系统节点
-    if (result.ret === MxUploadReturn.kOk) {
-      await this.createFileSystemNode(name, hash, size, context);
-    }
+    // 注意：文件系统节点创建已移至 mergeConvertFile 方法内部，避免重复创建
     
     console.log('[MxCadService] mergeChunksWithPermission 最终返回:', result);
     return result;
