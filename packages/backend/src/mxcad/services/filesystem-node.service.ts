@@ -23,6 +23,9 @@ export interface CreateNodeOptions {
 @Injectable()
 export class FileSystemNodeService {
   private readonly logger = new Logger(FileSystemNodeService.name);
+  
+  // 并发控制：防止同一个文件同时创建多个节点
+  private readonly creatingNodes: Map<string, Promise<void>> = new Map();
 
   constructor(private readonly prisma: DatabaseService) {}
 
@@ -33,41 +36,61 @@ export class FileSystemNodeService {
   async createOrReferenceNode(options: CreateNodeOptions): Promise<void> {
     const { originalName, fileHash, fileSize, accessPath, mimeType, extension, context } = options;
 
-    this.logger.log(`🔍 开始创建文件系统节点: ${originalName}, 大小: ${fileSize}字节, 项目: ${context.projectId}, 父目录: ${context.parentId}, 用户: ${context.userId}`);
+    // 创建唯一的节点键，包含项目上下文
+    const nodeKey = `${context.projectId}:${context.parentId || 'root'}:${fileHash}`;
 
     try {
-      // 使用事务确保数据一致性
-      await this.prisma.$transaction(async (tx) => {
-        // 检查是否已存在相同文件哈希的节点（全局去重）
-        this.logger.log(`查找现有文件节点，哈希: ${fileHash}`);
-        const existingNode = await tx.fileSystemNode.findFirst({
-          where: { fileHash },
-        });
+      // 并发控制：如果同一个文件正在创建，等待结果
+      if (this.creatingNodes.has(nodeKey)) {
+        await this.creatingNodes.get(nodeKey)!;
+        return;
+      }
 
-        this.logger.log(`现有节点查找结果:`, existingNode ? `存在(${existingNode.id})` : '不存在');
+      // 创建创建 Promise 并缓存
+      const createPromise = this.performCreateNode(options, nodeKey);
+      this.creatingNodes.set(nodeKey, createPromise);
 
-        if (!existingNode) {
-          // 创建新节点
-          await this.createNewNode(tx, {
-            name: originalName,
-            accessPath,
-            size: fileSize,
-            mimeType,
-            extension,
-            fileHash,
-            context,
-          });
-        } else {
-          // 检查是否需要在当前项目/文件夹下创建引用
-          await this.handleExistingNode(tx, existingNode, originalName, context);
-        }
-      });
-
-      this.logger.log(`✅ 事务提交成功`);
+      try {
+        await createPromise;
+      } finally {
+        // 清理并发控制
+        this.creatingNodes.delete(nodeKey);
+      }
     } catch (error) {
       this.logger.error(`创建文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 执行实际的节点创建操作
+   */
+  private async performCreateNode(options: CreateNodeOptions, nodeKey: string): Promise<void> {
+    const { originalName, fileHash, fileSize, accessPath, mimeType, extension, context } = options;
+
+    // 使用事务确保数据一致性
+    await this.prisma.$transaction(async (tx) => {
+      // 检查是否已存在相同文件哈希的节点（全局去重）
+      const existingNode = await tx.fileSystemNode.findFirst({
+        where: { fileHash },
+      });
+
+      if (!existingNode) {
+        // 创建新节点
+        await this.createNewNode(tx, {
+          name: originalName,
+          accessPath,
+          size: fileSize,
+          mimeType,
+          extension,
+          fileHash,
+          context,
+        });
+      } else {
+        // 检查是否需要在当前项目/文件夹下创建引用
+        await this.handleExistingNode(tx, existingNode, originalName, context);
+      }
+    });
   }
 
   /**
@@ -369,55 +392,89 @@ export class FileSystemNodeService {
     this.logger.log(`✅ 新节点创建成功，ID: ${fileNode.id}`);
   }
 
+  /**
+   * 生成不重复的文件名，自动添加序号
+   * 例如: dxf.dxf -> dxf (1).dxf -> dxf (2).dxf
+   */
+  private async generateUniqueFileName(
+    tx: any,
+    parentId: string,
+    originalName: string
+  ): Promise<string> {
+    const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.'));
+    const extension = originalName.substring(originalName.lastIndexOf('.'));
+    
+    // 检查是否已存在同名文件
+    const existingCount = await tx.fileSystemNode.count({
+      where: {
+        parentId,
+        originalName: { startsWith: nameWithoutExt },
+        extension,
+      },
+    });
+
+    if (existingCount === 0) {
+      return originalName;
+    }
+
+    // 生成带序号的文件名
+    let counter = 1;
+    while (true) {
+      const newName = `${nameWithoutExt} (${counter})${extension}`;
+      const exists = await tx.fileSystemNode.findFirst({
+        where: {
+          parentId,
+          name: newName,
+        },
+      });
+      if (!exists) {
+        return newName;
+      }
+      counter++;
+    }
+  }
+
   private async handleExistingNode(
     tx: any,
     existingNode: any,
     originalName: string,
     context: FileSystemNodeContext
   ): Promise<void> {
-    this.logger.log('检查当前项目/文件夹下的引用');
-    this.logger.log('查找条件:', {
-      parentId: context.parentId || context.projectId,
-      fileHash: existingNode.fileHash,
-      userId: context.userId,
-    });
+    const targetParentId = context.parentId || context.projectId;
 
-    // 检查是否已存在引用节点
-    const existingRef = await tx.fileSystemNode.findFirst({
+    // 检查是否完全相同（同名+同哈希+同目录+同用户）
+    const exactDuplicate = await tx.fileSystemNode.findFirst({
       where: {
-        parentId: context.parentId || context.projectId,
+        parentId: targetParentId,
         fileHash: existingNode.fileHash,
+        originalName: originalName,  // 同名
         ownerId: context.userId,
       },
     });
 
-    this.logger.log('现有引用查找结果:', existingRef ? `存在(${existingRef.id})` : '不存在');
-
-    if (!existingRef) {
-      this.logger.log('创建引用节点');
-
-      const newRef = await tx.fileSystemNode.create({
-        data: {
-          name: existingNode.name,
-          isFolder: false,
-          isRoot: false,
-          parentId: context.parentId || context.projectId,
-          originalName: existingNode.originalName,
-          path: existingNode.path,
-          size: existingNode.size,
-          mimeType: existingNode.mimeType,
-          extension: existingNode.extension,
-          fileStatus: FileStatus.COMPLETED,
-          fileHash: existingNode.fileHash,
-          ownerId: context.userId,
-        },
-      });
-
-      this.logger.log(`✅ 引用节点创建成功，ID: ${newRef.id}`);
-      this.logger.log(`文件已存在，创建引用节点: ${originalName} -> 父节点: ${context.parentId}`);
-    } else {
-      this.logger.log('⚠️ 文件引用节点已存在，跳过创建');
-      this.logger.log(`文件引用节点已存在，跳过创建: ${originalName}`);
+    if (exactDuplicate) {
+      return;  // 完全相同的文件已存在，跳过创建
     }
+
+    // 生成不重复的文件名（自动加序号）
+    const uniqueName = await this.generateUniqueFileName(tx, targetParentId, originalName);
+
+    // 创建新节点（即使是相同内容也创建新节点，共享存储路径）
+    await tx.fileSystemNode.create({
+      data: {
+        name: uniqueName,
+        isFolder: false,
+        isRoot: false,
+        parentId: targetParentId,
+        originalName: uniqueName,
+        path: existingNode.path,  // 共享存储路径
+        size: existingNode.size,
+        mimeType: existingNode.mimeType,
+        extension: existingNode.extension,
+        fileStatus: FileStatus.COMPLETED,
+        fileHash: existingNode.fileHash,
+        ownerId: context.userId,
+      },
+    });
   }
 }

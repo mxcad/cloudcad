@@ -1,4 +1,5 @@
 import { AppConfig } from './app.config';
+import debugConfig from '../common/config/debug.config';
 
 export default (): AppConfig => ({
   port: parseInt(process.env.PORT || '3001', 10) || 3001,
@@ -48,4 +49,5 @@ export default (): AppConfig => ({
       process.env.UPLOAD_ALLOWED_TYPES || '.dwg,.dxf,.pdf,.png,.jpg,.jpeg'
     ).split(','),
   },
+  debug: debugConfig(),
 });
