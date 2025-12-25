@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+﻿import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // API 基础配置
 const API_BASE_URL =
@@ -19,46 +19,42 @@ class ApiService {
     // 请求拦截器 - 添加认证 token 和 MxCAD 项目上下文
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+        // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
 
         // 为 MxCAD 上传相关请求添加项目上下文
         if (config.url?.includes('/mxcad/files/')) {
-          console.log('🌐 [ApiService] 拦截MxCAD上传请求:', config.url);
-          
           // 从当前URL获取项目上下文作为后备
           const currentUrl = new URL(window.location.href);
           const urlProjectId = currentUrl.searchParams.get('project') || '';
           const urlParentId = currentUrl.searchParams.get('parent') || '';
           
-          console.log('📝 [ApiService] URL中的项目上下文:', { projectId: urlProjectId, parentId: urlParentId });
-
           // 如果是POST请求且有data，检查并补充项目上下文参数
           if (config.method?.toLowerCase() === 'post' && config.data) {
-            const existingProjectId = config.data.projectId;
-            const existingParentId = config.data.parentId;
+            // 检查是否是 FormData（文件上传）
+            const isFormData = config.data instanceof FormData;
             
-            // 只有当请求体中没有项目上下文时，才从URL获取
-            if (!existingProjectId && !existingParentId) {
-              const enhancedData = {
-                ...config.data,
-                projectId: urlProjectId,
-                parentId: urlParentId,
-              };
-              
-              console.log('✅ [ApiService] 从URL补充项目上下文:', {
-                original: config.data,
-                enhanced: enhancedData,
-              });
-              
-              config.data = enhancedData;
+            if (isFormData) {
+              // 对于 FormData，使用 append 方法追加字段
+              if (!config.data.has('projectId') && urlProjectId) {
+                config.data.append('projectId', urlProjectId);
+              }
+              if (!config.data.has('parentId') && urlParentId) {
+                config.data.append('parentId', urlParentId);
+              }
             } else {
-              console.log('✅ [ApiService] 请求体中已包含项目上下文，保持不变:', {
-                projectId: existingProjectId,
-                parentId: existingParentId,
-              });
+              // 对于普通对象，使用扩展运算符
+              const existingProjectId = config.data.projectId;
+              const existingParentId = config.data.parentId;
+              
+              // 只有当请求体中没有项目上下文时，才从URL获取
+              if (!existingProjectId && !existingParentId) {
+                const enhancedData = {
+                  ...config.data,
+                  projectId: urlProjectId,
+                  parentId: urlParentId,
+                };
+                config.data = enhancedData;
+              }
             }
           } else if (config.method?.toLowerCase() === 'post' && config.params) {
             // 如果参数在params中（某些情况下）
@@ -71,24 +67,10 @@ class ApiService {
                 projectId: urlProjectId,
                 parentId: urlParentId,
               };
-              
-              console.log('✅ [ApiService] 从URL补充请求参数:', {
-                original: config.params,
-                enhanced: enhancedParams,
-              });
-              
               config.params = enhancedParams;
-            } else {
-              console.log('✅ [ApiService] 请求参数中已包含项目上下文，保持不变:', {
-                projectId: existingProjectId,
-                parentId: existingParentId,
-              });
             }
-          } else {
-            console.warn('⚠️ [ApiService] 无法为MxCAD请求添加项目上下文，缺少数据载体');
           }
         }
-
         return config;
       },
       (error) => {

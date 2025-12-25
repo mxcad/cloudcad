@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { MxCADView } from 'mxcad-app';
 import { Logger } from '../utils/mxcadUtils';
 import { MxFun } from 'mxdraw';
@@ -61,8 +61,7 @@ class MxCADContainerManager {
 
   clearContainer(): void {
     // 永远不要清空全局容器，保持 mxcadView 绑定的 DOM 元素
-    console.log('ℹ️ 跳过清空全局容器，保持 MxCAD 实例');
-  }
+}
 }
 
 /**
@@ -86,62 +85,108 @@ class MxCADAuthManager {
   }
 
   setupAuthInterceptor(): void {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      Logger.warn('未找到 JWT token');
+    // 防止重复配置
+    if (this.isConfigured) {
+      Logger.info('MxCAD 认证拦截器已配置，跳过重复配置');
       return;
     }
 
-    // 3. 简单的 XMLHttpRequest 拦截器
-    const originalOpen = XMLHttpRequest.prototype.open;
-    const originalSend = XMLHttpRequest.prototype.send;
+    // 获取存储的 token
+    const token = localStorage.getItem('accessToken');
+    // 获取 URL 中的项目参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('project');
+    const parentId = urlParams.get('parent');
 
+    // 保存原始方法（只保存一次）
+    if (!this.originalXHROpen) {
+      this.originalXHROpen = XMLHttpRequest.prototype.open;
+    }
+    if (!this.originalXHRSend) {
+      this.originalXHRSend = XMLHttpRequest.prototype.send;
+    }
+    if (!this.originalFetch) {
+      this.originalFetch = window.fetch;
+    }
+
+    const originalOpen = this.originalXHROpen;
+    const originalSend = this.originalXHRSend;
+    const originalFetch = this.originalFetch;
+
+    // 拦截 XMLHttpRequest
     XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...args: any[]) {
       const urlString = url.toString();
-      if (urlString.includes('/mxcad/')) {
+      if (urlString.includes('/mxcad/') || urlString.includes('/api/mxcad/')) {
         (this as any)._isMxCad = true;
+        (this as any)._mxCadMethod = method.toUpperCase();
       }
       return originalOpen.call(this, method, url, ...args);
     };
 
     XMLHttpRequest.prototype.send = function(body?: any) {
       if ((this as any)._isMxCad) {
-        // 设置认证头
-        if (!(this as any)._authSet && token) {
-          (this as any)._authSet = true;
-          try {
-            console.log('🔐 为 MxCAD XMLHttpRequest 请求添加认证头');
-            this.setRequestHeader('Authorization', `Bearer ${token}`);
-          } catch (e) {}
-        }
+        // Authorization 由 globalAuth.ts 在底层统一处理
+        // 这里只添加 MxCAD 项目上下文
 
-        // 添加项目参数到请求体
-        if (typeof body === 'string') {
+        const method = (this as any)._mxCadMethod;
+        if ((method === 'POST' || method === 'PUT') && typeof body === 'string') {
           try {
             const bodyData = JSON.parse(body);
-            const urlParams = new URLSearchParams(window.location.search);
-            const projectId = urlParams.get('project');
-            const parentId = urlParams.get('parent');
-            
             if (projectId && !bodyData.projectId) {
               bodyData.projectId = projectId;
-              if (parentId && !bodyData.parentId) {
-                bodyData.parentId = parentId;
-              }
-              
-              const newBody = JSON.stringify(bodyData);
-              console.log('📋 已为 MxCAD 请求添加项目参数', { projectId, parentId });
-              return originalSend.call(this, newBody);
             }
+            if (parentId && !bodyData.parentId) {
+              bodyData.parentId = parentId;
+            }
+            const newBody = JSON.stringify(bodyData);
+            return originalSend.call(this, newBody);
           } catch (error) {
-            console.log('解析请求体失败，跳过添加项目参数');
+            // 静默处理 JSON 解析错误
           }
         }
       }
       return originalSend.call(this, body);
     };
 
+    // 拦截 fetch - 只添加项目上下文，不处理 Authorization
+    window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+      const urlString = typeof input === 'string' ? input : input.toString();
+      
+      if (urlString.includes('/mxcad/') || urlString.includes('/api/mxcad/')) {
+        // Authorization 由 globalAuth.ts 在底层统一处理
+        // 这里只添加 MxCAD 项目上下文
+
+        const headers = new Headers(init?.headers || {});
+
+        const modifiedInit: RequestInit = {
+          ...init,
+          headers,
+        };
+
+        const method = (init?.method || 'GET').toUpperCase();
+        if ((method === 'POST' || method === 'PUT') && init?.body && typeof init.body === 'string') {
+          try {
+            const bodyData = JSON.parse(init.body);
+            if (projectId && !bodyData.projectId) {
+              bodyData.projectId = projectId;
+            }
+            if (parentId && !bodyData.parentId) {
+              bodyData.parentId = parentId;
+            }
+            modifiedInit.body = JSON.stringify(bodyData);
+          } catch (error) {
+            // 静默处理 JSON 解析错误
+          }
+        }
+
+        return originalFetch.call(window, input, modifiedInit);
+      }
+
+      return originalFetch.call(window, input, init);
+    };
+
     this.isConfigured = true;
+    Logger.info('MxCAD 认证拦截器已设置 (XHR + Fetch)');
   }
 
   /**

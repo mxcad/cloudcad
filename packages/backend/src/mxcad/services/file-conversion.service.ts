@@ -24,6 +24,9 @@ export class FileConversionService implements IFileConversionService {
   }
 
   async convertFile(options: ConversionOptions): Promise<ConversionResult> {
+    let stdout = '';
+    let stderr = '';
+
     try {
       const { srcPath, fileHash, createPreloadingData = true, compression = this.compression } = options;
       
@@ -37,13 +40,17 @@ export class FileConversionService implements IFileConversionService {
         param.compression = 0;
       }
 
-      const cmd = `"${this.mxCadAssemblyPath}" "${JSON.stringify(param)}"`;
+      const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
       this.logger.log(`执行 MxCAD 转换命令: ${cmd}`);
       
-      const { stdout, stderr } = await execAsync(cmd, {
+      const execResult = await execAsync(cmd, {
         encoding: 'utf8',
-        timeout: options.timeout || 30000,
+        timeout: options.timeout || 60000, // 增加超时到60秒
+        maxBuffer: 50 * 1024 * 1024, // 增加缓冲区到50MB
       });
+      
+      stdout = execResult.stdout;
+      stderr = execResult.stderr;
 
       // 重命名原始文件
       const randomNum = Math.floor(Math.random() * (94552 - 11291) + 11291);
@@ -54,13 +61,16 @@ export class FileConversionService implements IFileConversionService {
         this.logger.log(`原始文件已重命名为: ${newPath}`);
       }
 
+      // 尝试从 stdout 或 stderr 解析结果
+      const output = Buffer.isBuffer(stdout) ? stdout.toString() : (stdout || (Buffer.isBuffer(stderr) ? stderr.toString() : stderr) || '');
+      
       try {
-        let strStdout = stdout.toString();
-        const iPos = strStdout.lastIndexOf('{"code"');
+        let strOutput = output.toString();
+        const iPos = strOutput.lastIndexOf('{"code"');
         if (iPos !== -1) {
-          strStdout = strStdout.substring(iPos);
+          strOutput = strOutput.substring(iPos);
         }
-        const ret = JSON.parse(strStdout);
+        const ret = JSON.parse(strOutput);
         ret.newpath = newPath;
         
         if (ret.code === 0) {
@@ -72,11 +82,64 @@ export class FileConversionService implements IFileConversionService {
         }
       } catch (e) {
         this.logger.error(`解析 MxCAD 输出失败: ${e.message}`);
-        this.logger.error(`原始输出: ${stdout}`);
+        this.logger.error(`原始输出: ${output}`);
         return { isOk: false, ret: { code: -1, message: '解析输出失败' }, error: e.message };
       }
-    } catch (error) {
-      this.logger.error(`文件转换异常: ${error.message}`, error);
+    } catch (error: any) {
+      // 输出详细错误信息
+      this.logger.error(`文件转换异常: ${error.message}`);
+      this.logger.error(`命令: ${error.cmd}`);
+      this.logger.error(`退出码: ${error.code}`);
+      
+      // 确保 stdout 和 stderr 是字符串
+      const errorStdout = error.stdout ? (Buffer.isBuffer(error.stdout) ? error.stdout.toString() : error.stdout) : (stdout || '');
+      const errorStderr = error.stderr ? (Buffer.isBuffer(error.stderr) ? error.stderr.toString() : error.stderr) : (stderr || '');
+      
+      this.logger.error(`stdout: [${errorStdout}]`);
+      this.logger.error(`stdout length: ${errorStdout.length}`);
+      this.logger.error(`stdout bytes: ${Buffer.from(errorStdout).toString('hex')}`);
+      this.logger.error(`stderr: [${errorStderr}]`);
+      
+      // 检查 stdout 或 stderr 是否包含成功的结果（mxcadassembly 可能退出码非0但实际成功）
+      const outputToCheck = errorStdout || errorStderr;
+      
+      if (outputToCheck) {
+        try {
+          // 查找 JSON 位置
+          const iPos = outputToCheck.lastIndexOf('{"code"');
+          this.logger.log(`JSON start position: ${iPos}`);
+          
+          if (iPos !== -1) {
+            const strOutput = outputToCheck.substring(iPos);
+            this.logger.log(`Extracted JSON string: [${strOutput}]`);
+            
+            const ret = JSON.parse(strOutput);
+            this.logger.log(`Parsed JSON: ${JSON.stringify(ret)}`);
+            
+            // 如果输出包含成功的结果，视为转换成功
+            if (ret.code === 0) {
+              this.logger.log(`检测到转换成功，返回成功状态`);
+              const randomNum = Math.floor(Math.random() * (94552 - 11291) + 11291);
+              const newPath = `${options.srcPath}_${randomNum}.dwg`;
+              
+              // 重命名原始文件
+              if (fs.existsSync(options.srcPath)) {
+                fs.renameSync(options.srcPath, newPath);
+                this.logger.log(`原始文件已重命名为: ${newPath}`);
+              }
+              
+              ret.newpath = newPath;
+              this.logger.log(`文件转换成功 (从输出解析): ${options.srcPath}`);
+              return { isOk: true, ret };
+            }
+          } else {
+            this.logger.log(`未找到 JSON 格式的输出`);
+          }
+        } catch (parseError) {
+          this.logger.log(`解析输出失败: ${parseError.message}`);
+        }
+      }
+      
       return { isOk: false, ret: { code: -1, message: error.message }, error: error.message };
     }
   }
