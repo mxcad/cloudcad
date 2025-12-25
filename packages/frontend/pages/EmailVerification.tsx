@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -42,8 +42,7 @@ export const EmailVerification: React.FC = () => {
         navigate('/login', { replace: true });
       }, 2000);
     } catch (err: any) {
-      console.error('邮箱验证失败:', err);
-      setError(
+setError(
         err.response?.data?.message || '验证失败，请检查验证码是否正确或已过期'
       );
     } finally {

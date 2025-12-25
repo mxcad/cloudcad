@@ -1,4 +1,4 @@
-import {
+﻿import {
   AlertCircle,
   Edit,
   Shield,
@@ -76,8 +76,7 @@ export const UserManagement = () => {
       setHasPermission(hasAccess);
       return hasAccess;
     } catch (error) {
-      console.error('Failed to check access:', error);
-      setHasPermission(false);
+setHasPermission(false);
       return false;
     }
   };
@@ -89,8 +88,7 @@ export const UserManagement = () => {
       const response = await usersApi.list();
       setUsers(response.data);
     } catch (error) {
-      console.error('Failed to load users:', error);
-      setError('加载用户列表失败');
+setError('加载用户列表失败');
     } finally {
       setLoading(false);
     }
@@ -153,8 +151,7 @@ export const UserManagement = () => {
       setIsModalOpen(false);
       await loadData();
     } catch (error) {
-      console.error('Failed to save user:', error);
-      setError(editingUser ? '更新用户失败' : '创建用户失败');
+setError(editingUser ? '更新用户失败' : '创建用户失败');
     } finally {
       setLoading(false);
     }
@@ -167,8 +164,7 @@ export const UserManagement = () => {
         await usersApi.delete(id);
         await loadData();
       } catch (error) {
-        console.error('Failed to delete user:', error);
-        setError('删除用户失败');
+setError('删除用户失败');
       } finally {
         setLoading(false);
       }

@@ -1,26 +1,19 @@
-import { PrismaClient } from '@prisma/client';
+﻿import { PrismaClient } from '@prisma/client';
 
 // Global test teardown for integration tests
 const prisma = new PrismaClient();
 
 export default async function globalTeardown() {
-  console.log('🧹 Global test teardown started');
-
-  try {
+try {
     // Connect to test database
     await prisma.$connect();
-    console.log('✅ Database connected');
-
-    // Clean up database after tests
+// Clean up database after tests
     await cleanupDatabase();
-    console.log('✅ Database cleaned');
-  } catch (error) {
-    console.error('❌ Global teardown failed:', error);
-    throw error;
+} catch (error) {
+throw error;
   } finally {
     await prisma.$disconnect();
-    console.log('🧹 Global test teardown completed');
-  }
+}
 }
 
 async function cleanupDatabase() {
@@ -36,8 +29,7 @@ async function cleanupDatabase() {
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
       } catch (error) {
-        console.log(`⚠️  Note: ${tablename} doesn't exist, skipping`);
-      }
+}
     }
   }
 }

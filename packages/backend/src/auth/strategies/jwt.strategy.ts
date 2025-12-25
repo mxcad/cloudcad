@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -33,13 +33,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: { sub: string; email: string; username: string }) {
-    console.log(`[JwtStrategy] 验证用户: ${payload.username} (${payload.sub})`);
-
     // 检查用户是否在黑名单中
     const isUserBlacklisted =
       await this.tokenBlacklistService.isUserBlacklisted(payload.sub);
-    console.log(`[JwtStrategy] 用户黑名单状态: ${isUserBlacklisted}`);
-    if (isUserBlacklisted) {
+if (isUserBlacklisted) {
       throw new Error('用户已被禁用');
     }
 
@@ -55,20 +52,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         status: true,
       },
     });
-
-    console.log(`[JwtStrategy] 数据库查询结果:`, user);
-
-    if (!user) {
-      console.log(`[JwtStrategy] 用户不存在: ${payload.sub}`);
-      throw new Error('用户不存在');
+if (!user) {
+throw new Error('用户不存在');
     }
 
     if (user.status !== 'ACTIVE') {
-      console.log(`[JwtStrategy] 用户状态异常: ${user.status} (期望: ACTIVE)`);
       throw new Error('用户已被禁用');
     }
-
-    console.log(`[JwtStrategy] 用户验证成功: ${user.username}`);
-    return user;
+return user;
   }
 }

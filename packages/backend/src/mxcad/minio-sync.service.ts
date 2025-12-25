@@ -214,7 +214,11 @@ export class MinioSyncService {
       await this.ensureBucketExists();
       const statResult = await this.minioClient.statObject(this.bucketName, minioPath);
       return statResult.size;
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'NotFound') {
+        this.logger.warn(`MinIO 文件不存在: ${minioPath}`);
+        return 0;
+      }
       this.logger.error(`获取 MinIO 文件大小失败: ${minioPath}`, error);
       return 0;
     }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
@@ -53,8 +53,7 @@ export const Profile: React.FC = () => {
       try {
         await logout();
       } catch (logoutErr) {
-        console.error('退出登录失败:', logoutErr);
-      }
+}
 
       navigate('/login', {
         state: { message: '密码已修改，请使用新密码登录' },

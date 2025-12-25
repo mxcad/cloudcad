@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -116,8 +116,7 @@ export const ProjectManager = () => {
       setProjects(response.data || []);
       showToast('项目列表加载成功', 'success');
     } catch (error: any) {
-      console.error('Failed to load projects:', error);
-      const errorMessage = error.response?.data?.message || error.message || '加载项目列表失败';
+const errorMessage = error.response?.data?.message || error.message || '加载项目列表失败';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
@@ -206,8 +205,7 @@ export const ProjectManager = () => {
       setFormData({ name: '', description: '', status: 'ACTIVE' });
       await loadProjects();
     } catch (error: any) {
-      console.error('Failed to save project:', error);
-      const errorMessage = error.response?.data?.message || error.message || '操作失败';
+const errorMessage = error.response?.data?.message || error.message || '操作失败';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
@@ -225,8 +223,7 @@ export const ProjectManager = () => {
         showToast('项目删除成功', 'success');
         await loadProjects();
       } catch (error: any) {
-        console.error('Failed to delete project:', error);
-        const errorMessage = error.response?.data?.message || error.message || '删除项目失败';
+const errorMessage = error.response?.data?.message || error.message || '删除项目失败';
         setError(errorMessage);
         showToast(errorMessage, 'error');
       } finally {

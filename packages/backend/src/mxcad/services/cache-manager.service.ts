@@ -9,7 +9,7 @@ export interface CacheItem<T> {
 export class CacheManagerService {
   private readonly logger = new Logger(CacheManagerService.name);
   private readonly caches: Map<string, Map<string, CacheItem<any>>> = new Map();
-  private readonly defaultTTL = 30000; // 30秒
+  private readonly defaultTTL = 300000; // 5分钟 - 增加缓存时间，避免文件上传过程中缓存过期
 
   /**
    * 获取缓存值

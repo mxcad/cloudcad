@@ -27,7 +27,7 @@ export class DatabaseService
     });
 
     super({
-      log: ['query', 'info', 'warn', 'error'],
+      log: ['info', 'warn', 'error'],
       adapter,
     });
   }

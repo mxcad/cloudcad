@@ -26,7 +26,10 @@ async function bootstrap() {
   
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule,
-    new ExpressAdapter(server)
+    new ExpressAdapter(server),
+    {
+      logger: ['error', 'warn', 'log'],
+    }
   );
 
   // 启用CORS
@@ -47,8 +50,5 @@ async function bootstrap() {
   AppModule.configureSwagger(app);
 
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
-
-  console.log(`应用运行在: ${await app.getUrl()}`);
-  console.log(`API文档地址: ${await app.getUrl()}/api/docs`);
 }
 bootstrap();

@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+﻿import React, { useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -89,15 +89,6 @@ export const FileSystemManager: React.FC = () => {
     node.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  // 调试日志
-  console.log('🔍 [FileSystemManager] 节点状态:', {
-    nodesCount: nodes.length,
-    filteredNodesCount: filteredNodes.length,
-    searchQuery,
-    nodes: nodes.map(n => ({ id: n.id, name: n.name, isFolder: n.isFolder })),
-    filteredNodes: filteredNodes.map(n => ({ id: n.id, name: n.name, isFolder: n.isFolder }))
-  });
-
   if (!projectId) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-500">
@@ -186,26 +177,13 @@ export const FileSystemManager: React.FC = () => {
                   // 使用 currentNode.id 而不是路由参数，确保获取的是当前实际的目录
                   const currentDirId = currentNode?.id || projectId;
                   const targetDirId = param.parentId || projectId;
-                  
-                  console.log('🔍 [FileSystemManager] 秒传后目录检查:', {
-                    currentDirId,
-                    targetDirId,
-                    currentNodeId: currentNode?.id,
-                    nodeId,
-                    projectId,
-                    paramParentId: param.parentId,
-                    isSameDirectory: currentDirId === targetDirId
-                  });
-                  
-                  if (currentDirId !== targetDirId) {
+if (currentDirId !== targetDirId) {
                     // 如果不在目标目录，导航到目标目录
                     const targetUrl = `/projects/${projectId}/files/${targetDirId === projectId ? '' : targetDirId}`;
-                    console.log('🔍 [FileSystemManager] 导航到目标目录:', targetUrl);
-                    navigate(targetUrl);
+navigate(targetUrl);
                   } else {
                     // 如果已在目标目录，直接刷新
-                    console.log('🔍 [FileSystemManager] 已在目标目录，刷新当前列表');
-                    handleRefresh();
+handleRefresh();
                   }
                 }, 1000); // 增加延迟时间从500ms到1000ms
               } else {
@@ -299,24 +277,14 @@ export const FileSystemManager: React.FC = () => {
                           const currentDirId = currentNode?.id || projectId;
                           const targetDirId = param.parentId || projectId;
                           
-                          console.log('🔍 [FileSystemManager] 秒传后目录检查 (空状态):', {
-                            currentDirId,
-                            targetDirId,
-                            currentNodeId: currentNode?.id,
-                            nodeId,
-                            projectId,
-                            paramParentId: param.parentId,
-                            isSameDirectory: currentDirId === targetDirId
-                          });
+                          
                           
                           if (currentDirId !== targetDirId) {
                             // 如果不在目标目录，导航到目标目录
                             const targetUrl = `/projects/${projectId}/files/${targetDirId === projectId ? '' : targetDirId}`;
-                            console.log('🔍 [FileSystemManager] 导航到目标目录 (空状态):', targetUrl);
                             navigate(targetUrl);
                           } else {
                             // 如果已在目标目录，直接刷新
-                            console.log('🔍 [FileSystemManager] 已在目标目录，刷新当前列表 (空状态)');
                             handleRefresh();
                           }
                         }, 1000); // 增加延迟时间从500ms到1000ms

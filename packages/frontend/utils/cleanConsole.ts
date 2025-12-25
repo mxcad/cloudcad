@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs';
+﻿import { readFileSync, writeFileSync } from 'fs';
 
 /**
  * 清理文件中的 console 输出
@@ -14,7 +14,6 @@ function cleanConsoleOutputs(filePath: string): void {
     .replace(/console\.info\([^)]*\);?/g, '// 静默：已移除信息日志');
   
   writeFileSync(filePath, cleanedContent);
-  console.log(`✅ 已清理: ${filePath}`);
 }
 
 // 如果直接运行此文件

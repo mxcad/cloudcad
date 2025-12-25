@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   createContext,
   useContext,
   useEffect,
@@ -80,11 +80,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .getProfile()
         .then((response) => {
           setUser(response.data);
-          console.log('[AuthContext] Token验证成功');
-        })
+})
         .catch((error) => {
-          console.error('[AuthContext] Token验证失败:', error);
-          // Token 无效，清除本地存储
+// Token 无效，清除本地存储
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -115,13 +113,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       
       if (sessionResponse.ok) {
-        console.log('[AuthContext] Session 创建成功');
-      } else {
-        console.warn('[AuthContext] Session 创建失败');
-      }
+} else {
+}
     } catch (error) {
-      console.warn('[AuthContext] Session 创建错误:', error);
-    }
+}
 
     // 更新状态
     setToken(accessToken);
@@ -138,11 +133,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const response = await authApi.register(data);
         // 注册成功但不自动登录，返回注册成功信息
-        console.log('[AuthContext] 注册成功，等待邮箱验证:', response.data);
-        return response.data; // { message: string; email: string }
+return response.data; // { message: string; email: string }
       } catch (error) {
-        console.error('[AuthContext] 注册失败:', error);
-        throw error;
+throw error;
       }
     },
     []
@@ -152,12 +145,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     async (email: string, code: string) => {
       try {
         const response = await authApi.verifyEmail({ email, code });
-        console.log('[AuthContext] 邮箱验证成功:', response.data);
-        // 注意：现在验证邮箱不再返回 tokens，只是验证成功
+// 注意：现在验证邮箱不再返回 tokens，只是验证成功
         // 用户需要重新登录
       } catch (error) {
-        console.error('[AuthContext] 邮箱验证失败:', error);
-        throw error;
+throw error;
       }
     },
     []
@@ -174,11 +165,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           credentials: 'include', // 包含 cookies
         });
       } catch (error) {
-        console.warn('[AuthContext] Session 清除错误:', error);
-      }
+}
     } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
+} finally {
       // 清除本地存储
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');

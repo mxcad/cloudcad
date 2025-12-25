@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -142,28 +142,22 @@ export const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[Register] 提交注册表单:', formData.email, formData.username);
-    if (!validateForm()) {
-      console.log('[Register] 表单验证失败');
-      return;
+if (!validateForm()) {
+return;
     }
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log('[Register] 调用registerUser函数');
-      await registerUser(formData);
-      console.log('[Register] 注册成功，准备跳转到邮箱验证页面');
-      // 跳转到邮箱验证页面
+await registerUser(formData);
+// 跳转到邮箱验证页面
       navigate('/verify-email', {
         state: { email: formData.email },
         replace: true,
       });
     } catch (err: any) {
-      console.error('[Register] 注册失败:', err);
-      console.error('[Register] 错误详情:', err.response?.data);
-      setError(err.response?.data?.message || '注册失败，请稍后重试');
+setError(err.response?.data?.message || '注册失败，请稍后重试');
     } finally {
       setLoading(false);
     }

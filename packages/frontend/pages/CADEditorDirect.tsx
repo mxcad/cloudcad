@@ -36,8 +36,6 @@ export const CADEditorDirect: React.FC = () => {
   const initMxCADConfig = async () => {
     const { mxcadApp } = await import('mxcad-app');
     const configUrl = window.location.origin;
-
-    console.log('⚙️ 初始化MxCAD配置');
     mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
     mxcadApp.initConfig({
       uiConfig: `${configUrl}/ini/myUiConfig.json`,
@@ -56,27 +54,8 @@ export const CADEditorDirect: React.FC = () => {
         new URLSearchParams(location.search).get('project') || '';
       const parentId = new URLSearchParams(location.search).get('parent') || '';
 
-      console.log('🔧 设置服务器配置', {
-        projectId,
-        parentId,
-        search: location.search,
-      });
-
       // 验证项目信息
       if (!projectId) {
-        console.error('❌ 缺少项目ID，无法正确上传文件到文件系统');
-        console.error(
-          '❌ 请确保通过文件管理页面访问CAD编辑器，而不是直接访问URL'
-        );
-
-        // 禁用上传功能
-        serverConfig.uploadFileConfig.create.beforeSend = function () {
-          alert(
-            '❌ 缺少项目上下文，无法上传文件。\n\n请通过文件管理页面访问CAD编辑器，确保文件能正确保存到项目中。'
-          );
-          return false; // 阻止上传
-        };
-
         // 显示用户提示
         const existingWarning = document.getElementById(
           'mxcad-context-warning'
@@ -113,66 +92,21 @@ export const CADEditorDirect: React.FC = () => {
           existingWarning.remove();
         }
       }
-
+   
       serverConfig.uploadFileConfig.create.formData = {
         ...serverConfig.uploadFileConfig.create.formData,
         projectId: projectId,
         parentId: parentId,
       };
 
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        // 为上传配置添加认证头
-        serverConfig.uploadFileConfig.create.headers = {
-          ...serverConfig.uploadFileConfig.create.headers,
-          Authorization: `Bearer ${token}`,
-        };
-        console.log('✅ 已为 MxCAD 上传配置添加认证头');
-
-        // 文件检查请求保持原始配置，MxCAD会自动使用upload配置中的认证头
-        console.log('✅ MxCAD 文件检查请求将使用upload配置中的认证头');
-      }
+      // Authorization header 由 apiService 拦截器统一处理
     }
   };
 
   useEffect(() => {
-    console.log('🔍 CAD编辑器页面加载', {
-      fileId,
-      pathname: location.pathname,
-      search: location.search,
-    });
-
-    // 尽早设置MxCAD认证拦截器，确保所有MxCAD网络请求都携带认证头
-
-    const setupMxCADAuth = async () => {
-      const token = localStorage.getItem('accessToken');
-
-      if (!token) {
-        console.warn('⚠️ 未找到JWT token，MxCAD文件访问可能失败');
-
-        return;
-      }
-
-      console.log('🔐 设置MxCAD认证拦截器');
-
-      // 手动调用 MxCADManager 的认证拦截器设置
-
-      const { mxcadManager } = await import('../services/mxcadManager');
-
-      mxcadManager.setupAuthInterceptor();
-
-      console.log('✅ JWT token 已准备就绪，认证拦截器已配置');
-    };
-
-    setupMxCADAuth();
-
     if (!fileId) {
-      console.error('❌ 未找到文件ID');
-
       setError('未找到文件ID');
-
       setLoading(false);
-
       return;
     }
 
@@ -189,17 +123,13 @@ export const CADEditorDirect: React.FC = () => {
 
     const initEditor = async () => {
       try {
-        console.log('📁 获取文件信息', { fileId });
-
         // 获取文件信息
         const fileResponse = await apiService.get(
           `/file-system/nodes/${fileId}`
         );
         const file = fileResponse.data;
-        console.log('📄 文件信息', file);
 
         if (!file.fileHash) {
-          console.error('❌ 文件尚未转换完成');
           setError('文件尚未转换完成');
           setLoading(false);
           return;
@@ -214,20 +144,11 @@ export const CADEditorDirect: React.FC = () => {
         // 直接使用数据库中的path字段
         const mxcadFileUrl = file.path;
 
-        console.log('🚀 准备初始化MxCAD', {
-          fileHash: file.fileHash,
-          fileName: file.originalName,
-          fileExtension: file.extension,
-          mxcadFileUrl,
-        });
-
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);
         mxcadManager.showMxCAD(true);
-        console.log('✅ CAD编辑器初始化完成');
         setLoading(false);
       } catch (err) {
-        console.error('❌ CAD编辑器初始化失败:', err);
         setError('CAD编辑器初始化失败');
         setLoading(false);
       }
@@ -236,7 +157,6 @@ export const CADEditorDirect: React.FC = () => {
     initEditor();
 
     return () => {
-      console.log('🧹 清理：隐藏MxCAD');
       // 动态导入 mxcadManager 进行清理
       import('../services/mxcadManager').then(({ mxcadManager }) => {
         mxcadManager.showMxCAD(false);

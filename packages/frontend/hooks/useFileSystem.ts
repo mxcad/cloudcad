@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+﻿import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { projectsApi, filesApi } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
@@ -83,15 +83,7 @@ export const useFileSystem = () => {
     if (!projectId) return;
     
     const currentNodeId = nodeId || projectId;
-    
-    console.log('🔍 [useFileSystem] loadData 开始:', {
-      projectId,
-      nodeId,
-      currentNodeId,
-      url: window.location.pathname
-    });
-    
-    setLoading(true);
+setLoading(true);
     setError(null);
     setSelectedNodes(new Set()); // 清除选中状态
     
@@ -101,14 +93,7 @@ export const useFileSystem = () => {
         projectsApi.getNode(currentNodeId),
         projectsApi.getChildren(currentNodeId)
       ]);
-      
-      console.log('🔍 [useFileSystem] API 响应:', {
-        currentNode: nodeResponse.data,
-        childrenCount: childrenResponse.data?.length || 0,
-        children: childrenResponse.data
-      });
-      
-      const nodeData = nodeResponse.data;
+const nodeData = nodeResponse.data;
       const childrenData = childrenResponse.data || [];
       
       setCurrentNode(nodeData);

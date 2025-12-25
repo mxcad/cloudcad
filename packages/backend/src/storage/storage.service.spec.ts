@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from './storage.service';
 import { Readable } from 'stream';
@@ -96,8 +96,7 @@ describe('StorageService', () => {
       const bucketExists = await mockMinioClient.bucketExists('cloucad');
       if (!bucketExists) {
         await mockMinioClient.makeBucket('cloucad', 'us-east-1');
-        console.log('MinIO bucket cloucad 创建成功');
-      }
+}
 
       expect(mockMinioClient.bucketExists).toHaveBeenCalledWith('cloucad');
       expect(mockMinioClient.makeBucket).toHaveBeenCalledWith(

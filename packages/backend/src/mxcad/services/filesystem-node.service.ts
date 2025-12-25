@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { FileStatus } from '@prisma/client';
-import * as path from 'path';
 
 export interface FileSystemNodeContext {
   projectId: string;

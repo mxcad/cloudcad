@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Post,
   Get,
@@ -68,31 +68,8 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
   async checkFileExist(@Body() dto: FileExistDto, @Req() request: any, @Res() res: Response) {
-    console.log('[MxCadController] checkFileExist - 开始处理请求');
-    console.log('[MxCadController] checkFileExist - 请求体:', dto);
-    console.log('[MxCadController] checkFileExist - 请求头:', {
-      authorization: request.headers.authorization ? '存在' : '不存在',
-      contentType: request.headers['content-type'],
-    });
-
-    // 构建上下文
-    console.log('[MxCadController] checkFileExist - 开始构建上下文');
     const context = await this.buildContextFromRequest(request);
-    console.log('[MxCadController] checkFileExist - 构建的上下文:', context);
-    console.log('[MxCadController] checkFileExist - 上下文详细信息:', {
-      hasContext: !!context,
-      hasProjectId: !!context?.projectId,
-      hasUserId: !!context?.userId,
-      projectId: context?.projectId,
-      parentId: context?.parentId,
-      userId: context?.userId,
-      userRole: context?.userRole,
-    });
-
-    console.log('[MxCadController] checkFileExist - 调用服务层方法');
     const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash, context);
-    console.log('[MxCadController] checkFileExist - 服务层返回结果:', result);
-
     return res.json(result);
   }
 
@@ -159,54 +136,23 @@ export class MxCadController {
     @Req() request: any,
     @Res() res: Response
   ) {
-    // 添加调试日志
-    console.log('[MxCadController] uploadFile - body:', body);
-    console.log('[MxCadController] uploadFile - file:', file ? `存在(${file.originalname})` : '不存在');
-
     if (!file) {
-      console.log('[MxCadController] ❌ 缺少文件参数');
       return res.json({ ret: 'errorparam' });
     }
 
     if (!body.hash || !body.name || !body.size) {
-      console.log('[MxCadController] ❌ 缺少必需参数:', {
-        hash: !!body.hash,
-        name: !!body.name,
-        size: !!body.size,
-        actualHash: body.hash,
-        actualName: body.name,
-        actualSize: body.size,
-        allBodyKeys: Object.keys(body),
-        allBodyValues: body
-      });
-
-      // 尝试从文件中提取信息作为后备
-      if (file && !body.hash) {
-        console.log('[MxCadController] ⚠️ 尝试从文件信息补充参数');
-        // 这里可以尝试从文件名或其他信息推断参数
-      }
-
       return res.json({ ret: 'errorparam' });
     }
 
     if (body.chunk !== undefined && body.chunks === undefined) {
-      console.log('[MxCadController] ❌ 分片上传参数不完整:', {
-        chunk: body.chunk,
-        chunks: body.chunks
-      });
       return res.json({ ret: 'errorparam' });
     }
-
-    console.log('[MxCadController] ✅ 参数验证通过');
 
     // 构建上下文 - 从JWT token验证用户身份
     const context = await this.buildContextFromRequest(request);
 
-    console.log('[MxCadController] 构建的上下文:', context);
-
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
-      console.log('[MxCadController] 执行分片上传逻辑');
       try {
         const fs = require('fs');
         const path = require('path');
@@ -230,8 +176,11 @@ export class MxCadController {
         }
 
         // 移动文件
-        fs.renameSync(file.path, chunkFilePath);
+        if (!fs.existsSync(file.path)) {
+          return res.json({ ret: 'errorparam' });
+        }
 
+        fs.renameSync(file.path, chunkFilePath);
 
         const result = await this.mxCadService.uploadChunkWithPermission(
           body.hash,
@@ -248,7 +197,6 @@ export class MxCadController {
       }
     } else if (body.chunks !== undefined && !file) {
       // 完成请求（没有文件，只有 chunks 信息）
-      console.log('[MxCadController] 执行完成请求逻辑');
       try {
         const result = await this.mxCadService.mergeChunksWithPermission(
           body.hash,
@@ -257,7 +205,6 @@ export class MxCadController {
           parseInt(body.chunks, 10),
           context
         );
-        console.log('[MxCadController] mergeChunksWithPermission 结果:', result);
         return res.json(result);
       } catch (error) {
         this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
@@ -816,16 +763,43 @@ export class MxCadController {
    */
   private async handleFileRequest(filename: string, @Res() res: Response, @Req() req: any, isHeadRequest: boolean) {
     try {
-      // 1. 构建上下文并验证权限
-      const context = await this.buildContextFromRequest(req);
+      // 对于文件访问请求，验证 JWT token 但不强制要求 projectId
+      // 通过文件路径查找 FileSystemNode 并验证权限
+      
+      // 调试日志
+      this.logger.log(`访问文件请求: ${filename}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`);
+      
+      let userId: string;
+      try {
+        userId = await this.validateTokenAndGetUserId(req);
+        this.logger.log(`用户ID验证成功: ${userId}`);
+      } catch (authError) {
+        this.logger.warn(`JWT验证失败: ${authError.message}`);
+        return res.status(401).json({ code: -1, message: authError.message });
+      }
+      
+      // 从文件路径中提取哈希值（可能是完整路径如: hash/filename 或直接是 filename）
+      const pathParts = filename.split('/');
+      const fileHash = pathParts[0]; // 第一个部分是哈希值
+      const actualFilename = pathParts.length > 1 ? pathParts.slice(1).join('/') : filename;
 
-      // 2. 如果提供了项目ID，验证用户是否有权限访问该项目
-      if (context.projectId) {
-        const hasPermission = await this.mxCadService.checkProjectPermission(
-          context.projectId,
-          context.userId,
-          context.userRole
+      this.logger.log(`提取的fileHash: ${fileHash}, actualFilename: ${actualFilename}`);
+
+      // 通过哈希值查找 FileSystemNode，验证用户是否有访问权限
+      const node = await this.getFileSystemNodeByHash(fileHash);
+      this.logger.log(`查找文件节点: hash=${fileHash}, 找到=${!!node}`);
+      
+      if (!node) {
+        // 文件节点不存在，降级到本地文件系统查找（兼容旧文件）
+        this.logger.log(`文件节点不存在，降级到本地文件系统: ${filename}`);
+      } else {
+        // 验证用户是否有权限访问该文件
+        const hasPermission = await this.checkFileAccessPermission(
+          node.id,
+          userId,
+          userId // 简化处理，使用用户ID作为检查对象
         );
+        this.logger.log(`权限检查结果: nodeId=${node.id}, userId=${userId}, hasPermission=${hasPermission}`);
 
         if (!hasPermission) {
           return res.status(401).json({
@@ -838,13 +812,33 @@ export class MxCadController {
       const fs = require('fs');
       const path = require('path');
 
-      // 直接使用完整文件名进行查找，不需要提取哈希值
-      // 文件在 MinIO 和本地文件系统中都以完整文件名存储
-      const possiblePaths = [
-        `mxcad/file/${filename}`,
-      ];
+      // 根据文件扩展名确定可能的存储路径
+      const ext = path.extname(filename).toLowerCase();
+      const possiblePaths: string[] = [];
 
-      this.logger.log(`访问文件 - mxcad/file/${filename}`);
+      // 对于 mxweb 文件，使用 mxcad/file/ 路径
+      if (ext === '.mxweb') {
+        possiblePaths.push(`mxcad/file/${filename}`);
+      } 
+      // 对于图片文件，可能在 mxcad_res 目录下或根据哈希值查找
+      else if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
+        possiblePaths.push(`mxcad/res/${filename}`);
+        possiblePaths.push(`mxcad/images/${filename}`);
+        // 也支持直接文件名
+        possiblePaths.push(filename);
+      }
+      // 对于 JSON 文件
+      else if (ext === '.json') {
+        possiblePaths.push(`mxcad/file/${filename}`);
+        possiblePaths.push(filename);
+      }
+      // 其他文件类型
+      else {
+        possiblePaths.push(`mxcad/file/${filename}`);
+        possiblePaths.push(filename);
+      }
+
+      this.logger.log(`访问文件 - 尝试路径: ${possiblePaths.join(', ')}`);
 
       let minioUrl: string | null = null;
 
@@ -920,7 +914,7 @@ export class MxCadController {
       // MinIO 中不存在，降级到本地文件系统
       this.mxCadService.logWarn(`MinIO 文件不存在，降级到本地文件系统: ${filename}`);
 
-      // 获取文件搜索路径列表，与参考代码保持一致
+      // 获取文件搜索路径列表
       const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const resFilePath: string[] = [uploadPath];
 
@@ -939,10 +933,29 @@ export class MxCadController {
 
       // 在所有路径中查找文件
       for (let i = 0; i < resFilePath.length; i++) {
-        const currentPath = path.join(resFilePath[i], filename);
-        if (fs.existsSync(currentPath)) {
-          foundFilePath = currentPath;
+        // 直接查找
+        const directPath = path.join(resFilePath[i], filename);
+        if (fs.existsSync(directPath)) {
+          foundFilePath = directPath;
           break;
+        }
+
+        // 对于图片和资源文件，可能在哈希值命名的子目录中
+        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.json'].includes(ext)) {
+          // 从 filename 中提取哈希值（如果包含路径）
+          const parts = filename.split('/');
+          const hash = parts[0];
+          const shortName = parts.length > 1 ? parts.slice(1).join('/') : filename;
+
+          // 在哈希值命名的目录中查找
+          const hashDirPath = path.join(resFilePath[i], hash);
+          if (fs.existsSync(hashDirPath) && fs.statSync(hashDirPath).isDirectory()) {
+            const fileInHashDir = path.join(hashDirPath, shortName);
+            if (fs.existsSync(fileInHashDir)) {
+              foundFilePath = fileInHashDir;
+              break;
+            }
+          }
         }
       }
 
@@ -957,8 +970,7 @@ export class MxCadController {
       // 获取文件状态
       const stats = fs.statSync(foundFilePath);
 
-      // 设置响应头，与参考代码保持一致
-      const ext = path.extname(filename).toLowerCase();
+      // 设置响应头，与参考代码保持一致（ext 已在上面声明）
       let contentType = 'application/octet-stream';
 
       // 根据文件扩展名设置适当的 Content-Type
@@ -982,8 +994,36 @@ export class MxCadController {
         case '.jpeg':
           contentType = 'image/jpeg';
           break;
+        case '.gif':
+          contentType = 'image/gif';
+          break;
+        case '.webp':
+          contentType = 'image/webp';
+          break;
+        case '.svg':
+          contentType = 'image/svg+xml';
+          break;
+        case '.bmp':
+          contentType = 'image/bmp';
+          break;
         case '.pdf':
           contentType = 'application/pdf';
+          break;
+        case '.xml':
+          contentType = 'application/xml';
+          break;
+        case '.txt':
+          contentType = 'text/plain';
+          break;
+        case '.css':
+          contentType = 'text/css';
+          break;
+        case '.js':
+          contentType = 'application/javascript';
+          break;
+        case '.html':
+        case '.htm':
+          contentType = 'text/html';
           break;
       }
 
@@ -1026,107 +1066,179 @@ export class MxCadController {
    * 从请求中构建上下文信息，通过JWT验证用户身份
    * 强制要求JWT认证，确保安全性
    */
-  private async buildContextFromRequest(request: any): Promise<any> {
-    try {
-      console.log('[MxCadController] buildContextFromRequest - 开始构建上下文');
-      console.log('[MxCadController] buildContextFromRequest - 请求体:', request.body);
-      console.log('[MxCadController] buildContextFromRequest - 请求查询:', request.query);
-
-      // 1. 必须从 Authorization header 获取 JWT token
-      if (!request.headers.authorization) {
-        console.log('[MxCadController] ❌ 缺少Authorization header');
-        throw new UnauthorizedException('缺少Authorization header，请提供有效的JWT token');
-      }
-
-      const token = request.headers.authorization.replace('Bearer ', '');
-      console.log('[MxCadController] JWT token 长度:', token.length);
-
-      let payload;
-
+    private async buildContextFromRequest(request: any): Promise<any> {
       try {
-        payload = this.jwtService.verify(token);
-        console.log('[MxCadController] JWT 验证成功，用户ID:', payload.sub);
-      } catch (error) {
-        console.log('[MxCadController] ❌ JWT token验证失败:', error.message);
-        throw new UnauthorizedException('JWT token无效或已过期');
-      }
-
-      // 2. 验证用户存在且状态正常
-      const userData = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          nickname: true,
-          role: true,
-          status: true,
-        },
-      });
-
-      if (!userData) {
-        console.log('[MxCadController] ❌ 用户不存在:', payload.sub);
-        throw new UnauthorizedException('用户不存在');
-      }
-
-      if (userData.status !== 'ACTIVE') {
-        console.log('[MxCadController] ❌ 用户账号被禁用:', userData.status);
-        throw new UnauthorizedException('用户账号已被禁用');
-      }
-
-      this.logger.log(`JWT 验证成功: ${userData.username}`);
-
-      // 3. 从多个来源获取项目信息：
-      // - POST 请求：从 request.body 获取
-      // - GET/HEAD 请求：从 request.query 获取
-      const projectId = request.body?.projectId || request.query?.project;
-      const parentId = request.body?.parentId || request.query?.parent;
-
-      console.log('[MxCadController] 项目信息提取:', {
-        fromBody: {
-          projectId: request.body?.projectId,
-          parentId: request.body?.parentId,
-        },
-        fromQuery: {
-          project: request.query?.project,
-          parent: request.query?.parent,
-        },
-        final: {
+        // 1. 必须从 Authorization header 获取 JWT token
+        if (!request.headers.authorization) {
+          throw new UnauthorizedException('缺少Authorization header，请提供有效的JWT token');
+        }
+  
+        const token = request.headers.authorization.replace('Bearer ', '');
+  
+        let payload;
+        try {
+          payload = this.jwtService.verify(token);
+        } catch (error) {
+          throw new UnauthorizedException('JWT token无效或已过期');
+        }
+  
+        // 2. 验证用户存在且状态正常
+        const userData = await this.prisma.user.findUnique({
+          where: { id: payload.sub },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            nickname: true,
+            role: true,
+            status: true,
+          },
+        });
+  
+        if (!userData) {
+          throw new UnauthorizedException('用户不存在');
+        }
+  
+        if (userData.status !== 'ACTIVE') {
+          throw new UnauthorizedException('用户账号已被禁用');
+        }
+  
+        this.logger.log(`JWT 验证成功: ${userData.username}`);
+  
+        // 3. 从多个来源获取项目信息：
+        // - POST 请求：从 request.body 获取
+        // - GET/HEAD 请求：从 request.query 获取
+        const projectId = request.body?.projectId || request.query?.project;
+        const parentId = request.body?.parentId || request.query?.parent;
+  
+        // 4. 严格验证项目ID是否存在
+        if (!projectId) {
+          throw new Error('缺少项目ID，无法创建文件系统节点');
+        }
+  
+        // 5. 构建上下文
+        const context = {
           projectId,
           parentId,
+          userId: userData.id,
+          userRole: userData.role,
+        };
+  
+        this.logger.log(`构建上下文: userId=${userData.id}, projectId=${projectId}, parentId=${parentId}`);
+        return context;
+  
+      } catch (error) {
+        this.logger.error(`构建上下文失败: ${error.message}`, error);
+  
+        // 验证失败时抛出异常，不再返回空上下文
+        if (error instanceof UnauthorizedException) {
+          throw error;
+        }
+  
+        throw new UnauthorizedException('身份验证失败');
+      }
+    }
+
+  /**
+   * 验证 JWT token 并返回用户 ID（用于文件访问）
+   * @param request Express Request 对象
+   * @returns 用户 ID
+   */
+  private async validateTokenAndGetUserId(request: any): Promise<string> {
+    const authorization = request.headers.authorization;
+
+    if (!authorization) {
+      throw new UnauthorizedException('缺少Authorization header');
+    }
+
+    const token = authorization.replace('Bearer ', '');
+
+    let payload;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException('JWT token无效或已过期');
+    }
+
+    const userData = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, status: true },
+    });
+
+    if (!userData) {
+      throw new UnauthorizedException('用户不存在');
+    }
+
+    if (userData.status !== 'ACTIVE') {
+      throw new UnauthorizedException('用户账号已被禁用');
+    }
+
+    return userData.id;
+  }
+
+  /**
+   * 通过文件哈希值查找 FileSystemNode
+   * @param fileHash 文件哈希值
+   * @returns FileSystemNode 或 null
+   */
+  private async getFileSystemNodeByHash(fileHash: string): Promise<any> {
+    try {
+      // 查找文件哈希匹配的文件节点
+      const node = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          fileHash: fileHash,
+          isFolder: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
         },
       });
 
-      // 4. 严格验证项目ID是否存在
-      if (!projectId) {
-        console.log('[MxCadController] ❌ 缺少项目ID，无法构建上下文');
-        console.log('[MxCadController] ❌ 请确保通过文件管理页面访问CAD编辑器，而不是直接访问URL');
-        throw new Error('缺少项目ID，无法创建文件系统节点');
-      }
-
-      // 5. 构建上下文
-      const context = {
-        projectId,
-        parentId,
-        userId: userData.id,
-        userRole: userData.role,
-      };
-
-      this.logger.log(`构建上下文: userId=${userData.id}, projectId=${projectId}, parentId=${parentId}`);
-      console.log('[MxCadController] ✅ 上下文构建完成:', context);
-
-      return context;
-
+      return node;
     } catch (error) {
-      console.log('[MxCadController] ❌ 构建上下文失败:', error.message);
-      this.logger.error(`构建上下文失败: ${error.message}`, error);
+      this.logger.error(`查找文件节点失败: ${error.message}`, error);
+      return null;
+    }
+  }
 
-      // 验证失败时抛出异常，不再返回空上下文
-      if (error instanceof UnauthorizedException) {
-        throw error;
+  /**
+   * 检查用户是否有文件访问权限
+   * @param nodeId 文件节点 ID
+   * @param userId 用户 ID
+   * @param checkUserId 要检查权限的用户 ID
+   * @returns 是否有权限
+   */
+  private async checkFileAccessPermission(nodeId: string, userId: string, checkUserId: string): Promise<boolean> {
+    try {
+      // 如果是文件所有者，有权限
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { ownerId: true },
+      });
+
+      if (!node) {
+        return false;
       }
 
-      throw new UnauthorizedException('身份验证失败');
+      // 文件所有者有权限
+      if (node.ownerId === checkUserId) {
+        return true;
+      }
+
+      // 检查是否有文件访问权限
+      const access = await this.prisma.fileAccess.findFirst({
+        where: {
+          nodeId: nodeId,
+          userId: checkUserId,
+        },
+      });
+
+      return !!access;
+    } catch (error) {
+      this.logger.error(`检查文件访问权限失败: ${error.message}`, error);
+      return false;
     }
   }
 }

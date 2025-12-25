@@ -1,29 +1,24 @@
-/**
+﻿/**
  * 日志工具
  */
 export class Logger {
   static info(message: string, ...args: any[]): void {
-    console.log(`[INFO] ${message}`, ...args);
-  }
+}
 
   static error(message: string, ...args: any[]): void {
-    console.error(`[ERROR] ${message}`, ...args);
-  }
+}
 
   static warn(message: string, ...args: any[]): void {
-    console.warn(`[WARN] ${message}`, ...args);
-  }
+}
 
   static success(message: string, ...args: any[]): void {
-    console.log(`%c[SUCCESS] ${message}`, 'color: green', ...args);
-  }
+}
 
   /**
    * 强制输出日志（仅在调试时启用）
    */
   static force(message: string, ...args: any[]): void {
-    console.log(`[FORCE] ${message}`, ...args);
-  }
+}
 
   /**
    * 静默所有日志输出

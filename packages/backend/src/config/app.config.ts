@@ -29,20 +29,6 @@ export interface MinIOConfig {
   bucket: string;
 }
 
-export interface DebugConfig {
-  enabled: boolean;
-  modules: {
-    fileSystem: string;
-    mxcad: string;
-    upload: string;
-    auth: string;
-    database: string;
-    cache: string;
-  };
-  console: boolean;
-  filePath: string;
-}
-
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -58,5 +44,5 @@ export interface AppConfig {
     maxSize: number;
     allowedTypes: string[];
   };
-  debug: DebugConfig;
+  // debug 配置已删除，使用 NestJS 原生日志
 }

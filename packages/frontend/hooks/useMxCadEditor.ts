@@ -112,13 +112,7 @@ export const useMxCadServerConfig = (
           mxcadUserRole: user.role,
         };
 
-        const token = localStorage.getItem('accessToken');
-        if (!serverConfig.uploadFileConfig.create.headers) {
-          serverConfig.uploadFileConfig.create.headers = {};
-        }
-        if (token) {
-          serverConfig.uploadFileConfig.create.headers.Authorization = `Bearer ${token}`;
-        }
+        // Authorization header 由 apiService 拦截器统一处理
         
         Logger.info('修改 MxCAD 服务器配置，添加上下文参数', 
           serverConfig.uploadFileConfig.create.formData);

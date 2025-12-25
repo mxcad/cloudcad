@@ -1,35 +1,24 @@
-import { ConfigService } from '@nestjs/config';
+﻿import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 // Global test setup for integration tests
 const prisma = new PrismaClient();
 
 export default async function globalSetup() {
-  console.log('🔧 Global test setup started');
-
-  try {
+try {
     // Connect to test database
     await prisma.$connect();
-    console.log('✅ Database connected');
-
-    // Clean up database before tests
+// Clean up database before tests
     await cleanupDatabase();
-    console.log('✅ Database cleaned');
-
-    // Run database migrations if needed
+// Run database migrations if needed
     // await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-    console.log('✅ Database schema ready');
-
-    // Create test data seeds if needed
+// Create test data seeds if needed
     await seedTestData();
-    console.log('✅ Test data seeded');
-  } catch (error) {
-    console.error('❌ Global setup failed:', error);
-    throw error;
+} catch (error) {
+throw error;
   } finally {
     await prisma.$disconnect();
-    console.log('🔧 Global test setup completed');
-  }
+}
 }
 
 async function cleanupDatabase() {
@@ -45,8 +34,7 @@ async function cleanupDatabase() {
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
       } catch (error) {
-        console.log(`⚠️  Note: ${tablename} doesn't exist, skipping`);
-      }
+}
     }
   }
 }
@@ -69,8 +57,7 @@ async function seedTestData() {
     });
   } catch (error) {
     // Admin user might already exist
-    console.log('ℹ️  Admin user already exists or creation failed');
-  }
+}
 
   // Create default regular user if it doesn't exist
   try {
@@ -87,6 +74,5 @@ async function seedTestData() {
     });
   } catch (error) {
     // Regular user might already exist
-    console.log('ℹ️  Regular user already exists or creation failed');
-  }
+}
 }

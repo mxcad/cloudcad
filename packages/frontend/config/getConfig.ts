@@ -16,7 +16,7 @@ export const getConfig = async <T = object>(url: string)=> {
       configMap.set(url, config)
       return config as T
     } catch(e) {
-      console.error("error Config:" + url, e)
+      // 静默处理配置获取错误
     }
   }
 }

@@ -1,15 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
-import type { IFileStorageService } from '../interfaces/file-storage.interface';
-import type { IFileConversionService } from '../interfaces/file-conversion.interface';
-import type { IFileSystemService } from '../interfaces/file-system.interface';
 import { FileStorageService } from './file-storage.service';
 import { FileConversionService } from './file-conversion.service';
 import { FileSystemService } from './file-system.service';
 import { FileSystemNodeService, FileSystemNodeContext } from './filesystem-node.service';
 import { CacheManagerService } from './cache-manager.service';
-import { FileTypeDetector } from '../utils/file-type-detector';
+import { MinioSyncService } from '../minio-sync.service';
 import * as path from 'path';
 
 export interface UploadChunkOptions {
@@ -54,6 +51,7 @@ export class FileUploadManagerService {
     private readonly fileSystemService: FileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
+    private readonly minioSyncService: MinioSyncService,
   ) {}
 
   /**
@@ -93,33 +91,30 @@ export class FileUploadManagerService {
    * 支持缓存和并发控制
    */
   async checkFileExist(filename: string, fileHash: string, context?: FileSystemNodeContext): Promise<{ ret: string }> {
-    console.log('[FileUploadManager] checkFileExist - 开始处理');
-    console.log('[FileUploadManager] checkFileExist - 参数:', { filename, fileHash, context });
-
     try {
       const suffix = filename.substring(filename.lastIndexOf('.') + 1);
       const convertedExt = this.fileConversionService.getConvertedExtension(filename);
       const targetFile = `${fileHash}.${suffix}${convertedExt}`;
 
-      // 1. 检查缓存
-      const cacheKey = `${fileHash}.${suffix}`;
+      // 1. 检查缓存 - 只缓存文件存在的结果，不缓存文件不存在的结果
+      // 使用项目上下文作为缓存键的一部分，确保不同项目的文件缓存分开
+      const cacheKey = context?.projectId ? `${context.projectId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
       const cached = this.cacheManager.get<{ exists: boolean; source: string }>('file-existence', cacheKey);
       
-      if (cached) {
-        console.log('[FileUploadManager] checkFileExist - 🚀 使用缓存结果:', cached.exists, '来源:', cached.source);
-        if (cached.exists) {
-          // 缓存命中，直接处理文件系统节点创建
-          await this.handleFileSystemNodeCreation(filename, fileHash, context, cached.source, targetFile);
-          return { ret: MxUploadReturn.kFileAlreadyExist };
-        } else {
-          return { ret: MxUploadReturn.kFileNoExist };
-        }
+      if (cached && cached.exists) {
+        // 缓存命中，直接处理文件系统节点创建
+        await this.handleFileSystemNodeCreation(filename, fileHash, context, cached.source, targetFile);
+        return { ret: MxUploadReturn.kFileAlreadyExist };
+      }
+      
+      // 如果缓存显示文件不存在，忽略缓存，重新检查（避免缓存错误结果导致上传失败）
+      if (cached && !cached.exists) {
+        // 继续执行实际检查
       }
 
       // 2. 并发控制 - 如果同一个文件正在检查，等待结果
       const checkKey = `${fileHash}.${suffix}`;
       if (this.checkingFiles.has(checkKey)) {
-        console.log('[FileUploadManager] checkFileExist - ⏳ 文件正在检查中，等待结果:', checkKey);
         return await this.checkingFiles.get(checkKey)!;
       }
 
@@ -278,14 +273,11 @@ export class FileUploadManagerService {
     // 检查文件类型
     if (this.fileConversionService.needsConversion(name)) {
       // CAD文件：执行转换流程
-      console.log('[FileUploadManager] 检测到CAD文件，执行转换流程');
-      const mergeResult = await this.mergeConvertFile({ hash, name, size, chunks, context });
-      console.log('[FileUploadManager] mergeChunksWithPermission 最终返回:', mergeResult);
-      return mergeResult;
+const mergeResult = await this.mergeConvertFile({ hash, name, size, chunks, context });
+return mergeResult;
     } else {
       // 非CAD文件：合并分片并直接上传到存储服务
-      console.log('[FileUploadManager] 检测到非CAD文件，合并分片并上传到存储服务');
-      try {
+try {
         // 合并分片文件
         const tmpDir = this.fileSystemService.getChunkTempDirPath(hash);
         const mergedFilePath = path.join(tmpDir, `${hash}_merged_${name}`);
@@ -313,9 +305,7 @@ export class FileUploadManagerService {
         // 清理临时文件
         await this.fileSystemService.deleteDirectory(tmpDir);
         await this.fileSystemService.delete(mergedFilePath);
-
-        console.log('[FileUploadManager] mergeChunksWithPermission 非CAD文件处理完成');
-        return { ret: MxUploadReturn.kOk };
+return { ret: MxUploadReturn.kOk };
       } catch (error) {
         this.logger.error(`非CAD文件合并上传失败: ${error.message}`, error.stack);
         return { ret: MxUploadReturn.kConvertFileError };
@@ -389,44 +379,35 @@ export class FileUploadManagerService {
 
     // 1. 优先检查存储服务
     try {
-      console.log('[FileUploadManager] checkFileExist - 检查存储服务文件:', targetFile);
-
-      const existsInStorage = await this.fileStorageService.fileExists(targetFile);
+const existsInStorage = await this.fileStorageService.fileExists(targetFile);
       if (existsInStorage) {
         fileExists = true;
         fileSource = 'MinIO';
-        console.log('[FileUploadManager] checkFileExist - ✅ 文件在存储服务中存在');
-      }
+}
     } catch (error) {
-      console.log('[FileUploadManager] checkFileExist - ⚠️ 存储服务检查失败，降级到本地文件系统:', error.message);
-    }
+}
 
     // 2. 降级检查本地文件系统
     if (!fileExists) {
       const localPath = this.fileSystemService.getMd5Path(targetFile);
-      console.log('[FileUploadManager] checkFileExist - 检查本地文件路径:', localPath);
-      const localExists = await this.fileSystemService.exists(localPath);
-      console.log('[FileUploadManager] checkFileExist - 本地文件是否存在:', localExists);
-
-      if (localExists) {
+const localExists = await this.fileSystemService.exists(localPath);
+if (localExists) {
         fileExists = true;
         fileSource = 'Local';
-        console.log('[FileUploadManager] checkFileExist - ✅ 文件在本地文件系统中存在');
-      }
+}
     }
 
-    // 3. 缓存结果
-    this.cacheManager.set('file-existence', `${fileHash}.${suffix}`, { exists: fileExists, source: fileSource });
-
+    // 3. 缓存结果 - 只缓存文件存在的结果，避免缓存错误结果
     if (fileExists) {
-      console.log('[FileUploadManager] checkFileExist - ✅ 文件已存在（来源:', fileSource, '），检查上下文条件');
-
-      // 使用辅助方法处理文件系统节点创建
+      // 使用项目上下文作为缓存键的一部分
+      const cacheKey = context?.projectId ? `${context.projectId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
+      this.cacheManager.set('file-existence', cacheKey, { exists: true, source: fileSource });
+// 使用辅助方法处理文件系统节点创建
       await this.handleFileSystemNodeCreation(filename, fileHash, context, fileSource, targetFile);
 
       return { ret: MxUploadReturn.kFileAlreadyExist };
     } else {
-      console.log('[FileUploadManager] checkFileExist - ❌ 文件不存在（存储服务和本地均不存在）');
+// 不缓存文件不存在的结果，避免后续上传失败
       return { ret: MxUploadReturn.kFileNoExist };
     }
   }
@@ -442,23 +423,11 @@ export class FileUploadManagerService {
     targetFile: string
   ): Promise<void> {
     if (!context || !context.projectId || !context.userId) {
-      console.log('[FileUploadManager] checkFileExist - ❌ 上下文条件不满足，跳过文件系统节点创建');
-      console.log('[FileUploadManager] checkFileExist - 缺少必要参数:', {
-        hasContext: !!context,
-        hasProjectId: !!context?.projectId,
-        hasUserId: !!context?.userId,
-      });
+
       this.logger.warn(`文件 ${filename} (${fileHash}) 缺少必要上下文信息，无法创建文件系统节点`);
       return;
     }
 
-    console.log('[FileUploadManager] checkFileExist - ✅ 上下文条件满足，开始创建文件系统节点');
-    console.log('[FileUploadManager] checkFileExist - 上下文详情:', {
-      projectId: context.projectId,
-      parentId: context.parentId,
-      userId: context.userId,
-      userRole: context.userRole,
-    });
 
     try {
       // 获取文件大小
@@ -478,12 +447,8 @@ export class FileUploadManagerService {
         extension: extension,
         context: context,
       });
-
-      console.log('[FileUploadManager] checkFileExist - ✅ 文件系统节点处理完成');
-    } catch (error) {
-      console.log('[FileUploadManager] checkFileExist - ❌ 创建文件系统节点失败:', error.message);
-      console.log('[FileUploadManager] checkFileExist - 错误堆栈:', error.stack);
-      this.logger.warn(`创建文件系统节点失败: ${error.message}`);
+} catch (error) {
+this.logger.warn(`创建文件系统节点失败: ${error.message}`);
     }
   }
 
@@ -589,8 +554,7 @@ export class FileUploadManagerService {
         // 从存储服务获取文件大小
         const size = await this.fileStorageService.getFileSize(targetFile);
         if (size > 0) {
-          console.log('[FileUploadManager] getFileSize - 从存储服务获取文件大小:', size);
-          return size;
+return size;
         }
       }
 
@@ -598,22 +562,17 @@ export class FileUploadManagerService {
       const localPath = this.fileSystemService.getMd5Path(targetFile);
       const size = await this.fileSystemService.getFileSize(localPath);
       if (size > 0) {
-        console.log('[FileUploadManager] getFileSize - 从文件系统获取文件大小:', size);
-        return size;
+return size;
       }
 
       // 尝试查找其他可能的文件格式
-      console.log('[FileUploadManager] getFileSize - ⚠️ 目标文件不存在，尝试查找其他格式');
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
       const allFiles = await this.fileSystemService.readDirectory(uploadPath);
       const relatedFiles = allFiles.filter(file => file.startsWith(fileHash));
-      console.log('[FileUploadManager] getFileSize - 找到相关文件:', relatedFiles);
-
-      if (relatedFiles.length > 0) {
+if (relatedFiles.length > 0) {
         const firstFile = path.join(uploadPath, relatedFiles[0]);
         const firstFileSize = await this.fileSystemService.getFileSize(firstFile);
-        console.log('[FileUploadManager] getFileSize - 使用第一个文件的大小:', firstFileSize);
-        return firstFileSize;
+return firstFileSize;
       }
 
       return 0;

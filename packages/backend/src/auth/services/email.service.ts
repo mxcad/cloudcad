@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
 
@@ -11,11 +11,7 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
     const baseUrl = this.configService.get('FRONTEND_URL');
-
-    console.log(`[EmailService] 准备发送验证邮件到: ${email}`);
-    console.log(`[EmailService] 验证码: ${token}`);
-
-    try {
+try {
       await this.mailerService.sendMail({
         to: email,
         subject: 'CloudCAD - 验证码',
@@ -28,11 +24,8 @@ export class EmailService {
           productName: 'CloudCAD',
         },
       });
-
-      console.log(`[EmailService] 验证邮件发送成功: ${email}`);
-    } catch (error) {
-      console.error(`[EmailService] 验证邮件发送失败:`, error);
-      throw error;
+} catch (error) {
+throw error;
     }
   }
 

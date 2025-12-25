@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -119,15 +119,7 @@ export class FileSystemController {
     body: { parentId?: string; fileName?: string; fileContent?: string }
   ) {
     const { parentId, fileName, fileContent } = body;
-
-    console.log('[FileSystemController] 接收到上传请求:', {
-      parentId,
-      fileName,
-      fileContentLength: fileContent?.length || 0,
-      userId: req.user?.id,
-    });
-
-    if (!fileName) {
+if (!fileName) {
       throw new BadRequestException('缺少文件名称');
     }
 

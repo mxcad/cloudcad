@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MxCadPermissionService } from './mxcad-permission.service';
-import { FileUploadManagerService, UploadChunkOptions, MergeOptions, UploadFileOptions } from './services/file-upload-manager.service';
+import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
 
@@ -150,9 +150,7 @@ export class MxCadService {
     chunks: number,
     context?: any
   ): Promise<{ ret: string; tz?: boolean }> {
-    console.log('[MxCadService] uploadChunkWithPermission - hash:', hash, 'name:', name, 'chunk:', chunk, 'chunks:', chunks);
-
-    // 验证权限
+// 验证权限
     await this.permissionService.validateUploadPermission(context);
 
     const result = await this.fileUploadManager.uploadChunk({
@@ -163,9 +161,7 @@ export class MxCadService {
       chunks,
       context: this.validateContext(context),
     });
-
-    console.log('[MxCadService] uploadChunkWithPermission 最终返回:', result);
-    return result;
+return result;
   }
 
   /**
@@ -178,9 +174,7 @@ export class MxCadService {
     chunks: number,
     context?: any
   ): Promise<{ ret: string; tz?: boolean }> {
-    console.log('[MxCadService] mergeChunksWithPermission 开始 - hash:', hash, 'name:', name, 'chunks:', chunks);
-
-    // 验证权限
+// 验证权限
     await this.permissionService.validateUploadPermission(context);
 
     const result = await this.fileUploadManager.mergeChunksWithPermission({
@@ -190,9 +184,7 @@ export class MxCadService {
       chunks,
       context: this.validateContext(context),
     });
-
-    console.log('[MxCadService] mergeChunksWithPermission 最终返回:', result);
-    return result;
+return result;
   }
 
   /**

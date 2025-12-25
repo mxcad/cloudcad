@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
@@ -30,9 +30,7 @@ export class EmailVerificationService {
     // 存储到 Redis，15分钟过期
     const key = this.getCodeKey(email);
     await this.redis.setex(key, this.CODE_TTL, code);
-
-    console.log(`[EmailVerification] 生成验证码: ${code} for ${email}`);
-    return code;
+return code;
   }
 
   async sendVerificationEmail(email: string): Promise<void> {
@@ -53,9 +51,7 @@ export class EmailVerificationService {
   }
 
   async verifyEmail(email: string, code: string): Promise<boolean> {
-    console.log(`[EmailVerification] 尝试验证: ${email} - ${code}`);
-
-    const key = this.getCodeKey(email);
+const key = this.getCodeKey(email);
     const storedCode = await this.redis.get(key);
 
     if (!storedCode) {
