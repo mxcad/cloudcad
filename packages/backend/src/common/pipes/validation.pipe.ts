@@ -1,5 +1,7 @@
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
+
+const logger = new Logger('ValidationPipe');
 
 export class CustomValidationPipe extends ValidationPipe {
   constructor() {
@@ -11,6 +13,7 @@ export class CustomValidationPipe extends ValidationPipe {
         enableImplicitConversion: true,
       },
       exceptionFactory: (validationErrors: ValidationError[] = []) => {
+        logger.error(`验证错误: ${JSON.stringify(validationErrors, null, 2)}`);
         const errors = validationErrors.map((error) => ({
           field: error.property,
           message: Object.values(error.constraints || {}).join(', '),

@@ -48,6 +48,7 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
   async checkChunkExist(@Body() dto: ChunkExistDto, @Req() request: any, @Res() res: Response) {
+    this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(dto)}`);
     // 构建上下文
     const context = await this.buildContextFromRequest(request);
     const result = await this.mxCadService.checkChunkExist(
@@ -55,7 +56,7 @@ export class MxCadController {
       dto.fileHash,
       dto.size,
       dto.chunks,
-      dto.fileName,
+      dto.filename,
       context
     );
     return res.json(result);
@@ -136,7 +137,11 @@ export class MxCadController {
     @Req() request: any,
     @Res() res: Response
   ) {
-    if (!file) {
+    // 检查是否为合并请求（没有文件，只有 chunks 信息）
+    const isMergeRequest = !file && body.chunks !== undefined;
+    
+    // 合并请求不需要检查 file，但需要检查必要参数
+    if (!isMergeRequest && !file) {
       return res.json({ ret: 'errorparam' });
     }
 
@@ -150,6 +155,23 @@ export class MxCadController {
 
     // 构建上下文 - 从JWT token验证用户身份
     const context = await this.buildContextFromRequest(request);
+
+    // 优先处理合并请求（没有文件，有 chunks 信息）
+    if (isMergeRequest) {
+      try {
+        const result = await this.mxCadService.mergeChunksWithPermission(
+          body.hash,
+          body.name,
+          parseInt(body.size, 10),
+          parseInt(body.chunks, 10),
+          context
+        );
+        return res.json(result);
+      } catch (error) {
+        this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
+        return res.json({ ret: 'convertFileError' });
+      }
+    }
 
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
@@ -193,21 +215,6 @@ export class MxCadController {
         return res.json(result);
       } catch (error) {
         this.mxCadService.logError(`分片文件处理失败: ${error.message}`, error);
-        return res.json({ ret: 'convertFileError' });
-      }
-    } else if (body.chunks !== undefined && !file) {
-      // 完成请求（没有文件，只有 chunks 信息）
-      try {
-        const result = await this.mxCadService.mergeChunksWithPermission(
-          body.hash,
-          body.name,
-          parseInt(body.size, 10),
-          parseInt(body.chunks, 10),
-          context
-        );
-        return res.json(result);
-      } catch (error) {
-        this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
         return res.json({ ret: 'convertFileError' });
       }
     } else {

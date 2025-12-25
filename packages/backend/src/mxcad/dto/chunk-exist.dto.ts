@@ -20,7 +20,7 @@ export class ChunkExistDto {
 
   @ApiProperty({ description: '原始文件名' })
   @IsString()
-  fileName: string;
+  filename: string;
 
   @ApiProperty({ description: '项目ID（用于文件系统关联）', required: false })
   @IsString()

@@ -38,24 +38,9 @@ export class MxCadPermissionService {
       throw new ForbiddenException('您不是该项目的成员，无法上传文件');
     }
     
-    // 如果有 parentId，验证是否有文件夹访问权限
-    if (context.parentId) {
-      // 如果 parentId 等于 projectId，说明是上传到项目根目录
-      // 此时应该检查项目成员权限，而不是文件夹访问权限
-      if (context.parentId !== context.projectId) {
-        const folderAccess = await this.prisma.fileAccess.findFirst({
-          where: {
-            userId: context.userId,
-            nodeId: context.parentId,
-          },
-        });
-        
-        if (!folderAccess) {
-          throw new ForbiddenException('您无权限访问该文件夹');
-        }
-      }
-      // 如果 parentId == projectId，项目成员权限已经验证过了，无需额外检查
-    }
+    // 项目成员对项目内所有文件夹都有访问权限，无需单独检查 fileAccess
+    // 如果有 parentId，仅检查是否为项目成员即可（已在上面验证）
+    // 父文件夹的访问权限继承自项目成员权限
 
     return true;
   }

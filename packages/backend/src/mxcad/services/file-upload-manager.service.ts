@@ -7,6 +7,7 @@ import { FileSystemService } from './file-system.service';
 import { FileSystemNodeService, FileSystemNodeContext } from './filesystem-node.service';
 import { CacheManagerService } from './cache-manager.service';
 import { MinioSyncService } from '../minio-sync.service';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export interface UploadChunkOptions {
@@ -58,7 +59,9 @@ export class FileUploadManagerService {
    * 检查分片是否存在
    */
   async checkChunkExist(options: UploadChunkOptions): Promise<{ ret: string }> {
-    const { chunk, hash, size, name } = options;
+    const { chunk, hash, size, chunks: totalChunks, name } = options;
+    
+    this.logger.log(`[checkChunkExist] 开始检查: chunk=${chunk}, hash=${hash}, chunks=${totalChunks}, name=${name}`);
     
     try {
       const cbfilename = `${chunk}_${hash}`;
@@ -70,12 +73,61 @@ export class FileUploadManagerService {
       if (chunkExists) {
         // 检查文件大小是否匹配
         const chunkSize = await this.fileSystemService.getFileSize(chunkPath);
-        if (chunkSize === size) {
-          // 分片已存在，直接返回，不进行合并操作
-          return { ret: MxUploadReturn.kChunkAlreadyExist };
-        } else {
+        if (chunkSize !== size) {
           return { ret: MxUploadReturn.kChunkNoExist };
         }
+        
+        // 分片大小匹配，检查是否需要合并
+        // 如果是最后一个分片，检查是否所有分片都已上传
+        if (chunk === totalChunks - 1) {
+          this.logger.log(`🔍 最后分片已上传，检查是否需要合并: ${name}, hash=${hash}, chunks=${totalChunks}`);
+          
+          // 检查所有分片是否都存在
+          let allChunksExist = true;
+          for (let i = 0; i < totalChunks; i++) {
+            const eachChunkPath = path.join(tmpDir, `${i}_${hash}`);
+            if (!(await this.fileSystemService.exists(eachChunkPath))) {
+              allChunksExist = false;
+              break;
+            }
+          }
+          
+          if (allChunksExist) {
+            this.logger.log(`✅ 所有分片已存在，触发合并: ${name}`);
+            
+            // 防止重复转换：检查是否正在转换中
+            const convertingKey = `converting:${hash}`;
+            const isConverting = this.cacheManager.get<boolean>('file-existence', convertingKey);
+            if (isConverting) {
+              this.logger.log(`⏭️ 文件正在转换中，跳过重复转换: ${name}`);
+              return { ret: MxUploadReturn.kFileAlreadyExist };
+            }
+            
+            // 标记为正在转换
+            this.cacheManager.set('file-existence', convertingKey, true);
+            
+            // 所有分片存在，触发合并
+            const mergeResult = await this.mergeChunksWithPermission({
+              hash,
+              name,
+              size: 0,
+              chunks: totalChunks,
+              context: options.context,
+            });
+            
+            // 清除转换标记
+            this.cacheManager.delete('file-existence', convertingKey);
+            
+            if (mergeResult.ret === MxUploadReturn.kOk || mergeResult.ret === 'ok') {
+              return { ret: MxUploadReturn.kFileAlreadyExist };
+            } else {
+              return { ret: MxUploadReturn.kChunkAlreadyExist };
+            }
+          }
+        }
+        
+        // 分片已存在，无需合并
+        return { ret: MxUploadReturn.kChunkAlreadyExist };
       } else {
         return { ret: MxUploadReturn.kChunkNoExist };
       }
@@ -101,10 +153,40 @@ export class FileUploadManagerService {
       const cacheKey = context?.projectId ? `${context.projectId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
       const cached = this.cacheManager.get<{ exists: boolean; source: string }>('file-existence', cacheKey);
       
+      this.logger.log(`🔍 检查文件存在性: ${targetFile}, 缓存: ${cached ? (cached.exists ? '存在' : '不存在') : '无'}`);
+      
       if (cached && cached.exists) {
-        // 缓存命中，直接处理文件系统节点创建
-        await this.handleFileSystemNodeCreation(filename, fileHash, context, cached.source, targetFile);
-        return { ret: MxUploadReturn.kFileAlreadyExist };
+        // 缓存命中，但需要验证文件是否真正存在于存储中
+        // 如果缓存来源是 MinIO，验证文件是否真的在 MinIO 中
+        this.logger.log(`📋 缓存命中，来源: ${cached.source}`);
+        
+        if (cached.source === 'MinIO') {
+          try {
+            const minioPath = `mxcad/file/${targetFile}`;
+            this.logger.log(`🔍 验证MinIO文件是否存在: ${minioPath}`);
+            const existsInMinio = await this.minioSyncService.fileExists(minioPath);
+            this.logger.log(`📦 MinIO文件存在: ${existsInMinio}`);
+            
+            if (!existsInMinio) {
+              // 文件不在 MinIO 中，删除缓存并重新检查
+              this.logger.warn(`⚠️ 缓存失效，文件不在MinIO中: ${targetFile}`);
+              this.cacheManager.delete('file-existence', cacheKey);
+            } else {
+              // 文件确实存在，返回成功
+              this.logger.log(`✅ 文件存在于MinIO，返回成功`);
+              await this.handleFileSystemNodeCreation(filename, fileHash, context, cached.source, targetFile);
+              return { ret: MxUploadReturn.kFileAlreadyExist };
+            }
+          } catch (error) {
+            this.logger.error(`❌ 验证MinIO文件存在性失败: ${error.message}`);
+            // 验证失败，降级到重新检查
+          }
+        } else {
+          // 缓存来源是本地，直接返回成功
+          this.logger.log(`✅ 文件存在于本地，返回成功`);
+          await this.handleFileSystemNodeCreation(filename, fileHash, context, cached.source, targetFile);
+          return { ret: MxUploadReturn.kFileAlreadyExist };
+        }
       }
       
       // 如果缓存显示文件不存在，忽略缓存，重新检查（避免缓存错误结果导致上传失败）
@@ -115,15 +197,18 @@ export class FileUploadManagerService {
       // 2. 并发控制 - 如果同一个文件正在检查，等待结果
       const checkKey = `${fileHash}.${suffix}`;
       if (this.checkingFiles.has(checkKey)) {
+        this.logger.log(`⏳ 文件正在检查中，等待结果: ${checkKey}`);
         return await this.checkingFiles.get(checkKey)!;
       }
 
       // 3. 创建检查 Promise 并缓存
+      this.logger.log(`🔄 执行实际文件存在性检查: ${targetFile}`);
       const checkPromise = this.performFileExistenceCheck(filename, fileHash, suffix, convertedExt, context);
       this.checkingFiles.set(checkKey, checkPromise);
 
       try {
         const result = await checkPromise;
+        this.logger.log(`📋 文件存在性检查结果: ${targetFile} -> ${result.ret}`);
         return result;
       } finally {
         // 清理并发控制
@@ -363,38 +448,50 @@ return { ret: MxUploadReturn.kOk };
     }
   }
 
-  /**
-   * 执行实际的文件存在性检查
-   */
-  private async performFileExistenceCheck(
-    filename: string,
-    fileHash: string,
-    suffix: string,
-    convertedExt: string,
-    context?: FileSystemNodeContext
-  ): Promise<{ ret: string }> {
-    const targetFile = `${fileHash}.${suffix}${convertedExt}`;
-    let fileExists = false;
-    let fileSource = '';
-
-    // 1. 优先检查存储服务
-    try {
-const existsInStorage = await this.fileStorageService.fileExists(targetFile);
-      if (existsInStorage) {
-        fileExists = true;
-        fileSource = 'MinIO';
-}
-    } catch (error) {
-}
-
-    // 2. 降级检查本地文件系统
-    if (!fileExists) {
-      const localPath = this.fileSystemService.getMd5Path(targetFile);
-const localExists = await this.fileSystemService.exists(localPath);
-if (localExists) {
-        fileExists = true;
-        fileSource = 'Local';
-}
+    /**
+     * 执行实际的文件存在性检查
+     */
+    private async performFileExistenceCheck(
+      filename: string,
+      fileHash: string,
+      suffix: string,
+      convertedExt: string,
+      context?: FileSystemNodeContext
+    ): Promise<{ ret: string }> {
+      const targetFile = `${fileHash}.${suffix}${convertedExt}`;
+      let fileExists = false;
+      let fileSource = '';
+  
+      // 1. 优先检查存储服务
+      this.logger.log(`🔍 检查MinIO: ${targetFile}`);
+      try {
+        const existsInStorage = await this.fileStorageService.fileExists(targetFile);
+        this.logger.log(`📦 MinIO检查结果: ${existsInStorage}`);
+        if (existsInStorage) {
+          fileExists = true;
+          fileSource = 'MinIO';
+        }
+      } catch (error) {
+        this.logger.error(`❌ MinIO检查失败: ${error.message}`);
+      }
+  
+      // 2. 降级检查本地文件系统
+      if (!fileExists) {
+        const localPath = this.fileSystemService.getMd5Path(targetFile);
+        this.logger.log(`🔍 检查本地: ${localPath}`);
+        const localExists = await this.fileSystemService.exists(localPath);
+        this.logger.log(`📁 本地检查结果: ${localExists}`);
+        if (localExists) {
+          fileExists = true;
+          fileSource = 'Local';        // 同步到 MinIO 以确保一致性
+        try {
+          const fileBuffer = await fs.readFile(localPath);
+          await this.minioSyncService.uploadFile(`mxcad/file/${targetFile}`, fileBuffer);
+          this.logger.log(`✅ 文件同步到MinIO: ${targetFile}`);
+        } catch (syncError) {
+          this.logger.warn(`⚠️ 同步到MinIO失败: ${targetFile}, ${syncError.message}`);
+        }
+      }
     }
 
     // 3. 缓存结果 - 只缓存文件存在的结果，避免缓存错误结果
@@ -468,24 +565,30 @@ this.logger.warn(`创建文件系统节点失败: ${error.message}`);
     }
 
     try {
-      // 扫描MxCAD实际生成的mxweb文件
+      // 扫描MxCAD实际生成的所有相关文件
       const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
       const actualFiles = await this.fileSystemService.readDirectory(uploadPath);
+      
+      // 匹配所有以fileHash开头的文件（包含.mxweb、.mxweb_preloading.json、_xxx.dwg等）
       const mxcadFiles = actualFiles.filter(file =>
-        file.startsWith(fileHash) && file.endsWith('.mxweb')
+        file.startsWith(fileHash)
       );
 
-      this.logger.log(`🔍 扫描MxCAD文件: 哈希=${fileHash}, 找到文件数=${mxcadFiles.length}`);
+      this.logger.log(`🔍 扫描MxCAD文件: 哈希=${fileHash}, 找到文件数=${mxcadFiles.length}, 文件列表: ${mxcadFiles.join(', ')}`);
 
       if (mxcadFiles.length === 0) {
         this.logger.error(`❌ 未找到MxCAD转换后的文件: ${fileHash}`);
         return;
       }
 
-      // 使用实际生成的文件名（包含原始扩展名）
-      const actualFileName = mxcadFiles[0];
-      const accessPath = `/mxcad/file/${actualFileName}`;
+      // 找到主.mxweb文件
+      const mainMxwebFile = mxcadFiles.find(file => file.endsWith('.mxweb'));
+      if (!mainMxwebFile) {
+        this.logger.error(`❌ 未找到MxCAD主文件: ${fileHash}`);
+        return;
+      }
 
+      const accessPath = `/mxcad/file/${mainMxwebFile}`;
       const extension = path.extname(originalName).toLowerCase();
       const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
@@ -499,17 +602,28 @@ this.logger.warn(`创建文件系统节点失败: ${error.message}`);
         context: context,
       });
 
-      this.logger.log(`使用MxCAD实际生成的文件名: ${actualFileName} -> ${accessPath}`);
-      this.logger.log(`文件系统节点创建成功: ${originalName} (${fileHash})`);
+      this.logger.log(`✅ 文件系统节点创建成功: ${originalName} (${fileHash})`);
 
-      // 同步MxCAD转换后的文件到存储服务
-      try {
-        // TODO: 实现文件同步逻辑
-        this.logger.log(`MxCAD文件同步到存储服务: ${fileHash}`);
-      } catch (syncError) {
-        this.logger.error(`MxCAD文件同步异常: ${fileHash}: ${syncError.message}`, syncError);
-        // 同步失败不影响文件创建流程
+      // 同步所有MxCAD转换后的文件到存储服务
+      let syncedCount = 0;
+      for (const fileName of mxcadFiles) {
+        try {
+          const localFilePath = path.join(uploadPath, fileName);
+          if (await this.fileSystemService.exists(localFilePath)) {
+            const fileBuffer = await fs.readFile(localFilePath);
+            const minioPath = `mxcad/file/${fileName}`;
+            await this.minioSyncService.uploadFile(minioPath, fileBuffer);
+            this.logger.log(`✅ 文件同步到MinIO: ${fileName} (${fileBuffer.length} bytes)`);
+            syncedCount++;
+          } else {
+            this.logger.warn(`⚠️ 本地文件不存在，跳过同步: ${localFilePath}`);
+          }
+        } catch (syncError) {
+          this.logger.error(`❌ 文件同步失败: ${fileName}: ${syncError.message}`);
+          // 单个文件同步失败不影响其他文件
+        }
       }
+      this.logger.log(`📤 共 ${syncedCount}/${mxcadFiles.length} 个文件同步到MinIO成功`);
     } catch (error) {
       this.logger.error(`创建文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
       // 不抛出错误，避免影响 mxcad 上传流程
