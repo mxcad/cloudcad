@@ -233,7 +233,7 @@ export class MxCadController {
         fs.renameSync(file.path, chunkFilePath);
 
 
-        let result = await this.mxCadService.uploadChunkWithPermission(
+        const result = await this.mxCadService.uploadChunkWithPermission(
           body.hash,
           body.name,
           parseInt(body.size, 10),
@@ -1097,7 +1097,14 @@ export class MxCadController {
         },
       });
 
-      // 4. 构建上下文
+      // 4. 严格验证项目ID是否存在
+      if (!projectId) {
+        console.log('[MxCadController] ❌ 缺少项目ID，无法构建上下文');
+        console.log('[MxCadController] ❌ 请确保通过文件管理页面访问CAD编辑器，而不是直接访问URL');
+        throw new Error('缺少项目ID，无法创建文件系统节点');
+      }
+
+      // 5. 构建上下文
       const context = {
         projectId,
         parentId,

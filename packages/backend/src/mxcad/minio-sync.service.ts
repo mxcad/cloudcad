@@ -41,7 +41,7 @@ export class MinioSyncService {
   /**
    * 同步单个文件到 MinIO
    */
-  private async syncFileToMinio(localPath: string, minioPath: string): Promise<boolean> {
+  public async syncFileToMinio(localPath: string, minioPath: string): Promise<boolean> {
     try {
       await this.ensureBucketExists();
       
@@ -203,6 +203,20 @@ export class MinioSyncService {
       return true;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * 获取 MinIO 文件大小
+   */
+  public async getFileSize(minioPath: string): Promise<number> {
+    try {
+      await this.ensureBucketExists();
+      const statResult = await this.minioClient.statObject(this.bucketName, minioPath);
+      return statResult.size;
+    } catch (error) {
+      this.logger.error(`获取 MinIO 文件大小失败: ${minioPath}`, error);
+      return 0;
     }
   }
 }

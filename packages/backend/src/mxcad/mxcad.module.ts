@@ -3,6 +3,12 @@ import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
 import { MxCadPermissionService } from './mxcad-permission.service';
 import { MinioSyncService } from './minio-sync.service';
+import { FileStorageService } from './services/file-storage.service';
+import { FileConversionService } from './services/file-conversion.service';
+import { FileSystemService } from './services/file-system.service';
+import { CacheManagerService } from './services/cache-manager.service';
+import { FileSystemNodeService } from './services/filesystem-node.service';
+import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -65,6 +71,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     MxCadService,
     MxCadPermissionService,
     MinioSyncService,
+    FileStorageService,
+    FileConversionService,
+    FileSystemService,
+    CacheManagerService,
+    FileSystemNodeService,
+    FileUploadManagerService,
   ],
   exports: [MxCadService],
 })

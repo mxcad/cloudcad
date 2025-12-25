@@ -86,22 +86,126 @@ describe('MxCadService', () => {
   });
 
   describe('checkFileExist', () => {
-    it('should return fileNoExist when file does not exist', async () => {
+    let mockMinioSyncService: any;
+
+    beforeEach(() => {
+      // Mock MinioSyncService
+      mockMinioSyncService = {
+        fileExists: jest.fn(),
+        minioClient: {
+          statObject: jest.fn(),
+        },
+        bucketName: 'test-bucket',
+      };
+      // 注入 mock 服务
+      (service as any).minioSyncService = mockMinioSyncService;
+      
+      // 清空缓存
+      (service as any).fileExistenceCache.clear();
+      (service as any).checkingFiles.clear();
+    });
+
+    it('should return fileNoExist when file does not exist in MinIO or local', async () => {
       const fs = require('fs');
       fs.existsSync = jest.fn().mockReturnValue(false);
+      mockMinioSyncService.fileExists.mockResolvedValue(false);
 
       const result = await service.checkFileExist('test.dwg', 'testhash');
 
       expect(result.ret).toBe(MxUploadReturn.kFileNoExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledWith('mxcad/file/testhash.dwg.mxweb');
     });
 
-    it('should return fileAlreadyExist when file exists', async () => {
+    it('should return fileAlreadyExist when file exists in MinIO', async () => {
       const fs = require('fs');
-      fs.existsSync = jest.fn().mockReturnValue(true);
+      fs.existsSync = jest.fn().mockReturnValue(false);
+      mockMinioSyncService.fileExists.mockResolvedValue(true);
 
       const result = await service.checkFileExist('test.dwg', 'testhash');
 
       expect(result.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledWith('mxcad/file/testhash.dwg.mxweb');
+    });
+
+    it('should return fileAlreadyExist when file exists in local (MinIO fallback)', async () => {
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(true);
+      mockMinioSyncService.fileExists.mockResolvedValue(false);
+
+      const result = await service.checkFileExist('test.dwg', 'testhash');
+
+      expect(result.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledWith('mxcad/file/testhash.dwg.mxweb');
+    });
+
+    it('should handle MinIO error and fallback to local', async () => {
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(true);
+      mockMinioSyncService.fileExists.mockRejectedValue(new Error('MinIO connection failed'));
+
+      const result = await service.checkFileExist('test.dwg', 'testhash');
+
+      expect(result.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+    });
+
+    it('should use cache for repeated requests', async () => {
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(false);
+      mockMinioSyncService.fileExists.mockResolvedValue(true);
+
+      // 第一次请求
+      const result1 = await service.checkFileExist('test.dwg', 'testhash');
+      expect(result1.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledTimes(1);
+
+      // 第二次请求应该使用缓存
+      const result2 = await service.checkFileExist('test.dwg', 'testhash');
+      expect(result2.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledTimes(1); // 没有增加
+    });
+
+    it('should handle concurrent requests for same file', async () => {
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(false);
+      mockMinioSyncService.fileExists.mockImplementation(async () => {
+        // 模拟延迟
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return true;
+      });
+
+      // 同时发起多个请求
+      const promises = [
+        service.checkFileExist('test.dwg', 'testhash'),
+        service.checkFileExist('test.dwg', 'testhash'),
+        service.checkFileExist('test.dwg', 'testhash'),
+      ];
+
+      const results = await Promise.all(promises);
+      
+      // 所有请求都应该成功
+      results.forEach(result => {
+        expect(result.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      });
+      
+      // MinIO 检查应该只执行一次
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle different file extensions correctly', async () => {
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(false);
+      mockMinioSyncService.fileExists.mockResolvedValue(true);
+
+      // 测试 PDF 文件
+      const resultPdf = await service.checkFileExist('test.pdf', 'testhash');
+      expect(resultPdf.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledWith('mxcad/file/testhash.pdf.pdf');
+
+      // 测试图片文件
+      mockMinioSyncService.fileExists.mockClear();
+      const resultPng = await service.checkFileExist('test.png', 'testhash');
+      expect(resultPng.ret).toBe(MxUploadReturn.kFileAlreadyExist);
+      expect(mockMinioSyncService.fileExists).toHaveBeenCalledWith('mxcad/file/testhash.png.png');
     });
   });
 

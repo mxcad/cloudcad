@@ -60,19 +60,21 @@ class MxCADContainerManager {
   }
 
   clearContainer(): void {
-    if (this.globalContainer) {
-      this.globalContainer.innerHTML = '';
-    }
+    // 永远不要清空全局容器，保持 mxcadView 绑定的 DOM 元素
+    console.log('ℹ️ 跳过清空全局容器，保持 MxCAD 实例');
   }
 }
 
 /**
  * MxCAD 认证管理器
- * 负责配置 axios 认证拦截器
+ * 负责配置全面的网络认证拦截器
  */
 class MxCADAuthManager {
   private static instance: MxCADAuthManager;
   private isConfigured = false;
+  private originalFetch: typeof fetch | null = null;
+  private originalXHROpen: typeof XMLHttpRequest.prototype.open | null = null;
+  private originalXHRSend: typeof XMLHttpRequest.prototype.send | null = null;
 
   private constructor() { }
 
@@ -84,26 +86,93 @@ class MxCADAuthManager {
   }
 
   setupAuthInterceptor(): void {
-    if (this.isConfigured) {
-      Logger.info('认证拦截器已配置，跳过重复配置');
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      Logger.warn('未找到 JWT token');
       return;
     }
 
-    axios.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
+    // 3. 简单的 XMLHttpRequest 拦截器
+    const originalOpen = XMLHttpRequest.prototype.open;
+    const originalSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...args: any[]) {
+      const urlString = url.toString();
+      if (urlString.includes('/mxcad/')) {
+        (this as any)._isMxCad = true;
       }
-    );
+      return originalOpen.call(this, method, url, ...args);
+    };
+
+    XMLHttpRequest.prototype.send = function(body?: any) {
+      if ((this as any)._isMxCad) {
+        // 设置认证头
+        if (!(this as any)._authSet && token) {
+          (this as any)._authSet = true;
+          try {
+            console.log('🔐 为 MxCAD XMLHttpRequest 请求添加认证头');
+            this.setRequestHeader('Authorization', `Bearer ${token}`);
+          } catch (e) {}
+        }
+
+        // 添加项目参数到请求体
+        if (typeof body === 'string') {
+          try {
+            const bodyData = JSON.parse(body);
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('project');
+            const parentId = urlParams.get('parent');
+            
+            if (projectId && !bodyData.projectId) {
+              bodyData.projectId = projectId;
+              if (parentId && !bodyData.parentId) {
+                bodyData.parentId = parentId;
+              }
+              
+              const newBody = JSON.stringify(bodyData);
+              console.log('📋 已为 MxCAD 请求添加项目参数', { projectId, parentId });
+              return originalSend.call(this, newBody);
+            }
+          } catch (error) {
+            console.log('解析请求体失败，跳过添加项目参数');
+          }
+        }
+      }
+      return originalSend.call(this, body);
+    };
 
     this.isConfigured = true;
-    Logger.success('已为 MxCAD-App 配置 axios 认证拦截器');
+  }
+
+  /**
+   * 清理所有拦截器，恢复原始方法
+   */
+  cleanup(): void {
+    if (!this.isConfigured) {
+      return;
+    }
+
+    Logger.info('清理 MxCAD 认证拦截器');
+
+    // 恢复原始 fetch
+    if (this.originalFetch) {
+      window.fetch = this.originalFetch;
+      this.originalFetch = null;
+    }
+
+    // 恢复原始 XMLHttpRequest
+    if (this.originalXHROpen) {
+      XMLHttpRequest.prototype.open = this.originalXHROpen;
+      this.originalXHROpen = null;
+    }
+
+    if (this.originalXHRSend) {
+      XMLHttpRequest.prototype.send = this.originalXHRSend;
+      this.originalXHRSend = null;
+    }
+
+    this.isConfigured = false;
+    Logger.success('已清理所有 MxCAD 认证拦截器');
   }
 }
 
@@ -159,6 +228,8 @@ class MxCADInstanceManager {
       const containerManager = MxCADContainerManager.getInstance();
       const authManager = MxCADAuthManager.getInstance();
 
+      // 在创建 MxCADView 实例之前就设置认证拦截器
+      // 确保 MxCAD-App 的所有网络请求都携带认证头
       authManager.setupAuthInterceptor();
 
       const viewOptions: any = {
@@ -311,6 +382,10 @@ export class MxCADManager {
 
   reset(): void {
     this.instanceManager.reset();
+  }
+
+  setupAuthInterceptor(): void {
+    MxCADAuthManager.getInstance().setupAuthInterceptor();
   }
 }
 
