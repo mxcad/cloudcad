@@ -320,7 +320,7 @@ export class AuthService {
 
       const expiresAt = new Date(payload.exp * 1000);
 
-      // 先删除该用户的旧刷新Token
+      // 先删除该用户的旧刷新Token，避免唯一约束冲突
       await this.prisma.refreshToken.deleteMany({
         where: { userId },
       });

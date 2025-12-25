@@ -16,13 +16,79 @@ class ApiService {
       },
     });
 
-    // 请求拦截器 - 添加认证 token
+    // 请求拦截器 - 添加认证 token 和 MxCAD 项目上下文
     this.client.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('accessToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // 为 MxCAD 上传相关请求添加项目上下文
+        if (config.url?.includes('/mxcad/files/')) {
+          console.log('🌐 [ApiService] 拦截MxCAD上传请求:', config.url);
+          
+          // 从当前URL获取项目上下文作为后备
+          const currentUrl = new URL(window.location.href);
+          const urlProjectId = currentUrl.searchParams.get('project') || '';
+          const urlParentId = currentUrl.searchParams.get('parent') || '';
+          
+          console.log('📝 [ApiService] URL中的项目上下文:', { projectId: urlProjectId, parentId: urlParentId });
+
+          // 如果是POST请求且有data，检查并补充项目上下文参数
+          if (config.method?.toLowerCase() === 'post' && config.data) {
+            const existingProjectId = config.data.projectId;
+            const existingParentId = config.data.parentId;
+            
+            // 只有当请求体中没有项目上下文时，才从URL获取
+            if (!existingProjectId && !existingParentId) {
+              const enhancedData = {
+                ...config.data,
+                projectId: urlProjectId,
+                parentId: urlParentId,
+              };
+              
+              console.log('✅ [ApiService] 从URL补充项目上下文:', {
+                original: config.data,
+                enhanced: enhancedData,
+              });
+              
+              config.data = enhancedData;
+            } else {
+              console.log('✅ [ApiService] 请求体中已包含项目上下文，保持不变:', {
+                projectId: existingProjectId,
+                parentId: existingParentId,
+              });
+            }
+          } else if (config.method?.toLowerCase() === 'post' && config.params) {
+            // 如果参数在params中（某些情况下）
+            const existingProjectId = config.params.projectId;
+            const existingParentId = config.params.parentId;
+            
+            if (!existingProjectId && !existingParentId) {
+              const enhancedParams = {
+                ...config.params,
+                projectId: urlProjectId,
+                parentId: urlParentId,
+              };
+              
+              console.log('✅ [ApiService] 从URL补充请求参数:', {
+                original: config.params,
+                enhanced: enhancedParams,
+              });
+              
+              config.params = enhancedParams;
+            } else {
+              console.log('✅ [ApiService] 请求参数中已包含项目上下文，保持不变:', {
+                projectId: existingProjectId,
+                parentId: existingParentId,
+              });
+            }
+          } else {
+            console.warn('⚠️ [ApiService] 无法为MxCAD请求添加项目上下文，缺少数据载体');
+          }
+        }
+
         return config;
       },
       (error) => {
@@ -33,11 +99,7 @@ class ApiService {
     // 响应拦截器 - 自动解包后端响应格式和处理 token 刷新
     this.client.interceptors.response.use(
       (response) => {
-        console.log('[ApiService] API响应:', {
-          url: response.config.url,
-          status: response.status,
-          data: response.data,
-        });
+        // 静默：API响应
 
         // 检查是否为 MxCAD 接口，如果是则跳过自动解包
         const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
@@ -49,12 +111,9 @@ class ApiService {
         ) {
           const originalData = response.data;
           response.data = originalData.data;
-          console.log('[ApiService] 自动解包:', {
-            originalData,
-            extractedData: response.data,
-          });
+// 静默：自动解包
         } else if (isMxCadEndpoint) {
-          console.log('[ApiService] MxCAD接口跳过自动解包，保持原始格式');
+          // 静默：MxCAD接口跳过自动解包，保持原始格式
         }
 
         return response;
@@ -239,6 +298,9 @@ export const projectsApi = {
     apiService.get(`/file-system/nodes/${nodeId}/children`),
 
   updateNode: (nodeId: string, data: { name?: string; description?: string }) =>
+    apiService.patch(`/file-system/nodes/${nodeId}`, data),
+
+  renameNode: (nodeId: string, data: { name: string }) =>
     apiService.patch(`/file-system/nodes/${nodeId}`, data),
 
   deleteNode: (nodeId: string) =>

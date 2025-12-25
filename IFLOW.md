@@ -11,8 +11,7 @@
 - **100% PowerShell 语法**（Windows 环境，命令必须符合 PowerShell 规范）
 - **100% 使用 Express**（后端 NestJS 开发使用 Express 平台）
 - **100% 禁止 any 类型**（TypeScript 严格模式，代码质量检查必须通过）
-- **100% 避免 --watch 命令**（除非用户明确要求，否则避免不会退出的命令）
-
+- **100% 禁止创建一个快速测试来验证修复**
 ## 2. 项目概览
 
 CloudCAD 是一个基于 **NestJS + React** 的现代化云端 CAD 图纸管理平台，采用 **monorepo** 架构，专为 B2B 私有部署设计。核心功能包括：

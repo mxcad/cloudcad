@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
       }
     } catch (error) {
-      console.error('[AuthContext] 初始化认证状态失败:', error);
+      // 静默：初始化认证状态失败
     }
 
     return {
@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 异步验证 token
   useEffect(() => {
     if (token && user) {
-      console.log('[AuthContext] 验证 token 有效性');
+      // 静默：验证 token 有效性
       authApi
         .getProfile()
         .then((response) => {

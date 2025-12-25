@@ -93,15 +93,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       projectsApi
         .getStorageInfo()
         .then((response) => {
-          console.log('存储空间完整响应:', response);
-          console.log('存储空间信息:', response.data);
+          // 静默：存储空间响应
+          // 静默：存储空间信息
           if (response.data) {
             setStorageInfo(response.data);
           }
         })
         .catch((error) => {
-          console.error('获取存储空间信息失败:', error);
-          console.error('错误详情:', error.response?.data || error.message);
+          // 静默：获取存储空间信息失败
+          // 静默：错误详情
         });
     }
   }, [user, loading]);
@@ -118,9 +118,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     try {
       await logout();
       navigate('/login');
-      console.log('退出登录成功');
+      // 静默：退出登录成功
     } catch (error) {
-      console.error('退出登录失败:', error);
+      // 静默：退出登录失败
     } finally {
       setIsLoggingOut(false);
       setShowLogoutConfirm(false);

@@ -3,6 +3,8 @@ import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
 import { MxUploadReturn } from './enums/mxcad-return.enum';
 import { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { DatabaseService } from '../database/database.service';
 
 describe('MxCadController', () => {
   let controller: MxCadController;
@@ -20,6 +22,20 @@ describe('MxCadController', () => {
       logError: jest.fn(),
       logInfo: jest.fn(),
       logWarn: jest.fn(),
+      checkProjectPermission: jest.fn(),
+    } as any;
+
+    const mockDatabaseService = {
+      user: {
+        findUnique: jest.fn(),
+      },
+      projectMember: {
+        findFirst: jest.fn(),
+      },
+    } as any;
+
+    const mockJwtService = {
+      verify: jest.fn(),
     } as any;
 
     mockResponse = {
@@ -27,6 +43,8 @@ describe('MxCadController', () => {
       send: jest.fn(),
       status: jest.fn().mockReturnThis(),
       setHeader: jest.fn().mockReturnThis(),
+      end: jest.fn(),
+      redirect: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -35,6 +53,14 @@ describe('MxCadController', () => {
         {
           provide: MxCadService,
           useValue: mockMxCadService,
+        },
+        {
+          provide: DatabaseService,
+          useValue: mockDatabaseService,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
         },
       ],
     }).compile();

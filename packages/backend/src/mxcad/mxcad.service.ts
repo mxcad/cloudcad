@@ -5,6 +5,7 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { MinioSyncService } from './minio-sync.service';
 import { MxUploadReturn } from './enums/mxcad-return.enum';
 import { FileStatus } from '@prisma/client';
+import { FileTypeDetector } from './utils/file-type-detector';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -41,6 +42,31 @@ export class MxCadService {
     // 确保目录存在
     this.ensureDirectoryExists(this.uploadPath);
     this.ensureDirectoryExists(this.tempPath);
+  }
+
+  /**
+   * 检查用户是否有项目访问权限
+   */
+  async checkProjectPermission(projectId: string, userId: string, userRole: string): Promise<boolean> {
+    try {
+      // 管理员有所有权限
+      if (userRole === 'ADMIN') {
+        return true;
+      }
+      
+      // 检查项目成员权限
+      const membership = await this.prisma.projectMember.findFirst({
+        where: {
+          userId: userId,
+          nodeId: projectId,
+        },
+      });
+      
+      return !!membership;
+    } catch (error) {
+      this.logger.error(`检查项目权限失败: ${error.message}`, error);
+      return false;
+    }
   }
 
   /**
@@ -481,25 +507,57 @@ export class MxCadService {
                 this.delFileDir(tmpDir);
                 
                 // 只有在提供了上下文且转换成功时才创建文件系统节点
-                if (context && context.projectId && context.userId) {
-                  try {
-                    // 检查是否已存在相同文件哈希的节点，避免重复创建
+                if (context && context.userId) {
+                  if (!context.projectId) {
+                    this.logger.warn('⚠️ 缺少项目ID，无法创建文件系统节点。文件将只保存到MxCAD存储，不会出现在文件系统中。');
+                    this.logger.warn('⚠️ 请确保通过文件管理页面访问CAD编辑器，而不是直接访问URL。');
+                  }
+                  
+                  // 只有在有项目ID时才创建文件系统节点
+                  if (context.projectId) {
+                    try {
+                    // 检查是否已存在相同文件哈希的节点（全局去重）
                     const existingNode = await this.prisma.fileSystemNode.findFirst({
                       where: {
                         fileHash: fileMd5,
-                        ownerId: context.userId,
-                        parentId: context.parentId,
                       },
                     });
                     
-                    if (!existingNode) {
+                    // 如果文件已存在，但不在当前项目/文件夹，则创建引用
+                    if (existingNode) {
+                      if (existingNode.parentId !== context.parentId) {
+                        // 创建引用节点（软链接概念）
+                        await this.prisma.fileSystemNode.create({
+                          data: {
+                            name: existingNode.name,
+                            isFolder: false,
+                            isRoot: false,
+                            parentId: context.parentId, // 新的父节点
+                            originalName: existingNode.originalName,
+                            path: existingNode.path, // 指向同一个文件
+                            size: existingNode.size,
+                            mimeType: existingNode.mimeType,
+                            extension: existingNode.extension,
+                            fileStatus: FileStatus.COMPLETED,
+                            fileHash: existingNode.fileHash,
+                            ownerId: context.userId,
+                          },
+                        });
+                        this.logger.log(`文件已存在，创建引用节点: ${fileName} -> 父节点: ${context.parentId}`);
+                      } else {
+                        this.logger.log(`文件已存在于当前文件夹，跳过创建: ${fileName}`);
+                      }
+                    } else {
+                      // 文件完全不存在，创建新节点
                       await this.createFileSystemNode(fileName, fileMd5, fileSize, context);
                       this.logger.log(`文件合并完成，创建文件系统节点: ${fileName}`);
-                    } else {
-                      this.logger.log(`文件系统节点已存在，跳过创建: ${fileName}`);
                     }
                   } catch (error) {
-                    this.logger.error(`创建文件系统节点失败: ${error.message}`, error);
+                      this.logger.error(`创建文件系统节点失败: ${error.message}`, error);
+                    }
+                  } else {
+                    // 没有项目ID，跳过文件系统节点创建
+                    this.logger.log(`ℹ️ 跳过文件系统节点创建（缺少项目ID）: ${fileName}`);
                   }
                 }
                 
@@ -548,13 +606,9 @@ export class MxCadService {
         // 检查文件大小是否匹配
         const stats = statSync(chunkPath);
         if (stats.size === size) {
-          // 如果切片已经都齐全了，也需要进行合并操作
-          const mergeResult = await this.mergeConvertFile(fileHash, chunks, fileName, size, context);
-          if (mergeResult.ret === MxUploadReturn.kOk) {
-            return { ret: MxUploadReturn.kChunkAlreadyExist };
-          } else {
-            return { ret: MxUploadReturn.kChunkNoExist };
-          }
+          // 分片已存在，直接返回，不进行合并操作
+          // 合并操作应该在所有分片上传完成后由 uploadChunkWithPermission 触发
+          return { ret: MxUploadReturn.kChunkAlreadyExist };
         } else {
           return { ret: MxUploadReturn.kChunkNoExist };
         }
@@ -571,33 +625,171 @@ export class MxCadService {
    * 检查文件是否存在
    */
   public async checkFileExist(filename: string, fileHash: string, context?: any): Promise<{ ret: string }> {
+    console.log('[MxCadService] checkFileExist - 开始处理');
+    console.log('[MxCadService] checkFileExist - 参数:', { filename, fileHash, context });
+    
     try {
       const suffix = filename.substring(filename.lastIndexOf('.') + 1);
       const mxwebFile = `${fileHash}.${suffix}${this.mxCadFileExt}`;
       const mxwebPath = path.join(this.uploadPath, mxwebFile);
 
+      console.log('[MxCadService] checkFileExist - 检查文件路径:', mxwebPath);
+      console.log('[MxCadService] checkFileExist - 文件是否存在:', fs.existsSync(mxwebPath));
+
       if (fs.existsSync(mxwebPath)) {
+        console.log('[MxCadService] checkFileExist - ✅ 文件已存在，检查上下文条件');
+        console.log('[MxCadService] checkFileExist - 上下文检查:', {
+          hasContext: !!context,
+          hasProjectId: !!context?.projectId,
+          hasUserId: !!context?.userId,
+          projectId: context?.projectId,
+          userId: context?.userId,
+        });
+        
         // 文件已存在，创建文件系统节点记录（如果提供了上下文）
         if (context && context.projectId && context.userId) {
+          console.log('[MxCadService] checkFileExist - ✅ 上下文条件满足，开始创建文件系统节点');
+          console.log('[MxCadService] checkFileExist - 上下文详情:', {
+            projectId: context.projectId,
+            parentId: context.parentId,
+            userId: context.userId,
+            userRole: context.userRole,
+          });
+          
           try {
-            // 检查是否已存在相同文件哈希的节点，避免重复创建
-            const existingNode = await this.prisma.fileSystemNode.findFirst({
-              where: {
-                fileHash: fileHash,
-                ownerId: context.userId,
-                parentId: context.parentId,
-              },
+            // 使用事务确保数据一致性
+            await this.prisma.$transaction(async (tx) => {
+              // 检查是否已存在相同文件哈希的节点（全局去重）
+              console.log('[MxCadService] checkFileExist - 查找现有文件节点，哈希:', fileHash);
+              const existingNode = await tx.fileSystemNode.findFirst({
+                where: {
+                  fileHash: fileHash,
+                },
+              });
+              
+              console.log('[MxCadService] checkFileExist - 现有节点查找结果:', existingNode ? `存在(${existingNode.id})` : '不存在');
+              
+              if (!existingNode) {
+                console.log('[MxCadService] checkFileExist - 创建新的文件系统节点');
+                
+                // 获取实际文件大小
+                const suffix = filename.substring(filename.lastIndexOf('.') + 1);
+                const mxwebFile = `${fileHash}.${suffix}${this.mxCadFileExt}`;
+                const mxwebPath = path.join(this.uploadPath, mxwebFile);
+                
+                let actualFileSize = 0;
+                let actualFileName = `${fileHash}.${suffix}${this.mxCadFileExt}`;
+                
+                try {
+                  if (fs.existsSync(mxwebPath)) {
+                    const stats = statSync(mxwebPath);
+                    actualFileSize = stats.size;
+                    console.log('[MxCadService] checkFileExist - 获取到实际文件大小:', actualFileSize);
+                  } else {
+                    console.log('[MxCadService] checkFileExist - ⚠️ 转换文件不存在，尝试查找其他格式');
+                    // 尝试查找其他可能的文件格式
+                    const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+                    const allFiles = fs.readdirSync(uploadPath).filter(file => file.startsWith(fileHash));
+                    console.log('[MxCadService] checkFileExist - 找到相关文件:', allFiles);
+                    
+                    if (allFiles.length > 0) {
+                      actualFileName = allFiles[0];
+                      const firstFile = path.join(uploadPath, allFiles[0]);
+                      const firstFileStats = statSync(firstFile);
+                      actualFileSize = firstFileStats.size;
+                      console.log('[MxCadService] checkFileExist - 使用第一个文件的大小:', actualFileSize);
+                    }
+                  }
+                } catch (error) {
+                  this.logger.warn(`获取文件大小失败: ${error.message}`);
+                }
+                
+                // 在事务中创建文件系统节点
+                const extension = path.extname(filename).toLowerCase();
+                const mimeType = this.getMimeType(extension);
+                const accessPath = `/mxcad/file/${actualFileName}`;
+                
+                const fileNode = await tx.fileSystemNode.create({
+                  data: {
+                    name: filename,
+                    isFolder: false,
+                    isRoot: false,
+                    parentId: context.parentId || null,
+                    originalName: filename,
+                    path: accessPath,
+                    size: actualFileSize,
+                    mimeType: mimeType,
+                    extension: extension,
+                    fileStatus: FileStatus.COMPLETED,
+                    fileHash: fileHash,
+                    ownerId: context.userId,
+                  },
+                });
+                
+                console.log('[MxCadService] checkFileExist - ✅ 新节点创建成功，ID:', fileNode.id);
+                this.logger.log(`为已存在文件创建系统节点: ${filename} (大小: ${actualFileSize}字节)`);
+              } else {
+                console.log('[MxCadService] checkFileExist - 检查当前项目/文件夹下的引用');
+                console.log('[MxCadService] checkFileExist - 查找条件:', {
+                  fileHash,
+                  parentId: context.parentId,
+                  ownerId: context.userId,
+                });
+                
+                // 检查是否在当前项目/文件夹下已有引用
+                const existingRef = await tx.fileSystemNode.findFirst({
+                  where: {
+                    fileHash: fileHash,
+                    parentId: context.parentId,
+                    ownerId: context.userId,
+                  },
+                });
+                
+                console.log('[MxCadService] checkFileExist - 现有引用查找结果:', existingRef ? `存在(${existingRef.id})` : '不存在');
+                
+                if (!existingRef) {
+                  console.log('[MxCadService] checkFileExist - 创建引用节点');
+                  // 在事务中创建引用节点
+                  const newRef = await tx.fileSystemNode.create({
+                    data: {
+                      name: existingNode.name,
+                      isFolder: false,
+                      isRoot: false,
+                      parentId: context.parentId,
+                      originalName: existingNode.originalName,
+                      path: existingNode.path,
+                      size: existingNode.size,
+                      mimeType: existingNode.mimeType,
+                      extension: existingNode.extension,
+                      fileStatus: FileStatus.COMPLETED,
+                      fileHash: existingNode.fileHash,
+                      ownerId: context.userId,
+                    },
+                  });
+                  console.log('[MxCadService] checkFileExist - ✅ 引用节点创建成功，ID:', newRef.id);
+                  this.logger.log(`为已存在文件创建引用节点: ${filename} -> 父节点: ${context.parentId}`);
+                } else {
+                  console.log('[MxCadService] checkFileExist - ⚠️ 文件引用节点已存在，跳过创建');
+                  this.logger.log(`文件引用节点已存在，跳过创建: ${filename}`);
+                }
+              }
             });
             
-            if (!existingNode) {
-              await this.createFileSystemNode(filename, fileHash, 0, context);
-              this.logger.log(`为已存在文件创建系统节点: ${filename}`);
-            } else {
-              this.logger.log(`文件系统节点已存在，跳过创建: ${filename}`);
-            }
+            console.log('[MxCadService] checkFileExist - ✅ 事务提交成功');
           } catch (error) {
+            console.log('[MxCadService] checkFileExist - ❌ 创建文件系统节点失败:', error.message);
+            console.log('[MxCadService] checkFileExist - 错误堆栈:', error.stack);
             this.logger.warn(`创建文件系统节点失败: ${error.message}`);
           }
+        } else {
+          console.log('[MxCadService] checkFileExist - ❌ 上下文条件不满足，跳过文件系统节点创建');
+          console.log('[MxCadService] checkFileExist - 条件详情:', {
+            hasContext: !!context,
+            hasProjectId: !!context?.projectId,
+            hasUserId: !!context?.userId,
+            context: context,
+          });
+          this.logger.warn('⚠️ 缺少项目ID或用户ID，无法创建文件系统节点');
         }
         return { ret: MxUploadReturn.kFileAlreadyExist };
       } else {
@@ -695,12 +887,65 @@ export class MxCadService {
       const extension = path.extname(originalName).toLowerCase();
       const mimeType = this.getMimeType(extension);
       
-      this.logger.log(`开始创建文件系统节点: ${originalName}, 大小: ${fileSize}字节, 项目: ${context.projectId}, 父目录: ${context.parentId}`);
+      this.logger.log(`🔍 开始创建文件系统节点: ${originalName}, 大小: ${fileSize}字节, 项目: ${context.projectId}, 父目录: ${context.parentId}, 用户: ${context.userId}`);
       
-      // 构建正确的 MinIO 路径：projects/{projectId}/files/{fileHash}
-      const minioPath = context.projectId 
-        ? `projects/${context.projectId}/files/${fileHash}`
-        : `mxcad/${fileHash}`; // 兼容旧数据
+      // 验证上下文参数
+      if (!context.projectId || !context.userId) {
+        this.logger.error(`❌ 缺少必要的上下文参数: projectId=${context.projectId}, userId=${context.userId}`);
+        throw new Error('缺少项目ID或用户ID');
+      }
+      
+      // 首先检查是否已存在相同哈希的文件
+      const existingNode = await this.prisma.fileSystemNode.findFirst({
+        where: { fileHash: fileHash },
+      });
+      
+      if (existingNode) {
+        this.logger.log(`⚠️ 文件哈希已存在: ${fileHash}, 现有节点ID: ${existingNode.id}, 现有父目录: ${existingNode.parentId}`);
+        
+        // 检查是否在当前项目/文件夹下
+        if (existingNode.parentId === context.parentId) {
+          this.logger.log(`✅ 文件已存在于当前文件夹，无需重复创建: ${originalName}`);
+          return;
+        } else {
+          // 创建引用节点
+          const refNode = await this.prisma.fileSystemNode.create({
+            data: {
+              name: existingNode.name,
+              isFolder: false,
+              isRoot: false,
+              parentId: context.parentId,
+              originalName: existingNode.originalName,
+              path: existingNode.path,
+              size: existingNode.size,
+              mimeType: existingNode.mimeType,
+              extension: existingNode.extension,
+              fileStatus: FileStatus.COMPLETED,
+              fileHash: existingNode.fileHash,
+              ownerId: context.userId,
+            },
+          });
+          this.logger.log(`✅ 创建引用节点成功: ${originalName}, 新节点ID: ${refNode.id}`);
+          return;
+        }
+      }
+      
+      // 扫描MxCAD实际生成的mxweb文件
+      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const actualFiles = fs.readdirSync(uploadPath).filter(file => 
+        file.startsWith(fileHash) && file.endsWith('.mxweb')
+      );
+      
+      this.logger.log(`🔍 扫描MxCAD文件: 哈希=${fileHash}, 找到文件数=${actualFiles.length}`);
+      
+      if (actualFiles.length === 0) {
+        this.logger.error(`❌ 未找到MxCAD转换后的文件: ${fileHash}`);
+        return;
+      }
+      
+      // 使用实际生成的文件名（包含原始扩展名）
+      const actualFileName = actualFiles[0];
+      const accessPath = `/mxcad/file/${actualFileName}`;
 
       const fileNode = await this.prisma.fileSystemNode.create({
         data: {
@@ -709,7 +954,7 @@ export class MxCadService {
           isRoot: false,
           parentId: context.parentId || null,
           originalName: originalName,
-          path: minioPath, // MinIO 路径
+          path: accessPath, // 存储MxCAD实际生成的文件访问路径
           size: fileSize,
           mimeType: mimeType,
           extension: extension,
@@ -719,10 +964,22 @@ export class MxCadService {
         },
       });
       
+      this.logger.log(`使用MxCAD实际生成的文件名: ${actualFileName} -> ${accessPath}`);
+      
       this.logger.log(`文件系统节点创建成功: ${originalName} (${fileHash}), 节点ID: ${fileNode.id}`);
       
-      // 异步同步文件到 MinIO
-      this.syncFilesToMinioAsync(fileHash, context);
+      // 同步MxCAD转换后的文件到MinIO
+      try {
+        const syncSuccess = await this.minioSyncService.syncMxCadFiles(fileHash, context);
+        if (syncSuccess) {
+          this.logger.log(`MxCAD文件同步到MinIO成功: ${fileHash}`);
+        } else {
+          this.logger.warn(`MxCAD文件同步到MinIO失败: ${fileHash}`);
+        }
+      } catch (syncError) {
+        this.logger.error(`MxCAD文件同步异常: ${fileHash}: ${syncError.message}`, syncError);
+        // 同步失败不影响文件创建流程
+      }
     } catch (error) {
       this.logger.error(`创建文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
       // 不抛出错误，避免影响 mxcad 上传流程
@@ -730,17 +987,43 @@ export class MxCadService {
   }
 
   /**
-   * 异步同步文件到 MinIO
+   * 为非CAD文件创建文件系统节点
    */
-  private async syncFilesToMinioAsync(fileHash: string, context: any): Promise<void> {
-    // 使用 setTimeout 让同步操作不阻塞主流程
-    setTimeout(async () => {
-      try {
-        await this.minioSyncService.syncMxCadFiles(fileHash, context);
-      } catch (error) {
-        this.logger.error(`异步同步文件到 MinIO 失败: ${fileHash}: ${error.message}`, error.stack);
-      }
-    }, 1000); // 延迟 1 秒执行，确保文件转换完成
+  private async createFileSystemNodeForNonCad(
+    originalName: string,
+    fileHash: string,
+    fileSize: number,
+    storageKey: string,
+    context: any
+  ): Promise<void> {
+    try {
+      const extension = path.extname(originalName).toLowerCase();
+      const mimeType = this.getMimeType(extension);
+      
+      this.logger.log(`开始创建非CAD文件系统节点: ${originalName}, 大小: ${fileSize}字节, 存储路径: ${storageKey}`);
+      
+      const fileNode = await this.prisma.fileSystemNode.create({
+        data: {
+          name: originalName,
+          isFolder: false,
+          isRoot: false,
+          parentId: context.parentId || null,
+          originalName: originalName,
+          path: storageKey, // MinIO 存储路径
+          size: fileSize,
+          mimeType: mimeType,
+          extension: extension,
+          fileStatus: FileStatus.COMPLETED,
+          fileHash: fileHash, // 文件哈希
+          ownerId: context.userId,
+        },
+      });
+      
+      this.logger.log(`非CAD文件系统节点创建成功: ${originalName} (${fileHash}), 节点ID: ${fileNode.id}`);
+    } catch (error) {
+      this.logger.error(`创建非CAD文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
+      throw error; // 非CAD文件上传失败应该抛出错误
+    }
   }
 
   /**
@@ -758,6 +1041,98 @@ export class MxCadService {
     };
     
     return mimeTypes[extension] || 'application/octet-stream';
+  }
+
+  /**
+   * 合并分片文件到单个文件
+   */
+  private async mergeChunksToFile(hash: string, chunks: number, fileName: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const chunkDir = path.join(this.tempPath, `chunk_${hash}`);
+      const mergedFilePath = path.join(this.tempPath, `${hash}_merged_${fileName}`);
+      
+      this.logger.log(`开始合并分片文件: ${chunkDir} -> ${mergedFilePath}`);
+      
+      // 确保分片目录存在
+      if (!fs.existsSync(chunkDir)) {
+        reject(new Error(`分片目录不存在: ${chunkDir}`));
+        return;
+      }
+      
+      // 获取所有分片文件
+      const chunkFiles: string[] = [];
+      for (let i = 0; i < chunks; i++) {
+        const chunkFile = path.join(chunkDir, `${i}_${hash}`);
+        if (fs.existsSync(chunkFile)) {
+          chunkFiles.push(chunkFile);
+        } else {
+          reject(new Error(`分片文件不存在: ${chunkFile}`));
+          return;
+        }
+      }
+      
+      // 按顺序合并文件
+      const writeStream = fs.createWriteStream(mergedFilePath);
+      let currentFileIndex = 0;
+      
+      const processNextFile = () => {
+        if (currentFileIndex >= chunkFiles.length) {
+          writeStream.end();
+          return;
+        }
+        
+        const readStream = fs.createReadStream(chunkFiles[currentFileIndex]);
+        readStream.pipe(writeStream, { end: false });
+        
+        readStream.on('end', () => {
+          currentFileIndex++;
+          processNextFile();
+        });
+        
+        readStream.on('error', (error) => {
+          writeStream.destroy();
+          reject(error);
+        });
+      };
+      
+      writeStream.on('finish', () => {
+        this.logger.log(`分片文件合并完成: ${mergedFilePath}`);
+        resolve(mergedFilePath);
+      });
+      
+      writeStream.on('error', (error) => {
+        reject(error);
+      });
+      
+      processNextFile();
+    });
+  }
+
+  /**
+   * 清理临时文件
+   */
+  private cleanupTempFiles(hash: string, mergedFilePath: string): void {
+    try {
+      // 删除合并后的文件
+      if (fs.existsSync(mergedFilePath)) {
+        fs.unlinkSync(mergedFilePath);
+      }
+      
+      // 删除分片目录
+      const chunkDir = path.join(this.tempPath, `chunk_${hash}`);
+      if (fs.existsSync(chunkDir)) {
+        const chunkFiles = fs.readdirSync(chunkDir);
+        chunkFiles.forEach(file => {
+          const filePath = path.join(chunkDir, file);
+          fs.unlinkSync(filePath);
+        });
+        fs.rmdirSync(chunkDir);
+      }
+      
+      this.logger.log(`临时文件清理完成: ${hash}`);
+    } catch (error) {
+      this.logger.warn(`清理临时文件失败: ${error.message}`);
+    }
   }
 
   /**
@@ -803,14 +1178,40 @@ export class MxCadService {
     // 验证权限
     await this.permissionService.validateUploadPermission(context);
     
-    const result = await this.mergeConvertFile(hash, chunks, name, size, context);
-    
-    console.log('[MxCadService] mergeConvertFile 结果:', result);
-    
-    // 注意：文件系统节点创建已移至 mergeConvertFile 方法内部，避免重复创建
-    
-    console.log('[MxCadService] mergeChunksWithPermission 最终返回:', result);
-    return result;
+    // 检查文件类型
+    if (FileTypeDetector.needsConversion(name)) {
+      // CAD文件：执行转换流程
+      console.log('[MxCadService] 检测到CAD文件，执行转换流程');
+      const mergeResult = await this.mergeConvertFile(hash, chunks, name, size, context);
+      console.log('[MxCadService] mergeChunksWithPermission 最终返回:', mergeResult);
+      return mergeResult;
+    } else {
+      // 非CAD文件：合并分片并直接上传到MinIO
+      console.log('[MxCadService] 检测到非CAD文件，合并分片并上传到MinIO');
+      try {
+        // 合并分片文件
+        const mergedFilePath = await this.mergeChunksToFile(hash, chunks, name);
+        
+        // 上传到MinIO
+        const fileBuffer = fs.readFileSync(mergedFilePath);
+        const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
+        
+        await this.minioSyncService.uploadFile(storageKey, fileBuffer);
+        this.logger.log(`非CAD文件合并并上传到MinIO成功: ${storageKey}`);
+        
+        // 创建文件系统节点
+        await this.createFileSystemNodeForNonCad(name, hash, size, storageKey, context);
+        
+        // 清理临时文件
+        this.cleanupTempFiles(hash, mergedFilePath);
+        
+        console.log('[MxCadService] mergeChunksWithPermission 非CAD文件处理完成');
+        return { ret: MxUploadReturn.kOk };
+      } catch (error) {
+        this.logger.error(`非CAD文件合并上传失败: ${error.message}`, error.stack);
+        return { ret: MxUploadReturn.kConvertFileError };
+      }
+    }
   }
 
   /**
@@ -826,20 +1227,44 @@ export class MxCadService {
     // 验证权限
     await this.permissionService.validateUploadPermission(context);
     
-    this.writeStatusFile(name, size, hash);
-    const { isOk, ret } = await this.convertFile(filePath, hash);
-    
-    if (isOk) {
-      // 创建文件系统节点
-      await this.createFileSystemNode(name, hash, size, context);
+    // 检查文件类型
+    if (FileTypeDetector.needsConversion(name)) {
+      // CAD文件：执行转换流程
+      this.logger.log(`检测到CAD文件，执行转换流程: ${name}`);
+      this.writeStatusFile(name, size, hash);
+      const { isOk, ret } = await this.convertFile(filePath, hash);
       
-      if (ret.tz) {
-        return { ret: MxUploadReturn.kOk, tz: true };
+      if (isOk) {
+        // 创建文件系统节点
+        await this.createFileSystemNode(name, hash, size, context);
+        
+        if (ret.tz) {
+          return { ret: MxUploadReturn.kOk, tz: true };
+        } else {
+          return { ret: MxUploadReturn.kOk };
+        }
       } else {
-        return { ret: MxUploadReturn.kOk };
+        return { ret: MxUploadReturn.kConvertFileError };
       }
     } else {
-      return { ret: MxUploadReturn.kConvertFileError };
+      // 非CAD文件：直接上传到MinIO
+      this.logger.log(`检测到非CAD文件，直接上传到MinIO: ${name}`);
+      try {
+        const fileBuffer = fs.readFileSync(filePath);
+        const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
+        
+        // 上传到MinIO
+        await this.minioSyncService.uploadFile(storageKey, fileBuffer);
+        this.logger.log(`非CAD文件上传到MinIO成功: ${storageKey}`);
+        
+        // 创建文件系统节点
+        await this.createFileSystemNodeForNonCad(name, hash, size, storageKey, context);
+        
+        return { ret: MxUploadReturn.kOk };
+      } catch (error) {
+        this.logger.error(`非CAD文件上传失败: ${error.message}`, error.stack);
+        return { ret: MxUploadReturn.kConvertFileError };
+      }
     }
   }
 }

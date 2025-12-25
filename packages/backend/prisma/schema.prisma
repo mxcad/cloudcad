@@ -43,7 +43,7 @@ model FileSystemNode {
   
   // 文件专属字段（文件夹时为null）
   originalName String?   // 原始文件名
-  path         String?   // MinIO存储路径
+  path         String?   // 文件访问路径（如：/mxcad/file/xxx.dwg.mxweb）
   size         Int?      // 文件大小（字节）
   mimeType     String?   // MIME类型
   extension    String?   // 文件扩展名（.dwg, .dxf）

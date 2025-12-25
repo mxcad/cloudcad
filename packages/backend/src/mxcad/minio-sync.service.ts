@@ -69,6 +69,27 @@ export class MinioSyncService {
   }
 
   /**
+   * 上传文件到MinIO（支持Buffer）
+   */
+  async uploadFile(minioPath: string, buffer: Buffer): Promise<void> {
+    try {
+      await this.ensureBucketExists();
+      
+      await this.minioClient.putObject(
+        this.bucketName,
+        minioPath,
+        buffer,
+        buffer.length
+      );
+      
+      this.logger.log(`文件上传成功: ${minioPath} (${buffer.length} bytes)`);
+    } catch (error) {
+      this.logger.error(`文件上传失败: ${minioPath}: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
    * 同步目录下的所有文件到 MinIO
    */
   private async syncDirectoryToMinio(localDir: string, minioDir: string): Promise<boolean> {

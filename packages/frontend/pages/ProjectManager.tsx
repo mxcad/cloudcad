@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -9,12 +9,13 @@ import {
   Calendar,
   Search,
   Filter,
-  MoreHorizontal,
   FolderOpen,
   Pencil,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { Toast } from '../components/ui/Toast';
 import { projectsApi } from '../services/apiService';
 
 // 类型定义（基于后端 FileSystemNode 模型）
@@ -81,6 +82,9 @@ export const ProjectManager = () => {
   );
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
 
+  // Toast 状态
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' | 'info' }[]>([]);
+
   // 表单数据
   const [formData, setFormData] = useState({
     name: '',
@@ -88,24 +92,42 @@ export const ProjectManager = () => {
     status: 'ACTIVE' as const,
   });
 
-  useEffect(() => {
-    loadProjects();
+  // Toast 操作
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, message }]);
+    
+    // 自动移除 Toast
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
   // 加载项目列表
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await projectsApi.list();
-      setProjects(response.data);
-    } catch (error) {
+      setProjects(response.data || []);
+      showToast('项目列表加载成功', 'success');
+    } catch (error: any) {
       console.error('Failed to load projects:', error);
-      setError('加载项目列表失败');
+      const errorMessage = error.response?.data?.message || error.message || '加载项目列表失败';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   // 过滤项目
   const filteredProjects = projects.filter((project) => {
@@ -119,7 +141,7 @@ export const ProjectManager = () => {
   });
 
   // 打开创建项目模态框
-  const handleOpenCreate = () => {
+  const handleOpenCreate = useCallback(() => {
     setEditingProject(null);
     setFormData({
       name: '',
@@ -127,75 +149,96 @@ export const ProjectManager = () => {
       status: 'ACTIVE',
     });
     setIsModalOpen(true);
-  };
+  }, []);
 
   // 打开编辑项目模态框
-  const handleOpenEdit = (project: ProjectDto) => {
+  const handleOpenEdit = useCallback((project: ProjectDto) => {
     setEditingProject(project);
     setFormData({
       name: project.name,
       description: project.description || '',
     });
     setIsModalOpen(true);
-  };
+  }, []);
 
   // 进入项目查看文件
-  const handleEnterProject = (projectId: string) => {
+  const handleEnterProject = useCallback((projectId: string) => {
     navigate(`/projects/${projectId}/files`);
-  };
+  }, [navigate]);
 
   // 显示项目成员（使用项目数据中已包含的 members）
-  const showProjectMembers = (project: ProjectDto) => {
+  const showProjectMembers = useCallback((project: ProjectDto) => {
     setSelectedProject(project);
     setProjectMembers(project.members || []);
     setIsMembersModalOpen(true);
-  };
+  }, []);
 
   // 提交表单
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      showToast('项目名称不能为空', 'error');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     try {
       if (editingProject) {
         const updateData: UpdateProjectDto = {
-          name: formData.name,
-          description: formData.description,
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
         };
         await projectsApi.update(editingProject.id, updateData);
+        showToast('项目更新成功', 'success');
       } else {
         const createData: CreateProjectDto = {
-          name: formData.name,
-          description: formData.description,
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
         };
         await projectsApi.create(createData);
+        showToast('项目创建成功', 'success');
       }
 
       setIsModalOpen(false);
+      setFormData({ name: '', description: '', status: 'ACTIVE' });
       await loadProjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save project:', error);
-      setError(editingProject ? '更新项目失败' : '创建项目失败');
+      const errorMessage = error.response?.data?.message || error.message || '操作失败';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData, editingProject, loadProjects, showToast]);
 
   // 删除项目
-  const handleDelete = async (id: string) => {
-    if (window.confirm('确定要删除该项目吗？此操作不可恢复。')) {
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (window.confirm(`确定要删除项目"${name}"吗？此操作不可恢复。`)) {
       setLoading(true);
+      setError(null);
       try {
         await projectsApi.delete(id);
+        showToast('项目删除成功', 'success');
         await loadProjects();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to delete project:', error);
-        setError('删除项目失败');
+        const errorMessage = error.response?.data?.message || error.message || '删除项目失败';
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
       } finally {
         setLoading(false);
       }
     }
-  };
+  }, [loadProjects, showToast]);
+
+  // 刷新项目列表
+  const handleRefresh = useCallback(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   // 获取状态显示文本
   const getStatusText = (status: string) => {
@@ -258,6 +301,18 @@ export const ProjectManager = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* Toast 通知 */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
+
       {/* 页面标题和操作 */}
       <div className="flex items-center justify-between">
         <div>
@@ -273,6 +328,15 @@ export const ProjectManager = () => {
           >
             <Pencil size={16} className="mr-2" />
             测试 CAD 编辑器
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={loading}
+            title="刷新项目列表"
+          >
+            <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+            刷新
           </Button>
           <Button onClick={handleOpenCreate} disabled={loading}>
             <FolderPlus size={16} className="mr-2" />
@@ -320,7 +384,7 @@ export const ProjectManager = () => {
               ? '没有找到匹配的项目'
               : '开始创建您的第一个项目'}
           </p>
-          <Button onClick={handleOpenCreate} variant="outline">
+          <Button onClick={handleOpenCreate} variant="outline" disabled={loading}>
             <FolderPlus size={16} className="mr-2" />
             创建项目
           </Button>
@@ -330,27 +394,19 @@ export const ProjectManager = () => {
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="bg-white rounded-xl border border-slate-200 hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all cursor-pointer group"
               onClick={() => handleEnterProject(project.id)}
             >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-                      <FolderOpen size={20} className="text-indigo-600" />
-                      {project.name}
+                      <FolderOpen size={20} className="text-indigo-600 flex-shrink-0" />
+                      <span className="truncate">{project.name}</span>
                     </h3>
                     <p className="text-sm text-slate-500 line-clamp-2">
                       {project.description || '暂无描述'}
                     </p>
-                  </div>
-                  <div className="relative">
-                    <button
-                      className="p-1 text-slate-400 hover:text-slate-600 rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
                   </div>
                 </div>
 
@@ -360,15 +416,20 @@ export const ProjectManager = () => {
                   >
                     {getStatusText(project.projectStatus || 'ACTIVE')}
                   </span>
+                  {project._count && (
+                    <span className="text-xs text-slate-500">
+                      {project._count.children} 个文件 · {project._count.members} 个成员
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center text-sm text-slate-500 mb-4">
-                  <Calendar size={14} className="mr-1" />
+                  <Calendar size={14} className="mr-1 flex-shrink-0" />
                   创建于 {formatDate(project.createdAt)}
                 </div>
 
                 <div
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Button
@@ -379,28 +440,29 @@ export const ProjectManager = () => {
                       showProjectMembers(project);
                     }}
                     className="text-slate-600 hover:text-indigo-600"
+                    disabled={!project.members || project.members.length === 0}
                   >
                     <Users size={14} className="mr-1" />
-                    成员
+                    成员 {project.members ? `(${project.members.length})` : ''}
                   </Button>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenEdit(project);
                       }}
                       className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="编辑"
+                      title="编辑项目"
                     >
                       <Edit size={14} />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(project.id);
+                        handleDelete(project.id, project.name);
                       }}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="删除"
+                      title="删除项目"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -415,24 +477,40 @@ export const ProjectManager = () => {
       {/* 创建/编辑项目模态框 */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          if (!loading) {
+            setIsModalOpen(false);
+            setEditingProject(null);
+            setFormData({ name: '', description: '', status: 'ACTIVE' });
+          }
+        }}
         title={editingProject ? '编辑项目' : '创建新项目'}
         footer={
           <>
             <Button
               variant="ghost"
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                if (!loading) {
+                  setIsModalOpen(false);
+                  setEditingProject(null);
+                  setFormData({ name: '', description: '', status: 'ACTIVE' });
+                }
+              }}
               disabled={loading}
             >
               取消
             </Button>
-            <Button onClick={handleSubmit} disabled={loading}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading || !formData.name.trim()}
+              type="submit"
+            >
               {loading ? '处理中...' : editingProject ? '保存' : '创建'}
             </Button>
           </>
         }
       >
-        <form className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               项目名称 *
@@ -444,9 +522,14 @@ export const ProjectManager = () => {
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="请输入项目名称"
+              autoFocus
+              maxLength={100}
             />
+            <p className="text-xs text-slate-500 mt-1">
+              {formData.name.length}/100 字符
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -458,9 +541,13 @@ export const ProjectManager = () => {
                 setFormData({ ...formData, description: e.target.value })
               }
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
-              placeholder="请输入项目描述"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="请输入项目描述（可选）"
+              maxLength={500}
             />
+            <p className="text-xs text-slate-500 mt-1">
+              {formData.description.length}/500 字符
+            </p>
           </div>
         </form>
       </Modal>

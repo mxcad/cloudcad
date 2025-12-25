@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 const configMap = new Map()
-export const getConfig = async <T = Object>(url: string)=> {
+export const getConfig = async <T = object>(url: string)=> {
   if(configMap.has(url)) {
     return configMap.get(url) as T
   }else {

@@ -5,7 +5,7 @@ export interface FileSystemNode {
   isRoot: boolean;
   parentId: string | null;
   originalName?: string;
-  path?: string;
+  path?: string; // 改为存储访问路径：/mxcad/file/xxx.dwg.mxweb
   size?: number | null;
   mimeType?: string | null;
   extension?: string | null;

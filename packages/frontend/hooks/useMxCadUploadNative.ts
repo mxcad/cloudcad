@@ -34,6 +34,10 @@ export interface LoadFileParam {
   hash?: string;
   isUseServerExistingFile?: boolean;
   file_path?: string;
+  /** 是否为秒传（文件已存在） */
+  isInstantUpload?: boolean;
+  /** 文件上传的目标父目录ID */
+  parentId?: string;
 }
 
 /**
@@ -48,13 +52,15 @@ export interface MxCadUploadConfig {
   onSuccess?: (param: LoadFileParam) => void;
   /** 上传失败回调 */
   onError?: (error: string) => void;
-  /** 进度回调 */
+  /** 上传进度回调 */
   onProgress?: (percentage: number) => void;
-  /** 文件排队回调 */
+  /** 文件加入队列回调 */
   onFileQueued?: (file: File) => void;
   /** 开始上传回调 */
   onBeginUpload?: () => void;
 }
+
+
 
 /**
  * 计算文件哈希
@@ -98,6 +104,13 @@ const uploadInChunks = async (
   
   // 检查文件是否已存在
   try {
+    console.log('[useMxCadUploadNative] 检查文件是否存在:', {
+      fileHash: hash,
+      filename: file.name,
+      projectId: config.projectId,
+      parentId: config.parentId,
+    });
+
     const existResponse = await apiService.post('/mxcad/files/fileisExist', {
       fileHash: hash,
       filename: file.name,
@@ -105,8 +118,16 @@ const uploadInChunks = async (
       parentId: config.parentId,
     });
 
+    console.log('[useMxCadUploadNative] 文件检查响应:', existResponse.data);
+
     if (existResponse.data.ret === 'fileAlreadyExist') {
       // 文件已存在，秒传
+      console.log('[useMxCadUploadNative] ✅ 文件已存在，执行秒传:', file.name);
+      
+      // 等待更长时间，确保后端已完成文件系统节点的创建和数据库事务提交
+      // 秒传时需要更长的等待时间，因为后端可能需要创建引用节点
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       config.onSuccess?.({
         file,
         id: hash,
@@ -115,10 +136,15 @@ const uploadInChunks = async (
         type: file.type,
         hash,
         isUseServerExistingFile: true,
+        // 标记为秒传，前端可以据此调整刷新策略
+        isInstantUpload: true,
+        // 传递上传目标目录信息
+        parentId: config.parentId,
       });
       return;
     }
   } catch (error) {
+    console.error('[useMxCadUploadNative] ❌ 文件检查失败:', error);
     config.onError?.('文件检查失败');
     throw error;
   }
@@ -160,8 +186,8 @@ const uploadInChunks = async (
     formData.append('name', file.name);
     formData.append('hash', hash);
     formData.append('size', file.size.toString());
-    formData.append('projectId', config.projectId || '');
-    formData.append('parentId', config.parentId || '');
+formData.append('projectId', config.projectId || '');
+        formData.append('parentId', config.parentId || '');
 
     try {
       const response = await apiService.post('/mxcad/files/uploadFiles', formData, {
@@ -172,19 +198,19 @@ const uploadInChunks = async (
       
       // 忽略单个分片的 errorparam，只记录日志
       if (response.data.ret === 'errorparam') {
-        console.log(`[MxCadUpload] 分片 ${chunkIndex + 1} 返回 errorparam，但继续上传`);
+        // 静默：分片返回 errorparam，但继续上传
       }
       
       onProgress(((chunkIndex + 1) / totalChunks) * 100);
     } catch (error) {
-      console.log(`[MxCadUpload] 分片 ${chunkIndex + 1} 上传异常，但继续上传:`, error);
+      // 静默：分片上传异常，但继续上传
       // 不抛出错误，继续上传下一个分片
     }
   }
 
   // 完成上传 - 等待一段时间让后端处理转换
   try {
-    console.log('[MxCadUpload] 所有分片上传完成，等待后端处理转换...');
+    // 静默：所有分片上传完成，等待后端处理转换
     
     // 等待后端处理转换
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -204,7 +230,7 @@ const uploadInChunks = async (
         });
 
         if (verifyResponse.data.ret === 'fileAlreadyExist') {
-          console.log('[MxCadUpload] ✅ 文件验证成功，上传完成');
+          // 静默：文件验证成功，上传完成
           uploadSuccess = true;
           
           config.onSuccess?.({
@@ -218,10 +244,10 @@ const uploadInChunks = async (
           });
           break;
         } else {
-          console.log(`[MxCadUpload] 文件验证中... (${verifyAttempts + 1}/${maxAttempts})`);
+          // 静默：文件验证中
         }
       } catch (error) {
-        console.log(`[MxCadUpload] 验证请求失败 (${verifyAttempts + 1}/${maxAttempts}):`, error);
+        // 静默：验证请求失败
       }
       
       verifyAttempts++;
@@ -231,12 +257,12 @@ const uploadInChunks = async (
     }
 
     if (!uploadSuccess) {
-      console.log('[MxCadUpload] ❌ 文件验证失败，但后端可能仍在处理');
+      // 静默：文件验证失败，但后端可能仍在处理
       // 不立即报错，给后端更多时间处理
       config.onError?.('文件上传完成，但验证超时，请稍后检查文件列表');
     }
   } catch (error) {
-    console.log('[MxCadUpload] 最终验证异常:', error);
+    // 静默：最终验证异常
     config.onError?.('文件上传完成，但验证过程异常');
   }
 };

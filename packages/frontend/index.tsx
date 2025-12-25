@@ -2,9 +2,13 @@ import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { setupGlobalAuth } from './utils/globalAuth';
 
 import './styles/transitions.css';
 import './styles/app.css';
+
+// 在应用启动时设置全局认证
+setupGlobalAuth();
 
 
 const rootElement = document.getElementById('root');

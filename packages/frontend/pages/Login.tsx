@@ -8,8 +8,8 @@ type LoginDto = components['schemas']['LoginDto'];
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
-  console.log('[Login Component] login函数:', login);
-  console.log('[Login Component] login函数类型:', typeof login);
+  // 静默：login函数信息
+  // 静默：login函数类型
   const [formData, setFormData] = useState<LoginDto>({
     account: '',
     password: '',
@@ -34,19 +34,19 @@ export const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[Login] 提交登录表单:', formData.account);
+    // 静默：提交登录表单
     setLoading(true);
     setError(null);
 
     try {
-      console.log('[Login] 调用login函数');
+      // 静默：调用login函数
       await login(formData.account, formData.password);
-      console.log('[Login] 登录成功，准备跳转到首页');
+      // 静默：登录成功，准备跳转到首页
       // 跳转到首页
       navigate('/');
     } catch (err: any) {
-      console.error('[Login] 登录失败:', err);
-      console.error('[Login] 错误详情:', err.response?.data);
+      // 静默：登录失败
+      // 静默：错误详情
       setError(err.response?.data?.message || '登录失败，请检查账号和密码');
     } finally {
       setLoading(false);

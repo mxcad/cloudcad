@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMxCadUploadNative, LoadFileParam } from '../hooks/useMxCadUploadNative';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MxCadUploaderProps {
   /** 项目ID */
@@ -44,6 +45,7 @@ export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
   buttonText = '上传 CAD 文件',
   buttonClassName = '',
 }) => {
+  const { isAuthenticated } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -51,7 +53,20 @@ export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
 
   const { selectFiles } = useMxCadUploadNative();
 
+
+
   const handleSelectFiles = () => {
+    // 检查用户是否已登录
+    if (!isAuthenticated) {
+      setMessage('请先登录后再上传文件');
+      setShowToast(true);
+      onError?.('用户未登录');
+      
+      // 5秒后隐藏提示
+      setTimeout(() => setShowToast(false), 5000);
+      return;
+    }
+
     selectFiles({
       projectId,
       parentId,
@@ -95,10 +110,11 @@ export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
     <div className="mxcad-uploader">
       <button
         onClick={handleSelectFiles}
-        disabled={uploading}
-        className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 ${buttonClassName}`}
+        disabled={uploading || !isAuthenticated}
+        className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 ${buttonClassName}`}
+        title={!isAuthenticated ? '请先登录后再上传文件' : ''}
       >
-        {uploading ? '上传中...' : buttonText}
+        {uploading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
       </button>
 
       {showProgress && uploading && (

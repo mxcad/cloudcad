@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Upload } from 'lucide-react';
+import { Upload, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ToastContainer } from '../components/ui/Toast';
@@ -11,7 +11,6 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useMxCadUploadNative } from '../hooks/useMxCadUploadNative';
-
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -41,9 +40,6 @@ export const FileSystemManager: React.FC = () => {
     setEditingNode,
     removeToast,
     closeConfirm,
-    loadCurrentNode,
-    loadChildren,
-    buildBreadcrumbs,
     handleRefresh,
     handleGoBack,
     handleNodeSelect,
@@ -52,7 +48,6 @@ export const FileSystemManager: React.FC = () => {
     handleRename,
     handleDelete,
     handleBatchDelete,
-    handleEnterFolder,
     handleFileOpen,
     handleDownload,
     handleOpenRename,
@@ -65,44 +60,43 @@ export const FileSystemManager: React.FC = () => {
   const { selectFiles } = useMxCadUploadNative();
 
   // 处理文件上传
-  const handleFileUpload = () => {
+  const handleFileUpload = useCallback(() => {
     selectFiles({
       projectId,
       parentId: nodeId || projectId,
-      onSuccess: (param) => {
+      onSuccess: () => {
         showToast('文件上传成功', 'success');
-        loadCurrentNode();
-        loadChildren();
+        handleRefresh();
       },
-      onError: (error) => {
+      onError: (error: string) => {
         showToast(`上传失败: ${error}`, 'error');
       },
-      onProgress: (percentage) => {
+      onProgress: (percentage: number) => {
         // 可以在这里添加进度显示逻辑
-        console.log(`上传进度: ${percentage}%`);
+        // 静默：上传进度
       },
-      onFileQueued: (file) => {
+      onFileQueued: (file: any) => {
         showToast(`正在排队上传: ${file.name}`, 'info');
       },
       onBeginUpload: () => {
         showToast('开始上传文件', 'info');
       },
     });
-  };
-
-  // 页面加载时获取数据
-  useEffect(() => {
-    if (projectId) {
-      loadCurrentNode();
-      loadChildren();
-      buildBreadcrumbs();
-    }
-  }, [projectId, nodeId, loadCurrentNode, loadChildren, buildBreadcrumbs]);
+  }, [projectId, nodeId, selectFiles, showToast, handleRefresh]);
 
   // 过滤节点
   const filteredNodes = nodes.filter(node =>
     node.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  // 调试日志
+  console.log('🔍 [FileSystemManager] 节点状态:', {
+    nodesCount: nodes.length,
+    filteredNodesCount: filteredNodes.length,
+    searchQuery,
+    nodes: nodes.map(n => ({ id: n.id, name: n.name, isFolder: n.isFolder })),
+    filteredNodes: filteredNodes.map(n => ({ id: n.id, name: n.name, isFolder: n.isFolder }))
+  });
 
   if (!projectId) {
     return (
@@ -117,6 +111,9 @@ export const FileSystemManager: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative">
+      {/* Toast 通知 */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       {/* 拖拽上传遮罩层 */}
       {isDragging && (
         <div className="fixed inset-0 z-40 bg-indigo-500 bg-opacity-20 backdrop-blur-sm flex items-center justify-center">
@@ -141,11 +138,12 @@ export const FileSystemManager: React.FC = () => {
               size="sm"
               onClick={handleGoBack}
               title="返回上级"
+              disabled={!currentNode?.parentId}
             >
               ←
             </Button>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">
-              文件系统
+              {currentNode?.name || '文件系统'}
             </h1>
           </div>
 
@@ -162,21 +160,64 @@ export const FileSystemManager: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button onClick={handleFileUpload}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={loading}
+            title="刷新"
+          >
+            <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+            刷新
+          </Button>
+          <Button onClick={handleFileUpload} disabled={loading}>
+            <Upload size={16} className="mr-2" />
             上传文件
           </Button>
           <MxCadUploader
             projectId={projectId}
             parentId={nodeId || projectId}
-            onSuccess={() => {
+            onSuccess={(param) => {
               showToast('文件上传成功', 'success');
-              loadCurrentNode();
-              loadChildren();
+              // 如果是秒传，添加额外的延迟确保后端数据库事务完成
+              if (param.isInstantUpload) {
+                setTimeout(() => {
+                  // 检查当前目录是否是文件上传的目标目录
+                  // 使用 currentNode.id 而不是路由参数，确保获取的是当前实际的目录
+                  const currentDirId = currentNode?.id || projectId;
+                  const targetDirId = param.parentId || projectId;
+                  
+                  console.log('🔍 [FileSystemManager] 秒传后目录检查:', {
+                    currentDirId,
+                    targetDirId,
+                    currentNodeId: currentNode?.id,
+                    nodeId,
+                    projectId,
+                    paramParentId: param.parentId,
+                    isSameDirectory: currentDirId === targetDirId
+                  });
+                  
+                  if (currentDirId !== targetDirId) {
+                    // 如果不在目标目录，导航到目标目录
+                    const targetUrl = `/projects/${projectId}/files/${targetDirId === projectId ? '' : targetDirId}`;
+                    console.log('🔍 [FileSystemManager] 导航到目标目录:', targetUrl);
+                    navigate(targetUrl);
+                  } else {
+                    // 如果已在目标目录，直接刷新
+                    console.log('🔍 [FileSystemManager] 已在目标目录，刷新当前列表');
+                    handleRefresh();
+                  }
+                }, 1000); // 增加延迟时间从500ms到1000ms
+              } else {
+                handleRefresh();
+              }
             }}
-            onError={(error) => showToast(`上传失败: ${error}`, 'error')}
+            onError={(error: string) => showToast(`上传失败: ${error}`, 'error')}
           />
-          <Button onClick={() => setShowCreateFolderModal(true)}>
+          <Button 
+            onClick={() => setShowCreateFolderModal(true)}
+            disabled={loading}
+          >
             新建文件夹
           </Button>
         </div>
@@ -199,7 +240,7 @@ export const FileSystemManager: React.FC = () => {
       {/* 内容区域 */}
       <div 
         ref={fileAreaRef}
-        className="bg-white rounded-xl border border-slate-200 relative"
+        className="bg-white rounded-xl border border-slate-200 relative min-h-[400px]"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -208,8 +249,9 @@ export const FileSystemManager: React.FC = () => {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-            <p className="text-red-500">{error}</p>
-            <Button onClick={handleRefresh} className="mt-4">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw size={16} className="mr-2" />
               重试
             </Button>
           </div>
@@ -220,33 +262,74 @@ export const FileSystemManager: React.FC = () => {
                 <p className="text-xl font-semibold text-slate-900 mb-2">
                   没有找到匹配的文件
                 </p>
-                <p className="text-slate-500">
+                <p className="text-slate-500 mb-4">
                   没有找到包含 "{searchQuery}" 的文件或文件夹
                 </p>
+                <Button 
+                  onClick={() => setSearchQuery('')}
+                  variant="outline"
+                >
+                  清除搜索
+                </Button>
               </>
             ) : (
               <>
+                <Upload size={48} className="mx-auto text-slate-300 mb-4" />
                 <p className="text-xl font-semibold text-slate-900 mb-2">
                   这个文件夹是空的
                 </p>
                 <p className="text-slate-500 mb-6">
                   上传文件或创建文件夹来开始使用
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap justify-center">
                   <Button onClick={handleFileUpload}>
+                    <Upload size={16} className="mr-2" />
                     上传文件
                   </Button>
                   <MxCadUploader
                     projectId={projectId}
                     parentId={nodeId || projectId}
-                    onSuccess={() => {
+                    onSuccess={(param) => {
                       showToast('文件上传成功', 'success');
-                      loadCurrentNode();
-                      loadChildren();
+                      // 如果是秒传，添加额外的延迟确保后端数据库事务完成
+                      if (param.isInstantUpload) {
+                        setTimeout(() => {
+                          // 检查当前目录是否是文件上传的目标目录
+                          // 使用 currentNode.id 而不是路由参数，确保获取的是当前实际的目录
+                          const currentDirId = currentNode?.id || projectId;
+                          const targetDirId = param.parentId || projectId;
+                          
+                          console.log('🔍 [FileSystemManager] 秒传后目录检查 (空状态):', {
+                            currentDirId,
+                            targetDirId,
+                            currentNodeId: currentNode?.id,
+                            nodeId,
+                            projectId,
+                            paramParentId: param.parentId,
+                            isSameDirectory: currentDirId === targetDirId
+                          });
+                          
+                          if (currentDirId !== targetDirId) {
+                            // 如果不在目标目录，导航到目标目录
+                            const targetUrl = `/projects/${projectId}/files/${targetDirId === projectId ? '' : targetDirId}`;
+                            console.log('🔍 [FileSystemManager] 导航到目标目录 (空状态):', targetUrl);
+                            navigate(targetUrl);
+                          } else {
+                            // 如果已在目标目录，直接刷新
+                            console.log('🔍 [FileSystemManager] 已在目标目录，刷新当前列表 (空状态)');
+                            handleRefresh();
+                          }
+                        }, 1000); // 增加延迟时间从500ms到1000ms
+                      } else {
+                        handleRefresh();
+                      }
                     }}
-                    onError={(error) => showToast(`上传失败: ${error}`, 'error')}
+                    onError={(error: string) => showToast(`上传失败: ${error}`, 'error')}
                   />
-                  <Button onClick={() => setShowCreateFolderModal(true)}>
+                  <Button 
+                    onClick={() => setShowCreateFolderModal(true)}
+                    variant="outline"
+                  >
                     新建文件夹
                   </Button>
                 </div>

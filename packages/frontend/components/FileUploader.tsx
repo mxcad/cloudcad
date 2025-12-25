@@ -15,6 +15,7 @@ interface FileUploadItem {
 }
 
 interface FileUploaderProps {
+  projectId?: string;
   parentId?: string;
   onUploadComplete?: (file: File, result: any) => void;
   onUploadError?: (file: File, error: Error) => void;
@@ -25,11 +26,12 @@ interface FileUploaderProps {
 }
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
+  projectId,
   parentId,
   onUploadComplete,
   onUploadError,
   maxFiles = 10,
-  accept = '.dwg,.dxf,.pdf,.png,.jpg,.jpeg',
+  accept = '.dwg,.dxf,.pdf,.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z',
   disabled = false,
   className = '',
 }) => {
@@ -117,6 +119,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     );
 
     const options: FileUploadOptions = {
+      projectId,
       parentId,
       onProgress: (progress) => {
         setFiles((prev) =>
