@@ -28,4 +28,189 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
+
+  /* 文件系统动画 */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes bounce-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* 应用动画类 */
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+
+  .animate-bounce-in {
+    animation: bounce-in 0.4s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  /* 文件项悬停效果 */
+  .file-item-grid {
+    transition: all 0.2s ease;
+  }
+
+  .file-item-grid:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
+  }
+
+  .file-item-grid.selected {
+    box-shadow: 0 0 0 2px #6366f1, 0 8px 25px -8px rgba(99, 102, 241, 0.3);
+  }
+
+  /* 列表项悬停效果 */
+  .file-item-list {
+    transition: all 0.15s ease;
+  }
+
+  .file-item-list:hover {
+    background-color: #f8fafc;
+  }
+
+  .file-item-list.selected {
+    background-color: #eef2ff;
+    border-left-color: #6366f1;
+  }
+
+  /* 按钮悬停效果 */
+  .btn-hover-lift {
+    transition: all 0.2s ease;
+  }
+
+  .btn-hover-lift:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-hover-lift:active {
+    transform: translateY(0);
+  }
+
+  /* 卡片悬停效果 */
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 骨架屏动画 */
+  .skeleton-pulse {
+    background: linear-gradient(
+      90deg,
+      #f1f5f9 0%,
+      #e2e8f0 50%,
+      #f1f5f9 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* 选中状态指示器动画 */
+  .selection-indicator {
+    transition: all 0.2s ease;
+  }
+
+  .selection-indicator.checked {
+    background-color: #6366f1;
+    border-color: #6366f1;
+  }
+
+  /* 图标容器悬浮效果 */
+  .icon-container {
+    transition: all 0.2s ease;
+  }
+
+  .icon-container:hover {
+    transform: scale(1.05);
+  }
+
+  /* 拖拽效果 */
+  .drag-over {
+    background-color: #eef2ff !important;
+    border-color: #6366f1 !important;
+  }
+
+  /* 阴影层次 */
+  .shadow-sm-custom {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 
+                0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-md-custom {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+                0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-lg-custom {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 
+                0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  }
 }

@@ -60,3 +60,29 @@ export const isPdfFile = (extension: string | null | undefined): boolean => {
   if (!extension) return false;
   return extension.toLowerCase() === '.pdf';
 };
+
+/**
+ * 获取图片文件的缩略图URL
+ * 对于本地存储的文件，直接返回文件路径
+ * 对于MinIO存储的文件，返回预签名URL或代理路径
+ */
+export const getThumbnailUrl = (node: FileSystemNode): string => {
+  if (!node.path) return '';
+
+  // 判断是否是图片文件
+  const extension = node.extension?.toLowerCase() || '';
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+  if (!imageExtensions.includes(extension)) {
+    return '';
+  }
+
+  // 如果是mxweb文件（MxCAD转换后的格式），尝试获取对应的缩略图
+  if (extension === '.mxweb') {
+    // mxweb 文件通常有对应的 jpg 缩略图
+    const basePath = node.path.replace('.mxweb', '');
+    return `${basePath}2__mxole__.jpg`;
+  }
+
+  // 直接返回文件路径（前端会通过代理访问）
+  return node.path;
+};
