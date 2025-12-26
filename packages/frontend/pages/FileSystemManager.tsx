@@ -79,6 +79,8 @@ export const FileSystemManager: React.FC = () => {
     viewMode,
     setViewMode,
     selectedNodes,
+    isMultiSelectMode,
+    setIsMultiSelectMode,
     toasts,
     confirmDialog,
     showCreateFolderModal,
@@ -119,11 +121,6 @@ export const FileSystemManager: React.FC = () => {
       breadcrumbRef.current.scrollTo({ left: breadcrumbRef.current.scrollWidth, behavior: 'smooth' });
     }
   }, [breadcrumbs]);
-
-  // 调试：打印当前上传路径信息
-  useEffect(() => {
-    console.log('[UploadDebug] currentNode:', currentNode?.id, 'projectId:', projectId, 'nodeId:', nodeId);
-  }, [currentNode, projectId, nodeId]);
 
   // 获取当前正确的父节点 ID
   const getCurrentParentId = useCallback(() => {
@@ -341,6 +338,7 @@ export const FileSystemManager: React.FC = () => {
 
         {/* 操作按钮组 */}
         <div className="flex items-center gap-1.5">
+          {/* 刷新按钮 */}
           <Button
             variant="ghost"
             size="sm"
@@ -352,9 +350,21 @@ export const FileSystemManager: React.FC = () => {
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
 
-          {/* 仅在项目内显示新建文件夹和上传按钮 */}
-          {!isAtRoot && (
+          {/* 新建按钮 - 根据页面类型显示不同图标 */}
+          {isAtRoot ? (
+            /* 新建项目 */
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenCreateProject}
+              className="text-slate-600"
+              title="新建项目"
+            >
+              <FolderPlus size={16} />
+            </Button>
+          ) : (
             <>
+              {/* 新建文件夹 */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -369,6 +379,7 @@ export const FileSystemManager: React.FC = () => {
                 </svg>
               </Button>
 
+              {/* 上传按钮 */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -386,19 +397,6 @@ export const FileSystemManager: React.FC = () => {
             </>
           )}
 
-          {/* 仅在项目列表页面显示新建项目按钮 */}
-          {isAtRoot && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenCreateProject}
-              className="text-slate-600"
-              title="新建项目"
-            >
-              <FolderPlus size={16} />
-            </Button>
-          )}
-
           <MxCadUploader
             ref={uploaderRef}
             projectId={projectId || ''}
@@ -414,69 +412,85 @@ export const FileSystemManager: React.FC = () => {
         </div>
       </div>
 
-      {/* 搜索和筛选 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
-        <div className="relative group flex-1 max-w-xs">
-          <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="搜索..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg
-                       placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* 根级别显示状态筛选 */}
-        {isAtRoot && (
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white"
-            >
-              <option value="ALL">全部</option>
-              <option value="ACTIVE">活跃</option>
-              <option value="ARCHIVED">已归档</option>
-            </select>
-          </div>
-        )}
-
-        {/* 视图切换（非根级别时显示） */}
-        {!isAtRoot && (
-          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500'}`}
-            >
-              <GridIcon size={14} />
-            </button>
-            <div className="w-px h-4 bg-slate-200" />
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500'}`}
-            >
-              <ListIcon size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  // 统一的空状态
+              {/* 搜索和筛选 */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
+              <div className="relative group flex-1 max-w-xs">
+                <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="搜索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg
+                             placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+      
+                      {/* 右侧工具栏 */}
+                      <div className="flex items-center gap-3">
+                        {/* 状态筛选 */}
+                        <div className="flex items-center gap-2">
+                          <Filter size={14} className="text-slate-400" />
+                          <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white"
+                          >
+                            <option value="ALL">全部</option>
+                            <option value="ACTIVE">活跃</option>
+                            <option value="ARCHIVED">已归档</option>
+                          </select>
+                        </div>
+              
+                        {/* 多选模式开关 */}
+                        <Button
+                          variant={isMultiSelectMode ? 'primary' : 'ghost'}
+                          size="sm"
+                          onClick={() => {
+                            setIsMultiSelectMode(!isMultiSelectMode);
+                            if (isMultiSelectMode) {
+                              // 关闭多选模式时清除选中
+                              selectedNodes.clear();
+                            }
+                          }}
+                          className={isMultiSelectMode ? '' : 'text-slate-600'}
+                          title="多选模式"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
+                          </svg>
+                        </Button>
+                        
+                        {/* 视图切换 */}
+                        <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-1.5 ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500'}`}
+                          >
+                            <GridIcon size={14} />
+                          </button>
+                          <div className="w-px h-4 bg-slate-200" />
+                          <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-1.5 ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500'}`}
+                          >
+                            <ListIcon size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );  // 统一的空状态
   const renderEmpty = (isProjectsEmpty: boolean) => (
     <div className="flex flex-col items-center justify-center py-16">
       <EmptyFolderIcon size={64} className="text-slate-300 mb-4" />
@@ -518,6 +532,7 @@ export const FileSystemManager: React.FC = () => {
             node={node}
             isSelected={selectedNodes.has(node.id)}
             viewMode={viewMode}
+            isMultiSelectMode={isMultiSelectMode}
             onSelect={handleNodeSelect}
             onEnter={handleFileOpen}
             onDownload={handleDownload}
@@ -582,14 +597,22 @@ export const FileSystemManager: React.FC = () => {
         {!loading && !error && renderContent()}
 
         {/* 选中数量提示 */}
-        {selectedNodes.size > 0 && (
+        {isMultiSelectMode && selectedNodes.size > 0 && (
           <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2
                         bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg
                         flex items-center gap-3">
             <span className="text-sm font-medium">已选中 {selectedNodes.size} 项</span>
             <div className="w-px h-4 bg-slate-700" />
             <button onClick={handleBatchDelete} className="text-red-400 hover:text-white text-sm">删除</button>
-            <button onClick={() => selectedNodes.clear()} className="text-slate-400 hover:text-white text-sm">取消</button>
+            <button 
+              onClick={() => {
+                selectedNodes.clear();
+                setIsMultiSelectMode(false);
+              }} 
+              className="text-slate-400 hover:text-white text-sm"
+            >
+              取消
+            </button>
           </div>
         )}
       </div>

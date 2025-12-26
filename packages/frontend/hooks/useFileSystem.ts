@@ -22,6 +22,7 @@ export const useFileSystem = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'ARCHIVED'>('ALL');
   
   // 模态框状态
@@ -89,6 +90,7 @@ export const useFileSystem = () => {
     setLoading(true);
     setError(null);
     setSelectedNodes(new Set()); // 清除选中状态
+    setIsMultiSelectMode(false); // 清除多选模式
 
     try {
       if (isProjectRootMode) {
@@ -190,15 +192,21 @@ export const useFileSystem = () => {
   }, [currentNode, navigate, projectId]);
 
   // 节点选择
-  const handleNodeSelect = useCallback((nodeId: string) => {
+  const handleNodeSelect = useCallback((nodeId: string, isMultiSelect: boolean = false) => {
     setSelectedNodes(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(nodeId)) {
-        newSet.delete(nodeId);
+      if (isMultiSelect) {
+        // 多选模式：toggle
+        const newSet = new Set(prev);
+        if (newSet.has(nodeId)) {
+          newSet.delete(nodeId);
+        } else {
+          newSet.add(nodeId);
+        }
+        return newSet;
       } else {
-        newSet.add(nodeId);
+        // 单选模式：只选中当前
+        return new Set([nodeId]);
       }
-      return newSet;
     });
   }, []);
 
@@ -443,6 +451,8 @@ export const useFileSystem = () => {
     viewMode,
     setViewMode,
     selectedNodes,
+    isMultiSelectMode,
+    setIsMultiSelectMode,
     toasts,
     confirmDialog,
     showCreateFolderModal,

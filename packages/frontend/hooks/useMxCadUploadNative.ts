@@ -34,9 +34,33 @@ export interface MxCadUploadConfig {
   parentId?: string;
   onBeginUpload?: () => void;
   onProgress?: (percentage: number) => void;
-  onSuccess?: (param: any) => void;
+  onSuccess?: (param: LoadFileParam) => void;
   onError?: (error: string) => void;
   onFileQueued?: (file: File) => void;
+}
+
+/**
+ * 上传成功回调参数类型
+ */
+export interface LoadFileParam {
+  /** 原始文件对象 */
+  file: File;
+  /** 文件ID（哈希值） */
+  id: string;
+  /** 文件名 */
+  name: string;
+  /** 文件大小（字节） */
+  size: number;
+  /** MIME 类型 */
+  type: string;
+  /** 文件哈希值 */
+  hash: string;
+  /** 是否使用服务器已有文件（秒传） */
+  isUseServerExistingFile: boolean;
+  /** 是否为秒传 */
+  isInstantUpload?: boolean;
+  /** 父文件夹ID */
+  parentId?: string;
 }
 
 interface PickerElement extends HTMLInputElement {
