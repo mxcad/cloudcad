@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useCallback, useRef } from 'react';
 import { useMxCadUploadNative, LoadFileParam } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
 
 interface MxCadUploaderProps {
   /** 项目ID */
   projectId?: string;
-  /** 父文件夹ID */
-  parentId?: string;
+  /** 父文件夹ID（动态获取） */
+  parentId?: string | (() => string);
   /** 上传成功回调 */
   onSuccess?: (param: LoadFileParam) => void;
   /** 上传失败回调 */
@@ -19,14 +19,19 @@ interface MxCadUploaderProps {
   buttonClassName?: string;
 }
 
+export interface MxCadUploaderRef {
+  triggerUpload: () => void;
+}
+
 /**
  * MxCAD 文件上传组件
  * 
  * 使用示例：
  * ```tsx
  * <MxCadUploader
+ *   ref={uploaderRef}
  *   projectId="project-123"
- *   parentId="folder-456"
+ *   parentId={() => getCurrentParentId()}
  *   onSuccess={(param) => {
  *     console.log('上传成功:', param);
  *   }}
@@ -34,9 +39,12 @@ interface MxCadUploaderProps {
  *     console.error('上传失败:', error);
  *   }}
  * />
+ * 
+ * // 触发上传
+ * uploaderRef.current?.triggerUpload();
  * ```
  */
-export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
+export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
   projectId,
   parentId,
   onSuccess,
@@ -44,18 +52,37 @@ export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
   showProgress = true,
   buttonText = '上传 CAD 文件',
   buttonClassName = '',
-}) => {
+}, ref) => {
   const { isAuthenticated } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+  
+  // 使用 ref 存储最新的 parentId
+  const parentIdRef = useRef<string>(typeof parentId === 'string' ? parentId : '');
+  
+  // 更新 parentIdRef 的回调
+  const updateParentIdRef = useCallback(() => {
+    if (typeof parentId === 'function') {
+      parentIdRef.current = parentId();
+    } else if (typeof parentId === 'string') {
+      parentIdRef.current = parentId;
+    }
+  }, [parentId]);
 
   const { selectFiles } = useMxCadUploadNative();
 
-
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    triggerUpload: () => handleSelectFiles(),
+  }), []);
 
   const handleSelectFiles = () => {
+    // 更新最新的 parentId
+    updateParentIdRef();
+    console.log('[MxCadUploader] 当前 parentId:', parentIdRef.current);
+    
     // 检查用户是否已登录
     if (!isAuthenticated) {
       setMessage('请先登录后再上传文件');
@@ -69,7 +96,7 @@ export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
 
     selectFiles({
       projectId,
-      parentId,
+      parentId: parentIdRef.current || undefined,
       onSuccess: (param: LoadFileParam) => {
         setUploading(false);
         setProgress(0);
@@ -138,6 +165,8 @@ export const MxCadUploader: React.FC<MxCadUploaderProps> = ({
       )}
     </div>
   );
-};
+});
+
+MxCadUploader.displayName = 'MxCadUploader';
 
 export default MxCadUploader;

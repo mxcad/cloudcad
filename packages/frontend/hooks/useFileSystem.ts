@@ -7,7 +7,12 @@ import { ToastType, Toast } from '../components/ui/Toast';
 export const useFileSystem = () => {
   const navigate = useNavigate();
   const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
-  
+
+  // 是否为项目根目录模式（无 projectId）
+  const isProjectRootMode = !projectId;
+  // 是否为文件夹模式（有 projectId）
+  const isFolderMode = !!projectId;
+
   // 状态管理
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [currentNode, setCurrentNode] = useState<FileSystemNode | null>(null);
@@ -17,6 +22,7 @@ export const useFileSystem = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'ARCHIVED'>('ALL');
   
   // 模态框状态
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
@@ -80,29 +86,37 @@ export const useFileSystem = () => {
 
   // 统一的数据加载函数
   const loadData = useCallback(async () => {
-    if (!projectId) return;
-    
-    const currentNodeId = nodeId || projectId;
-setLoading(true);
+    setLoading(true);
     setError(null);
     setSelectedNodes(new Set()); // 清除选中状态
-    
+
     try {
-      // 并行加载当前节点和子节点
-      const [nodeResponse, childrenResponse] = await Promise.all([
-        projectsApi.getNode(currentNodeId),
-        projectsApi.getChildren(currentNodeId)
-      ]);
-const nodeData = nodeResponse.data;
-      const childrenData = childrenResponse.data || [];
-      
-      setCurrentNode(nodeData);
-      setNodes(childrenData);
-      
-      // 构建面包屑
-      await buildBreadcrumbsFromNode(nodeData);
-      
-      showToast('加载成功', 'success');
+      if (isProjectRootMode) {
+        // 项目根目录模式：加载项目列表
+        const response = await projectsApi.list();
+        const allProjects = response.data || [];
+        setNodes(allProjects);
+        setCurrentNode(null);
+        setBreadcrumbs([]);
+        showToast('项目列表加载成功', 'success');
+      } else {
+        // 文件夹模式：加载项目/文件夹内容
+        const currentNodeId = nodeId || projectId;
+        const [nodeResponse, childrenResponse] = await Promise.all([
+          projectsApi.getNode(currentNodeId),
+          projectsApi.getChildren(currentNodeId)
+        ]);
+        const nodeData = nodeResponse.data;
+        const childrenData = childrenResponse.data || [];
+
+        setCurrentNode(nodeData);
+        setNodes(childrenData);
+
+        // 构建面包屑
+        await buildBreadcrumbsFromNode(nodeData);
+
+        showToast('加载成功', 'success');
+      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || '加载数据失败';
       setError(errorMessage);
@@ -110,7 +124,7 @@ const nodeData = nodeResponse.data;
     } finally {
       setLoading(false);
     }
-  }, [projectId, nodeId, showToast]);
+  }, [projectId, nodeId, isProjectRootMode, showToast]);
 
   // 从节点构建面包屑
   const buildBreadcrumbsFromNode = useCallback(async (node: FileSystemNode) => {
@@ -171,7 +185,7 @@ const nodeData = nodeResponse.data;
     if (currentNode?.parentId) {
       navigate(`/projects/${projectId}/files/${currentNode.parentId}`);
     } else {
-      navigate(`/projects/${projectId}`);
+      navigate('/projects'); // 没有父节点，返回项目列表
     }
   }, [currentNode, navigate, projectId]);
 
@@ -348,14 +362,76 @@ const nodeData = nodeResponse.data;
     setShowRenameModal(true);
   }, []);
 
+  // 项目相关操作
+  const handleCreateProject = useCallback(async (name: string, description?: string) => {
+    try {
+      await projectsApi.create({ name: name.trim(), description: description?.trim() });
+      showToast('项目创建成功', 'success');
+      loadData();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || '创建项目失败';
+      showToast(errorMessage, 'error');
+      throw err;
+    }
+  }, [loadData, showToast]);
+
+  const handleUpdateProject = useCallback(async (id: string, data: { name?: string; description?: string }) => {
+    try {
+      await projectsApi.update(id, data);
+      showToast('项目更新成功', 'success');
+      loadData();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || '更新项目失败';
+      showToast(errorMessage, 'error');
+      throw err;
+    }
+  }, [loadData, showToast]);
+
+  const handleDeleteProject = useCallback(async (id: string, name: string) => {
+    try {
+      await projectsApi.delete(id);
+      showToast('项目删除成功', 'success');
+      loadData();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || '删除项目失败';
+      showToast(errorMessage, 'error');
+      throw err;
+    }
+  }, [loadData, showToast]);
+
+  // 项目过滤
+  const getFilteredProjects = useCallback(() => {
+    return nodes.filter((node) => {
+      const matchesSearch =
+        node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (node.description &&
+          node.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesStatus =
+        statusFilter === 'ALL' || node.projectStatus === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [nodes, searchQuery, statusFilter]);
+
+  // 进入项目
+  const handleEnterProject = useCallback((projectId: string) => {
+    navigate(`/projects/${projectId}/files`);
+  }, [navigate]);
+
+  // 显示项目成员
+  const handleShowMembers = useCallback((node: FileSystemNode) => {
+    // 成员管理功能由父组件处理
+  }, []);
+
   // 添加初始加载和参数变化监听
   useEffect(() => {
-    if (projectId) {
-      loadData();
-    }
+    loadData();
   }, [projectId, nodeId, loadData]);
 
   return {
+    // 模式状态
+    isProjectRootMode,
+    isFolderMode,
+
     // 状态
     nodes,
     currentNode,
@@ -374,7 +450,9 @@ const nodeData = nodeResponse.data;
     folderName,
     setFolderName,
     editingNode,
-    
+    statusFilter,
+    setStatusFilter,
+
     // 操作方法
     setShowCreateFolderModal,
     setShowRenameModal,
@@ -398,5 +476,13 @@ const nodeData = nodeResponse.data;
     handleFileOpen,
     handleDownload,
     handleOpenRename,
+
+    // 项目相关操作
+    handleCreateProject,
+    handleUpdateProject,
+    handleDeleteProject,
+    getFilteredProjects,
+    handleEnterProject,
+    handleShowMembers,
   };
 };
