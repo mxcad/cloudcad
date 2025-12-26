@@ -15,7 +15,6 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Profile } from './pages/Profile';
 import { FileSystemManager } from './pages/FileSystemManager';
 import { Login } from './pages/Login';
-import { ProjectManager } from './pages/ProjectManager';
 import { Register } from './pages/Register';
 import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
@@ -77,8 +76,8 @@ function AppContent() {
                       path="/"
                       element={<Navigate to="/projects" replace />}
                     />
-                    <Route path="/projects" element={<ProjectManager />} />
-                    {/* 文件系统管理 */}
+                    {/* 统一使用 FileSystemManager 组件：项目根目录模式（无 projectId）和文件夹模式（有 projectId） */}
+                    <Route path="/projects" element={<FileSystemManager />} />
                     <Route
                       path="/projects/:projectId/files"
                       element={<FileSystemManager />}

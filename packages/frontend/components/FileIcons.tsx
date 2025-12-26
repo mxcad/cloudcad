@@ -252,6 +252,11 @@ export const getFileIconComponent = (
   node: FileSystemNode,
   size: number = 48
 ): React.ReactNode => {
+  // 项目根节点使用专门的图标
+  if (node.isRoot) {
+    return <ProjectIcon size={size} className="flex-shrink-0" />;
+  }
+
   if (node.isFolder) {
     return <FolderIcon size={size} className="flex-shrink-0" />;
   }
@@ -678,5 +683,53 @@ export const MoreIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => 
     <circle cx="12" cy="12" r="1" fill="currentColor"/>
     <circle cx="12" cy="5" r="1" fill="currentColor"/>
     <circle cx="12" cy="19" r="1" fill="currentColor"/>
+  </svg>
+);
+
+export const UsersIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+export const ProjectIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 64 64"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* 项目图标 - 类似文件夹但有建筑感 */}
+    {/* 建筑屋顶 */}
+    <path
+      d="M32 6L10 22V54C10 56.2091 11.7909 58 14 58H50C52.2091 58 54 56.2091 54 54V22L32 6Z"
+      fill="#0891B2"
+      stroke="#06B6D4"
+      strokeWidth="2"
+    />
+    {/* 建筑正立面 */}
+    <rect x="16" y="28" width="32" height="24" rx="1" fill="white" fillOpacity="0.9"/>
+    {/* 门 */}
+    <rect x="26" y="38" width="12" height="14" rx="1" fill="#06B6D4"/>
+    {/* 窗户 */}
+    <rect x="20" y="32" width="8" height="6" rx="1" fill="#0891B2"/>
+    <rect x="36" y="32" width="8" height="6" rx="1" fill="#0891B2"/>
+    {/* 项目标签 */}
+    <text x="32" y="18" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">PROJ</text>
   </svg>
 );

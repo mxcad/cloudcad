@@ -4,6 +4,7 @@ import {
   DeleteIcon,
   EditIcon,
   MoreIcon,
+  UsersIcon,
   getFileIconComponent,
 } from './FileIcons';
 import { Button } from './ui/Button';
@@ -20,6 +21,10 @@ interface FileItemProps {
   onDownload: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;
   onRename: (node: FileSystemNode) => void;
+  // 项目特有操作（仅 isRoot 时使用）
+  onEdit?: (e: React.MouseEvent) => void;
+  onDeleteNode?: (e: React.MouseEvent) => void;
+  onShowMembers?: (e: React.MouseEvent) => void;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -31,9 +36,13 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDownload,
   onDelete,
   onRename,
+  onEdit,
+  onDeleteNode,
+  onShowMembers,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const isRoot = node.isRoot;
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -132,7 +141,9 @@ export const FileItem: React.FC<FileItemProps> = ({
 
           {/* 文件信息 */}
           <p className="text-xs text-slate-500 text-center mt-1">
-            {node.isFolder
+            {isRoot
+              ? `${node._count?.children || 0} 个文件`
+              : node.isFolder
               ? `${node._count?.children || 0} 个项目`
               : formatFileSize(node.size)}
           </p>
@@ -163,42 +174,84 @@ export const FileItem: React.FC<FileItemProps> = ({
                 className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200 
                            py-1 min-w-[120px] z-20 animate-scale-in origin-top-right"
               >
-                {!node.isFolder && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(() => onDownload(node));
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
-                               flex items-center gap-2 transition-colors"
-                  >
-                    <DownloadIcon size={16} />
-                    下载
-                  </button>
+                {/* 项目根节点显示编辑和成员 */}
+                {isRoot ? (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuAction(() => onEdit?.(e));
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                                 flex items-center gap-2 transition-colors"
+                    >
+                      <EditIcon size={16} />
+                      编辑
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuAction(() => onShowMembers?.(e));
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                                 flex items-center gap-2 transition-colors"
+                    >
+                      <UsersIcon size={16} />
+                      成员
+                    </button>
+                    <hr className="my-1 border-slate-100" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuAction(() => onDelete(node));
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 
+                                 flex items-center gap-2 transition-colors"
+                    >
+                      <DeleteIcon size={16} />
+                      删除
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {!node.isFolder && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onDownload(node));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <DownloadIcon size={16} />
+                        下载
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuAction(() => onRename(node));
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                                 flex items-center gap-2 transition-colors"
+                    >
+                      <EditIcon size={16} />
+                      重命名
+                    </button>
+                    <hr className="my-1 border-slate-100" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuAction(() => onDelete(node));
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 
+                                 flex items-center gap-2 transition-colors"
+                    >
+                      <DeleteIcon size={16} />
+                      删除
+                    </button>
+                  </>
                 )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMenuAction(() => onRename(node));
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
-                             flex items-center gap-2 transition-colors"
-                >
-                  <EditIcon size={16} />
-                  重命名
-                </button>
-                <hr className="my-1 border-slate-100" />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMenuAction(() => onDelete(node));
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 
-                             flex items-center gap-2 transition-colors"
-                >
-                  <DeleteIcon size={16} />
-                  删除
-                </button>
               </div>
             )}
           </div>
@@ -274,8 +327,17 @@ export const FileItem: React.FC<FileItemProps> = ({
 
       {/* 文件信息 */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-medium text-slate-900 truncate" title={node.name}>
-          {node.name}
+        <h3
+          className="font-medium text-slate-900 truncate"
+          style={{
+            direction: 'rtl',
+            textAlign: 'left',
+          }}
+          title={node.name}
+        >
+          <span style={{ direction: 'ltr', unicodeBidi: 'embed' }}>
+            {node.name}
+          </span>
         </h3>
         <p className="text-xs text-slate-500">
           {formatDate(node.updatedAt)}
@@ -283,11 +345,13 @@ export const FileItem: React.FC<FileItemProps> = ({
         </p>
       </div>
 
-      {/* 类型标签 */}
-      <div className="hidden sm:block">
+      {/* 类型标签 - 固定宽度对齐 */}
+      <div className="hidden sm:flex w-16 justify-end">
         <span
-          className={`px-2 py-0.5 text-xs rounded-full ${
-            node.isFolder
+          className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${
+            isRoot
+              ? 'bg-indigo-100 text-indigo-700'
+              : node.isFolder
               ? 'bg-amber-100 text-amber-700'
               : node.extension === '.dwg'
               ? 'bg-blue-100 text-blue-700'
@@ -298,7 +362,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               : 'bg-slate-100 text-slate-700'
           }`}
         >
-          {node.isFolder ? '文件夹' : node.extension?.toUpperCase().replace('.', '')}
+          {isRoot ? '项目' : node.isFolder ? '文件夹' : node.extension?.toUpperCase().replace('.', '')}
         </span>
       </div>
 
@@ -308,41 +372,76 @@ export const FileItem: React.FC<FileItemProps> = ({
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        {!node.isFolder && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDownload(node);
-            }}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 
-                       transition-colors"
-            title="下载"
-          >
-            <DownloadIcon size={18} />
-          </button>
+        {/* 项目根节点显示编辑和成员 */}
+        {isRoot ? (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(e);
+              }}
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              title="编辑"
+            >
+              <EditIcon size={18} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onShowMembers?.(e);
+              }}
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              title="成员"
+            >
+              <UsersIcon size={18} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(node);
+              }}
+              className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
+              title="删除"
+            >
+              <DeleteIcon size={18} />
+            </button>
+          </>
+        ) : (
+          <>
+            {!node.isFolder && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownload(node);
+                }}
+                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                title="下载"
+              >
+                <DownloadIcon size={18} />
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename(node);
+              }}
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              title="重命名"
+            >
+              <EditIcon size={18} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(node);
+              }}
+              className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
+              title="删除"
+            >
+              <DeleteIcon size={18} />
+            </button>
+          </>
         )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRename(node);
-          }}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 
-                     transition-colors"
-          title="重命名"
-        >
-          <EditIcon size={18} />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(node);
-          }}
-          className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 
-                     transition-colors"
-          title="删除"
-        >
-          <DeleteIcon size={18} />
-        </button>
       </div>
     </div>
   );

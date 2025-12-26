@@ -125,9 +125,6 @@ importers:
       passport-jwt:
         specifier: ^4.0.1
         version: 4.0.1
-      pg:
-        specifier: ^8.16.3
-        version: 8.16.3
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -270,6 +267,9 @@ importers:
       react-hook-form:
         specifier: ^7.68.0
         version: 7.69.0(react@19.2.3)
+      react-horizontal-scrolling:
+        specifier: ^0.1.13
+        version: 0.1.13(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-router-dom:
         specifier: ^7.10.1
         version: 7.11.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -5929,6 +5929,12 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
+
+  react-horizontal-scrolling@0.1.13:
+    resolution: {integrity: sha512-LOInfIj77DA+Jijft5PZT/XGmF+B3iEx17wmXkBJ06J5VtjbXsO7zagP5ERJvUDM68M7Yd5dZEGpEW+8qlK0Sg==}
+    peerDependencies:
+      react: '>=16.0.0'
+      react-dom: '>=16.0.0'
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -13465,6 +13471,11 @@ snapshots:
   react-hook-form@7.69.0(react@19.2.3):
     dependencies:
       react: 19.2.3
+
+  react-horizontal-scrolling@0.1.13(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   react-is@16.13.1: {}
 
