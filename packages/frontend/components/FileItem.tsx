@@ -5,6 +5,7 @@ import {
   EditIcon,
   MoreIcon,
   UsersIcon,
+  RestoreIcon,
   getFileIconComponent,
 } from './FileIcons';
 import { Button } from './ui/Button';
@@ -26,6 +27,8 @@ interface FileItemProps {
   onEdit?: (e: React.MouseEvent) => void;
   onDeleteNode?: (e: React.MouseEvent) => void;
   onShowMembers?: (e: React.MouseEvent) => void;
+  // 回收站特有操作
+  onRestore?: (node: FileSystemNode) => void;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -41,6 +44,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onEdit,
   onDeleteNode,
   onShowMembers,
+  onRestore,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -254,23 +258,36 @@ export const FileItem: React.FC<FileItemProps> = ({
                         e.stopPropagation();
                         handleMenuAction(() => onRename(node));
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                  flex items-center gap-2 transition-colors"
                     >
                       <EditIcon size={16} />
                       重命名
                     </button>
+                    {onRestore && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onRestore(node));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <RestoreIcon size={16} />
+                        恢复
+                      </button>
+                    )}
                     <hr className="my-1 border-slate-100" />
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMenuAction(() => onDelete(node));
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
                                  flex items-center gap-2 transition-colors"
                     >
                       <DeleteIcon size={16} />
-                      删除
+                      {onRestore ? '彻底删除' : '删除'}
                     </button>
                   </>
                 )}

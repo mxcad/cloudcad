@@ -97,6 +97,7 @@ class MxCADAuthManager {
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('project');
     const parentId = urlParams.get('parent');
+    const nodeId = urlParams.get('nodeId') || parentId;
 
     // 保存原始方法（只保存一次）
     if (!this.originalXHROpen) {
@@ -132,6 +133,10 @@ class MxCADAuthManager {
         if ((method === 'POST' || method === 'PUT') && typeof body === 'string') {
           try {
             const bodyData = JSON.parse(body);
+            // 后端 buildContextFromRequest 期望 nodeId 参数
+            if (nodeId && !bodyData.nodeId) {
+              bodyData.nodeId = nodeId;
+            }
             if (projectId && !bodyData.projectId) {
               bodyData.projectId = projectId;
             }
@@ -167,6 +172,10 @@ class MxCADAuthManager {
         if ((method === 'POST' || method === 'PUT') && init?.body && typeof init.body === 'string') {
           try {
             const bodyData = JSON.parse(init.body);
+            // 后端 buildContextFromRequest 期望 nodeId 参数
+            if (nodeId && !bodyData.nodeId) {
+              bodyData.nodeId = nodeId;
+            }
             if (projectId && !bodyData.projectId) {
               bodyData.projectId = projectId;
             }

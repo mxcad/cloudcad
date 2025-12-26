@@ -29,8 +29,8 @@ describe('MxCadController', () => {
       user: {
         findUnique: jest.fn(),
       },
-      projectMember: {
-        findFirst: jest.fn(),
+      fileAccess: {
+        findUnique: jest.fn(),
       },
     } as any;
 

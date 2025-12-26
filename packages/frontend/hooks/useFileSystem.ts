@@ -1,19 +1,29 @@
-﻿import { useState, useCallback, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { projectsApi, filesApi } from '../services/apiService';
-import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
-import { ToastType, Toast } from '../components/ui/Toast';
-
-export const useFileSystem = () => {
-  const navigate = useNavigate();
-  const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
-
-  // 是否为项目根目录模式（无 projectId）
-  const isProjectRootMode = !projectId;
-  // 是否为文件夹模式（有 projectId）
-  const isFolderMode = !!projectId;
-
-  // 状态管理
+﻿import { useState, useCallback, useEffect, useMemo } from 'react';
+﻿import { useNavigate, useParams, useLocation } from 'react-router-dom';
+﻿import { projectsApi, filesApi, trashApi } from '../services/apiService';
+﻿import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
+﻿import { ToastType, Toast } from '../components/ui/Toast';
+﻿
+﻿export const useFileSystem = () => {
+﻿  const navigate = useNavigate();
+﻿  const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
+﻿  const location = useLocation();
+﻿
+﻿  // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
+﻿  const urlProjectId = useMemo(() => {
+﻿    const match = location.pathname.match(/\/projects\/([^/]+)/);
+﻿    return match ? match[1] : '';
+﻿  }, [location.pathname]);
+﻿
+﻿  const urlNodeId = useMemo(() => {
+﻿    const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
+﻿    return match ? match[1] : undefined;
+﻿  }, [location.pathname]);
+﻿
+﻿  // 是否为项目根目录模式（无 projectId）
+﻿  const isProjectRootMode = !urlProjectId;
+﻿  // 是否为文件夹模式（有 projectId）
+﻿  const isFolderMode = !!urlProjectId;  // 状态管理
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [currentNode, setCurrentNode] = useState<FileSystemNode | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -24,6 +34,9 @@ export const useFileSystem = () => {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'ARCHIVED'>('ALL');
+  
+  // 强制刷新计数器，用于解决闭包中 URL 参数过期问题
+  const [refreshCount, setRefreshCount] = useState(0);
   
   // 模态框状态
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
@@ -85,48 +98,13 @@ export const useFileSystem = () => {
     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
   }, []);
 
-  // 统一的数据加载函数
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setSelectedNodes(new Set()); // 清除选中状态
-    setIsMultiSelectMode(false); // 清除多选模式
-
-    try {
-      if (isProjectRootMode) {
-        // 项目根目录模式：加载项目列表
-        const response = await projectsApi.list();
-        const allProjects = response.data || [];
-        setNodes(allProjects);
-        setCurrentNode(null);
-        setBreadcrumbs([]);
-        showToast('项目列表加载成功', 'success');
-      } else {
-        // 文件夹模式：加载项目/文件夹内容
-        const currentNodeId = nodeId || projectId;
-        const [nodeResponse, childrenResponse] = await Promise.all([
-          projectsApi.getNode(currentNodeId),
-          projectsApi.getChildren(currentNodeId)
-        ]);
-        const nodeData = nodeResponse.data;
-        const childrenData = childrenResponse.data || [];
-
-        setCurrentNode(nodeData);
-        setNodes(childrenData);
-
-        // 构建面包屑
-        await buildBreadcrumbsFromNode(nodeData);
-
-        showToast('加载成功', 'success');
-      }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || '加载数据失败';
-      setError(errorMessage);
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, nodeId, isProjectRootMode, showToast]);
+  // 刷新操作 - 使用 forceRefresh 确保获取最新 URL 参数
+  const handleRefresh = useCallback(() => {
+    // 增加计数器，强制 useEffect 重新执行 loadData
+    // 这样可以确保 loadData 使用最新的 projectId 和 nodeId
+    console.log('[handleRefresh] 触发刷新，refreshCount=', refreshCount + 1);
+    setRefreshCount(prev => prev + 1);
+  }, [refreshCount]);
 
   // 从节点构建面包屑
   const buildBreadcrumbsFromNode = useCallback(async (node: FileSystemNode) => {
@@ -177,19 +155,59 @@ export const useFileSystem = () => {
     // 已合并到 loadData 中
   }, []);
 
-  // 刷新操作
-  const handleRefresh = useCallback(() => {
-    loadData();
-  }, [loadData]);
+  // 统一的数据加载函数
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setSelectedNodes(new Set()); // 清除选中状态
+    setIsMultiSelectMode(false); // 清除多选模式
+
+    console.log('[loadData] 开始加载: urlProjectId=', urlProjectId, ', urlNodeId=', urlNodeId);
+
+    try {
+      if (isProjectRootMode) {
+        // 项目根目录模式：加载项目列表
+        const response = await projectsApi.list();
+        const allProjects = response.data || [];
+        setNodes(allProjects);
+        setCurrentNode(null);
+        setBreadcrumbs([]);
+        console.log('[loadData] 项目根目录模式，加载项目列表:', allProjects.length, '个项目');
+      } else {
+        // 文件夹模式：加载项目/文件夹内容
+        const currentNodeId = urlNodeId || urlProjectId;
+        console.log('[loadData] 文件夹模式: currentNodeId=', currentNodeId);
+        const [nodeResponse, childrenResponse] = await Promise.all([
+          projectsApi.getNode(currentNodeId),
+          projectsApi.getChildren(currentNodeId)
+        ]);
+        const nodeData = nodeResponse.data;
+        const childrenData = childrenResponse.data || [];
+
+        console.log('[loadData] 获取到节点数据: id=', nodeData?.id, 'name=', nodeData?.name, 'parentId=', nodeData?.parentId);
+        setCurrentNode(nodeData);
+        setNodes(childrenData);
+
+        // 构建面包屑
+        await buildBreadcrumbsFromNode(nodeData);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || '加载数据失败';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [urlProjectId, urlNodeId, isProjectRootMode, showToast, buildBreadcrumbsFromNode]);
 
   // 返回上级
   const handleGoBack = useCallback(() => {
     if (currentNode?.parentId) {
-      navigate(`/projects/${projectId}/files/${currentNode.parentId}`);
+      navigate(`/projects/${urlProjectId}/files/${currentNode.parentId}`);
     } else {
       navigate('/projects'); // 没有父节点，返回项目列表
     }
-  }, [currentNode, navigate, projectId]);
+  }, [currentNode, navigate, urlProjectId]);
 
   // 节点选择
   const handleNodeSelect = useCallback((nodeId: string, isMultiSelect: boolean = false) => {
@@ -225,28 +243,36 @@ export const useFileSystem = () => {
 
   // 创建文件夹
   const handleCreateFolder = useCallback(async () => {
-    if (!folderName.trim() || !projectId) {
+    if (!folderName.trim() || !urlProjectId) {
       showToast('文件夹名称不能为空', 'error');
-      return;
+      return null;
     }
-    
-    const parentNodeId = currentNode?.id || projectId;
-    
+
+    const parentNodeId = currentNode?.id || urlProjectId;
+
     try {
-      await projectsApi.createFolder(parentNodeId, { name: folderName.trim() });
-      showToast('文件夹创建成功', 'success');
+      const response = await projectsApi.createFolder(parentNodeId, { name: folderName.trim() });
+      const newFolder = response.data;
+      showToast('文件夹创建成功，正在进入文件夹...', 'success');
       setFolderName('');
       setShowCreateFolderModal(false);
-      loadData();
+
+      // 自动导航进入新创建的文件夹
+      if (newFolder?.id) {
+        navigate(`/projects/${urlProjectId}/files/${newFolder.id}`);
+      }
+
+      return newFolder;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || '创建文件夹失败';
       showToast(errorMessage, 'error');
+      return null;
     }
-  }, [folderName, projectId, currentNode, loadData, showToast]);
+  }, [folderName, urlProjectId, currentNode, navigate, loadData, showToast]);
 
   // 重命名
   const handleRename = useCallback(async () => {
-    if (!folderName.trim() || !editingNode || !projectId) {
+    if (!folderName.trim() || !editingNode || !urlProjectId) {
       showToast('名称不能为空', 'error');
       return;
     }
@@ -262,47 +288,76 @@ export const useFileSystem = () => {
       const errorMessage = err.response?.data?.message || err.message || '重命名失败';
       showToast(errorMessage, 'error');
     }
-  }, [folderName, editingNode, projectId, loadData, showToast]);
+  }, [folderName, editingNode, urlProjectId, loadData, showToast]);
 
-  // 删除节点
-  const handleDelete = useCallback((node: FileSystemNode) => {
-    const deleteMessage = node.isFolder 
-      ? `确定要删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容。`
-      : `确定要删除文件"${node.name}"吗？`;
-    
+  // 删除节点（默认到回收站）
+  const handleDelete = useCallback((node: FileSystemNode, permanently: boolean = false) => {
+    let deleteMessage: string;
+    let deleteApi: Promise<unknown>;
+
+    if (permanently) {
+      // 彻底删除
+      if (node.isRoot) {
+        deleteMessage = `确定要彻底删除项目"${node.name}"吗？此操作将同时删除项目内的所有内容，且不可恢复。`;
+        deleteApi = projectsApi.delete(node.id);
+      } else if (node.isFolder) {
+        deleteMessage = `确定要彻底删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容，且不可恢复。`;
+        deleteApi = projectsApi.deleteNode(node.id);
+      } else {
+        deleteMessage = `确定要彻底删除文件"${node.name}"吗？此操作不可恢复。`;
+        deleteApi = projectsApi.deleteNode(node.id);
+      }
+    } else {
+      // 移到回收站
+      if (node.isRoot) {
+        deleteMessage = `确定要将项目"${node.name}"移到回收站吗？可以在回收站中恢复。`;
+        deleteApi = projectsApi.delete(node.id);
+      } else if (node.isFolder) {
+        deleteMessage = `确定要将文件夹"${node.name}"移到回收站吗？可以在回收站中恢复。`;
+        deleteApi = projectsApi.deleteNode(node.id);
+      } else {
+        deleteMessage = `确定要将文件"${node.name}"移到回收站吗？可以在回收站中恢复。`;
+        deleteApi = projectsApi.deleteNode(node.id);
+      }
+    }
+
     showConfirm(
-      '确认删除',
+      permanently ? '确认彻底删除' : '确认删除',
       deleteMessage,
       async () => {
         try {
-          await projectsApi.deleteNode(node.id);
-          showToast('删除成功', 'success');
+          await deleteApi;
+          showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
           loadData();
         } catch (err: any) {
           const errorMessage = err.response?.data?.message || err.message || '删除失败';
           showToast(errorMessage, 'error');
         }
       },
-      'danger'
+      permanently ? 'danger' : 'warning'
     );
   }, [showConfirm, loadData, showToast]);
 
   // 批量删除
-  const handleBatchDelete = useCallback(() => {
+  const handleBatchDelete = useCallback((permanently: boolean = false) => {
     if (selectedNodes.size === 0) {
       showToast('请先选择要删除的项目', 'error');
       return;
     }
-    
+
+    const message = permanently
+      ? `确定要彻底删除选中的 ${selectedNodes.size} 个项目吗？此操作不可恢复。`
+      : `确定要将选中的 ${selectedNodes.size} 个项目移到回收站吗？`;
+
     showConfirm(
-      '批量删除',
-      `确定要删除选中的 ${selectedNodes.size} 个项目吗？此操作不可恢复。`,
+      permanently ? '确认彻底删除' : '批量删除',
+      message,
       async () => {
         try {
           await Promise.all(
             Array.from(selectedNodes).map(nodeId => projectsApi.deleteNode(nodeId))
           );
-          showToast('批量删除成功', 'success');
+          showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
           setSelectedNodes(new Set());
           loadData();
         } catch (err: any) {
@@ -310,36 +365,42 @@ export const useFileSystem = () => {
           showToast(errorMessage, 'error');
         }
       },
-      'danger'
+      permanently ? 'danger' : 'warning'
     );
   }, [selectedNodes, showConfirm, loadData, showToast]);
 
   // 进入文件夹
   const handleEnterFolder = useCallback((node: FileSystemNode) => {
     if (node.isFolder) {
-      navigate(`/projects/${projectId}/files/${node.id}`);
+      navigate(`/projects/${urlProjectId}/files/${node.id}`);
     }
-  }, [navigate, projectId]);
+  }, [navigate, urlProjectId]);
 
   // 处理文件打开（包括CAD文件跳转到编辑器）
   const handleFileOpen = useCallback((node: FileSystemNode) => {
     if (node.isFolder) {
-      navigate(`/projects/${projectId}/files/${node.id}`);
+      // 如果是项目根目录（isRoot=true），使用 node.id 作为 projectId
+      // 如果是普通文件夹，使用 URL 中的 projectId
+      const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
+      navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
     } else {
       // 检查是否是CAD文件
       const cadExtensions = ['.dwg', '.dxf'];
       if (node.extension && cadExtensions.includes(node.extension.toLowerCase())) {
         // 跳转到CAD编辑器，传递项目上下文
+        const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
         const queryParams = new URLSearchParams();
-        queryParams.set('project', projectId);
-        queryParams.set('parent', currentNode?.id || projectId);
+        queryParams.set('project', effectiveProjectId || '');
+        queryParams.set('parent', currentNode?.id || effectiveProjectId || '');
+        // 后端 buildContextFromRequest 期望 nodeId 参数
+        queryParams.set('nodeId', currentNode?.id || effectiveProjectId || '');
         navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
       } else {
         // 非CAD文件，执行下载
         handleDownload(node);
       }
     }
-  }, [navigate, projectId, currentNode]);
+  }, [navigate, urlProjectId, currentNode]);
 
   // 文件下载
   const handleDownload = useCallback(async (node: FileSystemNode) => {
@@ -433,7 +494,7 @@ export const useFileSystem = () => {
   // 添加初始加载和参数变化监听
   useEffect(() => {
     loadData();
-  }, [projectId, nodeId, loadData]);
+  }, [urlProjectId, urlNodeId, refreshCount, loadData]);
 
   return {
     // 模式状态
@@ -494,5 +555,8 @@ export const useFileSystem = () => {
     getFilteredProjects,
     handleEnterProject,
     handleShowMembers,
+
+    // 回收站相关操作
+    trashApi,
   };
 };

@@ -148,7 +148,7 @@ export class ValidationHelper {
     projectId?: string;
     parentId?: string;
   }): boolean {
-    return !!(context.projectId || context.parentId);
+    return !!(context.nodeId);
   }
 }
 

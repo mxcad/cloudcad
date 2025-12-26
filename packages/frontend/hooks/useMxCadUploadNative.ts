@@ -30,8 +30,7 @@ const calculateFileHash = (file: File): Promise<string> => {
 };
 
 export interface MxCadUploadConfig {
-  projectId?: string;
-  parentId?: string;
+  nodeId?: string;
   onBeginUpload?: () => void;
   onProgress?: (percentage: number) => void;
   onSuccess?: (param: LoadFileParam) => void;
@@ -59,8 +58,8 @@ export interface LoadFileParam {
   isUseServerExistingFile: boolean;
   /** 是否为秒传 */
   isInstantUpload?: boolean;
-  /** 父文件夹ID */
-  parentId?: string;
+  /** 节点ID（上传到的位置） */
+  nodeId?: string;
 }
 
 interface PickerElement extends HTMLInputElement {
@@ -158,17 +157,16 @@ export const useMxCadUploadNative = () => {
     const chunkSize = 5 * 1024 * 1024; // 5MB
     const totalChunks = Math.ceil(file.size / chunkSize);
     
-    // 检查 projectId 是否已传递
-    if (!config.projectId) {
-      throw new Error('缺少项目ID，请确保已选择项目或文件夹');
+    // 检查 nodeId 是否已传递
+    if (!config.nodeId) {
+      throw new Error('缺少节点ID，请确保已选择目标文件夹');
     }
     
     // 构建请求参数
     const buildRequest = (extra?: Record<string, any>) => ({
       fileHash: hash,
       filename: file.name,
-      projectId: config.projectId,
-      parentId: config.parentId,
+      nodeId: config.nodeId,
       ...extra,
     });
     
@@ -179,8 +177,9 @@ export const useMxCadUploadNative = () => {
     console.log('[fileisExist] 响应:', existResponse.data);
     
     if (existResponse.data.ret === 'fileAlreadyExist') {
-      // 秒传成功
-      console.log('[fileisExist] 秒传成功');
+      // 秒传成功，但需要确保文件节点已在目标目录创建
+      console.log('[fileisExist] 秒传成功，文件节点应在目标目录创建');
+      
       config.onSuccess?.({
         file,
         id: hash,
@@ -190,7 +189,7 @@ export const useMxCadUploadNative = () => {
         hash,
         isUseServerExistingFile: true,
         isInstantUpload: true,
-        parentId: config.parentId,
+        nodeId: config.nodeId,
       });
       return;
     }
@@ -229,10 +228,7 @@ export const useMxCadUploadNative = () => {
       formData.append('name', file.name);
       formData.append('hash', hash);
       formData.append('size', file.size.toString());
-      formData.append('projectId', config.projectId);
-      if (config.parentId) {
-        formData.append('parentId', config.parentId);
-      }
+      formData.append('nodeId', config.nodeId!);
       
       await apiService.post('/mxcad/files/uploadFiles', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -266,7 +262,7 @@ export const useMxCadUploadNative = () => {
           type: file.type,
           hash,
           isUseServerExistingFile: false,
-          parentId: config.parentId,
+          nodeId: config.nodeId,
         });
         break;
       }

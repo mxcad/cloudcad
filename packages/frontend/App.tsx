@@ -18,6 +18,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
+import { TrashPage } from './pages/TrashPage';
 import { useAuth } from './contexts/AuthContext';
 
 // 受保护的路由组件
@@ -115,6 +116,9 @@ function AppContent() {
                     <Route path="/users" element={<UserManagement />} />
                     <Route path="/roles" element={<RoleManagement />} />
                     <Route path="/profile" element={<Profile />} />
+
+                    {/* 回收站 */}
+                    <Route path="/trash" element={<TrashPage />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

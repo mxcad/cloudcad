@@ -733,3 +733,41 @@ export const ProjectIcon: React.FC<IconProps> = ({ size = 24, className = '' }) 
     <text x="32" y="18" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">PROJ</text>
   </svg>
 );
+
+// 恢复图标 - 用于回收站恢复功能
+export const RestoreIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M3 12C3 7.58172 6.58172 4 11 4H13C13.5523 4 14 4.44772 14 5V8"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M3 12C3 16.4183 6.58172 20 11 20H13C17.4183 20 21 16.4183 21 12"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M10 8L6 12L10 16"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M14 8H18"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);

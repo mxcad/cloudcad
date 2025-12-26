@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  FileAccessRole,
+  NodeAccessRole,
   Permission,
-  ProjectMemberRole,
   UserRole,
 } from '../enums/permissions.enum';
 
@@ -17,7 +16,7 @@ export class PermissionCacheService {
    * 生成缓存键
    */
   private generateCacheKey(
-    type: 'user' | 'project' | 'file',
+    type: 'user' | 'node',
     userId: string,
     resourceId?: string
   ): string {
@@ -69,35 +68,35 @@ export class PermissionCacheService {
   }
 
   /**
-   * 清除项目相关缓存
+   * 清除节点相关缓存（项目/文件夹/文件）
    */
-  clearProjectCache(projectId: string): void {
+  clearNodeCache(nodeId: string): void {
     const keysToDelete: string[] = [];
 
     for (const key of this.cache.keys()) {
-      if (key.includes(`project:${projectId}`)) {
+      if (key.includes(`node:${nodeId}`)) {
         keysToDelete.push(key);
       }
     }
 
     keysToDelete.forEach((key) => this.delete(key));
-    this.logger.log(`清除项目 ${projectId} 的权限缓存`);
+    this.logger.log(`清除节点 ${nodeId} 的权限缓存`);
   }
 
   /**
-   * 清除文件相关缓存
+   * 清除项目缓存（向后兼容）
+   * @deprecated 使用 clearNodeCache 代替
+   */
+  clearProjectCache(projectId: string): void {
+    this.clearNodeCache(projectId);
+  }
+
+  /**
+   * 清除文件缓存（向后兼容）
+   * @deprecated 使用 clearNodeCache 代替
    */
   clearFileCache(fileId: string): void {
-    const keysToDelete: string[] = [];
-
-    for (const key of this.cache.keys()) {
-      if (key.includes(`file:${fileId}`)) {
-        keysToDelete.push(key);
-      }
-    }
-
-    keysToDelete.forEach((key) => this.delete(key));
-    this.logger.log(`清除文件 ${fileId} 的权限缓存`);
+    this.clearNodeCache(fileId);
   }
 
   /**
@@ -117,46 +116,37 @@ export class PermissionCacheService {
   }
 
   /**
-   * 缓存项目权限
+   * 缓存节点访问权限（统一管理项目/文件夹/文件的访问权限）
    */
-  cacheProjectPermissions(
+  cacheNodeAccessRole(
     userId: string,
-    projectId: string,
-    permissions: Permission[]
+    nodeId: string,
+    role: NodeAccessRole
   ): void {
-    const key = this.generateCacheKey('project', userId, projectId);
-    this.set(key, permissions);
+    const key = `role:node:${userId}:${nodeId}`;
+    this.set(key, role, 5 * 60 * 1000); // 节点角色缓存5分钟
   }
 
   /**
-   * 获取项目权限缓存
+   * 获取节点访问角色缓存
    */
-  getProjectPermissions(
+  getNodeAccessRole(
     userId: string,
-    projectId: string
-  ): Permission[] | null {
-    const key = this.generateCacheKey('project', userId, projectId);
-    return this.get<Permission[]>(key);
+    nodeId: string
+  ): NodeAccessRole | null {
+    const key = `role:node:${userId}:${nodeId}`;
+    return this.get<NodeAccessRole>(key);
   }
 
   /**
-   * 缓存文件权限
+   * 获取文件访问角色缓存（向后兼容）
+   * @deprecated 使用 getNodeAccessRole 代替
    */
-  cacheFilePermissions(
+  getFileAccessRole(
     userId: string,
-    fileId: string,
-    permissions: Permission[]
-  ): void {
-    const key = this.generateCacheKey('file', userId, fileId);
-    this.set(key, permissions);
-  }
-
-  /**
-   * 获取文件权限缓存
-   */
-  getFilePermissions(userId: string, fileId: string): Permission[] | null {
-    const key = this.generateCacheKey('file', userId, fileId);
-    return this.get<Permission[]>(key);
+    nodeId: string
+  ): NodeAccessRole | null {
+    return this.getNodeAccessRole(userId, nodeId);
   }
 
   /**
@@ -173,49 +163,6 @@ export class PermissionCacheService {
   getUserRole(userId: string): UserRole | null {
     const key = `role:user:${userId}`;
     return this.get<UserRole>(key);
-  }
-
-  /**
-   * 缓存项目成员角色
-   */
-  cacheProjectMemberRole(
-    userId: string,
-    projectId: string,
-    role: ProjectMemberRole
-  ): void {
-    const key = `role:project:${userId}:${projectId}`;
-    this.set(key, role, 5 * 60 * 1000); // 项目角色缓存5分钟
-  }
-
-  /**
-   * 获取项目成员角色缓存
-   */
-  getProjectMemberRole(
-    userId: string,
-    projectId: string
-  ): ProjectMemberRole | null {
-    const key = `role:project:${userId}:${projectId}`;
-    return this.get<ProjectMemberRole>(key);
-  }
-
-  /**
-   * 缓存文件访问角色
-   */
-  cacheFileAccessRole(
-    userId: string,
-    fileId: string,
-    role: FileAccessRole
-  ): void {
-    const key = `role:file:${userId}:${fileId}`;
-    this.set(key, role, 5 * 60 * 1000); // 文件角色缓存5分钟
-  }
-
-  /**
-   * 获取文件访问角色缓存
-   */
-  getFileAccessRole(userId: string, fileId: string): FileAccessRole | null {
-    const key = `role:file:${userId}:${fileId}`;
-    return this.get<FileAccessRole>(key);
   }
 
   /**

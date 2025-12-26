@@ -149,8 +149,8 @@ export class FileUploadManagerService {
       const targetFile = `${fileHash}.${suffix}${convertedExt}`;
 
       // 1. 检查缓存 - 只缓存文件存在的结果，不缓存文件不存在的结果
-      // 使用项目上下文作为缓存键的一部分，确保不同项目的文件缓存分开
-      const cacheKey = context?.projectId ? `${context.projectId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
+      // 使用节点上下文作为缓存键的一部分
+      const cacheKey = context?.nodeId ? `${context.nodeId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
       const cached = this.cacheManager.get<{ exists: boolean; source: string }>('file-existence', cacheKey);
       
       this.logger.log(`🔍 检查文件存在性: ${targetFile}, 缓存: ${cached ? (cached.exists ? '存在' : '不存在') : '无'}`);
@@ -496,21 +496,30 @@ return { ret: MxUploadReturn.kOk };
 
     // 3. 缓存结果 - 只缓存文件存在的结果，避免缓存错误结果
     if (fileExists) {
-      // 使用项目上下文作为缓存键的一部分
-      const cacheKey = context?.projectId ? `${context.projectId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
+      // 使用节点上下文作为缓存键的一部分
+      const cacheKey = context?.nodeId ? `${context.nodeId}:${fileHash}.${suffix}` : `${fileHash}.${suffix}`;
       this.cacheManager.set('file-existence', cacheKey, { exists: true, source: fileSource });
-// 使用辅助方法处理文件系统节点创建
-      await this.handleFileSystemNodeCreation(filename, fileHash, context, fileSource, targetFile);
+
+      // 使用辅助方法处理文件系统节点创建
+      try {
+        await this.handleFileSystemNodeCreation(filename, fileHash, context, fileSource, targetFile);
+      } catch (nodeError) {
+        // 文件系统节点创建失败不影响文件检查结果，只记录错误
+        this.logger.error(`⚠️ 文件系统节点创建失败: ${nodeError.message}`);
+      }
 
       return { ret: MxUploadReturn.kFileAlreadyExist };
     } else {
-// 不缓存文件不存在的结果，避免后续上传失败
+      // 不缓存文件不存在的结果，避免后续上传失败
       return { ret: MxUploadReturn.kFileNoExist };
     }
   }
 
   /**
    * 处理文件系统节点创建
+   * 关键修复：每次秒传成功时，都在目标目录创建新的文件节点引用
+   * 这样相同文件上传到不同目录时，每个目录都有独立的文件节点
+   * 但底层存储路径是共享的，节省存储空间
    */
   private async handleFileSystemNodeCreation(
     filename: string,
@@ -519,34 +528,39 @@ return { ret: MxUploadReturn.kOk };
     fileSource: string,
     targetFile: string
   ): Promise<void> {
-    if (!context || !context.projectId || !context.userId) {
-
-      this.logger.warn(`文件 ${filename} (${fileHash}) 缺少必要上下文信息，无法创建文件系统节点`);
-      return;
+    if (!context) {
+      throw new Error(`文件 ${filename} (${fileHash}) 缺少上下文信息，无法创建文件系统节点`);
     }
 
-
-    try {
-      // 获取文件大小
-      const actualFileSize = await this.getFileSize(fileHash, filename, fileSource, targetFile);
-
-      // 在事务中创建文件系统节点
-      const extension = path.extname(filename).toLowerCase();
-      const mimeType = this.fileSystemNodeService.getMimeType(extension);
-      const accessPath = `/mxcad/file/${targetFile}`;
-
-      await this.fileSystemNodeService.createOrReferenceNode({
-        originalName: filename,
-        fileHash: fileHash,
-        fileSize: actualFileSize,
-        accessPath: accessPath,
-        mimeType: mimeType,
-        extension: extension,
-        context: context,
-      });
-} catch (error) {
-this.logger.warn(`创建文件系统节点失败: ${error.message}`);
+    if (!context.nodeId) {
+      throw new Error(`文件 ${filename} (${fileHash}) 缺少节点ID，无法创建文件系统节点`);
     }
+
+    if (!context.userId) {
+      throw new Error(`文件 ${filename} (${fileHash}) 缺少用户ID，无法创建文件系统节点`);
+    }
+
+    // 获取文件大小
+    const actualFileSize = await this.getFileSize(fileHash, filename, fileSource, targetFile);
+
+    // 在事务中创建文件系统节点
+    const extension = path.extname(filename).toLowerCase();
+    const mimeType = this.fileSystemNodeService.getMimeType(extension);
+    const accessPath = `/mxcad/file/${targetFile}`;
+
+    // 关键修复：直接调用 createOrReferenceNode，不再检查是否已存在
+    // createOrReferenceNode 内部会检查是否需要在当前目录创建新节点
+    await this.fileSystemNodeService.createOrReferenceNode({
+      originalName: filename,
+      fileHash: fileHash,
+      fileSize: actualFileSize,
+      accessPath: accessPath,
+      mimeType: mimeType,
+      extension: extension,
+      context: context,
+    });
+
+    this.logger.log(`✅ 文件系统节点创建成功: ${filename} (${fileHash}) 在目录 ${context.nodeId}`);
   }
 
   /**
@@ -558,9 +572,8 @@ this.logger.warn(`创建文件系统节点失败: ${error.message}`);
     fileSize: number,
     context: FileSystemNodeContext
   ): Promise<void> {
-    if (!context.projectId) {
-      this.logger.warn('⚠️ 缺少项目ID，无法创建文件系统节点。文件将只保存到MxCAD存储，不会出现在文件系统中。');
-      this.logger.warn('⚠️ 请确保通过文件管理页面访问CAD编辑器，而不是直接访问URL。');
+    if (!context.nodeId) {
+      this.logger.warn('⚠️ 缺少节点ID，无法创建文件系统节点。文件将只保存到MxCAD存储，不会出现在文件系统中。');
       return;
     }
 

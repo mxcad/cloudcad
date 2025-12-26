@@ -22,7 +22,6 @@ model User {
   updatedAt DateTime @updatedAt
 
   // 关联关系
-  projectMemberships ProjectMember[]
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   nodeAccesses       FileAccess[]
 
@@ -59,9 +58,9 @@ model FileSystemNode {
   owner       User     @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+  deletedAt   DateTime? // 软删除时间（回收站功能）
+
   // 关联关系
-  members      ProjectMember[] @relation("ProjectNodes")
   nodeAccesses FileAccess[]    @relation("NodeAccesses")
   
   // 索引优化
@@ -69,22 +68,8 @@ model FileSystemNode {
   @@index([ownerId])
   @@index([isRoot])
   @@index([isFolder])
+  @@index([deletedAt])
   @@map("file_system_nodes")
-}
-
-model ProjectMember {
-  id        String            @id @default(cuid())
-  userId    String
-  nodeId    String            // 关联到FileSystemNode（根节点）
-  role      ProjectMemberRole @default(MEMBER)
-  joinedAt  DateTime          @default(now())
-
-  // 关联关系
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  node    FileSystemNode   @relation("ProjectNodes", fields: [nodeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, nodeId])
-  @@map("project_members")
 }
 
 model FileAccess {
@@ -178,13 +163,6 @@ enum ProjectStatus {
   DELETED
 }
 
-enum ProjectMemberRole {
-  OWNER
-  ADMIN
-  MEMBER
-  VIEWER
-}
-
 enum FileStatus {
   UPLOADING
   PROCESSING
@@ -194,9 +172,11 @@ enum FileStatus {
 }
 
 enum FileAccessRole {
-  OWNER
-  EDITOR
-  VIEWER
+  OWNER      // 所有者：完全控制
+  ADMIN      // 管理员：管理权限
+  MEMBER     // 成员：可编辑
+  EDITOR     // 编辑者：可编辑文件
+  VIEWER     // 查看者：只读
 }
 
 enum AssetStatus {

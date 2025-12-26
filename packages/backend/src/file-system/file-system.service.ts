@@ -33,7 +33,7 @@ export class FileSystemService {
           isRoot: true,
           projectStatus: ProjectStatus.ACTIVE,
           ownerId: userId,
-          members: {
+          nodeAccesses: {
             create: {
               userId,
               role: 'OWNER',
@@ -41,7 +41,7 @@ export class FileSystemService {
           },
         },
         include: {
-          members: {
+          nodeAccesses: {
             include: {
               user: {
                 select: {
@@ -70,14 +70,15 @@ export class FileSystemService {
       const projects = await this.prisma.fileSystemNode.findMany({
         where: {
           isRoot: true,
-          members: {
+          deletedAt: null,
+          nodeAccesses: {
             some: {
               userId,
             },
           },
         },
         include: {
-          members: {
+          nodeAccesses: {
             include: {
               user: {
                 select: {
@@ -93,7 +94,7 @@ export class FileSystemService {
           _count: {
             select: {
               children: true,
-              members: true,
+              nodeAccesses: true,
             },
           },
         },
@@ -114,7 +115,7 @@ export class FileSystemService {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
         include: {
-          members: {
+          nodeAccesses: {
             include: {
               user: {
                 select: {
@@ -173,7 +174,7 @@ export class FileSystemService {
           projectStatus: dto.status as ProjectStatus,
         },
         include: {
-          members: {
+          nodeAccesses: {
             include: {
               user: {
                 select: {
@@ -197,17 +198,127 @@ export class FileSystemService {
     }
   }
 
-  async deleteProject(projectId: string) {
+  async deleteProject(projectId: string, permanently: boolean = false) {
     try {
-      await this.prisma.fileSystemNode.delete({
-        where: { id: projectId, isRoot: true },
-      });
-
-      this.logger.log(`项目删除成功: ${projectId}`);
-      return { message: '项目删除成功' };
+      if (permanently) {
+        // 彻底删除
+        await this.prisma.$transaction(async (tx) => {
+          await this.deleteDescendantsWithFiles(tx, projectId);
+          await tx.fileSystemNode.delete({
+            where: { id: projectId, isRoot: true },
+          });
+        });
+        this.logger.log(`项目彻底删除成功: ${projectId}`);
+      } else {
+        // 软删除到回收站
+        await this.prisma.$transaction(async (tx) => {
+          // 递归软删除所有后代节点
+          await this.softDeleteDescendants(tx, projectId);
+          // 软删除根节点
+          await tx.fileSystemNode.update({
+            where: { id: projectId, isRoot: true },
+            data: {
+              deletedAt: new Date(),
+              projectStatus: ProjectStatus.DELETED,
+            },
+          });
+        });
+        this.logger.log(`项目已移至回收站: ${projectId}`);
+      }
+      return { message: permanently ? '项目已彻底删除' : '项目已移至回收站' };
     } catch (error) {
       this.logger.error(`项目删除失败: ${error.message}`, error.stack);
       throw error;
+    }
+  }
+
+  /**
+   * 递归软删除节点的所有后代
+   */
+  private async softDeleteDescendants(tx: any, nodeId: string): Promise<void> {
+    const children = await tx.fileSystemNode.findMany({
+      where: { parentId: nodeId },
+      select: { id: true, isFolder: true },
+    });
+
+    for (const child of children) {
+      await this.softDeleteDescendants(tx, child.id);
+    }
+
+    if (children.length > 0) {
+      const childIds = children.map((c: { id: string }) => c.id);
+      await tx.fileSystemNode.updateMany({
+        where: { id: { in: childIds } },
+        data: {
+          deletedAt: new Date(),
+          fileStatus: FileStatus.DELETED,
+        },
+      });
+    }
+  }
+
+  /**
+   * 递归删除节点的所有后代（包含文件删除逻辑）
+   */
+  private async deleteDescendantsWithFiles(tx: any, nodeId: string): Promise<void> {
+    // 获取当前节点的所有直接子节点
+    const children = await tx.fileSystemNode.findMany({
+      where: { parentId: nodeId },
+      select: { id: true, isFolder: true, path: true, fileHash: true },
+    });
+
+    // 递归删除每个子节点的后代
+    for (const child of children) {
+      await this.deleteDescendantsWithFiles(tx, child.id);
+    }
+
+    // 删除当前层的子节点及其文件
+    if (children.length > 0) {
+      for (const child of children) {
+        // 如果是文件节点，检查是否需要删除 MinIO 文件
+        if (!child.isFolder && child.path) {
+          await this.deleteFileIfNotReferenced(tx, child.path, child.fileHash);
+        }
+      }
+
+      // 删除数据库记录
+      const childIds = children.map((c: { id: string }) => c.id);
+      await tx.fileSystemNode.deleteMany({
+        where: { id: { in: childIds } },
+      });
+    }
+  }
+
+  /**
+   * 检查文件是否被其他节点引用，如果没有则从 MinIO 删除
+   */
+  private async deleteFileIfNotReferenced(tx: any, path: string, fileHash: string | null): Promise<void> {
+    if (!path) return;
+
+    // 如果有 fileHash，检查是否有其他节点使用相同的文件哈希
+    if (fileHash) {
+      const referenceCount = await tx.fileSystemNode.count({
+        where: {
+          fileHash,
+          isFolder: false,
+          fileStatus: 'COMPLETED',
+          NOT: { path }, // 排除当前节点
+        },
+      });
+
+      if (referenceCount > 0) {
+        this.logger.log(`文件被其他项目引用，保留MinIO文件: ${path}`);
+        return;
+      }
+    }
+
+    // 无引用或无 fileHash，删除 MinIO 文件
+    try {
+      await this.storage.deleteFile(path);
+      this.logger.log(`MinIO文件删除成功: ${path}`);
+    } catch (error) {
+      this.logger.error(`MinIO文件删除失败: ${path}`, error);
+      // 不抛出错误，继续处理
     }
   }
 
@@ -256,7 +367,7 @@ export class FileSystemService {
   async getNode(nodeId: string) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
+        where: { id: nodeId, deletedAt: null },
       });
 
       if (!node) {
@@ -324,7 +435,7 @@ export class FileSystemService {
       }
 
       const children = await this.prisma.fileSystemNode.findMany({
-        where: { parentId: nodeId },
+        where: { parentId: nodeId, deletedAt: null },
         include: {
           owner: {
             select: {
@@ -376,23 +487,43 @@ export class FileSystemService {
     }
   }
 
-  async deleteNode(nodeId: string) {
+  async deleteNode(nodeId: string, permanently: boolean = false) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { isRoot: true },
+        select: { isRoot: true, isFolder: true, path: true, fileHash: true },
       });
 
-      if (node?.isRoot) {
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      if (node.isRoot) {
         throw new BadRequestException('请使用删除项目接口删除根节点');
       }
 
-      await this.prisma.fileSystemNode.delete({
-        where: { id: nodeId },
-      });
-
-      this.logger.log(`节点删除成功: ${nodeId}`);
-      return { message: '节点删除成功' };
+      if (permanently) {
+        // 彻底删除
+        await this.prisma.$transaction(async (tx) => {
+          await this.deleteDescendantsWithFiles(tx, nodeId);
+          await tx.fileSystemNode.delete({ where: { id: nodeId } });
+        });
+        this.logger.log(`节点彻底删除成功: ${nodeId}`);
+      } else {
+        // 软删除到回收站
+        await this.prisma.$transaction(async (tx) => {
+          await this.softDeleteDescendants(tx, nodeId);
+          await tx.fileSystemNode.update({
+            where: { id: nodeId },
+            data: {
+              deletedAt: new Date(),
+              fileStatus: FileStatus.DELETED,
+            },
+          });
+        });
+        this.logger.log(`节点已移至回收站: ${nodeId}`);
+      }
+      return { message: permanently ? '节点已彻底删除' : '节点已移至回收站' };
     } catch (error) {
       this.logger.error(`节点删除失败: ${error.message}`, error.stack);
       throw error;
@@ -541,23 +672,292 @@ export class FileSystemService {
     roles: string[]
   ): Promise<boolean> {
     try {
-      const membership = await this.prisma.projectMember.findFirst({
+      const access = await this.prisma.fileAccess.findUnique({
         where: {
-          nodeId: projectId,
-          userId,
+          userId_nodeId: { userId, nodeId: projectId },
         },
       });
 
-      if (!membership) {
+      if (!access) {
         return false;
       }
 
-      return roles.includes(membership.role);
+      return roles.includes(access.role);
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
       return false;
     }
   }
+
+  // ============ 回收站相关方法 ============
+
+  /**
+   * 获取用户的回收站列表（已删除的项目和文件）
+   */
+  async getTrashItems(userId: string) {
+    try {
+      // 获取用户有权限访问的已删除项目
+      const projects = await this.prisma.fileSystemNode.findMany({
+        where: {
+          isRoot: true,
+          deletedAt: { not: null },
+          OR: [
+            { ownerId: userId },
+            {
+              nodeAccesses: {
+                some: { userId },
+              },
+            },
+          ],
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              nickname: true,
+            },
+          },
+          nodeAccesses: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  username: true,
+                  nickname: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          deletedAt: 'desc',
+        },
+      });
+
+      // 获取用户删除的文件和文件夹（不属于项目的）
+      const nodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          deletedAt: { not: null },
+          ownerId: userId,
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              username: true,
+              nickname: true,
+            },
+          },
+          _count: {
+            select: { children: true },
+          },
+        },
+        orderBy: {
+          deletedAt: 'desc',
+        },
+      });
+
+      return { projects, nodes };
+    } catch (error) {
+      this.logger.error(`获取回收站列表失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 从回收站恢复项目
+   */
+  async restoreProject(projectId: string) {
+    try {
+      const project = await this.prisma.fileSystemNode.findFirst({
+        where: { id: projectId, isRoot: true, deletedAt: { not: null } },
+      });
+
+      if (!project) {
+        throw new NotFoundException('回收站中不存在该项目');
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        // 恢复根节点
+        await tx.fileSystemNode.update({
+          where: { id: projectId },
+          data: {
+            deletedAt: null,
+            projectStatus: ProjectStatus.ACTIVE,
+          },
+        });
+        // 恢复所有后代节点
+        await tx.fileSystemNode.updateMany({
+          where: {
+            OR: [
+              { parentId: projectId },
+              { deletedAt: { not: null } },
+            ],
+          },
+          data: {
+            deletedAt: null,
+            fileStatus: FileStatus.COMPLETED,
+          },
+        });
+      });
+
+      this.logger.log(`项目恢复成功: ${projectId}`);
+      return { message: '项目已从回收站恢复' };
+    } catch (error) {
+      this.logger.error(`项目恢复失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 从回收站恢复节点
+   */
+  async restoreNode(nodeId: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.findFirst({
+        where: { id: nodeId, deletedAt: { not: null } },
+      });
+
+      if (!node) {
+        throw new NotFoundException('回收站中不存在该节点');
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        // 恢复当前节点
+        await tx.fileSystemNode.update({
+          where: { id: nodeId },
+          data: {
+            deletedAt: null,
+            fileStatus: FileStatus.COMPLETED,
+          },
+        });
+
+        // 如果有父节点且父节点也被删除，需要恢复父节点
+        if (node.parentId) {
+          await tx.fileSystemNode.updateMany({
+            where: {
+              id: node.parentId,
+              deletedAt: { not: null },
+            },
+            data: {
+              deletedAt: null,
+              fileStatus: FileStatus.COMPLETED,
+            },
+          });
+        }
+      });
+
+      this.logger.log(`节点恢复成功: ${nodeId}`);
+      return { message: '已从回收站恢复' };
+    } catch (error) {
+      this.logger.error(`节点恢复失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 彻底删除回收站中的项目
+   */
+  async permanentlyDeleteProject(projectId: string) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await this.deleteDescendantsWithFiles(tx, projectId);
+        await tx.fileSystemNode.delete({
+          where: { id: projectId, isRoot: true, deletedAt: { not: null } },
+        });
+      });
+
+      this.logger.log(`项目已从回收站彻底删除: ${projectId}`);
+      return { message: '项目已彻底删除' };
+    } catch (error) {
+      this.logger.error(`项目彻底删除失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 彻底删除回收站中的节点
+   */
+  async permanentlyDeleteNode(nodeId: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { isFolder: true, path: true, fileHash: true },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        if (!node.isFolder && node.path) {
+          await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
+        }
+        await this.deleteDescendantsWithFiles(tx, nodeId);
+        await tx.fileSystemNode.delete({ where: { id: nodeId } });
+      });
+
+      this.logger.log(`节点已从回收站彻底删除: ${nodeId}`);
+      return { message: '已彻底删除' };
+    } catch (error) {
+      this.logger.error(`节点彻底删除失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 清空用户回收站
+   */
+  async clearTrash(userId: string) {
+    try {
+      // 获取用户回收站中的所有项目
+      const projects = await this.prisma.fileSystemNode.findMany({
+        where: {
+          isRoot: true,
+          deletedAt: { not: null },
+          nodeAccesses: { some: { userId } },
+        },
+        select: { id: true },
+      });
+
+      // 获取用户回收站中的所有节点
+      const nodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          deletedAt: { not: null },
+          ownerId: userId,
+        },
+        select: { id: true, isFolder: true, path: true, fileHash: true },
+      });
+
+      // 彻底删除所有
+      for (const project of projects) {
+        await this.permanentlyDeleteProject(project.id);
+      }
+
+      for (const node of nodes) {
+        if (!node.isFolder && node.path) {
+          await this.deleteFileIfNotReferenced(this.prisma, node.path, node.fileHash);
+        }
+      }
+
+      await this.prisma.fileSystemNode.deleteMany({
+        where: {
+          id: { in: nodes.map((n) => n.id) },
+        },
+      });
+
+      this.logger.log(`用户回收站已清空: ${userId}`);
+      return { message: '回收站已清空' };
+    } catch (error) {
+      this.logger.error(`清空回收站失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  // ============ 权限检查方法 ============
 
   async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
@@ -576,27 +976,25 @@ export class FileSystemService {
         return true;
       }
 
-      // 如果是根节点，检查项目成员权限
+      // 如果是根节点，检查节点访问权限
       if (node.isRoot) {
-        const membership = await this.prisma.projectMember.findFirst({
+        const rootAccess = await this.prisma.fileAccess.findUnique({
           where: {
-            nodeId,
-            userId,
+            userId_nodeId: { userId, nodeId },
           },
         });
-        return !!membership;
+        return !!rootAccess;
       }
 
-      // 如果不是根节点，向上查找根节点并检查项目权限
+      // 如果不是根节点，向上查找根节点并检查权限
       const rootNode = await this.getRootNode(nodeId);
       if (rootNode) {
-        const membership = await this.prisma.projectMember.findFirst({
+        const rootAccess = await this.prisma.fileAccess.findUnique({
           where: {
-            nodeId: rootNode.id,
-            userId,
+            userId_nodeId: { userId, nodeId: rootNode.id },
           },
         });
-        return !!membership;
+        return !!rootAccess;
       }
 
       return false;

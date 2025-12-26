@@ -10,13 +10,8 @@ export class FileExistDto {
   @IsString()
   fileHash: string;
 
-  @ApiProperty({ description: '项目ID（用于文件系统关联）', required: false })
+  @ApiProperty({ description: '节点ID（项目根目录或文件夹的 FileSystemNode ID）', required: false })
   @IsString()
   @IsOptional()
-  projectId?: string;
-
-  @ApiProperty({ description: '父文件夹ID（用于文件系统关联）', required: false })
-  @IsString()
-  @IsOptional()
-  parentId?: string;
+  nodeId?: string;
 }

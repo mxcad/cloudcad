@@ -2,8 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException, ForbiddenExcept
 import { DatabaseService } from '../database/database.service';
 
 export interface MxCadContext {
-  projectId?: string;
-  parentId?: string;
+  nodeId?: string;
   userId?: string;
   userRole?: string;
 }
@@ -21,26 +20,21 @@ export class MxCadPermissionService {
       throw new UnauthorizedException('用户未认证，请先登录');
     }
     
-    // 必须有项目信息
-    if (!context.projectId) {
-      throw new BadRequestException('缺少项目信息');
+    // 必须有节点信息
+    if (!context.nodeId) {
+      throw new BadRequestException('缺少节点信息');
     }
     
-    // 验证用户是否为项目成员
-    const membership = await this.prisma.projectMember.findFirst({
+    // 验证用户是否有节点访问权限
+    const access = await this.prisma.fileAccess.findUnique({
       where: {
-        userId: context.userId,
-        nodeId: context.projectId,
+        userId_nodeId: { userId: context.userId, nodeId: context.nodeId },
       },
     });
     
-    if (!membership) {
-      throw new ForbiddenException('您不是该项目的成员，无法上传文件');
+    if (!access) {
+      throw new ForbiddenException('您没有该节点的访问权限，无法上传文件');
     }
-    
-    // 项目成员对项目内所有文件夹都有访问权限，无需单独检查 fileAccess
-    // 如果有 parentId，仅检查是否为项目成员即可（已在上面验证）
-    // 父文件夹的访问权限继承自项目成员权限
 
     return true;
   }
@@ -80,16 +74,15 @@ export class MxCadPermissionService {
       return true;
     }
 
-    // 检查项目成员权限
+    // 检查项目访问权限
     if (fileNode.parentId) {
-      const projectMembership = await this.prisma.projectMember.findFirst({
+      const projectAccess = await this.prisma.fileAccess.findUnique({
         where: {
-          userId: context.userId,
-          nodeId: fileNode.parentId,
+          userId_nodeId: { userId: context.userId, nodeId: fileNode.parentId },
         },
       });
 
-      if (projectMembership) {
+      if (projectAccess) {
         return true;
       }
     }

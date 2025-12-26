@@ -3,10 +3,8 @@ import { useMxCadUploadNative, LoadFileParam } from '../hooks/useMxCadUploadNati
 import { useAuth } from '../contexts/AuthContext';
 
 interface MxCadUploaderProps {
-  /** 项目ID */
-  projectId?: string;
-  /** 父文件夹ID（动态获取） */
-  parentId?: string | (() => string);
+  /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
+  nodeId?: string | (() => string);
   /** 上传成功回调 */
   onSuccess?: (param: LoadFileParam) => void;
   /** 上传失败回调 */
@@ -25,28 +23,10 @@ export interface MxCadUploaderRef {
 
 /**
  * MxCAD 文件上传组件
- * 
- * 使用示例：
- * ```tsx
- * <MxCadUploader
- *   ref={uploaderRef}
- *   projectId="project-123"
- *   parentId={() => getCurrentParentId()}
- *   onSuccess={(param) => {
- *     console.log('上传成功:', param);
- *   }}
- *   onError={(error) => {
- *     console.error('上传失败:', error);
- *   }}
- * />
- * 
- * // 触发上传
- * uploaderRef.current?.triggerUpload();
  * ```
  */
 export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
-  projectId,
-  parentId,
+  nodeId,
   onSuccess,
   onError,
   showProgress = true,
@@ -58,18 +38,6 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
-  
-  // 使用 ref 存储最新的 parentId
-  const parentIdRef = useRef<string>(typeof parentId === 'string' ? parentId : '');
-  
-  // 更新 parentIdRef 的回调
-  const updateParentIdRef = useCallback(() => {
-    if (typeof parentId === 'function') {
-      parentIdRef.current = parentId();
-    } else if (typeof parentId === 'string') {
-      parentIdRef.current = parentId;
-    }
-  }, [parentId]);
 
   const { selectFiles } = useMxCadUploadNative();
 
@@ -79,24 +47,23 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
   }), []);
 
   const handleSelectFiles = () => {
-    // 更新最新的 parentId
-    updateParentIdRef();
-    console.log('[MxCadUploader] 当前 parentId:', parentIdRef.current);
-    
+    // 每次上传前都获取最新的 nodeId
+    const currentNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
+    console.log('[MxCadUploader] 当前 nodeId:', currentNodeId, '类型:', typeof currentNodeId, '长度:', currentNodeId?.length);
+
     // 检查用户是否已登录
     if (!isAuthenticated) {
       setMessage('请先登录后再上传文件');
       setShowToast(true);
       onError?.('用户未登录');
-      
+
       // 5秒后隐藏提示
       setTimeout(() => setShowToast(false), 5000);
       return;
     }
 
     selectFiles({
-      projectId,
-      parentId: parentIdRef.current || undefined,
+      nodeId: currentNodeId || undefined,
       onSuccess: (param: LoadFileParam) => {
         setUploading(false);
         setProgress(0);
