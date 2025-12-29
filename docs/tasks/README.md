@@ -23,7 +23,7 @@
 | [011](./011-backend-external-reference-tracking.md) | 后端 - 文件系统外部参照跟踪 | ✅ 已完成 | 3h | 001, 002 |
 | [004](./004-frontend-api-methods.md) | 前端 - 获取预加载数据 API 方法 | ✅ 已完成 | 1.5h | 001, 002 |
 | [005](./005-frontend-use-external-reference-upload-hook.md) | 前端 - useExternalReferenceUpload Hook | ✅ 已完成 | 3h | 004 |
-| [006](./006-frontend-external-reference-modal.md) | 前端 - ExternalReferenceModal 组件 | ⬜ 待开始 | 2.5h | 005 |
+| [006](./006-frontend-external-reference-modal.md) | 前端 - ExternalReferenceModal 组件 | ✅ 已完成 | 2.5h | 005 |
 | [007](./007-frontend-integrate-to-mxcad-uploader.md) | 前端 - 集成到 MxCadUploader | ⬜ 待开始 | 1.5h | 005, 006 |
 | [008](./008-frontend-missing-reference-warning.md) | 前端 - 文件列表缺失外部参照提醒 | ⬜ 待开始 | 2.5h | 005, 006, 007, 011 |
 | [009](./009-frontend-upload-anytime.md) | 前端 - 随时上传外部参照功能 | ⬜ 待开始 | 2h | 005, 006, 008 |
@@ -235,4 +235,4 @@
 **文档版本**：v1.2  
 **创建日期**：2025-12-29  
 **最后更新**：2025-12-29  
-**状态**：执行中（5/11 已完成，45%）
+**状态**：执行中（6/11 已完成，55%）
