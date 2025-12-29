@@ -112,7 +112,7 @@ export interface UseExternalReferenceUploadReturn {
   /** 是否正在上传 */
   loading: boolean;
   /** 检查缺失的外部参照 */
-  checkMissingReferences: () => Promise<boolean>;
+  checkMissingReferences: (fileHash?: string) => Promise<boolean>;
   /** 选择文件 */
   selectFiles: () => void;
   /** 上传文件 */

@@ -6,6 +6,7 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
+import * as fsPromises from 'fs/promises';
 
 // Mock fs 模块
 jest.mock('fs');
@@ -423,10 +424,10 @@ describe('MxCadService', () => {
     });
 
     it('应该在 JSON 解析失败时返回 null', async () => {
-      fsPromises.readdir = jest.fn().mockResolvedValue([
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue([
         'testhash123.dwg.mxweb_preloading.json',
       ]);
-      fsPromises.readFile = jest.fn().mockResolvedValue('invalid json');
+      fsPromisesMock.readFile = jest.fn().mockResolvedValue('invalid json');
 
       const result = await service.getPreloadingData('testhash123');
 
@@ -441,10 +442,10 @@ describe('MxCadService', () => {
         externalReference: [],
       };
 
-      fsPromises.readdir = jest.fn().mockResolvedValue([
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue([
         'testhash456.dxf.mxweb_preloading.json',
       ]);
-      fsPromises.readFile = jest.fn().mockResolvedValue(
+      fsPromisesMock.readFile = jest.fn().mockResolvedValue(
         JSON.stringify(mockPreloadingData)
       );
 
@@ -462,7 +463,7 @@ describe('MxCadService', () => {
     });
 
     it('应该在检测到路径遍历攻击时返回 null', async () => {
-      fsPromises.readdir = jest.fn().mockResolvedValue([
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue([
         '../../../etc/passwd_preloading.json',
       ]);
       path.normalize = jest.fn((p) => p);
@@ -475,7 +476,6 @@ describe('MxCadService', () => {
 
   describe('checkExternalReferenceExists', () => {
     const fs = require('fs');
-    const fsPromises = require('fs/promises');
     const path = require('path');
 
     beforeEach(() => {
@@ -514,7 +514,7 @@ describe('MxCadService', () => {
       ];
 
       fs.existsSync = jest.fn().mockReturnValue(true);
-      fsPromises.readdir = jest.fn().mockResolvedValue(mockFiles);
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue(mockFiles);
 
       const exists = await service.checkExternalReferenceExists(
         '25e89b5adf19984330f4e68b0f99db64',

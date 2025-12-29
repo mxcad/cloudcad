@@ -106,9 +106,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
         // 保存文件哈希值
         setCurrentFileHash(param.hash);
 
-        // 检查外部参照
-        console.log('[MxCadUploader] 开始检查外部参照');
-        externalReferenceUpload.checkMissingReferences();
+        // 检查外部参照（传入 fileHash 确保不为空）
+        console.log('[MxCadUploader] 开始检查外部参照, hash:', param.hash);
+        externalReferenceUpload.checkMissingReferences(param.hash);
 
         // 3秒后隐藏提示
         setTimeout(() => setShowToast(false), 3000);

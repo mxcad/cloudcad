@@ -27,24 +27,29 @@ export const useExternalReferenceUpload = (
   /**
    * 获取预加载数据
    */
-  const fetchPreloadingData = useCallback(async (): Promise<PreloadingData | null> => {
+  const fetchPreloadingData = useCallback(async (hash: string): Promise<PreloadingData | null> => {
+    if (!hash) {
+      console.warn('[useExternalReferenceUpload] fileHash 为空，无法获取预加载数据');
+      return null;
+    }
     try {
-      const response = await mxcadApi.getPreloadingData(config.fileHash);
+      const response = await mxcadApi.getPreloadingData(hash);
       return response.data;
     } catch (error) {
       console.error('[useExternalReferenceUpload] 获取预加载数据失败:', error);
       return null;
     }
-  }, [config.fileHash]);
+  }, []);
 
   /**
    * 检查外部参照是否存在
    */
   const checkReferenceExists = useCallback(
-    async (fileName: string): Promise<boolean> => {
+    async (fileHash: string, fileName: string): Promise<boolean> => {
+      if (!fileHash) return false;
       try {
         const response = await mxcadApi.checkExternalReferenceExists(
-          config.fileHash,
+          fileHash,
           fileName
         );
         return response.data.exists;
@@ -53,79 +58,84 @@ export const useExternalReferenceUpload = (
         return false;
       }
     },
-    [config.fileHash]
+    []
   );
 
   /**
    * 检查缺失的外部参照
+   * @param fileHash 可选的文件哈希值，如果不提供则使用 config.fileHash
    * @returns 是否有缺失的外部参照
    */
-  const checkMissingReferences = useCallback(async (): Promise<boolean> => {
-    const preloadingData = await fetchPreloadingData();
+  const checkMissingReferences = useCallback(
+    async (fileHash?: string): Promise<boolean> => {
+      const hash = fileHash || config.fileHash;
+      const preloadingData = await fetchPreloadingData(hash);
 
-    if (!preloadingData) {
-      console.log('[useExternalReferenceUpload] 未找到预加载数据');
-      return false;
-    }
+      if (!preloadingData) {
+        console.log('[useExternalReferenceUpload] 未找到预加载数据');
+        return false;
+      }
 
-    // 过滤掉 http/https 开头的 URL（已有外部参照）
-    const missingImages = preloadingData.images.filter(
-      (name) => !name.startsWith('http:') && !name.startsWith('https:')
-    );
-    const missingRefs = preloadingData.externalReference;
+      // 过滤掉 http/https 开头的 URL（已有外部参照）
+      const missingImages = preloadingData.images.filter(
+        (name) => !name.startsWith('http:') && !name.startsWith('https:')
+      );
+      const missingRefs = preloadingData.externalReference;
 
-    if (missingImages.length === 0 && missingRefs.length === 0) {
-      console.log('[useExternalReferenceUpload] 无缺失的外部参照');
-      return false;
-    }
+      if (missingImages.length === 0 && missingRefs.length === 0) {
+        console.log('[useExternalReferenceUpload] 无缺失的外部参照');
+        return false;
+      }
 
-    console.log(
-      `[useExternalReferenceUpload] 检测到外部参照: 图片 ${missingImages.length} 个, DWG ${missingRefs.length} 个`
-    );
+      console.log(
+        `[useExternalReferenceUpload] 检测到外部参照: 图片 ${missingImages.length} 个, DWG ${missingRefs.length} 个`
+      );
 
-    // 检查哪些文件缺失
-    const missingFiles: ExternalReferenceFile[] = [];
+      // 检查哪些文件缺失
+      const missingFiles: ExternalReferenceFile[] = [];
 
-    // 检查 DWG 外部参照
-    for (const name of missingRefs) {
-      const exists = await checkReferenceExists(name);
-      missingFiles.push({
-        name,
-        type: 'ref',
-        uploadState: 'notSelected',
-        progress: 0,
-        exists,
-      });
-    }
+      // 检查 DWG 外部参照
+      for (const name of missingRefs) {
+        const exists = await checkReferenceExists(hash, name);
+        missingFiles.push({
+          name,
+          type: 'ref',
+          uploadState: 'notSelected',
+          progress: 0,
+          exists,
+        });
+      }
 
-    // 检查图片外部参照
-    for (const name of missingImages) {
-      const exists = await checkReferenceExists(name);
-      missingFiles.push({
-        name,
-        type: 'img',
-        uploadState: 'notSelected',
-        progress: 0,
-        exists,
-      });
-    }
+      // 检查图片外部参照
+      for (const name of missingImages) {
+        const exists = await checkReferenceExists(hash, name);
+        missingFiles.push({
+          name,
+          type: 'img',
+          uploadState: 'notSelected',
+          progress: 0,
+          exists,
+        });
+      }
 
-    // 过滤掉已存在的文件
-    const trulyMissingFiles = missingFiles.filter((f) => !f.exists);
+      // 过滤掉已存在的文件
+      const trulyMissingFiles = missingFiles.filter((f) => !f.exists);
 
-    if (trulyMissingFiles.length === 0) {
-      console.log('[useExternalReferenceUpload] 所有外部参照已存在');
-      return false;
-    }
+      if (trulyMissingFiles.length === 0) {
+        console.log('[useExternalReferenceUpload] 所有外部参照已存在');
+        return false;
+      }
 
-    console.log(
-      `[useExternalReferenceUpload] 缺失的外部参照: ${trulyMissingFiles.length} 个`
-    );
+      console.log(
+        `[useExternalReferenceUpload] 缺失的外部参照: ${trulyMissingFiles.length} 个`
+      );
 
-    setFiles(trulyMissingFiles);
-    setIsOpen(true);
-    return true;
-  }, [fetchPreloadingData, checkReferenceExists]);
+      setFiles(trulyMissingFiles);
+      setIsOpen(true);
+      return true;
+    },
+    [config.fileHash, fetchPreloadingData, checkReferenceExists]
+  );
 
   /**
    * 选择文件

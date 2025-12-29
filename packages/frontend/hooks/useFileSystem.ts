@@ -112,15 +112,19 @@ export const useFileSystem = () => {
       const response = await mxcadApi.getPreloadingData(node.fileHash);
       const preloadingData = response.data;
 
-      if (!preloadingData) {
+      if (!preloadingData || typeof preloadingData !== 'object') {
         return { hasMissing: false, count: 0 };
       }
 
+      // 确保 images 和 externalReference 存在
+      const images = preloadingData.images || [];
+      const externalReference = preloadingData.externalReference || [];
+
       // 过滤掉 http/https 开头的 URL（已有外部参照）
-      const missingImages = preloadingData.images.filter(
+      const missingImages = images.filter(
         (name: string) => !name.startsWith('http:') && !name.startsWith('https:')
       );
-      const missingRefs = preloadingData.externalReference;
+      const missingRefs = externalReference;
 
       if (missingImages.length === 0 && missingRefs.length === 0) {
         return { hasMissing: false, count: 0 };
