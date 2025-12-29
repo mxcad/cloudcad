@@ -1,5 +1,4 @@
-﻿import axios from 'axios';
-import { MxCADView } from 'mxcad-app';
+﻿import { MxCADView } from 'mxcad-app';
 import { Logger } from '../utils/mxcadUtils';
 import { MxFun } from 'mxdraw';
 

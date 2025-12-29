@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { ExternalReferenceFile, UploadState } from '../../types/filesystem';
+import { ExternalReferenceFile } from '../../types/filesystem';
 import { CheckCircle, XCircle, Loader2, Upload, AlertTriangle } from 'lucide-react';
 
 interface ExternalReferenceModalProps {

@@ -8,7 +8,6 @@ import {
   RestoreIcon,
   getFileIconComponent,
 } from './FileIcons';
-import { Button } from './ui/Button';
 import { FileSystemNode } from '../../types/filesystem';
 import { formatDate, formatFileSize } from '../utils/fileUtils';
 import { getThumbnailUrl } from '../utils/fileUtils';

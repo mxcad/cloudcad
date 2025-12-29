@@ -2,8 +2,6 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   FolderPlus,
-  Users,
-  Search,
   Filter,
   AlertCircle,
 } from 'lucide-react';

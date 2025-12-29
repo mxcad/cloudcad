@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, RotateCcw, Trash, AlertTriangle } from 'lucide-react';
+import { Trash2, Trash } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';

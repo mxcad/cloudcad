@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { FileSystemNode } from '../types/filesystem';
-import { projectsApi } from '../services/apiService';
 
 interface UseProjectManagementOptions {
   onProjectCreated?: () => void;
