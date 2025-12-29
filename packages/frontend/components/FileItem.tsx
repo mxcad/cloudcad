@@ -53,7 +53,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   const isRoot = node.isRoot;
   const modalRef = useRef<{ checkMissingReferences: () => Promise<boolean> } | null>(null);
 
-  // 外部参照上传 Hook（任务008）
+  // 外部参照上传 Hook（任务008/009）
   const externalReferenceUpload = useExternalReferenceUpload({
     fileHash: node.fileHash || '',
     onSuccess: () => {
@@ -67,6 +67,41 @@ export const FileItem: React.FC<FileItemProps> = ({
       console.log('[FileItem] 用户跳过外部参照上传');
     },
   });
+
+  /**
+   * 处理上传外部参照（任务009 - 随时上传）
+   * 如果没有缺失的外部参照，直接打开文件选择对话框
+   */
+  const handleUploadExternalReference = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setShowMenu(false);
+
+      if (!node.fileHash) {
+        console.error('[FileItem] 文件哈希不存在');
+        return;
+      }
+
+      // 检查是否有缺失的外部参照
+      const hasMissing = await externalReferenceUpload.checkMissingReferences();
+
+      if (!hasMissing) {
+        console.log('[FileItem] 无缺失外部参照，打开文件选择对话框');
+        // 无缺失时，直接打开模态框让用户选择要上传的文件
+        externalReferenceUpload.openModalForUpload();
+      }
+    },
+    [node.fileHash, externalReferenceUpload]
+  );
+
+  /**
+   * 检查是否为 CAD 文件（支持外部参照上传）
+   */
+  const isCadFile = useCallback(() => {
+    if (node.isFolder || node.isRoot) return false;
+    const ext = node.extension?.toLowerCase();
+    return ext === '.dwg' || ext === '.dxf';
+  }, [node.extension, node.isFolder, node.isRoot]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -209,7 +244,23 @@ export const FileItem: React.FC<FileItemProps> = ({
             isHovered || showMenu ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <div className="relative">
+          <div className="relative flex items-center gap-1">
+            {/* 上传外部参照按钮（任务009 - 仅 CAD 文件显示） */}
+            {isCadFile() && (
+              <button
+                onClick={(e) => handleUploadExternalReference(e)}
+                className={`w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200
+                           flex items-center justify-center transition-colors ${
+                             node.hasMissingExternalReferences
+                               ? 'text-amber-500 hover:text-amber-600'
+                               : 'text-slate-500 hover:text-slate-700'
+                           }`}
+                title={node.hasMissingExternalReferences ? '上传外部参照' : '上传外部参照'}
+              >
+                <Upload size={16} />
+              </button>
+            )}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -228,25 +279,23 @@ export const FileItem: React.FC<FileItemProps> = ({
                 className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200
                            py-1 min-w-[120px] z-20 animate-scale-in origin-top-right"
               >
-                {/* 上传外部参照按钮（任务008） */}
-                {node.hasMissingExternalReferences && !node.isFolder && (
+                {/* 上传外部参照按钮（任务009 - 始终显示，仅 CAD 文件） */}
+                {isCadFile() && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleMenuAction(async () => {
-                        if (!node.fileHash) {
-                          console.error('[FileItem] 文件哈希不存在');
-                          return;
-                        }
-                        console.log('[FileItem] 开始检查外部参照');
-                        await externalReferenceUpload.checkMissingReferences();
+                        await handleUploadExternalReference(e);
                       });
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-amber-600 hover:bg-amber-50
-                               flex items-center gap-2 transition-colors"
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                      node.hasMissingExternalReferences
+                        ? 'text-amber-600 hover:bg-amber-50'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
                   >
                     <Upload size={16} />
-                    上传外部参照
+                    {node.hasMissingExternalReferences ? '上传外部参照' : '上传外部参照'}
                   </button>
                 )}
 
@@ -529,6 +578,20 @@ export const FileItem: React.FC<FileItemProps> = ({
           </>
         ) : (
           <>
+            {/* 上传外部参照按钮（任务009 - 仅 CAD 文件显示） */}
+            {isCadFile() && (
+              <button
+                onClick={(e) => handleUploadExternalReference(e)}
+                className={`p-2 rounded-lg transition-colors ${
+                  node.hasMissingExternalReferences
+                    ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+                title="上传外部参照"
+              >
+                <Upload size={18} />
+              </button>
+            )}
             {!node.isFolder && (
               <button
                 onClick={(e) => {

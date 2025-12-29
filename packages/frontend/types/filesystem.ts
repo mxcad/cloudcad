@@ -123,4 +123,6 @@ export interface UseExternalReferenceUploadReturn {
   complete: () => void;
   /** 跳过上传 */
   skip: () => void;
+  /** 打开模态框准备上传（任务009 - 随时上传） */
+  openModalForUpload: () => void;
 }

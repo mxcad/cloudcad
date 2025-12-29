@@ -276,6 +276,17 @@ export const useExternalReferenceUpload = (
     close();
   }, [config.onSkip, close]);
 
+  /**
+   * 打开模态框准备上传（任务009 - 随时上传功能）
+   * 无缺失外部参照时调用，直接打开文件选择对话框
+   */
+  const openModalForUpload = useCallback(() => {
+    console.log('[useExternalReferenceUpload] 打开上传模态框');
+    setIsOpen(true);
+    // 清空已选文件，准备新上传
+    setFiles([]);
+  }, []);
+
   return {
     isOpen,
     files,
@@ -286,5 +297,6 @@ export const useExternalReferenceUpload = (
     close,
     complete,
     skip,
+    openModalForUpload,
   };
 };

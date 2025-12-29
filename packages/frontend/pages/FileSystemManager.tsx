@@ -26,6 +26,7 @@ import { CreateFolderModal } from '../components/modals/CreateFolderModal';
 import { RenameModal } from '../components/modals/RenameModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { MembersModal } from '../components/modals/MembersModal';
+import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -228,6 +229,25 @@ export const FileSystemManager: React.FC = () => {
     },
     [handleDeleteProject, handleRefresh]
   );
+
+  /**
+   * 处理上传外部参照（任务009 - 快捷键支持）
+   * 获取当前选中的 CAD 文件并触发上传
+   */
+  const handleUploadExternalReference = useCallback((node: FileSystemNode) => {
+    console.log('[FileSystemManager] 上传外部参照:', node.name);
+
+    // 检查是否为 CAD 文件
+    const ext = node.extension?.toLowerCase();
+    if (ext !== '.dwg' && ext !== '.dxf') {
+      console.log('[FileSystemManager] 仅支持 DWG/DXF 文件的外部参照上传');
+      return;
+    }
+
+    // TODO: 触发外部参照上传逻辑
+    // 这里可以打开 ExternalReferenceModal 或触发 FileItem 中的上传逻辑
+    console.log('[FileSystemManager] 准备上传外部参照:', node.name);
+  }, []);
 
   // ========== 渲染函数 ==========
 
@@ -559,6 +579,12 @@ export const FileSystemManager: React.FC = () => {
         isOpen={isMembersModalOpen}
         projectId={editingProject?.id || ''}
         onClose={() => setIsMembersModalOpen(false)}
+      />
+
+      {/* 键盘快捷键组件（任务009 - 可选功能） */}
+      <KeyboardShortcuts
+        selectedNode={selectedNodes.size === 1 ? nodes.find((n) => n.id === Array.from(selectedNodes)[0]) : null}
+        onUploadExternalReference={handleUploadExternalReference}
       />
     </div>
   );
