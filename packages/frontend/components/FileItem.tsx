@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   DownloadIcon,
   DeleteIcon,
@@ -11,6 +11,9 @@ import {
 import { FileSystemNode } from '../../types/filesystem';
 import { formatDate, formatFileSize } from '../utils/fileUtils';
 import { getThumbnailUrl } from '../utils/fileUtils';
+import { AlertTriangle, Upload } from 'lucide-react';
+import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
+import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 
 interface FileItemProps {
   node: FileSystemNode;
@@ -48,6 +51,22 @@ export const FileItem: React.FC<FileItemProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const isRoot = node.isRoot;
+  const modalRef = useRef<{ checkMissingReferences: () => Promise<boolean> } | null>(null);
+
+  // 外部参照上传 Hook（任务008）
+  const externalReferenceUpload = useExternalReferenceUpload({
+    fileHash: node.fileHash || '',
+    onSuccess: () => {
+      console.log('[FileItem] 外部参照上传成功');
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error('[FileItem] 外部参照上传失败:', error);
+    },
+    onSkip: () => {
+      console.log('[FileItem] 用户跳过外部参照上传');
+    },
+  });
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -164,6 +183,16 @@ export const FileItem: React.FC<FileItemProps> = ({
             {node.name}
           </h3>
 
+          {/* 缺失外部参照警告（任务008） */}
+          {node.hasMissingExternalReferences && (
+            <div className="flex items-center justify-center gap-1 mt-1 px-2">
+              <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
+              <span className="text-xs text-amber-600 whitespace-nowrap">
+                缺失 {node.missingExternalReferencesCount || 0} 个外部参照
+              </span>
+            </div>
+          )}
+
           {/* 文件信息 */}
           <p className="text-xs text-slate-500 text-center mt-1 truncate px-2" title={node.description || undefined}>
             {isRoot
@@ -186,7 +215,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                 e.stopPropagation();
                 setShowMenu(!showMenu);
               }}
-              className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200 
+              className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200
                          flex items-center justify-center text-slate-500 hover:text-slate-700
                          transition-colors"
             >
@@ -196,9 +225,31 @@ export const FileItem: React.FC<FileItemProps> = ({
             {/* 下拉菜单 */}
             {showMenu && (
               <div
-                className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200 
+                className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200
                            py-1 min-w-[120px] z-20 animate-scale-in origin-top-right"
               >
+                {/* 上传外部参照按钮（任务008） */}
+                {node.hasMissingExternalReferences && !node.isFolder && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMenuAction(async () => {
+                        if (!node.fileHash) {
+                          console.error('[FileItem] 文件哈希不存在');
+                          return;
+                        }
+                        console.log('[FileItem] 开始检查外部参照');
+                        await externalReferenceUpload.checkMissingReferences();
+                      });
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-amber-600 hover:bg-amber-50
+                               flex items-center gap-2 transition-colors"
+                  >
+                    <Upload size={16} />
+                    上传外部参照
+                  </button>
+                )}
+
                 {/* 项目根节点显示编辑和成员 */}
                 {isRoot ? (
                   <>
@@ -207,7 +258,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                         e.stopPropagation();
                         handleMenuAction(() => onEdit?.(e));
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                  flex items-center gap-2 transition-colors"
                     >
                       <EditIcon size={16} />
@@ -218,7 +269,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                         e.stopPropagation();
                         handleMenuAction(() => onShowMembers?.(e));
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                  flex items-center gap-2 transition-colors"
                     >
                       <UsersIcon size={16} />
@@ -230,7 +281,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                         e.stopPropagation();
                         handleMenuAction(() => onDelete(node));
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
                                  flex items-center gap-2 transition-colors"
                     >
                       <DeleteIcon size={16} />
@@ -245,7 +296,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                           e.stopPropagation();
                           handleMenuAction(() => onDownload(node));
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                    flex items-center gap-2 transition-colors"
                       >
                         <DownloadIcon size={16} />
@@ -294,6 +345,18 @@ export const FileItem: React.FC<FileItemProps> = ({
             )}
           </div>
         </div>
+
+        {/* 外部参照上传模态框（任务008） */}
+        <ExternalReferenceModal
+          isOpen={externalReferenceUpload.isOpen}
+          files={externalReferenceUpload.files}
+          loading={externalReferenceUpload.loading}
+          onSelectFiles={externalReferenceUpload.selectFiles}
+          onUpload={externalReferenceUpload.uploadFiles}
+          onComplete={externalReferenceUpload.complete}
+          onSkip={externalReferenceUpload.skip}
+          onClose={externalReferenceUpload.close}
+        />
 
         {/* 底部装饰 */}
         <div
@@ -388,10 +451,19 @@ export const FileItem: React.FC<FileItemProps> = ({
             {node.name}
           </span>
         </h3>
-        <p className="text-xs text-slate-500">
-          {formatDate(node.updatedAt)}
-          {!node.isFolder && ` • ${formatFileSize(node.size)}`}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-slate-500">
+            {formatDate(node.updatedAt)}
+            {!node.isFolder && ` • ${formatFileSize(node.size)}`}
+          </p>
+          {/* 缺失外部参照警告（任务008） */}
+          {node.hasMissingExternalReferences && (
+            <span className="flex items-center gap-1 text-xs text-amber-600">
+              <AlertTriangle size={10} />
+              缺失 {node.missingExternalReferencesCount || 0} 个外部参照
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 类型标签 - 固定宽度对齐 */}

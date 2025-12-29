@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { projectsApi, filesApi, trashApi } from '../services/apiService';
+import { projectsApi, filesApi, trashApi, mxcadApi } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
 
@@ -98,6 +98,72 @@ export const useFileSystem = () => {
     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
   }, []);
 
+  /**
+   * 检查文件是否缺失外部参照（任务008）
+   */
+  const checkMissingExternalReferences = useCallback(async (
+    node: FileSystemNode
+  ): Promise<{ hasMissing: boolean; count: number }> => {
+    if (!node.fileHash || node.isFolder) {
+      return { hasMissing: false, count: 0 };
+    }
+
+    try {
+      const response = await mxcadApi.getPreloadingData(node.fileHash);
+      const preloadingData = response.data;
+
+      if (!preloadingData) {
+        return { hasMissing: false, count: 0 };
+      }
+
+      // 过滤掉 http/https 开头的 URL（已有外部参照）
+      const missingImages = preloadingData.images.filter(
+        (name: string) => !name.startsWith('http:') && !name.startsWith('https:')
+      );
+      const missingRefs = preloadingData.externalReference;
+
+      if (missingImages.length === 0 && missingRefs.length === 0) {
+        return { hasMissing: false, count: 0 };
+      }
+
+      // 检查哪些文件缺失
+      let missingCount = 0;
+
+      for (const name of missingRefs) {
+        try {
+          const existsResponse = await mxcadApi.checkExternalReferenceExists(
+            node.fileHash!,
+            name
+          );
+          if (!existsResponse.data.exists) {
+            missingCount++;
+          }
+        } catch {
+          missingCount++;
+        }
+      }
+
+      for (const name of missingImages) {
+        try {
+          const existsResponse = await mxcadApi.checkExternalReferenceExists(
+            node.fileHash!,
+            name
+          );
+          if (!existsResponse.data.exists) {
+            missingCount++;
+          }
+        } catch {
+          missingCount++;
+        }
+      }
+
+      return { hasMissing: missingCount > 0, count: missingCount };
+    } catch (error) {
+      console.error('[useFileSystem] 检查外部参照失败:', error);
+      return { hasMissing: false, count: 0 };
+    }
+  }, []);
+
   // 刷新操作 - 使用 forceRefresh 确保获取最新 URL 参数
   const handleRefresh = useCallback(() => {
     // 增加计数器，强制 useEffect 重新执行 loadData
@@ -186,7 +252,25 @@ export const useFileSystem = () => {
 
         console.log('[loadData] 获取到节点数据: id=', nodeData?.id, 'name=', nodeData?.name, 'parentId=', nodeData?.parentId);
         setCurrentNode(nodeData);
-        setNodes(childrenData);
+
+        // 检查每个文件是否缺失外部参照（任务008）
+        const nodesWithExternalReferenceCheck = await Promise.all(
+          childrenData.map(async (node: FileSystemNode) => {
+            if (node.isFolder) {
+              return node;
+            }
+
+            const { hasMissing, count } = await checkMissingExternalReferences(node);
+
+            return {
+              ...node,
+              hasMissingExternalReferences: hasMissing,
+              missingExternalReferencesCount: count,
+            };
+          })
+        );
+
+        setNodes(nodesWithExternalReferenceCheck);
 
         // 构建面包屑
         await buildBreadcrumbsFromNode(nodeData);
@@ -198,7 +282,7 @@ export const useFileSystem = () => {
     } finally {
       setLoading(false);
     }
-  }, [urlProjectId, urlNodeId, isProjectRootMode, showToast, buildBreadcrumbsFromNode]);
+  }, [urlProjectId, urlNodeId, isProjectRootMode, showToast, buildBreadcrumbsFromNode, checkMissingExternalReferences]);
 
   // 返回上级
   const handleGoBack = useCallback(() => {

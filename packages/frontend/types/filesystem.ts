@@ -22,6 +22,10 @@ export interface FileSystemNode {
     files: number;
     folders: number;
   };
+
+  // 缺失外部参照标识（任务008）
+  hasMissingExternalReferences?: boolean;
+  missingExternalReferencesCount?: number;
 }
 
 export interface BreadcrumbItem {
