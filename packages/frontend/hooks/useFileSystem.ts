@@ -253,14 +253,12 @@
     try {
       const response = await projectsApi.createFolder(parentNodeId, { name: folderName.trim() });
       const newFolder = response.data;
-      showToast('文件夹创建成功，正在进入文件夹...', 'success');
+      showToast('文件夹创建成功', 'success');
       setFolderName('');
       setShowCreateFolderModal(false);
 
-      // 自动导航进入新创建的文件夹
-      if (newFolder?.id) {
-        navigate(`/projects/${urlProjectId}/files/${newFolder.id}`);
-      }
+      // 刷新当前目录列表，不自动进入新创建的文件夹
+      loadData();
 
       return newFolder;
     } catch (err: any) {
@@ -268,7 +266,7 @@
       showToast(errorMessage, 'error');
       return null;
     }
-  }, [folderName, urlProjectId, currentNode, navigate, loadData, showToast]);
+  }, [folderName, urlProjectId, currentNode, loadData, showToast]);
 
   // 重命名
   const handleRename = useCallback(async () => {
