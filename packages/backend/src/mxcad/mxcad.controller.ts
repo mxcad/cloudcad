@@ -844,6 +844,20 @@ export class MxCadController {
       if (fs.existsSync(sourceFile)) {
         fs.copyFileSync(sourceFile, targetFile);
         this.logger.log(`[uploadExtReferenceDwg] 文件复制成功: ${targetFile}`);
+
+        // 同步到 MinIO
+        try {
+          const minioPath = `mxcad/file/${body.src_dwgfile_hash}/${body.ext_ref_file}.mxweb`;
+          const syncSuccess = await this.mxCadService['minioSyncService'].syncFileToMinio(targetFile, minioPath);
+          if (syncSuccess) {
+            this.logger.log(`[uploadExtReferenceDwg] MinIO 同步成功: ${minioPath}`);
+          } else {
+            this.logger.warn(`[uploadExtReferenceDwg] MinIO 同步失败: ${minioPath}`);
+          }
+        } catch (syncError) {
+          this.logger.error(`[uploadExtReferenceDwg] MinIO 同步异常: ${syncError.message}`, syncError.stack);
+          // MinIO 同步失败不影响主流程，继续返回成功
+        }
       } else {
         this.logger.error(`[uploadExtReferenceDwg] 源文件不存在: ${sourceFile}`);
         return res.json({ code: -1, message: '转换后的文件不存在' });
@@ -954,6 +968,20 @@ export class MxCadController {
       fs.copyFileSync(file.path, targetFile);
 
       this.logger.log(`[uploadExtReferenceImage] 文件复制成功: ${targetFile}`);
+
+      // 同步到 MinIO
+      try {
+        const minioPath = `mxcad/file/${body.src_dwgfile_hash}/${body.ext_ref_file}`;
+        const syncSuccess = await this.mxCadService['minioSyncService'].syncFileToMinio(targetFile, minioPath);
+        if (syncSuccess) {
+          this.logger.log(`[uploadExtReferenceImage] MinIO 同步成功: ${minioPath}`);
+        } else {
+          this.logger.warn(`[uploadExtReferenceImage] MinIO 同步失败: ${minioPath}`);
+        }
+      } catch (syncError) {
+        this.logger.error(`[uploadExtReferenceImage] MinIO 同步异常: ${syncError.message}`, syncError.stack);
+        // MinIO 同步失败不影响主流程，继续返回成功
+      }
     } catch (error) {
       this.logger.error(`[uploadExtReferenceImage] 文件复制失败: ${error.message}`, error.stack);
       return res.json({ code: -1, message: '文件复制失败' });
