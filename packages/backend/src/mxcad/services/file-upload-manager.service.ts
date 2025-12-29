@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+﻿import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { FileStorageService } from './file-storage.service';
@@ -7,6 +7,7 @@ import { FileSystemService } from './file-system.service';
 import { FileSystemNodeService, FileSystemNodeContext } from './filesystem-node.service';
 import { CacheManagerService } from './cache-manager.service';
 import { MinioSyncService } from '../minio-sync.service';
+import { MxCadService } from '../mxcad.service';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -53,6 +54,8 @@ export class FileUploadManagerService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
     private readonly minioSyncService: MinioSyncService,
+    @Inject(forwardRef(() => MxCadService))
+    private readonly mxCadService: MxCadService,
   ) {}
 
   /**
@@ -616,6 +619,13 @@ return { ret: MxUploadReturn.kOk };
       });
 
       this.logger.log(`✅ 文件系统节点创建成功: ${originalName} (${fileHash})`);
+
+      // 检查并更新外部参照信息
+      try {
+        await this.mxCadService.updateExternalReferenceAfterUpload(fileHash);
+      } catch (extRefError) {
+        this.logger.warn(`⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`);
+      }
 
       // 同步所有MxCAD转换后的文件到存储服务
       let syncedCount = 0;

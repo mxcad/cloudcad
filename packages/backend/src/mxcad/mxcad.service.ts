@@ -1,11 +1,13 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+﻿import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
-import fs from 'fs/promises';
+import { ExternalReferenceStats, ExternalReferenceInfo } from './types/external-reference.types';
+import * as fsPromises from 'fs/promises';
+import * as fsSync from 'fs';
 import path from 'path';
 
 @Injectable()
@@ -15,6 +17,7 @@ export class MxCadService {
   constructor(
     private readonly configService: ConfigService,
     private readonly permissionService: MxCadPermissionService,
+    @Inject(forwardRef(() => FileUploadManagerService))
     private readonly fileUploadManager: FileUploadManagerService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
@@ -137,14 +140,14 @@ export class MxCadService {
     try {
       const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
 
-      // 验证哈希值格式（32位十六进制）
-      if (!/^[a-f0-9]{32}$/i.test(fileHash)) {
+      // 验证哈希值格式
+      if (!this.isValidFileHash(fileHash)) {
         this.logger.warn(`无效的文件哈希格式: ${fileHash}`);
         return null;
       }
 
       // 直接构造预期文件名，避免扫描整个目录
-      const preloadingFiles = await fs.readdir(uploadPath);
+      const preloadingFiles = await fsPromises.readdir(uploadPath);
       const preloadingFile = preloadingFiles.find(file =>
         file.startsWith(fileHash) && file.endsWith('_preloading.json')
       );
@@ -154,24 +157,21 @@ export class MxCadService {
         return null;
       }
 
-      // 验证文件名合法性，防止路径遍历攻击
-      const isValidFileName = /^[a-f0-9]+\.[a-z]+\.[a-z]+_preloading\.json$/i.test(preloadingFile);
-      if (!isValidFileName) {
+      // 验证文件名合法性
+      if (!this.isValidPreloadingFileName(preloadingFile)) {
         this.logger.warn(`非法的预加载数据文件名: ${preloadingFile}`);
         return null;
       }
 
       const filePath = path.join(uploadPath, preloadingFile);
 
-      // 验证路径安全性，防止路径遍历
-      const resolvedPath = path.normalize(filePath);
-      const normalizedUploadPath = path.normalize(uploadPath);
-      if (!resolvedPath.startsWith(normalizedUploadPath)) {
+      // 验证路径安全性
+      if (!this.validateFilePath(filePath, uploadPath)) {
         this.logger.error(`检测到路径遍历攻击: ${filePath}`);
         return null;
       }
 
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await fsPromises.readFile(filePath, 'utf-8');
       const data = JSON.parse(content) as PreloadingDataDto;
 
       this.logger.debug(`成功获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
@@ -197,19 +197,21 @@ export class MxCadService {
     try {
       const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, fileHash);
-      
+
       // 检查哈希目录是否存在
-      if (!fs.existsSync(hashDir)) {
+      try {
+        await fsPromises.access(hashDir);
+      } catch {
         this.logger.log(`[checkExternalReferenceExists] 目录不存在: ${hashDir}`);
         return false;
       }
-      
+
       // 读取目录中的所有文件
-      const files = await fs.readdir(hashDir);
-      
+      const files = await fsPromises.readdir(hashDir);
+
       // 提取文件名的基本部分（不含扩展名）
       const baseName = path.basename(fileName, path.extname(fileName));
-      
+
       // 检查是否存在匹配的文件
       // DWG 文件会被转换为 .mxweb，所以需要检查 .mxweb 文件
       // 图片文件保持原扩展名
@@ -217,9 +219,9 @@ export class MxCadService {
         const fileBaseName = path.basename(file, path.extname(file));
         return fileBaseName === baseName;
       });
-      
+
       this.logger.log(`[checkExternalReferenceExists] fileHash=${fileHash}, fileName=${fileName}, exists=${exists}`);
-      
+
       return exists;
     } catch (error) {
       this.logger.error(`[checkExternalReferenceExists] 检查失败: ${error.message}`, error.stack);
@@ -347,11 +349,145 @@ return result;
   }
 
   /**
+   * 获取外部参照统计信息
+   * @param fileHash 文件哈希值
+   * @returns 外部参照统计信息
+   */
+  async getExternalReferenceStats(fileHash: string): Promise<ExternalReferenceStats> {
+    const preloadingData = await this.getPreloadingData(fileHash);
+
+    if (!preloadingData) {
+      return {
+        hasMissing: false,
+        missingCount: 0,
+        totalCount: 0,
+        references: [],
+      };
+    }
+
+    // 过滤掉 http/https 开头的 URL
+    const missingImages = preloadingData.images.filter(
+      (name: string) => !name.startsWith('http:') && !name.startsWith('https:')
+    );
+    const missingRefs = preloadingData.externalReference;
+
+    const references: ExternalReferenceInfo[] = [];
+
+    // 检查 DWG 外部参照
+    for (const name of missingRefs) {
+      const exists = await this.checkExternalReferenceExists(fileHash, name);
+      references.push({
+        name,
+        type: 'dwg',
+        exists,
+        required: true,
+      });
+    }
+
+    // 检查图片外部参照
+    for (const name of missingImages) {
+      const exists = await this.checkExternalReferenceExists(fileHash, name);
+      references.push({
+        name,
+        type: 'image',
+        exists,
+        required: true,
+      });
+    }
+
+    const missingCount = references.filter(ref => !ref.exists).length;
+
+    return {
+      hasMissing: missingCount > 0,
+      missingCount,
+      totalCount: references.length,
+      references,
+    };
+  }
+
+  /**
+   * 更新文件节点的外部参照信息
+   * @param fileHash 文件哈希值
+   * @param stats 外部参照统计信息
+   */
+  async updateExternalReferenceInfo(
+    fileHash: string,
+    stats: ExternalReferenceStats
+  ): Promise<void> {
+    try {
+      const node = await this.fileSystemNodeService.findByFileHash(fileHash);
+
+      if (!node) {
+        this.logger.warn(`文件节点不存在: ${fileHash}`);
+        return;
+      }
+
+      await this.fileSystemNodeService.updateExternalReferenceInfo(
+        node.id,
+        stats.hasMissing,
+        stats.missingCount,
+        stats.references
+      );
+
+      this.logger.log(
+        `更新外部参照信息成功: ${fileHash}, 缺失数量: ${stats.missingCount}`
+      );
+    } catch (error) {
+      this.logger.error(`更新外部参照信息失败: ${error.message}`, error.stack);
+    }
+  }
+
+  /**
+   * 上传完成后更新外部参照信息
+   * @param fileHash 文件哈希值
+   */
+  async updateExternalReferenceAfterUpload(fileHash: string): Promise<void> {
+    try {
+      const stats = await this.getExternalReferenceStats(fileHash);
+
+      if (stats.totalCount > 0) {
+        await this.updateExternalReferenceInfo(fileHash, stats);
+        this.logger.log(
+          `上传完成后更新外部参照信息成功: ${fileHash}, 缺失数量=${stats.missingCount}`
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `上传完成后更新外部参照信息失败（不影响主流程）: ${error.message}`,
+        error.stack
+      );
+    }
+  }
+
+  /**
    * 创建默认上下文（用于没有上下文的操作）
    */
   private async createDefaultContext(): Promise<any> {
     // 这里可以创建一个默认的用户和项目上下文
     // 或者抛出异常要求必须提供上下文
     throw new Error('必须提供有效的上下文参数');
+  }
+
+  /**
+   * 验证文件路径安全性，防止路径遍历攻击
+   */
+  private validateFilePath(filePath: string, uploadPath: string): boolean {
+    const resolvedPath = path.normalize(filePath);
+    const normalizedUploadPath = path.normalize(uploadPath);
+    return resolvedPath.startsWith(normalizedUploadPath);
+  }
+
+  /**
+   * 验证预加载数据文件名合法性
+   */
+  private isValidPreloadingFileName(fileName: string): boolean {
+    return /^[a-f0-9]+\.[a-z]+\.[a-z]+_preloading\.json$/i.test(fileName);
+  }
+
+  /**
+   * 验证哈希值格式（32位十六进制）
+   */
+  private isValidFileHash(fileHash: string): boolean {
+    return /^[a-f0-9]{32}$/i.test(fileHash);
   }
 }

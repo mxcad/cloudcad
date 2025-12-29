@@ -172,158 +172,22 @@ export class FileSystemNodeService {
     try {
       this.logger.log(`🔍 为文件哈希 ${fileHash} 推断 MxCAD-App 上下文`);
 
-      // 1. 尝试从 Session 获取用户信息
-      let user = request.session?.user;
-
-      // 2. 如果没有 Session 用户，查找最近活动用户
-      if (!user) {
-        const recentToken = await this.prisma.refreshToken.findFirst({
-          orderBy: { createdAt: 'desc' }
-        });
-
-        if (recentToken) {
-          user = await this.prisma.user.findUnique({
-            where: { id: recentToken.userId },
-            select: {
-              id: true,
-              email: true,
-              username: true,
-              nickname: true,
-              role: true,
-              status: true,
-            },
-          });
-
-          if (user && user.status === 'ACTIVE') {
-            this.logger.log(`✅ 使用最近活动用户: ${user.username} (${user.id})`);
-          } else {
-            user = null;
-          }
-        }
-      }
-
+      // 1. 获取用户信息
+      const user = await this.getUserFromRequest(request);
       if (!user) {
         this.logger.error(`❌ 无法找到有效用户，无法推断上下文`);
         return null;
       }
 
-      // 3. 尝试从文件哈希查找项目信息
-      let projectId: string | null = null;
-      let parentId: string | null = null;
+      // 2. 查找项目信息
+      const projectInfo = await this.findProjectInfo(fileHash, user);
 
-      const existingFile = await this.prisma.fileSystemNode.findFirst({
-        where: {
-          fileHash,
-          isFolder: false,
-        },
-        select: {
-          id: true,
-          parentId: true,
-          owner: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-        },
-      });
+      // 3. 如果没有项目，创建默认项目
+      const projectId = projectInfo.projectId || await this.createDefaultProject(user);
 
-      if (existingFile) {
-        // 如果文件已存在，使用其父节点信息
-        const fileParentId = existingFile.parentId || null;
-        this.logger.log(`📁 找到现有文件节点: ${existingFile.id}, 父节点: ${fileParentId}`);
-
-        // 向上查找项目根节点
-        let currentNodeId = existingFile.parentId;
-        let foundProjectId: string | null = null;
-        while (currentNodeId) {
-          const parentNode = await this.prisma.fileSystemNode.findUnique({
-            where: { id: currentNodeId },
-            select: { id: true, isRoot: true, parentId: true, name: true }
-          });
-
-          if (parentNode?.isRoot) {
-            foundProjectId = parentNode.id;
-            this.logger.log(`📍 找到项目根节点: ${foundProjectId} (${parentNode.name})`);
-            break;
-          }
-
-          currentNodeId = parentNode?.parentId || null;
-        }
-
-        this.logger.log(`📋 从现有文件推断节点: projectId=${foundProjectId}, parentId=${fileParentId}`);
-        projectId = foundProjectId;
-        parentId = fileParentId;
-      } else {
-        // 如果是新文件，尝试从用户的项目中查找默认项目
-        this.logger.log(`🆕 新文件，查找用户的默认项目`);
-        const userAccess = await this.prisma.fileAccess.findFirst({
-          where: {
-            userId: user.id,
-            node: { isRoot: true },
-          },
-          include: {
-            node: { select: { id: true, name: true, isRoot: true } },
-          },
-          orderBy: { createdAt: 'asc' }
-        });
-
-        if (userAccess && userAccess.node.isRoot) {
-          projectId = userAccess.nodeId;
-          parentId = projectId; // 上传到项目根目录
-          this.logger.log('✅ 使用用户默认项目: projectId=' + projectId + ' (' + userAccess.node.name + ')');
-        } else {
-          this.logger.log(`⚠️ 用户没有有效的项目，将创建默认项目`);
-        }
-      }
-
-      // 4. 如果还是没有项目，创建一个默认项目
-      if (!projectId) {
-        this.logger.log(`🏗️ 为用户 ${user.username} 创建默认项目`);
-        
-        // 检查是否已有同名默认项目
-        const existingDefaultProject = await this.prisma.fileSystemNode.findFirst({
-          where: {
-            name: `${user.username}的默认项目`,
-            isRoot: true,
-            ownerId: user.id,
-          },
-        });
-
-        if (existingDefaultProject) {
-          projectId = existingDefaultProject.id;
-          parentId = projectId;
-          this.logger.log(`📂 使用现有的默认项目: projectId=${projectId}`);
-        } else {
-          const defaultProject = await this.prisma.fileSystemNode.create({
-            data: {
-              name: `${user.username}的默认项目`,
-              isFolder: true,
-              isRoot: true,
-              parentId: null,
-              description: 'MxCAD-App 自动创建的默认项目',
-              projectStatus: 'ACTIVE',
-              ownerId: user.id,
-            },
-          });
-
-          // 添加用户为项目所有者
-          await this.prisma.fileAccess.create({
-            data: {
-              userId: user.id,
-              nodeId: defaultProject.id,
-              role: 'OWNER',
-            },
-          });
-
-          projectId = defaultProject.id;
-          parentId = projectId;
-          this.logger.log(`🆕 创建默认项目成功: projectId=${projectId} (${defaultProject.name})`);
-        }
-      }
-
+      // 4. 创建上下文
       const context = {
-        nodeId: parentId || projectId,
+        nodeId: projectInfo.parentId || projectId,
         userId: user.id,
         userRole: user.role,
       };
@@ -335,6 +199,174 @@ export class FileSystemNodeService {
       this.logger.error(`❌ 推断 MxCAD-App 上下文失败: ${error.message}`, error);
       return null;
     }
+  }
+
+  /**
+   * 从请求中获取用户信息
+   */
+  private async getUserFromRequest(request: any): Promise<any | null> {
+    // 1. 尝试从 Session 获取用户信息
+    let user = request.session?.user;
+
+    // 2. 如果没有 Session 用户，查找最近活动用户
+    if (!user) {
+      const recentToken = await this.prisma.refreshToken.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (recentToken) {
+        user = await this.prisma.user.findUnique({
+          where: { id: recentToken.userId },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            nickname: true,
+            role: true,
+            status: true,
+          },
+        });
+
+        if (user && user.status === 'ACTIVE') {
+          this.logger.log(`✅ 使用最近活动用户: ${user.username} (${user.id})`);
+        } else {
+          user = null;
+        }
+      }
+    }
+
+    return user;
+  }
+
+  /**
+   * 查找项目信息
+   */
+  private async findProjectInfo(fileHash: string, user: any): Promise<{ projectId: string | null; parentId: string | null }> {
+    let projectId: string | null = null;
+    let parentId: string | null = null;
+
+    const existingFile = await this.prisma.fileSystemNode.findFirst({
+      where: {
+        fileHash,
+        isFolder: false,
+      },
+      select: {
+        id: true,
+        parentId: true,
+        owner: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+    if (existingFile) {
+      // 如果文件已存在，使用其父节点信息
+      const fileParentId = existingFile.parentId || null;
+      this.logger.log(`📁 找到现有文件节点: ${existingFile.id}, 父节点: ${fileParentId}`);
+
+      // 向上查找项目根节点
+      const foundProjectId = await this.findProjectRootId(existingFile.parentId);
+      this.logger.log(`📋 从现有文件推断节点: projectId=${foundProjectId}, parentId=${fileParentId}`);
+      projectId = foundProjectId;
+      parentId = fileParentId;
+    } else {
+      // 如果是新文件，尝试从用户的项目中查找默认项目
+      this.logger.log(`🆕 新文件，查找用户的默认项目`);
+      const userAccess = await this.prisma.fileAccess.findFirst({
+        where: {
+          userId: user.id,
+          node: { isRoot: true },
+        },
+        include: {
+          node: { select: { id: true, name: true, isRoot: true } },
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (userAccess && userAccess.node.isRoot) {
+        projectId = userAccess.nodeId;
+        parentId = projectId; // 上传到项目根目录
+        this.logger.log('✅ 使用用户默认项目: projectId=' + projectId + ' (' + userAccess.node.name + ')');
+      } else {
+        this.logger.log(`⚠️ 用户没有有效的项目，将创建默认项目`);
+      }
+    }
+
+    return { projectId, parentId };
+  }
+
+  /**
+   * 向上查找项目根节点ID
+   */
+  private async findProjectRootId(parentId: string | null): Promise<string | null> {
+    let currentNodeId = parentId;
+    let foundProjectId: string | null = null;
+
+    while (currentNodeId) {
+      const parentNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: currentNodeId },
+        select: { id: true, isRoot: true, parentId: true, name: true }
+      });
+
+      if (parentNode?.isRoot) {
+        foundProjectId = parentNode.id;
+        this.logger.log(`📍 找到项目根节点: ${foundProjectId} (${parentNode.name})`);
+        break;
+      }
+
+      currentNodeId = parentNode?.parentId || null;
+    }
+
+    return foundProjectId;
+  }
+
+  /**
+   * 创建默认项目
+   */
+  private async createDefaultProject(user: any): Promise<string> {
+    this.logger.log(`🏗️ 为用户 ${user.username} 创建默认项目`);
+
+    // 检查是否已有同名默认项目
+    const existingDefaultProject = await this.prisma.fileSystemNode.findFirst({
+      where: {
+        name: `${user.username}的默认项目`,
+        isRoot: true,
+        ownerId: user.id,
+      },
+    });
+
+    if (existingDefaultProject) {
+      this.logger.log(`📂 使用现有的默认项目: projectId=${existingDefaultProject.id}`);
+      return existingDefaultProject.id;
+    }
+
+    // 创建新的默认项目
+    const defaultProject = await this.prisma.fileSystemNode.create({
+      data: {
+        name: `${user.username}的默认项目`,
+        isFolder: true,
+        isRoot: true,
+        parentId: null,
+        description: 'MxCAD-App 自动创建的默认项目',
+        projectStatus: 'ACTIVE',
+        ownerId: user.id,
+      },
+    });
+
+    // 添加用户为项目所有者
+    await this.prisma.fileAccess.create({
+      data: {
+        userId: user.id,
+        nodeId: defaultProject.id,
+        role: 'OWNER',
+      },
+    });
+
+    this.logger.log(`🆕 创建默认项目成功: projectId=${defaultProject.id} (${defaultProject.name})`);
+    return defaultProject.id;
   }
 
   /**
@@ -497,5 +529,55 @@ export class FileSystemNodeService {
       },
     });
     this.logger.log(`✅ 引用节点创建成功，ID: ${newNode.id}, parentId: ${newNode.parentId}, 共享存储: ${existingNode.path}`);
+  }
+
+  /**
+   * 根据文件哈希值查找文件节点
+   * @param fileHash 文件哈希值
+   * @returns 文件节点，如果不存在则返回 null
+   */
+  async findByFileHash(fileHash: string): Promise<any | null> {
+    try {
+      const node = await this.prisma.fileSystemNode.findFirst({
+        where: { fileHash },
+      });
+
+      return node;
+    } catch (error) {
+      this.logger.error(`根据文件哈希查找节点失败: ${error.message}`, error.stack);
+      return null;
+    }
+  }
+
+  /**
+   * 更新文件节点的外部参照信息
+   * @param nodeId 节点ID
+   * @param hasMissing 是否有缺失的外部参照
+   * @param missingCount 缺失的外部参照数量
+   * @param references 外部参照列表
+   */
+  async updateExternalReferenceInfo(
+    nodeId: string,
+    hasMissing: boolean,
+    missingCount: number,
+    references: any[]
+  ): Promise<void> {
+    try {
+      await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: {
+          hasMissingExternalReferences: hasMissing,
+          missingExternalReferencesCount: missingCount,
+          externalReferencesJson: JSON.stringify(references),
+        },
+      });
+
+      this.logger.log(
+        `更新外部参照信息成功: nodeId=${nodeId}, 缺失数量=${missingCount}`
+      );
+    } catch (error) {
+      this.logger.error(`更新外部参照信息失败: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 }

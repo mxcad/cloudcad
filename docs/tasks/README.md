@@ -20,7 +20,7 @@
 | [001](./001-backend-get-preloading-data.md) | 后端 - 获取外部参照预加载数据接口 | ✅ 已完成 | 2h | - |
 | [002](./002-backend-check-reference-exists.md) | 后端 - 检查外部参照文件是否存在接口 | ✅ 已完成 | 2h | 001 |
 | [003](./003-backend-enhance-upload-validation.md) | 后端 - 增强上传接口验证 | ✅ 已完成 | 3h | 001, 002 |
-| [011](./011-backend-external-reference-tracking.md) | 后端 - 文件系统外部参照跟踪 | ⬜ 待开始 | 3h | 001, 002 |
+| [011](./011-backend-external-reference-tracking.md) | 后端 - 文件系统外部参照跟踪 | ✅ 已完成 | 3h | 001, 002 |
 | [004](./004-frontend-api-methods.md) | 前端 - 获取预加载数据 API 方法 | ⬜ 待开始 | 1.5h | 001, 002 |
 | [005](./005-frontend-use-external-reference-upload-hook.md) | 前端 - useExternalReferenceUpload Hook | ⬜ 待开始 | 3h | 004 |
 | [006](./006-frontend-external-reference-modal.md) | 前端 - ExternalReferenceModal 组件 | ⬜ 待开始 | 2.5h | 005 |
@@ -29,7 +29,9 @@
 | [009](./009-frontend-upload-anytime.md) | 前端 - 随时上传外部参照功能 | ⬜ 待开始 | 2h | 005, 006, 008 |
 | [010](./010-integration-test.md) | 集成测试 | ⬜ 待开始 | 4h | 001-009 |
 
-**总预计工时**：27 小时
+**总预计工时**：27 小时  
+**已完成工时**：10 小时  
+**剩余工时**：17 小时
 
 ## 任务依赖关系
 
@@ -230,7 +232,7 @@
 
 ---
 
-**文档版本**：v1.1  
+**文档版本**：v1.2  
 **创建日期**：2025-12-29  
 **最后更新**：2025-12-29  
-**状态**：执行中（3/11 已完成）
+**状态**：执行中（4/11 已完成，36%）

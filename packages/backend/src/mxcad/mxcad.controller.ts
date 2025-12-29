@@ -171,6 +171,92 @@ export class MxCadController {
   }
 
   /**
+   * 获取文件的外部参照统计信息
+   * @param fileHash 文件哈希值
+   * @returns 外部参照统计信息
+   */
+  @Get('file/:hash/external-references')
+  @ApiResponse({
+    status: 200,
+    description: '成功获取外部参照统计信息',
+    schema: {
+      type: 'object',
+      properties: {
+        hasMissing: { type: 'boolean', description: '是否有缺失的外部参照' },
+        missingCount: { type: 'number', description: '缺失的外部参照数量' },
+        totalCount: { type: 'number', description: '总外部参照数量' },
+        references: { type: 'array', description: '外部参照列表' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '文件不存在',
+  })
+  async getExternalReferences(
+    @Param('hash') fileHash: string,
+    @Res() res: Response
+  ) {
+    this.logger.log(`[getExternalReferences] 请求参数: fileHash=${fileHash}`);
+
+    try {
+      const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
+
+      this.logger.log(`[getExternalReferences] 检查结果: 缺失=${stats.missingCount}, 总数=${stats.totalCount}`);
+
+      return res.json(stats);
+    } catch (error) {
+      this.logger.error(`[getExternalReferences] 获取失败: ${error.message}`);
+      return res.status(500).json({ code: -1, message: '获取外部参照信息失败' });
+    }
+  }
+
+  /**
+   * 手动刷新文件的外部参照信息
+   * @param fileHash 文件哈希值
+   * @returns 刷新结果
+   */
+  @Post('file/:hash/refresh-external-references')
+  @ApiResponse({
+    status: 200,
+    description: '刷新成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 0 },
+        message: { type: 'string', example: '刷新成功' },
+        stats: { type: 'object', description: '外部参照统计信息' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '刷新失败',
+  })
+  async refreshExternalReferences(
+    @Param('hash') fileHash: string,
+    @Res() res: Response
+  ) {
+    this.logger.log(`[refreshExternalReferences] 请求参数: fileHash=${fileHash}`);
+
+    try {
+      const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
+      await this.mxCadService.updateExternalReferenceInfo(fileHash, stats);
+
+      this.logger.log(`[refreshExternalReferences] 刷新成功: ${fileHash}`);
+
+      return res.json({
+        code: 0,
+        message: '刷新成功',
+        stats,
+      });
+    } catch (error) {
+      this.logger.error(`[refreshExternalReferences] 刷新失败: ${error.message}`);
+      return res.status(500).json({ code: -1, message: '刷新失败' });
+    }
+  }
+
+  /**
    * 上传文件（支持分片）
    */
   @Post('files/uploadFiles')

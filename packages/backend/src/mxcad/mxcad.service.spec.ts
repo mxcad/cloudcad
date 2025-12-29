@@ -14,6 +14,9 @@ jest.mock('child_process', () => ({
   exec: jest.fn(),
 }));
 
+// 创建 fsPromises mock
+const fsPromisesMock = require('fs/promises');
+
 describe('MxCadService', () => {
   let service: MxCadService;
   let mockConfigService: jest.Mocked<ConfigService>;
@@ -384,11 +387,11 @@ describe('MxCadService', () => {
       };
 
       // Mock 文件系统操作
-      fsPromises.readdir = jest.fn().mockResolvedValue([
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue([
         'testhash123.dwg.mxweb',
         'testhash123.dwg.mxweb_preloading.json',
       ]);
-      fsPromises.readFile = jest.fn().mockResolvedValue(
+      fsPromisesMock.readFile = jest.fn().mockResolvedValue(
         JSON.stringify(mockPreloadingData)
       );
       path.normalize = jest.fn((p) => p);
@@ -396,15 +399,15 @@ describe('MxCadService', () => {
       const result = await service.getPreloadingData('testhash123');
 
       expect(result).toEqual(mockPreloadingData);
-      expect(fsPromises.readdir).toHaveBeenCalledWith('/tmp/uploads');
-      expect(fsPromises.readFile).toHaveBeenCalledWith(
+      expect(fsPromisesMock.readdir).toHaveBeenCalledWith('/tmp/uploads');
+      expect(fsPromisesMock.readFile).toHaveBeenCalledWith(
         '/tmp/uploads/testhash123.dwg.mxweb_preloading.json',
         'utf-8'
       );
     });
 
     it('应该在文件不存在时返回 null', async () => {
-      fsPromises.readdir = jest.fn().mockResolvedValue([]);
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue([]);
 
       const result = await service.getPreloadingData('nonexistent');
 
@@ -412,7 +415,7 @@ describe('MxCadService', () => {
     });
 
     it('应该在读取失败时返回 null', async () => {
-      fsPromises.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
+      fsPromisesMock.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
 
       const result = await service.getPreloadingData('errorhash');
 
@@ -488,7 +491,7 @@ describe('MxCadService', () => {
       ];
 
       fs.existsSync = jest.fn().mockReturnValue(true);
-      fsPromises.readdir = jest.fn().mockResolvedValue(mockFiles);
+      fsPromisesMock.readdir = jest.fn().mockResolvedValue(mockFiles);
 
       // 检查 DWG 文件（已转换为 mxweb）
       const dwgExists = await service.checkExternalReferenceExists(
@@ -534,7 +537,7 @@ describe('MxCadService', () => {
 
     it('应该在读取失败时返回 false', async () => {
       fs.existsSync = jest.fn().mockReturnValue(true);
-      fsPromises.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
+      fsPromisesMock.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
 
       const exists = await service.checkExternalReferenceExists(
         '25e89b5adf19984330f4e68b0f99db64',

@@ -78,6 +78,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     FileSystemNodeService,
     FileUploadManagerService,
   ],
-  exports: [MxCadService],
+  exports: [MxCadService, FileUploadManagerService],
 })
 export class MxCadModule {}

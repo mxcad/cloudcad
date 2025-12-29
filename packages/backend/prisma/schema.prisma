@@ -52,7 +52,12 @@ model FileSystemNode {
   // 项目专属字段（仅根节点使用）
   description    String?          // 项目描述
   projectStatus  ProjectStatus?   // 项目状态
-  
+
+  // 外部参照相关字段（仅文件使用）
+  hasMissingExternalReferences  Boolean @default(false)  // 是否有缺失的外部参照
+  missingExternalReferencesCount Int    @default(0)      // 缺失的外部参照数量
+  externalReferencesJson        String?                // 完整的外部参照信息（JSON格式）
+
   // 权限与审计
   ownerId     String
   owner       User     @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
