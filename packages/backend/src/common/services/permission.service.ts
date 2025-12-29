@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
+  NODE_ACCESS_PERMISSIONS,
+  NodeAccessRole,
   Permission,
-  ProjectMemberRole,
   ROLE_PERMISSIONS,
   UserRole,
 } from '../enums/permissions.enum';
@@ -30,7 +31,7 @@ export class PermissionService {
   async hasPermission(
     user: UserWithPermissions,
     permission: Permission,
-    resourceId?: { projectId?: string; fileId?: string }
+    resourceId?: { nodeId?: string }
   ): Promise<boolean> {
     const resourceInfo = resourceId
       ? ` (资源: ${JSON.stringify(resourceId)})`
@@ -48,9 +49,11 @@ export class PermissionService {
         return true;
       }
 
-      this.logger.warn(
-        '项目和文件权限检查已迁移到 FileSystemPermissionService'
-      );
+      // 检查节点访问权限
+      if (resourceId?.nodeId) {
+        return this.checkNodePermission(user, resourceId.nodeId, permission);
+      }
+
       return false;
     } catch (error) {
       this.logger.error(`权限检查失败: ${error.message}`, error.stack);
@@ -59,88 +62,104 @@ export class PermissionService {
   }
 
   /**
-   * @deprecated 已迁移到 FileSystemPermissionService.checkNodePermission
+   * 检查节点访问权限
    */
-  async checkProjectPermission(
+  async checkNodePermission(
     user: UserWithPermissions,
-    projectId: string,
+    nodeId: string,
     permission: Permission
   ): Promise<boolean> {
-    this.logger.warn(
-      'checkProjectPermission 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
-    );
-    return false;
+    try {
+      const role = await this.getNodeAccessRole(user.id, nodeId);
+      if (!role) {
+        return false;
+      }
+
+      const permissions = NODE_ACCESS_PERMISSIONS[role] || [];
+      return permissions.includes(permission);
+    } catch (error) {
+      this.logger.error(`检查节点权限失败: ${error.message}`, error.stack);
+      return false;
+    }
   }
 
   /**
-   * @deprecated 已迁移到 FileSystemPermissionService.checkNodePermission
+   * 获取用户在节点上的访问角色
    */
-  async checkFilePermission(
+  async getNodeAccessRole(
+    userId: string,
+    nodeId: string
+  ): Promise<NodeAccessRole | null> {
+    try {
+      // 先检查缓存
+      const cachedRole = this.cacheService.getNodeAccessRole(userId, nodeId);
+      if (cachedRole) {
+        return cachedRole;
+      }
+
+      // 查询数据库
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { ownerId: true, deletedAt: true },
+      });
+
+      if (!node || node.deletedAt) {
+        return null;
+      }
+
+      // 如果是所有者，直接返回 OWNER
+      if (node.ownerId === userId) {
+        this.cacheService.cacheNodeAccessRole(userId, nodeId, NodeAccessRole.OWNER);
+        return NodeAccessRole.OWNER;
+      }
+
+      // 查询 FileAccess 表获取角色
+      const access = await this.prisma.fileAccess.findUnique({
+        where: {
+          userId_nodeId: { userId, nodeId },
+        },
+      });
+
+      if (access) {
+        this.cacheService.cacheNodeAccessRole(userId, nodeId, access.role as NodeAccessRole);
+        return access.role as NodeAccessRole;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`获取节点访问角色失败: ${error.message}`, error.stack);
+      return null;
+    }
+  }
+
+  /**
+   * 检查用户是否具有指定角色之一
+   */
+  async hasNodeAccessRole(
     user: UserWithPermissions,
-    fileId: string,
-    permission: Permission
+    nodeId: string,
+    roles: NodeAccessRole[]
   ): Promise<boolean> {
-    this.logger.warn(
-      'checkFilePermission 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
-    );
-    return false;
+    const role = await this.getNodeAccessRole(user.id, nodeId);
+    return role ? roles.includes(role) : false;
+  }
+
+  /**
+   * 获取用户在节点上的所有权限
+   */
+  async getNodePermissions(
+    userId: string,
+    nodeId: string
+  ): Promise<Permission[]> {
+    const role = await this.getNodeAccessRole(userId, nodeId);
+    if (!role) {
+      return [];
+    }
+    return NODE_ACCESS_PERMISSIONS[role] || [];
   }
 
   hasRole(user: UserWithPermissions, roles: UserRole[]): boolean {
     return roles.includes(user.role);
-  }
-
-  /**
-   * @deprecated 已迁移到 FileSystemPermissionService
-   */
-  async hasProjectRole(
-    user: UserWithPermissions,
-    projectId: string,
-    roles: ProjectMemberRole[]
-  ): Promise<boolean> {
-    this.logger.warn(
-      'hasProjectRole 已废弃，请使用 FileSystemPermissionService'
-    );
-    return false;
-  }
-
-  /**
-   * @deprecated 已迁移到 FileSystemPermissionService.checkNodePermission
-   */
-  async getProjectPermissions(
-    user: UserWithPermissions,
-    projectId: string
-  ): Promise<Permission[]> {
-    this.logger.warn(
-      'getProjectPermissions 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
-    );
-    return [];
-  }
-
-  /**
-   * @deprecated 已迁移到 FileSystemPermissionService.checkNodePermission
-   */
-  async getFilePermissions(
-    user: UserWithPermissions,
-    fileId: string
-  ): Promise<Permission[]> {
-    this.logger.warn(
-      'getFilePermissions 已废弃，请使用 FileSystemPermissionService.checkNodePermission'
-    );
-    return [];
-  }
-
-  /**
-   * @deprecated 已迁移到 FileSystemPermissionService
-   */
-  async getFileAccessPermissions(
-    user: UserWithPermissions,
-    fileId: string
-  ): Promise<Permission[]> {
-    this.logger.warn(
-      'getFileAccessPermissions 已废弃，请使用 FileSystemPermissionService'
-    );
-    return [];
   }
 
   async getUserPermissions(user: UserWithPermissions): Promise<Permission[]> {

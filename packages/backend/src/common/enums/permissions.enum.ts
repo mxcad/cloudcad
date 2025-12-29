@@ -31,18 +31,31 @@ export enum UserRole {
   USER = 'USER',
 }
 
-export enum ProjectMemberRole {
-  OWNER = 'OWNER',
-  ADMIN = 'ADMIN',
-  MEMBER = 'MEMBER',
-  VIEWER = 'VIEWER',
+/**
+ * 统一的节点访问角色
+ * 用于 FileSystemNode（项目、文件夹、文件）的权限控制
+ */
+export enum NodeAccessRole {
+  OWNER = 'OWNER',      // 所有者：完全控制
+  ADMIN = 'ADMIN',      // 管理员：管理权限
+  MEMBER = 'MEMBER',    // 成员：可编辑
+  EDITOR = 'EDITOR',    // 编辑者：可编辑文件
+  VIEWER = 'VIEWER',    // 查看者：只读
 }
 
-export enum FileAccessRole {
-  OWNER = 'OWNER',
-  EDITOR = 'EDITOR',
-  VIEWER = 'VIEWER',
-}
+/**
+ * FileAccessRole - 保留用于向后兼容
+ * @deprecated 使用 NodeAccessRole 代替
+ */
+export const FileAccessRole = NodeAccessRole;
+export type FileAccessRole = NodeAccessRole;
+
+/**
+ * ProjectMemberRole - 保留用于向后兼容
+ * @deprecated 使用 NodeAccessRole 代替
+ */
+export const ProjectMemberRole = NodeAccessRole;
+export type ProjectMemberRole = NodeAccessRole;
 
 // 权限映射表
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
@@ -79,12 +92,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 };
 
-// 项目成员权限映射
-export const PROJECT_MEMBER_PERMISSIONS: Record<
-  ProjectMemberRole,
-  Permission[]
-> = {
-  [ProjectMemberRole.OWNER]: [
+// 节点访问权限映射
+export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
+  [NodeAccessRole.OWNER]: [
     Permission.PROJECT_READ,
     Permission.PROJECT_WRITE,
     Permission.PROJECT_DELETE,
@@ -97,7 +107,7 @@ export const PROJECT_MEMBER_PERMISSIONS: Record<
     Permission.FILE_SHARE,
     Permission.FILE_DOWNLOAD,
   ],
-  [ProjectMemberRole.ADMIN]: [
+  [NodeAccessRole.ADMIN]: [
     Permission.PROJECT_READ,
     Permission.PROJECT_WRITE,
     Permission.PROJECT_MEMBER_MANAGE,
@@ -108,7 +118,7 @@ export const PROJECT_MEMBER_PERMISSIONS: Record<
     Permission.FILE_SHARE,
     Permission.FILE_DOWNLOAD,
   ],
-  [ProjectMemberRole.MEMBER]: [
+  [NodeAccessRole.MEMBER]: [
     Permission.PROJECT_READ,
     Permission.FILE_CREATE,
     Permission.FILE_READ,
@@ -116,27 +126,14 @@ export const PROJECT_MEMBER_PERMISSIONS: Record<
     Permission.FILE_SHARE,
     Permission.FILE_DOWNLOAD,
   ],
-  [ProjectMemberRole.VIEWER]: [
-    Permission.PROJECT_READ,
-    Permission.FILE_READ,
-    Permission.FILE_DOWNLOAD,
-  ],
-};
-
-// 文件访问权限映射
-export const FILE_ACCESS_PERMISSIONS: Record<FileAccessRole, Permission[]> = {
-  [FileAccessRole.OWNER]: [
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-  ],
-  [FileAccessRole.EDITOR]: [
+  [NodeAccessRole.EDITOR]: [
     Permission.FILE_READ,
     Permission.FILE_WRITE,
     Permission.FILE_SHARE,
     Permission.FILE_DOWNLOAD,
   ],
-  [FileAccessRole.VIEWER]: [Permission.FILE_READ, Permission.FILE_DOWNLOAD],
+  [NodeAccessRole.VIEWER]: [
+    Permission.FILE_READ,
+    Permission.FILE_DOWNLOAD,
+  ],
 };

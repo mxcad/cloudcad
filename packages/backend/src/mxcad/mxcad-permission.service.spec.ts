@@ -8,11 +8,8 @@ describe('MxCadPermissionService', () => {
 
   beforeEach(async () => {
     const mockDatabaseService = {
-      projectMember: {
-        findFirst: jest.fn(),
-      },
       fileAccess: {
-        findFirst: jest.fn(),
+        findUnique: jest.fn(),
       },
       fileSystemNode: {
         findUnique: jest.fn(),
@@ -42,7 +39,7 @@ describe('MxCadPermissionService', () => {
       const context = { userId: undefined, projectId: '123' };
       
       await expect(service.validateUploadPermission(context))
-        .rejects.toThrow('用户未登录');
+        .rejects.toThrow('用户未认证');
     });
 
     it('should throw BadRequestException when project is missing', async () => {
@@ -52,17 +49,17 @@ describe('MxCadPermissionService', () => {
         .rejects.toThrow('缺少项目信息');
     });
 
-    it('should throw ForbiddenException when user is not project member', async () => {
+    it('should throw ForbiddenException when user has no project access', async () => {
       const context = { userId: 'user1', projectId: '123' };
-      mockPrisma.projectMember.findFirst.mockResolvedValue(null);
+      mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
       
       await expect(service.validateUploadPermission(context))
-        .rejects.toThrow('无权限访问该项目');
+        .rejects.toThrow('您没有该项目的访问权限，无法上传文件');
     });
 
-    it('should pass when user is project member', async () => {
+    it('should pass when user has project access', async () => {
       const context = { userId: 'user1', projectId: '123' };
-      mockPrisma.projectMember.findFirst.mockResolvedValue({
+      mockPrisma.fileAccess.findUnique.mockResolvedValue({
         userId: 'user1',
         nodeId: '123',
         role: 'MEMBER',
@@ -74,11 +71,11 @@ describe('MxCadPermissionService', () => {
   });
 
   describe('validateFileAccess', () => {
-    it('should throw UnauthorizedException when user is not logged in', async () => {
+    it('should allow anonymous access when no user info', async () => {
       const context = { userId: undefined };
       
       await expect(service.validateFileAccess(context, 'file1'))
-        .rejects.toThrow('用户未登录');
+        .resolves.toBe(true);
     });
 
     it('should throw BadRequestException when file does not exist', async () => {

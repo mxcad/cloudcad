@@ -237,8 +237,8 @@ return result;
       throw new Error('上下文缺少用户ID');
     }
 
-    if (!context.projectId) {
-      throw new Error('上下文缺少项目ID');
+    if (!context.nodeId) {
+      throw new Error('上下文缺少节点ID');
     }
 
     return context;

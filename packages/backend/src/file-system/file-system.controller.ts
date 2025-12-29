@@ -63,8 +63,54 @@ export class FileSystemController {
   @Delete('projects/:projectId')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '删除项目成功' })
-  async deleteProject(@Param('projectId') projectId: string) {
-    return this.fileSystemService.deleteProject(projectId);
+  async deleteProject(
+    @Param('projectId') projectId: string,
+    @Body() body: { permanently?: boolean }
+  ) {
+    return this.fileSystemService.deleteProject(projectId, body?.permanently);
+  }
+
+  // ============ 回收站相关 API ============
+
+  @Get('trash')
+  @ApiResponse({ status: 200, description: '获取回收站列表成功' })
+  async getTrash(@Request() req) {
+    return this.fileSystemService.getTrashItems(req.user.id);
+  }
+
+  @Post('projects/:projectId/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: '恢复项目成功' })
+  async restoreProject(@Param('projectId') projectId: string) {
+    return this.fileSystemService.restoreProject(projectId);
+  }
+
+  @Post('nodes/:nodeId/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: '恢复节点成功' })
+  async restoreNode(@Param('nodeId') nodeId: string) {
+    return this.fileSystemService.restoreNode(nodeId);
+  }
+
+  @Delete('projects/:projectId/permanent')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: '彻底删除项目成功' })
+  async permanentlyDeleteProject(@Param('projectId') projectId: string) {
+    return this.fileSystemService.permanentlyDeleteProject(projectId);
+  }
+
+  @Delete('nodes/:nodeId/permanent')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: '彻底删除节点成功' })
+  async permanentlyDeleteNode(@Param('nodeId') nodeId: string) {
+    return this.fileSystemService.permanentlyDeleteNode(nodeId);
+  }
+
+  @Delete('trash')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: '清空回收站成功' })
+  async clearTrash(@Request() req) {
+    return this.fileSystemService.clearTrash(req.user.id);
   }
 
   @Post('nodes/:parentId/folders')
@@ -101,8 +147,11 @@ export class FileSystemController {
   @Delete('nodes/:nodeId')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '删除节点成功' })
-  async deleteNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.deleteNode(nodeId);
+  async deleteNode(
+    @Param('nodeId') nodeId: string,
+    @Body() body: { permanently?: boolean }
+  ) {
+    return this.fileSystemService.deleteNode(nodeId, body?.permanently);
   }
 
   @Post('nodes/:nodeId/move')

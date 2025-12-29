@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   FolderPlus,
   Users,
@@ -15,6 +15,7 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useProjectManagement } from '../hooks/useProjectManagement';
+import { projectsApi } from '../services/apiService';
 import {
   EmptyFolderIcon,
   RefreshIcon,
@@ -31,6 +32,18 @@ import { MembersModal } from '../components/modals/MembersModal';
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
   const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
+  const location = useLocation();
+
+  // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
+  const urlProjectId = React.useMemo(() => {
+    const match = location.pathname.match(/\/projects\/([^/]+)/);
+    return match ? match[1] : '';
+  }, [location.pathname]);
+
+  const urlNodeId = React.useMemo(() => {
+    const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
+    return match ? match[1] : undefined;
+  }, [location.pathname]);
 
   // 上传组件 ref
   const uploaderRef = useRef<MxCadUploaderRef>(null);
@@ -101,7 +114,7 @@ export const FileSystemManager: React.FC = () => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   // 是否在根级别（无 projectId）
-  const isAtRoot = !projectId;
+  const isAtRoot = !urlProjectId;
 
   // 面包屑滚轮横向滚动处理
   useEffect(() => {
@@ -133,10 +146,49 @@ export const FileSystemManager: React.FC = () => {
     }
   }, [breadcrumbs]);
 
-  // 获取当前正确的父节点 ID
+  // 获取当前正确的父节点 ID（上传目标目录）
+  // 使用 ref 缓存最新值，避免闭包问题
+  const currentNodeIdRef = useRef<string | null>(null);
   const getCurrentParentId = useCallback(() => {
-    return currentNode?.id || nodeId || projectId || '';
-  }, [currentNode, nodeId, projectId]);
+    // 优先使用 ref 中的最新值（实时更新）
+    if (currentNodeIdRef.current) {
+      console.log('[getCurrentParentId] 模式0 - 使用 ref 最新值:', currentNodeIdRef.current);
+      return currentNodeIdRef.current;
+    }
+    
+    // 备用方案：使用 URL 参数
+    // 优先使用 URL nodeId（最可靠，因为 URL 是页面状态的权威来源）
+    if (urlNodeId) {
+      console.log('[getCurrentParentId] 模式1 - 使用 URL nodeId:', urlNodeId);
+      return urlNodeId;
+    }
+    
+    // 如果 URL nodeId 存在但 nodes 已加载，验证节点是否存在
+    if (urlNodeId && nodes.length > 0) {
+      const currentNodeData = nodes.find((n) => n.id === urlNodeId);
+      if (currentNodeData) {
+        console.log('[getCurrentParentId] 模式2 - 从 nodes 中找到:', currentNodeData.id);
+        return currentNodeData.id;
+      }
+    }
+    
+    // 最后使用 projectId（项目根目录）
+    if (urlProjectId) {
+      console.log('[getCurrentParentId] 模式3 - 使用 URL projectId:', urlProjectId);
+      return urlProjectId;
+    }
+    
+    console.log('[getCurrentParentId] 警告: 无法确定目标目录');
+    return '';
+  }, [urlNodeId, urlProjectId, nodes]);
+
+  // 当 currentNode 变化时，更新 ref
+  useEffect(() => {
+    if (currentNode?.id) {
+      currentNodeIdRef.current = currentNode.id;
+      console.log('[getCurrentParentId] 更新 ref 为 currentNode.id:', currentNode.id);
+    }
+  }, [currentNode?.id]);
 
   // 过滤后的数据
   const filteredProjects = isAtRoot ? nodes.filter((n) => n.isRoot) : nodes;
@@ -155,12 +207,19 @@ export const FileSystemManager: React.FC = () => {
     (e: React.FormEvent) => {
       e.preventDefault();
       if (editingProject) {
-        handleUpdateProjectSubmit(handleRefresh);
+        handleUpdateProjectSubmit((id, data) =>
+          projectsApi.update(id, {
+            name: data.name ?? undefined,
+            description: data.description,
+          })
+        );
       } else {
-        handleCreateProjectSubmit(handleRefresh);
+        handleCreateProjectSubmit((name, description) =>
+          projectsApi.create({ name, description })
+        );
       }
     },
-    [editingProject, handleCreateProjectSubmit, handleUpdateProjectSubmit, handleRefresh]
+    [editingProject, handleCreateProjectSubmit, handleUpdateProjectSubmit]
   );
 
   // 删除项目
@@ -243,7 +302,13 @@ export const FileSystemManager: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => uploaderRef.current?.triggerUpload()}
+                onClick={() => {
+                  if (!projectId) {
+                    alert('请先选择一个项目再上传文件');
+                    return;
+                  }
+                  uploaderRef.current?.triggerUpload();
+                }}
                 disabled={loading}
                 className="text-slate-600"
                 title="上传文件"
@@ -257,15 +322,17 @@ export const FileSystemManager: React.FC = () => {
             </>
           )}
 
-          <MxCadUploader
-            ref={uploaderRef}
-            projectId={projectId || ''}
-            parentId={getCurrentParentId()}
-            buttonText=""
-            buttonClassName="hidden"
-            onSuccess={handleRefresh}
-            onError={(err: string) => console.error('Upload error:', err)}
-          />
+          {/* 上传组件 - 仅在项目/文件夹模式下显示 */}
+          {!isAtRoot && (
+            <MxCadUploader
+              ref={uploaderRef}
+              nodeId={() => getCurrentParentId()}
+              buttonText=""
+              buttonClassName="hidden"
+              onSuccess={handleRefresh}
+              onError={(err: string) => console.error('Upload error:', err)}
+            />
+          )}
         </div>
       </div>
 

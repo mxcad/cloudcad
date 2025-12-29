@@ -93,10 +93,9 @@ class MxCADAuthManager {
 
     // 获取存储的 token
     const token = localStorage.getItem('accessToken');
-    // 获取 URL 中的项目参数
+    // 获取 URL 中的节点参数
     const urlParams = new URLSearchParams(window.location.search);
-    const projectId = urlParams.get('project');
-    const parentId = urlParams.get('parent');
+    const nodeId = urlParams.get('nodeId') || urlParams.get('parent') || '';
 
     // 保存原始方法（只保存一次）
     if (!this.originalXHROpen) {
@@ -132,11 +131,17 @@ class MxCADAuthManager {
         if ((method === 'POST' || method === 'PUT') && typeof body === 'string') {
           try {
             const bodyData = JSON.parse(body);
-            if (projectId && !bodyData.projectId) {
-              bodyData.projectId = projectId;
+            // 后端 buildContextFromRequest 只期望 nodeId 参数
+            // 移除 projectId 和 parentId 参数，保持接口一致性
+            if (nodeId && !bodyData.nodeId) {
+              bodyData.nodeId = nodeId;
             }
-            if (parentId && !bodyData.parentId) {
-              bodyData.parentId = parentId;
+            // 清理冗余参数
+            if (bodyData.projectId) {
+              delete bodyData.projectId;
+            }
+            if (bodyData.parentId) {
+              delete bodyData.parentId;
             }
             const newBody = JSON.stringify(bodyData);
             return originalSend.call(this, newBody);
@@ -167,13 +172,18 @@ class MxCADAuthManager {
         if ((method === 'POST' || method === 'PUT') && init?.body && typeof init.body === 'string') {
           try {
             const bodyData = JSON.parse(init.body);
-            if (projectId && !bodyData.projectId) {
-              bodyData.projectId = projectId;
-            }
-            if (parentId && !bodyData.parentId) {
-              bodyData.parentId = parentId;
-            }
-            modifiedInit.body = JSON.stringify(bodyData);
+                    // 后端 buildContextFromRequest 只期望 nodeId 参数
+                    // 移除 projectId 和 parentId 参数，保持接口一致性
+                    if (nodeId && !bodyData.nodeId) {
+                      bodyData.nodeId = nodeId;
+                    }
+                    // 清理冗余参数
+                    if (bodyData.projectId) {
+                      delete bodyData.projectId;
+                    }
+                    if (bodyData.parentId) {
+                      delete bodyData.parentId;
+                    }            modifiedInit.body = JSON.stringify(bodyData);
           } catch (error) {
             // 静默处理 JSON 解析错误
           }
@@ -233,10 +243,11 @@ class MxCADInstanceManager {
   async initialize(initialFileUrl?: string): Promise<MxCADView> {
     Logger.info('MxCADView 初始化开始', { initialFileUrl, hasExistingView: !!this.mxcadView, isInitialized: this.isInitialized });
     
+    // 如果实例已存在且已初始化，直接返回现有实例
     if (this.mxcadView && this.isInitialized) {
       Logger.info('复用现有 MxCADView 实例');
       
-      // 如果传入了新文件URL，则打开新文件
+      // 如果传入了新文件URL，则使用 openWebFile 打开新文件
       if (initialFileUrl) {
         Logger.info('切换到新文件', { initialFileUrl });
         await this.openFile(initialFileUrl);
@@ -245,6 +256,7 @@ class MxCADInstanceManager {
       return this.mxcadView;
     }
 
+    // 如果正在初始化中，等待完成
     if (this.initPromise) {
       Logger.info('等待初始化完成');
       await this.initPromise;
@@ -258,6 +270,7 @@ class MxCADInstanceManager {
       return this.mxcadView!;
     }
 
+    // 创建新实例（只执行一次）
     Logger.info('创建新实例', { initialFileUrl });
     this.initPromise = this.createInstance(initialFileUrl);
     await this.initPromise;
@@ -282,22 +295,28 @@ class MxCADInstanceManager {
       };
 
       // 第一次初始化时传入 mxweb 文件 URL
+      // 注意：只有第一次创建实例时才设置 openFile 参数
+      // 后续文件切换应该使用 openWebFile 方法
       if (openFile) {
         viewOptions.openFile = openFile;
-        Logger.info('设置初始文件（第一次初始化）', { openFile });
+        Logger.info('第一次初始化，设置初始文件', { openFile });
+      } else {
+        Logger.info('第一次初始化，未设置初始文件');
       }
 
       this.mxcadView = new MxCADView(viewOptions);
       
-      // 使用viewOptions创建实例，第一次初始化会自动打开文件
+      // 使用 viewOptions 创建实例
+      // 如果设置了 openFile 参数，MxCADView 会自动打开该文件
       this.mxcadView.create();
       
+      // 监听 MxCAD 应用创建完成事件
       MxFun.on("mxcadApplicationCreatedMxCADObject", () => {
         this.isInitialized = true;
         Logger.success('MxCADView 实例初始化完成');
-      })
+      });
 
-      Logger.info('MxCADView 实例创建完成');
+      Logger.info('MxCADView 实例创建完成，等待初始化事件');
     } catch (error) {
       Logger.error('MxCADView 实例创建失败', error);
       this.mxcadView = null;
@@ -322,14 +341,19 @@ class MxCADInstanceManager {
         return;
       }
       
-      // 第二次打开文件需要调用 openWebFile 方法
-      if (this.mxcadView?.mxcad) {
-        this.mxcadView.mxcad.openWebFile(fileUrl);
-        Logger.info('第二次打开文件命令已执行', { fileUrl, currentFileName, targetFileName });
-      } else {
-        Logger.error('mxcad 对象不可用');
+      Logger.info('准备打开文件', { fileUrl, currentFileName, targetFileName });
+      
+      // 检查 mxcad 对象是否可用
+      if (!this.mxcadView?.mxcad) {
+        Logger.error('mxcad 对象不可用，无法打开文件');
         throw new Error('mxcad 对象不可用');
       }
+      
+      // 使用 openWebFile 方法打开文件
+      // 这是 MxCADView 实例创建后打开文件的正确方式
+      this.mxcadView.mxcad.openWebFile(fileUrl);
+      
+      Logger.success('使用 openWebFile 方法打开文件成功', { fileUrl });
     } catch (error) {
       Logger.error('打开文件时发生错误', error);
       throw error;
@@ -359,6 +383,10 @@ class MxCADInstanceManager {
       return false;
     }
     return currentFileName.includes(targetFileName);
+  }
+
+  isCreated(): boolean {
+    return this.mxcadView !== null;
   }
 
   isReady(): boolean {
@@ -411,6 +439,10 @@ export class MxCADManager {
 
   async openFile(fileUrl: string): Promise<void> {
     return this.instanceManager.openFile(fileUrl);
+  }
+
+  isCreated(): boolean {
+    return this.instanceManager.isCreated();
   }
 
   isReady(): boolean {

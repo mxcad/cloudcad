@@ -1,4 +1,5 @@
 ﻿import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { Logger } from '../utils/mxcadUtils';
 
 // API 基础配置
 const API_BASE_URL =
@@ -21,53 +22,25 @@ class ApiService {
       (config) => {
         // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
 
-        // 为 MxCAD 上传相关请求添加项目上下文
-        if (config.url?.includes('/mxcad/files/')) {
-          // 从当前URL获取项目上下文作为后备
-          const currentUrl = new URL(window.location.href);
-          const urlProjectId = currentUrl.searchParams.get('project') || '';
-          const urlParentId = currentUrl.searchParams.get('parent') || '';
+        // 为所有 MxCAD 接口添加节点上下文
+        if (config.url?.includes('/mxcad/')) {
+          // 从多个来源获取节点上下文
+          const nodeId = this.getNodeIdFromMultipleSources(config);
           
-          // 如果是POST请求且有data，检查并补充项目上下文参数
-          if (config.method?.toLowerCase() === 'post' && config.data) {
-            // 检查是否是 FormData（文件上传）
-            const isFormData = config.data instanceof FormData;
-            
-            if (isFormData) {
-              // 对于 FormData，使用 append 方法追加字段
-              if (!config.data.has('projectId') && urlProjectId) {
-                config.data.append('projectId', urlProjectId);
-              }
-              if (!config.data.has('parentId') && urlParentId) {
-                config.data.append('parentId', urlParentId);
-              }
-            } else {
-              // 对于普通对象，使用扩展运算符
-              const existingProjectId = config.data.projectId;
-              const existingParentId = config.data.parentId;
-              
-              // 只有当请求体中没有项目上下文时，才从URL获取
-              if (!existingProjectId && !existingParentId) {
-                const enhancedData = {
-                  ...config.data,
-                  projectId: urlProjectId,
-                  parentId: urlParentId,
-                };
-                config.data = enhancedData;
-              }
+          if (nodeId) {
+            // 验证 nodeId 格式
+            if (!this.isValidNodeId(nodeId)) {
+              Logger.warn('[apiService] 无效的 nodeId 格式:', nodeId);
+              return config; // 不添加无效参数
             }
-          } else if (config.method?.toLowerCase() === 'post' && config.params) {
-            // 如果参数在params中（某些情况下）
-            const existingProjectId = config.params.projectId;
-            const existingParentId = config.params.parentId;
             
-            if (!existingProjectId && !existingParentId) {
-              const enhancedParams = {
-                ...config.params,
-                projectId: urlProjectId,
-                parentId: urlParentId,
-              };
-              config.params = enhancedParams;
+            // 根据请求类型补充 nodeId 参数
+            this.supplementNodeIdToRequest(config, nodeId);
+          } else {
+            // 对于关键的上传接口，如果缺少 nodeId 则记录警告
+            if (config.url?.includes('/mxcad/files/uploadFiles') || 
+                config.url?.includes('/mxcad/files/fileisExist')) {
+              Logger.warn('[apiService] MxCAD 接口缺少 nodeId 参数，可能影响文件系统集成');
             }
           }
         }
@@ -308,6 +281,31 @@ export const projectsApi = {
     apiService.patch(`/projects/${projectId}/members/${userId}`, data),
 };
 
+// 回收站相关的 API 方法
+export const trashApi = {
+  // 获取回收站列表
+  getList: () => apiService.get('/file-system/trash'),
+
+  // 恢复项目
+  restoreProject: (projectId: string) =>
+    apiService.post(`/file-system/projects/${projectId}/restore`),
+
+  // 恢复节点
+  restoreNode: (nodeId: string) =>
+    apiService.post(`/file-system/nodes/${nodeId}/restore`),
+
+  // 彻底删除项目
+  permanentlyDeleteProject: (projectId: string) =>
+    apiService.delete(`/file-system/projects/${projectId}/permanent`),
+
+  // 彻底删除节点
+  permanentlyDeleteNode: (nodeId: string) =>
+    apiService.delete(`/file-system/nodes/${nodeId}/permanent`),
+
+  // 清空回收站
+  clear: () => apiService.delete('/file-system/trash'),
+};
+
 // 文件相关的 API 方法
 export const filesApi = {
   list: () => apiService.get('/files'),
@@ -372,4 +370,81 @@ export const adminApi = {
 
   getUserPermissions: (userId: string) =>
     apiService.get(`/admin/permissions/user/${userId}`),
+};
+
+// 在类定义后添加辅助方法
+ApiService.prototype.getNodeIdFromMultipleSources = function(config: any): string | null {
+  // 1. 从请求数据中获取
+  if (config.data?.nodeId) return config.data.nodeId;
+  
+  // 2. 从 URL 查询参数获取
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlNodeId = urlParams.get('nodeId') || urlParams.get('parent');
+    if (urlNodeId) return urlNodeId;
+  }
+  
+  // 3. 从全局状态获取（如果有）
+  if (typeof window !== 'undefined' && (window as any).__CURRENT_NODE_ID__) {
+    return (window as any).__CURRENT_NODE_ID__;
+  }
+  
+  // 4. 从 localStorage 获取（如果有）
+  if (typeof window !== 'undefined') {
+    const storedNodeId = localStorage.getItem('currentNodeId');
+    if (storedNodeId) return storedNodeId;
+  }
+  
+  return null;
+};
+
+ApiService.prototype.isValidNodeId = function(nodeId: string): boolean {
+  // CUID2 格式验证：以 'c' 开头，包含字母和数字，长度约 24-32 字符
+  if (!nodeId || typeof nodeId !== 'string') return false;
+  
+  // 基本格式检查
+  const cuid2Pattern = /^c[a-z0-9]{23,31}$/;
+  return cuid2Pattern.test(nodeId);
+};
+
+ApiService.prototype.supplementNodeIdToRequest = function(config: any, nodeId: string): void {
+  if (!config || !nodeId) return;
+  
+  // 如果是 POST/PUT 请求且有 data
+  const method = config.method?.toLowerCase();
+  if ((method === 'post' || method === 'put') && config.data) {
+    // 检查是否是 FormData（文件上传）
+    const isFormData = config.data instanceof FormData;
+    
+    if (isFormData) {
+      // 对于 FormData，检查是否已有 nodeId，如果没有才添加
+      if (!config.data.has('nodeId')) {
+        config.data.append('nodeId', nodeId);
+        Logger.info('[apiService] 为 FormData 请求补充 nodeId:', nodeId);
+      }
+    } else {
+      // 对于普通 JSON 对象，优先使用请求中已传递的 nodeId
+      const existingNodeId = config.data.nodeId;
+      
+      // 只有当请求体中没有 nodeId 时，才添加
+      if (!existingNodeId) {
+        config.data = {
+          ...config.data,
+          nodeId: nodeId,
+        };
+        Logger.info('[apiService] 为 JSON 请求补充 nodeId:', nodeId);
+      }
+    }
+  } else if (config.params) {
+    // 如果参数在 params 中
+    const existingNodeId = config.params.nodeId;
+    
+    if (!existingNodeId) {
+      config.params = {
+        ...config.params,
+        nodeId: nodeId,
+      };
+      Logger.info('[apiService] 为 params 补充 nodeId:', nodeId);
+    }
+  }
 };

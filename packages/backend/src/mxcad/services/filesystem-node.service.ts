@@ -3,8 +3,7 @@ import { DatabaseService } from '../../database/database.service';
 import { FileStatus } from '@prisma/client';
 
 export interface FileSystemNodeContext {
-  projectId: string;
-  parentId?: string | null;
+  nodeId: string;  // 当前节点ID（项目根目录或文件夹）
   userId: string;
   userRole: string;
 }
@@ -29,14 +28,29 @@ export class FileSystemNodeService {
   constructor(private readonly prisma: DatabaseService) {}
 
   /**
+   * 检查指定目录下是否已存在相同哈希值的文件节点
+   */
+  async checkNodeExistsInDirectory(nodeId: string, fileHash: string, userId: string): Promise<boolean> {
+    const existingNode = await this.prisma.fileSystemNode.findFirst({
+      where: {
+        parentId: nodeId,
+        fileHash: fileHash,
+        ownerId: userId,
+      },
+    });
+
+    return !!existingNode;
+  }
+
+  /**
    * 创建或引用文件系统节点
    * @param options 创建选项
    */
   async createOrReferenceNode(options: CreateNodeOptions): Promise<void> {
     const { originalName, fileHash, fileSize, accessPath, mimeType, extension, context } = options;
 
-    // 创建唯一的节点键，包含项目上下文
-    const nodeKey = `${context.projectId}:${context.parentId || 'root'}:${fileHash}`;
+    // 创建唯一的节点键
+    const nodeKey = `${context.nodeId}:${fileHash}`;
 
     try {
       // 并发控制：如果同一个文件正在创建，等待结果
@@ -63,19 +77,24 @@ export class FileSystemNodeService {
 
   /**
    * 执行实际的节点创建操作
+   * 关键修复：不再做全局哈希值检查，而是直接调用 handleExistingNode
+   * 这样可以确保在目标目录创建新节点，并正确处理同名文件加序号
    */
   private async performCreateNode(options: CreateNodeOptions, nodeKey: string): Promise<void> {
     const { originalName, fileHash, fileSize, accessPath, mimeType, extension, context } = options;
 
     // 使用事务确保数据一致性
     await this.prisma.$transaction(async (tx) => {
-      // 检查是否已存在相同文件哈希的节点（全局去重）
+      // 查找全局是否有相同哈希值的文件（用于共享存储路径）
       const existingNode = await tx.fileSystemNode.findFirst({
         where: { fileHash },
       });
 
-      if (!existingNode) {
-        // 创建新节点
+      if (existingNode) {
+        // 文件在存储中存在，调用 handleExistingNode 处理同名文件加序号
+        await this.handleExistingNode(tx, existingNode, originalName, context);
+      } else {
+        // 文件在存储中不存在，创建新节点
         await this.createNewNode(tx, {
           name: originalName,
           accessPath,
@@ -85,9 +104,6 @@ export class FileSystemNodeService {
           fileHash,
           context,
         });
-      } else {
-        // 检查是否需要在当前项目/文件夹下创建引用
-        await this.handleExistingNode(tx, existingNode, originalName, context);
       }
     });
   }
@@ -106,7 +122,7 @@ export class FileSystemNodeService {
           name: originalName,
           isFolder: false,
           isRoot: false,
-          parentId: context.parentId || null,
+          parentId: context.nodeId,
           originalName,
           path: accessPath,
           size: fileSize,
@@ -135,15 +151,14 @@ export class FileSystemNodeService {
         return true;
       }
 
-      // 检查项目成员权限
-      const membership = await this.prisma.projectMember.findFirst({
+      // 检查节点访问权限
+      const access = await this.prisma.fileAccess.findUnique({
         where: {
-          userId,
-          nodeId: projectId,
+          userId_nodeId: { userId, nodeId: projectId },
         },
       });
 
-      return !!membership;
+      return !!access;
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error);
       return false;
@@ -215,11 +230,12 @@ export class FileSystemNodeService {
 
       if (existingFile) {
         // 如果文件已存在，使用其父节点信息
-        parentId = existingFile.parentId || null;
-        this.logger.log(`📁 找到现有文件节点: ${existingFile.id}, 父节点: ${parentId}`);
+        const fileParentId = existingFile.parentId || null;
+        this.logger.log(`📁 找到现有文件节点: ${existingFile.id}, 父节点: ${fileParentId}`);
 
         // 向上查找项目根节点
         let currentNodeId = existingFile.parentId;
+        let foundProjectId: string | null = null;
         while (currentNodeId) {
           const parentNode = await this.prisma.fileSystemNode.findUnique({
             where: { id: currentNodeId },
@@ -227,51 +243,35 @@ export class FileSystemNodeService {
           });
 
           if (parentNode?.isRoot) {
-            projectId = parentNode.id;
-            this.logger.log(`📍 找到项目根节点: ${projectId} (${parentNode.name})`);
+            foundProjectId = parentNode.id;
+            this.logger.log(`📍 找到项目根节点: ${foundProjectId} (${parentNode.name})`);
             break;
           }
 
           currentNodeId = parentNode?.parentId || null;
         }
 
-        this.logger.log(`📋 从现有文件推断项目: projectId=${projectId}, parentId=${parentId}`);
+        this.logger.log(`📋 从现有文件推断节点: projectId=${foundProjectId}, parentId=${fileParentId}`);
+        projectId = foundProjectId;
+        parentId = fileParentId;
       } else {
         // 如果是新文件，尝试从用户的项目中查找默认项目
         this.logger.log(`🆕 新文件，查找用户的默认项目`);
-        const userProject = await this.prisma.projectMember.findFirst({
+        const userAccess = await this.prisma.fileAccess.findFirst({
           where: {
             userId: user.id,
-            user: {
-              status: 'ACTIVE'
-            }
+            node: { isRoot: true },
           },
           include: {
-            node: {
-              select: {
-                id: true,
-                name: true,
-                isRoot: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                username: true,
-                role: true,
-                status: true,
-              },
-            },
+            node: { select: { id: true, name: true, isRoot: true } },
           },
-          orderBy: {
-            id: 'asc'
-          }
+          orderBy: { createdAt: 'asc' }
         });
 
-        if (userProject && userProject.node.isRoot) {
-          projectId = userProject.nodeId;
+        if (userAccess && userAccess.node.isRoot) {
+          projectId = userAccess.nodeId;
           parentId = projectId; // 上传到项目根目录
-          this.logger.log(`✅ 使用用户默认项目: projectId=${projectId} (${userProject.node.name})`);
+          this.logger.log('✅ 使用用户默认项目: projectId=' + projectId + ' (' + userAccess.node.name + ')');
         } else {
           this.logger.log(`⚠️ 用户没有有效的项目，将创建默认项目`);
         }
@@ -308,7 +308,7 @@ export class FileSystemNodeService {
           });
 
           // 添加用户为项目所有者
-          await this.prisma.projectMember.create({
+          await this.prisma.fileAccess.create({
             data: {
               userId: user.id,
               nodeId: defaultProject.id,
@@ -323,13 +323,12 @@ export class FileSystemNodeService {
       }
 
       const context = {
-        projectId,
-        parentId,
+        nodeId: parentId || projectId,
         userId: user.id,
         userRole: user.role,
       };
 
-      this.logger.log(`🎯 推断上下文完成:`, context);
+      this.logger.log(`🎯 推断上下文完成: nodeId=${context.nodeId}, userId=${context.userId}`);
       return context;
 
     } catch (error) {
@@ -369,14 +368,14 @@ export class FileSystemNodeService {
   ): Promise<void> {
     const { name, accessPath, size, mimeType, extension, fileHash, context } = options;
 
-    this.logger.log('创建新的文件系统节点');
+    this.logger.log(`[createNewNode] 创建新节点: name=${name}, nodeId=${context.nodeId}`);
 
     const fileNode = await tx.fileSystemNode.create({
       data: {
         name,
         isFolder: false,
         isRoot: false,
-        parentId: context.parentId || null,
+        parentId: context.nodeId,
         originalName: name,
         path: accessPath,
         size,
@@ -388,7 +387,7 @@ export class FileSystemNodeService {
       },
     });
 
-    this.logger.log(`✅ 新节点创建成功，ID: ${fileNode.id}`);
+    this.logger.log(`✅ 新节点创建成功，ID: ${fileNode.id}, parentId: ${fileNode.parentId}`);
   }
 
   /**
@@ -439,27 +438,49 @@ export class FileSystemNodeService {
     originalName: string,
     context: FileSystemNodeContext
   ): Promise<void> {
-    const targetParentId = context.parentId || context.projectId;
+    const targetParentId = context.nodeId;
+    this.logger.log(`[handleExistingNode] 处理现有节点: originalName=${originalName}, targetParentId=${targetParentId}, existingNodeId=${existingNode.id}, fileHash=${existingNode.fileHash}`);
 
-    // 检查是否完全相同（同名+同哈希+同目录+同用户）
-    const exactDuplicate = await tx.fileSystemNode.findFirst({
+    // 检查是否在当前目录下已存在相同哈希值的文件
+    // 如果存在，说明文件已经上传过了，直接返回
+    const existingFileWithSameHash = await tx.fileSystemNode.findFirst({
       where: {
         parentId: targetParentId,
-        fileHash: existingNode.fileHash,
-        originalName: originalName,  // 同名
+        fileHash: existingNode.fileHash,  // 检查哈希值而不是文件名
         ownerId: context.userId,
       },
     });
 
-    if (exactDuplicate) {
-      return;  // 完全相同的文件已存在，跳过创建
+    if (existingFileWithSameHash) {
+      this.logger.log(`[handleExistingNode] 相同哈希值的文件已存在于当前目录: ID=${existingFileWithSameHash.id}, 不创建新节点`);
+      return; // 文件已存在，无需重复创建
     }
 
-    // 生成不重复的文件名（自动加序号）
-    const uniqueName = await this.generateUniqueFileName(tx, targetParentId, originalName);
+    // 文件在存储中存在，但当前目录下没有相同哈希值的文件
+    // 需要创建新的文件节点，并处理同名文件情况
+    this.logger.log(`[handleExistingNode] 文件在存储中存在，当前目录没有相同文件，创建新节点...`);
 
-    // 创建新节点（即使是相同内容也创建新节点，共享存储路径）
-    await tx.fileSystemNode.create({
+    // 检查是否在当前目录下已存在同名文件（不同哈希值）
+    // 如果存在，则生成唯一文件名（添加序号）
+    const existingInTarget = await tx.fileSystemNode.findFirst({
+      where: {
+        parentId: targetParentId,
+        originalName: originalName,
+        ownerId: context.userId,
+      },
+    });
+
+    // 如果存在同名文件但哈希值不同，生成唯一文件名
+    const uniqueName = existingInTarget
+      ? await this.generateUniqueFileName(tx, targetParentId, originalName)
+      : originalName;
+
+    this.logger.log(`[handleExistingNode] 当前目录检查: ${existingInTarget ? `找到同名文件 ID=${existingInTarget.id}` : '无同名文件'}`);
+    this.logger.log(`[handleExistingNode] 使用文件名: ${uniqueName}, targetParentId=${targetParentId}`);
+
+    // 创建新节点（引用现有存储路径，节省空间）
+    this.logger.log(`[handleExistingNode] 开始创建引用节点...`);
+    const newNode = await tx.fileSystemNode.create({
       data: {
         name: uniqueName,
         isFolder: false,
@@ -475,5 +496,6 @@ export class FileSystemNodeService {
         ownerId: context.userId,
       },
     });
+    this.logger.log(`✅ 引用节点创建成功，ID: ${newNode.id}, parentId: ${newNode.parentId}, 共享存储: ${existingNode.path}`);
   }
 }

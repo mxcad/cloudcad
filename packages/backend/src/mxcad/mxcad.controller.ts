@@ -47,16 +47,16 @@ export class MxCadController {
   @Post('files/chunkisExist')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
-  async checkChunkExist(@Body() dto: ChunkExistDto, @Req() request: any, @Res() res: Response) {
-    this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(dto)}`);
+  async checkChunkExist(@Body() body: any, @Req() request: any, @Res() res: Response) {
+    this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
     // 构建上下文
     const context = await this.buildContextFromRequest(request);
     const result = await this.mxCadService.checkChunkExist(
-      dto.chunk,
-      dto.fileHash,
-      dto.size,
-      dto.chunks,
-      dto.filename,
+      body.chunk,
+      body.fileHash,
+      body.size,
+      body.chunks,
+      body.filename,
       context
     );
     return res.json(result);
@@ -68,9 +68,9 @@ export class MxCadController {
   @Post('files/fileisExist')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
-  async checkFileExist(@Body() dto: FileExistDto, @Req() request: any, @Res() res: Response) {
+  async checkFileExist(@Body() body: any, @Req() request: any, @Res() res: Response) {
     const context = await this.buildContextFromRequest(request);
-    const result = await this.mxCadService.checkFileExist(dto.filename, dto.fileHash, context);
+    const result = await this.mxCadService.checkFileExist(body.filename, body.fileHash, context);
     return res.json(result);
   }
 
@@ -119,13 +119,9 @@ export class MxCadController {
           type: 'number',
           description: '总分片数量（分片上传时必填）',
         },
-        projectId: {
+        nodeId: {
           type: 'string',
-          description: '项目ID（用于文件系统关联）',
-        },
-        parentId: {
-          type: 'string',
-          description: '父文件夹ID（用于文件系统关联）',
+          description: '节点ID（项目根目录或文件夹的 FileSystemNode ID）',
         },
       },
     },
@@ -770,7 +766,7 @@ export class MxCadController {
    */
   private async handleFileRequest(filename: string, @Res() res: Response, @Req() req: any, isHeadRequest: boolean) {
     try {
-      // 对于文件访问请求，验证 JWT token 但不强制要求 projectId
+      // 对于文件访问请求，验证 JWT token 但不强制要求 nodeId
       // 通过文件路径查找 FileSystemNode 并验证权限
       
       // 调试日志
@@ -1112,26 +1108,28 @@ export class MxCadController {
   
         this.logger.log(`JWT 验证成功: ${userData.username}`);
   
-        // 3. 从多个来源获取项目信息：
+        // 3. 从多个来源获取节点信息：
         // - POST 请求：从 request.body 获取
         // - GET/HEAD 请求：从 request.query 获取
-        const projectId = request.body?.projectId || request.query?.project;
-        const parentId = request.body?.parentId || request.query?.parent;
-  
-        // 4. 严格验证项目ID是否存在
-        if (!projectId) {
-          throw new Error('缺少项目ID，无法创建文件系统节点');
+        // nodeId 是当前文件夹或项目根目录的 FileSystemNode ID
+        const nodeId = request.body?.nodeId || request.query?.nodeId;
+
+        this.logger.log(`🔍 解析参数: body.nodeId=${request.body?.nodeId}, query.nodeId=${request.query?.nodeId}`);
+        this.logger.log(`🔍 最终值: nodeId=${nodeId}`);
+
+        // 4. 严格验证 nodeId 是否存在
+        if (!nodeId) {
+          throw new Error('缺少节点ID（nodeId），无法创建文件系统节点');
         }
-  
+
         // 5. 构建上下文
         const context = {
-          projectId,
-          parentId,
+          nodeId,
           userId: userData.id,
           userRole: userData.role,
         };
   
-        this.logger.log(`构建上下文: userId=${userData.id}, projectId=${projectId}, parentId=${parentId}`);
+        this.logger.log(`构建上下文: userId=${userData.id}, nodeId=${nodeId}`);
         return context;
   
       } catch (error) {
