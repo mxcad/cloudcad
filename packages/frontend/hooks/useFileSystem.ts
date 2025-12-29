@@ -1,29 +1,29 @@
 ﻿import { useState, useCallback, useEffect, useMemo } from 'react';
-﻿import { useNavigate, useParams, useLocation } from 'react-router-dom';
-﻿import { projectsApi, filesApi, trashApi } from '../services/apiService';
-﻿import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
-﻿import { ToastType, Toast } from '../components/ui/Toast';
-﻿
-﻿export const useFileSystem = () => {
-﻿  const navigate = useNavigate();
-﻿  const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
-﻿  const location = useLocation();
-﻿
-﻿  // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
-﻿  const urlProjectId = useMemo(() => {
-﻿    const match = location.pathname.match(/\/projects\/([^/]+)/);
-﻿    return match ? match[1] : '';
-﻿  }, [location.pathname]);
-﻿
-﻿  const urlNodeId = useMemo(() => {
-﻿    const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
-﻿    return match ? match[1] : undefined;
-﻿  }, [location.pathname]);
-﻿
-﻿  // 是否为项目根目录模式（无 projectId）
-﻿  const isProjectRootMode = !urlProjectId;
-﻿  // 是否为文件夹模式（有 projectId）
-﻿  const isFolderMode = !!urlProjectId;  // 状态管理
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { projectsApi, filesApi, trashApi } from '../services/apiService';
+import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
+import { ToastType, Toast } from '../components/ui/Toast';
+
+export const useFileSystem = () => {
+  const navigate = useNavigate();
+  const { projectId, nodeId } = useParams<{ projectId: string; nodeId?: string }>();
+  const location = useLocation();
+
+  // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
+  const urlProjectId = useMemo(() => {
+    const match = location.pathname.match(/\/projects\/([^/]+)/);
+    return match ? match[1] : '';
+  }, [location.pathname]);
+
+  const urlNodeId = useMemo(() => {
+    const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
+    return match ? match[1] : undefined;
+  }, [location.pathname]);
+
+  // 是否为项目根目录模式（无 projectId）
+  const isProjectRootMode = !urlProjectId;
+  // 是否为文件夹模式（有 projectId）
+  const isFolderMode = !!urlProjectId;  // 状态管理
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [currentNode, setCurrentNode] = useState<FileSystemNode | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -159,7 +159,7 @@
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setSelectedNodes(new Set()); // 清除选中状态
+    setSelectedNodes(new Set<string>()); // 清除选中状态
     setIsMultiSelectMode(false); // 清除多选模式
 
     console.log('[loadData] 开始加载: urlProjectId=', urlProjectId, ', urlNodeId=', urlNodeId);
@@ -353,10 +353,10 @@
       async () => {
         try {
           await Promise.all(
-            Array.from(selectedNodes).map(nodeId => projectsApi.deleteNode(nodeId))
+            Array.from(selectedNodes).map((nodeId: string) => projectsApi.deleteNode(nodeId))
           );
           showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
-          setSelectedNodes(new Set());
+          setSelectedNodes(new Set<string>());
           loadData();
         } catch (err: any) {
           const errorMessage = err.response?.data?.message || err.message || '批量删除失败';
