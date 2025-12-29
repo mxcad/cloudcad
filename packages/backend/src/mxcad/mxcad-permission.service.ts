@@ -25,7 +25,18 @@ export class MxCadPermissionService {
       throw new BadRequestException('缺少节点信息');
     }
     
-    // 验证用户是否有节点访问权限
+    // 1. 检查用户是否是节点所有者
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: context.nodeId },
+      select: { ownerId: true },
+    });
+    
+    if (node?.ownerId === context.userId) {
+      // 节点所有者，允许上传
+      return true;
+    }
+    
+    // 2. 检查用户是否有显式的节点访问权限
     const access = await this.prisma.fileAccess.findUnique({
       where: {
         userId_nodeId: { userId: context.userId, nodeId: context.nodeId },

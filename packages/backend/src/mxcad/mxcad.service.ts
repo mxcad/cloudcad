@@ -4,6 +4,7 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
+import { MinioSyncService } from './minio-sync.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { ExternalReferenceStats, ExternalReferenceInfo } from './types/external-reference.types';
 import * as fsPromises from 'fs/promises';
@@ -21,6 +22,7 @@ export class MxCadService {
     private readonly fileUploadManager: FileUploadManagerService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
+    private readonly minioSyncService: MinioSyncService,
   ) {}
 
   /**
@@ -143,28 +145,38 @@ export class MxCadService {
    */
   async getPreloadingData(fileHash: string): Promise<PreloadingDataDto | null> {
     try {
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-
       // 验证哈希值格式
       if (!this.isValidFileHash(fileHash)) {
         this.logger.warn(`无效的文件哈希格式: ${fileHash}`);
         return null;
       }
 
+      // 优先从 MinIO 读取预加载数据文件
+      const minioPath = `mxcad/file/${fileHash}.dwg.mxweb_preloading.json`;
+      const fileContent = await this.minioSyncService.getFileContent(minioPath);
+
+      if (fileContent) {
+        const data = JSON.parse(fileContent.toString('utf-8')) as PreloadingDataDto;
+        this.logger.debug(`成功从 MinIO 获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
+        return data;
+      }
+
+      // 如果 MinIO 中不存在，回退到本地文件系统
+      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      
       // 直接构造预期文件名，避免扫描整个目录
-      const preloadingFiles = await fsPromises.readdir(uploadPath);
-      const preloadingFile = preloadingFiles.find(file =>
-        file.startsWith(fileHash) && file.endsWith('_preloading.json')
-      );
+      let preloadingFile: string | undefined;
+      try {
+        const files = await fsPromises.readdir(uploadPath);
+        preloadingFile = files.find(file =>
+          file.startsWith(fileHash) && file.endsWith('_preloading.json')
+        );
+      } catch (error) {
+        // 目录不存在或其他错误，忽略
+      }
 
       if (!preloadingFile) {
         this.logger.debug(`预加载数据文件不存在: ${fileHash}`);
-        return null;
-      }
-
-      // 验证文件名合法性
-      if (!this.isValidPreloadingFileName(preloadingFile)) {
-        this.logger.warn(`非法的预加载数据文件名: ${preloadingFile}`);
         return null;
       }
 
@@ -179,7 +191,7 @@ export class MxCadService {
       const content = await fsPromises.readFile(filePath, 'utf-8');
       const data = JSON.parse(content) as PreloadingDataDto;
 
-      this.logger.debug(`成功获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
+      this.logger.debug(`成功从本地获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
 
       return data;
     } catch (error) {

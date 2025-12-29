@@ -128,17 +128,12 @@ export class MinioSyncService {
     try {
       const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
       
-      // 直接同步到 mxcad/file/ 路径，不使用 hash 目录
-      // 前端请求路径：/mxcad/file/4b298dd48355af1202b532fc4d051658.dwg.mxweb
-      // MinIO 存储路径：mxcad/file/4b298dd48355af1202b532fc4d051658.dwg.mxweb
       const baseMinioPath = `mxcad/file`;
       
       let allSuccess = true;
       
       // 同步根目录下的转换文件
-      // MxCAD 转换后的文件名格式：{fileHash}.dwg.mxweb, {fileHash}.dwg.mxweb_preloading.json
       const files = fs.readdirSync(uploadPath).filter(file => {
-        // 匹配所有相关文件：原始文件、转换文件、状态文件
         return file.startsWith(fileHash) && 
                (file.endsWith('.dwg') || 
                 file.endsWith('.dxf') || 
@@ -148,11 +143,29 @@ export class MinioSyncService {
       
       for (const file of files) {
         const localFilePath = path.join(uploadPath, file);
-        
-        // 直接同步到 mxcad/file/ 路径下，文件名保持不变
         const success = await this.syncFileToMinio(localFilePath, `${baseMinioPath}/${file}`);
         if (!success) {
           allSuccess = false;
+        }
+      }
+      
+      // 同步子目录中的外部参照文件
+      // 子目录结构：uploads/{src_hash}/ext_ref_file.mxweb
+      const hashDir = path.join(uploadPath, fileHash);
+      if (fs.existsSync(hashDir) && fs.statSync(hashDir).isDirectory()) {
+        const subFiles = fs.readdirSync(hashDir).filter(file => file.endsWith('.mxweb'));
+        
+        for (const file of subFiles) {
+          const localFilePath = path.join(hashDir, file);
+          const minioFilePath = `${baseMinioPath}/${file}`;
+          const success = await this.syncFileToMinio(localFilePath, minioFilePath);
+          if (!success) {
+            allSuccess = false;
+          }
+        }
+        
+        if (subFiles.length > 0) {
+          this.logger.log(`同步外部参照文件 ${subFiles.length} 个到 MinIO`);
         }
       }
       
@@ -221,6 +234,31 @@ export class MinioSyncService {
       }
       this.logger.error(`获取 MinIO 文件大小失败: ${minioPath}`, error);
       return 0;
+    }
+  }
+
+  /**
+   * 从 MinIO 读取文件内容
+   */
+  public async getFileContent(minioPath: string): Promise<Buffer | null> {
+    try {
+      await this.ensureBucketExists();
+      
+      // 检查文件是否存在
+      await this.minioClient.statObject(this.bucketName, minioPath);
+      
+      // 读取文件内容
+      const stream = await this.minioClient.getObject(this.bucketName, minioPath);
+      const chunks: Buffer[] = [];
+      
+      return new Promise((resolve, reject) => {
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('end', () => resolve(Buffer.concat(chunks)));
+        stream.on('error', reject);
+      });
+    } catch (error) {
+      this.logger.error(`读取 MinIO 文件失败: ${minioPath}: ${error.message}`, error.stack);
+      return null;
     }
   }
 }

@@ -24,8 +24,12 @@ class ApiService {
 
         // 为所有 MxCAD 接口添加节点上下文
         if (config.url?.includes('/mxcad/')) {
+          Logger.info('[apiService] 请求拦截器 - URL:', config.url);
+          Logger.info('[apiService] 请求拦截器 - 原始 data:', JSON.stringify(config.data));
+          
           // 从多个来源获取节点上下文
           const nodeId = this.getNodeIdFromMultipleSources(config);
+          Logger.info('[apiService] 请求拦截器 - 获取的 nodeId:', nodeId);
           
           if (nodeId) {
             // 验证 nodeId 格式
@@ -36,10 +40,12 @@ class ApiService {
             
             // 根据请求类型补充 nodeId 参数
             this.supplementNodeIdToRequest(config, nodeId);
+            Logger.info('[apiService] 请求拦截器 - 处理后的 data:', JSON.stringify(config.data));
           } else {
             // 对于关键的上传接口，如果缺少 nodeId 则记录警告
             if (config.url?.includes('/mxcad/files/uploadFiles') || 
-                config.url?.includes('/mxcad/files/fileisExist')) {
+                config.url?.includes('/mxcad/files/fileisExist') ||
+                config.url?.includes('/mxcad/files/chunkisExist')) {
               Logger.warn('[apiService] MxCAD 接口缺少 nodeId 参数，可能影响文件系统集成');
             }
           }
@@ -487,27 +493,25 @@ ApiService.prototype.supplementNodeIdToRequest = function(config: any, nodeId: s
       }
     } else {
       // 对于普通 JSON 对象，优先使用请求中已传递的 nodeId
-      const existingNodeId = config.data.nodeId;
+      // 但如果请求中已经有 nodeId，就不需要做任何操作
+      if (config.data.nodeId) {
+        Logger.info('[apiService] 请求中已包含 nodeId，使用已有值:', config.data.nodeId);
+        return;
+      }
       
       // 只有当请求体中没有 nodeId 时，才添加
-      if (!existingNodeId) {
-        config.data = {
-          ...config.data,
-          nodeId: nodeId,
-        };
-        Logger.info('[apiService] 为 JSON 请求补充 nodeId:', nodeId);
-      }
+      // 使用 Object.assign 更安全地添加属性
+      Object.assign(config.data, { nodeId });
+      Logger.info('[apiService] 为 JSON 请求补充 nodeId:', nodeId);
     }
   } else if (config.params) {
     // 如果参数在 params 中
-    const existingNodeId = config.params.nodeId;
-    
-    if (!existingNodeId) {
-      config.params = {
-        ...config.params,
-        nodeId: nodeId,
-      };
-      Logger.info('[apiService] 为 params 补充 nodeId:', nodeId);
+    if (config.params.nodeId) {
+      Logger.info('[apiService] params 中已包含 nodeId，使用已有值:', config.params.nodeId);
+      return;
     }
+    
+    Object.assign(config.params, { nodeId });
+    Logger.info('[apiService] 为 params 补充 nodeId:', nodeId);
   }
 };

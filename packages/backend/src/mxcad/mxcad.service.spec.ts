@@ -6,6 +6,7 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
+import { MinioSyncService } from './minio-sync.service';
 import * as fsPromises from 'fs/promises';
 
 // Mock fs 模块
@@ -55,6 +56,15 @@ describe('MxCadService', () => {
       convertFileAsync: jest.fn().mockResolvedValue('task-123'),
     };
 
+    const mockMinioSyncService = {
+      fileExists: jest.fn(),
+      getFileContent: jest.fn(),
+      minioClient: {
+        statObject: jest.fn(),
+      },
+      bucketName: 'test-bucket',
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MxCadService,
@@ -77,6 +87,10 @@ describe('MxCadService', () => {
         {
           provide: FileConversionService,
           useValue: mockFileConversionService,
+        },
+        {
+          provide: MinioSyncService,
+          useValue: mockMinioSyncService,
         },
       ],
     }).compile();
@@ -375,81 +389,115 @@ describe('MxCadService', () => {
     const fsPromises = require('fs/promises');
     const path = require('path');
 
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('应该成功获取预加载数据', async () => {
+    it('应该成功从 MinIO 获取预加载数据', async () => {
+      const mockMinioSyncService = (service as any).minioSyncService;
+      // 清除之前的 mock 调用
+      mockMinioSyncService.getFileContent.mockClear();
+      
+      // 使用有效的32位十六进制哈希值
+      const validHash = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';
       const mockPreloadingData = {
         tz: false,
-        src_file_md5: 'testhash123',
+        src_file_md5: validHash,
         images: ['image1.png', 'image2.jpg'],
         externalReference: ['ref1.dwg', 'ref2.dwg'],
       };
 
+      // Mock MinIO 读取成功
+      mockMinioSyncService.getFileContent.mockResolvedValue(
+        Buffer.from(JSON.stringify(mockPreloadingData))
+      );
+
+      const result = await service.getPreloadingData(validHash);
+
+      expect(result).toEqual(mockPreloadingData);
+      expect(mockMinioSyncService.getFileContent).toHaveBeenCalledWith(
+        `mxcad/file/${validHash}.dwg.mxweb_preloading.json`
+      );
+    });
+
+    it('应该在 MinIO 中不存在时从本地文件系统获取', async () => {
+      const mockMinioSyncService = (service as any).minioSyncService;
+      mockMinioSyncService.getFileContent.mockClear();
+      
+      // 使用有效的32位十六进制哈希值
+      const validHash = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: validHash,
+        images: ['image1.png', 'image2.jpg'],
+        externalReference: ['ref1.dwg', 'ref2.dwg'],
+      };
+
+      // Mock MinIO 读取失败
+      mockMinioSyncService.getFileContent.mockResolvedValue(null);
+
       // Mock 文件系统操作
       fsPromisesMock.readdir = jest.fn().mockResolvedValue([
-        'testhash123.dwg.mxweb',
-        'testhash123.dwg.mxweb_preloading.json',
+        `${validHash}.dwg.mxweb`,
+        `${validHash}.dwg.mxweb_preloading.json`,
       ]);
       fsPromisesMock.readFile = jest.fn().mockResolvedValue(
         JSON.stringify(mockPreloadingData)
       );
       path.normalize = jest.fn((p) => p);
 
-      const result = await service.getPreloadingData('testhash123');
+      const result = await service.getPreloadingData(validHash);
 
       expect(result).toEqual(mockPreloadingData);
+      expect(mockMinioSyncService.getFileContent).toHaveBeenCalled();
       expect(fsPromisesMock.readdir).toHaveBeenCalledWith('/tmp/uploads');
-      expect(fsPromisesMock.readFile).toHaveBeenCalledWith(
-        '/tmp/uploads/testhash123.dwg.mxweb_preloading.json',
-        'utf-8'
-      );
     });
 
     it('应该在文件不存在时返回 null', async () => {
+      const mockMinioSyncService = (service as any).minioSyncService;
+      mockMinioSyncService.getFileContent.mockClear();
+      mockMinioSyncService.getFileContent.mockResolvedValue(null);
       fsPromisesMock.readdir = jest.fn().mockResolvedValue([]);
 
-      const result = await service.getPreloadingData('nonexistent');
+      const result = await service.getPreloadingData('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4');
 
       expect(result).toBeNull();
     });
 
     it('应该在读取失败时返回 null', async () => {
-      fsPromisesMock.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
+      const mockMinioSyncService = (service as any).minioSyncService;
+      mockMinioSyncService.getFileContent.mockClear();
+      mockMinioSyncService.getFileContent.mockRejectedValue(new Error('Read error'));
 
-      const result = await service.getPreloadingData('errorhash');
+      const result = await service.getPreloadingData('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4');
 
       expect(result).toBeNull();
     });
 
     it('应该在 JSON 解析失败时返回 null', async () => {
-      fsPromisesMock.readdir = jest.fn().mockResolvedValue([
-        'testhash123.dwg.mxweb_preloading.json',
-      ]);
-      fsPromisesMock.readFile = jest.fn().mockResolvedValue('invalid json');
+      const mockMinioSyncService = (service as any).minioSyncService;
+      mockMinioSyncService.getFileContent.mockClear();
+      mockMinioSyncService.getFileContent.mockResolvedValue(Buffer.from('invalid json'));
 
-      const result = await service.getPreloadingData('testhash123');
+      const result = await service.getPreloadingData('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4');
 
       expect(result).toBeNull();
     });
 
     it('应该正确处理空的外部参照和图片列表', async () => {
+      const mockMinioSyncService = (service as any).minioSyncService;
+      mockMinioSyncService.getFileContent.mockClear();
+      
+      // 使用有效的32位十六进制哈希值
+      const validHash = 'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5';
       const mockPreloadingData = {
         tz: true,
-        src_file_md5: 'testhash456',
+        src_file_md5: validHash,
         images: [],
         externalReference: [],
       };
 
-      fsPromisesMock.readdir = jest.fn().mockResolvedValue([
-        'testhash456.dxf.mxweb_preloading.json',
-      ]);
-      fsPromisesMock.readFile = jest.fn().mockResolvedValue(
-        JSON.stringify(mockPreloadingData)
+      mockMinioSyncService.getFileContent.mockResolvedValue(
+        Buffer.from(JSON.stringify(mockPreloadingData))
       );
 
-      const result = await service.getPreloadingData('testhash456');
+      const result = await service.getPreloadingData(validHash);
 
       expect(result).toEqual(mockPreloadingData);
       expect(result.images).toHaveLength(0);
@@ -463,12 +511,15 @@ describe('MxCadService', () => {
     });
 
     it('应该在检测到路径遍历攻击时返回 null', async () => {
+      const mockMinioSyncService = (service as any).minioSyncService;
+      mockMinioSyncService.getFileContent.mockClear();
+      mockMinioSyncService.getFileContent.mockResolvedValue(null);
       fsPromisesMock.readdir = jest.fn().mockResolvedValue([
         '../../../etc/passwd_preloading.json',
       ]);
       path.normalize = jest.fn((p) => p);
 
-      const result = await service.getPreloadingData('testhash');
+      const result = await service.getPreloadingData('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4');
 
       expect(result).toBeNull();
     });

@@ -76,26 +76,29 @@ export const useExternalReferenceUpload = (
         return false;
       }
 
+      // 安全获取数组属性，防止 undefined
+      const images = preloadingData.images || [];
+      const externalReference = preloadingData.externalReference || [];
+
       // 过滤掉 http/https 开头的 URL（已有外部参照）
-      const missingImages = preloadingData.images.filter(
+      const missingImages = images.filter(
         (name) => !name.startsWith('http:') && !name.startsWith('https:')
       );
-      const missingRefs = preloadingData.externalReference;
 
-      if (missingImages.length === 0 && missingRefs.length === 0) {
+      if (missingImages.length === 0 && externalReference.length === 0) {
         console.log('[useExternalReferenceUpload] 无缺失的外部参照');
         return false;
       }
 
       console.log(
-        `[useExternalReferenceUpload] 检测到外部参照: 图片 ${missingImages.length} 个, DWG ${missingRefs.length} 个`
+        `[useExternalReferenceUpload] 检测到外部参照: 图片 ${missingImages.length} 个, DWG ${externalReference.length} 个`
       );
 
       // 检查哪些文件缺失
       const missingFiles: ExternalReferenceFile[] = [];
 
       // 检查 DWG 外部参照
-      for (const name of missingRefs) {
+      for (const name of externalReference) {
         const exists = await checkReferenceExists(hash, name);
         missingFiles.push({
           name,
