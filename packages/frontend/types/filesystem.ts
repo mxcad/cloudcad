@@ -37,3 +37,86 @@ export interface ConfirmDialogState {
   onConfirm: () => void;
   type?: 'danger' | 'warning' | 'info';
 }
+
+/**
+ * 外部参照预加载数据
+ */
+export interface PreloadingData {
+  /** 是否为图纸 */
+  tz: boolean;
+  /** 源文件哈希值 */
+  src_file_md5: string;
+  /** 图片列表 */
+  images: string[];
+  /** 外部参照列表 */
+  externalReference: string[];
+}
+
+/**
+ * 外部参照文件存在性检查结果
+ */
+export interface CheckReferenceExistsResult {
+  /** 文件是否存在 */
+  exists: boolean;
+}
+
+/**
+ * 外部参照文件上传状态
+ */
+export type UploadState = 'notSelected' | 'uploading' | 'success' | 'fail';
+
+/**
+ * 外部参照文件信息
+ */
+export interface ExternalReferenceFile {
+  /** 文件名 */
+  name: string;
+  /** 文件类型 */
+  type: 'img' | 'ref';
+  /** 上传状态 */
+  uploadState: UploadState;
+  /** 上传进度（0-100） */
+  progress: number;
+  /** 选中的文件对象 */
+  source?: File;
+  /** 文件是否已存在 */
+  exists?: boolean;
+}
+
+/**
+ * useExternalReferenceUpload 配置
+ */
+export interface UseExternalReferenceUploadConfig {
+  /** 文件哈希值 */
+  fileHash: string;
+  /** 上传成功回调 */
+  onSuccess?: () => void;
+  /** 上传失败回调 */
+  onError?: (error: string) => void;
+  /** 跳过上传回调 */
+  onSkip?: () => void;
+}
+
+/**
+ * useExternalReferenceUpload 返回值
+ */
+export interface UseExternalReferenceUploadReturn {
+  /** 模态框是否打开 */
+  isOpen: boolean;
+  /** 外部参照文件列表 */
+  files: ExternalReferenceFile[];
+  /** 是否正在上传 */
+  loading: boolean;
+  /** 检查缺失的外部参照 */
+  checkMissingReferences: () => Promise<boolean>;
+  /** 选择文件 */
+  selectFiles: () => void;
+  /** 上传文件 */
+  uploadFiles: () => Promise<void>;
+  /** 关闭模态框 */
+  close: () => void;
+  /** 完成上传 */
+  complete: () => void;
+  /** 跳过上传 */
+  skip: () => void;
+}
