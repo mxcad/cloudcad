@@ -184,6 +184,50 @@ export class MxCadService {
   }
 
   /**
+   * 检查外部参照文件是否存在
+   * 
+   * @param fileHash 源图纸文件的哈希值
+   * @param fileName 外部参照文件名
+   * @returns 文件是否存在
+   */
+  async checkExternalReferenceExists(
+    fileHash: string,
+    fileName: string
+  ): Promise<boolean> {
+    try {
+      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const hashDir = path.join(uploadPath, fileHash);
+      
+      // 检查哈希目录是否存在
+      if (!fs.existsSync(hashDir)) {
+        this.logger.log(`[checkExternalReferenceExists] 目录不存在: ${hashDir}`);
+        return false;
+      }
+      
+      // 读取目录中的所有文件
+      const files = await fs.readdir(hashDir);
+      
+      // 提取文件名的基本部分（不含扩展名）
+      const baseName = path.basename(fileName, path.extname(fileName));
+      
+      // 检查是否存在匹配的文件
+      // DWG 文件会被转换为 .mxweb，所以需要检查 .mxweb 文件
+      // 图片文件保持原扩展名
+      const exists = files.some(file => {
+        const fileBaseName = path.basename(file, path.extname(file));
+        return fileBaseName === baseName;
+      });
+      
+      this.logger.log(`[checkExternalReferenceExists] fileHash=${fileHash}, fileName=${fileName}, exists=${exists}`);
+      
+      return exists;
+    } catch (error) {
+      this.logger.error(`[checkExternalReferenceExists] 检查失败: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
    * 为 MxCAD-App 推断上下文信息
    */
   async inferContextForMxCadApp(fileHash: string, request: any): Promise<any> {

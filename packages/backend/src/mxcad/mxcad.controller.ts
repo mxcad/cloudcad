@@ -117,6 +117,57 @@ export class MxCadController {
   }
 
   /**
+   * 检查外部参照文件是否存在
+   * 
+   * @param fileHash 源图纸文件的哈希值
+   * @param body 请求体，包含 fileName 字段
+   * @returns 文件是否存在
+   */
+  @Post('file/:hash/check-reference')
+  @ApiResponse({
+    status: 200,
+    description: '成功检查文件存在性',
+    schema: {
+      type: 'object',
+      properties: {
+        exists: { type: 'boolean', description: '文件是否存在' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: -1 },
+        message: { type: 'string', example: '缺少必要参数' },
+      },
+    },
+  })
+  async checkExternalReference(
+    @Param('hash') fileHash: string,
+    @Body() body: { fileName: string },
+    @Res() res: Response
+  ) {
+    this.logger.log(`[checkExternalReference] 请求参数: fileHash=${fileHash}, fileName=${body.fileName}`);
+    
+    // 验证参数
+    if (!body.fileName) {
+      return res.status(400).json({ code: -1, message: '缺少必要参数: fileName' });
+    }
+    
+    const exists = await this.mxCadService.checkExternalReferenceExists(
+      fileHash,
+      body.fileName
+    );
+    
+    this.logger.log(`[checkExternalReference] 检查结果: ${exists}`);
+    
+    return res.json({ exists });
+  }
+
+  /**
    * 上传文件（支持分片）
    */
   @Post('files/uploadFiles')

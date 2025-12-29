@@ -469,4 +469,79 @@ describe('MxCadService', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('checkExternalReferenceExists', () => {
+    const fs = require('fs');
+    const fsPromises = require('fs/promises');
+    const path = require('path');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('应该在文件存在时返回 true', async () => {
+      const mockFiles = [
+        '25e89b5adf19984330f4e68b0f99db64.dwg.mxweb',
+        '25e89b5adf19984330f4e68b0f99db64.dwg.mxweb_preloading.json',
+        'ref1.dwg.mxweb',
+        'image1.png',
+      ];
+
+      fs.existsSync = jest.fn().mockReturnValue(true);
+      fsPromises.readdir = jest.fn().mockResolvedValue(mockFiles);
+
+      // 检查 DWG 文件（已转换为 mxweb）
+      const dwgExists = await service.checkExternalReferenceExists(
+        '25e89b5adf19984330f4e68b0f99db64',
+        'ref1.dwg'
+      );
+      expect(dwgExists).toBe(true);
+
+      // 检查图片文件
+      const imgExists = await service.checkExternalReferenceExists(
+        '25e89b5adf19984330f4e68b0f99db64',
+        'image1.png'
+      );
+      expect(imgExists).toBe(true);
+    });
+
+    it('应该在文件不存在时返回 false', async () => {
+      const mockFiles = [
+        '25e89b5adf19984330f4e68b0f99db64.dwg.mxweb',
+      ];
+
+      fs.existsSync = jest.fn().mockReturnValue(true);
+      fsPromises.readdir = jest.fn().mockResolvedValue(mockFiles);
+
+      const exists = await service.checkExternalReferenceExists(
+        '25e89b5adf19984330f4e68b0f99db64',
+        'nonexistent.dwg'
+      );
+
+      expect(exists).toBe(false);
+    });
+
+    it('应该在目录不存在时返回 false', async () => {
+      fs.existsSync = jest.fn().mockReturnValue(false);
+
+      const exists = await service.checkExternalReferenceExists(
+        'nonexistent',
+        'ref1.dwg'
+      );
+
+      expect(exists).toBe(false);
+    });
+
+    it('应该在读取失败时返回 false', async () => {
+      fs.existsSync = jest.fn().mockReturnValue(true);
+      fsPromises.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
+
+      const exists = await service.checkExternalReferenceExists(
+        '25e89b5adf19984330f4e68b0f99db64',
+        'ref1.dwg'
+      );
+
+      expect(exists).toBe(false);
+    });
+  });
 });
