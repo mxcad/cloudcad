@@ -1,6 +1,8 @@
-import React, { useState, forwardRef, useImperativeHandle, useCallback, useRef } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { useMxCadUploadNative, LoadFileParam } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
+import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
+import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 
 interface MxCadUploaderProps {
   /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
@@ -15,6 +17,10 @@ interface MxCadUploaderProps {
   buttonText?: string;
   /** 按钮样式类名 */
   buttonClassName?: string;
+  /** 外部参照上传成功回调 */
+  onExternalReferenceSuccess?: () => void;
+  /** 外部参照跳过上传回调 */
+  onExternalReferenceSkip?: () => void;
 }
 
 export interface MxCadUploaderRef {
@@ -22,8 +28,12 @@ export interface MxCadUploaderRef {
 }
 
 /**
- * MxCAD 文件上传组件
- * ```
+ * MxCAD 文件上传组件（增强版本）
+ *
+ * 新增功能：
+ * - 自动检测外部参照
+ * - 支持外部参照上传
+ * - 支持跳过外部参照上传（可选）
  */
 export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
   nodeId,
@@ -32,14 +42,36 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
   showProgress = true,
   buttonText = '上传 CAD 文件',
   buttonClassName = '',
+  onExternalReferenceSuccess,
+  onExternalReferenceSkip,
 }, ref) => {
   const { isAuthenticated } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [currentFileHash, setCurrentFileHash] = useState('');
 
   const { selectFiles } = useMxCadUploadNative();
+
+  // 外部参照上传 Hook
+  const externalReferenceUpload = useExternalReferenceUpload({
+    fileHash: currentFileHash,
+    onSuccess: () => {
+      console.log('[MxCadUploader] 外部参照上传成功');
+      onExternalReferenceSuccess?.();
+    },
+    onError: (error) => {
+      console.error('[MxCadUploader] 外部参照上传失败:', error);
+      setMessage(`外部参照上传失败: ${error}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    },
+    onSkip: () => {
+      console.log('[MxCadUploader] 用户跳过外部参照上传');
+      onExternalReferenceSkip?.();
+    },
+  });
 
   // 暴露方法给父组件
   useImperativeHandle(ref, () => ({
@@ -70,6 +102,13 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
         setMessage('文件上传成功！');
         setShowToast(true);
         onSuccess?.(param);
+
+        // 保存文件哈希值
+        setCurrentFileHash(param.hash);
+
+        // 检查外部参照
+        console.log('[MxCadUploader] 开始检查外部参照');
+        externalReferenceUpload.checkMissingReferences();
 
         // 3秒后隐藏提示
         setTimeout(() => setShowToast(false), 3000);
@@ -130,6 +169,18 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
           {message}
         </div>
       )}
+
+      {/* 外部参照上传模态框 */}
+      <ExternalReferenceModal
+        isOpen={externalReferenceUpload.isOpen}
+        files={externalReferenceUpload.files}
+        loading={externalReferenceUpload.loading}
+        onSelectFiles={externalReferenceUpload.selectFiles}
+        onUpload={externalReferenceUpload.uploadFiles}
+        onComplete={externalReferenceUpload.complete}
+        onSkip={externalReferenceUpload.skip}
+        onClose={externalReferenceUpload.close}
+      />
     </div>
   );
 });
