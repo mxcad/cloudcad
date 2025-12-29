@@ -10,6 +10,7 @@ describe('MxCadController', () => {
   let controller: MxCadController;
   let mockMxCadService: jest.Mocked<MxCadService>;
   let mockResponse: jest.Mocked<Response>;
+  let mockRequest: any;
 
   beforeEach(async () => {
     mockMxCadService = {
@@ -23,6 +24,8 @@ describe('MxCadController', () => {
       logInfo: jest.fn(),
       logWarn: jest.fn(),
       checkProjectPermission: jest.fn(),
+      getPreloadingData: jest.fn(),
+      checkExternalReferenceExists: jest.fn(),
     } as any;
 
     const mockDatabaseService = {
@@ -30,6 +33,10 @@ describe('MxCadController', () => {
         findUnique: jest.fn(),
       },
       fileAccess: {
+        findUnique: jest.fn(),
+      },
+      fileSystemNode: {
+        findFirst: jest.fn(),
         findUnique: jest.fn(),
       },
     } as any;
@@ -46,6 +53,18 @@ describe('MxCadController', () => {
       end: jest.fn(),
       redirect: jest.fn(),
     } as any;
+
+    mockRequest = {
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+      body: {
+        nodeId: 'node123',
+      },
+      query: {
+        nodeId: 'node123',
+      },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MxCadController],
@@ -66,6 +85,20 @@ describe('MxCadController', () => {
     }).compile();
 
     controller = module.get<MxCadController>(MxCadController);
+
+    // Mock JWT verify to return a valid payload
+    mockJwtService.verify = jest.fn().mockReturnValue({
+      sub: 'user123',
+      email: 'test@example.com',
+    });
+
+    // Mock user findUnique to return a valid user
+    mockDatabaseService.user.findUnique = jest.fn().mockResolvedValue({
+      id: 'user123',
+      email: 'test@example.com',
+      username: 'testuser',
+      status: 'ACTIVE',
+    });
   });
 
   it('should be defined', () => {
@@ -79,14 +112,14 @@ describe('MxCadController', () => {
         fileHash: 'testhash',
         size: 1024,
         chunks: 10,
-        fileName: 'test.dwg',
+        filename: 'test.dwg',
       };
 
       mockMxCadService.checkChunkExist.mockResolvedValue({
         ret: MxUploadReturn.kChunkNoExist,
       });
 
-      await controller.checkChunkExist(dto, mockResponse);
+      await controller.checkChunkExist(dto, mockRequest, mockResponse);
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: MxUploadReturn.kChunkNoExist,
@@ -96,7 +129,11 @@ describe('MxCadController', () => {
         dto.fileHash,
         dto.size,
         dto.chunks,
-        dto.fileName
+        dto.filename,
+        expect.objectContaining({
+          nodeId: 'node123',
+          userId: 'user123',
+        })
       );
     });
   });
@@ -112,14 +149,18 @@ describe('MxCadController', () => {
         ret: MxUploadReturn.kFileNoExist,
       });
 
-      await controller.checkFileExist(dto, mockResponse);
+      await controller.checkFileExist(dto, mockRequest, mockResponse);
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: MxUploadReturn.kFileNoExist,
       });
       expect(mockMxCadService.checkFileExist).toHaveBeenCalledWith(
         dto.filename,
-        dto.fileHash
+        dto.fileHash,
+        expect.objectContaining({
+          nodeId: 'node123',
+          userId: 'user123',
+        })
       );
     });
   });
@@ -141,7 +182,7 @@ describe('MxCadController', () => {
 
   describe('uploadFile', () => {
     it('should return errorparam when file is missing', async () => {
-      await controller.uploadFile(undefined, {}, mockResponse);
+      await controller.uploadFile(undefined, {}, mockRequest, mockResponse);
 
       expect(mockResponse.json).toHaveBeenCalledWith({ ret: 'errorparam' });
     });
@@ -149,7 +190,7 @@ describe('MxCadController', () => {
     it('should return errorparam when required fields are missing', async () => {
       const mockFile = { path: '/tmp/test', originalname: 'test.dwg' } as any;
 
-      await controller.uploadFile(mockFile, {}, mockResponse);
+      await controller.uploadFile(mockFile, {}, mockRequest, mockResponse);
 
       expect(mockResponse.json).toHaveBeenCalledWith({ ret: 'errorparam' });
     });
@@ -158,15 +199,19 @@ describe('MxCadController', () => {
       const mockFile = { path: '/tmp/test', originalname: 'test.dwg' } as any;
       const body = { hash: 'testhash', name: 'test.dwg', size: 1024 };
 
-      mockMxCadService.uploadAndConvertFile.mockResolvedValue({ ret: MxUploadReturn.kOk });
+      mockMxCadService.uploadAndConvertFileWithPermission = jest.fn().mockResolvedValue({ ret: MxUploadReturn.kOk });
 
-      await controller.uploadFile(mockFile, body, mockResponse);
+      await controller.uploadFile(mockFile, body, mockRequest, mockResponse);
 
-      expect(mockMxCadService.uploadAndConvertFile).toHaveBeenCalledWith(
+      expect(mockMxCadService.uploadAndConvertFileWithPermission).toHaveBeenCalledWith(
         '/tmp/test',
         'testhash',
         'test.dwg',
-        1024
+        1024,
+        expect.objectContaining({
+          nodeId: 'node123',
+          userId: 'user123',
+        })
       );
       expect(mockResponse.json).toHaveBeenCalledWith({ ret: MxUploadReturn.kOk });
     });
@@ -361,29 +406,304 @@ describe('MxCadController', () => {
   });
 
   describe('uploadExtReferenceDwg', () => {
-    it('should upload external reference dwg successfully', async () => {
-      const mockFile = { path: '/tmp/test', originalname: 'ref.dwg' } as any;
-      const body = { src_dwgfile_hash: 'testhash', ext_ref_file: 'ref' };
+    let mockRequest: any;
 
-      mockMxCadService.convertServerFile.mockResolvedValue({ code: 0 });
-
-      await controller.uploadExtReferenceDwg(mockFile, body, mockResponse);
-
-      expect(mockResponse.json).toHaveBeenCalledWith({ code: 0 });
+    beforeEach(() => {
+      mockRequest = {
+        headers: {
+          authorization: 'Bearer valid-token',
+        },
+      };
     });
 
-    it('should return error when file is missing', async () => {
-      await controller.uploadExtReferenceDwg(undefined, { src_dwgfile_hash: 'test', ext_ref_file: 'ref' }, mockResponse);
+    it('应该成功上传有效的外部参照 DWG', async () => {
+      const mockFile = {
+        path: '/tmp/test.dwg',
+        originalname: 'ref1.dwg',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'ref1.dwg',
+      };
+
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: [],
+        externalReference: ['ref1.dwg'],
+      };
+
+      const mockConvertResult = { code: 0, message: 'ok' };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(mockPreloadingData);
+      mockMxCadService.convertServerFile = jest.fn().mockResolvedValue(mockConvertResult);
+
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(true);
+      fs.mkdirSync = jest.fn();
+      fs.copyFileSync = jest.fn();
+
+      await controller.uploadExtReferenceDwg(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockMxCadService.getPreloadingData).toHaveBeenCalledWith('testhash123');
+      expect(mockMxCadService.convertServerFile).toHaveBeenCalled();
+      expect(mockResponse.json).toHaveBeenCalledWith(mockConvertResult);
+    });
+
+    it('应该在缺少文件时返回错误', async () => {
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'ref1.dwg',
+      };
+
+      await controller.uploadExtReferenceDwg(null, mockBody, mockRequest, mockResponse);
 
       expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '缺少文件' });
+    });
+
+    it('应该在缺少必要参数时返回错误', async () => {
+      const mockFile = {
+        path: '/tmp/test.dwg',
+        originalname: 'ref1.dwg',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: '',
+        ext_ref_file: '',
+      };
+
+      await controller.uploadExtReferenceDwg(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '缺少必要参数' });
+    });
+
+    it('应该在图纸不存在时返回错误', async () => {
+      const mockFile = {
+        path: '/tmp/test.dwg',
+        originalname: 'ref1.dwg',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'nonexistent',
+        ext_ref_file: 'ref1.dwg',
+      };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(null);
+
+      await controller.uploadExtReferenceDwg(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockMxCadService.getPreloadingData).toHaveBeenCalledWith('nonexistent');
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '图纸文件不存在' });
+    });
+
+    it('应该拒绝无效的外部参照文件', async () => {
+      const mockFile = {
+        path: '/tmp/test.dwg',
+        originalname: 'invalid.dwg',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'invalid.dwg',
+      };
+
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: [],
+        externalReference: ['ref1.dwg', 'ref2.dwg'],
+      };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(mockPreloadingData);
+
+      await controller.uploadExtReferenceDwg(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '无效的外部参照文件' });
+    });
+
+    it('应该在转换失败时返回错误', async () => {
+      const mockFile = {
+        path: '/tmp/test.dwg',
+        originalname: 'ref1.dwg',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'ref1.dwg',
+      };
+
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: [],
+        externalReference: ['ref1.dwg'],
+      };
+
+      const mockConvertResult = { code: -1, message: '转换失败' };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(mockPreloadingData);
+      mockMxCadService.convertServerFile = jest.fn().mockResolvedValue(mockConvertResult);
+
+      await controller.uploadExtReferenceDwg(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '转换失败' });
     });
   });
 
   describe('uploadExtReferenceImage', () => {
-    it('should return error when file is missing', async () => {
-      await controller.uploadExtReferenceImage(undefined, { src_dwgfile_hash: 'test', ext_ref_file: 'ref' }, mockResponse);
+    let mockRequest: any;
+
+    beforeEach(() => {
+      mockRequest = {
+        headers: {
+          authorization: 'Bearer valid-token',
+        },
+      };
+    });
+
+    it('应该成功上传有效的外部参照图片', async () => {
+      const mockFile = {
+        path: '/tmp/test.png',
+        originalname: 'ref1.png',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'ref1.png',
+      };
+
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: ['ref1.png'],
+        externalReference: [],
+      };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(mockPreloadingData);
+
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(false);
+      fs.mkdirSync = jest.fn();
+      fs.copyFileSync = jest.fn();
+
+      await controller.uploadExtReferenceImage(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockMxCadService.getPreloadingData).toHaveBeenCalledWith('testhash123');
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: 0, message: 'ok' });
+    });
+
+    it('应该在缺少文件时返回错误', async () => {
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'ref1.png',
+      };
+
+      await controller.uploadExtReferenceImage(null, mockBody, mockRequest, mockResponse);
 
       expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '缺少文件' });
+    });
+
+    it('应该在缺少必要参数时返回错误', async () => {
+      const mockFile = {
+        path: '/tmp/test.png',
+        originalname: 'ref1.png',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: '',
+        ext_ref_file: '',
+      };
+
+      await controller.uploadExtReferenceImage(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '缺少必要参数' });
+    });
+
+    it('应该在图纸不存在时返回错误', async () => {
+      const mockFile = {
+        path: '/tmp/test.png',
+        originalname: 'ref1.png',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'nonexistent',
+        ext_ref_file: 'ref1.png',
+      };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(null);
+
+      await controller.uploadExtReferenceImage(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockMxCadService.getPreloadingData).toHaveBeenCalledWith('nonexistent');
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '图纸文件不存在' });
+    });
+
+    it('应该拒绝无效的外部参照文件', async () => {
+      const mockFile = {
+        path: '/tmp/test.png',
+        originalname: 'invalid.png',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'invalid.png',
+      };
+
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: ['ref1.png', 'ref2.png'],
+        externalReference: [],
+      };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(mockPreloadingData);
+
+      await controller.uploadExtReferenceImage(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '无效的外部参照文件' });
+    });
+
+    it('应该在文件复制失败时返回错误', async () => {
+      const mockFile = {
+        path: '/tmp/test.png',
+        originalname: 'ref1.png',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const mockBody = {
+        src_dwgfile_hash: 'testhash123',
+        ext_ref_file: 'ref1.png',
+      };
+
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: ['ref1.png'],
+        externalReference: [],
+      };
+
+      mockMxCadService.getPreloadingData = jest.fn().mockResolvedValue(mockPreloadingData);
+
+      const fs = require('fs');
+      fs.existsSync = jest.fn().mockReturnValue(false);
+      fs.mkdirSync = jest.fn();
+      fs.copyFileSync = jest.fn().mockImplementation(() => {
+        throw new Error('复制失败');
+      });
+
+      await controller.uploadExtReferenceImage(mockFile, mockBody, mockRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({ code: -1, message: '文件复制失败' });
     });
   });
 
@@ -410,11 +730,11 @@ describe('MxCadController', () => {
   describe('getFile', () => {
     it('should return 404 when file does not exist', async () => {
       const filename = 'nonexistent.dwg.mxweb';
-      
+
       const fs = require('fs');
       fs.existsSync = jest.fn().mockReturnValue(false);
 
-      await controller.getFile(filename, mockResponse);
+      await controller.getFile(filename, mockResponse, mockRequest);
 
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({

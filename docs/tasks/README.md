@@ -17,9 +17,9 @@
 
 | 任务 | 描述 | 状态 | 预计工时 | 依赖 |
 |------|------|------|----------|------|
-| [001](./001-backend-get-preloading-data.md) | 后端 - 获取外部参照预加载数据接口 | ⬜ 待开始 | 2h | - |
-| [002](./002-backend-check-reference-exists.md) | 后端 - 检查外部参照文件是否存在接口 | ⬜ 待开始 | 2h | 001 |
-| [003](./003-backend-enhance-upload-validation.md) | 后端 - 增强上传接口验证 | ⬜ 待开始 | 3h | 001, 002 |
+| [001](./001-backend-get-preloading-data.md) | 后端 - 获取外部参照预加载数据接口 | ✅ 已完成 | 2h | - |
+| [002](./002-backend-check-reference-exists.md) | 后端 - 检查外部参照文件是否存在接口 | ✅ 已完成 | 2h | 001 |
+| [003](./003-backend-enhance-upload-validation.md) | 后端 - 增强上传接口验证 | ✅ 已完成 | 3h | 001, 002 |
 | [011](./011-backend-external-reference-tracking.md) | 后端 - 文件系统外部参照跟踪 | ⬜ 待开始 | 3h | 001, 002 |
 | [004](./004-frontend-api-methods.md) | 前端 - 获取预加载数据 API 方法 | ⬜ 待开始 | 1.5h | 001, 002 |
 | [005](./005-frontend-use-external-reference-upload-hook.md) | 前端 - useExternalReferenceUpload Hook | ⬜ 待开始 | 3h | 004 |
@@ -230,7 +230,7 @@
 
 ---
 
-**文档版本**：v1.0  
+**文档版本**：v1.1  
 **创建日期**：2025-12-29  
 **最后更新**：2025-12-29  
-**状态**：待执行
+**状态**：执行中（3/11 已完成）

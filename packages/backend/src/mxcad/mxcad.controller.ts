@@ -19,6 +19,8 @@
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { MxCadService } from './mxcad.service';
@@ -643,41 +645,144 @@ export class MxCadController {
   }
 
   /**
-   * 上传外部参照 DWG
+   * 上传外部参照 DWG（增强版本）
+   *
+   * 验证逻辑：
+   * 1. 验证文件是否存在
+   * 2. 验证参数完整性
+   * 3. 验证图纸文件是否存在
+   * 4. 验证外部参照文件是否在预加载数据列表中
+   * 5. 验证文件名安全性（防止路径遍历攻击）
+   * 6. 验证文件大小（最大 100MB）
+   * 7. 验证文件类型（仅支持 DWG 和 DXF）
+   * 8. 验证用户权限（可选）
    */
   @Post('up_ext_reference_dwg')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '上传外部参照 DWG' })
+  @ApiResponse({
+    status: 200,
+    description: '上传成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 0 },
+        message: { type: 'string', example: 'ok' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '图纸文件不存在',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '无效的外部参照文件',
+  })
   async uploadExtReferenceDwg(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { src_dwgfile_hash: string; ext_ref_file: string },
+    @Req() request: any,
     @Res() res: Response
   ) {
+    this.logger.log(`[uploadExtReferenceDwg] 开始处理: ${body.ext_ref_file}`);
+
+    // 1. 验证文件
     if (!file) {
+      this.logger.warn('[uploadExtReferenceDwg] 缺少文件');
       return res.json({ code: -1, message: '缺少文件' });
     }
 
+    // 2. 验证参数
     if (!body.src_dwgfile_hash || !body.ext_ref_file) {
+      this.logger.warn('[uploadExtReferenceDwg] 缺少必要参数');
       return res.json({ code: -1, message: '缺少必要参数' });
     }
 
+    // 3. 验证图纸文件是否存在
+    const preloadingData = await this.mxCadService.getPreloadingData(body.src_dwgfile_hash);
+    if (!preloadingData) {
+      this.logger.warn(`[uploadExtReferenceDwg] 图纸文件不存在: ${body.src_dwgfile_hash}`);
+      return res.json({ code: -1, message: '图纸文件不存在' });
+    }
+
+    // 4. 验证外部参照文件是否在预加载数据列表中
+    const isValidReference =
+      preloadingData.externalReference.includes(body.ext_ref_file) ||
+      preloadingData.images.includes(body.ext_ref_file);
+
+    if (!isValidReference) {
+      this.logger.warn(`[uploadExtReferenceDwg] 无效的外部参照文件: ${body.ext_ref_file}`);
+      return res.json({ code: -1, message: '无效的外部参照文件' });
+    }
+
+    // 5. 验证文件名安全性（防止路径遍历攻击）
+    if (!this.validateFileName(body.ext_ref_file)) {
+      this.logger.warn(`[uploadExtReferenceDwg] 文件名包含非法字符: ${body.ext_ref_file}`);
+      return res.json({ code: -1, message: '文件名包含非法字符' });
+    }
+
+    // 6. 验证文件大小
+    if (!this.validateFileSize(file.size)) {
+      this.logger.warn(`[uploadExtReferenceDwg] 文件大小超出限制: ${file.size} bytes`);
+      return res.json({ code: -1, message: '文件大小超出限制（最大 100MB）' });
+    }
+
+    // 7. 验证文件类型
+    if (!this.validateFileType(body.ext_ref_file, ['.dwg', '.dxf'])) {
+      this.logger.warn(`[uploadExtReferenceDwg] 不支持的文件类型: ${body.ext_ref_file}`);
+      return res.json({ code: -1, message: '仅支持 DWG 和 DXF 文件' });
+    }
+
+    // 8. 验证用户权限（可选）
+    try {
+      const userId = await this.validateTokenAndGetUserId(request);
+      this.logger.log(`[uploadExtReferenceDwg] 用户ID: ${userId}`);
+
+      // 检查用户是否有权限访问该图纸
+      // const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+      // if (node) {
+      //   const hasPermission = await this.checkFileAccessPermission(
+      //     node.id,
+      //     userId,
+      //     userId
+      //   );
+      //   if (!hasPermission) {
+      //     return res.json({ code: -1, message: '无权限访问该图纸' });
+      //   }
+      // }
+    } catch (authError) {
+      this.logger.warn(`[uploadExtReferenceDwg] 权限验证失败: ${authError.message}`);
+      // 权限验证失败不阻止上传，仅记录警告
+    }
+
+    // 9. 转换文件
     const inputFile = file.path.replace(/\\/g, '/');
     const param = {
       srcpath: inputFile,
     };
 
+    this.logger.log(`[uploadExtReferenceDwg] 开始转换: ${inputFile}`);
     const result = await this.mxCadService.convertServerFile(param);
 
-    // 复制转换后的文件到指定目录
+    if (result.code !== 0) {
+      this.logger.error(`[uploadExtReferenceDwg] 转换失败: ${result.message}`);
+      return res.json({ code: -1, message: '转换失败' });
+    }
+
+    // 10. 复制转换后的文件到指定目录
     try {
-      const fs = require('fs');
-      const path = require('path');
       const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, body.src_dwgfile_hash);
 
+      // 确保目录存在
       if (!fs.existsSync(hashDir)) {
         fs.mkdirSync(hashDir, { recursive: true });
+        this.logger.log(`[uploadExtReferenceDwg] 创建目录: ${hashDir}`);
       }
 
       const sourceFile = inputFile + (process.env.MXCAD_FILE_EXT || '.mxweb');
@@ -685,51 +790,158 @@ export class MxCadController {
 
       if (fs.existsSync(sourceFile)) {
         fs.copyFileSync(sourceFile, targetFile);
+        this.logger.log(`[uploadExtReferenceDwg] 文件复制成功: ${targetFile}`);
+      } else {
+        this.logger.error(`[uploadExtReferenceDwg] 源文件不存在: ${sourceFile}`);
+        return res.json({ code: -1, message: '转换后的文件不存在' });
       }
     } catch (error) {
-      return res.json({ code: -1, message: 'catch error' });
+      this.logger.error(`[uploadExtReferenceDwg] 文件复制失败: ${error.message}`, error.stack);
+      return res.json({ code: -1, message: '文件复制失败' });
     }
 
+    this.logger.log(`[uploadExtReferenceDwg] 上传成功: ${body.ext_ref_file}`);
     return res.json(result);
   }
 
   /**
-   * 上传外部参照图片
+   * 上传外部参照图片（增强版本）
+   *
+   * 验证逻辑：
+   * 1. 验证文件是否存在
+   * 2. 验证参数完整性
+   * 3. 验证图纸文件是否存在
+   * 4. 验证外部参照文件是否在预加载数据列表中
+   * 5. 验证文件名安全性（防止路径遍历攻击）
+   * 6. 验证文件大小（最大 100MB）
+   * 7. 验证文件类型（仅支持图片文件）
+   * 8. 验证用户权限（可选）
    */
   @Post('up_ext_reference_image')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '上传外部参照图片' })
+  @ApiResponse({
+    status: 200,
+    description: '上传成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 0 },
+        message: { type: 'string', example: 'ok' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '图纸文件不存在',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '无效的外部参照文件',
+  })
   async uploadExtReferenceImage(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { src_dwgfile_hash: string; ext_ref_file: string },
+    @Req() request: any,
     @Res() res: Response
   ) {
+    this.logger.log(`[uploadExtReferenceImage] 开始处理: ${body.ext_ref_file}`);
+
+    // 1. 验证文件
     if (!file) {
+      this.logger.warn('[uploadExtReferenceImage] 缺少文件');
       return res.json({ code: -1, message: '缺少文件' });
     }
 
+    // 2. 验证参数
     if (!body.src_dwgfile_hash || !body.ext_ref_file) {
+      this.logger.warn('[uploadExtReferenceImage] 缺少必要参数');
       return res.json({ code: -1, message: '缺少必要参数' });
     }
 
+    // 3. 验证图纸文件是否存在
+    const preloadingData = await this.mxCadService.getPreloadingData(body.src_dwgfile_hash);
+    if (!preloadingData) {
+      this.logger.warn(`[uploadExtReferenceImage] 图纸文件不存在: ${body.src_dwgfile_hash}`);
+      return res.json({ code: -1, message: '图纸文件不存在' });
+    }
+
+    // 4. 验证外部参照文件是否在预加载数据列表中
+    const isValidReference =
+      preloadingData.externalReference.includes(body.ext_ref_file) ||
+      preloadingData.images.includes(body.ext_ref_file);
+
+    if (!isValidReference) {
+      this.logger.warn(`[uploadExtReferenceImage] 无效的外部参照文件: ${body.ext_ref_file}`);
+      return res.json({ code: -1, message: '无效的外部参照文件' });
+    }
+
+    // 5. 验证文件名安全性（防止路径遍历攻击）
+    if (!this.validateFileName(body.ext_ref_file)) {
+      this.logger.warn(`[uploadExtReferenceImage] 文件名包含非法字符: ${body.ext_ref_file}`);
+      return res.json({ code: -1, message: '文件名包含非法字符' });
+    }
+
+    // 6. 验证文件大小
+    if (!this.validateFileSize(file.size)) {
+      this.logger.warn(`[uploadExtReferenceImage] 文件大小超出限制: ${file.size} bytes`);
+      return res.json({ code: -1, message: '文件大小超出限制（最大 100MB）' });
+    }
+
+    // 7. 验证文件类型
+    if (!this.validateFileType(body.ext_ref_file, ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'])) {
+      this.logger.warn(`[uploadExtReferenceImage] 不支持的文件类型: ${body.ext_ref_file}`);
+      return res.json({ code: -1, message: '仅支持图片文件（PNG, JPG, JPEG, GIF, BMP, WEBP）' });
+    }
+
+    // 8. 验证用户权限（可选）
     try {
-      const fs = require('fs');
-      const path = require('path');
+      const userId = await this.validateTokenAndGetUserId(request);
+      this.logger.log(`[uploadExtReferenceImage] 用户ID: ${userId}`);
+
+      // 检查用户是否有权限访问该图纸
+      // const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+      // if (node) {
+      //   const hasPermission = await this.checkFileAccessPermission(
+      //     node.id,
+      //     userId,
+      //     userId
+      //   );
+      //   if (!hasPermission) {
+      //     return res.json({ code: -1, message: '无权限访问该图纸' });
+      //   }
+      // }
+    } catch (authError) {
+      this.logger.warn(`[uploadExtReferenceImage] 权限验证失败: ${authError.message}`);
+      // 权限验证失败不阻止上传，仅记录警告
+    }
+
+    // 9. 复制文件到指定目录
+    try {
       const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, body.src_dwgfile_hash);
 
+      // 确保目录存在
       if (!fs.existsSync(hashDir)) {
         fs.mkdirSync(hashDir, { recursive: true });
+        this.logger.log(`[uploadExtReferenceImage] 创建目录: ${hashDir}`);
       }
 
       const targetFile = path.join(hashDir, body.ext_ref_file);
       fs.copyFileSync(file.path, targetFile);
 
-      return res.json({ code: 0, message: 'ok' });
+      this.logger.log(`[uploadExtReferenceImage] 文件复制成功: ${targetFile}`);
     } catch (error) {
-      return res.json({ code: -1, message: 'catch error' });
+      this.logger.error(`[uploadExtReferenceImage] 文件复制失败: ${error.message}`, error.stack);
+      return res.json({ code: -1, message: '文件复制失败' });
     }
+
+    this.logger.log(`[uploadExtReferenceImage] 上传成功: ${body.ext_ref_file}`);
+    return res.json({ code: 0, message: 'ok' });
   }
 
   /**
@@ -1327,5 +1539,56 @@ export class MxCadController {
       this.logger.error(`检查文件访问权限失败: ${error.message}`, error);
       return false;
     }
+  }
+
+  /**
+   * 验证文件名是否安全（防止路径遍历攻击）
+   * @param fileName 文件名
+   * @returns 是否安全
+   */
+  private validateFileName(fileName: string): boolean {
+    // 检查文件名是否包含路径遍历字符
+    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+      return false;
+    }
+
+    // 检查文件名是否为空
+    if (!fileName || fileName.trim().length === 0) {
+      return false;
+    }
+
+    // 检查文件名长度（限制为 255 字符）
+    if (fileName.length > 255) {
+      return false;
+    }
+
+    // 检查文件名是否包含非法字符（Windows 和 Linux 都不允许的字符）
+    const invalidChars = /[<>:"|?*\x00-\x1F]/;
+    if (invalidChars.test(fileName)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 验证文件大小是否在允许范围内
+   * @param fileSize 文件大小（字节）
+   * @param maxSize 最大文件大小（字节），默认 100MB
+   * @returns 是否在允许范围内
+   */
+  private validateFileSize(fileSize: number, maxSize: number = 104857600): boolean {
+    return fileSize > 0 && fileSize <= maxSize;
+  }
+
+  /**
+   * 验证文件类型是否允许
+   * @param fileName 文件名
+   * @param allowedExtensions 允许的文件扩展名列表
+   * @returns 是否允许
+   */
+  private validateFileType(fileName: string, allowedExtensions: string[] = ['.dwg', '.dxf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']): boolean {
+    const ext = path.extname(fileName).toLowerCase();
+    return allowedExtensions.includes(ext);
   }
 }
