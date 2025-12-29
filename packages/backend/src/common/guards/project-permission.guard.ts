@@ -6,7 +6,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { NODE_PERMISSION_KEY, PROJECT_PERMISSION_KEY } from '../decorators/project-permission.decorator';
+import { NODE_PERMISSION_KEY } from '../decorators/project-permission.decorator';
 import { NodeAccessRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from '../services/permission-cache.service';
 import {
