@@ -4,6 +4,9 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
+import { PreloadingDataDto } from './dto/preloading-data.dto';
+import fs from 'fs/promises';
+import path from 'path';
 
 @Injectable()
 export class MxCadService {
@@ -123,6 +126,61 @@ export class MxCadService {
   async checkTzStatus(fileHash: string): Promise<{ code: number }> {
     // 这里应该实现 tz 状态检查逻辑，暂时返回成功
     return { code: 0 };
+  }
+
+  /**
+   * 获取外部参照预加载数据
+   * @param fileHash 文件哈希值
+   * @returns 预加载数据，如果文件不存在则返回 null
+   */
+  async getPreloadingData(fileHash: string): Promise<PreloadingDataDto | null> {
+    try {
+      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+
+      // 验证哈希值格式（32位十六进制）
+      if (!/^[a-f0-9]{32}$/i.test(fileHash)) {
+        this.logger.warn(`无效的文件哈希格式: ${fileHash}`);
+        return null;
+      }
+
+      // 直接构造预期文件名，避免扫描整个目录
+      const preloadingFiles = await fs.readdir(uploadPath);
+      const preloadingFile = preloadingFiles.find(file =>
+        file.startsWith(fileHash) && file.endsWith('_preloading.json')
+      );
+
+      if (!preloadingFile) {
+        this.logger.debug(`预加载数据文件不存在: ${fileHash}`);
+        return null;
+      }
+
+      // 验证文件名合法性，防止路径遍历攻击
+      const isValidFileName = /^[a-f0-9]+\.[a-z]+\.[a-z]+_preloading\.json$/i.test(preloadingFile);
+      if (!isValidFileName) {
+        this.logger.warn(`非法的预加载数据文件名: ${preloadingFile}`);
+        return null;
+      }
+
+      const filePath = path.join(uploadPath, preloadingFile);
+
+      // 验证路径安全性，防止路径遍历
+      const resolvedPath = path.normalize(filePath);
+      const normalizedUploadPath = path.normalize(uploadPath);
+      if (!resolvedPath.startsWith(normalizedUploadPath)) {
+        this.logger.error(`检测到路径遍历攻击: ${filePath}`);
+        return null;
+      }
+
+      const content = await fs.readFile(filePath, 'utf-8');
+      const data = JSON.parse(content) as PreloadingDataDto;
+
+      this.logger.debug(`成功获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
+
+      return data;
+    } catch (error) {
+      this.logger.error(`获取预加载数据失败: ${error.message}`, error.stack);
+      return null;
+    }
   }
 
   /**

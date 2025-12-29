@@ -14,6 +14,7 @@
   Logger,
   UseGuards,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -21,11 +22,10 @@ import { JwtService } from '@nestjs/jwt';
 
 import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { MxCadService } from './mxcad.service';
-import { ChunkExistDto } from './dto/chunk-exist.dto';
-import { FileExistDto } from './dto/file-exist.dto';
 import { ConvertDto } from './dto/convert.dto';
 import { DatabaseService } from '../database/database.service';
 import { TzDto } from './dto/tz.dto';
+import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('MxCAD 文件上传与转换')
@@ -83,6 +83,37 @@ export class MxCadController {
   async checkTzStatus(@Body() dto: TzDto, @Res() res: Response) {
     const result = await this.mxCadService.checkTzStatus(dto.fileHash);
     return res.json(result);
+  }
+
+  /**
+   * 获取外部参照预加载数据
+   *
+   * @param fileHash 文件哈希值
+   * @returns 预加载数据
+   * @throws NotFoundException 预加载数据不存在时抛出异常
+   */
+  @Get('file/:hash/preloading')
+  @ApiResponse({
+    status: 200,
+    description: '成功获取预加载数据',
+    type: PreloadingDataDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '预加载数据不存在',
+  })
+  async getPreloadingData(@Param('hash') fileHash: string): Promise<PreloadingDataDto> {
+    this.logger.debug(`[getPreloadingData] 请求参数: fileHash=${fileHash}`);
+
+    const data = await this.mxCadService.getPreloadingData(fileHash);
+
+    if (!data) {
+      this.logger.warn(`[getPreloadingData] 预加载数据不存在: ${fileHash}`);
+      throw new NotFoundException('预加载数据不存在');
+    }
+
+    this.logger.debug(`[getPreloadingData] 成功返回预加载数据: ${fileHash}`);
+    return data;
   }
 
   /**

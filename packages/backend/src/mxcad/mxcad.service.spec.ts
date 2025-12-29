@@ -2,9 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MxCadService } from './mxcad.service';
 import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from './enums/mxcad-return.enum';
+import { MxCadPermissionService } from './mxcad-permission.service';
+import { FileUploadManagerService } from './services/file-upload-manager.service';
+import { FileSystemNodeService } from './services/filesystem-node.service';
+import { FileConversionService } from './services/file-conversion.service';
 
 // Mock fs 模块
 jest.mock('fs');
+jest.mock('fs/promises');
 jest.mock('child_process', () => ({
   exec: jest.fn(),
 }));
@@ -17,10 +22,34 @@ describe('MxCadService', () => {
   beforeEach(async () => {
     // 重置所有 mock
     jest.clearAllMocks();
-    
+
     mockConfigService = {
       get: jest.fn(),
     } as any;
+
+    // Mock 其他依赖服务
+    const mockMxCadPermissionService = {
+      validateUploadPermission: jest.fn().mockResolvedValue(undefined),
+      validateFileAccessPermission: jest.fn().mockResolvedValue(true),
+    };
+
+    const mockFileUploadManagerService = {
+      checkChunkExist: jest.fn(),
+      checkFileExist: jest.fn(),
+      uploadChunk: jest.fn(),
+      mergeChunksWithPermission: jest.fn(),
+      uploadAndConvertFileWithPermission: jest.fn(),
+    };
+
+    const mockFileSystemNodeService = {
+      inferContextForMxCadApp: jest.fn(),
+      checkProjectPermission: jest.fn().mockResolvedValue(true),
+    };
+
+    const mockFileConversionService = {
+      convertFile: jest.fn(),
+      convertFileAsync: jest.fn().mockResolvedValue('task-123'),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -28,6 +57,22 @@ describe('MxCadService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: MxCadPermissionService,
+          useValue: mockMxCadPermissionService,
+        },
+        {
+          provide: FileUploadManagerService,
+          useValue: mockFileUploadManagerService,
+        },
+        {
+          provide: FileSystemNodeService,
+          useValue: mockFileSystemNodeService,
+        },
+        {
+          provide: FileConversionService,
+          useValue: mockFileConversionService,
         },
       ],
     }).compile();
@@ -228,7 +273,7 @@ describe('MxCadService', () => {
       const result = await service.convertServerFile(param);
 
       expect(result.code).toBe(0);
-      expect(result.message).toBe('aysnc calling');
+      expect(result.message).toBe('async calling');
     });
 
     it('should handle param error', async () => {
@@ -319,6 +364,109 @@ describe('MxCadService', () => {
 
       expect(result.isOk).toBe(false);
       expect(result.ret.code).toBe(-1);
+    });
+  });
+
+  describe('getPreloadingData', () => {
+    const fsPromises = require('fs/promises');
+    const path = require('path');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('应该成功获取预加载数据', async () => {
+      const mockPreloadingData = {
+        tz: false,
+        src_file_md5: 'testhash123',
+        images: ['image1.png', 'image2.jpg'],
+        externalReference: ['ref1.dwg', 'ref2.dwg'],
+      };
+
+      // Mock 文件系统操作
+      fsPromises.readdir = jest.fn().mockResolvedValue([
+        'testhash123.dwg.mxweb',
+        'testhash123.dwg.mxweb_preloading.json',
+      ]);
+      fsPromises.readFile = jest.fn().mockResolvedValue(
+        JSON.stringify(mockPreloadingData)
+      );
+      path.normalize = jest.fn((p) => p);
+
+      const result = await service.getPreloadingData('testhash123');
+
+      expect(result).toEqual(mockPreloadingData);
+      expect(fsPromises.readdir).toHaveBeenCalledWith('/tmp/uploads');
+      expect(fsPromises.readFile).toHaveBeenCalledWith(
+        '/tmp/uploads/testhash123.dwg.mxweb_preloading.json',
+        'utf-8'
+      );
+    });
+
+    it('应该在文件不存在时返回 null', async () => {
+      fsPromises.readdir = jest.fn().mockResolvedValue([]);
+
+      const result = await service.getPreloadingData('nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('应该在读取失败时返回 null', async () => {
+      fsPromises.readdir = jest.fn().mockRejectedValue(new Error('Read error'));
+
+      const result = await service.getPreloadingData('errorhash');
+
+      expect(result).toBeNull();
+    });
+
+    it('应该在 JSON 解析失败时返回 null', async () => {
+      fsPromises.readdir = jest.fn().mockResolvedValue([
+        'testhash123.dwg.mxweb_preloading.json',
+      ]);
+      fsPromises.readFile = jest.fn().mockResolvedValue('invalid json');
+
+      const result = await service.getPreloadingData('testhash123');
+
+      expect(result).toBeNull();
+    });
+
+    it('应该正确处理空的外部参照和图片列表', async () => {
+      const mockPreloadingData = {
+        tz: true,
+        src_file_md5: 'testhash456',
+        images: [],
+        externalReference: [],
+      };
+
+      fsPromises.readdir = jest.fn().mockResolvedValue([
+        'testhash456.dxf.mxweb_preloading.json',
+      ]);
+      fsPromises.readFile = jest.fn().mockResolvedValue(
+        JSON.stringify(mockPreloadingData)
+      );
+
+      const result = await service.getPreloadingData('testhash456');
+
+      expect(result).toEqual(mockPreloadingData);
+      expect(result.images).toHaveLength(0);
+      expect(result.externalReference).toHaveLength(0);
+    });
+
+    it('应该在哈希格式无效时返回 null', async () => {
+      const result = await service.getPreloadingData('invalid-hash');
+
+      expect(result).toBeNull();
+    });
+
+    it('应该在检测到路径遍历攻击时返回 null', async () => {
+      fsPromises.readdir = jest.fn().mockResolvedValue([
+        '../../../etc/passwd_preloading.json',
+      ]);
+      path.normalize = jest.fn((p) => p);
+
+      const result = await service.getPreloadingData('testhash');
+
+      expect(result).toBeNull();
     });
   });
 });
