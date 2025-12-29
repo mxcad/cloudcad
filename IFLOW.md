@@ -100,15 +100,15 @@ cloudcad/
 │   │   │   ├── Register.tsx          # 注册
 │   │   │   ├── ResetPassword.tsx     # 重置密码
 │   │   │   ├── RoleManagement.tsx    # 角色管理
+│   │   │   ├── TrashPage.tsx         # 回收站
 │   │   │   └── UserManagement.tsx    # 用户管理
 │   │   ├── services/            # API 服务
 │   │   │   ├── api.ts               # 统一 API 接口
-│   │   │   ├── apiService.ts        # API 服务封装
-│   │   │   ├── fileUploadService.ts # 文件上传服务
-│   │   │   ├── mxcadManager.ts      # MxCAD 全局管理器
+│   │   │   ├── apiService.ts        # API 服务封装（含拦截器）
+│   │   │   ├── mxcadManager.ts      # MxCAD 全局管理器（底层拦截）
 │   │   │   └── mockDb.ts            # Mock 数据库
 │   │   ├── types/               # 类型定义
-│   │   │   ├── api.ts           # API 类型定义
+│   │   │   ├── api.ts           # API 类型定义（自动生成）
 │   │   │   └── filesystem.ts    # 文件系统类型定义
 │   │   ├── utils/               # 工具函数
 │   │   │   ├── cleanConsole.ts      # 控制台清理
@@ -120,7 +120,7 @@ cloudcad/
 │   │   ├── public/              # 静态资源
 │   │   │   ├── debug-mxcad.html # MxCAD 调试页面
 │   │   │   ├── webuploader-test.html # WebUploader 测试页面
-│   │   │   └── ini/             # 配置文件
+│   │   │   └── ini/             # MxCAD 配置文件
 │   │   ├── styles/              # 样式文件
 │   │   ├── scripts/             # 构建脚本
 │   │   │   └── generate-types.js # 类型生成脚本
@@ -836,11 +836,11 @@ MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和
 
 ### 统一上传方案
 
-**新增功能**：MxCAD 文件上传已与文件系统完全集成
+**核心特性**：MxCAD 文件上传已与文件系统完全集成
 
 - **自动同步**：文件上传成功后自动创建 FileSystemNode 记录
-- **项目上下文**：支持项目ID和父文件夹ID传递
-- **原生上传实现**：前端使用 useMxCadUploadNative Hook 实现分片上传
+- **统一参数**：所有接口使用 `nodeId` 参数（已移除废弃的 `projectId` 和 `parentId`）
+- **原生上传实现**：前端使用 `useMxCadUploadNative` Hook 实现分片上传
 - **MxCAD 管理器**：全局 MxCADView 实例管理，支持实例复用和永不销毁容器
 - **权限集成**：上传文件自动继承项目权限设置
 
@@ -854,8 +854,7 @@ MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和
 ```tsx
 <MxCadUploader
   ref={uploaderRef}
-  projectId="project-123"
-  parentId="folder-456"
+  nodeId={() => getCurrentParentId()}
   onSuccess={handleRefresh}
   onError={(err) => console.error('上传失败:', err)}
 />
@@ -871,6 +870,7 @@ MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和
   - 文件哈希计算（用于去重）
   - 自动重试和错误处理
   - 秒传支持（文件已存在时）
+  - **统一使用 `nodeId` 参数**
 
 #### MxCADManager 管理器
 - **位置**: `packages/frontend/services/mxcadManager.ts`
@@ -881,10 +881,11 @@ MxCAD 模块提供了完整的 CAD 文件上传、分片上传、断点续传和
   - 实例复用提高性能
   - 支持显示/隐藏控制
   - 文件打开和管理功能
+  - **清理冗余参数**：自动移除 `projectId` 和 `parentId`
 
 **核心流程**：
 ```
-用户选择文件 → 原生分片上传 → MxCAD 转换服务 → 自动创建文件系统记录 → MxCADManager 管理
+用户选择文件 → 原生分片上传（nodeId） → MxCAD 转换服务 → 自动创建文件系统记录 → MxCADManager 管理
 ```
 
 ### 返回格式
@@ -908,6 +909,32 @@ MXCAD_TEMP_PATH=D:\web\MxCADOnline\cloudcad\temp
 MXCAD_FILE_EXT=.mxweb
 MXCAD_COMPRESSION=true
 ```
+
+### 双层拦截器架构
+
+**设计原因**：避免重复设置 Authorization Header，特别是 MxCAD-App 内部会调用并设置请求头
+
+#### ApiService 拦截器（axios 层）
+- **职责**：处理前端代码通过 axios 发送的请求
+- **功能**：
+  - 补充 `nodeId` 参数（从多个来源获取）
+  - 设置 `Authorization` header
+  - 支持 FormData 和 JSON 两种格式
+  - 验证 `nodeId` 格式
+
+#### MxCadManager 拦截器（底层 XHR/fetch 层）
+- **职责**：处理 MxCAD-App 内部通过 XHR/fetch 发送的请求
+- **功能**：
+  - **不设置** `Authorization` header（由 MxCAD-App 自己设置）
+  - 清理冗余参数（`projectId`、`parentId`）
+  - 补充 `nodeId` 参数（针对 MxCAD-App 内部调用）
+  - 只处理 JSON 请求体，不处理 FormData
+
+**参数来源优先级**（ApiService）：
+1. 请求体中的 `nodeId`
+2. URL 查询参数中的 `nodeId` 或 `parent`
+3. 全局状态 `window.__CURRENT_NODE_ID__`
+4. localStorage 中的 `currentNodeId`
 
 ## 13. 测试架构
 
@@ -986,6 +1013,7 @@ pnpm test:cov          # 测试覆盖率
 7. **测试优先**: 新功能开发前先编写测试用例
 8. **图标系统**: 使用 FileIcons.tsx 提供的 SVG 图标组件
 9. **Modal 组件**: 使用 ui/Modal 作为基础，modals/ 目录下的组件进行业务封装
+10. **参数规范**: MxCAD 接口统一使用 `nodeId` 参数，禁止使用 `projectId` 和 `parentId`
 
 ### 后端开发
 
@@ -1054,6 +1082,11 @@ pnpm test:cov          # 测试覆盖率
    - 检查 `MXCAD_ASSEMBLY_PATH` 是否正确
    - 确认 mxcadassembly.exe 文件存在且可执行
    - 查看服务器日志获取详细错误信息
+
+9. **MxCAD 参数传递错误**
+   - 确保使用 `nodeId` 参数而非 `projectId` 或 `parentId`
+   - 检查拦截器是否正确清理冗余参数
+   - 验证 `nodeId` 格式是否符合 CUID2 规范
 
 ### 调试技巧
 
@@ -1158,6 +1191,40 @@ Closes #123
 
 ## 19. 最新更新记录
 
+### 2025-12-29（MxCAD 参数统一与架构优化）
+
+#### 前端重构
+
+- **统一 MxCAD 参数**：所有接口统一使用 `nodeId` 参数，移除废弃的 `projectId` 和 `parentId`
+- **删除废弃服务**：移除 `fileUploadService.ts`（使用废弃参数的上传服务）
+- **拦截器优化**：
+  - ApiService 拦截器增强：添加 `nodeId` 格式验证和多来源获取支持
+  - MxCadManager 拦截器优化：清理冗余参数，兼容 MxCAD-App 内部调用
+- **CADEditorDirect 优化**：统一使用 `nodeId` 参数，更新验证提示
+- **useFileSystem 优化**：移除 URL 中的废弃参数（`project`、`parent`）
+- **mxcadUtils 清理**：移除未使用的 `getProjectContext` 方法
+
+#### 架构改进
+
+- **双层拦截器设计**：明确职责分工，避免重复设置 Authorization Header
+  - ApiService 拦截器：处理 axios 请求，补充 `nodeId`，设置 `Authorization`
+  - MxCadManager 拦截器：处理 XHR/fetch 请求，清理冗余参数，兼容 MxCAD-App
+- **参数来源优先级**：明确 `nodeId` 的获取优先级（请求体 > URL > 全局状态 > localStorage）
+- **格式验证**：添加 CUID2 格式验证，确保 `nodeId` 格式正确
+
+#### 代码质量
+
+- **减少代码量**：净减少 198 行代码（删除 319 行，新增 121 行）
+- **参数一致性**：所有 MxCAD 接口参数传递链路清晰统一
+- **容错性增强**：多层后备机制确保参数完整性
+
+#### 关键成就
+
+- **100% 参数统一**：所有 MxCAD 接口只使用 `nodeId`
+- **双层拦截器**：避免重复设置 Authorization Header，兼容 MxCAD-App
+- **代码更清晰**：移除所有废弃参数和未使用代码
+- **架构更健壮**：多层验证和后备机制确保系统稳定性
+
 ### 2025-12-29（项目架构完善与 Session 支持）
 
 #### 后端增强
@@ -1202,5 +1269,5 @@ Closes #123
 
 ---
 
-_v3.0 | 2025-12-29 | CloudCAD 团队_  
-_更新：项目架构完善、Session 支持、前端组件体系完善、文档体系更新_
+_v4.0 | 2025-12-29 | CloudCAD 团队_  
+_更新：MxCAD 参数统一、双层拦截器架构、代码清理、架构优化_
