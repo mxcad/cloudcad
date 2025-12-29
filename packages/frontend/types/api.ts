@@ -2801,3 +2801,25 @@ export interface operations {
         };
     };
 }
+
+/**
+ * 外部参照预加载数据
+ */
+export interface PreloadingData {
+  /** 是否为图纸 */
+  tz: boolean;
+  /** 源文件哈希值 */
+  src_file_md5: string;
+  /** 图片列表 */
+  images: string[];
+  /** 外部参照列表 */
+  externalReference: string[];
+}
+
+/**
+ * 外部参照文件存在性检查结果
+ */
+export interface CheckReferenceExistsResult {
+  /** 文件是否存在 */
+  exists: boolean;
+}

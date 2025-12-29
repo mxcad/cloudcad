@@ -234,12 +234,12 @@ describe('MxCAD API Methods', () => {
 
 ## 验收标准
 
-- [ ] 类型定义完整准确
-- [ ] `getPreloadingData` 方法实现正确
-- [ ] `checkExternalReferenceExists` 方法实现正确
-- [ ] 便捷方法导出完整
-- [ ] 单元测试全部通过
-- [ ] TypeScript 类型检查通过
+- [x] 类型定义完整准确
+- [x] `getPreloadingData` 方法实现正确
+- [x] `checkExternalReferenceExists` 方法实现正确
+- [x] 便捷方法导出完整
+- [x] 单元测试全部通过
+- [x] TypeScript 类型检查通过
 
 ## 测试方法
 
@@ -308,7 +308,6 @@ pnpm test apiService.spec.ts
 
 ---
 
-**任务状态**：⬜ 待开始  
-**预计工时**：1.5 小时  
-**负责人**：待分配  
-**创建日期**：2025-12-29
+**任务状态**：✅ 已完成  
+**完成日期**：2025-12-29  
+**负责人**：iFlow CLI

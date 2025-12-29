@@ -161,6 +161,19 @@ class ApiService {
   async upload<T = any>(url: string, data: any): Promise<AxiosResponse<T>> {
     return this.client.post(url, data);
   }
+
+  // 获取外部参照预加载数据
+  async getPreloadingData(fileHash: string): Promise<AxiosResponse<import('../types/api').PreloadingData>> {
+    return this.get(`/mxcad/file/${fileHash}/preloading`);
+  }
+
+  // 检查外部参照文件是否存在
+  async checkExternalReferenceExists(
+    fileHash: string,
+    fileName: string
+  ): Promise<AxiosResponse<import('../types/api').CheckReferenceExistsResult>> {
+    return this.post(`/mxcad/file/${fileHash}/check-reference`, { fileName });
+  }
 }
 
 // 创建 API 服务实例
@@ -370,6 +383,56 @@ export const adminApi = {
 
   getUserPermissions: (userId: string) =>
     apiService.get(`/admin/permissions/user/${userId}`),
+};
+
+// MxCAD 相关的 API 方法
+export const mxcadApi = {
+  // 获取预加载数据
+  getPreloadingData: (fileHash: string) =>
+    apiService.get<import('../types/api').PreloadingData>(`/mxcad/file/${fileHash}/preloading`),
+
+  // 检查外部参照是否存在
+  checkExternalReferenceExists: (fileHash: string, fileName: string) =>
+    apiService.post<import('../types/api').CheckReferenceExistsResult>(
+      `/mxcad/file/${fileHash}/check-reference`,
+      { fileName }
+    ),
+
+  // 上传外部参照 DWG
+  uploadExtReferenceDwg: (
+    file: File,
+    srcDwgFileHash: string,
+    extRefFile: string,
+    onProgress?: (progressEvent: any) => void
+  ) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('src_dwgfile_hash', srcDwgFileHash);
+    formData.append('ext_ref_file', extRefFile);
+
+    return apiService.post('/mxcad/up_ext_reference_dwg', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress,
+    });
+  },
+
+  // 上传外部参照图片
+  uploadExtReferenceImage: (
+    file: File,
+    srcDwgFileHash: string,
+    extRefFile: string,
+    onProgress?: (progressEvent: any) => void
+  ) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('src_dwgfile_hash', srcDwgFileHash);
+    formData.append('ext_ref_file', extRefFile);
+
+    return apiService.post('/mxcad/up_ext_reference_image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress,
+    });
+  },
 };
 
 // 在类定义后添加辅助方法
