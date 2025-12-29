@@ -117,20 +117,7 @@ export class UrlHelper {
     return `/mxcad/file/${fileHash}.${suffix}.mxweb`;
   }
 
-  static getProjectContext(search: string): {
-    projectId?: string;
-    parentId?: string;
-  } {
-    const searchParams = new URLSearchParams(search);
-    const projectId = searchParams.get('project');
-    const parentId = searchParams.get('parent');
-
-    return {
-      projectId: projectId || undefined,
-      parentId: parentId || undefined,
-    };
   }
-}
 
 /**
  * 验证工具

@@ -50,12 +50,12 @@ export const CADEditorDirect: React.FC = () => {
       window as any
     ).MxPluginContext.getServerConfig();
     if (serverConfig?.uploadFileConfig?.create) {
-      const projectId =
-        new URLSearchParams(location.search).get('project') || '';
-      const parentId = new URLSearchParams(location.search).get('parent') || '';
+      const nodeId =
+        new URLSearchParams(location.search).get('nodeId') ||
+        new URLSearchParams(location.search).get('parent') || '';
 
-      // 验证项目信息
-      if (!projectId) {
+      // 验证节点信息
+      if (!nodeId) {
         // 显示用户提示
         const existingWarning = document.getElementById(
           'mxcad-context-warning'
@@ -79,7 +79,7 @@ export const CADEditorDirect: React.FC = () => {
           `;
           warning.innerHTML = `
             <strong>⚠️ 上传功能已禁用</strong><br>
-            缺少项目上下文，请通过文件管理页面访问CAD编辑器。
+            缺少节点上下文，请通过文件管理页面访问CAD编辑器。
           `;
           document.body.appendChild(warning);
         }
@@ -95,8 +95,7 @@ export const CADEditorDirect: React.FC = () => {
    
       serverConfig.uploadFileConfig.create.formData = {
         ...serverConfig.uploadFileConfig.create.formData,
-        projectId: projectId,
-        parentId: parentId,
+        nodeId: nodeId,
       };
 
       // Authorization header 由 apiService 拦截器统一处理

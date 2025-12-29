@@ -388,8 +388,6 @@
         // 跳转到CAD编辑器，传递项目上下文
         const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
         const queryParams = new URLSearchParams();
-        queryParams.set('project', effectiveProjectId || '');
-        queryParams.set('parent', currentNode?.id || effectiveProjectId || '');
         // 后端 buildContextFromRequest 期望 nodeId 参数
         queryParams.set('nodeId', currentNode?.id || effectiveProjectId || '');
         navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);

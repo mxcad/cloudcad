@@ -93,11 +93,9 @@ class MxCADAuthManager {
 
     // 获取存储的 token
     const token = localStorage.getItem('accessToken');
-    // 获取 URL 中的项目参数
+    // 获取 URL 中的节点参数
     const urlParams = new URLSearchParams(window.location.search);
-    const projectId = urlParams.get('project');
-    const parentId = urlParams.get('parent');
-    const nodeId = urlParams.get('nodeId') || parentId;
+    const nodeId = urlParams.get('nodeId') || urlParams.get('parent') || '';
 
     // 保存原始方法（只保存一次）
     if (!this.originalXHROpen) {
@@ -133,15 +131,17 @@ class MxCADAuthManager {
         if ((method === 'POST' || method === 'PUT') && typeof body === 'string') {
           try {
             const bodyData = JSON.parse(body);
-            // 后端 buildContextFromRequest 期望 nodeId 参数
+            // 后端 buildContextFromRequest 只期望 nodeId 参数
+            // 移除 projectId 和 parentId 参数，保持接口一致性
             if (nodeId && !bodyData.nodeId) {
               bodyData.nodeId = nodeId;
             }
-            if (projectId && !bodyData.projectId) {
-              bodyData.projectId = projectId;
+            // 清理冗余参数
+            if (bodyData.projectId) {
+              delete bodyData.projectId;
             }
-            if (parentId && !bodyData.parentId) {
-              bodyData.parentId = parentId;
+            if (bodyData.parentId) {
+              delete bodyData.parentId;
             }
             const newBody = JSON.stringify(bodyData);
             return originalSend.call(this, newBody);
@@ -172,17 +172,18 @@ class MxCADAuthManager {
         if ((method === 'POST' || method === 'PUT') && init?.body && typeof init.body === 'string') {
           try {
             const bodyData = JSON.parse(init.body);
-            // 后端 buildContextFromRequest 期望 nodeId 参数
-            if (nodeId && !bodyData.nodeId) {
-              bodyData.nodeId = nodeId;
-            }
-            if (projectId && !bodyData.projectId) {
-              bodyData.projectId = projectId;
-            }
-            if (parentId && !bodyData.parentId) {
-              bodyData.parentId = parentId;
-            }
-            modifiedInit.body = JSON.stringify(bodyData);
+                    // 后端 buildContextFromRequest 只期望 nodeId 参数
+                    // 移除 projectId 和 parentId 参数，保持接口一致性
+                    if (nodeId && !bodyData.nodeId) {
+                      bodyData.nodeId = nodeId;
+                    }
+                    // 清理冗余参数
+                    if (bodyData.projectId) {
+                      delete bodyData.projectId;
+                    }
+                    if (bodyData.parentId) {
+                      delete bodyData.parentId;
+                    }            modifiedInit.body = JSON.stringify(bodyData);
           } catch (error) {
             // 静默处理 JSON 解析错误
           }

@@ -22,45 +22,25 @@ class ApiService {
       (config) => {
         // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
 
-        // 为 MxCAD 上传相关请求添加节点上下文
-        if (config.url?.includes('/mxcad/files/')) {
-          // 从当前URL获取节点上下文作为后备（仅当请求中没有传递 nodeId 时使用）
-          const currentUrl = new URL(window.location.href);
-          const urlNodeId = currentUrl.searchParams.get('nodeId') || currentUrl.searchParams.get('parent') || '';
+        // 为所有 MxCAD 接口添加节点上下文
+        if (config.url?.includes('/mxcad/')) {
+          // 从多个来源获取节点上下文
+          const nodeId = this.getNodeIdFromMultipleSources(config);
           
-          // 如果是POST请求且有data，检查并补充节点上下文参数
-          if (config.method?.toLowerCase() === 'post' && config.data) {
-            // 检查是否是 FormData（文件上传）
-            const isFormData = config.data instanceof FormData;
-            
-            if (isFormData) {
-              // 对于 FormData，检查是否已有 nodeId，如果没有才从 URL 获取
-              if (!config.data.has('nodeId') && urlNodeId) {
-                config.data.append('nodeId', urlNodeId);
-                Logger.info('[apiService] 为 FormData 请求补充 nodeId:', urlNodeId);
-              }
-            } else {
-              // 对于普通 JSON 对象，优先使用请求中已传递的 nodeId
-              const existingNodeId = config.data.nodeId;
-              
-              // 只有当请求体中没有 nodeId 时，才从 URL 获取作为后备
-              if (!existingNodeId && urlNodeId) {
-                config.data = {
-                  ...config.data,
-                  nodeId: urlNodeId,
-                };
-                Logger.info('[apiService] 为 JSON 请求补充 nodeId:', urlNodeId);
-              }
+          if (nodeId) {
+            // 验证 nodeId 格式
+            if (!this.isValidNodeId(nodeId)) {
+              Logger.warn('[apiService] 无效的 nodeId 格式:', nodeId);
+              return config; // 不添加无效参数
             }
-          } else if (config.method?.toLowerCase() === 'post' && config.params) {
-            // 如果参数在params中（某些情况下）
-            const existingNodeId = config.params.nodeId;
             
-            if (!existingNodeId && urlNodeId) {
-              config.params = {
-                ...config.params,
-                nodeId: urlNodeId,
-              };
+            // 根据请求类型补充 nodeId 参数
+            this.supplementNodeIdToRequest(config, nodeId);
+          } else {
+            // 对于关键的上传接口，如果缺少 nodeId 则记录警告
+            if (config.url?.includes('/mxcad/files/uploadFiles') || 
+                config.url?.includes('/mxcad/files/fileisExist')) {
+              Logger.warn('[apiService] MxCAD 接口缺少 nodeId 参数，可能影响文件系统集成');
             }
           }
         }
@@ -390,4 +370,81 @@ export const adminApi = {
 
   getUserPermissions: (userId: string) =>
     apiService.get(`/admin/permissions/user/${userId}`),
+};
+
+// 在类定义后添加辅助方法
+ApiService.prototype.getNodeIdFromMultipleSources = function(config: any): string | null {
+  // 1. 从请求数据中获取
+  if (config.data?.nodeId) return config.data.nodeId;
+  
+  // 2. 从 URL 查询参数获取
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlNodeId = urlParams.get('nodeId') || urlParams.get('parent');
+    if (urlNodeId) return urlNodeId;
+  }
+  
+  // 3. 从全局状态获取（如果有）
+  if (typeof window !== 'undefined' && (window as any).__CURRENT_NODE_ID__) {
+    return (window as any).__CURRENT_NODE_ID__;
+  }
+  
+  // 4. 从 localStorage 获取（如果有）
+  if (typeof window !== 'undefined') {
+    const storedNodeId = localStorage.getItem('currentNodeId');
+    if (storedNodeId) return storedNodeId;
+  }
+  
+  return null;
+};
+
+ApiService.prototype.isValidNodeId = function(nodeId: string): boolean {
+  // CUID2 格式验证：以 'c' 开头，包含字母和数字，长度约 24-32 字符
+  if (!nodeId || typeof nodeId !== 'string') return false;
+  
+  // 基本格式检查
+  const cuid2Pattern = /^c[a-z0-9]{23,31}$/;
+  return cuid2Pattern.test(nodeId);
+};
+
+ApiService.prototype.supplementNodeIdToRequest = function(config: any, nodeId: string): void {
+  if (!config || !nodeId) return;
+  
+  // 如果是 POST/PUT 请求且有 data
+  const method = config.method?.toLowerCase();
+  if ((method === 'post' || method === 'put') && config.data) {
+    // 检查是否是 FormData（文件上传）
+    const isFormData = config.data instanceof FormData;
+    
+    if (isFormData) {
+      // 对于 FormData，检查是否已有 nodeId，如果没有才添加
+      if (!config.data.has('nodeId')) {
+        config.data.append('nodeId', nodeId);
+        Logger.info('[apiService] 为 FormData 请求补充 nodeId:', nodeId);
+      }
+    } else {
+      // 对于普通 JSON 对象，优先使用请求中已传递的 nodeId
+      const existingNodeId = config.data.nodeId;
+      
+      // 只有当请求体中没有 nodeId 时，才添加
+      if (!existingNodeId) {
+        config.data = {
+          ...config.data,
+          nodeId: nodeId,
+        };
+        Logger.info('[apiService] 为 JSON 请求补充 nodeId:', nodeId);
+      }
+    }
+  } else if (config.params) {
+    // 如果参数在 params 中
+    const existingNodeId = config.params.nodeId;
+    
+    if (!existingNodeId) {
+      config.params = {
+        ...config.params,
+        nodeId: nodeId,
+      };
+      Logger.info('[apiService] 为 params 补充 nodeId:', nodeId);
+    }
+  }
 };
