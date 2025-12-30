@@ -36,54 +36,80 @@ describe('MxCadPermissionService', () => {
 
   describe('validateUploadPermission', () => {
     it('should throw UnauthorizedException when user is not logged in', async () => {
-      const context = { userId: undefined, projectId: '123' };
-      
-      await expect(service.validateUploadPermission(context))
-        .rejects.toThrow('用户未认证');
+      const context = { userId: undefined, nodeId: '123' };
+
+      await expect(service.validateUploadPermission(context)).rejects.toThrow(
+        '用户未认证，请先登录'
+      );
     });
 
-    it('should throw BadRequestException when project is missing', async () => {
-      const context = { userId: 'user1', projectId: undefined };
-      
-      await expect(service.validateUploadPermission(context))
-        .rejects.toThrow('缺少项目信息');
+    it('should throw BadRequestException when node is missing', async () => {
+      const context = { userId: 'user1', nodeId: undefined };
+
+      await expect(service.validateUploadPermission(context)).rejects.toThrow(
+        '缺少节点信息'
+      );
     });
 
-    it('should throw ForbiddenException when user has no project access', async () => {
-      const context = { userId: 'user1', projectId: '123' };
+    it('should throw ForbiddenException when user has no node access', async () => {
+      const context = { userId: 'user1', nodeId: '123' };
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: '123',
+        ownerId: 'owner-id',
+      });
       mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
-      
-      await expect(service.validateUploadPermission(context))
-        .rejects.toThrow('您没有该项目的访问权限，无法上传文件');
+
+      await expect(service.validateUploadPermission(context)).rejects.toThrow(
+        '您没有该节点的访问权限，无法上传文件'
+      );
     });
 
-    it('should pass when user has project access', async () => {
-      const context = { userId: 'user1', projectId: '123' };
+    it('should pass when user is node owner', async () => {
+      const context = { userId: 'user1', nodeId: '123' };
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: '123',
+        ownerId: 'user1',
+      });
+
+      await expect(service.validateUploadPermission(context)).resolves.toBe(
+        true
+      );
+    });
+
+    it('should pass when user has node access', async () => {
+      const context = { userId: 'user1', nodeId: '123' };
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: '123',
+        ownerId: 'owner-id',
+      });
       mockPrisma.fileAccess.findUnique.mockResolvedValue({
         userId: 'user1',
         nodeId: '123',
-        role: 'MEMBER',
+        role: 'EDITOR',
       });
-      
-      await expect(service.validateUploadPermission(context))
-        .resolves.toBe(true);
+
+      await expect(service.validateUploadPermission(context)).resolves.toBe(
+        true
+      );
     });
   });
 
   describe('validateFileAccess', () => {
     it('should allow anonymous access when no user info', async () => {
       const context = { userId: undefined };
-      
-      await expect(service.validateFileAccess(context, 'file1'))
-        .resolves.toBe(true);
+
+      await expect(service.validateFileAccess(context, 'file1')).resolves.toBe(
+        true
+      );
     });
 
     it('should throw BadRequestException when file does not exist', async () => {
       const context = { userId: 'user1' };
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
-      
-      await expect(service.validateFileAccess(context, 'file1'))
-        .rejects.toThrow('文件不存在');
+
+      await expect(
+        service.validateFileAccess(context, 'file1')
+      ).rejects.toThrow('文件不存在');
     });
 
     it('should pass when user is file owner', async () => {
@@ -92,9 +118,10 @@ describe('MxCadPermissionService', () => {
         id: 'file1',
         ownerId: 'user1',
       });
-      
-      await expect(service.validateFileAccess(context, 'file1'))
-        .resolves.toBe(true);
+
+      await expect(service.validateFileAccess(context, 'file1')).resolves.toBe(
+        true
+      );
     });
   });
 });

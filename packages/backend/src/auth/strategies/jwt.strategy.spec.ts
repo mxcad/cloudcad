@@ -218,7 +218,7 @@ describe('JwtStrategy', () => {
     });
 
     it('should handle user with null avatar', async () => {
-      const userWithNullAvatar = { ...mockUser, avatar: undefined };
+      const userWithNullAvatar = { ...mockUser, avatar: null };
       prisma.user.findUnique.mockResolvedValue(userWithNullAvatar);
 
       const result = await strategy.validate(mockPayload);

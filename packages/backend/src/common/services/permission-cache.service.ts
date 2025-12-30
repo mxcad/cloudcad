@@ -74,7 +74,7 @@ export class PermissionCacheService {
     const keysToDelete: string[] = [];
 
     for (const key of this.cache.keys()) {
-      if (key.includes(`node:${nodeId}`)) {
+      if (key.endsWith(`:${nodeId}`)) {
         keysToDelete.push(key);
       }
     }
@@ -130,10 +130,7 @@ export class PermissionCacheService {
   /**
    * 获取节点访问角色缓存
    */
-  getNodeAccessRole(
-    userId: string,
-    nodeId: string
-  ): NodeAccessRole | null {
+  getNodeAccessRole(userId: string, nodeId: string): NodeAccessRole | null {
     const key = `role:node:${userId}:${nodeId}`;
     return this.get<NodeAccessRole>(key);
   }
@@ -142,10 +139,7 @@ export class PermissionCacheService {
    * 获取文件访问角色缓存（向后兼容）
    * @deprecated 使用 getNodeAccessRole 代替
    */
-  getFileAccessRole(
-    userId: string,
-    nodeId: string
-  ): NodeAccessRole | null {
+  getFileAccessRole(userId: string, nodeId: string): NodeAccessRole | null {
     return this.getNodeAccessRole(userId, nodeId);
   }
 

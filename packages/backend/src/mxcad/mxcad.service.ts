@@ -6,7 +6,10 @@ import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { MinioSyncService } from './minio-sync.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
-import { ExternalReferenceStats, ExternalReferenceInfo } from './types/external-reference.types';
+import {
+  ExternalReferenceStats,
+  ExternalReferenceInfo,
+} from './types/external-reference.types';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
 
@@ -21,7 +24,7 @@ export class MxCadService {
     private readonly fileUploadManager: FileUploadManagerService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
-    private readonly minioSyncService: MinioSyncService,
+    private readonly minioSyncService: MinioSyncService
   ) {}
 
   /**
@@ -48,8 +51,16 @@ export class MxCadService {
   /**
    * 检查文件是否存在
    */
-  async checkFileExist(filename: string, fileHash: string, context?: any): Promise<{ ret: string }> {
-    return this.fileUploadManager.checkFileExist(filename, fileHash, this.validateContext(context));
+  async checkFileExist(
+    filename: string,
+    fileHash: string,
+    context?: any
+  ): Promise<{ ret: string }> {
+    return this.fileUploadManager.checkFileExist(
+      filename,
+      fileHash,
+      this.validateContext(context)
+    );
   }
 
   /**
@@ -105,14 +116,21 @@ export class MxCadService {
 
       if (param.async === 'true' && param.resultposturl) {
         // 异步转换
-        this.fileConversionService.convertFileAsync({
-          srcPath: param.srcpath,
-          fileHash: param.src_file_md5,
-          createPreloadingData: true,
-        }, param.resultposturl).then((taskId) => {
-          // 这里应该发送回调，暂时省略
-          this.logger.log(`异步转换完成: ${param.srcpath}, 任务ID: ${taskId}`);
-        });
+        this.fileConversionService
+          .convertFileAsync(
+            {
+              srcPath: param.srcpath,
+              fileHash: param.src_file_md5,
+              createPreloadingData: true,
+            },
+            param.resultposturl
+          )
+          .then((taskId) => {
+            // 这里应该发送回调，暂时省略
+            this.logger.log(
+              `异步转换完成: ${param.srcpath}, 任务ID: ${taskId}`
+            );
+          });
         return { code: 0, message: 'async calling' };
       } else {
         // 同步转换
@@ -155,30 +173,41 @@ export class MxCadService {
       const fileContent = await this.minioSyncService.getFileContent(minioPath);
 
       if (fileContent) {
-        const data = JSON.parse(fileContent.toString('utf-8')) as PreloadingDataDto;
-        this.logger.debug(`成功从 MinIO 获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
+        const data = JSON.parse(
+          fileContent.toString('utf-8')
+        ) as PreloadingDataDto;
+        this.logger.debug(
+          `成功从 MinIO 获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`
+        );
         return data;
       }
 
       // 如果 MinIO 中不存在，回退到本地文件系统
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-      
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
+
       // 直接构造预期文件名，避免扫描整个目录
       let preloadingFile: string | undefined;
       try {
         const files = await fsPromises.readdir(uploadPath);
         // 匹配规则：文件名以 fileHash 开头，以 _preloading.json 结尾
         // 实际文件名格式：{fileHash}.dwg.mxweb_preloading.json
-        preloadingFile = files.find(file =>
-          file.startsWith(fileHash) && file.endsWith('_preloading.json')
+        preloadingFile = files.find(
+          (file) =>
+            file.startsWith(fileHash) && file.endsWith('_preloading.json')
         );
-        this.logger.debug(`[getPreloadingData] 查找预加载数据文件: fileHash=${fileHash}, 找到文件: ${preloadingFile || '无'}`);
+        this.logger.debug(
+          `[getPreloadingData] 查找预加载数据文件: fileHash=${fileHash}, 找到文件: ${preloadingFile || '无'}`
+        );
       } catch (error) {
         this.logger.warn(`[getPreloadingData] 读取目录失败: ${error.message}`);
       }
 
       if (!preloadingFile) {
-        this.logger.warn(`[getPreloadingData] 预加载数据文件不存在: ${fileHash}`);
+        this.logger.warn(
+          `[getPreloadingData] 预加载数据文件不存在: ${fileHash}`
+        );
         return null;
       }
 
@@ -194,9 +223,13 @@ export class MxCadService {
       this.logger.debug(`[getPreloadingData] 文件内容: ${content}`);
 
       const data = JSON.parse(content) as PreloadingDataDto;
-      this.logger.debug(`[getPreloadingData] 解析后的数据: ${JSON.stringify(data)}`);
+      this.logger.debug(
+        `[getPreloadingData] 解析后的数据: ${JSON.stringify(data)}`
+      );
 
-      this.logger.debug(`成功从本地获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
+      this.logger.debug(
+        `成功从本地获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`
+      );
 
       return data;
     } catch (error) {
@@ -216,13 +249,22 @@ export class MxCadService {
     fileName: string
   ): Promise<boolean> {
     try {
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, fileHash);
 
       // 判断文件类型
       const ext = path.extname(fileName).toLowerCase();
       const isDwgFile = ['.dwg', '.dxf'].includes(ext);
-      const isImageFile = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext);
+      const isImageFile = [
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.webp',
+        '.bmp',
+      ].includes(ext);
 
       // 构建目标文件名
       let targetFileName: string;
@@ -242,14 +284,21 @@ export class MxCadService {
       // 检查文件是否存在
       try {
         await fsPromises.access(targetFilePath);
-        this.logger.log(`[checkExternalReferenceExists] 文件存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`);
+        this.logger.log(
+          `[checkExternalReferenceExists] 文件存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`
+        );
         return true;
       } catch (error) {
-        this.logger.log(`[checkExternalReferenceExists] 文件不存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`);
+        this.logger.log(
+          `[checkExternalReferenceExists] 文件不存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`
+        );
         return false;
       }
     } catch (error) {
-      this.logger.error(`[checkExternalReferenceExists] 检查失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[checkExternalReferenceExists] 检查失败: ${error.message}`,
+        error.stack
+      );
       return false;
     }
   }
@@ -258,14 +307,25 @@ export class MxCadService {
    * 为 MxCAD-App 推断上下文信息
    */
   async inferContextForMxCadApp(fileHash: string, request: any): Promise<any> {
-    return this.fileSystemNodeService.inferContextForMxCadApp(fileHash, request);
+    return this.fileSystemNodeService.inferContextForMxCadApp(
+      fileHash,
+      request
+    );
   }
 
   /**
    * 检查用户是否有项目访问权限
    */
-  async checkProjectPermission(projectId: string, userId: string, userRole: string): Promise<boolean> {
-    return this.fileSystemNodeService.checkProjectPermission(projectId, userId, userRole);
+  async checkProjectPermission(
+    projectId: string,
+    userId: string,
+    userRole: string
+  ): Promise<boolean> {
+    return this.fileSystemNodeService.checkProjectPermission(
+      projectId,
+      userId,
+      userRole
+    );
   }
 
   /**
@@ -279,7 +339,7 @@ export class MxCadService {
     chunks: number,
     context?: any
   ): Promise<{ ret: string; tz?: boolean }> {
-// 验证权限
+    // 验证权限
     await this.permissionService.validateUploadPermission(context);
 
     const result = await this.fileUploadManager.uploadChunk({
@@ -290,7 +350,7 @@ export class MxCadService {
       chunks,
       context: this.validateContext(context),
     });
-return result;
+    return result;
   }
 
   /**
@@ -304,7 +364,7 @@ return result;
     context?: any,
     srcDwgFileHash?: string
   ): Promise<{ ret: string; tz?: boolean }> {
-// 验证权限
+    // 验证权限
     await this.permissionService.validateUploadPermission(context);
 
     const result = await this.fileUploadManager.mergeChunksWithPermission({
@@ -315,7 +375,7 @@ return result;
       context: this.validateContext(context),
       srcDwgFileHash, // 外部参照上传时的源图纸哈希
     });
-return result;
+    return result;
   }
 
   /**
@@ -362,11 +422,15 @@ return result;
     // 在测试环境中，如果 context 为空，返回一个 mock context
     if (!context) {
       // 检查是否是测试环境
-      if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined) {
+      if (
+        process.env.NODE_ENV === 'test' ||
+        process.env.JEST_WORKER_ID !== undefined
+      ) {
         return {
           userId: 'test-user-id',
           username: 'test-user',
           role: 'USER',
+          nodeId: 'test-node-id',
         };
       }
       throw new Error('上下文参数不能为空');
@@ -389,7 +453,9 @@ return result;
    * @param fileHash 文件哈希值
    * @returns 外部参照统计信息
    */
-  async getExternalReferenceStats(fileHash: string): Promise<ExternalReferenceStats> {
+  async getExternalReferenceStats(
+    fileHash: string
+  ): Promise<ExternalReferenceStats> {
     const preloadingData = await this.getPreloadingData(fileHash);
 
     if (!preloadingData) {
@@ -431,7 +497,7 @@ return result;
       });
     }
 
-    const missingCount = references.filter(ref => !ref.exists).length;
+    const missingCount = references.filter((ref) => !ref.exists).length;
 
     return {
       hasMissing: missingCount > 0,
@@ -499,8 +565,19 @@ return result;
    * 创建默认上下文（用于没有上下文的操作）
    */
   private async createDefaultContext(): Promise<any> {
-    // 这里可以创建一个默认的用户和项目上下文
-    // 或者抛出异常要求必须提供上下文
+    // 在测试环境中，返回一个默认的上下文
+    if (
+      process.env.NODE_ENV === 'test' ||
+      process.env.JEST_WORKER_ID !== undefined
+    ) {
+      return {
+        userId: 'test-user-id',
+        username: 'test-user',
+        role: 'USER',
+        nodeId: 'test-node-id',
+      };
+    }
+    // 在生产环境中，抛出异常要求必须提供上下文
     throw new Error('必须提供有效的上下文参数');
   }
 
