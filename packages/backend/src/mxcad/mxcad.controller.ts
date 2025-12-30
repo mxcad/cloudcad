@@ -838,8 +838,20 @@ export class MxCadController {
 
     // 获取源图纸节点信息
     const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+    
     // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
-    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+    // 如果源图纸没有 parentId（说明是项目根目录），则使用源图纸的 ID
+    // 否则递归查找项目根目录（isRoot=true 的节点）
+    let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+    
+    // 如果源图纸有 parentId，尝试查找项目根目录
+    if (sourceNode?.parentId && !sourceNode.isRoot) {
+      const projectRoot = await this.getProjectRootByNodeId(sourceNode.parentId);
+      if (projectRoot) {
+        nodeId = projectRoot.id;
+        this.logger.log(`[uploadExtReferenceDwg] 找到项目根目录: ${nodeId}`);
+      }
+    }
 
     // 构建上下文（外部参照上传）
     const context = {
@@ -954,8 +966,18 @@ export class MxCadController {
 
     // 获取源图纸节点信息
     const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+    
     // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
-    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+    let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+    
+    // 如果源图纸有 parentId，尝试查找项目根目录
+    if (sourceNode?.parentId && !sourceNode.isRoot) {
+      const projectRoot = await this.getProjectRootByNodeId(sourceNode.parentId);
+      if (projectRoot) {
+        nodeId = projectRoot.id;
+        this.logger.log(`[uploadExtReferenceImage] 找到项目根目录: ${nodeId}`);
+      }
+    }
 
     // 构建上下文（外部参照上传）
     const context = {
@@ -1508,12 +1530,47 @@ export class MxCadController {
           id: true,
           name: true,
           ownerId: true,
+          parentId: true,
+          isRoot: true,
         },
       });
 
       return node;
     } catch (error) {
       this.logger.error(`查找文件节点失败: ${error.message}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 根据节点 ID 查找项目根目录
+   * @param nodeId 节点 ID
+   * @returns 项目根目录节点或 null
+   */
+  private async getProjectRootByNodeId(nodeId: string): Promise<any> {
+    try {
+      // 先检查当前节点是否是项目根目录
+      const currentNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { id: true, isRoot: true, parentId: true },
+      });
+
+      if (!currentNode) {
+        return null;
+      }
+
+      if (currentNode.isRoot) {
+        return currentNode;
+      }
+
+      // 如果不是根目录，递归查找父节点
+      if (currentNode.parentId) {
+        return this.getProjectRootByNodeId(currentNode.parentId);
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`查找项目根目录失败: ${error.message}`, error);
       return null;
     }
   }
