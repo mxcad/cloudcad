@@ -185,13 +185,13 @@ export class MinioSyncService {
   public async getFileUrl(minioPath: string, expiry: number = 3600): Promise<string | null> {
     try {
       await this.ensureBucketExists();
-      
+
       const exists = await this.minioClient.statObject(this.bucketName, minioPath);
       if (!exists) {
         this.logger.warn(`MinIO 文件不存在: ${minioPath}`);
         return null;
       }
-      
+
       return await this.minioClient.presignedGetObject(
         this.bucketName,
         minioPath,
@@ -199,6 +199,26 @@ export class MinioSyncService {
       );
     } catch (error) {
       this.logger.error(`获取文件 URL 失败: ${minioPath}: ${error.message}`, error.stack);
+      return null;
+    }
+  }
+
+  /**
+   * 获取 MinIO 文件信息（用于 HEAD 请求）
+   * MinIO 的预签名 GET URL 不支持 HEAD 请求，需要使用 SDK 直接获取文件信息
+   */
+  public async getFileInfo(minioPath: string): Promise<{ contentType: string; contentLength: string } | null> {
+    try {
+      await this.ensureBucketExists();
+
+      const statResult = await this.minioClient.statObject(this.bucketName, minioPath);
+
+      return {
+        contentType: statResult.metaData?.['content-type'] || 'application/octet-stream',
+        contentLength: statResult.size.toString(),
+      };
+    } catch (error) {
+      this.logger.error(`获取 MinIO 文件信息失败: ${minioPath}: ${error.message}`, error.stack);
       return null;
     }
   }

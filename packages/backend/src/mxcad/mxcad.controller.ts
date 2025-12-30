@@ -30,6 +30,7 @@ import { TzDto } from './dto/tz.dto';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -37,12 +38,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiBearerAuth()
 export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
+  private readonly mxCadFileExt: string;
 
   constructor(
     private readonly mxCadService: MxCadService,
     private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
-  ) { }
+    private readonly configService: ConfigService,
+  ) {
+    this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
+  }
 
   /**
    * 检查分片是否存在
@@ -712,8 +717,7 @@ export class MxCadController {
     }
 
     const inputFile = file.path.replace(/\\/g, '/');
-    const outputFile = `${file.filename}.mxweb`;
-
+          const outputFile = `${file.filename}${this.mxCadFileExt}`;
     param.srcpath = inputFile;
     param.outname = outputFile;
 
@@ -982,12 +986,12 @@ export class MxCadController {
    * 访问转换后的文件 (.mxweb) - GET 方法
    * 支持 MxCAD-App 访问路径: /mxcad/file/{filename}
    * 优先从 MinIO 读取，失败时降级到本地文件系统
-   * 
-   * @param filename 文件名，例如: 53c2fbd5c71f81794af465cc02a845e2.dwg.mxweb
+   *
+   * @param filename 文件名，支持跨目录路径，例如: 53c2fbd5c71f81794af465cc02a845e2/A1.dwg.mxweb
    * @param res Express Response 对象
    * @returns 返回文件流或错误信息
    */
-  @Get('file/:filename')
+  @Get('file/*filename')
   @ApiResponse({
     status: 200,
     description: '成功获取文件',
@@ -1037,12 +1041,12 @@ export class MxCadController {
   /**
    * 访问转换后的文件 (.mxweb) - HEAD 方法
    * 用于获取文件信息而不下载文件内容
-   * 
-   * @param filename 文件名，例如: 53c2fbd5c71f81794af465cc02a845e2.dwg.mxweb
+   *
+   * @param filename 文件名，支持跨目录路径，例如: 53c2fbd5c71f81794af465cc02a845e2/A1.dwg.mxweb
    * @param res Express Response 对象
    * @returns 返回文件头信息或错误信息
    */
-  @Head('file/:filename')
+  @Head('file/*filename')
   @ApiResponse({
     status: 200,
     description: '成功获取文件信息',
@@ -1070,9 +1074,9 @@ export class MxCadController {
     try {
       // 对于文件访问请求，验证 JWT token 但不强制要求 nodeId
       // 通过文件路径查找 FileSystemNode 并验证权限
-      
+
       // 调试日志
-      this.logger.log(`访问文件请求: ${filename}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`);
+      this.logger.log(`访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`);
       
       let userId: string;
       try {
@@ -1083,10 +1087,13 @@ export class MxCadController {
         return res.status(401).json({ code: -1, message: authError.message });
       }
       
+      // Express 的 *filename 通配符会将路径中的 / 替换为 ,，需要先还原
+      const normalizedFilename = filename.replace(/,/g, '/');
+
       // 从文件路径中提取哈希值（可能是完整路径如: hash/filename 或直接是 filename）
-      const pathParts = filename.split('/');
+      const pathParts = normalizedFilename.split('/');
       const fileHash = pathParts[0]; // 第一个部分是哈希值
-      const actualFilename = pathParts.length > 1 ? pathParts.slice(1).join('/') : filename;
+      const actualFilename = pathParts.length > 1 ? pathParts.slice(1).join('/') : normalizedFilename;
 
       this.logger.log(`提取的fileHash: ${fileHash}, actualFilename: ${actualFilename}`);
 
@@ -1096,7 +1103,7 @@ export class MxCadController {
       
       if (!node) {
         // 文件节点不存在，降级到本地文件系统查找（兼容旧文件）
-        this.logger.log(`文件节点不存在，降级到本地文件系统: ${filename}`);
+        this.logger.log(`文件节点不存在，降级到本地文件系统: ${normalizedFilename}`);
       } else {
         // 验证用户是否有权限访问该文件
         const hasPermission = await this.checkFileAccessPermission(
@@ -1118,34 +1125,35 @@ export class MxCadController {
       const path = require('path');
 
       // 根据文件扩展名确定可能的存储路径
-      const ext = path.extname(filename).toLowerCase();
+      const ext = path.extname(normalizedFilename).toLowerCase();
       const possiblePaths: string[] = [];
 
-      // 对于 mxweb 文件，使用 mxcad/file/ 路径
-      if (ext === '.mxweb') {
-        possiblePaths.push(`mxcad/file/${filename}`);
-      } 
+      // 对于 MxCAD 转换文件，使用 mxcad/file/ 路径
+      if (ext === this.mxCadFileExt) {
+        possiblePaths.push(`mxcad/file/${normalizedFilename}`);
+      }
       // 对于图片文件，可能在 mxcad_res 目录下或根据哈希值查找
       else if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
-        possiblePaths.push(`mxcad/res/${filename}`);
-        possiblePaths.push(`mxcad/images/${filename}`);
+        possiblePaths.push(`mxcad/res/${normalizedFilename}`);
+        possiblePaths.push(`mxcad/images/${normalizedFilename}`);
         // 也支持直接文件名
-        possiblePaths.push(filename);
+        possiblePaths.push(normalizedFilename);
       }
       // 对于 JSON 文件
       else if (ext === '.json') {
-        possiblePaths.push(`mxcad/file/${filename}`);
-        possiblePaths.push(filename);
+        possiblePaths.push(`mxcad/file/${normalizedFilename}`);
+        possiblePaths.push(normalizedFilename);
       }
       // 其他文件类型
       else {
-        possiblePaths.push(`mxcad/file/${filename}`);
-        possiblePaths.push(filename);
+        possiblePaths.push(`mxcad/file/${normalizedFilename}`);
+        possiblePaths.push(normalizedFilename);
       }
 
       this.logger.log(`访问文件 - 尝试路径: ${possiblePaths.join(', ')}`);
 
       let minioUrl: string | null = null;
+      let foundMinioPath: string | null = null;
 
       // 尝试获取文件 URL
       for (const mxcadPath of possiblePaths) {
@@ -1153,6 +1161,7 @@ export class MxCadController {
           const url = await this.mxCadService['minioSyncService'].getFileUrl(mxcadPath);
           if (url) {
             minioUrl = url;
+            foundMinioPath = mxcadPath;
             this.logger.log(`找到 MinIO 文件: ${mxcadPath}`);
             break;
           }
@@ -1164,48 +1173,25 @@ export class MxCadController {
       if (minioUrl) {
         // MinIO 中存在文件
         if (isHeadRequest) {
-          // 对于 HEAD 请求，我们需要获取文件信息而不是重定向
+          // 对于 HEAD 请求，直接使用 MinIO SDK 获取文件信息
+          // MinIO 的预签名 GET URL 不支持 HEAD 请求
           try {
-            // 使用 Node.js 内置的 https/http 模块获取文件信息
-            const { URL } = require('url');
-            const http = require(minioUrl.startsWith('https://') ? 'https' : 'http');
+            const fileInfo = await this.mxCadService['minioSyncService'].getFileInfo(foundMinioPath!);
 
-            const fileInfo = await new Promise<{
-              contentType: string;
-              contentLength: string;
-            }>((resolve, reject) => {
-              const url = new URL(minioUrl);
-              const req = http.request({
-                hostname: url.hostname,
-                port: url.port,
-                path: url.pathname + url.search,
-                method: 'HEAD',
-                timeout: 5000,
-              }, (response) => {
-                resolve({
-                  contentType: response.headers['content-type'] || 'application/octet-stream',
-                  contentLength: response.headers['content-length'] || '0',
-                });
-              });
+            if (fileInfo) {
+              // 设置响应头
+              res.setHeader('Content-Type', fileInfo.contentType);
+              res.setHeader('Content-Length', fileInfo.contentLength);
+              res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存1小时
+              res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
 
-              req.on('error', reject);
-              req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('请求超时'));
-              });
-
-              req.end();
-            });
-
-            // 设置响应头
-            res.setHeader('Content-Type', fileInfo.contentType);
-            res.setHeader('Content-Length', fileInfo.contentLength);
-            res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存1小时
-            res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
-
-            // HEAD 请求只返回头部信息
-            res.end();
-            return;
+              // HEAD 请求只返回头部信息
+              res.end();
+              return;
+            } else {
+              // 获取文件信息失败，降级到本地文件系统
+              this.mxCadService.logWarn(`获取 MinIO 文件信息失败，降级到本地文件系统: ${normalizedFilename}`);
+            }
           } catch (error) {
             this.mxCadService.logError(`获取 MinIO 文件信息失败: ${error.message}`, error);
             // 如果获取文件信息失败，降级到本地文件系统
@@ -1217,7 +1203,7 @@ export class MxCadController {
       }
 
       // MinIO 中不存在，降级到本地文件系统
-      this.mxCadService.logWarn(`MinIO 文件不存在，降级到本地文件系统: ${filename}`);
+      this.mxCadService.logWarn(`MinIO 文件不存在，降级到本地文件系统: ${normalizedFilename}`);
 
       // 获取文件搜索路径列表
       const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
@@ -1239,7 +1225,7 @@ export class MxCadController {
       // 在所有路径中查找文件
       for (let i = 0; i < resFilePath.length; i++) {
         // 直接查找
-        const directPath = path.join(resFilePath[i], filename);
+        const directPath = path.join(resFilePath[i], normalizedFilename);
         if (fs.existsSync(directPath)) {
           foundFilePath = directPath;
           break;
@@ -1247,10 +1233,10 @@ export class MxCadController {
 
         // 对于图片和资源文件，可能在哈希值命名的子目录中
         if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.json'].includes(ext)) {
-          // 从 filename 中提取哈希值（如果包含路径）
-          const parts = filename.split('/');
+          // 从 normalizedFilename 中提取哈希值（如果包含路径）
+          const parts = normalizedFilename.split('/');
           const hash = parts[0];
-          const shortName = parts.length > 1 ? parts.slice(1).join('/') : filename;
+          const shortName = parts.length > 1 ? parts.slice(1).join('/') : normalizedFilename;
 
           // 在哈希值命名的目录中查找
           const hashDirPath = path.join(resFilePath[i], hash);
@@ -1280,7 +1266,7 @@ export class MxCadController {
 
       // 根据文件扩展名设置适当的 Content-Type
       switch (ext) {
-        case '.mxweb':
+        case this.mxCadFileExt:
           contentType = 'application/octet-stream';
           break;
         case '.dwg':
