@@ -7,7 +7,7 @@ import { PermissionCacheService } from '../common/services/permission-cache.serv
 
 describe('AdminController', () => {
   let controller: AdminController;
-  
+
   const mockPermissionService = {
     getUserPermissions: jest.fn(),
   };

@@ -7,21 +7,44 @@ export class FileTypeDetector {
    * CAD文件扩展名
    */
   private static readonly CAD_EXTENSIONS = ['.dwg', '.dxf'];
-  
+
   /**
    * 图片文件扩展名
    */
-  private static readonly IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
-  
+  private static readonly IMAGE_EXTENSIONS = [
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.bmp',
+    '.svg',
+    '.webp',
+  ];
+
   /**
    * 文档文件扩展名
    */
-  private static readonly DOCUMENT_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'];
-  
+  private static readonly DOCUMENT_EXTENSIONS = [
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.txt',
+  ];
+
   /**
    * 压缩文件扩展名
    */
-  private static readonly ARCHIVE_EXTENSIONS = ['.zip', '.rar', '.7z', '.tar', '.gz'];
+  private static readonly ARCHIVE_EXTENSIONS = [
+    '.zip',
+    '.rar',
+    '.7z',
+    '.tar',
+    '.gz',
+  ];
 
   /**
    * 检查是否为CAD文件
@@ -86,7 +109,9 @@ export class FileTypeDetector {
    * @param fileName 文件名
    * @returns 文件类型分类
    */
-  static getFileCategory(fileName: string): 'cad' | 'image' | 'document' | 'archive' | 'other' {
+  static getFileCategory(
+    fileName: string
+  ): 'cad' | 'image' | 'document' | 'archive' | 'other' {
     if (this.isCadFile(fileName)) return 'cad';
     if (this.isImageFile(fileName)) return 'image';
     if (this.isDocumentFile(fileName)) return 'document';

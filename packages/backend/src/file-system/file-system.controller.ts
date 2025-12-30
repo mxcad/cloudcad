@@ -154,7 +154,7 @@ export class FileSystemController {
     body: { parentId?: string; fileName?: string; fileContent?: string }
   ) {
     const { parentId, fileName, fileContent } = body;
-if (!fileName) {
+    if (!fileName) {
       throw new BadRequestException('缺少文件名称');
     }
 

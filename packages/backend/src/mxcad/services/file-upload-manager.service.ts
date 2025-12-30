@@ -4,7 +4,10 @@ import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { FileStorageService } from './file-storage.service';
 import { FileConversionService } from './file-conversion.service';
 import { FileSystemService } from './file-system.service';
-import { FileSystemNodeService, FileSystemNodeContext } from './filesystem-node.service';
+import {
+  FileSystemNodeService,
+  FileSystemNodeContext,
+} from './filesystem-node.service';
 import { CacheManagerService } from './cache-manager.service';
 import { MinioSyncService } from '../minio-sync.service';
 import { MxCadService } from '../mxcad.service';
@@ -42,12 +45,13 @@ export interface UploadFileOptions {
 @Injectable()
 export class FileUploadManagerService {
   private readonly logger = new Logger(FileUploadManagerService.name);
-  
+
   // 当前正在合并转换的文件，防止同一个文件同时多次进行转换合并调用
   private readonly mapCurrentFilesBeingMerged: Record<string, boolean> = {};
-  
+
   // 并发控制
-  private readonly checkingFiles: Map<string, Promise<{ ret: string }>> = new Map();
+  private readonly checkingFiles: Map<string, Promise<{ ret: string }>> =
+    new Map();
 
   constructor(
     private readonly configService: ConfigService,
@@ -58,7 +62,7 @@ export class FileUploadManagerService {
     private readonly cacheManager: CacheManagerService,
     private readonly minioSyncService: MinioSyncService,
     @Inject(forwardRef(() => MxCadService))
-    private readonly mxCadService: MxCadService,
+    private readonly mxCadService: MxCadService
   ) {}
 
   /**
@@ -66,9 +70,11 @@ export class FileUploadManagerService {
    */
   async checkChunkExist(options: UploadChunkOptions): Promise<{ ret: string }> {
     const { chunk, hash, size, chunks: totalChunks, name } = options;
-    
-    this.logger.log(`[checkChunkExist] 开始检查: chunk=${chunk}, hash=${hash}, chunks=${totalChunks}, name=${name}`);
-    
+
+    this.logger.log(
+      `[checkChunkExist] 开始检查: chunk=${chunk}, hash=${hash}, chunks=${totalChunks}, name=${name}`
+    );
+
     try {
       const cbfilename = `${chunk}_${hash}`;
       const tmpDir = this.fileSystemService.getChunkTempDirPath(hash);
@@ -82,12 +88,14 @@ export class FileUploadManagerService {
         if (chunkSize !== size) {
           return { ret: MxUploadReturn.kChunkNoExist };
         }
-        
+
         // 分片大小匹配，检查是否需要合并
         // 如果是最后一个分片，检查是否所有分片都已上传
         if (chunk === totalChunks - 1) {
-          this.logger.log(`🔍 最后分片已上传，检查是否需要合并: ${name}, hash=${hash}, chunks=${totalChunks}`);
-          
+          this.logger.log(
+            `🔍 最后分片已上传，检查是否需要合并: ${name}, hash=${hash}, chunks=${totalChunks}`
+          );
+
           // 检查所有分片是否都存在
           let allChunksExist = true;
           for (let i = 0; i < totalChunks; i++) {
@@ -97,21 +105,24 @@ export class FileUploadManagerService {
               break;
             }
           }
-          
+
           if (allChunksExist) {
             this.logger.log(`✅ 所有分片已存在，触发合并: ${name}`);
-            
+
             // 防止重复转换：检查是否正在转换中
             const convertingKey = `converting:${hash}`;
-            const isConverting = this.cacheManager.get<boolean>('file-existence', convertingKey);
+            const isConverting = this.cacheManager.get<boolean>(
+              'file-existence',
+              convertingKey
+            );
             if (isConverting) {
               this.logger.log(`⏭️ 文件正在转换中，跳过重复转换: ${name}`);
               return { ret: MxUploadReturn.kFileAlreadyExist };
             }
-            
+
             // 标记为正在转换
             this.cacheManager.set('file-existence', convertingKey, true);
-            
+
             // 所有分片存在，触发合并
             const mergeResult = await this.mergeChunksWithPermission({
               hash,
@@ -120,18 +131,21 @@ export class FileUploadManagerService {
               chunks: totalChunks,
               context: options.context,
             });
-            
+
             // 清除转换标记
             this.cacheManager.delete('file-existence', convertingKey);
-            
-            if (mergeResult.ret === MxUploadReturn.kOk || mergeResult.ret === 'ok') {
+
+            if (
+              mergeResult.ret === MxUploadReturn.kOk ||
+              mergeResult.ret === 'ok'
+            ) {
               return { ret: MxUploadReturn.kFileAlreadyExist };
             } else {
               return { ret: MxUploadReturn.kChunkAlreadyExist };
             }
           }
         }
-        
+
         // 分片已存在，无需合并
         return { ret: MxUploadReturn.kChunkAlreadyExist };
       } else {
@@ -148,11 +162,16 @@ export class FileUploadManagerService {
    * 优先检查存储服务，本地文件系统作为降级方案
    * 支持并发控制
    */
-  async checkFileExist(filename: string, fileHash: string, context?: FileSystemNodeContext): Promise<{ ret: string }> {
+  async checkFileExist(
+    filename: string,
+    fileHash: string,
+    context?: FileSystemNodeContext
+  ): Promise<{ ret: string }> {
     try {
       const targetFile = this.getConvertedFileName(fileHash, filename);
       const suffix = filename.substring(filename.lastIndexOf('.') + 1);
-      const convertedExt = this.fileConversionService.getConvertedExtension(filename);
+      const convertedExt =
+        this.fileConversionService.getConvertedExtension(filename);
 
       this.logger.log(`🔍 检查文件存在性: ${targetFile}`);
 
@@ -165,12 +184,20 @@ export class FileUploadManagerService {
 
       // 创建检查 Promise 并缓存
       this.logger.log(`🔄 执行实际文件存在性检查: ${targetFile}`);
-      const checkPromise = this.performFileExistenceCheck(filename, fileHash, suffix, convertedExt, context);
+      const checkPromise = this.performFileExistenceCheck(
+        filename,
+        fileHash,
+        suffix,
+        convertedExt,
+        context
+      );
       this.checkingFiles.set(checkKey, checkPromise);
 
       try {
         const result = await checkPromise;
-        this.logger.log(`📋 文件存在性检查结果: ${targetFile} -> ${result.ret}`);
+        this.logger.log(
+          `📋 文件存在性检查结果: ${targetFile} -> ${result.ret}`
+        );
         return result;
       } finally {
         // 清理并发控制
@@ -185,8 +212,17 @@ export class FileUploadManagerService {
   /**
    * 合并转换文件
    */
-  async mergeConvertFile(options: MergeOptions): Promise<{ ret: string; tz?: boolean }> {
-    const { hash: hashFile, chunks, name: fileName, size: fileSize, context, srcDwgFileHash } = options;
+  async mergeConvertFile(
+    options: MergeOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
+    const {
+      hash: hashFile,
+      chunks,
+      name: fileName,
+      size: fileSize,
+      context,
+      srcDwgFileHash,
+    } = options;
     const fileMd5 = hashFile;
     const tmpDir = this.fileSystemService.getChunkTempDirPath(fileMd5);
 
@@ -229,7 +265,12 @@ export class FileUploadManagerService {
           }
 
           // 写入状态文件
-          await this.fileSystemService.writeStatusFile(fileName, fileSize, hashFile, filepath);
+          await this.fileSystemService.writeStatusFile(
+            fileName,
+            fileSize,
+            hashFile,
+            filepath
+          );
 
           // 对合并的文件进行格式转换
           const { isOk, ret } = await this.fileConversionService.convertFile({
@@ -247,7 +288,9 @@ export class FileUploadManagerService {
             // 检查是否为外部参照上传
             if (srcDwgFileHash) {
               // 外部参照：将转换后的文件移动到源图纸的 hash 目录
-              this.logger.log(`[mergeConvertFile] 检测到外部参照上传: srcDwgFileHash=${srcDwgFileHash}, fileName=${fileName}`);
+              this.logger.log(
+                `[mergeConvertFile] 检测到外部参照上传: srcDwgFileHash=${srcDwgFileHash}, fileName=${fileName}`
+              );
               try {
                 await this.handleExternalReferenceFile(
                   fileMd5,
@@ -257,12 +300,20 @@ export class FileUploadManagerService {
                 );
                 this.logger.log(`[mergeConvertFile] 外部参照文件处理完成`);
               } catch (error) {
-                this.logger.error(`[mergeConvertFile] 外部参照文件处理失败: ${error.message}`, error.stack);
+                this.logger.error(
+                  `[mergeConvertFile] 外部参照文件处理失败: ${error.message}`,
+                  error.stack
+                );
                 throw error;
               }
             } else if (context && context.userId) {
               // 普通图纸：创建文件系统节点
-              await this.handleFileNodeCreation(fileName, fileMd5, fileSize, context);
+              await this.handleFileNodeCreation(
+                fileName,
+                fileMd5,
+                fileSize,
+                context
+              );
             }
 
             if (ret.tz) {
@@ -300,15 +351,21 @@ export class FileUploadManagerService {
     srcFilePath: string
   ): Promise<void> {
     try {
-      this.logger.log(`[handleExternalReferenceFile] 开始处理: extRefHash=${extRefHash}, srcDwgFileHash=${srcDwgFileHash}, extRefFileName=${extRefFileName}, srcFilePath=${srcFilePath}`);
+      this.logger.log(
+        `[handleExternalReferenceFile] 开始处理: extRefHash=${extRefHash}, srcDwgFileHash=${srcDwgFileHash}, extRefFileName=${extRefFileName}, srcFilePath=${srcFilePath}`
+      );
 
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, srcDwgFileHash);
 
-      this.logger.log(`[handleExternalReferenceFile] uploadPath=${uploadPath}, hashDir=${hashDir}`);
+      this.logger.log(
+        `[handleExternalReferenceFile] uploadPath=${uploadPath}, hashDir=${hashDir}`
+      );
 
       // 确保目录存在
-      if (!await this.fileSystemService.exists(hashDir)) {
+      if (!(await this.fileSystemService.exists(hashDir))) {
         await fsPromises.mkdir(hashDir, { recursive: true } as any);
         this.logger.log(`[handleExternalReferenceFile] 创建目录: ${hashDir}`);
       } else {
@@ -325,29 +382,44 @@ export class FileUploadManagerService {
       const targetFile = path.join(hashDir, `${extRefFileName}${convertedExt}`);
 
       // 检查源文件是否存在
-      if (!await this.fileSystemService.exists(sourceFile)) {
+      if (!(await this.fileSystemService.exists(sourceFile))) {
         throw new Error(`转换后的文件不存在: ${sourceFile}`);
       }
 
       // 拷贝 mxweb 文件（保留原始文件供其他图纸复用）
       await fsPromises.copyFile(sourceFile, targetFile);
-      this.logger.log(`[handleExternalReferenceFile] mxweb 文件拷贝成功: ${targetFile}`);
+      this.logger.log(
+        `[handleExternalReferenceFile] mxweb 文件拷贝成功: ${targetFile}`
+      );
 
       // 同步 mxweb 文件到 MinIO
       try {
         const minioPath = `mxcad/file/${srcDwgFileHash}/${extRefFileName}${convertedExt}`;
-        const syncSuccess = await this.minioSyncService.syncFileToMinio(targetFile, minioPath);
+        const syncSuccess = await this.minioSyncService.syncFileToMinio(
+          targetFile,
+          minioPath
+        );
         if (syncSuccess) {
-          this.logger.log(`[handleExternalReferenceFile] MinIO 同步成功: ${minioPath}`);
+          this.logger.log(
+            `[handleExternalReferenceFile] MinIO 同步成功: ${minioPath}`
+          );
         } else {
-          this.logger.warn(`[handleExternalReferenceFile] MinIO 同步失败: ${minioPath}`);
+          this.logger.warn(
+            `[handleExternalReferenceFile] MinIO 同步失败: ${minioPath}`
+          );
         }
       } catch (syncError) {
-        this.logger.error(`[handleExternalReferenceFile] MinIO 同步异常: ${syncError.message}`, syncError.stack);
+        this.logger.error(
+          `[handleExternalReferenceFile] MinIO 同步异常: ${syncError.message}`,
+          syncError.stack
+        );
         // MinIO 同步失败不影响主流程
       }
     } catch (error) {
-      this.logger.error(`[handleExternalReferenceFile] 处理失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[handleExternalReferenceFile] 处理失败: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
@@ -355,7 +427,9 @@ export class FileUploadManagerService {
   /**
    * 上传分片文件
    */
-  async uploadChunk(options: UploadChunkOptions): Promise<{ ret: string; tz?: boolean }> {
+  async uploadChunk(
+    options: UploadChunkOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     const { hash, chunks, name, size, context } = options;
     return this.mergeConvertFile({ hash, chunks, name, size, context });
   }
@@ -363,9 +437,11 @@ export class FileUploadManagerService {
   /**
    * 上传完整文件并转换
    */
-  async uploadAndConvertFile(options: UploadFileOptions): Promise<{ ret: string; tz?: boolean }> {
+  async uploadAndConvertFile(
+    options: UploadFileOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     const { filePath, hash, name, size, context } = options;
-    
+
     try {
       await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
       const { isOk, ret } = await this.fileConversionService.convertFile({
@@ -395,19 +471,30 @@ export class FileUploadManagerService {
   /**
    * 合并分片文件方法（用于完成请求）
    */
-  async mergeChunksWithPermission(options: MergeOptions): Promise<{ ret: string; tz?: boolean }> {
+  async mergeChunksWithPermission(
+    options: MergeOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     const { hash, name, size, chunks, context, srcDwgFileHash } = options;
 
-    this.logger.log(`[mergeChunksWithPermission] 开始合并: hash=${hash}, name=${name}, srcDwgFileHash=${srcDwgFileHash}`);
+    this.logger.log(
+      `[mergeChunksWithPermission] 开始合并: hash=${hash}, name=${name}, srcDwgFileHash=${srcDwgFileHash}`
+    );
 
     // 检查文件类型
     if (this.fileConversionService.needsConversion(name)) {
       // CAD文件：执行转换流程
-      const mergeResult = await this.mergeConvertFile({ hash, name, size, chunks, context, srcDwgFileHash });
+      const mergeResult = await this.mergeConvertFile({
+        hash,
+        name,
+        size,
+        chunks,
+        context,
+        srcDwgFileHash,
+      });
       return mergeResult;
     } else {
       // 非CAD文件：合并分片并直接上传到存储服务
-try {
+      try {
         // 合并分片文件
         const tmpDir = this.fileSystemService.getChunkTempDirPath(hash);
         const mergedFilePath = path.join(tmpDir, `${hash}_merged_${name}`);
@@ -423,10 +510,20 @@ try {
         }
 
         // 上传到存储服务
-        const fileSize = await this.fileSystemService.getFileSize(mergedFilePath);
+        const fileSize =
+          await this.fileSystemService.getFileSize(mergedFilePath);
         const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
 
-        // TODO: 实现文件上传逻辑
+        // 上传文件到 MinIO
+        const uploadSuccess = await this.fileStorageService.uploadFileFromLocal(
+          mergedFilePath,
+          storageKey
+        );
+        if (!uploadSuccess) {
+          this.logger.error(`非CAD文件上传到 MinIO 失败: ${storageKey}`);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+
         this.logger.log(`非CAD文件合并并上传到存储服务成功: ${storageKey}`);
 
         // 创建文件系统节点
@@ -435,9 +532,13 @@ try {
         // 清理临时文件
         await this.fileSystemService.deleteDirectory(tmpDir);
         await this.fileSystemService.delete(mergedFilePath);
-return { ret: MxUploadReturn.kOk };
+
+        return { ret: MxUploadReturn.kOk };
       } catch (error) {
-        this.logger.error(`非CAD文件合并上传失败: ${error.message}`, error.stack);
+        this.logger.error(
+          `非CAD文件合并上传失败: ${error.message}`,
+          error.stack
+        );
         return { ret: MxUploadReturn.kConvertFileError };
       }
     }
@@ -446,24 +547,43 @@ return { ret: MxUploadReturn.kOk };
   /**
    * 上传完整文件方法，添加权限验证和文件节点创建
    */
-  async uploadAndConvertFileWithPermission(options: UploadFileOptions): Promise<{ ret: string; tz?: boolean }> {
+  async uploadAndConvertFileWithPermission(
+    options: UploadFileOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     const { filePath, hash, name, size, context } = options;
 
     // 检查文件是否已存在（秒传）：优先 MinIO，然后本地文件系统
     const fileExists = await this.checkFileExistsInStorage(hash, name);
     if (fileExists) {
-      this.logger.log(`[uploadAndConvertFileWithPermission] 文件已存在，返回成功: ${name}`);
+      this.logger.log(
+        `[uploadAndConvertFileWithPermission] 文件已存在，返回成功: ${name}`
+      );
       // 创建文件系统节点
       await this.handleFileNodeCreation(name, hash, size, context);
 
       // 如果是外部参照，额外拷贝文件
       if (context.srcDwgFileHash) {
-        const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-        const targetFile = path.join(uploadPath, this.getConvertedFileName(hash, name));
+        const uploadPath =
+          this.configService.get('MXCAD_UPLOAD_PATH') ||
+          path.join(process.cwd(), 'uploads');
+        const targetFile = path.join(
+          uploadPath,
+          this.getConvertedFileName(hash, name)
+        );
         if (!context.isImage) {
-          await this.handleExternalReferenceFile(hash, context.srcDwgFileHash, name, targetFile);
+          await this.handleExternalReferenceFile(
+            hash,
+            context.srcDwgFileHash,
+            name,
+            targetFile
+          );
         } else {
-          await this.handleExternalReferenceImage(hash, context.srcDwgFileHash, name, targetFile);
+          await this.handleExternalReferenceImage(
+            hash,
+            context.srcDwgFileHash,
+            name,
+            targetFile
+          );
         }
       }
 
@@ -471,8 +591,13 @@ return { ret: MxUploadReturn.kOk };
     }
 
     // 获取目标文件路径
-    const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-    const targetFile = path.join(uploadPath, this.getConvertedFileName(hash, name));
+    const uploadPath =
+      this.configService.get('MXCAD_UPLOAD_PATH') ||
+      path.join(process.cwd(), 'uploads');
+    const targetFile = path.join(
+      uploadPath,
+      this.getConvertedFileName(hash, name)
+    );
 
     // 检查文件类型
     if (this.fileConversionService.needsConversion(name)) {
@@ -491,14 +616,29 @@ return { ret: MxUploadReturn.kOk };
 
         // 如果是外部参照 DWG 上传，额外拷贝文件到源图纸目录
         if (context.srcDwgFileHash && !context.isImage) {
-          this.logger.log(`[uploadAndConvertFileWithPermission] 外部参照 DWG 上传: ${name}, srcDwgFileHash=${context.srcDwgFileHash}`);
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 外部参照 DWG 上传: ${name}, srcDwgFileHash=${context.srcDwgFileHash}`
+          );
           try {
             // 传递转换后的文件路径（包含 .mxweb 扩展名）
-            const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-            const convertedFilePath = path.join(uploadPath, this.getConvertedFileName(hash, name));
-            await this.handleExternalReferenceFile(hash, context.srcDwgFileHash, name, convertedFilePath);
+            const uploadPath =
+              this.configService.get('MXCAD_UPLOAD_PATH') ||
+              path.join(process.cwd(), 'uploads');
+            const convertedFilePath = path.join(
+              uploadPath,
+              this.getConvertedFileName(hash, name)
+            );
+            await this.handleExternalReferenceFile(
+              hash,
+              context.srcDwgFileHash,
+              name,
+              convertedFilePath
+            );
           } catch (error) {
-            this.logger.error(`[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${error.message}`, error.stack);
+            this.logger.error(
+              `[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${error.message}`,
+              error.stack
+            );
             // 拷贝失败不影响主流程，只记录错误
           }
         }
@@ -518,7 +658,16 @@ return { ret: MxUploadReturn.kOk };
         const fileSize = await this.fileSystemService.getFileSize(filePath);
         const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
 
-        // TODO: 实现文件上传逻辑
+        // 上传文件到 MinIO
+        const uploadSuccess = await this.fileStorageService.uploadFileFromLocal(
+          filePath,
+          storageKey
+        );
+        if (!uploadSuccess) {
+          this.logger.error(`非CAD文件上传到 MinIO 失败: ${storageKey}`);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+
         this.logger.log(`非CAD文件上传到存储服务成功: ${storageKey}`);
 
         // 创建文件系统节点
@@ -526,11 +675,21 @@ return { ret: MxUploadReturn.kOk };
 
         // 如果是外部参照图片上传，额外拷贝文件到源图纸目录
         if (context.srcDwgFileHash && context.isImage) {
-          this.logger.log(`[uploadAndConvertFileWithPermission] 外部参照图片上传: ${name}, srcDwgFileHash=${context.srcDwgFileHash}`);
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 外部参照图片上传: ${name}, srcDwgFileHash=${context.srcDwgFileHash}`
+          );
           try {
-            await this.handleExternalReferenceImage(hash, context.srcDwgFileHash, name, filePath);
+            await this.handleExternalReferenceImage(
+              hash,
+              context.srcDwgFileHash,
+              name,
+              filePath
+            );
           } catch (error) {
-            this.logger.error(`[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${error.message}`, error.stack);
+            this.logger.error(
+              `[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${error.message}`,
+              error.stack
+            );
             // 拷贝失败不影响主流程，只记录错误
           }
         }
@@ -554,13 +713,17 @@ return { ret: MxUploadReturn.kOk };
     srcFilePath: string
   ): Promise<void> {
     try {
-      this.logger.log(`[handleExternalReferenceImage] 开始处理: fileHash=${fileHash}, srcDwgFileHash=${srcDwgFileHash}, extRefFileName=${extRefFileName}`);
+      this.logger.log(
+        `[handleExternalReferenceImage] 开始处理: fileHash=${fileHash}, srcDwgFileHash=${srcDwgFileHash}, extRefFileName=${extRefFileName}`
+      );
 
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, srcDwgFileHash);
 
       // 确保目录存在
-      if (!await this.fileSystemService.exists(hashDir)) {
+      if (!(await this.fileSystemService.exists(hashDir))) {
         await fsPromises.mkdir(hashDir, { recursive: true } as any);
         this.logger.log(`[handleExternalReferenceImage] 创建目录: ${hashDir}`);
       }
@@ -569,69 +732,90 @@ return { ret: MxUploadReturn.kOk };
 
       // 拷贝文件
       await fsPromises.copyFile(srcFilePath, targetFile);
-      this.logger.log(`[handleExternalReferenceImage] 文件拷贝成功: ${targetFile}`);
+      this.logger.log(
+        `[handleExternalReferenceImage] 文件拷贝成功: ${targetFile}`
+      );
 
       // 同步到 MinIO
       try {
         const minioPath = `mxcad/file/${srcDwgFileHash}/${extRefFileName}`;
-        const syncSuccess = await this.minioSyncService.syncFileToMinio(targetFile, minioPath);
+        const syncSuccess = await this.minioSyncService.syncFileToMinio(
+          targetFile,
+          minioPath
+        );
         if (syncSuccess) {
-          this.logger.log(`[handleExternalReferenceImage] MinIO 同步成功: ${minioPath}`);
+          this.logger.log(
+            `[handleExternalReferenceImage] MinIO 同步成功: ${minioPath}`
+          );
         } else {
-          this.logger.warn(`[handleExternalReferenceImage] MinIO 同步失败: ${minioPath}`);
+          this.logger.warn(
+            `[handleExternalReferenceImage] MinIO 同步失败: ${minioPath}`
+          );
         }
       } catch (syncError) {
-        this.logger.error(`[handleExternalReferenceImage] MinIO 同步异常: ${syncError.message}`, syncError.stack);
+        this.logger.error(
+          `[handleExternalReferenceImage] MinIO 同步异常: ${syncError.message}`,
+          syncError.stack
+        );
         // MinIO 同步失败不影响主流程
       }
     } catch (error) {
-      this.logger.error(`[handleExternalReferenceImage] 处理失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[handleExternalReferenceImage] 处理失败: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
 
-    /**
-     * 执行实际的文件存在性检查
-     */
-    private async performFileExistenceCheck(
-      filename: string,
-      fileHash: string,
-      suffix: string,
-      convertedExt: string,
-      context?: FileSystemNodeContext
-    ): Promise<{ ret: string }> {
-      const targetFile = `${fileHash}.${suffix}${convertedExt}`;
-      let fileExists = false;
-      let fileSource = '';
-  
-      // 1. 优先检查存储服务
-      this.logger.log(`🔍 检查MinIO: ${targetFile}`);
-      try {
-        const existsInStorage = await this.fileStorageService.fileExists(targetFile);
-        this.logger.log(`📦 MinIO检查结果: ${existsInStorage}`);
-        if (existsInStorage) {
-          fileExists = true;
-          fileSource = 'MinIO';
-        }
-      } catch (error) {
-        this.logger.error(`❌ MinIO检查失败: ${error.message}`);
+  /**
+   * 执行实际的文件存在性检查
+   */
+  private async performFileExistenceCheck(
+    filename: string,
+    fileHash: string,
+    suffix: string,
+    convertedExt: string,
+    context?: FileSystemNodeContext
+  ): Promise<{ ret: string }> {
+    const targetFile = `${fileHash}.${suffix}${convertedExt}`;
+    let fileExists = false;
+    let fileSource = '';
+
+    // 1. 优先检查存储服务
+    this.logger.log(`🔍 检查MinIO: ${targetFile}`);
+    try {
+      const existsInStorage =
+        await this.fileStorageService.fileExists(targetFile);
+      this.logger.log(`📦 MinIO检查结果: ${existsInStorage}`);
+      if (existsInStorage) {
+        fileExists = true;
+        fileSource = 'MinIO';
       }
-  
-      // 2. 降级检查本地文件系统
-      if (!fileExists) {
-        const localPath = this.fileSystemService.getMd5Path(targetFile);
-        this.logger.log(`🔍 检查本地: ${localPath}`);
-        const localExists = await this.fileSystemService.exists(localPath);
-        this.logger.log(`📁 本地检查结果: ${localExists}`);
-        if (localExists) {
-          fileExists = true;
-          fileSource = 'Local';        // 同步到 MinIO 以确保一致性
+    } catch (error) {
+      this.logger.error(`❌ MinIO检查失败: ${error.message}`);
+    }
+
+    // 2. 降级检查本地文件系统
+    if (!fileExists) {
+      const localPath = this.fileSystemService.getMd5Path(targetFile);
+      this.logger.log(`🔍 检查本地: ${localPath}`);
+      const localExists = await this.fileSystemService.exists(localPath);
+      this.logger.log(`📁 本地检查结果: ${localExists}`);
+      if (localExists) {
+        fileExists = true;
+        fileSource = 'Local'; // 同步到 MinIO 以确保一致性
         try {
           const fileBuffer = await fsPromises.readFile(localPath);
-          await this.minioSyncService.uploadFile(`mxcad/file/${targetFile}`, fileBuffer);
+          await this.minioSyncService.uploadFile(
+            `mxcad/file/${targetFile}`,
+            fileBuffer
+          );
           this.logger.log(`✅ 文件同步到MinIO: ${targetFile}`);
         } catch (syncError) {
-          this.logger.warn(`⚠️ 同步到MinIO失败: ${targetFile}, ${syncError.message}`);
+          this.logger.warn(
+            `⚠️ 同步到MinIO失败: ${targetFile}, ${syncError.message}`
+          );
         }
       }
     }
@@ -640,7 +824,13 @@ return { ret: MxUploadReturn.kOk };
     if (fileExists) {
       // 使用辅助方法处理文件系统节点创建
       try {
-        await this.handleFileSystemNodeCreation(filename, fileHash, context, fileSource, targetFile);
+        await this.handleFileSystemNodeCreation(
+          filename,
+          fileHash,
+          context,
+          fileSource,
+          targetFile
+        );
       } catch (nodeError) {
         // 文件系统节点创建失败不影响文件检查结果，只记录错误
         this.logger.error(`⚠️ 文件系统节点创建失败: ${nodeError.message}`);
@@ -666,19 +856,30 @@ return { ret: MxUploadReturn.kOk };
     targetFile: string
   ): Promise<void> {
     if (!context) {
-      throw new Error(`文件 ${filename} (${fileHash}) 缺少上下文信息，无法创建文件系统节点`);
+      throw new Error(
+        `文件 ${filename} (${fileHash}) 缺少上下文信息，无法创建文件系统节点`
+      );
     }
 
     if (!context.nodeId) {
-      throw new Error(`文件 ${filename} (${fileHash}) 缺少节点ID，无法创建文件系统节点`);
+      throw new Error(
+        `文件 ${filename} (${fileHash}) 缺少节点ID，无法创建文件系统节点`
+      );
     }
 
     if (!context.userId) {
-      throw new Error(`文件 ${filename} (${fileHash}) 缺少用户ID，无法创建文件系统节点`);
+      throw new Error(
+        `文件 ${filename} (${fileHash}) 缺少用户ID，无法创建文件系统节点`
+      );
     }
 
     // 获取文件大小
-    const actualFileSize = await this.getFileSize(fileHash, filename, fileSource, targetFile);
+    const actualFileSize = await this.getFileSize(
+      fileHash,
+      filename,
+      fileSource,
+      targetFile
+    );
 
     // 在事务中创建文件系统节点
     const extension = path.extname(filename).toLowerCase();
@@ -697,7 +898,9 @@ return { ret: MxUploadReturn.kOk };
       context: context,
     });
 
-    this.logger.log(`✅ 文件系统节点创建成功: ${filename} (${fileHash}) 在目录 ${context.nodeId}`);
+    this.logger.log(
+      `✅ 文件系统节点创建成功: ${filename} (${fileHash}) 在目录 ${context.nodeId}`
+    );
   }
 
   /**
@@ -710,21 +913,28 @@ return { ret: MxUploadReturn.kOk };
     context: FileSystemNodeContext
   ): Promise<void> {
     if (!context.nodeId) {
-      this.logger.warn('⚠️ 缺少节点ID，无法创建文件系统节点。文件将只保存到MxCAD存储，不会出现在文件系统中。');
+      this.logger.warn(
+        '⚠️ 缺少节点ID，无法创建文件系统节点。文件将只保存到MxCAD存储，不会出现在文件系统中。'
+      );
       return;
     }
 
     try {
       // 扫描MxCAD实际生成的所有相关文件
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-      const actualFiles = await this.fileSystemService.readDirectory(uploadPath);
-      
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
+      const actualFiles =
+        await this.fileSystemService.readDirectory(uploadPath);
+
       // 匹配所有以fileHash开头的文件（包含.mxweb、.mxweb_preloading.json、_xxx.dwg等）
-      const mxcadFiles = actualFiles.filter(file =>
+      const mxcadFiles = actualFiles.filter((file) =>
         file.startsWith(fileHash)
       );
 
-      this.logger.log(`🔍 扫描MxCAD文件: 哈希=${fileHash}, 找到文件数=${mxcadFiles.length}, 文件列表: ${mxcadFiles.join(', ')}`);
+      this.logger.log(
+        `🔍 扫描MxCAD文件: 哈希=${fileHash}, 找到文件数=${mxcadFiles.length}, 文件列表: ${mxcadFiles.join(', ')}`
+      );
 
       if (mxcadFiles.length === 0) {
         this.logger.error(`❌ 未找到MxCAD转换后的文件: ${fileHash}`);
@@ -732,7 +942,7 @@ return { ret: MxUploadReturn.kOk };
       }
 
       // 找到主.mxweb文件
-      const mainMxwebFile = mxcadFiles.find(file => file.endsWith('.mxweb'));
+      const mainMxwebFile = mxcadFiles.find((file) => file.endsWith('.mxweb'));
       if (!mainMxwebFile) {
         this.logger.error(`❌ 未找到MxCAD主文件: ${fileHash}`);
         return;
@@ -758,7 +968,9 @@ return { ret: MxUploadReturn.kOk };
       try {
         await this.mxCadService.updateExternalReferenceAfterUpload(fileHash);
       } catch (extRefError) {
-        this.logger.warn(`⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`);
+        this.logger.warn(
+          `⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`
+        );
       }
 
       // 同步所有MxCAD转换后的文件到存储服务
@@ -770,19 +982,28 @@ return { ret: MxUploadReturn.kOk };
             const fileBuffer = await fsPromises.readFile(localFilePath);
             const minioPath = `mxcad/file/${fileName}`;
             await this.minioSyncService.uploadFile(minioPath, fileBuffer);
-            this.logger.log(`✅ 文件同步到MinIO: ${fileName} (${fileBuffer.length} bytes)`);
+            this.logger.log(
+              `✅ 文件同步到MinIO: ${fileName} (${fileBuffer.length} bytes)`
+            );
             syncedCount++;
           } else {
             this.logger.warn(`⚠️ 本地文件不存在，跳过同步: ${localFilePath}`);
           }
         } catch (syncError) {
-          this.logger.error(`❌ 文件同步失败: ${fileName}: ${syncError.message}`);
+          this.logger.error(
+            `❌ 文件同步失败: ${fileName}: ${syncError.message}`
+          );
           // 单个文件同步失败不影响其他文件
         }
       }
-      this.logger.log(`📤 共 ${syncedCount}/${mxcadFiles.length} 个文件同步到MinIO成功`);
+      this.logger.log(
+        `📤 共 ${syncedCount}/${mxcadFiles.length} 个文件同步到MinIO成功`
+      );
     } catch (error) {
-      this.logger.error(`创建文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
+      this.logger.error(
+        `创建文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`,
+        error.stack
+      );
       // 不抛出错误，避免影响 mxcad 上传流程
     }
   }
@@ -811,7 +1032,10 @@ return { ret: MxUploadReturn.kOk };
         context: context,
       });
     } catch (error) {
-      this.logger.error(`创建非CAD文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
+      this.logger.error(
+        `创建非CAD文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`,
+        error.stack
+      );
       throw error; // 非CAD文件上传失败应该抛出错误
     }
   }
@@ -819,13 +1043,18 @@ return { ret: MxUploadReturn.kOk };
   /**
    * 获取文件大小（根据来源选择合适的方式）
    */
-  private async getFileSize(fileHash: string, filename: string, fileSource: string, targetFile: string): Promise<number> {
+  private async getFileSize(
+    fileHash: string,
+    filename: string,
+    fileSource: string,
+    targetFile: string
+  ): Promise<number> {
     try {
       if (fileSource === 'MinIO') {
         // 从存储服务获取文件大小
         const size = await this.fileStorageService.getFileSize(targetFile);
         if (size > 0) {
-return size;
+          return size;
         }
       }
 
@@ -833,17 +1062,20 @@ return size;
       const localPath = this.fileSystemService.getMd5Path(targetFile);
       const size = await this.fileSystemService.getFileSize(localPath);
       if (size > 0) {
-return size;
+        return size;
       }
 
       // 尝试查找其他可能的文件格式
-const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
       const allFiles = await this.fileSystemService.readDirectory(uploadPath);
-      const relatedFiles = allFiles.filter(file => file.startsWith(fileHash));
-if (relatedFiles.length > 0) {
+      const relatedFiles = allFiles.filter((file) => file.startsWith(fileHash));
+      if (relatedFiles.length > 0) {
         const firstFile = path.join(uploadPath, relatedFiles[0]);
-        const firstFileSize = await this.fileSystemService.getFileSize(firstFile);
-return firstFileSize;
+        const firstFileSize =
+          await this.fileSystemService.getFileSize(firstFile);
+        return firstFileSize;
       }
 
       return 0;
@@ -861,26 +1093,39 @@ return firstFileSize;
    * @param originalFilename 原始文件名（用于获取后缀）
    * @returns 文件是否存在
    */
-  private async checkFileExistsInStorage(fileHash: string, originalFilename: string): Promise<boolean> {
+  private async checkFileExistsInStorage(
+    fileHash: string,
+    originalFilename: string
+  ): Promise<boolean> {
     const targetFile = this.getConvertedFileName(fileHash, originalFilename);
 
     // 1. 优先检查 MinIO
     try {
-      const existsInMinio = await this.minioSyncService.fileExists(`mxcad/file/${targetFile}`);
+      const existsInMinio = await this.minioSyncService.fileExists(
+        `mxcad/file/${targetFile}`
+      );
       if (existsInMinio) {
-        this.logger.debug(`[checkFileExistsInStorage] 文件存在于 MinIO: ${targetFile}`);
+        this.logger.debug(
+          `[checkFileExistsInStorage] 文件存在于 MinIO: ${targetFile}`
+        );
         return true;
       }
     } catch (error) {
-      this.logger.debug(`[checkFileExistsInStorage] MinIO 检查失败: ${error.message}`);
+      this.logger.debug(
+        `[checkFileExistsInStorage] MinIO 检查失败: ${error.message}`
+      );
     }
 
     // 2. 降级检查本地文件系统
-    const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+    const uploadPath =
+      this.configService.get('MXCAD_UPLOAD_PATH') ||
+      path.join(process.cwd(), 'uploads');
     const localPath = path.join(uploadPath, targetFile);
     const existsInLocal = fs.existsSync(localPath);
     if (existsInLocal) {
-      this.logger.debug(`[checkFileExistsInStorage] 文件存在于本地: ${targetFile}`);
+      this.logger.debug(
+        `[checkFileExistsInStorage] 文件存在于本地: ${targetFile}`
+      );
       return true;
     }
 
@@ -895,9 +1140,15 @@ return firstFileSize;
    * @param originalFilename 原始文件名
    * @returns 转换后的文件名（不含路径）
    */
-  private getConvertedFileName(fileHash: string, originalFilename: string): string {
-    const suffix = originalFilename.substring(originalFilename.lastIndexOf('.') + 1);
-    const convertedExt = this.fileConversionService.getConvertedExtension(originalFilename);
+  private getConvertedFileName(
+    fileHash: string,
+    originalFilename: string
+  ): string {
+    const suffix = originalFilename.substring(
+      originalFilename.lastIndexOf('.') + 1
+    );
+    const convertedExt =
+      this.fileConversionService.getConvertedExtension(originalFilename);
     return `${fileHash}.${suffix}${convertedExt}`;
   }
 }

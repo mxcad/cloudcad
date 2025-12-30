@@ -312,7 +312,7 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       };
 
-      jwtService.verify.mockResolvedValue({ sub: 'user-id', type: 'refresh' });
+      jwtService.verify.mockReturnValue({ sub: 'user-id', type: 'refresh' });
       prisma.refreshToken.findFirst.mockResolvedValue(mockRefreshToken);
       tokenBlacklistService.isTokenBlacklisted.mockResolvedValue(false);
       prisma.user.findUnique.mockResolvedValue(mockUser);
@@ -327,19 +327,17 @@ describe('AuthService', () => {
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
         user: {
-          id: 'user-id',
-          email: 'test@example.com',
-          username: 'testuser',
-          nickname: 'Test User',
-          avatar: undefined,
-          role: 'USER',
-          status: 'ACTIVE',
+          ...mockUser,
+          nickname: mockUser.nickname || undefined,
+          avatar: mockUser.avatar || undefined,
         },
       });
     });
 
     it('should throw UnauthorizedException if token is invalid', async () => {
-      jwtService.verifyAsync.mockRejectedValue(new Error('Invalid token'));
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
 
       await expect(service.refreshToken('invalid-token')).rejects.toThrow(
         UnauthorizedException
@@ -347,7 +345,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if token is blacklisted', async () => {
-      jwtService.verifyAsync.mockResolvedValue({
+      jwtService.verify.mockReturnValue({
         sub: 'user-id',
         type: 'refresh',
       });
@@ -359,7 +357,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
-      jwtService.verifyAsync.mockResolvedValue({
+      jwtService.verify.mockReturnValue({
         sub: 'user-id',
         type: 'refresh',
       });

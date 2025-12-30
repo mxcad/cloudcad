@@ -72,8 +72,8 @@ const existResponse = await fetch('/mxcad/files/fileisExist', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     filename: file.name,
-    fileHash: fileHash
-  })
+    fileHash: fileHash,
+  }),
 });
 
 if (existResponse.ret === 'fileAlreadyExist') {
@@ -95,14 +95,14 @@ for (let i = 0; i < chunks; i++) {
       fileHash: fileHash,
       size: chunkSize,
       chunks: chunks,
-      fileName: file.name
-    })
+      fileName: file.name,
+    }),
   });
-  
+
   if (chunkExistResponse.ret === 'chunkAlreadyExist') {
     continue; // 跳过已存在的分片
   }
-  
+
   // 上传分片
   const formData = new FormData();
   formData.append('file', chunk);
@@ -111,10 +111,10 @@ for (let i = 0; i < chunks; i++) {
   formData.append('size', file.size);
   formData.append('chunk', i);
   formData.append('chunks', chunks);
-  
+
   await fetch('/mxcad/files/uploadFiles', {
     method: 'POST',
-    body: formData
+    body: formData,
   });
 }
 ```
@@ -129,23 +129,23 @@ const response = await fetch('/mxcad/convert', {
     param: {
       srcpath: '/path/to/file.dwg',
       async: 'true',
-      resultposturl: 'https://example.com/callback'
-    }
-  })
+      resultposturl: 'https://example.com/callback',
+    },
+  }),
 });
 ```
 
 ## 返回状态码
 
-| 状态码 | 说明 |
-|--------|------|
-| ok | 操作成功 |
-| errorparam | 参数错误 |
-| chunkAlreadyExist | 分片已存在 |
-| chunkNoExist | 分片不存在 |
-| fileAlreadyExist | 文件已存在 |
-| fileNoExist | 文件不存在 |
-| convertFileError | 文件转换错误 |
+| 状态码            | 说明         |
+| ----------------- | ------------ |
+| ok                | 操作成功     |
+| errorparam        | 参数错误     |
+| chunkAlreadyExist | 分片已存在   |
+| chunkNoExist      | 分片不存在   |
+| fileAlreadyExist  | 文件已存在   |
+| fileNoExist       | 文件不存在   |
+| convertFileError  | 文件转换错误 |
 
 ## 注意事项
 

@@ -137,10 +137,10 @@ describe('FileSystemController', () => {
 
       mockFileSystemService.deleteProject.mockResolvedValue(mockResult);
 
-      const result = await controller.deleteProject(projectId);
+      const result = await controller.deleteProject(projectId, {});
 
       expect(result).toEqual(mockResult);
-      expect(service.deleteProject).toHaveBeenCalledWith(projectId);
+      expect(service.deleteProject).toHaveBeenCalledWith(projectId, undefined);
     });
   });
 
@@ -248,10 +248,10 @@ describe('FileSystemController', () => {
 
       mockFileSystemService.deleteNode.mockResolvedValue(mockResult);
 
-      const result = await controller.deleteNode(nodeId);
+      const result = await controller.deleteNode(nodeId, {});
 
       expect(result).toEqual(mockResult);
-      expect(service.deleteNode).toHaveBeenCalledWith(nodeId);
+      expect(service.deleteNode).toHaveBeenCalledWith(nodeId, undefined);
     });
   });
 

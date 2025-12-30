@@ -63,7 +63,9 @@ export interface IFileSystemService {
    * @param options 合并选项
    * @returns 合并结果
    */
-  mergeChunks(options: MergeOptions): Promise<{ success: boolean; error?: string }>;
+  mergeChunks(
+    options: MergeOptions
+  ): Promise<{ success: boolean; error?: string }>;
 
   /**
    * 写入状态文件
@@ -73,7 +75,12 @@ export interface IFileSystemService {
    * @param targetPath 目标路径
    * @returns 是否写入成功
    */
-  writeStatusFile(name: string, size: number, hash: string, targetPath: string): Promise<boolean>;
+  writeStatusFile(
+    name: string,
+    size: number,
+    hash: string,
+    targetPath: string
+  ): Promise<boolean>;
 
   /**
    * 获取分片临时目录路径

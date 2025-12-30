@@ -36,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // 检查用户是否在黑名单中
     const isUserBlacklisted =
       await this.tokenBlacklistService.isUserBlacklisted(payload.sub);
-if (isUserBlacklisted) {
+    if (isUserBlacklisted) {
       throw new Error('用户已被禁用');
     }
 
@@ -52,13 +52,13 @@ if (isUserBlacklisted) {
         status: true,
       },
     });
-if (!user) {
-throw new Error('用户不存在');
+    if (!user) {
+      throw new Error('用户不存在');
     }
 
     if (user.status !== 'ACTIVE') {
       throw new Error('用户已被禁用');
     }
-return user;
+    return user;
   }
 }

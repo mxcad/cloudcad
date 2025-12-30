@@ -39,12 +39,10 @@ afterEach(() => {
 });
 
 // Global error handler for unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-});
+process.on('unhandledRejection', (reason, promise) => {});
 
 // Global error handler for uncaught exceptions
-process.on('uncaughtException', (error) => {
-});
+process.on('uncaughtException', (error) => {});
 
 // Extend Jest matchers for custom assertions
 expect.extend({

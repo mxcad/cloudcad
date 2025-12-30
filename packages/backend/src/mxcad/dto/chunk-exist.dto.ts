@@ -22,7 +22,10 @@ export class ChunkExistDto {
   @IsString()
   filename: string;
 
-  @ApiProperty({ description: '节点ID（项目根目录或文件夹的 FileSystemNode ID）', required: false })
+  @ApiProperty({
+    description: '节点ID（项目根目录或文件夹的 FileSystemNode ID）',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   nodeId?: string;

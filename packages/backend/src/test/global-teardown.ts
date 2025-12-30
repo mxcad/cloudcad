@@ -4,16 +4,16 @@
 const prisma = new PrismaClient();
 
 export default async function globalTeardown() {
-try {
+  try {
     // Connect to test database
     await prisma.$connect();
-// Clean up database after tests
+    // Clean up database after tests
     await cleanupDatabase();
-} catch (error) {
-throw error;
+  } catch (error) {
+    throw error;
   } finally {
     await prisma.$disconnect();
-}
+  }
 }
 
 async function cleanupDatabase() {
@@ -28,8 +28,7 @@ async function cleanupDatabase() {
         await prisma.$executeRawUnsafe(
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
-      } catch (error) {
-}
+      } catch (error) {}
     }
   }
 }

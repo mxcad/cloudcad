@@ -5,20 +5,20 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export default async function globalSetup() {
-try {
+  try {
     // Connect to test database
     await prisma.$connect();
-// Clean up database before tests
+    // Clean up database before tests
     await cleanupDatabase();
-// Run database migrations if needed
+    // Run database migrations if needed
     // await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-// Create test data seeds if needed
+    // Create test data seeds if needed
     await seedTestData();
-} catch (error) {
-throw error;
+  } catch (error) {
+    throw error;
   } finally {
     await prisma.$disconnect();
-}
+  }
 }
 
 async function cleanupDatabase() {
@@ -33,8 +33,7 @@ async function cleanupDatabase() {
         await prisma.$executeRawUnsafe(
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
-      } catch (error) {
-}
+      } catch (error) {}
     }
   }
 }
@@ -57,7 +56,7 @@ async function seedTestData() {
     });
   } catch (error) {
     // Admin user might already exist
-}
+  }
 
   // Create default regular user if it doesn't exist
   try {
@@ -74,5 +73,5 @@ async function seedTestData() {
     });
   } catch (error) {
     // Regular user might already exist
-}
+  }
 }

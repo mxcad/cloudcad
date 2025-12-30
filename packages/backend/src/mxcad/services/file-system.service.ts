@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { IFileSystemService, MergeOptions } from '../interfaces/file-system.interface';
+import type {
+  IFileSystemService,
+  MergeOptions,
+} from '../interfaces/file-system.interface';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createReadStream, createWriteStream, statSync } from 'fs';
@@ -12,8 +15,12 @@ export class FileSystemService implements IFileSystemService {
   private readonly tempPath: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-    this.tempPath = this.configService.get('MXCAD_TEMP_PATH') || path.join(process.cwd(), 'temp');
+    this.uploadPath =
+      this.configService.get('MXCAD_UPLOAD_PATH') ||
+      path.join(process.cwd(), 'uploads');
+    this.tempPath =
+      this.configService.get('MXCAD_TEMP_PATH') ||
+      path.join(process.cwd(), 'temp');
   }
 
   async exists(path: string): Promise<boolean> {
@@ -73,10 +80,12 @@ export class FileSystemService implements IFileSystemService {
     }
   }
 
-  async mergeChunks(options: MergeOptions): Promise<{ success: boolean; error?: string }> {
+  async mergeChunks(
+    options: MergeOptions
+  ): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
       const { sourceFiles, targetPath, chunkDir } = options;
-      
+
       try {
         if (!fs.existsSync(chunkDir)) {
           resolve({ success: false, error: `分片目录不存在: ${chunkDir}` });
@@ -85,12 +94,12 @@ export class FileSystemService implements IFileSystemService {
 
         const list = fs.readdirSync(chunkDir);
         const aryList: any[] = [];
-        
+
         list.forEach((val: string) => {
           const strNum = val.substring(0, val.indexOf('_'));
           aryList.push({ num: parseInt(strNum, 10), file: val });
         });
-        
+
         aryList.sort((a, b) => a.num - b.num);
 
         const fileList = aryList.map((val) => ({
@@ -113,7 +122,12 @@ export class FileSystemService implements IFileSystemService {
     });
   }
 
-  async writeStatusFile(name: string, size: number, hash: string, targetPath: string): Promise<boolean> {
+  async writeStatusFile(
+    name: string,
+    size: number,
+    hash: string,
+    targetPath: string
+  ): Promise<boolean> {
     try {
       const status = {
         name,
@@ -171,9 +185,9 @@ export class FileSystemService implements IFileSystemService {
     const data = fileList.shift();
     const { filePath: chunkFilePath } = data;
     const currentReadStream = createReadStream(chunkFilePath);
-    
+
     currentReadStream.pipe(fileWriteStream, { end: false });
-    
+
     currentReadStream.on('end', () => {
       this.streamMergeRecursive(fileList, fileWriteStream, resultCall);
     });

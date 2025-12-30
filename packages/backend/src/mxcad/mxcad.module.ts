@@ -12,6 +12,7 @@ import { FileUploadManagerService } from './services/file-upload-manager.service
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
+import * as fs from 'fs';
 import { DatabaseModule } from '../database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -37,12 +38,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             // 分片文件存放位置
             const fileMd5 = req.body.hash;
             const tmpDir = join(process.cwd(), 'temp', `chunk_${fileMd5}`);
-            require('fs').mkdirSync(tmpDir, { recursive: true });
+            fs.mkdirSync(tmpDir, { recursive: true });
             cb(null, tmpDir);
           } else {
             // 完整文件存放位置
-            const uploadPath = process.env.MXCAD_UPLOAD_PATH || join(process.cwd(), 'uploads');
-            require('fs').mkdirSync(uploadPath, { recursive: true });
+            const uploadPath =
+              process.env.MXCAD_UPLOAD_PATH || join(process.cwd(), 'uploads');
+            fs.mkdirSync(uploadPath, { recursive: true });
             cb(null, uploadPath);
           }
         },

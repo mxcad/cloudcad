@@ -3,10 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
 async function testJwtConfig() {
-// 模拟 ConfigService
+  // 模拟 ConfigService
   const mockConfigService = {
     get: (key: string) => {
-switch (key) {
+      switch (key) {
         case 'jwt.secret':
           return 'your-super-secret-jwt-key-change-in-production';
         case 'jwt.expiresIn':
@@ -28,12 +28,15 @@ switch (key) {
     });
 
     // 创建测试 token
-    const payload = { sub: 'test-user-id', email: 'test@example.com', username: 'testuser' };
+    const payload = {
+      sub: 'test-user-id',
+      email: 'test@example.com',
+      username: 'testuser',
+    };
     const token = jwtService.sign(payload);
-// 验证 token
+    // 验证 token
     const decoded = jwtService.verify(token);
-} catch (error) {
-}
+  } catch (error) {}
 }
 
 // 如果直接运行此文件

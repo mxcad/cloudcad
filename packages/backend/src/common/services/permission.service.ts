@@ -109,7 +109,11 @@ export class PermissionService {
 
       // 如果是所有者，直接返回 OWNER
       if (node.ownerId === userId) {
-        this.cacheService.cacheNodeAccessRole(userId, nodeId, NodeAccessRole.OWNER);
+        this.cacheService.cacheNodeAccessRole(
+          userId,
+          nodeId,
+          NodeAccessRole.OWNER
+        );
         return NodeAccessRole.OWNER;
       }
 
@@ -121,7 +125,11 @@ export class PermissionService {
       });
 
       if (access) {
-        this.cacheService.cacheNodeAccessRole(userId, nodeId, access.role as NodeAccessRole);
+        this.cacheService.cacheNodeAccessRole(
+          userId,
+          nodeId,
+          access.role as NodeAccessRole
+        );
         return access.role as NodeAccessRole;
       }
 

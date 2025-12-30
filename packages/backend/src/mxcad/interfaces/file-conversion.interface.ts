@@ -38,14 +38,19 @@ export interface IFileConversionService {
    * @param callbackUrl 回调URL
    * @returns 转换任务ID
    */
-  convertFileAsync(options: ConversionOptions, callbackUrl?: string): Promise<string>;
+  convertFileAsync(
+    options: ConversionOptions,
+    callbackUrl?: string
+  ): Promise<string>;
 
   /**
    * 检查转换状态
    * @param taskId 任务ID
    * @returns 转换状态
    */
-  checkConversionStatus(taskId: string): Promise<{ code: number; status?: string }>;
+  checkConversionStatus(
+    taskId: string
+  ): Promise<{ code: number; status?: string }>;
 
   /**
    * 获取转换后的文件扩展名

@@ -36,11 +36,11 @@ export enum UserRole {
  * 用于 FileSystemNode（项目、文件夹、文件）的权限控制
  */
 export enum NodeAccessRole {
-  OWNER = 'OWNER',      // 所有者：完全控制
-  ADMIN = 'ADMIN',      // 管理员：管理权限
-  MEMBER = 'MEMBER',    // 成员：可编辑
-  EDITOR = 'EDITOR',    // 编辑者：可编辑文件
-  VIEWER = 'VIEWER',    // 查看者：只读
+  OWNER = 'OWNER', // 所有者：完全控制
+  ADMIN = 'ADMIN', // 管理员：管理权限
+  MEMBER = 'MEMBER', // 成员：可编辑
+  EDITOR = 'EDITOR', // 编辑者：可编辑文件
+  VIEWER = 'VIEWER', // 查看者：只读
 }
 
 /**
@@ -132,8 +132,5 @@ export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
     Permission.FILE_SHARE,
     Permission.FILE_DOWNLOAD,
   ],
-  [NodeAccessRole.VIEWER]: [
-    Permission.FILE_READ,
-    Permission.FILE_DOWNLOAD,
-  ],
+  [NodeAccessRole.VIEWER]: [Permission.FILE_READ, Permission.FILE_DOWNLOAD],
 };

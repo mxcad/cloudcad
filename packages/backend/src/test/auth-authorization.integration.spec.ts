@@ -100,18 +100,15 @@ describe('Authentication & Authorization Integration Tests', () => {
   async function cleanupTestData() {
     try {
       await prisma.fileAccess.deleteMany();
-    } catch (error) {
-}
+    } catch (error) {}
 
     try {
       await prisma.projectMember.deleteMany();
-    } catch (error) {
-}
+    } catch (error) {}
 
     try {
       await prisma.fileSystemNode.deleteMany();
-    } catch (error) {
-}
+    } catch (error) {}
 
     try {
       await prisma.user.deleteMany({
@@ -122,8 +119,7 @@ describe('Authentication & Authorization Integration Tests', () => {
           ],
         },
       });
-    } catch (error) {
-}
+    } catch (error) {}
   }
 
   async function createTestUsers() {

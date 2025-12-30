@@ -31,7 +31,7 @@ export class CacheManagerService {
 
     const now = Date.now();
     const actualTTL = ttl || this.defaultTTL;
-    
+
     if (now - item.timestamp >= actualTTL) {
       cache.delete(key);
       this.logger.debug(`缓存过期已清理: ${cacheName}:${key}`);
@@ -78,7 +78,7 @@ export class CacheManagerService {
     if (deleted) {
       this.logger.debug(`缓存删除: ${cacheName}:${key}`);
     }
-    
+
     return deleted;
   }
 
@@ -127,7 +127,7 @@ export class CacheManagerService {
    */
   getStats(cacheName?: string): Record<string, number> {
     const stats: Record<string, number> = {};
-    
+
     if (cacheName) {
       const cache = this.caches.get(cacheName);
       stats[cacheName] = cache ? cache.size : 0;
@@ -136,7 +136,7 @@ export class CacheManagerService {
         stats[name] = cache.size;
       }
     }
-    
+
     return stats;
   }
 

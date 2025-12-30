@@ -11,22 +11,18 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
     const baseUrl = this.configService.get('FRONTEND_URL');
-try {
-      await this.mailerService.sendMail({
-        to: email,
-        subject: 'CloudCAD - 验证码',
-        template: 'email-verification',
-        context: {
-          token, // 6位数字验证码
-          baseUrl, // 前端验证页面地址
-          expiresIn: '15分钟',
-          supportEmail: this.configService.get('MAIL_FROM'),
-          productName: 'CloudCAD',
-        },
-      });
-} catch (error) {
-throw error;
-    }
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'CloudCAD - 验证码',
+      template: 'email-verification',
+      context: {
+        token, // 6位数字验证码
+        baseUrl, // 前端验证页面地址
+        expiresIn: '15分钟',
+        supportEmail: this.configService.get('MAIL_FROM'),
+        productName: 'CloudCAD',
+      },
+    });
   }
 
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {

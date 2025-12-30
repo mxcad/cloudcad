@@ -20,7 +20,10 @@ export class FileHashService {
         );
         resolve(hashValue);
       } catch (error) {
-        this.logger.error(`计算文件 MD5 哈希值失败: ${error.message}`, error.stack);
+        this.logger.error(
+          `计算文件 MD5 哈希值失败: ${error.message}`,
+          error.stack
+        );
         reject(error);
       }
     });
@@ -45,7 +48,10 @@ export class FileHashService {
         });
         stream.on('error', reject);
       } catch (error) {
-        this.logger.error(`计算流 MD5 哈希值失败: ${error.message}`, error.stack);
+        this.logger.error(
+          `计算流 MD5 哈希值失败: ${error.message}`,
+          error.stack
+        );
         reject(error);
       }
     });

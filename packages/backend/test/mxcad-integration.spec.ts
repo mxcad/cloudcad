@@ -73,7 +73,9 @@ describe('MxCAD External Reference Integration Tests', () => {
     });
 
     it('当文件不存在时应该返回 null', async () => {
-      const result = await mxCadService.getPreloadingData('nonexistent_hash_12345678901234567890123456789012');
+      const result = await mxCadService.getPreloadingData(
+        'nonexistent_hash_12345678901234567890123456789012'
+      );
       expect(result).toBeNull();
     });
 
@@ -85,7 +87,10 @@ describe('MxCAD External Reference Integration Tests', () => {
 
   describe('checkExternalReferenceExists', () => {
     it('应该正确检查不存在的外部参照', async () => {
-      const exists = await mxCadService.checkExternalReferenceExists(testFileHash, 'ref1.dwg');
+      const exists = await mxCadService.checkExternalReferenceExists(
+        testFileHash,
+        'ref1.dwg'
+      );
       expect(exists).toBe(false);
     });
 
@@ -94,7 +99,10 @@ describe('MxCAD External Reference Integration Tests', () => {
       const refFilePath = path.join(hashDir, 'ref1.dwg.mxweb');
       fs.writeFileSync(refFilePath, 'test mxweb content');
 
-      const exists = await mxCadService.checkExternalReferenceExists(testFileHash, 'ref1.dwg');
+      const exists = await mxCadService.checkExternalReferenceExists(
+        testFileHash,
+        'ref1.dwg'
+      );
 
       expect(exists).toBe(true);
 
@@ -103,7 +111,10 @@ describe('MxCAD External Reference Integration Tests', () => {
     });
 
     it('应该正确处理图片文件的检查', async () => {
-      const exists = await mxCadService.checkExternalReferenceExists(testFileHash, 'image1.png');
+      const exists = await mxCadService.checkExternalReferenceExists(
+        testFileHash,
+        'image1.png'
+      );
       expect(exists).toBe(false);
     });
   });
@@ -142,7 +153,9 @@ describe('MxCAD External Reference Integration Tests', () => {
   describe('文件安全性验证', () => {
     it('应该防止路径遍历攻击', async () => {
       // 验证 isValidFileHash 方法
-      expect(await mxCadService.getPreloadingData('../../etc/passwd')).toBeNull();
+      expect(
+        await mxCadService.getPreloadingData('../../etc/passwd')
+      ).toBeNull();
       expect(await mxCadService.getPreloadingData('/etc/passwd')).toBeNull();
       expect(await mxCadService.getPreloadingData('abc')).toBeNull();
     });

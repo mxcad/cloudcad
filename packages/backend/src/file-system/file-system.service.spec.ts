@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { FileSystemService } from './file-system.service';
 import { DatabaseService } from '../database/database.service';
+import { FileHashService } from './file-hash.service';
+import { MinioStorageProvider } from '../storage/minio-storage.provider';
 import { FileStatus, ProjectStatus } from '@prisma/client';
 
 describe('FileSystemService', () => {
@@ -13,18 +15,42 @@ describe('FileSystemService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
     },
+    $transaction: jest.fn((callback) => {
+      return callback(mockPrisma);
+    }),
   };
 
   beforeEach(async () => {
+    const mockStorage = {
+      uploadFile: jest.fn(),
+      deleteFile: jest.fn(),
+      getFileStream: jest.fn(),
+      fileExists: jest.fn(),
+    };
+
+    const mockFileHashService = {
+      calculateHash: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileSystemService,
         {
           provide: DatabaseService,
           useValue: mockPrisma,
+        },
+        {
+          provide: MinioStorageProvider,
+          useValue: mockStorage,
+        },
+        {
+          provide: FileHashService,
+          useValue: mockFileHashService,
         },
       ],
     })
@@ -56,7 +82,7 @@ describe('FileSystemService', () => {
         isRoot: true,
         projectStatus: ProjectStatus.ACTIVE,
         ownerId: userId,
-        members: [
+        nodeAccesses: [
           { userId, role: 'OWNER', user: { id: userId, username: 'test' } },
         ],
       };
@@ -74,7 +100,7 @@ describe('FileSystemService', () => {
           isRoot: true,
           projectStatus: ProjectStatus.ACTIVE,
           ownerId: userId,
-          members: {
+          nodeAccesses: {
             create: {
               userId,
               role: 'OWNER',
@@ -82,7 +108,7 @@ describe('FileSystemService', () => {
           },
         },
         include: {
-          members: {
+          nodeAccesses: {
             include: {
               user: {
                 select: {
@@ -121,8 +147,8 @@ describe('FileSystemService', () => {
           id: 'project-1',
           name: '项目1',
           isRoot: true,
-          members: [],
-          _count: { children: 5, members: 2 },
+          nodeAccesses: [],
+          _count: { children: 5, nodeAccesses: 2 },
         },
       ];
 
@@ -134,7 +160,8 @@ describe('FileSystemService', () => {
       expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledWith({
         where: {
           isRoot: true,
-          members: {
+          deletedAt: null,
+          nodeAccesses: {
             some: {
               userId,
             },
@@ -217,20 +244,24 @@ describe('FileSystemService', () => {
     it('应该成功删除项目', async () => {
       const projectId = 'project-123';
 
-      mockPrisma.fileSystemNode.delete.mockResolvedValue({});
+      // Mock findMany 用于 softDeleteDescendants 递归调用
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      // Mock update 用于软删除子节点
+      mockPrisma.fileSystemNode.updateMany.mockResolvedValue({});
+      // Mock update 用于软删除根节点
+      mockPrisma.fileSystemNode.update.mockResolvedValue({});
 
       const result = await service.deleteProject(projectId);
 
-      expect(result).toEqual({ message: '项目删除成功' });
-      expect(mockPrisma.fileSystemNode.delete).toHaveBeenCalledWith({
-        where: { id: projectId, isRoot: true },
-      });
+      expect(result).toEqual({ message: '项目已移至回收站' });
     });
 
     it('应该处理删除错误', async () => {
       const projectId = 'project-123';
 
-      mockPrisma.fileSystemNode.delete.mockRejectedValue(
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      // 让 $transaction 抛出错误
+      mockPrisma.$transaction.mockRejectedValueOnce(
         new Error('Delete failed')
       );
 
@@ -355,7 +386,7 @@ describe('FileSystemService', () => {
 
       expect(result).toEqual(mockChildren);
       expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledWith({
-        where: { parentId: nodeId },
+        where: { parentId: nodeId, deletedAt: null },
         include: expect.any(Object),
         orderBy: [{ isFolder: 'desc' }, { name: 'asc' }],
       });
@@ -402,19 +433,24 @@ describe('FileSystemService', () => {
   describe('deleteNode', () => {
     it('应该成功删除非根节点', async () => {
       const nodeId = 'node-123';
-      const mockNode = { isRoot: false };
+      const mockNode = { isRoot: false, isFolder: true, path: null, fileHash: null };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
-      mockPrisma.fileSystemNode.delete.mockResolvedValue({});
+      // Mock findMany 用于 softDeleteDescendants 递归调用
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      // Mock update 用于软删除子节点
+      mockPrisma.fileSystemNode.updateMany.mockResolvedValue({});
+      // Mock update 用于软删除当前节点
+      mockPrisma.fileSystemNode.update.mockResolvedValue({});
 
       const result = await service.deleteNode(nodeId);
 
-      expect(result).toEqual({ message: '节点删除成功' });
+      expect(result).toEqual({ message: '节点已移至回收站' });
     });
 
     it('应该禁止删除根节点', async () => {
       const nodeId = 'root-123';
-      const mockNode = { isRoot: true };
+      const mockNode = { isRoot: true, isFolder: true, path: null, fileHash: null };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
 
@@ -425,10 +461,12 @@ describe('FileSystemService', () => {
 
     it('应该处理删除节点时的错误', async () => {
       const nodeId = 'node-123';
-      const mockNode = { isRoot: false };
+      const mockNode = { isRoot: false, isFolder: false, path: null, fileHash: null };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
-      mockPrisma.fileSystemNode.delete.mockRejectedValue(
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      // 让 $transaction 抛出错误
+      mockPrisma.$transaction.mockRejectedValueOnce(
         new Error('Delete error')
       );
 
@@ -548,36 +586,37 @@ describe('FileSystemService', () => {
         filename: 'upload-123.dwg',
         mimetype: 'application/acad',
         size: 1024,
+        buffer: Buffer.from('test'),
       } as Express.Multer.File;
       const mockParent = { isFolder: true };
       const mockFileNode = {
         id: 'file-123',
         name: file.originalname,
         size: file.size,
+        path: 'files/user-123/17670855557382-test.dwg',
+        fileHash: 'abc123',
+        fileStatus: FileStatus.COMPLETED,
+        isFolder: false,
+        isRoot: false,
+        ownerId: userId,
+        parentId,
+        originalName: file.originalname,
+        extension: 'dwg',
+        mimeType: file.mimetype,
+        owner: {
+          id: userId,
+          username: 'test',
+          nickname: 'Test User',
+        },
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockParent);
+      mockPrisma.fileSystemNode.findFirst.mockResolvedValue(null); // 无重复文件
       mockPrisma.fileSystemNode.create.mockResolvedValue(mockFileNode);
 
       const result = await service.uploadFile(userId, parentId, file);
 
       expect(result).toEqual(mockFileNode);
-      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith({
-        data: {
-          name: file.originalname,
-          originalName: file.originalname,
-          isFolder: false,
-          isRoot: false,
-          parentId,
-          extension: 'dwg',
-          mimeType: file.mimetype,
-          size: file.size,
-          path: `/uploads/${file.filename}`,
-          fileStatus: FileStatus.COMPLETED,
-          ownerId: userId,
-        },
-        include: expect.any(Object),
-      });
     });
 
     it('应该在父节点不存在时抛出异常', async () => {

@@ -16,35 +16,37 @@
   UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
-import { JwtService } from '@nestjs/jwt';
-import * as fs from 'fs';
-import * as path from 'path';
-
-import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
-import { MxCadService } from './mxcad.service';
-import { ConvertDto } from './dto/convert.dto';
-import { DatabaseService } from '../database/database.service';
-import { TzDto } from './dto/tz.dto';
-import { PreloadingDataDto } from './dto/preloading-data.dto';
-import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ConfigService } from '@nestjs/config';
-
-@ApiTags('MxCAD 文件上传与转换')
-@Controller('mxcad')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
-export class MxCadController {
-  private readonly logger = new Logger(MxCadController.name);
-  private readonly mxCadFileExt: string;
+  import { FileInterceptor } from '@nestjs/platform-express';
+  import type { Response } from 'express';
+  import { JwtService } from '@nestjs/jwt';
+  import * as fs from 'fs';
+  import * as path from 'path';
+  import * as crypto from 'crypto';
+  
+  import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+  import { MxCadService } from './mxcad.service';
+  import { ConvertDto } from './dto/convert.dto';
+  import { DatabaseService } from '../database/database.service';
+  import { TzDto } from './dto/tz.dto';
+  import { PreloadingDataDto } from './dto/preloading-data.dto';
+  import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
+  import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+  import { ConfigService } from '@nestjs/config';
+  import { MinioSyncService } from './minio-sync.service';
+  
+  @ApiTags('MxCAD 文件上传与转换')
+  @Controller('mxcad')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  export class MxCadController {
+    private readonly logger = new Logger(MxCadController.name);  private readonly mxCadFileExt: string;
 
   constructor(
     private readonly mxCadService: MxCadService,
     private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly minioSyncService: MinioSyncService,
   ) {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
   }
@@ -349,9 +351,6 @@ export class MxCadController {
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
       try {
-        const fs = require('fs');
-        const path = require('path');
-
         // 获取临时目录路径
         const tempPath = process.env.MXCAD_TEMP_PATH || path.join(process.cwd(), 'temp');
         const chunkDir = path.join(tempPath, `chunk_${body.hash}`);
@@ -818,7 +817,6 @@ export class MxCadController {
     let isBackendCalculated = false;
     if (!fileHash) {
       // 兼容 MxCAD-App：如果前端没有传递 hash，则后端计算
-      const crypto = require('crypto');
       const fileBuffer = fs.readFileSync(file.path);
       fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
       isBackendCalculated = true;
@@ -949,7 +947,6 @@ export class MxCadController {
     }
 
     // 计算文件哈希
-    const crypto = require('crypto');
     const fileBuffer = fs.readFileSync(file.path);
     const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
@@ -966,10 +963,10 @@ export class MxCadController {
 
     // 获取源图纸节点信息
     const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
-    
+
     // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
     let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
-    
+
     // 如果源图纸有 parentId，尝试查找项目根目录
     if (sourceNode?.parentId && !sourceNode.isRoot) {
       const projectRoot = await this.getProjectRootByNodeId(sourceNode.parentId);
@@ -1023,6 +1020,91 @@ export class MxCadController {
       });
     } catch (error) {
       return res.json({ code: -1, message: 'catch error' });
+    }
+  }
+
+  /**
+   * 访问非 CAD 文件（图片、文档等）
+   * 从 MinIO 读取文件流并返回
+   *
+   * @param storageKey MinIO 存储键，格式: files/{userId}/{timestamp}-{filename}
+   * @param res Express Response 对象
+   * @returns 返回文件流或错误信息
+   */
+  @Get('files/:storageKey')
+  @ApiResponse({
+    status: 200,
+    description: '成功获取文件',
+    content: {
+      'application/octet-stream': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '文件不存在',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            code: { type: 'number', example: -1 },
+            message: { type: 'string', example: '文件不存在' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            code: { type: 'number', example: -1 },
+            message: { type: 'string', example: '获取文件失败' },
+          },
+        },
+      },
+    },
+  })
+  async getNonCadFile(@Param('storageKey') storageKey: string, @Res() res: Response) {
+    try {
+      // 验证 storageKey 格式，防止路径遍历攻击
+      if (!storageKey || storageKey.includes('..') || storageKey.includes('\\')) {
+        this.logger.warn(`[getNonCadFile] 无效的 storageKey: ${storageKey}`);
+        return res.status(400).json({ code: -1, message: '无效的文件路径' });
+      }
+
+      // 从 MinIO 获取文件流
+      const fileStream = await this.minioSyncService.getFileStream(storageKey);
+
+      // 设置响应头
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${storageKey.split('/').pop()}"`);
+
+      // 返回文件流
+      fileStream.pipe(res);
+
+      // 处理流错误
+      fileStream.on('error', (error) => {
+        this.logger.error(`[getNonCadFile] 文件流错误: ${error.message}`, error);
+        if (!res.headersSent) {
+          res.status(500).json({ code: -1, message: '获取文件失败' });
+        }
+      });
+    } catch (error: any) {
+      this.logger.error(`[getNonCadFile] 获取文件失败: ${storageKey}`, error);
+      if (error.code === 'NotFound' || error.code === 'NoSuchKey') {
+        return res.status(404).json({ code: -1, message: '文件不存在' });
+      }
+      return res.status(500).json({ code: -1, message: '获取文件失败' });
     }
   }
 
@@ -1164,9 +1246,6 @@ export class MxCadController {
           });
         }
       }
-
-      const fs = require('fs');
-      const path = require('path');
 
       // 根据文件扩展名确定可能的存储路径
       const ext = path.extname(normalizedFilename).toLowerCase();
@@ -1636,9 +1715,17 @@ export class MxCadController {
     }
 
     // 检查文件名是否包含非法字符（Windows 和 Linux 都不允许的字符）
-    const invalidChars = /[<>:"|?*\x00-\x1F]/;
+    const invalidChars = /[<>:"|?*]/;
     if (invalidChars.test(fileName)) {
       return false;
+    }
+
+    // 单独检查控制字符
+    for (let i = 0; i < fileName.length; i++) {
+      const charCode = fileName.charCodeAt(i);
+      if (charCode < 0x20 || charCode === 0x7F) {
+        return false;
+      }
     }
 
     return true;

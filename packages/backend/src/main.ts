@@ -1,5 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { ExpressAdapter, NestExpressApplication } from '@nestjs/platform-express';
+import {
+  ExpressAdapter,
+  NestExpressApplication,
+} from '@nestjs/platform-express';
 import express from 'express';
 import session from 'express-session';
 import { AppModule } from './app.module';
@@ -8,11 +11,13 @@ async function bootstrap() {
   const server = express();
   server.use(express.json({ limit: '50mb' }));
   server.use(express.urlencoded({ extended: true, limit: '50mb' }));
-  
+
   // 添加 Session 支持
   server.use(
     session({
-      secret: process.env.JWT_SECRET || 'mxcad-session-secret-key-change-in-production',
+      secret:
+        process.env.JWT_SECRET ||
+        'mxcad-session-secret-key-change-in-production',
       resave: false,
       saveUninitialized: false,
       cookie: {
@@ -23,7 +28,7 @@ async function bootstrap() {
       name: 'mxcad.sid',
     })
   );
-  
+
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule,
     new ExpressAdapter(server),

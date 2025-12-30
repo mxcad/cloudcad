@@ -46,10 +46,7 @@ export class NodePermissionGuard implements CanActivate {
     }
 
     // 先检查缓存
-    const cachedRole = this.cacheService.getNodeAccessRole(
-      user.id,
-      nodeId
-    );
+    const cachedRole = this.cacheService.getNodeAccessRole(user.id, nodeId);
     if (cachedRole && requiredRoles.includes(cachedRole)) {
       request.nodeId = nodeId;
       return true;
@@ -72,10 +69,16 @@ export class NodePermissionGuard implements CanActivate {
 
   private extractNodeId(request: any): string | null {
     // 从路由参数中获取（优先使用 nodeId，其次 projectId）
-    if (request.params?.nodeId !== undefined && request.params?.nodeId !== null) {
+    if (
+      request.params?.nodeId !== undefined &&
+      request.params?.nodeId !== null
+    ) {
       return request.params.nodeId;
     }
-    if (request.params?.projectId !== undefined && request.params?.projectId !== null) {
+    if (
+      request.params?.projectId !== undefined &&
+      request.params?.projectId !== null
+    ) {
       return request.params.projectId;
     }
 
@@ -83,7 +86,10 @@ export class NodePermissionGuard implements CanActivate {
     if (request.query?.nodeId !== undefined && request.query?.nodeId !== null) {
       return request.query.nodeId;
     }
-    if (request.query?.projectId !== undefined && request.query?.projectId !== null) {
+    if (
+      request.query?.projectId !== undefined &&
+      request.query?.projectId !== null
+    ) {
       return request.query.projectId;
     }
 
@@ -91,7 +97,10 @@ export class NodePermissionGuard implements CanActivate {
     if (request.body?.nodeId !== undefined && request.body?.nodeId !== null) {
       return request.body.nodeId;
     }
-    if (request.body?.projectId !== undefined && request.body?.projectId !== null) {
+    if (
+      request.body?.projectId !== undefined &&
+      request.body?.projectId !== null
+    ) {
       return request.body.projectId;
     }
 

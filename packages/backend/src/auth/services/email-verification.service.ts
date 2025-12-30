@@ -30,7 +30,7 @@ export class EmailVerificationService {
     // 存储到 Redis，15分钟过期
     const key = this.getCodeKey(email);
     await this.redis.setex(key, this.CODE_TTL, code);
-return code;
+    return code;
   }
 
   async sendVerificationEmail(email: string): Promise<void> {
@@ -51,7 +51,7 @@ return code;
   }
 
   async verifyEmail(email: string, code: string): Promise<boolean> {
-const key = this.getCodeKey(email);
+    const key = this.getCodeKey(email);
     const storedCode = await this.redis.get(key);
 
     if (!storedCode) {

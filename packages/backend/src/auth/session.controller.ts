@@ -25,7 +25,7 @@ export class SessionController {
     if (!body.user) {
       return { success: false, message: '用户信息不能为空' };
     }
-    
+
     // 将用户信息存储到 session 中
     req.session.user = {
       id: body.user.id,
@@ -33,7 +33,7 @@ export class SessionController {
       username: body.user.username,
       role: body.user.role,
     };
-    
+
     // 确保 session 保存
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => {
@@ -44,7 +44,7 @@ export class SessionController {
         }
       });
     });
-    
+
     return { success: true, message: 'Session 创建成功' };
   }
 
@@ -57,7 +57,7 @@ export class SessionController {
     if (!user) {
       return { success: false, message: '用户未登录' };
     }
-    
+
     return { success: true, user };
   }
 
@@ -68,7 +68,9 @@ export class SessionController {
   async destroySession(@Req() req: Request, @Res() res: Response) {
     req.session.destroy((err) => {
       if (err) {
-        return res.status(500).json({ success: false, message: 'Session 销毁失败' });
+        return res
+          .status(500)
+          .json({ success: false, message: 'Session 销毁失败' });
       }
       res.clearCookie('mxcad.sid');
       res.json({ success: true, message: 'Session 已销毁' });
