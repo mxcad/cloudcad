@@ -221,12 +221,34 @@ export const TrashPage: React.FC = () => {
             onDownload={() => {}}
             onDelete={() => {}}
             onRename={() => {}}
-            onRestore={() => {}}
+            onRestore={handleRestoreSingle}
           />
         ))}
       </div>
     );
   };
+
+  // 恢复单个文件
+  const handleRestoreSingle = useCallback(
+    async (node: FileSystemNode) => {
+      showConfirm(
+        '确认恢复',
+        `确定要恢复 "${node.name}" 吗？`,
+        async () => {
+          try {
+            await trashApi.restoreItems([node.id]);
+            showToast(`已恢复 "${node.name}"`, 'success');
+            loadTrashItems();
+          } catch (err: any) {
+            const errorMessage = err.response?.data?.message || err.message || '恢复失败';
+            showToast(errorMessage, 'error');
+          }
+        },
+        'warning'
+      );
+    },
+    [showConfirm, showToast, loadTrashItems]
+  );
 
   const hasSelection = selectedIds.size > 0;
   const isAllSelected = selectedIds.size === trashItems.length && trashItems.length > 0;
