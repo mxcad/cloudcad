@@ -78,32 +78,18 @@ export class FileSystemController {
     return this.fileSystemService.getTrashItems(req.user.id);
   }
 
-  @Post('projects/:projectId/restore')
+  @Post('trash/restore')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '恢复项目成功' })
-  async restoreProject(@Param('projectId') projectId: string) {
-    return this.fileSystemService.restoreProject(projectId);
+  @ApiResponse({ status: 200, description: '批量恢复成功' })
+  async restoreTrashItems(@Body() body: { itemIds: string[] }) {
+    return this.fileSystemService.restoreTrashItems(body.itemIds);
   }
 
-  @Post('nodes/:nodeId/restore')
+  @Delete('trash/items')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '恢复节点成功' })
-  async restoreNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.restoreNode(nodeId);
-  }
-
-  @Delete('projects/:projectId/permanent')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '彻底删除项目成功' })
-  async permanentlyDeleteProject(@Param('projectId') projectId: string) {
-    return this.fileSystemService.permanentlyDeleteProject(projectId);
-  }
-
-  @Delete('nodes/:nodeId/permanent')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '彻底删除节点成功' })
-  async permanentlyDeleteNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.permanentlyDeleteNode(nodeId);
+  @ApiResponse({ status: 200, description: '批量彻底删除成功' })
+  async permanentlyDeleteTrashItems(@Body() body: { itemIds: string[] }) {
+    return this.fileSystemService.permanentlyDeleteTrashItems(body.itemIds);
   }
 
   @Delete('trash')

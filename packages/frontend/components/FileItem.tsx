@@ -20,6 +20,7 @@ interface FileItemProps {
   isSelected: boolean;
   viewMode: 'grid' | 'list';
   isMultiSelectMode?: boolean;
+  isTrash?: boolean; // 是否在回收站场景
   onSelect: (nodeId: string, isMultiSelect?: boolean) => void;
   onEnter: (node: FileSystemNode) => void;
   onDownload: (node: FileSystemNode) => void;
@@ -38,6 +39,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   isSelected,
   viewMode,
   isMultiSelectMode = false,
+  isTrash = false,
   onSelect,
   onEnter,
   onDownload,
@@ -279,90 +281,9 @@ export const FileItem: React.FC<FileItemProps> = ({
                 className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200
                            py-1 min-w-[120px] z-20 animate-scale-in origin-top-right"
               >
-                {/* 上传外部参照按钮（任务009 - 始终显示，仅 CAD 文件） */}
-                {isCadFile() && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(async () => {
-                        await handleUploadExternalReference(e);
-                      });
-                    }}
-                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
-                      node.hasMissingExternalReferences
-                        ? 'text-amber-600 hover:bg-amber-50'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Upload size={16} />
-                    {node.hasMissingExternalReferences ? '上传外部参照' : '上传外部参照'}
-                  </button>
-                )}
-
-                {/* 项目根节点显示编辑和成员 */}
-                {isRoot ? (
+                {/* 回收站场景：只显示恢复和删除 */}
+                {isTrash ? (
                   <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuAction(() => onEdit?.(e));
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                 flex items-center gap-2 transition-colors"
-                    >
-                      <EditIcon size={16} />
-                      编辑
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuAction(() => onShowMembers?.(e));
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                 flex items-center gap-2 transition-colors"
-                    >
-                      <UsersIcon size={16} />
-                      成员
-                    </button>
-                    <hr className="my-1 border-slate-100" />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuAction(() => onDelete(node));
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
-                                 flex items-center gap-2 transition-colors"
-                    >
-                      <DeleteIcon size={16} />
-                      删除
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {!node.isFolder && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMenuAction(() => onDownload(node));
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <DownloadIcon size={16} />
-                        下载
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuAction(() => onRename(node));
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                 flex items-center gap-2 transition-colors"
-                    >
-                      <EditIcon size={16} />
-                      重命名
-                    </button>
                     {onRestore && (
                       <button
                         onClick={(e) => {
@@ -386,8 +307,122 @@ export const FileItem: React.FC<FileItemProps> = ({
                                  flex items-center gap-2 transition-colors"
                     >
                       <DeleteIcon size={16} />
-                      {onRestore ? '彻底删除' : '删除'}
+                      彻底删除
                     </button>
+                  </>
+                ) : (
+                  <>
+                    {/* 上传外部参照按钮（任务009 - 始终显示，仅 CAD 文件） */}
+                    {isCadFile() && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(async () => {
+                            await handleUploadExternalReference(e);
+                          });
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                          node.hasMissingExternalReferences
+                            ? 'text-amber-600 hover:bg-amber-50'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Upload size={16} />
+                        {node.hasMissingExternalReferences ? '上传外部参照' : '上传外部参照'}
+                      </button>
+                    )}
+
+                    {/* 项目根节点显示编辑和成员 */}
+                    {isRoot ? (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMenuAction(() => onEdit?.(e));
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                     flex items-center gap-2 transition-colors"
+                        >
+                          <EditIcon size={16} />
+                          编辑
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMenuAction(() => onShowMembers?.(e));
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                     flex items-center gap-2 transition-colors"
+                        >
+                          <UsersIcon size={16} />
+                          成员
+                        </button>
+                        <hr className="my-1 border-slate-100" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMenuAction(() => onDelete(node));
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                                     flex items-center gap-2 transition-colors"
+                        >
+                          <DeleteIcon size={16} />
+                          删除
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {!node.isFolder && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMenuAction(() => onDownload(node));
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                       flex items-center gap-2 transition-colors"
+                          >
+                            <DownloadIcon size={16} />
+                            下载
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMenuAction(() => onRename(node));
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                     flex items-center gap-2 transition-colors"
+                        >
+                          <EditIcon size={16} />
+                          重命名
+                        </button>
+                        {onRestore && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMenuAction(() => onRestore(node));
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
+                                       flex items-center gap-2 transition-colors"
+                          >
+                            <RestoreIcon size={16} />
+                            恢复
+                          </button>
+                        )}
+                        <hr className="my-1 border-slate-100" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMenuAction(() => onDelete(node));
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                                     flex items-center gap-2 transition-colors"
+                        >
+                          <DeleteIcon size={16} />
+                          {onRestore ? '彻底删除' : '删除'}
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -542,88 +577,118 @@ export const FileItem: React.FC<FileItemProps> = ({
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        {/* 项目根节点显示编辑和成员 */}
-        {isRoot ? (
+        {/* 回收站场景：只显示恢复和删除 */}
+        {isTrash ? (
           <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.(e);
-              }}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-              title="编辑"
-            >
-              <EditIcon size={18} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onShowMembers?.(e);
-              }}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-              title="成员"
-            >
-              <UsersIcon size={18} />
-            </button>
+            {onRestore && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore(node);
+                }}
+                className="p-2 rounded-lg text-slate-500 hover:text-green-600 hover:bg-green-50"
+                title="恢复"
+              >
+                <RestoreIcon size={18} />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(node);
               }}
               className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
-              title="删除"
+              title="彻底删除"
             >
               <DeleteIcon size={18} />
             </button>
           </>
         ) : (
           <>
-            {/* 上传外部参照按钮（任务009 - 仅 CAD 文件显示） */}
-            {isCadFile() && (
-              <button
-                onClick={(e) => handleUploadExternalReference(e)}
-                className={`p-2 rounded-lg transition-colors ${
-                  node.hasMissingExternalReferences
-                    ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                }`}
-                title="上传外部参照"
-              >
-                <Upload size={18} />
-              </button>
+            {/* 项目根节点显示编辑和成员 */}
+            {isRoot ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(e);
+                  }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  title="编辑"
+                >
+                  <EditIcon size={18} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowMembers?.(e);
+                  }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  title="成员"
+                >
+                  <UsersIcon size={18} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(node);
+                  }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
+                  title="删除"
+                >
+                  <DeleteIcon size={18} />
+                </button>
+              </>
+            ) : (
+              <>
+                {/* 上传外部参照按钮（任务009 - 仅 CAD 文件显示） */}
+                {isCadFile() && (
+                  <button
+                    onClick={(e) => handleUploadExternalReference(e)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      node.hasMissingExternalReferences
+                        ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                    }`}
+                    title="上传外部参照"
+                  >
+                    <Upload size={18} />
+                  </button>
+                )}
+                {!node.isFolder && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload(node);
+                    }}
+                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    title="下载"
+                  >
+                    <DownloadIcon size={18} />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRename(node);
+                  }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  title="重命名"
+                >
+                  <EditIcon size={18} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(node);
+                  }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
+                  title="删除"
+                >
+                  <DeleteIcon size={18} />
+                </button>
+              </>
             )}
-            {!node.isFolder && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDownload(node);
-                }}
-                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                title="下载"
-              >
-                <DownloadIcon size={18} />
-              </button>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRename(node);
-              }}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-              title="重命名"
-            >
-              <EditIcon size={18} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(node);
-              }}
-              className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
-              title="删除"
-            >
-              <DeleteIcon size={18} />
-            </button>
           </>
         )}
       </div>

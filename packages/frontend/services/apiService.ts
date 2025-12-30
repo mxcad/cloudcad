@@ -305,21 +305,13 @@ export const trashApi = {
   // 获取回收站列表
   getList: () => apiService.get('/file-system/trash'),
 
-  // 恢复项目
-  restoreProject: (projectId: string) =>
-    apiService.post(`/file-system/projects/${projectId}/restore`),
+  // 批量恢复
+  restoreItems: (itemIds: string[]) =>
+    apiService.post('/file-system/trash/restore', { itemIds }),
 
-  // 恢复节点
-  restoreNode: (nodeId: string) =>
-    apiService.post(`/file-system/nodes/${nodeId}/restore`),
-
-  // 彻底删除项目
-  permanentlyDeleteProject: (projectId: string) =>
-    apiService.delete(`/file-system/projects/${projectId}/permanent`),
-
-  // 彻底删除节点
-  permanentlyDeleteNode: (nodeId: string) =>
-    apiService.delete(`/file-system/nodes/${nodeId}/permanent`),
+  // 批量彻底删除
+  permanentlyDeleteItems: (itemIds: string[]) =>
+    apiService.delete('/file-system/trash/items', { data: { itemIds } }),
 
   // 清空回收站
   clear: () => apiService.delete('/file-system/trash'),
