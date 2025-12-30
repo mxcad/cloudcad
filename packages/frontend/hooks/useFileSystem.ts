@@ -441,7 +441,13 @@ export const useFileSystem = () => {
       async () => {
         try {
           await Promise.all(
-            Array.from(selectedNodes).map((nodeId: string) => projectsApi.deleteNode(nodeId))
+            Array.from(selectedNodes).map((nodeId: string) => {
+              const node = nodes.find(n => n.id === nodeId);
+              if (node?.isRoot) {
+                return projectsApi.delete(node.id);
+              }
+              return projectsApi.deleteNode(node.id);
+            })
           );
           showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
           setSelectedNodes(new Set<string>());
@@ -453,7 +459,7 @@ export const useFileSystem = () => {
       },
       permanently ? 'danger' : 'warning'
     );
-  }, [selectedNodes, showConfirm, loadData, showToast]);
+  }, [selectedNodes, nodes, showConfirm, loadData, showToast]);
 
   // 进入文件夹
   const handleEnterFolder = useCallback((node: FileSystemNode) => {
