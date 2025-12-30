@@ -12,6 +12,8 @@ import { FileHashService } from './file-hash.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 
 @Injectable()
 export class FileSystemService {
@@ -863,6 +865,43 @@ export class FileSystemService {
    */
   async permanentlyDeleteProject(projectId: string) {
     try {
+      // 先收集项目下所有文件的哈希值，用于清理 uploads 目录
+      const files = await this.prisma.fileSystemNode.findMany({
+        where: {
+          parentId: projectId,
+          isFolder: false,
+          fileHash: { not: null },
+        },
+        select: { fileHash: true },
+      });
+
+      // 递归收集所有子目录中的文件哈希值
+      const collectFileHashes = async (nodeId: string): Promise<string[]> => {
+        const children = await this.prisma.fileSystemNode.findMany({
+          where: { parentId: nodeId },
+          select: { id: true, isFolder: true, fileHash: true },
+        });
+
+        const hashes: string[] = [];
+        for (const child of children) {
+          if (child.isFolder) {
+            const childHashes = await collectFileHashes(child.id);
+            hashes.push(...childHashes);
+          } else if (child.fileHash) {
+            hashes.push(child.fileHash);
+          }
+        }
+        return hashes;
+      };
+
+      const allFileHashes = [...files.map(f => f.fileHash!), ...(await collectFileHashes(projectId))];
+
+      // 删除 uploads 目录中的物理文件
+      if (allFileHashes.length > 0) {
+        const deletedCount = await this.deleteMxCadFilesFromUploadsBatch(allFileHashes);
+        this.logger.log(`删除项目时删除 uploads 文件: ${deletedCount} 个`);
+      }
+
       await this.prisma.$transaction(async (tx) => {
         await this.deleteDescendantsWithFiles(tx, projectId);
         await tx.fileSystemNode.delete({
@@ -890,6 +929,11 @@ export class FileSystemService {
 
       if (!node) {
         throw new NotFoundException('节点不存在');
+      }
+
+      // 如果是文件且有文件哈希，删除 uploads 目录中的物理文件
+      if (!node.isFolder && node.fileHash) {
+        await this.deleteMxCadFilesFromUploads(node.fileHash);
       }
 
       await this.prisma.$transaction(async (tx) => {
@@ -931,6 +975,17 @@ export class FileSystemService {
         },
         select: { id: true, isFolder: true, path: true, fileHash: true },
       });
+
+      // 收集所有文件的哈希值，用于清理 uploads 目录
+      const fileHashes = nodes
+        .filter(node => !node.isFolder && node.fileHash)
+        .map(node => node.fileHash!);
+
+      // 删除 uploads 目录中的物理文件
+      if (fileHashes.length > 0) {
+        const deletedCount = await this.deleteMxCadFilesFromUploadsBatch(fileHashes);
+        this.logger.log(`清空回收站时删除 uploads 文件: ${deletedCount} 个`);
+      }
 
       // 彻底删除所有
       for (const project of projects) {
@@ -1069,6 +1124,134 @@ export class FileSystemService {
       this.logger.error(`获取用户存储信息失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 删除 uploads 目录和 MinIO 中与指定文件哈希相关的所有 MxCAD 文件
+   * 包括 .dwg, .mxweb, _preloading.json 等文件，以及外部参照子目录
+   * 
+   * @param fileHash 文件哈希值
+   * @returns 删除的文件数量
+   */
+  private async deleteMxCadFilesFromUploads(fileHash: string): Promise<number> {
+    if (!fileHash) {
+      return 0;
+    }
+
+    let totalDeleted = 0;
+
+    try {
+      // 1. 删除 uploads 目录中的文件
+      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      
+      try {
+        await fsPromises.access(uploadPath);
+        const files = await fsPromises.readdir(uploadPath);
+        
+        // 筛选出与 fileHash 相关的文件
+        const relatedFiles = files.filter(file => file.startsWith(fileHash));
+
+        for (const fileName of relatedFiles) {
+          const filePath = path.join(uploadPath, fileName);
+          try {
+            await fsPromises.unlink(filePath);
+            this.logger.log(`删除 uploads 文件成功: ${filePath}`);
+            totalDeleted++;
+          } catch (error) {
+            this.logger.error(`删除 uploads 文件失败: ${filePath}: ${error.message}`);
+          }
+        }
+
+        // 删除外部参照子目录（如果存在）
+        const hashDir = path.join(uploadPath, fileHash);
+        try {
+          await fsPromises.access(hashDir);
+          const extRefFiles = await fsPromises.readdir(hashDir);
+          
+          for (const extRefFile of extRefFiles) {
+            const extRefFilePath = path.join(hashDir, extRefFile);
+            try {
+              await fsPromises.unlink(extRefFilePath);
+              this.logger.log(`删除 uploads 外部参照文件成功: ${extRefFilePath}`);
+              totalDeleted++;
+            } catch (error) {
+              this.logger.error(`删除 uploads 外部参照文件失败: ${extRefFilePath}: ${error.message}`);
+            }
+          }
+          
+          // 删除空目录
+          await fsPromises.rmdir(hashDir);
+          this.logger.log(`删除 uploads 外部参照目录成功: ${hashDir}`);
+        } catch (error) {
+          // 子目录不存在或无权限，忽略
+          this.logger.debug(`外部参照子目录不存在: ${hashDir}`);
+        }
+      } catch (error) {
+        this.logger.warn(`uploads 目录不存在或读取失败: ${uploadPath}: ${error.message}`);
+      }
+
+      // 2. 删除 MinIO 中的相关文件
+      try {
+        // 获取 mxcad/file/ 路径下所有以 fileHash 开头的文件
+        const minioFiles = await this.storage.listFiles(`mxcad/file/`, `${fileHash}`);
+        
+        for (const minioFile of minioFiles) {
+          try {
+            await this.storage.deleteFile(minioFile);
+            this.logger.log(`删除 MinIO 文件成功: ${minioFile}`);
+            totalDeleted++;
+          } catch (error) {
+            this.logger.error(`删除 MinIO 文件失败: ${minioFile}: ${error.message}`);
+          }
+        }
+
+        // 删除外部参照子目录（如果存在）
+        try {
+          const extRefFiles = await this.storage.listFiles(`mxcad/file/${fileHash}/`);
+          for (const extRefFile of extRefFiles) {
+            try {
+              await this.storage.deleteFile(extRefFile);
+              this.logger.log(`删除 MinIO 外部参照文件成功: ${extRefFile}`);
+              totalDeleted++;
+            } catch (error) {
+              this.logger.error(`删除 MinIO 外部参照文件失败: ${extRefFile}: ${error.message}`);
+            }
+          }
+        } catch (error) {
+          // 子目录不存在或无权限，忽略
+          this.logger.debug(`外部参照子目录不存在: mxcad/file/${fileHash}/`);
+        }
+      } catch (error) {
+        this.logger.warn(`删除 MinIO 文件失败: ${error.message}`);
+      }
+
+      this.logger.log(`共删除 ${totalDeleted} 个文件（uploads + MinIO），哈希值: ${fileHash}`);
+      return totalDeleted;
+    } catch (error) {
+      this.logger.error(`删除 MxCAD 文件失败: ${error.message}`, error.stack);
+      return 0;
+    }
+  }
+
+  /**
+   * 批量删除 uploads 目录中与指定文件哈希列表相关的所有 MxCAD 文件
+   * 
+   * @param fileHashes 文件哈希值列表
+   * @returns 删除的文件总数
+   */
+  private async deleteMxCadFilesFromUploadsBatch(fileHashes: string[]): Promise<number> {
+    if (!fileHashes || fileHashes.length === 0) {
+      return 0;
+    }
+
+    let totalDeleted = 0;
+    for (const fileHash of fileHashes) {
+      const deleted = await this.deleteMxCadFilesFromUploads(fileHash);
+      totalDeleted += deleted;
+    }
+
+    this.logger.log(`批量删除 uploads 文件完成，共删除 ${totalDeleted} 个文件，哈希值数量: ${fileHashes.length}`);
+    return totalDeleted;
   }
 
   private formatBytes(bytes: number): string {

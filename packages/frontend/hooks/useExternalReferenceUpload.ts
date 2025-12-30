@@ -33,7 +33,9 @@ export const useExternalReferenceUpload = (
       return null;
     }
     try {
+      console.log('[useExternalReferenceUpload] 开始获取预加载数据, hash:', hash);
       const response = await mxcadApi.getPreloadingData(hash);
+      console.log('[useExternalReferenceUpload] 预加载数据响应:', response.data);
       return response.data;
     } catch (error) {
       console.error('[useExternalReferenceUpload] 获取预加载数据失败:', error);

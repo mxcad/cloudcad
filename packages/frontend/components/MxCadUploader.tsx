@@ -96,7 +96,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
 
     selectFiles({
       nodeId: currentNodeId || undefined,
-      onSuccess: (param: LoadFileParam) => {
+      onSuccess: async (param: LoadFileParam) => {
         setUploading(false);
         setProgress(0);
         setMessage('文件上传成功！');
@@ -108,7 +108,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
 
         // 检查外部参照（传入 fileHash 确保不为空）
         console.log('[MxCadUploader] 开始检查外部参照, hash:', param.hash);
-        externalReferenceUpload.checkMissingReferences(param.hash);
+        const hasMissing = await externalReferenceUpload.checkMissingReferences(param.hash);
+        console.log('[MxCadUploader] 外部参照检查结果:', hasMissing);
 
         // 3秒后隐藏提示
         setTimeout(() => setShowToast(false), 3000);

@@ -88,6 +88,35 @@ export class MinioStorageProvider implements StorageProvider {
     }
   }
 
+  /**
+   * 列出指定路径下的文件
+   * @param prefix 文件路径前缀
+   * @param startsWith 可选，文件名起始字符串
+   * @returns 文件路径列表
+   */
+  async listFiles(prefix: string, startsWith?: string): Promise<string[]> {
+    try {
+      const stream = this.client.listObjects(this.bucket, prefix, true);
+      const files: string[] = [];
+
+      return new Promise((resolve, reject) => {
+        stream.on('data', (obj) => {
+          if (obj.name) {
+            // 如果指定了 startsWith，只返回匹配的文件
+            if (!startsWith || obj.name.startsWith(prefix + startsWith)) {
+              files.push(obj.name);
+            }
+          }
+        });
+        stream.on('end', () => resolve(files));
+        stream.on('error', reject);
+      });
+    } catch (error) {
+      this.logger.error(`列出文件失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   // 预签名 URL
   async getPresignedUrl(key: string, expiry = 3600): Promise<string> {
     try {
