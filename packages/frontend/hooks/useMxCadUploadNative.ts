@@ -16,7 +16,7 @@ const simpleHash = (buffer: ArrayBuffer): string => {
 /**
  * 计算文件哈希
  */
-const calculateFileHash = (file: File): Promise<string> => {
+export const calculateFileHash = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

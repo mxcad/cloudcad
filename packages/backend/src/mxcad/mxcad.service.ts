@@ -8,7 +8,6 @@ import { MinioSyncService } from './minio-sync.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { ExternalReferenceStats, ExternalReferenceInfo } from './types/external-reference.types';
 import * as fsPromises from 'fs/promises';
-import * as fsSync from 'fs';
 import path from 'path';
 
 @Injectable()
@@ -316,7 +315,8 @@ return result;
     name: string,
     size: number,
     chunks: number,
-    context?: any
+    context?: any,
+    srcDwgFileHash?: string
   ): Promise<{ ret: string; tz?: boolean }> {
 // 验证权限
     await this.permissionService.validateUploadPermission(context);
@@ -327,6 +327,7 @@ return result;
       size,
       chunks,
       context: this.validateContext(context),
+      srcDwgFileHash, // 外部参照上传时的源图纸哈希
     });
 return result;
   }

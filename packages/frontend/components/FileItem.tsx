@@ -56,7 +56,11 @@ export const FileItem: React.FC<FileItemProps> = ({
   const modalRef = useRef<{ checkMissingReferences: () => Promise<boolean> } | null>(null);
 
   // 外部参照上传 Hook（任务008/009）
+  console.log('[FileItem] 初始化 useExternalReferenceUpload');
+  console.log('[FileItem] node.id =', node.id);
+  console.log('[FileItem] node =', node);
   const externalReferenceUpload = useExternalReferenceUpload({
+    nodeId: node.id, // 传递节点 ID 用于权限验证
     fileHash: node.fileHash || '',
     onSuccess: () => {
       console.log('[FileItem] 外部参照上传成功');
@@ -70,17 +74,30 @@ export const FileItem: React.FC<FileItemProps> = ({
     },
   });
 
+  // 阻止文件项点击的标志
+  const blockItemClickRef = useRef(false);
+
   /**
    * 处理上传外部参照（任务009 - 随时上传）
    * 如果没有缺失的外部参照，直接打开文件选择对话框
    */
   const handleUploadExternalReference = useCallback(
     async (e: React.MouseEvent) => {
+      console.log('[FileItem] handleUploadExternalReference 被调用');
       e.stopPropagation();
+      e.preventDefault();
       setShowMenu(false);
+
+      // 设置标志，阻止文件项点击
+      blockItemClickRef.current = true;
+      console.log('[FileItem] 设置 blockItemClickRef = true');
+
+      // 延迟执行，确保菜单完全关闭
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       if (!node.fileHash) {
         console.error('[FileItem] 文件哈希不存在');
+        blockItemClickRef.current = false;
         return;
       }
 
@@ -92,6 +109,13 @@ export const FileItem: React.FC<FileItemProps> = ({
         // 无缺失时，直接打开模态框让用户选择要上传的文件
         externalReferenceUpload.openModalForUpload();
       }
+
+      // 模态框打开后，等待一段时间再重置标志
+      // 这样可以确保在模态框打开期间，文件项的点击事件被阻止
+      setTimeout(() => {
+        console.log('[FileItem] 1秒后重置 blockItemClickRef = false');
+        blockItemClickRef.current = false;
+      }, 1000);
     },
     [node.fileHash, externalReferenceUpload]
   );
@@ -107,12 +131,22 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      console.log('[FileItem] handleClick 被调用, blockItemClickRef:', blockItemClickRef.current, 'node:', node.name);
+
+      // 检查是否应该阻止点击（例如：刚从菜单操作返回）
+      if (blockItemClickRef.current) {
+        console.log('[FileItem] 阻止文件项点击');
+        blockItemClickRef.current = false;
+        return;
+      }
+
       if (isMultiSelectMode) {
         // 多选模式：处理选择
         const isCtrl = e.ctrlKey || e.metaKey;
         onSelect(node.id, isCtrl || true);
       } else {
         // 非多选模式：直接进入
+        console.log('[FileItem] 调用 onEnter:', node.name);
         onEnter(node);
       }
     },
@@ -243,26 +277,10 @@ export const FileItem: React.FC<FileItemProps> = ({
         {/* 操作菜单 */}
         <div
           className={`absolute top-3 right-3 transition-opacity duration-200 ${
-            isHovered || showMenu ? 'opacity-100' : 'opacity-0'
+            isHovered || showMenu ? 'opacity-100' : 'opacity-100'
           }`}
         >
           <div className="relative flex items-center gap-1">
-            {/* 上传外部参照按钮（任务009 - 仅 CAD 文件显示） */}
-            {isCadFile() && (
-              <button
-                onClick={(e) => handleUploadExternalReference(e)}
-                className={`w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200
-                           flex items-center justify-center transition-colors ${
-                             node.hasMissingExternalReferences
-                               ? 'text-amber-500 hover:text-amber-600'
-                               : 'text-slate-500 hover:text-slate-700'
-                           }`}
-                title={node.hasMissingExternalReferences ? '上传外部参照' : '上传外部参照'}
-              >
-                <Upload size={16} />
-              </button>
-            )}
-
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -279,7 +297,8 @@ export const FileItem: React.FC<FileItemProps> = ({
             {showMenu && (
               <div
                 className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200
-                           py-1 min-w-[120px] z-20 animate-scale-in origin-top-right"
+                           py-1 min-w-[120px] z-50 animate-scale-in origin-top-right"
+                onClick={(e) => e.stopPropagation()}
               >
                 {/* 回收站场景：只显示恢复和删除 */}
                 {isTrash ? (
@@ -315,12 +334,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                     {/* 上传外部参照按钮（任务009 - 始终显示，仅 CAD 文件） */}
                     {isCadFile() && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMenuAction(async () => {
-                            await handleUploadExternalReference(e);
-                          });
-                        }}
+                        onClick={handleUploadExternalReference}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
                           node.hasMissingExternalReferences
                             ? 'text-amber-600 hover:bg-amber-50'
@@ -435,8 +449,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           isOpen={externalReferenceUpload.isOpen}
           files={externalReferenceUpload.files}
           loading={externalReferenceUpload.loading}
-          onSelectFiles={externalReferenceUpload.selectFiles}
-          onUpload={externalReferenceUpload.uploadFiles}
+          onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
           onComplete={externalReferenceUpload.complete}
           onSkip={externalReferenceUpload.skip}
           onClose={externalReferenceUpload.close}
@@ -641,20 +654,6 @@ export const FileItem: React.FC<FileItemProps> = ({
               </>
             ) : (
               <>
-                {/* 上传外部参照按钮（任务009 - 仅 CAD 文件显示） */}
-                {isCadFile() && (
-                  <button
-                    onClick={(e) => handleUploadExternalReference(e)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      node.hasMissingExternalReferences
-                        ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
-                    title="上传外部参照"
-                  >
-                    <Upload size={18} />
-                  </button>
-                )}
                 {!node.isFolder && (
                   <button
                     onClick={(e) => {

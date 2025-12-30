@@ -1,6 +1,34 @@
 ﻿import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Logger } from '../utils/mxcadUtils';
 
+/**
+ * 简单的哈希函数
+ */
+const simpleHash = (buffer: ArrayBuffer): string => {
+  const uint8Array = new Uint8Array(buffer);
+  let hash = '';
+  for (let i = 0; i < uint8Array.length; i++) {
+    hash += uint8Array[i].toString(16).padStart(2, '0');
+  }
+  return hash.substring(0, 32);
+};
+
+/**
+ * 计算文件哈希
+ */
+const calculateFileHash = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      const hash = simpleHash(buffer);
+      resolve(hash);
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 // API 基础配置
 const API_BASE_URL =
   (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
@@ -403,14 +431,31 @@ export const mxcadApi = {
     extRefFile: string,
     onProgress?: (progressEvent: any) => void
   ) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('src_dwgfile_hash', srcDwgFileHash);
-    formData.append('ext_ref_file', extRefFile);
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 计算上传文件的哈希
+        const hash = await calculateFileHash(file);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('hash', hash); // 使用上传文件的哈希
+        formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
+        formData.append('ext_ref_file', extRefFile);
 
-    return apiService.post('/mxcad/up_ext_reference_dwg', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: onProgress,
+        // 调试日志：打印 FormData 内容
+        console.log('[uploadExtReferenceDwg] FormData 内容:');
+        for (const [key, value] of formData.entries()) {
+          console.log(`  ${key}: ${value instanceof File ? `File(${value.name})` : value}`);
+        }
+
+        const response = await apiService.post('/mxcad/up_ext_reference_dwg', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: onProgress,
+        });
+        resolve(response);
+      } catch (error) {
+        reject(error);
+      }
     });
   },
 
@@ -421,14 +466,25 @@ export const mxcadApi = {
     extRefFile: string,
     onProgress?: (progressEvent: any) => void
   ) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('src_dwgfile_hash', srcDwgFileHash);
-    formData.append('ext_ref_file', extRefFile);
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 计算上传文件的哈希
+        const hash = await calculateFileHash(file);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('hash', hash); // 使用上传文件的哈希
+        formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
+        formData.append('ext_ref_file', extRefFile);
 
-    return apiService.post('/mxcad/up_ext_reference_image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: onProgress,
+        const response = await apiService.post('/mxcad/up_ext_reference_image', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: onProgress,
+        });
+        resolve(response);
+      } catch (error) {
+        reject(error);
+      }
     });
   },
 };

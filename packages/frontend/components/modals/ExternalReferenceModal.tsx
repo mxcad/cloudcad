@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ExternalReferenceFile } from '../../types/filesystem';
-import { CheckCircle, XCircle, Loader2, Upload, AlertTriangle } from 'lucide-react';
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Upload,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface ExternalReferenceModalProps {
   /** 模态框是否打开 */
@@ -11,10 +18,8 @@ interface ExternalReferenceModalProps {
   files: ExternalReferenceFile[];
   /** 是否正在上传 */
   loading: boolean;
-  /** 选择文件回调 */
-  onSelectFiles: () => void;
-  /** 上传文件回调 */
-  onUpload: () => void;
+  /** 选择文件并自动上传回调 */
+  onSelectAndUpload: () => void;
   /** 完成上传回调 */
   onComplete: () => void;
   /** 跳过上传回调 */
@@ -36,16 +41,27 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   isOpen,
   files,
   loading,
-  onSelectFiles,
-  onUpload,
+  onSelectAndUpload,
   onComplete,
   onSkip,
   onClose,
 }) => {
-  const allSuccess = files.length > 0 && files.every((f) => f.uploadState === 'success');
-  const allNotSelected = files.every((f) => f.uploadState === 'notSelected');
+  const allSuccess =
+    files.length > 0 && files.every((f) => f.uploadState === 'success');
   const hasUploading = files.some((f) => f.uploadState === 'uploading');
   const hasFailures = files.some((f) => f.uploadState === 'fail');
+
+  // 禁止背景滚动
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const getStatusIcon = (file: ExternalReferenceFile) => {
     switch (file.uploadState) {
@@ -86,7 +102,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
     }
   };
 
-  return (
+  const modalContent = (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -98,20 +114,53 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       }
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={loading}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              console.log('[ExternalReferenceModal] 取消按钮被点击');
+              onClose();
+            }}
+            disabled={loading}
+          >
             取消
           </Button>
-          <Button variant="outline" onClick={onSkip} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              console.log('[ExternalReferenceModal] 稍后上传按钮被点击');
+              onSkip();
+            }}
+            disabled={loading}
+          >
             稍后上传
           </Button>
-          <Button onClick={onSelectFiles} disabled={allSuccess || hasUploading}>
-            <Upload size={16} className="mr-2" />
-            选择文件
+          <Button
+            onClick={() => {
+              console.log('[ExternalReferenceModal] 选择并上传按钮被点击');
+              onSelectAndUpload();
+            }}
+            disabled={hasUploading || allSuccess}
+            variant="primary"
+          >
+            {hasUploading ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                上传中...
+              </>
+            ) : (
+              <>
+                <Upload size={16} className="mr-2" />
+                选择并上传
+              </>
+            )}
           </Button>
-          <Button onClick={onUpload} disabled={allNotSelected || hasUploading || allSuccess}>
-            上传
-          </Button>
-          <Button onClick={onComplete} disabled={!allSuccess || loading} variant="primary">
+          <Button
+            onClick={() => {
+              console.log('[ExternalReferenceModal] 完成按钮被点击');
+              onComplete();
+            }}
+            disabled={!allSuccess || loading}
+          >
             完成
           </Button>
         </>
@@ -120,9 +169,14 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       <div className="space-y-4">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <div className="flex items-start gap-2">
-            <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+            <AlertTriangle
+              size={16}
+              className="text-amber-600 mt-0.5 flex-shrink-0"
+            />
             <div className="text-sm text-amber-800">
-              <p className="font-medium mb-1">检测到 {files.length} 个缺失的外部参照文件</p>
+              <p className="font-medium mb-1">
+                检测到 {files.length} 个缺失的外部参照文件
+              </p>
               <p className="text-amber-700">
                 这些文件是图纸正常显示所必需的。您可以选择立即上传，也可以稍后上传。
                 稍后上传时，文件列表中会显示警告标识。
@@ -196,7 +250,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-600">正在上传...</span>
               <span className="text-slate-600">
-                {files.filter((f) => f.uploadState === 'success').length} / {files.length}
+                {files.filter((f) => f.uploadState === 'success').length} /{' '}
+                {files.length}
               </span>
             </div>
             <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
@@ -208,7 +263,10 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         {hasFailures && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <XCircle size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
+              <XCircle
+                size={16}
+                className="text-red-600 mt-0.5 flex-shrink-0"
+              />
               <div className="text-sm text-red-800">
                 <p className="font-medium mb-1">部分文件上传失败</p>
                 <p className="text-red-700">
@@ -222,12 +280,13 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         {allSuccess && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+              <CheckCircle
+                size={16}
+                className="text-green-600 mt-0.5 flex-shrink-0"
+              />
               <div className="text-sm text-green-800">
                 <p className="font-medium">所有外部参照文件上传成功</p>
-                <p className="text-green-700">
-                  图纸现在可以正常显示了。
-                </p>
+                <p className="text-green-700">图纸现在可以正常显示了。</p>
               </div>
             </div>
           </div>
@@ -235,6 +294,10 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       </div>
     </Modal>
   );
+
+  // 使用 Portal 将模态框渲染到 body
+  if (!isOpen) return null;
+  return createPortal(modalContent, document.body);
 };
 
 export default ExternalReferenceModal;

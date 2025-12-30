@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
-import { mxcadApi } from '../services/apiService';
+import { useState, useCallback, useRef } from 'react';
+import { apiService, mxcadApi } from '../services/apiService';
+import { calculateFileHash } from './useMxCadUploadNative';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -23,25 +24,60 @@ export const useExternalReferenceUpload = (
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<ExternalReferenceFile[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // 使用 ref 存储 nodeId，确保闭包中始终使用最新值
+  const nodeIdRef = useRef(config.nodeId);
+  nodeIdRef.current = config.nodeId;
 
   /**
-   * 获取预加载数据
-   */
-  const fetchPreloadingData = useCallback(async (hash: string): Promise<PreloadingData | null> => {
-    if (!hash) {
-      console.warn('[useExternalReferenceUpload] fileHash 为空，无法获取预加载数据');
-      return null;
-    }
-    try {
-      console.log('[useExternalReferenceUpload] 开始获取预加载数据, hash:', hash);
-      const response = await mxcadApi.getPreloadingData(hash);
-      console.log('[useExternalReferenceUpload] 预加载数据响应:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('[useExternalReferenceUpload] 获取预加载数据失败:', error);
-      return null;
-    }
-  }, []);
+
+     * 获取预加载数据
+
+     */
+
+  const fetchPreloadingData = useCallback(
+    async (hash: string): Promise<PreloadingData | null> => {
+      if (!hash) {
+        console.warn(
+          '[useExternalReferenceUpload] fileHash 为空，无法获取预加载数据'
+        );
+
+        return null;
+      }
+
+      try {
+        console.log(
+          '[useExternalReferenceUpload] 开始获取预加载数据, hash:',
+
+          hash
+        );
+
+        const response = await mxcadApi.getPreloadingData(hash);
+
+        console.log(
+          '[useExternalReferenceUpload] 预加载数据响应:',
+
+          response.data
+        );
+
+        // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
+
+        // 需要提取 data 字段中的实际预加载数据
+
+        return response.data?.data || null;
+      } catch (error) {
+        console.error(
+          '[useExternalReferenceUpload] 获取预加载数据失败:',
+
+          error
+        );
+
+        return null;
+      }
+    },
+
+    []
+  );
 
   /**
    * 检查外部参照是否存在
@@ -54,7 +90,9 @@ export const useExternalReferenceUpload = (
           fileHash,
           fileName
         );
-        return response.data.exists;
+        // checkExternalReference 接口使用 res.json({ exists }) 直接返回，绕过了全局响应包装
+        // 所以 response.data 就是 {exists: boolean}
+        return response.data?.exists ?? false;
       } catch (error) {
         console.error('[useExternalReferenceUpload] 检查外部参照失败:', error);
         return false;
@@ -71,10 +109,32 @@ export const useExternalReferenceUpload = (
   const checkMissingReferences = useCallback(
     async (fileHash?: string): Promise<boolean> => {
       const hash = fileHash || config.fileHash;
-      const preloadingData = await fetchPreloadingData(hash);
+
+      // 增加重试逻辑：等待 preloading.json 生成
+      // 解决文件转换未完成时检查外部参照导致预加载数据不存在的问题
+      let preloadingData = null;
+      let retryCount = 0;
+      const maxRetries = 10; // 最多重试10次
+      const retryDelay = 2000; // 每次间隔2秒（总共最多等待20秒）
+
+      while (retryCount < maxRetries && !preloadingData) {
+        preloadingData = await fetchPreloadingData(hash);
+
+        if (!preloadingData) {
+          console.log(
+            `[useExternalReferenceUpload] 预加载数据不存在，${retryDelay / 1000}秒后重试 (${retryCount + 1}/${maxRetries})`
+          );
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          }
+        }
+      }
 
       if (!preloadingData) {
-        console.log('[useExternalReferenceUpload] 未找到预加载数据');
+        console.log(
+          '[useExternalReferenceUpload] 重试次数耗尽，仍未找到预加载数据，可能是转换失败或文件无外部参照'
+        );
         return false;
       }
 
@@ -143,46 +203,28 @@ export const useExternalReferenceUpload = (
   );
 
   /**
-   * 选择文件
-   */
-  const selectFiles = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.dwg,image/*';
-    input.multiple = true;
-    input.style.display = 'none';
-    document.body.appendChild(input);
-
-    input.onchange = () => {
-      if (!input.files) return;
-
-      const selectedFiles = Array.from(input.files);
-
-      setFiles((prevFiles) => {
-        const newFiles = [...prevFiles];
-
-        selectedFiles.forEach((file) => {
-          const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) {
-            existingFile.source = file;
-          }
-        });
-
-        return newFiles;
-      });
-
-      input.remove();
-    };
-
-    input.click();
-  }, []);
-
-  /**
    * 上传文件
+   * DWG 外部参照使用外部参照上传接口，图片外部参照直接上传
    */
   const uploadFiles = useCallback(async () => {
+    console.log('[useExternalReferenceUpload] uploadFiles 被调用');
+    console.log(
+      '[useExternalReferenceUpload] 当前文件列表:',
+      files.map((f) => ({
+        name: f.name,
+        type: f.type,
+        uploadState: f.uploadState,
+        hasSource: !!f.source,
+      }))
+    );
+
     const filesToUpload = files.filter(
       (f) => f.source && f.uploadState === 'notSelected'
+    );
+
+    console.log(
+      '[useExternalReferenceUpload] 筛选后待上传文件:',
+      filesToUpload.map((f) => f.name)
     );
 
     if (filesToUpload.length === 0) {
@@ -208,26 +250,58 @@ export const useExternalReferenceUpload = (
       );
 
       try {
-        const endpoint =
-          fileInfo.type === 'img'
-            ? mxcadApi.uploadExtReferenceImage
-            : mxcadApi.uploadExtReferenceDwg;
-
-        await endpoint(
-          fileInfo.source,
-          config.fileHash,
-          fileInfo.name,
-          (progressEvent) => {
-            if (progressEvent.total) {
-              const progress = (progressEvent.loaded / progressEvent.total) * 100;
-              setFiles((prevFiles) =>
-                prevFiles.map((f) =>
-                  f.name === fileInfo.name ? { ...f, progress } : f
-                )
-              );
-            }
-          }
+        console.log(
+          `[useExternalReferenceUpload] 准备上传文件: ${fileInfo.name}`
         );
+        console.log(`[useExternalReferenceUpload] 文件类型: ${fileInfo.type}`);
+        console.log(
+          `[useExternalReferenceUpload] 源文件哈希: ${config.fileHash}`
+        );
+
+        if (fileInfo.type === 'img') {
+          // 图片外部参照：使用图片上传接口
+          console.log('[useExternalReferenceUpload] 使用图片上传接口');
+          await mxcadApi.uploadExtReferenceImage(
+            fileInfo.source,
+            config.fileHash,
+            fileInfo.name,
+            (progressEvent) => {
+              if (progressEvent.total) {
+                const progress =
+                  (progressEvent.loaded / progressEvent.total) * 100;
+                setFiles((prevFiles) =>
+                  prevFiles.map((f) =>
+                    f.name === fileInfo.name ? { ...f, progress } : f
+                  )
+                );
+              }
+            }
+          );
+        } else {
+          // DWG 外部参照：使用 DWG 外部参照上传接口
+          console.log('[useExternalReferenceUpload] 使用 DWG 外部参照上传接口');
+          console.log('[useExternalReferenceUpload] config.fileHash =', config.fileHash);
+          console.log('[useExternalReferenceUpload] fileInfo.name =', fileInfo.name);
+          
+          await mxcadApi.uploadExtReferenceDwg(
+            fileInfo.source,
+            config.fileHash,
+            fileInfo.name,
+            (progressEvent) => {
+              if (progressEvent.total) {
+                const progress =
+                  (progressEvent.loaded / progressEvent.total) * 100;
+                setFiles((prevFiles) =>
+                  prevFiles.map((f) =>
+                    f.name === fileInfo.name ? { ...f, progress } : f
+                  )
+                );
+              }
+            }
+          );
+        }
+
+        console.log(`[useExternalReferenceUpload] 上传成功: ${fileInfo.name}`);
 
         // 更新状态为成功
         setFiles((prevFiles) =>
@@ -237,10 +311,16 @@ export const useExternalReferenceUpload = (
               : f
           )
         );
-
-        console.log(`[useExternalReferenceUpload] 上传成功: ${fileInfo.name}`);
       } catch (error) {
-        console.error(`[useExternalReferenceUpload] 上传失败: ${fileInfo.name}`, error);
+        console.error(
+          `[useExternalReferenceUpload] 上传失败: ${fileInfo.name}`,
+          error
+        );
+        console.error('[useExternalReferenceUpload] 错误详情:', {
+          message: error instanceof Error ? error.message : String(error),
+          response: (error as any).response?.data,
+          status: (error as any).response?.status,
+        });
         config.onError?.(`上传 ${fileInfo.name} 失败`);
 
         // 更新状态为失败
@@ -302,13 +382,71 @@ export const useExternalReferenceUpload = (
     setFiles([]);
   }, []);
 
+  /**
+   * 选择文件并自动上传
+   */
+  const selectAndUploadFiles = useCallback(() => {
+    console.log('[useExternalReferenceUpload] selectAndUploadFiles 被调用');
+    console.log('[useExternalReferenceUpload] 当前文件列表:', files);
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.dwg,image/*';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = async () => {
+      console.log('[useExternalReferenceUpload] 文件选择器 onchange 触发');
+      if (!input.files) {
+        console.log('[useExternalReferenceUpload] 没有选择文件');
+        return;
+      }
+
+      const selectedFiles = Array.from(input.files);
+      console.log(
+        '[useExternalReferenceUpload] 用户选择的文件:',
+        selectedFiles.map((f) => f.name)
+      );
+
+      input.remove();
+
+      // 更新文件列表，设置 source
+      setFiles((prevFiles) => {
+        const newFiles = [...prevFiles];
+        let matchedCount = 0;
+        selectedFiles.forEach((file) => {
+          const existingFile = newFiles.find((f) => f.name === file.name);
+          if (existingFile) {
+            existingFile.source = file;
+            existingFile.uploadState = 'notSelected';
+            matchedCount++;
+            console.log(`[useExternalReferenceUpload] 匹配文件: ${file.name}, 设置 source`);
+          } else {
+            console.warn(`[useExternalReferenceUpload] 未找到匹配的缺失文件: ${file.name}`);
+          }
+        });
+        console.log(`[useExternalReferenceUpload] 匹配了 ${matchedCount}/${selectedFiles.length} 个文件`);
+        return newFiles;
+      });
+
+      // 等待状态更新后再开始上传
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // 自动开始上传
+      console.log('[useExternalReferenceUpload] 自动开始上传');
+      await uploadFiles();
+    };
+
+    input.click();
+  }, [files, uploadFiles]);
+
   return {
     isOpen,
     files,
     loading,
     checkMissingReferences,
-    selectFiles,
-    uploadFiles,
+    selectAndUploadFiles, // 合并后的方法
     close,
     complete,
     skip,

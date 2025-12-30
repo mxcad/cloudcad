@@ -51,13 +51,11 @@ export class MinioSyncService {
       }
 
       const fileStream = fs.createReadStream(localPath);
-      const stat = fs.statSync(localPath);
       
       await this.minioClient.putObject(
         this.bucketName,
         minioPath,
-        fileStream,
-        stat.size
+        fileStream
       );
       
       this.logger.log(`文件同步成功: ${localPath} -> ${minioPath}`);
@@ -78,8 +76,7 @@ export class MinioSyncService {
       await this.minioClient.putObject(
         this.bucketName,
         minioPath,
-        buffer,
-        buffer.length
+        buffer
       );
       
       this.logger.log(`文件上传成功: ${minioPath} (${buffer.length} bytes)`);

@@ -6,6 +6,8 @@ export interface FileSystemNodeContext {
   nodeId: string;  // 当前节点ID（项目根目录或文件夹）
   userId: string;
   userRole: string;
+  srcDwgFileHash?: string;  // 外部参照上传时的源图纸哈希
+  isImage?: boolean;  // 是否为图片外部参照
 }
 
 export interface CreateNodeOptions {

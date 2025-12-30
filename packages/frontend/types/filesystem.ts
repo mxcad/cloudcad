@@ -91,6 +91,8 @@ export interface ExternalReferenceFile {
  * useExternalReferenceUpload 配置
  */
 export interface UseExternalReferenceUploadConfig {
+  /** 节点 ID（用于权限验证） */
+  nodeId: string;
   /** 文件哈希值 */
   fileHash: string;
   /** 上传成功回调 */

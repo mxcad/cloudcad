@@ -51,10 +51,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           if (req.body.chunk !== undefined) {
             // 分片文件名: {chunkIndex}_{fileHash}
             cb(null, `${req.body.chunk}_${fileMd5}`);
-          } else {
+          } else if (fileMd5) {
             // 完整文件名: {fileHash}.{ext}
             const ext = file.originalname.split('.').pop();
             cb(null, `${fileMd5}.${ext}`);
+          } else {
+            // 没有 hash 参数时，使用原始文件名（用于外部参照上传）
+            cb(null, file.originalname);
           }
         },
       }),

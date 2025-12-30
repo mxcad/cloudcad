@@ -331,7 +331,8 @@ export class MxCadController {
           body.name,
           parseInt(body.size, 10),
           parseInt(body.chunks, 10),
-          context
+          context,
+          body.src_dwgfile_hash // 外部参照上传时的源图纸哈希
         );
         return res.json(result);
       } catch (error) {
@@ -732,17 +733,10 @@ export class MxCadController {
   }
 
   /**
-   * 上传外部参照 DWG（增强版本）
+   * 上传外部参照 DWG
    *
-   * 验证逻辑：
-   * 1. 验证文件是否存在
-   * 2. 验证参数完整性
-   * 3. 验证图纸文件是否存在
-   * 4. 验证外部参照文件是否在预加载数据列表中
-   * 5. 验证文件名安全性（防止路径遍历攻击）
-   * 6. 验证文件大小（最大 100MB）
-   * 7. 验证文件类型（仅支持 DWG 和 DXF）
-   * 8. 验证用户权限（可选）
+   * 复用现有的上传方法（/mxcad/files/uploadFiles），上传完成后将转换后的文件
+   * 拷贝到源图纸的 hash 目录并重命名。
    */
   @Post('up_ext_reference_dwg')
   @UseInterceptors(FileInterceptor('file'))
@@ -777,6 +771,8 @@ export class MxCadController {
     @Res() res: Response
   ) {
     this.logger.log(`[uploadExtReferenceDwg] 开始处理: ${body.ext_ref_file}`);
+    this.logger.log(`[uploadExtReferenceDwg] 接收到的 body 参数: ${JSON.stringify(body)}`);
+    this.logger.log(`[uploadExtReferenceDwg] 接收到的文件路径: ${file?.path}`);
 
     // 验证上传请求
     const validationResult = await this.validateExtReferenceUpload(
@@ -790,7 +786,7 @@ export class MxCadController {
       return res.json(validationResult.error);
     }
 
-    // 验证用户权限（可选）
+    // 验证用户权限
     try {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceDwg] 用户ID: ${userId}`);
@@ -813,76 +809,47 @@ export class MxCadController {
       return res.json({ code: -1, message: '权限验证失败' });
     }
 
-    // 转换文件
-    const inputFile = file.path.replace(/\\/g, '/');
-    const param = {
-      srcpath: inputFile,
+    // 计算文件哈希（优先使用前端传递的值，避免二次计算）
+    let fileHash = body.hash;
+    if (!fileHash) {
+      // 兼容 MxCAD-App：如果前端没有传递 hash，则后端计算
+      const crypto = require('crypto');
+      const fileBuffer = fs.readFileSync(file.path);
+      fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+      this.logger.log(`[uploadExtReferenceDwg] 前端未传递 hash，后端计算: ${fileHash}`);
+    } else {
+      this.logger.log(`[uploadExtReferenceDwg] 使用前端传递的 hash: ${fileHash}`);
+    }
+
+    // 获取源图纸节点信息
+    const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+    const nodeId = sourceNode?.id || 'external-reference';
+
+    // 构建上下文（外部参照上传）
+    const context = {
+      nodeId: nodeId, // 使用源图纸的节点 ID，这样权限验证才能通过
+      userId: await this.validateTokenAndGetUserId(request),
+      userRole: 'USER',
+      srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
+      isImage: false, // DWG 文件
     };
 
-    this.logger.log(`[uploadExtReferenceDwg] 开始转换: ${inputFile}`);
-    const result = await this.mxCadService.convertServerFile(param);
+    // 复用现有的上传和转换逻辑
+    const result = await this.mxCadService.uploadAndConvertFileWithPermission(
+      file.path,
+      fileHash || '',
+      body.ext_ref_file,
+      file.size,
+      context
+    );
 
-    if (result.code !== 0) {
-      this.logger.error(`[uploadExtReferenceDwg] 转换失败: ${result.message}`);
-      return res.json({ code: -1, message: '转换失败' });
-    }
-
-    // 复制转换后的文件到指定目录
-    try {
-      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
-      const hashDir = path.join(uploadPath, body.src_dwgfile_hash);
-
-      // 确保目录存在
-      if (!fs.existsSync(hashDir)) {
-        fs.mkdirSync(hashDir, { recursive: true });
-        this.logger.log(`[uploadExtReferenceDwg] 创建目录: ${hashDir}`);
-      }
-
-      const sourceFile = inputFile + (process.env.MXCAD_FILE_EXT || '.mxweb');
-      const targetFile = path.join(hashDir, body.ext_ref_file + (process.env.MXCAD_FILE_EXT || '.mxweb'));
-
-      if (fs.existsSync(sourceFile)) {
-        fs.copyFileSync(sourceFile, targetFile);
-        this.logger.log(`[uploadExtReferenceDwg] 文件复制成功: ${targetFile}`);
-
-        // 同步到 MinIO
-        try {
-          const minioPath = `mxcad/file/${body.src_dwgfile_hash}/${body.ext_ref_file}.mxweb`;
-          const syncSuccess = await this.mxCadService['minioSyncService'].syncFileToMinio(targetFile, minioPath);
-          if (syncSuccess) {
-            this.logger.log(`[uploadExtReferenceDwg] MinIO 同步成功: ${minioPath}`);
-          } else {
-            this.logger.warn(`[uploadExtReferenceDwg] MinIO 同步失败: ${minioPath}`);
-          }
-        } catch (syncError) {
-          this.logger.error(`[uploadExtReferenceDwg] MinIO 同步异常: ${syncError.message}`, syncError.stack);
-          // MinIO 同步失败不影响主流程，继续返回成功
-        }
-      } else {
-        this.logger.error(`[uploadExtReferenceDwg] 源文件不存在: ${sourceFile}`);
-        return res.json({ code: -1, message: '转换后的文件不存在' });
-      }
-    } catch (error) {
-      this.logger.error(`[uploadExtReferenceDwg] 文件复制失败: ${error.message}`, error.stack);
-      return res.json({ code: -1, message: '文件复制失败' });
-    }
-
-    this.logger.log(`[uploadExtReferenceDwg] 上传成功: ${body.ext_ref_file}`);
     return res.json(result);
   }
 
   /**
-   * 上传外部参照图片（增强版本）
+   * 上传外部参照图片
    *
-   * 验证逻辑：
-   * 1. 验证文件是否存在
-   * 2. 验证参数完整性
-   * 3. 验证图纸文件是否存在
-   * 4. 验证外部参照文件是否在预加载数据列表中
-   * 5. 验证文件名安全性（防止路径遍历攻击）
-   * 6. 验证文件大小（最大 100MB）
-   * 7. 验证文件类型（仅支持图片文件）
-   * 8. 验证用户权限（可选）
+   * 图片不需要转换，直接拷贝到源图纸的 hash 目录。
    */
   @Post('up_ext_reference_image')
   @UseInterceptors(FileInterceptor('file'))
@@ -930,7 +897,7 @@ export class MxCadController {
       return res.json(validationResult.error);
     }
 
-    // 验证用户权限（可选）
+    // 验证用户权限
     try {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceImage] 用户ID: ${userId}`);
@@ -953,41 +920,35 @@ export class MxCadController {
       return res.json({ code: -1, message: '权限验证失败' });
     }
 
-    // 复制文件到指定目录
-    try {
-      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
-      const hashDir = path.join(uploadPath, body.src_dwgfile_hash);
+    // 计算文件哈希
+    const crypto = require('crypto');
+    const fileBuffer = fs.readFileSync(file.path);
+    const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
-      // 确保目录存在
-      if (!fs.existsSync(hashDir)) {
-        fs.mkdirSync(hashDir, { recursive: true });
-        this.logger.log(`[uploadExtReferenceImage] 创建目录: ${hashDir}`);
-      }
+    this.logger.log(`[uploadExtReferenceImage] 文件哈希: ${fileHash}`);
 
-      const targetFile = path.join(hashDir, body.ext_ref_file);
-      fs.copyFileSync(file.path, targetFile);
+    // 获取源图纸节点信息
+    const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+    const nodeId = sourceNode?.id || 'external-reference';
 
-      this.logger.log(`[uploadExtReferenceImage] 文件复制成功: ${targetFile}`);
+    // 构建上下文（外部参照上传）
+    const context = {
+      nodeId: nodeId, // 使用源图纸的节点 ID，这样权限验证才能通过
+      userId: await this.validateTokenAndGetUserId(request),
+      userRole: 'USER',
+      srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
+      isImage: true, // 图片文件
+    };
 
-      // 同步到 MinIO
-      try {
-        const minioPath = `mxcad/file/${body.src_dwgfile_hash}/${body.ext_ref_file}`;
-        const syncSuccess = await this.mxCadService['minioSyncService'].syncFileToMinio(targetFile, minioPath);
-        if (syncSuccess) {
-          this.logger.log(`[uploadExtReferenceImage] MinIO 同步成功: ${minioPath}`);
-        } else {
-          this.logger.warn(`[uploadExtReferenceImage] MinIO 同步失败: ${minioPath}`);
-        }
-      } catch (syncError) {
-        this.logger.error(`[uploadExtReferenceImage] MinIO 同步异常: ${syncError.message}`, syncError.stack);
-        // MinIO 同步失败不影响主流程，继续返回成功
-      }
-    } catch (error) {
-      this.logger.error(`[uploadExtReferenceImage] 文件复制失败: ${error.message}`, error.stack);
-      return res.json({ code: -1, message: '文件复制失败' });
-    }
+    // 复用现有的上传逻辑
+    const result = await this.mxCadService.uploadAndConvertFileWithPermission(
+      file.path,
+      fileHash,
+      body.ext_ref_file,
+      file.size,
+      context
+    );
 
-    this.logger.log(`[uploadExtReferenceImage] 上传成功: ${body.ext_ref_file}`);
     return res.json({ code: 0, message: 'ok' });
   }
 
