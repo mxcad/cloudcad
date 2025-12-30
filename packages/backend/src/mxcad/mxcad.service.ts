@@ -207,7 +207,6 @@ export class MxCadService {
 
   /**
    * 检查外部参照文件是否存在
-   *
    * @param fileHash 源图纸文件的哈希值
    * @param fileName 外部参照文件名
    * @returns 文件是否存在
@@ -218,50 +217,37 @@ export class MxCadService {
   ): Promise<boolean> {
     try {
       const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-
-      // 提取文件名的基本部分（不含扩展名）
-      const baseName = path.basename(fileName, path.extname(fileName));
-
-      // 优先检查 uploads/{hash}/ 子目录（标准存储位置）
       const hashDir = path.join(uploadPath, fileHash);
-      try {
-        await fsPromises.access(hashDir);
-        const files = await fsPromises.readdir(hashDir);
 
-        if (files && files.length > 0) {
-          const exists = files.some(file => {
-            const fileBaseName = path.basename(file, path.extname(file));
-            return fileBaseName === baseName;
-          });
+      // 判断文件类型
+      const ext = path.extname(fileName).toLowerCase();
+      const isDwgFile = ['.dwg', '.dxf'].includes(ext);
+      const isImageFile = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext);
 
-          if (exists) {
-            this.logger.log(`[checkExternalReferenceExists] 在子目录找到文件: fileHash=${fileHash}, fileName=${fileName}, exists=true`);
-            return true;
-          }
-        }
-      } catch (error) {
-        this.logger.debug(`[checkExternalReferenceExists] 子目录不存在或无法访问: ${hashDir}`);
+      // 构建目标文件名
+      let targetFileName: string;
+      if (isDwgFile) {
+        // DWG 文件：检查 {源文件名}.mxweb
+        targetFileName = `${fileName}.mxweb`;
+      } else if (isImageFile) {
+        // 图片文件：检查 {源图片名}
+        targetFileName = fileName;
+      } else {
+        // 其他文件类型：假设为 DWG 处理
+        targetFileName = `${fileName}.mxweb`;
       }
 
-      // 兼容性检查：检查 uploads/ 根目录（旧实现）
+      const targetFilePath = path.join(hashDir, targetFileName);
+
+      // 检查文件是否存在
       try {
-        const rootFiles = await fsPromises.readdir(uploadPath);
-
-        if (rootFiles && rootFiles.length > 0) {
-          const exists = rootFiles.some(file => {
-            const fileBaseName = path.basename(file, path.extname(file));
-            return fileBaseName === baseName;
-          });
-
-          this.logger.log(`[checkExternalReferenceExists] fileHash=${fileHash}, fileName=${fileName}, exists=${exists}`);
-          return exists;
-        }
+        await fsPromises.access(targetFilePath);
+        this.logger.log(`[checkExternalReferenceExists] 文件存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`);
+        return true;
       } catch (error) {
-        this.logger.error(`[checkExternalReferenceExists] 检查根目录失败: ${error.message}`);
+        this.logger.log(`[checkExternalReferenceExists] 文件不存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`);
+        return false;
       }
-
-      this.logger.log(`[checkExternalReferenceExists] 文件不存在: fileHash=${fileHash}, fileName=${fileName}, exists=false`);
-      return false;
     } catch (error) {
       this.logger.error(`[checkExternalReferenceExists] 检查失败: ${error.message}`, error.stack);
       return false;

@@ -1,28 +1,24 @@
 import { useRef, useCallback } from 'react';
 import { apiService } from '../services/apiService';
 
-/**
- * 简单的哈希函数
- */
-const simpleHash = (buffer: ArrayBuffer): string => {
-  const uint8Array = new Uint8Array(buffer);
-  let hash = '';
-  for (let i = 0; i < uint8Array.length; i++) {
-    hash += uint8Array[i].toString(16).padStart(2, '0');
-  }
-  return hash.substring(0, 32);
-};
+import SparkMD5 from 'spark-md5';
 
 /**
- * 计算文件哈希
+ * 计算文件哈希（使用标准 MD5 算法，与后端保持一致）
  */
 export const calculateFileHash = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const buffer = e.target?.result as ArrayBuffer;
-      const hash = simpleHash(buffer);
-      resolve(hash);
+      try {
+        const buffer = e.target?.result as ArrayBuffer;
+        const spark = new SparkMD5.ArrayBuffer();
+        spark.append(buffer);
+        const hash = spark.end();
+        resolve(hash);
+      } catch (error) {
+        reject(error);
+      }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);

@@ -56,7 +56,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             const ext = file.originalname.split('.').pop();
             cb(null, `${fileMd5}.${ext}`);
           } else {
-            // 没有 hash 参数时，使用原始文件名（用于外部参照上传）
+            // 没有 hash 参数时，使用原始文件名
             cb(null, file.originalname);
           }
         },

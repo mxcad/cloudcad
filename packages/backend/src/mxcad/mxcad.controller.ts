@@ -815,23 +815,35 @@ export class MxCadController {
 
     // 计算文件哈希（优先使用前端传递的值，避免二次计算）
     let fileHash = body.hash;
+    let isBackendCalculated = false;
     if (!fileHash) {
       // 兼容 MxCAD-App：如果前端没有传递 hash，则后端计算
       const crypto = require('crypto');
       const fileBuffer = fs.readFileSync(file.path);
       fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+      isBackendCalculated = true;
       this.logger.log(`[uploadExtReferenceDwg] 前端未传递 hash，后端计算: ${fileHash}`);
+
+      // 重命名文件为 hash 格式
+      const ext = path.extname(file.originalname);
+      const newPath = path.join(path.dirname(file.path), `${fileHash}${ext}`);
+      if (file.path !== newPath) {
+        fs.renameSync(file.path, newPath);
+        file.path = newPath;
+        this.logger.log(`[uploadExtReferenceDwg] 文件已重命名: ${file.originalname} -> ${path.basename(newPath)}`);
+      }
     } else {
       this.logger.log(`[uploadExtReferenceDwg] 使用前端传递的 hash: ${fileHash}`);
     }
 
     // 获取源图纸节点信息
     const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
-    const nodeId = sourceNode?.id || 'external-reference';
+    // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
+    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
 
     // 构建上下文（外部参照上传）
     const context = {
-      nodeId: nodeId, // 使用源图纸的节点 ID，这样权限验证才能通过
+      nodeId: nodeId, // 使用源图纸的父节点 ID（项目目录）
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
       srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
@@ -931,13 +943,23 @@ export class MxCadController {
 
     this.logger.log(`[uploadExtReferenceImage] 文件哈希: ${fileHash}`);
 
+    // 重命名文件为 hash 格式
+    const ext = path.extname(file.originalname);
+    const newPath = path.join(path.dirname(file.path), `${fileHash}${ext}`);
+    if (file.path !== newPath) {
+      fs.renameSync(file.path, newPath);
+      file.path = newPath;
+      this.logger.log(`[uploadExtReferenceImage] 文件已重命名: ${file.originalname} -> ${path.basename(newPath)}`);
+    }
+
     // 获取源图纸节点信息
     const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
-    const nodeId = sourceNode?.id || 'external-reference';
+    // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
+    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
 
     // 构建上下文（外部参照上传）
     const context = {
-      nodeId: nodeId, // 使用源图纸的节点 ID，这样权限验证才能通过
+      nodeId: nodeId, // 使用源图纸的父节点 ID（项目目录）
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
       srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希

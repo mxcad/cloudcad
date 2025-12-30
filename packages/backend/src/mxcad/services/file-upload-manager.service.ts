@@ -289,7 +289,7 @@ export class FileUploadManagerService {
 
   /**
    * 处理外部参照文件
-   * 将转换后的 mxweb 文件拷贝到源图纸的 hash 目录并重命名
+   * 将转换后的 mxweb 文件拷贝到源图纸的 hash 目录
    * 文件名格式：A.dwg.mxweb（保留原始扩展名）
    * 注意：使用拷贝而非移动，保留原始文件供其他图纸复用
    */
@@ -316,11 +316,12 @@ export class FileUploadManagerService {
       }
 
       // 获取转换后的文件路径
-      const convertedExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
-      const sourceFile = `${srcFilePath}${convertedExt}`;
+      // srcFilePath 已经是完整的转换后文件路径（包含 .mxweb 扩展名）
+      const sourceFile = srcFilePath;
 
       // 构建目标文件路径：使用外部参照文件名（带原始扩展名）+ .mxweb
       // 例如：A.dwg -> A.dwg.mxweb
+      const convertedExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
       const targetFile = path.join(hashDir, `${extRefFileName}${convertedExt}`);
 
       // 检查源文件是否存在
@@ -492,7 +493,10 @@ return { ret: MxUploadReturn.kOk };
         if (context.srcDwgFileHash && !context.isImage) {
           this.logger.log(`[uploadAndConvertFileWithPermission] 外部参照 DWG 上传: ${name}, srcDwgFileHash=${context.srcDwgFileHash}`);
           try {
-            await this.handleExternalReferenceFile(hash, context.srcDwgFileHash, name, filePath);
+            // 传递转换后的文件路径（包含 .mxweb 扩展名）
+            const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+            const convertedFilePath = path.join(uploadPath, this.getConvertedFileName(hash, name));
+            await this.handleExternalReferenceFile(hash, context.srcDwgFileHash, name, convertedFilePath);
           } catch (error) {
             this.logger.error(`[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${error.message}`, error.stack);
             // 拷贝失败不影响主流程，只记录错误

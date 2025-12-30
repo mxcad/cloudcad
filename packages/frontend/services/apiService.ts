@@ -1,28 +1,24 @@
 ﻿import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Logger } from '../utils/mxcadUtils';
 
-/**
- * 简单的哈希函数
- */
-const simpleHash = (buffer: ArrayBuffer): string => {
-  const uint8Array = new Uint8Array(buffer);
-  let hash = '';
-  for (let i = 0; i < uint8Array.length; i++) {
-    hash += uint8Array[i].toString(16).padStart(2, '0');
-  }
-  return hash.substring(0, 32);
-};
+import SparkMD5 from 'spark-md5';
 
 /**
- * 计算文件哈希
+ * 计算文件哈希（使用标准 MD5 算法，与后端保持一致）
  */
 const calculateFileHash = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const buffer = e.target?.result as ArrayBuffer;
-      const hash = simpleHash(buffer);
-      resolve(hash);
+      try {
+        const buffer = e.target?.result as ArrayBuffer;
+        const spark = new SparkMD5.ArrayBuffer();
+        spark.append(buffer);
+        const hash = spark.end();
+        resolve(hash);
+      } catch (error) {
+        reject(error);
+      }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
@@ -437,10 +433,11 @@ export const mxcadApi = {
         const hash = await calculateFileHash(file);
         
         const formData = new FormData();
-        formData.append('file', file);
+        // 先添加字段，再添加文件，确保 Multer 能正确解析字段
         formData.append('hash', hash); // 使用上传文件的哈希
         formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
         formData.append('ext_ref_file', extRefFile);
+        formData.append('file', file);
 
         // 调试日志：打印 FormData 内容
         console.log('[uploadExtReferenceDwg] FormData 内容:');
@@ -472,10 +469,11 @@ export const mxcadApi = {
         const hash = await calculateFileHash(file);
         
         const formData = new FormData();
-        formData.append('file', file);
+        // 先添加字段，再添加文件，确保 Multer 能正确解析字段
         formData.append('hash', hash); // 使用上传文件的哈希
         formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
         formData.append('ext_ref_file', extRefFile);
+        formData.append('file', file);
 
         const response = await apiService.post('/mxcad/up_ext_reference_image', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
