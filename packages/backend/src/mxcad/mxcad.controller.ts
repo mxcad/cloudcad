@@ -869,7 +869,12 @@
       context
     );
 
-    return res.json(result);
+    // 统一返回格式：与参考代码保持一致
+    if (result.ret === 'ok' || result.ret === 'fileAlreadyExist') {
+      return res.json({ code: 0, message: 'ok' });
+    } else {
+      return res.json({ code: -1, message: result.ret || 'upload failed' });
+    }
   }
 
   /**
@@ -994,7 +999,12 @@
       context
     );
 
-    return res.json({ code: 0, message: 'ok' });
+    // 统一返回格式：与参考代码保持一致
+    if (result.ret === 'ok' || result.ret === 'fileAlreadyExist') {
+      return res.json({ code: 0, message: 'ok' });
+    } else {
+      return res.json({ code: -1, message: result.ret || 'upload failed' });
+    }
   }
 
   /**

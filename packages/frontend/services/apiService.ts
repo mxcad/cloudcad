@@ -449,7 +449,12 @@ export const mxcadApi = {
           headers: { 'Content-Type': 'multipart/form-data' },
           onUploadProgress: onProgress,
         });
-        resolve(response);
+        // 根据新的返回格式判断成功或失败
+        if (response.data?.code === 0) {
+          resolve(response);
+        } else {
+          reject(new Error(response.data?.message || '上传失败'));
+        }
       } catch (error) {
         reject(error);
       }
@@ -479,7 +484,12 @@ export const mxcadApi = {
           headers: { 'Content-Type': 'multipart/form-data' },
           onUploadProgress: onProgress,
         });
-        resolve(response);
+        // 根据新的返回格式判断成功或失败
+        if (response.data?.code === 0) {
+          resolve(response);
+        } else {
+          reject(new Error(response.data?.message || '上传失败'));
+        }
       } catch (error) {
         reject(error);
       }

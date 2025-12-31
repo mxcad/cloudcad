@@ -341,7 +341,6 @@ export class MxCadService {
   ): Promise<{ ret: string; tz?: boolean }> {
     // 验证权限
     await this.permissionService.validateUploadPermission(context);
-
     const result = await this.fileUploadManager.uploadChunk({
       hash,
       name,
