@@ -16,37 +16,44 @@
   UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
-  import { FileInterceptor } from '@nestjs/platform-express';
-  import type { Response } from 'express';
-  import { JwtService } from '@nestjs/jwt';
-  import * as fs from 'fs';
-  import * as path from 'path';
-  import * as crypto from 'crypto';
-  
-  import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
-  import { MxCadService } from './mxcad.service';
-  import { ConvertDto } from './dto/convert.dto';
-  import { DatabaseService } from '../database/database.service';
-  import { TzDto } from './dto/tz.dto';
-  import { PreloadingDataDto } from './dto/preloading-data.dto';
-  import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
-  import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-  import { ConfigService } from '@nestjs/config';
-  import { MinioSyncService } from './minio-sync.service';
-  
-  @ApiTags('MxCAD 文件上传与转换')
-  @Controller('mxcad')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  export class MxCadController {
-    private readonly logger = new Logger(MxCadController.name);  private readonly mxCadFileExt: string;
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
+
+import {
+  ApiTags,
+  ApiConsumes,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { MxCadService } from './mxcad.service';
+import { ConvertDto } from './dto/convert.dto';
+import { DatabaseService } from '../database/database.service';
+import { TzDto } from './dto/tz.dto';
+import { PreloadingDataDto } from './dto/preloading-data.dto';
+import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ConfigService } from '@nestjs/config';
+import { MinioSyncService } from './minio-sync.service';
+
+@ApiTags('MxCAD 文件上传与转换')
+@Controller('mxcad')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+export class MxCadController {
+  private readonly logger = new Logger(MxCadController.name);
+  private readonly mxCadFileExt: string;
 
   constructor(
     private readonly mxCadService: MxCadService,
     private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly minioSyncService: MinioSyncService,
+    private readonly minioSyncService: MinioSyncService
   ) {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
   }
@@ -57,7 +64,11 @@
   @Post('files/chunkisExist')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
-  async checkChunkExist(@Body() body: any, @Req() request: any, @Res() res: Response) {
+  async checkChunkExist(
+    @Body() body: any,
+    @Req() request: any,
+    @Res() res: Response
+  ) {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
     // 构建上下文
     const context = await this.buildContextFromRequest(request);
@@ -78,9 +89,17 @@
   @Post('files/fileisExist')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
-  async checkFileExist(@Body() body: any, @Req() request: any, @Res() res: Response) {
+  async checkFileExist(
+    @Body() body: any,
+    @Req() request: any,
+    @Res() res: Response
+  ) {
     const context = await this.buildContextFromRequest(request);
-    const result = await this.mxCadService.checkFileExist(body.filename, body.fileHash, context);
+    const result = await this.mxCadService.checkFileExist(
+      body.filename,
+      body.fileHash,
+      context
+    );
     return res.json(result);
   }
 
@@ -112,7 +131,9 @@
     status: 404,
     description: '预加载数据不存在',
   })
-  async getPreloadingData(@Param('hash') fileHash: string): Promise<PreloadingDataDto> {
+  async getPreloadingData(
+    @Param('hash') fileHash: string
+  ): Promise<PreloadingDataDto> {
     this.logger.debug(`[getPreloadingData] 请求参数: fileHash=${fileHash}`);
 
     const data = await this.mxCadService.getPreloadingData(fileHash);
@@ -128,7 +149,7 @@
 
   /**
    * 检查外部参照文件是否存在
-   * 
+   *
    * @param fileHash 源图纸文件的哈希值
    * @param body 请求体，包含 fileName 字段
    * @returns 文件是否存在
@@ -160,20 +181,24 @@
     @Body() body: { fileName: string },
     @Res() res: Response
   ) {
-    this.logger.log(`[checkExternalReference] 请求参数: fileHash=${fileHash}, fileName=${body.fileName}`);
-    
+    this.logger.log(
+      `[checkExternalReference] 请求参数: fileHash=${fileHash}, fileName=${body.fileName}`
+    );
+
     // 验证参数
     if (!body.fileName) {
-      return res.status(400).json({ code: -1, message: '缺少必要参数: fileName' });
+      return res
+        .status(400)
+        .json({ code: -1, message: '缺少必要参数: fileName' });
     }
-    
+
     const exists = await this.mxCadService.checkExternalReferenceExists(
       fileHash,
       body.fileName
     );
-    
+
     this.logger.log(`[checkExternalReference] 检查结果: ${exists}`);
-    
+
     return res.json({ exists });
   }
 
@@ -209,12 +234,16 @@
     try {
       const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
 
-      this.logger.log(`[getExternalReferences] 检查结果: 缺失=${stats.missingCount}, 总数=${stats.totalCount}`);
+      this.logger.log(
+        `[getExternalReferences] 检查结果: 缺失=${stats.missingCount}, 总数=${stats.totalCount}`
+      );
 
       return res.json(stats);
     } catch (error) {
       this.logger.error(`[getExternalReferences] 获取失败: ${error.message}`);
-      return res.status(500).json({ code: -1, message: '获取外部参照信息失败' });
+      return res
+        .status(500)
+        .json({ code: -1, message: '获取外部参照信息失败' });
     }
   }
 
@@ -244,7 +273,9 @@
     @Param('hash') fileHash: string,
     @Res() res: Response
   ) {
-    this.logger.log(`[refreshExternalReferences] 请求参数: fileHash=${fileHash}`);
+    this.logger.log(
+      `[refreshExternalReferences] 请求参数: fileHash=${fileHash}`
+    );
 
     try {
       const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
@@ -258,7 +289,9 @@
         stats,
       });
     } catch (error) {
-      this.logger.error(`[refreshExternalReferences] 刷新失败: ${error.message}`);
+      this.logger.error(
+        `[refreshExternalReferences] 刷新失败: ${error.message}`
+      );
       return res.status(500).json({ code: -1, message: '刷新失败' });
     }
   }
@@ -313,7 +346,7 @@
   ) {
     // 检查是否为合并请求（没有文件，只有 chunks 信息）
     const isMergeRequest = !file && body.chunks !== undefined;
-    
+
     // 合并请求不需要检查 file，但需要检查必要参数
     if (!isMergeRequest && !file) {
       return res.json({ ret: 'errorparam' });
@@ -352,7 +385,8 @@
       // 分片上传 - 手动处理文件移动
       try {
         // 获取临时目录路径
-        const tempPath = process.env.MXCAD_TEMP_PATH || path.join(process.cwd(), 'temp');
+        const tempPath =
+          process.env.MXCAD_TEMP_PATH || path.join(process.cwd(), 'temp');
         const chunkDir = path.join(tempPath, `chunk_${body.hash}`);
 
         // 确保目录存在
@@ -409,7 +443,10 @@
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '测试上传文件' })
-  async testUploadFile(@UploadedFile() file: Express.Multer.File, @Res() res: Response) {
+  async testUploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ) {
     if (!file) {
       return res.json({ ret: 'errorparam' });
     }
@@ -428,7 +465,7 @@
       try {
         param = JSON.parse(param);
       } catch (error) {
-        return res.json({ code: 12, message: "param error" });
+        return res.json({ code: 12, message: 'param error' });
       }
     }
 
@@ -443,9 +480,12 @@
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '上传并转换文件' })
-  async uploadAndConvert(@UploadedFile() file: Express.Multer.File, @Res() res: Response) {
+  async uploadAndConvert(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ) {
     if (!file) {
-      return res.json({ code: -1, message: "缺少文件" });
+      return res.json({ code: -1, message: '缺少文件' });
     }
 
     const param = {
@@ -462,7 +502,7 @@
       }
       return res.json(result);
     } catch (e) {
-      return res.json({ code: -1, message: "catch error" });
+      return res.json({ code: -1, message: 'catch error' });
     }
   }
 
@@ -473,9 +513,12 @@
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '保存 MXWEB 到服务器' })
-  async saveMxweb(@UploadedFile() file: Express.Multer.File, @Res() res: Response) {
+  async saveMxweb(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ) {
     if (!file) {
-      return res.json({ code: -1, message: "缺少文件" });
+      return res.json({ code: -1, message: '缺少文件' });
     }
 
     return res.json({
@@ -492,9 +535,12 @@
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '保存 DWG 到服务器' })
-  async saveDwg(@UploadedFile() file: Express.Multer.File, @Res() res: Response) {
+  async saveDwg(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ) {
     if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: "缺少文件" });
+      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
     }
 
     const inputFile = file.path.replace(/\\/g, '/');
@@ -516,7 +562,7 @@
       }
       return res.json(result);
     } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: "catch error" });
+      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
     }
   }
 
@@ -533,7 +579,7 @@
     @Res() res: Response
   ) {
     if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: "缺少文件" });
+      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
     }
 
     let param: any = {
@@ -551,7 +597,7 @@
           param = { ...param, ...body.param };
         }
       } catch (error) {
-        return res.json({ ret: 'failed', code: -1, message: "参数格式错误" });
+        return res.json({ ret: 'failed', code: -1, message: '参数格式错误' });
       }
     }
 
@@ -572,7 +618,7 @@
       }
       return res.json(result);
     } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: "catch error" });
+      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
     }
   }
 
@@ -589,11 +635,11 @@
     @Res() res: Response
   ) {
     if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: "缺少文件" });
+      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
     }
 
     if (!body.param) {
-      return res.json({ ret: 'failed', code: -1, message: "param error" });
+      return res.json({ ret: 'failed', code: -1, message: 'param error' });
     }
 
     let param;
@@ -604,7 +650,7 @@
         param = body.param;
       }
     } catch (error) {
-      return res.json({ ret: 'failed', code: -1, message: "param error" });
+      return res.json({ ret: 'failed', code: -1, message: 'param error' });
     }
 
     const inputFile = file.path.replace(/\\/g, '/');
@@ -628,7 +674,7 @@
       }
       return res.json(result);
     } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: "catch error" });
+      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
     }
   }
 
@@ -645,11 +691,11 @@
     @Res() res: Response
   ) {
     if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: "缺少文件" });
+      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
     }
 
     if (!body.param) {
-      return res.json({ ret: 'failed', code: -1, message: "param error" });
+      return res.json({ ret: 'failed', code: -1, message: 'param error' });
     }
 
     let param;
@@ -660,7 +706,7 @@
         param = body.param;
       }
     } catch (error) {
-      return res.json({ ret: 'failed', code: -1, message: "param error" });
+      return res.json({ ret: 'failed', code: -1, message: 'param error' });
     }
 
     const inputFile = file.path.replace(/\\/g, '/');
@@ -680,7 +726,7 @@
       }
       return res.json(result);
     } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: "catch error" });
+      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
     }
   }
 
@@ -697,11 +743,11 @@
     @Res() res: Response
   ) {
     if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: "缺少文件" });
+      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
     }
 
     if (!body.param) {
-      return res.json({ ret: 'failed', code: -1, message: "param error" });
+      return res.json({ ret: 'failed', code: -1, message: 'param error' });
     }
 
     let param;
@@ -712,11 +758,11 @@
         param = body.param;
       }
     } catch (error) {
-      return res.json({ ret: 'failed', code: -1, message: "param error" });
+      return res.json({ ret: 'failed', code: -1, message: 'param error' });
     }
 
     const inputFile = file.path.replace(/\\/g, '/');
-          const outputFile = `${file.filename}${this.mxCadFileExt}`;
+    const outputFile = `${file.filename}${this.mxCadFileExt}`;
     param.srcpath = inputFile;
     param.outname = outputFile;
 
@@ -731,7 +777,7 @@
       }
       return res.json(result);
     } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: "catch error" });
+      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
     }
   }
 
@@ -774,7 +820,9 @@
     @Res() res: Response
   ) {
     this.logger.log(`[uploadExtReferenceDwg] 开始处理: ${body.ext_ref_file}`);
-    this.logger.log(`[uploadExtReferenceDwg] 接收到的 body 参数: ${JSON.stringify(body)}`);
+    this.logger.log(
+      `[uploadExtReferenceDwg] 接收到的 body 参数: ${JSON.stringify(body)}`
+    );
     this.logger.log(`[uploadExtReferenceDwg] 接收到的文件路径: ${file?.path}`);
 
     // 验证上传请求
@@ -803,12 +851,16 @@
           userId
         );
         if (!hasPermission) {
-          this.logger.warn(`[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`);
+          this.logger.warn(
+            `[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
+          );
           return res.json({ code: -1, message: '无权限访问该图纸' });
         }
       }
     } catch (authError) {
-      this.logger.warn(`[uploadExtReferenceDwg] 权限验证失败: ${authError.message}`);
+      this.logger.warn(
+        `[uploadExtReferenceDwg] 权限验证失败: ${authError.message}`
+      );
       return res.json({ code: -1, message: '权限验证失败' });
     }
 
@@ -820,7 +872,9 @@
       const fileBuffer = fs.readFileSync(file.path);
       fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
       isBackendCalculated = true;
-      this.logger.log(`[uploadExtReferenceDwg] 前端未传递 hash，后端计算: ${fileHash}`);
+      this.logger.log(
+        `[uploadExtReferenceDwg] 前端未传递 hash，后端计算: ${fileHash}`
+      );
 
       // 重命名文件为 hash 格式
       const ext = path.extname(file.originalname);
@@ -828,23 +882,31 @@
       if (file.path !== newPath) {
         fs.renameSync(file.path, newPath);
         file.path = newPath;
-        this.logger.log(`[uploadExtReferenceDwg] 文件已重命名: ${file.originalname} -> ${path.basename(newPath)}`);
+        this.logger.log(
+          `[uploadExtReferenceDwg] 文件已重命名: ${file.originalname} -> ${path.basename(newPath)}`
+        );
       }
     } else {
-      this.logger.log(`[uploadExtReferenceDwg] 使用前端传递的 hash: ${fileHash}`);
+      this.logger.log(
+        `[uploadExtReferenceDwg] 使用前端传递的 hash: ${fileHash}`
+      );
     }
 
     // 获取源图纸节点信息
-    const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
-    
+    const sourceNode = await this.getFileSystemNodeByHash(
+      body.src_dwgfile_hash
+    );
+
     // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
     // 如果源图纸没有 parentId（说明是项目根目录），则使用源图纸的 ID
     // 否则递归查找项目根目录（isRoot=true 的节点）
     let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
-    
+
     // 如果源图纸有 parentId，尝试查找项目根目录
     if (sourceNode?.parentId && !sourceNode.isRoot) {
-      const projectRoot = await this.getProjectRootByNodeId(sourceNode.parentId);
+      const projectRoot = await this.getProjectRootByNodeId(
+        sourceNode.parentId
+      );
       if (projectRoot) {
         nodeId = projectRoot.id;
         this.logger.log(`[uploadExtReferenceDwg] 找到项目根目录: ${nodeId}`);
@@ -942,12 +1004,16 @@
           userId
         );
         if (!hasPermission) {
-          this.logger.warn(`[uploadExtReferenceImage] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`);
+          this.logger.warn(
+            `[uploadExtReferenceImage] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
+          );
           return res.json({ code: -1, message: '无权限访问该图纸' });
         }
       }
     } catch (authError) {
-      this.logger.warn(`[uploadExtReferenceImage] 权限验证失败: ${authError.message}`);
+      this.logger.warn(
+        `[uploadExtReferenceImage] 权限验证失败: ${authError.message}`
+      );
       return res.json({ code: -1, message: '权限验证失败' });
     }
 
@@ -963,18 +1029,24 @@
     if (file.path !== newPath) {
       fs.renameSync(file.path, newPath);
       file.path = newPath;
-      this.logger.log(`[uploadExtReferenceImage] 文件已重命名: ${file.originalname} -> ${path.basename(newPath)}`);
+      this.logger.log(
+        `[uploadExtReferenceImage] 文件已重命名: ${file.originalname} -> ${path.basename(newPath)}`
+      );
     }
 
     // 获取源图纸节点信息
-    const sourceNode = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+    const sourceNode = await this.getFileSystemNodeByHash(
+      body.src_dwgfile_hash
+    );
 
     // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
     let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
 
     // 如果源图纸有 parentId，尝试查找项目根目录
     if (sourceNode?.parentId && !sourceNode.isRoot) {
-      const projectRoot = await this.getProjectRootByNodeId(sourceNode.parentId);
+      const projectRoot = await this.getProjectRootByNodeId(
+        sourceNode.parentId
+      );
       if (projectRoot) {
         nodeId = projectRoot.id;
         this.logger.log(`[uploadExtReferenceImage] 找到项目根目录: ${nodeId}`);
@@ -1014,7 +1086,10 @@
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '上传图片' })
-  async uploadImage(@UploadedFile() file: Express.Multer.File, @Res() res: Response) {
+  async uploadImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ) {
     if (!file) {
       return res.json({ code: -1, message: '缺少文件' });
     }
@@ -1084,10 +1159,17 @@
       },
     },
   })
-  async getNonCadFile(@Param('storageKey') storageKey: string, @Res() res: Response) {
+  async getNonCadFile(
+    @Param('storageKey') storageKey: string,
+    @Res() res: Response
+  ) {
     try {
       // 验证 storageKey 格式，防止路径遍历攻击
-      if (!storageKey || storageKey.includes('..') || storageKey.includes('\\')) {
+      if (
+        !storageKey ||
+        storageKey.includes('..') ||
+        storageKey.includes('\\')
+      ) {
         this.logger.warn(`[getNonCadFile] 无效的 storageKey: ${storageKey}`);
         return res.status(400).json({ code: -1, message: '无效的文件路径' });
       }
@@ -1097,14 +1179,20 @@
 
       // 设置响应头
       res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `inline; filename="${storageKey.split('/').pop()}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${storageKey.split('/').pop()}"`
+      );
 
       // 返回文件流
       fileStream.pipe(res);
 
       // 处理流错误
       fileStream.on('error', (error) => {
-        this.logger.error(`[getNonCadFile] 文件流错误: ${error.message}`, error);
+        this.logger.error(
+          `[getNonCadFile] 文件流错误: ${error.message}`,
+          error
+        );
         if (!res.headersSent) {
           res.status(500).json({ code: -1, message: '获取文件失败' });
         }
@@ -1170,7 +1258,11 @@
       },
     },
   })
-  async getFile(@Param('filename') filename: string, @Res() res: Response, @Req() req: any) {
+  async getFile(
+    @Param('filename') filename: string,
+    @Res() res: Response,
+    @Req() req: any
+  ) {
     return this.handleFileRequest(filename, res, req, false);
   }
 
@@ -1195,7 +1287,11 @@
     status: 500,
     description: '服务器内部错误',
   })
-  async getFileHead(@Param('filename') filename: string, @Res() res: Response, @Req() req: any) {
+  async getFileHead(
+    @Param('filename') filename: string,
+    @Res() res: Response,
+    @Req() req: any
+  ) {
     return this.handleFileRequest(filename, res, req, true);
   }
 
@@ -1206,14 +1302,21 @@
    * @param req Express Request 对象
    * @param isHeadRequest 是否为 HEAD 请求
    */
-  private async handleFileRequest(filename: string, @Res() res: Response, @Req() req: any, isHeadRequest: boolean) {
+  private async handleFileRequest(
+    filename: string,
+    @Res() res: Response,
+    @Req() req: any,
+    isHeadRequest: boolean
+  ) {
     try {
       // 对于文件访问请求，验证 JWT token 但不强制要求 nodeId
       // 通过文件路径查找 FileSystemNode 并验证权限
 
       // 调试日志
-      this.logger.log(`访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`);
-      
+      this.logger.log(
+        `访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`
+      );
+
       let userId: string;
       try {
         userId = await this.validateTokenAndGetUserId(req);
@@ -1222,24 +1325,31 @@
         this.logger.warn(`JWT验证失败: ${authError.message}`);
         return res.status(401).json({ code: -1, message: authError.message });
       }
-      
+
       // Express 的 *filename 通配符会将路径中的 / 替换为 ,，需要先还原
       const normalizedFilename = filename.replace(/,/g, '/');
 
       // 从文件路径中提取哈希值（可能是完整路径如: hash/filename 或直接是 filename）
       const pathParts = normalizedFilename.split('/');
       const fileHash = pathParts[0]; // 第一个部分是哈希值
-      const actualFilename = pathParts.length > 1 ? pathParts.slice(1).join('/') : normalizedFilename;
+      const actualFilename =
+        pathParts.length > 1
+          ? pathParts.slice(1).join('/')
+          : normalizedFilename;
 
-      this.logger.log(`提取的fileHash: ${fileHash}, actualFilename: ${actualFilename}`);
+      this.logger.log(
+        `提取的fileHash: ${fileHash}, actualFilename: ${actualFilename}`
+      );
 
       // 通过哈希值查找 FileSystemNode，验证用户是否有访问权限
       const node = await this.getFileSystemNodeByHash(fileHash);
       this.logger.log(`查找文件节点: hash=${fileHash}, 找到=${!!node}`);
-      
+
       if (!node) {
         // 文件节点不存在，降级到本地文件系统查找（兼容旧文件）
-        this.logger.log(`文件节点不存在，降级到本地文件系统: ${normalizedFilename}`);
+        this.logger.log(
+          `文件节点不存在，降级到本地文件系统: ${normalizedFilename}`
+        );
       } else {
         // 验证用户是否有权限访问该文件
         const hasPermission = await this.checkFileAccessPermission(
@@ -1247,7 +1357,9 @@
           userId,
           userId // 简化处理，使用用户ID作为检查对象
         );
-        this.logger.log(`权限检查结果: nodeId=${node.id}, userId=${userId}, hasPermission=${hasPermission}`);
+        this.logger.log(
+          `权限检查结果: nodeId=${node.id}, userId=${userId}, hasPermission=${hasPermission}`
+        );
 
         if (!hasPermission) {
           return res.status(401).json({
@@ -1291,7 +1403,8 @@
       // 尝试获取文件 URL
       for (const mxcadPath of possiblePaths) {
         try {
-          const url = await this.mxCadService['minioSyncService'].getFileUrl(mxcadPath);
+          const url =
+            await this.mxCadService['minioSyncService'].getFileUrl(mxcadPath);
           if (url) {
             minioUrl = url;
             foundMinioPath = mxcadPath;
@@ -1309,7 +1422,9 @@
           // 对于 HEAD 请求，直接使用 MinIO SDK 获取文件信息
           // MinIO 的预签名 GET URL 不支持 HEAD 请求
           try {
-            const fileInfo = await this.mxCadService['minioSyncService'].getFileInfo(foundMinioPath!);
+            const fileInfo = await this.mxCadService[
+              'minioSyncService'
+            ].getFileInfo(foundMinioPath!);
 
             if (fileInfo) {
               // 设置响应头
@@ -1323,10 +1438,15 @@
               return;
             } else {
               // 获取文件信息失败，降级到本地文件系统
-              this.mxCadService.logWarn(`获取 MinIO 文件信息失败，降级到本地文件系统: ${normalizedFilename}`);
+              this.mxCadService.logWarn(
+                `获取 MinIO 文件信息失败，降级到本地文件系统: ${normalizedFilename}`
+              );
             }
           } catch (error) {
-            this.mxCadService.logError(`获取 MinIO 文件信息失败: ${error.message}`, error);
+            this.mxCadService.logError(
+              `获取 MinIO 文件信息失败: ${error.message}`,
+              error
+            );
             // 如果获取文件信息失败，降级到本地文件系统
           }
         } else {
@@ -1336,17 +1456,21 @@
       }
 
       // MinIO 中不存在，降级到本地文件系统
-      this.mxCadService.logWarn(`MinIO 文件不存在，降级到本地文件系统: ${normalizedFilename}`);
+      this.mxCadService.logWarn(
+        `MinIO 文件不存在，降级到本地文件系统: ${normalizedFilename}`
+      );
 
       // 获取文件搜索路径列表
-      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const resFilePath: string[] = [uploadPath];
 
       // 如果配置了静态资源目录，也添加到搜索路径中
-      const staticResDirs = process.env.MXCAD_STATIC_RES_DIRS ?
-        process.env.MXCAD_STATIC_RES_DIRS.split(',') : [];
+      const staticResDirs = process.env.MXCAD_STATIC_RES_DIRS
+        ? process.env.MXCAD_STATIC_RES_DIRS.split(',')
+        : [];
 
-      staticResDirs.forEach(dir => {
+      staticResDirs.forEach((dir) => {
         const staticMxCadResDir = path.join(dir, 'mxcad_res');
         if (fs.existsSync(staticMxCadResDir)) {
           resFilePath.push(staticMxCadResDir);
@@ -1369,11 +1493,15 @@
           // 从 normalizedFilename 中提取哈希值（如果包含路径）
           const parts = normalizedFilename.split('/');
           const hash = parts[0];
-          const shortName = parts.length > 1 ? parts.slice(1).join('/') : normalizedFilename;
+          const shortName =
+            parts.length > 1 ? parts.slice(1).join('/') : normalizedFilename;
 
           // 在哈希值命名的目录中查找
           const hashDirPath = path.join(resFilePath[i], hash);
-          if (fs.existsSync(hashDirPath) && fs.statSync(hashDirPath).isDirectory()) {
+          if (
+            fs.existsSync(hashDirPath) &&
+            fs.statSync(hashDirPath).isDirectory()
+          ) {
             const fileInHashDir = path.join(hashDirPath, shortName);
             if (fs.existsSync(fileInHashDir)) {
               foundFilePath = fileInHashDir;
@@ -1490,80 +1618,83 @@
    * 从请求中构建上下文信息，通过JWT验证用户身份
    * 强制要求JWT认证，确保安全性
    */
-    private async buildContextFromRequest(request: any): Promise<any> {
-      try {
-        // 1. 必须从 Authorization header 获取 JWT token
-        if (!request.headers.authorization) {
-          throw new UnauthorizedException('缺少Authorization header，请提供有效的JWT token');
-        }
-  
-        const token = request.headers.authorization.replace('Bearer ', '');
-  
-        let payload;
-        try {
-          payload = this.jwtService.verify(token);
-        } catch (error) {
-          throw new UnauthorizedException('JWT token无效或已过期');
-        }
-  
-        // 2. 验证用户存在且状态正常
-        const userData = await this.prisma.user.findUnique({
-          where: { id: payload.sub },
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            nickname: true,
-            role: true,
-            status: true,
-          },
-        });
-  
-        if (!userData) {
-          throw new UnauthorizedException('用户不存在');
-        }
-  
-        if (userData.status !== 'ACTIVE') {
-          throw new UnauthorizedException('用户账号已被禁用');
-        }
-  
-        this.logger.log(`JWT 验证成功: ${userData.username}`);
-  
-        // 3. 从多个来源获取节点信息：
-        // - POST 请求：从 request.body 获取
-        // - GET/HEAD 请求：从 request.query 获取
-        // nodeId 是当前文件夹或项目根目录的 FileSystemNode ID
-        const nodeId = request.body?.nodeId || request.query?.nodeId;
-
-        this.logger.log(`🔍 解析参数: body.nodeId=${request.body?.nodeId}, query.nodeId=${request.query?.nodeId}`);
-        this.logger.log(`🔍 最终值: nodeId=${nodeId}`);
-
-        // 4. 严格验证 nodeId 是否存在
-        if (!nodeId) {
-          throw new Error('缺少节点ID（nodeId），无法创建文件系统节点');
-        }
-
-        // 5. 构建上下文
-        const context = {
-          nodeId,
-          userId: userData.id,
-          userRole: userData.role,
-        };
-  
-        this.logger.log(`构建上下文: userId=${userData.id}, nodeId=${nodeId}`);
-        return context;
-  
-      } catch (error) {
-        this.logger.error(`构建上下文失败: ${error.message}`, error);
-  
-        // 验证失败时抛出异常，不再返回空上下文
-        if (error instanceof UnauthorizedException) {
-          throw error;
-        }
-  
-        throw new UnauthorizedException('身份验证失败');
+  private async buildContextFromRequest(request: any): Promise<any> {
+    try {
+      // 1. 必须从 Authorization header 获取 JWT token
+      if (!request.headers.authorization) {
+        throw new UnauthorizedException(
+          '缺少Authorization header，请提供有效的JWT token'
+        );
       }
+
+      const token = request.headers.authorization.replace('Bearer ', '');
+
+      let payload;
+      try {
+        payload = this.jwtService.verify(token);
+      } catch (error) {
+        throw new UnauthorizedException('JWT token无效或已过期');
+      }
+
+      // 2. 验证用户存在且状态正常
+      const userData = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          nickname: true,
+          role: true,
+          status: true,
+        },
+      });
+
+      if (!userData) {
+        throw new UnauthorizedException('用户不存在');
+      }
+
+      if (userData.status !== 'ACTIVE') {
+        throw new UnauthorizedException('用户账号已被禁用');
+      }
+
+      this.logger.log(`JWT 验证成功: ${userData.username}`);
+
+      // 3. 从多个来源获取节点信息：
+      // - POST 请求：从 request.body 获取
+      // - GET/HEAD 请求：从 request.query 获取
+      // nodeId 是当前文件夹或项目根目录的 FileSystemNode ID
+      const nodeId = request.body?.nodeId || request.query?.nodeId;
+
+      this.logger.log(
+        `🔍 解析参数: body.nodeId=${request.body?.nodeId}, query.nodeId=${request.query?.nodeId}`
+      );
+      this.logger.log(`🔍 最终值: nodeId=${nodeId}`);
+
+      // 4. 严格验证 nodeId 是否存在
+      if (!nodeId) {
+        throw new Error('缺少节点ID（nodeId），无法创建文件系统节点');
+      }
+
+      // 5. 构建上下文
+      const context = {
+        nodeId,
+        userId: userData.id,
+        userRole: userData.role,
+      };
+
+      this.logger.log(`构建上下文: userId=${userData.id}, nodeId=${nodeId}`);
+      return context;
+    } catch (error) {
+      this.logger.error(`构建上下文失败: ${error.message}`, error);
+
+      // 验证失败时抛出异常，不再返回空上下文
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      throw new UnauthorizedException('身份验证失败');
     }
+  }
 
   /**
    * 验证 JWT token 并返回用户 ID（用于文件访问）
@@ -1671,7 +1802,11 @@
    * @param checkUserId 要检查权限的用户 ID
    * @returns 是否有权限
    */
-  private async checkFileAccessPermission(nodeId: string, userId: string, checkUserId: string): Promise<boolean> {
+  private async checkFileAccessPermission(
+    nodeId: string,
+    userId: string,
+    checkUserId: string
+  ): Promise<boolean> {
     try {
       // 如果是文件所有者，有权限
       const node = await this.prisma.fileSystemNode.findUnique({
@@ -1710,7 +1845,11 @@
    */
   private validateFileName(fileName: string): boolean {
     // 检查文件名是否包含路径遍历字符
-    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+    if (
+      fileName.includes('..') ||
+      fileName.includes('/') ||
+      fileName.includes('\\')
+    ) {
       return false;
     }
 
@@ -1733,7 +1872,7 @@
     // 单独检查控制字符
     for (let i = 0; i < fileName.length; i++) {
       const charCode = fileName.charCodeAt(i);
-      if (charCode < 0x20 || charCode === 0x7F) {
+      if (charCode < 0x20 || charCode === 0x7f) {
         return false;
       }
     }
@@ -1747,7 +1886,10 @@
    * @param maxSize 最大文件大小（字节），默认 100MB
    * @returns 是否在允许范围内
    */
-  private validateFileSize(fileSize: number, maxSize: number = 104857600): boolean {
+  private validateFileSize(
+    fileSize: number,
+    maxSize: number = 104857600
+  ): boolean {
     return fileSize > 0 && fileSize <= maxSize;
   }
 
@@ -1757,7 +1899,19 @@
    * @param allowedExtensions 允许的文件扩展名列表
    * @returns 是否允许
    */
-  private validateFileType(fileName: string, allowedExtensions: string[] = ['.dwg', '.dxf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']): boolean {
+  private validateFileType(
+    fileName: string,
+    allowedExtensions: string[] = [
+      '.dwg',
+      '.dxf',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.bmp',
+      '.webp',
+    ]
+  ): boolean {
     const ext = path.extname(fileName).toLowerCase();
     return allowedExtensions.includes(ext);
   }
@@ -1775,7 +1929,11 @@
     body: UploadExtReferenceDto,
     methodPrefix: string,
     allowedExtensions: string[]
-  ): Promise<{ success: boolean; error?: { code: number; message: string }; preloadingData?: any }> {
+  ): Promise<{
+    success: boolean;
+    error?: { code: number; message: string };
+    preloadingData?: any;
+  }> {
     // 1. 验证文件
     if (!file) {
       this.logger.warn(`[${methodPrefix}] 缺少文件`);
@@ -1789,9 +1947,13 @@
     }
 
     // 3. 验证图纸文件是否存在
-    const preloadingData = await this.mxCadService.getPreloadingData(body.src_dwgfile_hash);
+    const preloadingData = await this.mxCadService.getPreloadingData(
+      body.src_dwgfile_hash
+    );
     if (!preloadingData) {
-      this.logger.warn(`[${methodPrefix}] 图纸文件不存在: ${body.src_dwgfile_hash}`);
+      this.logger.warn(
+        `[${methodPrefix}] 图纸文件不存在: ${body.src_dwgfile_hash}`
+      );
       return { success: false, error: { code: -1, message: '图纸文件不存在' } };
     }
 
@@ -1801,27 +1963,47 @@
       preloadingData.images.includes(body.ext_ref_file);
 
     if (!isValidReference) {
-      this.logger.warn(`[${methodPrefix}] 无效的外部参照文件: ${body.ext_ref_file}`);
-      return { success: false, error: { code: -1, message: '无效的外部参照文件' } };
+      this.logger.warn(
+        `[${methodPrefix}] 无效的外部参照文件: ${body.ext_ref_file}`
+      );
+      return {
+        success: false,
+        error: { code: -1, message: '无效的外部参照文件' },
+      };
     }
 
     // 5. 验证文件名安全性（防止路径遍历攻击）
     if (!this.validateFileName(body.ext_ref_file)) {
-      this.logger.warn(`[${methodPrefix}] 文件名包含非法字符: ${body.ext_ref_file}`);
-      return { success: false, error: { code: -1, message: '文件名包含非法字符' } };
+      this.logger.warn(
+        `[${methodPrefix}] 文件名包含非法字符: ${body.ext_ref_file}`
+      );
+      return {
+        success: false,
+        error: { code: -1, message: '文件名包含非法字符' },
+      };
     }
 
     // 6. 验证文件大小
     if (!this.validateFileSize(file.size)) {
-      this.logger.warn(`[${methodPrefix}] 文件大小超出限制: ${file.size} bytes`);
-      return { success: false, error: { code: -1, message: '文件大小超出限制（最大 100MB）' } };
+      this.logger.warn(
+        `[${methodPrefix}] 文件大小超出限制: ${file.size} bytes`
+      );
+      return {
+        success: false,
+        error: { code: -1, message: '文件大小超出限制（最大 100MB）' },
+      };
     }
 
     // 7. 验证文件类型
     if (!this.validateFileType(body.ext_ref_file, allowedExtensions)) {
-      this.logger.warn(`[${methodPrefix}] 不支持的文件类型: ${body.ext_ref_file}`);
+      this.logger.warn(
+        `[${methodPrefix}] 不支持的文件类型: ${body.ext_ref_file}`
+      );
       const allowedTypes = allowedExtensions.join(', ');
-      return { success: false, error: { code: -1, message: `仅支持 ${allowedTypes} 文件` } };
+      return {
+        success: false,
+        error: { code: -1, message: `仅支持 ${allowedTypes} 文件` },
+      };
     }
 
     return { success: true, preloadingData };

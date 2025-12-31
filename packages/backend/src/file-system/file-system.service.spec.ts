@@ -261,9 +261,7 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
       // 让 $transaction 抛出错误
-      mockPrisma.$transaction.mockRejectedValueOnce(
-        new Error('Delete failed')
-      );
+      mockPrisma.$transaction.mockRejectedValueOnce(new Error('Delete failed'));
 
       await expect(service.deleteProject(projectId)).rejects.toThrow(
         'Delete failed'
@@ -433,7 +431,12 @@ describe('FileSystemService', () => {
   describe('deleteNode', () => {
     it('应该成功删除非根节点', async () => {
       const nodeId = 'node-123';
-      const mockNode = { isRoot: false, isFolder: true, path: null, fileHash: null };
+      const mockNode = {
+        isRoot: false,
+        isFolder: true,
+        path: null,
+        fileHash: null,
+      };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
       // Mock findMany 用于 softDeleteDescendants 递归调用
@@ -450,7 +453,12 @@ describe('FileSystemService', () => {
 
     it('应该禁止删除根节点', async () => {
       const nodeId = 'root-123';
-      const mockNode = { isRoot: true, isFolder: true, path: null, fileHash: null };
+      const mockNode = {
+        isRoot: true,
+        isFolder: true,
+        path: null,
+        fileHash: null,
+      };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
 
@@ -461,14 +469,17 @@ describe('FileSystemService', () => {
 
     it('应该处理删除节点时的错误', async () => {
       const nodeId = 'node-123';
-      const mockNode = { isRoot: false, isFolder: false, path: null, fileHash: null };
+      const mockNode = {
+        isRoot: false,
+        isFolder: false,
+        path: null,
+        fileHash: null,
+      };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
       mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
       // 让 $transaction 抛出错误
-      mockPrisma.$transaction.mockRejectedValueOnce(
-        new Error('Delete error')
-      );
+      mockPrisma.$transaction.mockRejectedValueOnce(new Error('Delete error'));
 
       await expect(service.deleteNode(nodeId)).rejects.toThrow('Delete error');
     });
