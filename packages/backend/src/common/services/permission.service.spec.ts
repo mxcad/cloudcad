@@ -266,11 +266,10 @@ describe('PermissionService', () => {
     it('should return true when user has one of required roles', async () => {
       cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.EDITOR);
 
-      const result = await service.hasNodeAccessRole(
-        mockUser,
-        'node-id',
-        [NodeAccessRole.EDITOR, NodeAccessRole.OWNER]
-      );
+      const result = await service.hasNodeAccessRole(mockUser, 'node-id', [
+        NodeAccessRole.EDITOR,
+        NodeAccessRole.OWNER,
+      ]);
 
       expect(result).toBe(true);
     });
@@ -278,11 +277,10 @@ describe('PermissionService', () => {
     it('should return false when user has none of required roles', async () => {
       cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.VIEWER);
 
-      const result = await service.hasNodeAccessRole(
-        mockUser,
-        'node-id',
-        [NodeAccessRole.EDITOR, NodeAccessRole.OWNER]
-      );
+      const result = await service.hasNodeAccessRole(mockUser, 'node-id', [
+        NodeAccessRole.EDITOR,
+        NodeAccessRole.OWNER,
+      ]);
 
       expect(result).toBe(false);
     });
@@ -290,11 +288,9 @@ describe('PermissionService', () => {
     it('should return false when user has no role', async () => {
       cacheService.getNodeAccessRole.mockReturnValue(null);
 
-      const result = await service.hasNodeAccessRole(
-        mockUser,
-        'node-id',
-        [NodeAccessRole.EDITOR]
-      );
+      const result = await service.hasNodeAccessRole(mockUser, 'node-id', [
+        NodeAccessRole.EDITOR,
+      ]);
 
       expect(result).toBe(false);
     });

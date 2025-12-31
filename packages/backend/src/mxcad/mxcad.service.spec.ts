@@ -217,7 +217,9 @@ describe('MxCadService', () => {
       const mockFileContent = Buffer.from(JSON.stringify(mockData));
 
       // Mock getFileContent to return the data
-      jest.spyOn(mockMinioSyncService, 'getFileContent').mockResolvedValue(mockFileContent);
+      jest
+        .spyOn(mockMinioSyncService, 'getFileContent')
+        .mockResolvedValue(mockFileContent);
 
       const result = await service.getPreloadingData(
         'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'

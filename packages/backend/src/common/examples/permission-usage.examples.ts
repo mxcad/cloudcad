@@ -16,17 +16,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { FilePermission } from '../decorators/file-permission.decorator';
-import { ProjectPermission } from '../decorators/project-permission.decorator';
+import { NodePermission } from '../decorators/project-permission.decorator';
 import { Roles } from '../decorators/roles.decorator';
-import {
-  FileAccessRole,
-  ProjectMemberRole,
-  UserRole,
-} from '../enums/permissions.enum';
-import { FilePermissionGuard } from '../guards/file-permission.guard';
-import { ProjectPermissionGuard } from '../guards/project-permission.guard';
+import { NodeAccessRole, UserRole } from '../enums/permissions.enum';
+import { NodePermissionGuard } from '../guards/project-permission.guard';
 import { RolesGuard } from '../guards/roles.guard';
+
+// 向后兼容别名
+export const ProjectPermission = NodePermission;
+export const ProjectPermissionGuard = NodePermissionGuard;
+export const ProjectMemberRole = NodeAccessRole;
+export const FileAccessRole = NodeAccessRole;
 
 // ===== 示例1: 基于用户角色的权限控制 =====
 @Controller('example/users')
@@ -70,12 +70,12 @@ export class ProjectPermissionExampleController {
 
   // 查看项目详情 - 需要项目成员权限
   @Get(':projectId')
-  @UseGuards(ProjectPermissionGuard)
-  @ProjectPermission(
-    ProjectMemberRole.OWNER,
-    ProjectMemberRole.ADMIN,
-    ProjectMemberRole.MEMBER,
-    ProjectMemberRole.VIEWER
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER,
+    NodeAccessRole.VIEWER
   )
   getProjectDetails(@Param('projectId') projectId: string) {
     return {
@@ -86,8 +86,8 @@ export class ProjectPermissionExampleController {
 
   // 更新项目 - 需要项目管理权限
   @Patch(':projectId')
-  @UseGuards(ProjectPermissionGuard)
-  @ProjectPermission(ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   updateProject(
     @Param('projectId') projectId: string,
     @Body() updateData: any
@@ -101,8 +101,8 @@ export class ProjectPermissionExampleController {
 
   // 删除项目 - 只有项目所有者可以操作
   @Delete(':projectId')
-  @UseGuards(ProjectPermissionGuard)
-  @ProjectPermission(ProjectMemberRole.OWNER)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER)
   deleteProject(@Param('projectId') projectId: string) {
     return {
       message: '项目删除成功',
@@ -112,11 +112,11 @@ export class ProjectPermissionExampleController {
 
   // 管理项目成员 - 需要项目管理权限
   @Post(':projectId/members')
-  @UseGuards(ProjectPermissionGuard)
-  @ProjectPermission(ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   addProjectMember(
     @Param('projectId') projectId: string,
-    @Body() memberData: { userId: string; role: ProjectMemberRole }
+    @Body() memberData: { userId: string; role: NodeAccessRole }
   ) {
     return {
       message: '项目成员添加成功',
@@ -132,11 +132,11 @@ export class ProjectPermissionExampleController {
 export class FilePermissionExampleController {
   // 上传文件到项目 - 需要项目写入权限
   @Post('upload/:projectId')
-  @UseGuards(ProjectPermissionGuard)
-  @ProjectPermission(
-    ProjectMemberRole.OWNER,
-    ProjectMemberRole.ADMIN,
-    ProjectMemberRole.MEMBER
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER
   )
   uploadFileToProject(
     @Request() req,
@@ -153,11 +153,11 @@ export class FilePermissionExampleController {
 
   // 查看文件 - 需要文件读取权限
   @Get(':fileId')
-  @UseGuards(FilePermissionGuard)
-  @FilePermission(
-    FileAccessRole.OWNER,
-    FileAccessRole.EDITOR,
-    FileAccessRole.VIEWER
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
   )
   getFile(@Param('fileId') fileId: string) {
     return {
@@ -168,11 +168,11 @@ export class FilePermissionExampleController {
 
   // 下载文件 - 需要文件读取权限
   @Get(':fileId/download')
-  @UseGuards(FilePermissionGuard)
-  @FilePermission(
-    FileAccessRole.OWNER,
-    FileAccessRole.EDITOR,
-    FileAccessRole.VIEWER
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
   )
   downloadFile(@Param('fileId') fileId: string) {
     return {
@@ -183,8 +183,8 @@ export class FilePermissionExampleController {
 
   // 编辑文件 - 需要文件编辑权限
   @Patch(':fileId')
-  @UseGuards(FilePermissionGuard)
-  @FilePermission(FileAccessRole.OWNER, FileAccessRole.EDITOR)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.EDITOR)
   updateFile(@Param('fileId') fileId: string, @Body() updateData: any) {
     return {
       message: '文件更新成功',
@@ -195,8 +195,8 @@ export class FilePermissionExampleController {
 
   // 删除文件 - 只有文件所有者可以操作
   @Delete(':fileId')
-  @UseGuards(FilePermissionGuard)
-  @FilePermission(FileAccessRole.OWNER)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER)
   deleteFile(@Param('fileId') fileId: string) {
     return {
       message: '文件删除成功',
@@ -206,11 +206,11 @@ export class FilePermissionExampleController {
 
   // 分享文件给其他用户 - 需要文件管理权限
   @Post(':fileId/share')
-  @UseGuards(FilePermissionGuard)
-  @FilePermission(FileAccessRole.OWNER, FileAccessRole.EDITOR)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.EDITOR)
   shareFile(
     @Param('fileId') fileId: string,
-    @Body() shareData: { userId: string; role: FileAccessRole }
+    @Body() shareData: { userId: string; role: NodeAccessRole }
   ) {
     return {
       message: '文件分享成功',
@@ -227,8 +227,8 @@ export class ComplexPermissionExampleController {
   // 复杂权限检查：用户角色 + 项目权限
   @Post('projects/:projectId/admin-actions')
   @Roles(UserRole.ADMIN) // 首先检查用户角色
-  @UseGuards(ProjectPermissionGuard) // 然后检查项目权限
-  @ProjectPermission(ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN)
+  @UseGuards(NodePermissionGuard) // 然后检查项目权限
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   performAdminAction(@Param('projectId') projectId: string) {
     return {
       message: '管理员操作执行成功',
@@ -239,8 +239,8 @@ export class ComplexPermissionExampleController {
 
   // 批量文件操作 - 需要项目权限和文件权限
   @Post('projects/:projectId/batch-operation')
-  @UseGuards(ProjectPermissionGuard)
-  @ProjectPermission(ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN)
+  @UseGuards(NodePermissionGuard)
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   batchFileOperation(
     @Param('projectId') projectId: string,
     @Body() operationData: { fileIds: string[]; operation: string }
@@ -262,22 +262,22 @@ export class ComplexPermissionExampleController {
  *    - @Roles(UserRole.ADMIN) - 只有管理员
  *    - @Roles(UserRole.USER, UserRole.ADMIN) - 普通用户和管理员
  *
- * 2. 项目权限：
- *    - @ProjectPermission(ProjectMemberRole.OWNER) - 项目所有者
- *    - @ProjectPermission(ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN) - 所有者和管理员
- *    - @ProjectPermission(ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN, ProjectMemberRole.MEMBER, ProjectMemberRole.VIEWER) - 所有成员
+ * 2. 节点权限（统一管理项目/文件夹/文件）：
+ *    - @NodePermission(NodeAccessRole.OWNER) - 节点所有者
+ *    - @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN) - 所有者和管理员
+ *    - @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.VIEWER) - 所有成员
  *
- * 3. 文件权限：
- *    - @FilePermission(FileAccessRole.OWNER) - 文件所有者
- *    - @FilePermission(FileAccessRole.OWNER, FileAccessRole.EDITOR) - 所有者和编辑者
- *    - @FilePermission(FileAccessRole.OWNER, FileAccessRole.EDITOR, FileAccessRole.VIEWER) - 所有有权限的用户
- *
- * 4. 权限检查顺序：
+ * 3. 权限检查顺序：
  *    - 首先检查JWT认证
  *    - 然后检查用户角色（如果指定了@Roles）
- *    - 最后检查资源权限（项目或文件）
+ *    - 最后检查节点权限（项目/文件夹/文件）
  *
- * 5. 资源ID获取：
- *    - 项目ID从请求参数、查询参数或请求体中自动提取
- *    - 文件ID从请求参数、查询参数或请求体中自动提取
+ * 4. 资源ID获取：
+ *    - 节点ID（nodeId 或 projectId）从请求参数、查询参数或请求体中自动提取
+ *
+ * 5. 向后兼容：
+ *    - ProjectPermission 是 NodePermission 的别名
+ *    - ProjectPermissionGuard 是 NodePermissionGuard 的别名
+ *    - ProjectMemberRole 是 NodeAccessRole 的别名
+ *    - FileAccessRole 是 NodeAccessRole 的别名
  */
