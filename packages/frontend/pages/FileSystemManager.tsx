@@ -253,12 +253,12 @@ export const FileSystemManager: React.FC = () => {
   // ========== 渲染函数 ==========
 
   const renderHeader = () => (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <button
             onClick={isAtRoot ? () => navigate('/projects') : handleGoBack}
-            className="p-1.5 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
             title={isAtRoot ? '返回项目列表' : '返回上一级'}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -286,7 +286,7 @@ export const FileSystemManager: React.FC = () => {
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
-            className="text-slate-600"
+            className="text-slate-600 hover:bg-slate-100"
             title="刷新"
           >
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
@@ -297,7 +297,7 @@ export const FileSystemManager: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={openCreateProject}
-              className="text-slate-600"
+              className="text-slate-600 hover:bg-slate-100"
               title="新建项目"
             >
               <FolderPlus size={16} />
@@ -309,7 +309,7 @@ export const FileSystemManager: React.FC = () => {
                 size="sm"
                 onClick={() => setShowCreateFolderModal(true)}
                 disabled={loading}
-                className="text-slate-600"
+                className="text-slate-600 hover:bg-slate-100"
                 title="新建文件夹"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -329,7 +329,7 @@ export const FileSystemManager: React.FC = () => {
                   uploaderRef.current?.triggerUpload();
                 }}
                 disabled={loading}
-                className="text-slate-600"
+                className="text-slate-600 hover:bg-slate-100"
                 title="上传文件"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -357,18 +357,18 @@ export const FileSystemManager: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
         <div className="relative group flex-1 max-w-xs">
-          <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors" />
           <input
             type="text"
             placeholder="搜索..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12" />
@@ -383,7 +383,7 @@ export const FileSystemManager: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white"
+              className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             >
               <option value="ALL">全部</option>
               <option value="ACTIVE">活跃</option>
@@ -400,7 +400,7 @@ export const FileSystemManager: React.FC = () => {
                 selectedNodes.clear();
               }
             }}
-            className={isMultiSelectMode ? '' : 'text-slate-600'}
+            className={isMultiSelectMode ? '' : 'text-slate-600 hover:bg-slate-100'}
             title="多选模式"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -408,17 +408,17 @@ export const FileSystemManager: React.FC = () => {
             </svg>
           </Button>
 
-          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500'}`}
+              className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary-50 text-primary-600' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <GridIcon size={14} />
             </button>
             <div className="w-px h-4 bg-slate-200" />
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500'}`}
+              className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary-50 text-primary-600' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <ListIcon size={14} />
             </button>
@@ -430,11 +430,11 @@ export const FileSystemManager: React.FC = () => {
 
   const renderEmpty = (isProjectsEmpty: boolean) => (
     <div className="flex flex-col items-center justify-center py-16">
-      <EmptyFolderIcon size={64} className="text-slate-300 mb-4" />
-      <h3 className="text-base font-semibold text-slate-900 mb-2">
+      <EmptyFolderIcon size={80} className="text-slate-300 mb-6 animate-float" />
+      <h3 className="text-xl font-bold text-slate-900 mb-2">
         {isProjectsEmpty ? '暂无项目' : '这个文件夹是空的'}
       </h3>
-      <p className="text-slate-500 text-sm mb-4">
+      <p className="text-slate-500 text-sm mb-6">
         {searchQuery || statusFilter !== 'ALL'
           ? '没有找到匹配的内容'
           : isProjectsEmpty
@@ -442,7 +442,7 @@ export const FileSystemManager: React.FC = () => {
             : '上传文件或创建文件夹来开始使用'}
       </p>
       {isProjectsEmpty && (
-        <Button onClick={openCreateProject} variant="outline" size="sm">
+        <Button onClick={openCreateProject} variant="outline" size="sm" className="hover:shadow-md transition-all">
           <FolderPlus size={14} className="mr-2" />
           创建项目
         </Button>
@@ -496,12 +496,12 @@ export const FileSystemManager: React.FC = () => {
 
       {renderHeader()}
 
-      <div className="bg-white rounded-2xl border border-slate-200 relative min-h-[400px] shadow-sm overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 relative min-h-[400px] shadow-sm overflow-hidden">
         {loading && (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="relative">
               <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
-              <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
+              <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
             </div>
             <p className="mt-4 text-slate-500 font-medium">加载中...</p>
           </div>
@@ -509,10 +509,10 @@ export const FileSystemManager: React.FC = () => {
 
         {!loading && error && (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-              <AlertCircle size={32} className="text-red-600" />
+            <div className="w-16 h-16 rounded-full bg-error-100 flex items-center justify-center mb-4">
+              <AlertCircle size={32} className="text-error-600" />
             </div>
-            <p className="text-red-600 font-medium mb-4">{error}</p>
+            <p className="text-error-600 font-medium mb-4">{error}</p>
             <Button onClick={handleRefresh} variant="outline">
               <RefreshIcon size={16} className="mr-2" />
               重试
@@ -523,10 +523,10 @@ export const FileSystemManager: React.FC = () => {
         {!loading && !error && renderContent()}
 
         {isMultiSelectMode && selectedNodes.size > 0 && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-3">
-            <span className="text-sm font-medium">已选中 {selectedNodes.size} 项</span>
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up">
+            <span className="text-sm font-semibold">已选中 {selectedNodes.size} 项</span>
             <div className="w-px h-4 bg-slate-700" />
-            <button onClick={handleBatchDelete} className="text-red-400 hover:text-white text-sm">
+            <button onClick={handleBatchDelete} className="text-error-400 hover:text-white text-sm font-medium transition-colors">
               删除
             </button>
             <button
@@ -534,7 +534,7 @@ export const FileSystemManager: React.FC = () => {
                 selectedNodes.clear();
                 setIsMultiSelectMode(false);
               }}
-              className="text-slate-400 hover:text-white text-sm"
+              className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
             >
               取消
             </button>

@@ -70,29 +70,26 @@ setError(
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full text-center">
-          <div className="mb-4">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-              <svg
-                className="h-6 w-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                ></path>
+      <div className="min-h-screen flex items-center justify-center gradient-hero py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* 背景装饰 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        </div>
+
+        <div className="max-w-md w-full relative z-10 animate-scale-in">
+          {/* 成功图标 */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-success-100 mb-6 animate-scale-in">
+              <svg className="w-12 h-12 text-success-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              邮箱验证成功！
+            </h2>
+            <p className="text-slate-600">账号已激活，即将自动跳转到登录页...</p>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            邮箱验证成功！
-          </h2>
-          <p className="text-gray-600">账号已激活，即将自动跳转到登录页...</p>
         </div>
       </div>
     );
@@ -100,95 +97,81 @@ setError(
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full text-center">
-          <div className="mb-4">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-              <svg
-                className="animate-spin h-6 w-6 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+      <div className="min-h-screen flex items-center justify-center gradient-hero py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* 背景装饰 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        </div>
+
+        <div className="max-w-md w-full relative z-10 animate-scale-in">
+          {/* 加载图标 */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary-100 mb-6">
+              <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
             </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              正在验证邮箱...
+            </h2>
+            <p className="text-slate-600">请稍候，我们正在验证您的邮箱</p>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            正在验证邮箱...
-          </h2>
-          <p className="text-gray-600">请稍候，我们正在验证您的邮箱</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="text-center">
-          <div className="mb-4">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-              <svg
-                className="h-6 w-6 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                ></path>
-              </svg>
-            </div>
+    <div className="min-h-screen flex items-center justify-center gradient-hero py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+      </div>
+
+      <div className="max-w-md w-full relative z-10 animate-scale-in">
+        {/* Logo 和标题 */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float">
+            <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
           </div>
-
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            验证您的邮箱
+          <h2 className="text-4xl font-bold text-slate-900 mb-2">
+            <span className="text-gradient-primary">CloudCAD</span>
           </h2>
+          <p className="text-slate-600">
+            验证您的邮箱地址
+          </p>
+        </div>
 
+        {/* 验证卡片 */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
           {email && (
-            <p className="text-gray-600 mb-6">
-              我们已向 <span className="font-medium">{email}</span>{' '}
-              发送了验证邮件
-            </p>
-          )}
-
-          {email && (
-            <p className="text-gray-600 mb-6">
-              我们已向 <span className="font-medium">{email}</span> 发送了验证码
+            <p className="text-center text-slate-600 mb-6">
+              我们已向 <span className="font-semibold text-primary-600">{email}</span> 发送了验证码
             </p>
           )}
 
           {!email && (
-            <p className="text-gray-600 mb-6">请输入您收到的6位数字验证码</p>
+            <p className="text-center text-slate-600 mb-6">请输入您收到的6位数字验证码</p>
           )}
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4 mb-6">
-              <div className="text-sm text-red-800">{error}</div>
+            <div className="rounded-xl bg-error-50 border border-error-200 p-4 mb-6 animate-slide-up">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-error-600 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div className="text-sm text-error-800">{error}</div>
+              </div>
             </div>
           )}
 
-          <div className="space-y-4 mb-6">
+          <div className="space-y-6 mb-6">
             <div>
-              <label
-                htmlFor="code"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label htmlFor="code" className="block text-sm font-semibold text-slate-700 mb-2">
                 验证码
               </label>
               <input
@@ -197,16 +180,14 @@ setError(
                 maxLength={6}
                 value={verificationCode}
                 onChange={(e) => {
-                  // 只允许数字
                   const value = e.target.value.replace(/\D/g, '');
                   setVerificationCode(value);
                   if (error) setError(null);
                 }}
                 placeholder="请输入6位数字验证码"
-                className="w-full px-3 py-2 text-center text-xl tracking-widest border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                style={{ letterSpacing: '0.5em' }}
+                className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all font-mono"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-2 text-center">
                 验证码为6位数字，请查看邮件
               </p>
             </div>
@@ -214,33 +195,58 @@ setError(
             <button
               onClick={handleVerifyCode}
               disabled={loading || verificationCode.length !== 6}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white gradient-primary shadow-primary-custom hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {loading ? '验证中...' : '验证'}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  验证中...
+                </span>
+              ) : (
+                '验证'
+              )}
             </button>
           </div>
 
           <div className="space-y-4">
-            <div className="text-sm text-gray-600">
-              <p className="mb-2">没有收到邮件？</p>
-              <ul className="text-left space-y-1">
-                <li>• 检查垃圾邮件文件夹</li>
-                <li>• 确认邮箱地址正确</li>
-                <li>• 验证码15分钟内有效</li>
+            <div className="text-sm text-slate-600 bg-slate-50 rounded-xl p-4">
+              <p className="font-semibold mb-2">没有收到邮件？</p>
+              <ul className="space-y-1 text-slate-500">
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                  检查垃圾邮件文件夹
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                  确认邮箱地址正确
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                  验证码15分钟内有效
+                </li>
               </ul>
             </div>
 
             <div className="space-y-3">
               <button
                 onClick={handleResendEmail}
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="w-full flex justify-center py-3 px-4 border border-slate-200 text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition-all"
               >
                 重新发送验证邮件
               </button>
 
               <button
                 onClick={() => navigate('/login')}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-slate-700 hover:bg-slate-800 transition-all"
               >
                 返回登录
               </button>
