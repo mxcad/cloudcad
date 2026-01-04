@@ -90,38 +90,6 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       };
 
       // 验证 project.id
-      const buildTree = async (
-        nodeId: string,
-        excludeNodeId: string
-      ): Promise<FolderNode[]> => {
-        // 验证 nodeId
-        if (!nodeId) {
-          console.warn('[SelectFolderModal] buildTree: nodeId 为空，跳过');
-          return [];
-        }
-
-        const children = await projectsApi.getChildren(nodeId);
-
-        // 过滤出文件夹，并排除当前节点及其子节点
-        const folders = children
-          .filter((child) => child.isFolder && child.id !== excludeNodeId)
-          .map((folder) => ({
-            ...folder,
-            expanded: false,
-            children: [],
-          }));
-
-        // 递归加载子文件夹
-        for (const folder of folders) {
-          if (folder.id) {
-            folder.children = await buildTree(folder.id, excludeNodeId);
-          }
-        }
-
-        return folders;
-      };
-
-      // 验证 project.id
       if (!project.id) {
         setError('项目 ID 无效');
         setLoading(false);
