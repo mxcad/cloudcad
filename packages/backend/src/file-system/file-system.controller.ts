@@ -23,6 +23,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { MoveNodeDto } from './dto/move-node.dto';
+import { CopyNodeDto } from './dto/copy-node.dto';
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard)
@@ -144,6 +145,12 @@ export class FileSystemController {
   @ApiResponse({ status: 200, description: '移动节点成功' })
   async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
     return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
+  }
+
+  @Post('nodes/:nodeId/copy')
+  @ApiResponse({ status: 201, description: '拷贝节点成功' })
+  async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
+    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
   }
 
   @Post('files/upload')

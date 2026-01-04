@@ -593,6 +593,200 @@ export class FileSystemService {
     }
   }
 
+  /**
+   * 生成唯一的节点名称（处理同名文件）
+   */
+  private async generateUniqueName(
+    parentId: string,
+    baseName: string,
+    isFolder: boolean
+  ): Promise<string> {
+    const existingNodes = await this.prisma.fileSystemNode.findMany({
+      where: {
+        parentId,
+        deletedAt: null,
+      },
+      select: { name: true },
+    });
+
+    const existingNames = new Set(existingNodes.map((n) => n.name));
+
+    if (!existingNames.has(baseName)) {
+      return baseName;
+    }
+
+    // 文件名处理：提取名称和扩展名
+    if (!isFolder) {
+      const lastDotIndex = baseName.lastIndexOf('.');
+      if (lastDotIndex === -1) {
+        // 没有扩展名
+        return this.generateNumberedName(baseName, existingNames);
+      }
+      const nameWithoutExt = baseName.substring(0, lastDotIndex);
+      const extension = baseName.substring(lastDotIndex);
+      const numberedName = this.generateNumberedName(
+        nameWithoutExt,
+        existingNames
+      );
+      return `${numberedName}${extension}`;
+    }
+
+    // 文件夹处理
+    return this.generateNumberedName(baseName, existingNames);
+  }
+
+  /**
+   * 生成带序号的名称
+   */
+  private generateNumberedName(
+    baseName: string,
+    existingNames: Set<string>
+  ): string {
+    let counter = 1;
+    let newName: string;
+    do {
+      newName = `${baseName} (${counter})`;
+      counter++;
+    } while (existingNames.has(newName));
+    return newName;
+  }
+
+  /**
+   * 递归拷贝节点及其所有子项
+   */
+  async copyNode(nodeId: string, targetParentId: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: {
+          id: true,
+          name: true,
+          isRoot: true,
+          isFolder: true,
+          originalName: true,
+          path: true,
+          size: true,
+          mimeType: true,
+          extension: true,
+          fileStatus: true,
+          fileHash: true,
+          description: true,
+          ownerId: true,
+        },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      if (node.isRoot) {
+        throw new BadRequestException('不能拷贝根节点');
+      }
+
+      const targetParent = await this.prisma.fileSystemNode.findUnique({
+        where: { id: targetParentId },
+        select: { isFolder: true },
+      });
+
+      if (!targetParent) {
+        throw new NotFoundException('目标父节点不存在');
+      }
+
+      if (!targetParent.isFolder) {
+        throw new BadRequestException('目标父节点必须是文件夹');
+      }
+
+      if (nodeId === targetParentId) {
+        throw new BadRequestException('不能将节点拷贝到自身');
+      }
+
+      // 生成唯一名称
+      const uniqueName = await this.generateUniqueName(
+        targetParentId,
+        node.name,
+        node.isFolder
+      );
+
+      // 递归拷贝节点
+      const copiedNode = await this.copyNodeRecursive(
+        nodeId,
+        targetParentId,
+        uniqueName,
+        node.ownerId
+      );
+
+      this.logger.log(`节点拷贝成功: ${nodeId} -> ${copiedNode.id}`);
+      return copiedNode;
+    } catch (error) {
+      this.logger.error(`节点拷贝失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 递归拷贝节点及其所有子项
+   */
+  private async copyNodeRecursive(
+    sourceNodeId: string,
+    targetParentId: string,
+    newName: string,
+    ownerId: string
+  ): Promise<any> {
+    const sourceNode = await this.prisma.fileSystemNode.findUnique({
+      where: { id: sourceNodeId },
+      include: {
+        children: {
+          select: {
+            id: true,
+            name: true,
+            isFolder: true,
+          },
+        },
+      },
+    });
+
+    if (!sourceNode) {
+      throw new NotFoundException('源节点不存在');
+    }
+
+    // 创建新节点
+    const newNode = await this.prisma.fileSystemNode.create({
+      data: {
+        name: newName,
+        originalName: sourceNode.originalName || newName,
+        isFolder: sourceNode.isFolder,
+        isRoot: false,
+        parentId: targetParentId,
+        path: sourceNode.path,
+        size: sourceNode.size,
+        mimeType: sourceNode.mimeType,
+        extension: sourceNode.extension,
+        fileStatus: sourceNode.fileStatus,
+        fileHash: sourceNode.fileHash,
+        description: sourceNode.description,
+        ownerId,
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            nickname: true,
+          },
+        },
+      },
+    });
+
+    // 如果是文件夹，递归拷贝所有子项
+    if (sourceNode.isFolder && sourceNode.children.length > 0) {
+      for (const child of sourceNode.children) {
+        await this.copyNodeRecursive(child.id, newNode.id, child.name, ownerId);
+      }
+    }
+
+    return newNode;
+  }
+
   async uploadFile(
     userId: string,
     parentId: string,
