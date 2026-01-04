@@ -49,28 +49,38 @@ class ApiService {
         // 为所有 MxCAD 接口添加节点上下文
         if (config.url?.includes('/mxcad/')) {
           Logger.info('[apiService] 请求拦截器 - URL:', config.url);
-          Logger.info('[apiService] 请求拦截器 - 原始 data:', JSON.stringify(config.data));
-          
+          Logger.info(
+            '[apiService] 请求拦截器 - 原始 data:',
+            JSON.stringify(config.data)
+          );
+
           // 从多个来源获取节点上下文
           const nodeId = this.getNodeIdFromMultipleSources(config);
           Logger.info('[apiService] 请求拦截器 - 获取的 nodeId:', nodeId);
-          
+
           if (nodeId) {
             // 验证 nodeId 格式
             if (!this.isValidNodeId(nodeId)) {
               Logger.warn('[apiService] 无效的 nodeId 格式:', nodeId);
               return config; // 不添加无效参数
             }
-            
+
             // 根据请求类型补充 nodeId 参数
             this.supplementNodeIdToRequest(config, nodeId);
-            Logger.info('[apiService] 请求拦截器 - 处理后的 data:', JSON.stringify(config.data));
+            Logger.info(
+              '[apiService] 请求拦截器 - 处理后的 data:',
+              JSON.stringify(config.data)
+            );
           } else {
             // 对于关键的上传接口，如果缺少 nodeId 则记录警告
-            if (config.url?.includes('/mxcad/files/uploadFiles') || 
-                config.url?.includes('/mxcad/files/fileisExist') ||
-                config.url?.includes('/mxcad/files/chunkisExist')) {
-              Logger.warn('[apiService] MxCAD 接口缺少 nodeId 参数，可能影响文件系统集成');
+            if (
+              config.url?.includes('/mxcad/files/uploadFiles') ||
+              config.url?.includes('/mxcad/files/fileisExist') ||
+              config.url?.includes('/mxcad/files/chunkisExist')
+            ) {
+              Logger.warn(
+                '[apiService] MxCAD 接口缺少 nodeId 参数，可能影响文件系统集成'
+              );
             }
           }
         }
@@ -88,15 +98,16 @@ class ApiService {
 
         // 检查是否为 MxCAD 接口，如果是则跳过自动解包
         const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
-        
-        if (!isMxCadEndpoint &&
+
+        if (
+          !isMxCadEndpoint &&
           response.data &&
           typeof response.data === 'object' &&
           'data' in response.data
         ) {
           const originalData = response.data;
           response.data = originalData.data;
-// 静默：自动解包
+          // 静默：自动解包
         } else if (isMxCadEndpoint) {
           // 静默：MxCAD接口跳过自动解包，保持原始格式
         }
@@ -193,7 +204,9 @@ class ApiService {
   }
 
   // 获取外部参照预加载数据
-  async getPreloadingData(fileHash: string): Promise<AxiosResponse<import('../types/api').PreloadingData>> {
+  async getPreloadingData(
+    fileHash: string
+  ): Promise<AxiosResponse<import('../types/api').PreloadingData>> {
     return this.get(`/mxcad/file/${fileHash}/preloading`);
   }
 
@@ -307,6 +320,9 @@ export const projectsApi = {
   moveNode: (nodeId: string, targetParentId: string) =>
     apiService.post(`/file-system/nodes/${nodeId}/move`, { targetParentId }),
 
+  copyNode: (nodeId: string, targetParentId: string) =>
+    apiService.post(`/file-system/nodes/${nodeId}/copy`, { targetParentId }),
+
   // 存储空间信息
   getStorageInfo: () => apiService.get('/file-system/storage'),
 
@@ -411,7 +427,9 @@ export const adminApi = {
 export const mxcadApi = {
   // 获取预加载数据
   getPreloadingData: (fileHash: string) =>
-    apiService.get<import('../types/api').PreloadingData>(`/mxcad/file/${fileHash}/preloading`),
+    apiService.get<import('../types/api').PreloadingData>(
+      `/mxcad/file/${fileHash}/preloading`
+    ),
 
   // 检查外部参照是否存在
   checkExternalReferenceExists: (fileHash: string, fileName: string) =>
@@ -431,7 +449,7 @@ export const mxcadApi = {
       try {
         // 计算上传文件的哈希
         const hash = await calculateFileHash(file);
-        
+
         const formData = new FormData();
         // 先添加字段，再添加文件，确保 Multer 能正确解析字段
         formData.append('hash', hash); // 使用上传文件的哈希
@@ -442,13 +460,19 @@ export const mxcadApi = {
         // 调试日志：打印 FormData 内容
         console.log('[uploadExtReferenceDwg] FormData 内容:');
         for (const [key, value] of formData.entries()) {
-          console.log(`  ${key}: ${value instanceof File ? `File(${value.name})` : value}`);
+          console.log(
+            `  ${key}: ${value instanceof File ? `File(${value.name})` : value}`
+          );
         }
 
-        const response = await apiService.post('/mxcad/up_ext_reference_dwg', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: onProgress,
-        });
+        const response = await apiService.post(
+          '/mxcad/up_ext_reference_dwg',
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onProgress,
+          }
+        );
         // 根据新的返回格式判断成功或失败
         if (response.data?.code === 0) {
           resolve(response);
@@ -472,7 +496,7 @@ export const mxcadApi = {
       try {
         // 计算上传文件的哈希
         const hash = await calculateFileHash(file);
-        
+
         const formData = new FormData();
         // 先添加字段，再添加文件，确保 Multer 能正确解析字段
         formData.append('hash', hash); // 使用上传文件的哈希
@@ -480,10 +504,14 @@ export const mxcadApi = {
         formData.append('ext_ref_file', extRefFile);
         formData.append('file', file);
 
-        const response = await apiService.post('/mxcad/up_ext_reference_image', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: onProgress,
-        });
+        const response = await apiService.post(
+          '/mxcad/up_ext_reference_image',
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onProgress,
+          }
+        );
         // 根据新的返回格式判断成功或失败
         if (response.data?.code === 0) {
           resolve(response);
@@ -498,49 +526,54 @@ export const mxcadApi = {
 };
 
 // 在类定义后添加辅助方法
-ApiService.prototype.getNodeIdFromMultipleSources = function(config: any): string | null {
+ApiService.prototype.getNodeIdFromMultipleSources = function (
+  config: any
+): string | null {
   // 1. 从请求数据中获取
   if (config.data?.nodeId) return config.data.nodeId;
-  
+
   // 2. 从 URL 查询参数获取
   if (typeof window !== 'undefined') {
     const urlParams = new URLSearchParams(window.location.search);
     const urlNodeId = urlParams.get('nodeId') || urlParams.get('parent');
     if (urlNodeId) return urlNodeId;
   }
-  
+
   // 3. 从全局状态获取（如果有）
   if (typeof window !== 'undefined' && (window as any).__CURRENT_NODE_ID__) {
     return (window as any).__CURRENT_NODE_ID__;
   }
-  
+
   // 4. 从 localStorage 获取（如果有）
   if (typeof window !== 'undefined') {
     const storedNodeId = localStorage.getItem('currentNodeId');
     if (storedNodeId) return storedNodeId;
   }
-  
+
   return null;
 };
 
-ApiService.prototype.isValidNodeId = function(nodeId: string): boolean {
+ApiService.prototype.isValidNodeId = function (nodeId: string): boolean {
   // CUID2 格式验证：以 'c' 开头，包含字母和数字，长度约 24-32 字符
   if (!nodeId || typeof nodeId !== 'string') return false;
-  
+
   // 基本格式检查
   const cuid2Pattern = /^c[a-z0-9]{23,31}$/;
   return cuid2Pattern.test(nodeId);
 };
 
-ApiService.prototype.supplementNodeIdToRequest = function(config: any, nodeId: string): void {
+ApiService.prototype.supplementNodeIdToRequest = function (
+  config: any,
+  nodeId: string
+): void {
   if (!config || !nodeId) return;
-  
+
   // 如果是 POST/PUT 请求且有 data
   const method = config.method?.toLowerCase();
   if ((method === 'post' || method === 'put') && config.data) {
     // 检查是否是 FormData（文件上传）
     const isFormData = config.data instanceof FormData;
-    
+
     if (isFormData) {
       // 对于 FormData，检查是否已有 nodeId，如果没有才添加
       if (!config.data.has('nodeId')) {
@@ -551,10 +584,13 @@ ApiService.prototype.supplementNodeIdToRequest = function(config: any, nodeId: s
       // 对于普通 JSON 对象，优先使用请求中已传递的 nodeId
       // 但如果请求中已经有 nodeId，就不需要做任何操作
       if (config.data.nodeId) {
-        Logger.info('[apiService] 请求中已包含 nodeId，使用已有值:', config.data.nodeId);
+        Logger.info(
+          '[apiService] 请求中已包含 nodeId，使用已有值:',
+          config.data.nodeId
+        );
         return;
       }
-      
+
       // 只有当请求体中没有 nodeId 时，才添加
       // 使用 Object.assign 更安全地添加属性
       Object.assign(config.data, { nodeId });
@@ -563,10 +599,13 @@ ApiService.prototype.supplementNodeIdToRequest = function(config: any, nodeId: s
   } else if (config.params) {
     // 如果参数在 params 中
     if (config.params.nodeId) {
-      Logger.info('[apiService] params 中已包含 nodeId，使用已有值:', config.params.nodeId);
+      Logger.info(
+        '[apiService] params 中已包含 nodeId，使用已有值:',
+        config.params.nodeId
+      );
       return;
     }
-    
+
     Object.assign(config.params, { nodeId });
     Logger.info('[apiService] 为 params 补充 nodeId:', nodeId);
   }
