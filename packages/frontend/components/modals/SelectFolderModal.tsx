@@ -32,7 +32,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
   // 加载项目文件夹树
   const loadFolderTree = useCallback(async () => {
-    if (!projectId || !isOpen) return;
+    if (!projectId || !isOpen) {
+      console.warn('[SelectFolderModal] projectId 或 isOpen 为空，跳过加载');
+      return;
+    }
 
     setLoading(true);
     setError(null);

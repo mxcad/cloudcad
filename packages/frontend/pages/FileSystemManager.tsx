@@ -877,7 +877,11 @@ export const FileSystemManager: React.FC = () => {
 
       <SelectFolderModal
         isOpen={showSelectFolderModal}
-        currentNodeId={moveSourceNode?.id || copySourceNode?.id || ''}
+        currentNodeId={
+          moveSourceNode?.id === 'batch' || copySourceNode?.id === 'batch'
+            ? ''
+            : moveSourceNode?.id || copySourceNode?.id || ''
+        }
         projectId={urlProjectId}
         onClose={() => {
           setShowSelectFolderModal(false);
