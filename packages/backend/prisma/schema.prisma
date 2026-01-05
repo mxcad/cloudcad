@@ -64,6 +64,7 @@ model FileSystemNode {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime? // 软删除时间（回收站功能）
+  deletedByCascade Boolean @default(false) // 是否因父节点删除而被自动删除
 
   // 关联关系
   nodeAccesses FileAccess[]    @relation("NodeAccesses")

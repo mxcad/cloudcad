@@ -254,6 +254,7 @@ export class FileSystemService {
         data: {
           deletedAt: new Date(),
           fileStatus: FileStatus.DELETED,
+          deletedByCascade: true, // 标记为因父节点删除而被自动删除
         },
       });
     }
@@ -946,12 +947,13 @@ export class FileSystemService {
       const deletedProjectIds = projects.map((p) => p.id);
 
       // 获取用户删除的文件和文件夹（不属于项目的）
-      // 过滤掉已删除项目的子项
+      // 过滤掉已删除项目的子项和自动删除的节点
       const nodes = await this.prisma.fileSystemNode.findMany({
         where: {
           deletedAt: { not: null },
           ownerId: userId,
           isRoot: false,
+          deletedByCascade: false, // 只显示主动删除的节点
           // 排除已删除项目的子项
           parentId: {
             notIn: deletedProjectIds,
@@ -1060,8 +1062,10 @@ export class FileSystemService {
         where: { id: nodeId, deletedAt: { not: null } },
       });
 
+      // 如果节点不在回收站中（可能已被恢复），直接返回
       if (!node) {
-        throw new NotFoundException('回收站中不存在该节点');
+        this.logger.warn(`节点 ${nodeId} 不在回收站中，可能已被恢复`);
+        return { message: '节点已恢复或不存在' };
       }
 
       // 递归恢复所有子节点
