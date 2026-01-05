@@ -326,18 +326,18 @@ export const projectsApi = {
   // 存储空间信息
   getStorageInfo: () => apiService.get('/file-system/storage'),
 
-  // 项目成员管理（保留旧的 API 路径，如果后端有实现的话）
+  // 项目成员管理
   getMembers: (projectId: string) =>
-    apiService.get(`/projects/${projectId}/members`),
+    apiService.get(`/file-system/projects/${projectId}/members`),
 
   addMember: (projectId: string, data: { userId: string; role: string }) =>
-    apiService.post(`/projects/${projectId}/members`, data),
+    apiService.post(`/file-system/projects/${projectId}/members`, data),
 
   removeMember: (projectId: string, userId: string) =>
-    apiService.delete(`/projects/${projectId}/members/${userId}`),
+    apiService.delete(`/file-system/projects/${projectId}/members/${userId}`),
 
   updateMember: (projectId: string, userId: string, data: { role: string }) =>
-    apiService.patch(`/projects/${projectId}/members/${userId}`, data),
+    apiService.patch(`/file-system/projects/${projectId}/members/${userId}`, data),
 };
 
 // 回收站相关的 API 方法

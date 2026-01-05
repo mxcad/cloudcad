@@ -233,11 +233,84 @@ export class FileSystemController {
 
     return this.fileSystemService.uploadFile(req.user.id, parentId, mockFile);
   }
-
+  
   @Get('storage')
   @ApiResponse({ status: 200, description: '获取存储空间信息成功' })
   async getStorageInfo(@Request() req) {
     return this.fileSystemService.getUserStorageInfo(req.user.id);
+  }
+
+  // ============ 项目成员管理 API ============
+
+  @Get('projects/:projectId/members')
+  @ApiOperation({ summary: '获取项目成员列表' })
+  @ApiResponse({ status: 200, description: '获取成员列表成功' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权访问该项目' })
+  @ApiResponse({ status: 404, description: '项目不存在' })
+  async getProjectMembers(@Param('projectId') projectId: string) {
+    return this.fileSystemService.getProjectMembers(projectId);
+  }
+
+  @Post('projects/:projectId/members')
+  @ApiOperation({ summary: '添加项目成员' })
+  @ApiResponse({ status: 201, description: '添加成员成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限添加成员' })
+  @ApiResponse({ status: 404, description: '项目或用户不存在' })
+  async addProjectMember(
+    @Param('projectId') projectId: string,
+    @Body() body: { userId: string; role: string },
+    @Request() req
+  ) {
+    const { userId, role } = body;
+    return this.fileSystemService.addProjectMember(
+      projectId,
+      userId,
+      role,
+      req.user.id
+    );
+  }
+
+  @Patch('projects/:projectId/members/:userId')
+  @ApiOperation({ summary: '更新项目成员角色' })
+  @ApiResponse({ status: 200, description: '更新成员角色成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限更新成员角色' })
+  @ApiResponse({ status: 404, description: '项目或成员不存在' })
+  async updateProjectMember(
+    @Param('projectId') projectId: string,
+    @Param('userId') userId: string,
+    @Body('role') role: string,
+    @Request() req
+  ) {
+    return this.fileSystemService.updateProjectMember(
+      projectId,
+      userId,
+      role,
+      req.user.id
+    );
+  }
+
+  @Delete('projects/:projectId/members/:userId')
+  @ApiOperation({ summary: '移除项目成员' })
+  @ApiResponse({ status: 200, description: '移除成员成功' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限移除成员' })
+  @ApiResponse({ status: 404, description: '项目或成员不存在' })
+  @HttpCode(HttpStatus.OK)
+  async removeProjectMember(
+    @Param('projectId') projectId: string,
+    @Param('userId') userId: string,
+    @Request() req
+  ) {
+    return this.fileSystemService.removeProjectMember(
+      projectId,
+      userId,
+      req.user.id
+    );
   }
 
   private getMimeType(fileName: string): string {
@@ -319,7 +392,6 @@ export class FileSystemController {
     const mimeType = this.getMimeType(node.name);
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     // 返回图片流
     stream.pipe(res);

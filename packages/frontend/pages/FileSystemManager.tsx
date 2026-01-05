@@ -225,10 +225,9 @@ export const FileSystemManager: React.FC = () => {
   const handleShowMembers = useCallback(
     (project: FileSystemNode, e: React.MouseEvent) => {
       e.stopPropagation();
-      openEditProject(project);
       setIsMembersModalOpen(true);
     },
-    [openEditProject]
+    []
   );
 
   // 提交项目表单

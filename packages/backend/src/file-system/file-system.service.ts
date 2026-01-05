@@ -1738,4 +1738,272 @@ export class FileSystemService {
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+
+  // ============ 项目成员管理方法 ============
+
+  /**
+   * 获取项目成员列表
+   * @param projectId 项目 ID
+   * @returns 项目成员列表
+   */
+  async getProjectMembers(projectId: string) {
+    try {
+      // 验证项目是否存在且是根节点
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      // 获取所有成员
+      const members = await this.prisma.fileAccess.findMany({
+        where: { nodeId: projectId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              nickname: true,
+              avatar: true,
+              role: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
+      return members;
+    } catch (error) {
+      this.logger.error(`获取项目成员失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 添加项目成员
+   * @param projectId 项目 ID
+   * @param userId 用户 ID
+   * @param role 成员角色
+   * @param operatorId 操作者 ID
+   * @returns 新添加的成员信息
+   */
+  async addProjectMember(
+    projectId: string,
+    userId: string,
+    role: string,
+    operatorId: string
+  ) {
+    try {
+      // 验证项目是否存在且是根节点
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      // 检查操作者权限（只有 OWNER 和 ADMIN 可以添加成员）
+      const hasPermission = await this.checkProjectPermission(
+        projectId,
+        operatorId,
+        ['OWNER', 'ADMIN']
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('没有权限添加项目成员');
+      }
+
+      // 检查用户是否存在
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('用户不存在');
+      }
+
+      // 检查是否已经是成员
+      const existingMember = await this.prisma.fileAccess.findUnique({
+        where: {
+          userId_nodeId: {
+            userId,
+            nodeId: projectId,
+          },
+        },
+      });
+
+      if (existingMember) {
+        throw new ForbiddenException('用户已经是项目成员');
+      }
+
+      // 添加成员
+      const member = await this.prisma.fileAccess.create({
+        data: {
+          nodeId: projectId,
+          userId,
+          role: role as any,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              nickname: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+
+      this.logger.log(
+        `项目成员添加成功: ${projectId} - ${userId} (${role}) by ${operatorId}`
+      );
+
+      return member;
+    } catch (error) {
+      this.logger.error(`添加项目成员失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新项目成员角色
+   * @param projectId 项目 ID
+   * @param userId 用户 ID
+   * @param role 新角色
+   * @param operatorId 操作者 ID
+   * @returns 更新后的成员信息
+   */
+  async updateProjectMember(
+    projectId: string,
+    userId: string,
+    role: string,
+    operatorId: string
+  ) {
+    try {
+      // 验证项目是否存在且是根节点
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      // 检查操作者权限（只有 OWNER 和 ADMIN 可以更新成员角色）
+      const hasPermission = await this.checkProjectPermission(
+        projectId,
+        operatorId,
+        ['OWNER', 'ADMIN']
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('没有权限更新项目成员角色');
+      }
+
+      // 验证角色是否合法
+      const validRoles = ['OWNER', 'ADMIN', 'MEMBER', 'EDITOR', 'VIEWER'];
+      if (!validRoles.includes(role)) {
+        throw new BadRequestException('无效的角色');
+      }
+
+      // 更新成员角色
+      const member = await this.prisma.fileAccess.update({
+        where: {
+          userId_nodeId: {
+            userId,
+            nodeId: projectId,
+          },
+        },
+        data: { role: role as any },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              nickname: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+
+      this.logger.log(
+        `项目成员角色更新成功: ${projectId} - ${userId} -> ${role} by ${operatorId}`
+      );
+
+      return member;
+    } catch (error) {
+      this.logger.error(`更新项目成员角色失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 移除项目成员
+   * @param projectId 项目 ID
+   * @param userId 用户 ID
+   * @param operatorId 操作者 ID
+   * @returns 操作结果
+   */
+  async removeProjectMember(
+    projectId: string,
+    userId: string,
+    operatorId: string
+  ) {
+    try {
+      // 验证项目是否存在且是根节点
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      // 检查操作者权限（只有 OWNER 和 ADMIN 可以移除成员）
+      const hasPermission = await this.checkProjectPermission(
+        projectId,
+        operatorId,
+        ['OWNER', 'ADMIN']
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('没有权限移除项目成员');
+      }
+
+      // 检查是否是项目所有者（不能移除所有者）
+      if (project.ownerId === userId) {
+        throw new ForbiddenException('不能移除项目所有者');
+      }
+
+      // 移除成员
+      await this.prisma.fileAccess.delete({
+        where: {
+          userId_nodeId: {
+            userId,
+            nodeId: projectId,
+          },
+        },
+      });
+
+      this.logger.log(
+        `项目成员移除成功: ${projectId} - ${userId} by ${operatorId}`
+      );
+
+      return { message: '成员移除成功' };
+    } catch (error) {
+      this.logger.error(`移除项目成员失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
 }
