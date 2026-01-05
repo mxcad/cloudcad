@@ -68,6 +68,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const isRoot = node.isRoot;
   const modalRef = useRef<{
     checkMissingReferences: () => Promise<boolean>;
@@ -262,20 +263,16 @@ export const FileItem: React.FC<FileItemProps> = ({
             ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
               node.extension?.toLowerCase() || ''
             ) ? (
-              <img
-                src={getThumbnailUrl(node)}
-                alt={node.name}
-                className="w-full h-full object-cover rounded-lg"
-                onError={(e) => {
-                  // 缩略图加载失败时显示默认图标
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  target.parentElement!.innerHTML = getFileIconComponent(
-                    node,
-                    64
-                  );
-                }}
-              />
+              imageLoadError ? (
+                getFileIconComponent(node, 64)
+              ) : (
+                <img
+                  src={getThumbnailUrl(node)}
+                  alt={node.name}
+                  className="w-full h-full object-cover rounded-lg"
+                  onError={() => setImageLoadError(true)}
+                />
+              )
             ) : (
               getFileIconComponent(node, 64)
             )}
@@ -625,16 +622,16 @@ export const FileItem: React.FC<FileItemProps> = ({
         ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
           node.extension?.toLowerCase() || ''
         ) ? (
-          <img
-            src={getThumbnailUrl(node)}
-            alt={node.name}
-            className="w-full h-full object-cover rounded-lg"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              target.parentElement!.innerHTML = getFileIconComponent(node, 40);
-            }}
-          />
+          imageLoadError ? (
+            getFileIconComponent(node, 40)
+          ) : (
+            <img
+              src={getThumbnailUrl(node)}
+              alt={node.name}
+              className="w-full h-full object-cover rounded-lg"
+              onError={() => setImageLoadError(true)}
+            />
+          )
         ) : (
           getFileIconComponent(node, 40)
         )}
