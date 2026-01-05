@@ -95,6 +95,7 @@ export function useProjectManagement(options: UseProjectManagementOptions = {}) 
   return {
     isModalOpen,
     editingProject,
+    setEditingProject,
     formData,
     loading,
     openCreateModal,

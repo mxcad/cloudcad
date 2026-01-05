@@ -46,6 +46,23 @@ export class UsersController {
     return this.usersService.findAll(query);
   }
 
+  @Get('search/by-email')
+  @ApiOperation({ summary: '根据邮箱搜索用户' })
+  @ApiResponse({ status: 200, description: '搜索成功' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  @HttpCode(HttpStatus.OK)
+  searchByEmail(@Query('email') email: string) {
+    return this.usersService.findByEmail(email);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: '搜索用户（用于添加项目成员）' })
+  @ApiResponse({ status: 200, description: '搜索成功' })
+  @HttpCode(HttpStatus.OK)
+  searchUsers(@Query() query: QueryUsersDto) {
+    return this.usersService.findAll(query);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN)
   findOne(@Param('id') id: string) {

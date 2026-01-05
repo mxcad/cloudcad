@@ -31,88 +31,77 @@ async function main() {
 
   console.log('管理员用户已创建:', admin);
 
-  // 创建测试用户 - 已注释，改为通过注册流程创建
-  // const testPassword = await bcrypt.hash('Test123!', 12);
-  // const testUser = await prisma.user.upsert({
-  //   where: { email: 'test@cloucad.com' },
-  //   update: {},
-  //   create: {
-  //     email: 'test@cloucad.com',
-  //     username: 'testuser',
-  //     password: testPassword,
-  //     nickname: '测试用户',
-  //     role: UserRole.USER,
-  //     status: UserStatus.INACTIVE,
-  //     emailVerified: false,
-  //   },
-  // });
+  // 创建测试用户
+  const testPassword = await bcrypt.hash('Test123!', 12);
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@cloucad.com' },
+    update: {},
+    create: {
+      email: 'test@cloucad.com',
+      username: 'testuser',
+      password: testPassword,
+      nickname: '测试用户',
+      role: UserRole.USER,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+    },
+  });
 
-  // console.log('测试用户已创建:', testUser);
+  console.log('测试用户已创建:', testUser);
 
-  // 创建示例项目（根文件夹）- 已注释，等待用户注册后创建
-  // const projectRootNode = await prisma.fileSystemNode.create({
-  //   data: {
-  //     name: '示例项目',
-  //     description: '这是一个示例项目，用于演示系统功能',
-  //     isFolder: true,
-  //     isRoot: true,
-  //     projectStatus: 'ACTIVE',
-  //     ownerId: testUser.id,
-  //   },
-  // });
+  // 创建更多测试用户
+  const users = [
+    {
+      email: 'zhangsan@cloucad.com',
+      username: 'zhangsan',
+      nickname: '张三',
+      password: 'Zhang123!',
+    },
+    {
+      email: 'lisi@cloucad.com',
+      username: 'lisi',
+      nickname: '李四',
+      password: 'Li123!',
+    },
+    {
+      email: 'wangwu@cloucad.com',
+      username: 'wangwu',
+      nickname: '王五',
+      password: 'Wang123!',
+    },
+    {
+      email: 'zhaoliu@cloucad.com',
+      username: 'zhaoliu',
+      nickname: '赵六',
+      password: 'Zhao123!',
+    },
+    {
+      email: 'qianqi@cloucad.com',
+      username: 'qianqi',
+      nickname: '钱七',
+      password: 'Qian123!',
+    },
+  ];
 
-  // console.log('示例项目（根节点）已创建:', projectRootNode);
-
-  // // 添加项目成员
-  // await prisma.projectMember.create({
-  //   data: {
-  //     nodeId: projectRootNode.id,
-  //     userId: admin.id,
-  //     role: 'ADMIN',
-  //   },
-  // });
-
-  // await prisma.projectMember.create({
-  //   data: {
-  //     nodeId: projectRootNode.id,
-  //     userId: testUser.id,
-  //     role: 'OWNER',
-  //   },
-  // });
-
-  // console.log('项目成员已添加');
-
-  // // 创建示例文件夹
-  // const designFolder = await prisma.fileSystemNode.create({
-  //   data: {
-  //     name: '设计图纸',
-  //     isFolder: true,
-  //     isRoot: false,
-  //     parentId: projectRootNode.id,
-  //     ownerId: testUser.id,
-  //   },
-  // });
-
-  // console.log('示例文件夹已创建:', designFolder);
-
-  // // 创建示例文件
-  // const sampleFile = await prisma.fileSystemNode.create({
-  //   data: {
-  //     name: 'sample.dwg',
-  //     originalName: 'sample.dwg',
-  //     isFolder: false,
-  //     isRoot: false,
-  //     parentId: designFolder.id,
-  //     extension: '.dwg',
-  //     mimeType: 'application/acad',
-  //     size: 1024000,
-  //     path: '/uploads/sample-dwg-123456.dwg',
-  //     fileStatus: 'COMPLETED',
-  //     ownerId: testUser.id,
-  //   },
-  // });
-
-  // console.log('示例文件已创建:', sampleFile);
+  for (const userData of users) {
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+    const user = await prisma.user.upsert({
+      where: { email: userData.email },
+      update: {},
+      create: {
+        email: userData.email,
+        username: userData.username,
+        password: hashedPassword,
+        nickname: userData.nickname,
+        role: UserRole.USER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+      },
+    });
+    console.log(`用户已创建: ${user.nickname} (${user.email})`);
+  }
 
   console.log('种子数据初始化完成!');
 }

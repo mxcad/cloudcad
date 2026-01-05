@@ -96,6 +96,7 @@ export const FileSystemManager: React.FC = () => {
   const {
     isModalOpen: isProjectModalOpen,
     editingProject,
+    setEditingProject,
     formData: projectFormData,
     loading: projectLoading,
     openCreateModal: openCreateProject,
@@ -225,6 +226,7 @@ export const FileSystemManager: React.FC = () => {
   const handleShowMembers = useCallback(
     (project: FileSystemNode, e: React.MouseEvent) => {
       e.stopPropagation();
+      setEditingProject(project);
       setIsMembersModalOpen(true);
     },
     []
@@ -851,8 +853,11 @@ export const FileSystemManager: React.FC = () => {
 
       <MembersModal
         isOpen={isMembersModalOpen}
-        projectId={editingProject?.id || ''}
-        onClose={() => setIsMembersModalOpen(false)}
+        projectId={editingProject?.id || urlProjectId || ''}
+        onClose={() => {
+          setIsMembersModalOpen(false);
+          setEditingProject(null);
+        }}
       />
 
       <SelectFolderModal

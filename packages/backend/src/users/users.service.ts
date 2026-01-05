@@ -177,6 +177,37 @@ export class UsersService {
    */
   async findByEmail(email: string) {
     try {
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('用户不存在');
+      }
+
+      return user;
+    } catch (error) {
+      this.logger.error(`根据邮箱查询用户失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 根据邮箱查询用户（包含密码，用于登录验证）
+   */
+  async findByEmailWithPassword(email: string) {
+    try {
       return await this.prisma.user.findUnique({
         where: { email },
         select: {

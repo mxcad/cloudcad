@@ -1898,6 +1898,11 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
+      // 检查是否是项目所有者（不能修改所有者的角色）
+      if (project.ownerId === userId) {
+        throw new ForbiddenException('不能修改项目所有者的角色');
+      }
+
       // 检查操作者权限（只有 OWNER 和 ADMIN 可以更新成员角色）
       const hasPermission = await this.checkProjectPermission(
         projectId,

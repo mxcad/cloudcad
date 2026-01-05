@@ -254,8 +254,11 @@ export const authApi = {
 
 // 用户相关的 API 方法
 export const usersApi = {
-  list: (params?: { page?: number; limit?: number; search?: string }) =>
-    apiService.get('/users', { params }),
+  search: (params?: { page?: number; limit?: number; search?: string }) =>
+    apiService.get('/users/search', { params }),
+
+  searchByEmail: (email: string) =>
+    apiService.get('/users/search/by-email', { params: { email } }),
 
   create: (data: {
     email: string;
