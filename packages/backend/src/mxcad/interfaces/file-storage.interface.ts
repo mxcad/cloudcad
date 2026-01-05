@@ -34,14 +34,6 @@ export interface IFileStorageService {
   syncFile(localPath: string, storagePath: string): Promise<boolean>;
 
   /**
-   * 获取文件访问URL
-   * @param filePath 文件路径
-   * @param expiry 过期时间（秒）
-   * @returns 文件URL
-   */
-  getFileUrl(filePath: string, expiry?: number): Promise<string | null>;
-
-  /**
    * 删除文件
    * @param filePath 文件路径
    * @returns 删除是否成功

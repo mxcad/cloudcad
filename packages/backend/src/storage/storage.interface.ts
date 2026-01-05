@@ -17,6 +17,5 @@ export interface StorageProvider {
   fileExists(key: string): Promise<boolean>;
 
   // 预签名 URL
-  getPresignedUrl(key: string, expiry?: number): Promise<string>;
   getPresignedPutUrl(key: string, expiry?: number): Promise<string>;
 }

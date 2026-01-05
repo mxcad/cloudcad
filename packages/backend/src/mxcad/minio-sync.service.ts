@@ -208,39 +208,6 @@ export class MinioSyncService {
   }
 
   /**
-   * 从 MinIO 获取文件预签名 URL
-   */
-  public async getFileUrl(
-    minioPath: string,
-    expiry: number = 3600
-  ): Promise<string | null> {
-    try {
-      await this.ensureBucketExists();
-
-      const exists = await this.minioClient.statObject(
-        this.bucketName,
-        minioPath
-      );
-      if (!exists) {
-        this.logger.warn(`MinIO 文件不存在: ${minioPath}`);
-        return null;
-      }
-
-      return await this.minioClient.presignedGetObject(
-        this.bucketName,
-        minioPath,
-        expiry
-      );
-    } catch (error) {
-      this.logger.error(
-        `获取文件 URL 失败: ${minioPath}: ${error.message}`,
-        error.stack
-      );
-      return null;
-    }
-  }
-
-  /**
    * 获取 MinIO 文件信息（用于 HEAD 请求）
    * MinIO 的预签名 GET URL 不支持 HEAD 请求，需要使用 SDK 直接获取文件信息
    */

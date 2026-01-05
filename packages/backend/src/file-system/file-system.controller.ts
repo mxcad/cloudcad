@@ -7,16 +7,19 @@
   Body,
   Param,
   Request,
+  Req,
+  Res,
   UseGuards,
   HttpCode,
   HttpStatus,
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileSystemService } from './file-system.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -245,5 +248,64 @@ export class FileSystemController {
       txt: 'text/plain',
     };
     return mimeTypes[ext || ''] || 'application/octet-stream';
+  }
+
+  /**
+   * 获取文件缩略图（通过 Session 认证）
+   * 用于 img.src 直接访问，浏览器自动携带 Cookie
+   */
+  @Get('nodes/:nodeId/thumbnail')
+  @ApiOperation({ summary: '获取文件缩略图' })
+  @ApiResponse({ status: 200, description: '获取缩略图成功', type: 'stream' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权访问该文件' })
+  @ApiResponse({ status: 404, description: '文件不存在' })
+  async getThumbnail(
+    @Param('nodeId') nodeId: string,
+    @Request() req: any,
+    @Res() res: any,
+  ) {
+    // 从 Session 获取用户 ID
+    const userId = req.session?.userId;
+
+    if (!userId) {
+      throw new UnauthorizedException('未登录');
+    }
+
+    // 检查文件访问权限
+    const hasAccess = await this.fileSystemService.checkFileAccess(
+      nodeId,
+      userId,
+    );
+
+    if (!hasAccess) {
+      throw new ForbiddenException('无权访问该文件');
+    }
+
+    // 获取文件信息
+    const node = await this.fileSystemService.getNode(nodeId);
+
+    if (!node || node.isFolder || !node.path) {
+      throw new NotFoundException('文件不存在');
+    }
+
+    // 判断文件类型
+    const extension = node.extension?.toLowerCase() || '';
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+
+    if (!imageExtensions.includes(extension)) {
+      throw new BadRequestException('该文件不是图片文件');
+    }
+
+    // 从 MinIO 获取文件流
+    const stream = await this.fileSystemService.getFileStream(node.path);
+
+    // 设置响应头
+    const mimeType = this.getMimeType(node.name);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // 返回图片流
+    stream.pipe(res);
   }
 }

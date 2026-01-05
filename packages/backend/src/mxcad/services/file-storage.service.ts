@@ -115,21 +115,6 @@ export class FileStorageService implements IFileStorageService {
     }
   }
 
-  async getFileUrl(
-    filePath: string,
-    expiry: number = 3600
-  ): Promise<string | null> {
-    try {
-      const minioPath = filePath.startsWith('mxcad/file/')
-        ? filePath
-        : `mxcad/file/${filePath}`;
-      return await this.minioSyncService.getFileUrl(minioPath, expiry);
-    } catch (error) {
-      this.logger.error(`获取文件URL失败: ${filePath}`, error);
-      return null;
-    }
-  }
-
   async deleteFile(filePath: string): Promise<boolean> {
     try {
       // TODO: 实现文件删除逻辑

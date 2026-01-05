@@ -63,11 +63,11 @@ export const isPdfFile = (extension: string | null | undefined): boolean => {
 
 /**
  * 获取图片文件的缩略图URL
- * 对于本地存储的文件，直接返回文件路径
- * 对于MinIO存储的文件，返回预签名URL或代理路径
+ * 使用后端代理方式，通过 Session 认证访问
+ * 浏览器会自动携带 Cookie，无需手动添加请求头
  */
 export const getThumbnailUrl = (node: FileSystemNode): string => {
-  if (!node.path) return '';
+  if (!node.id) return '';
 
   // 判断是否是图片文件
   const extension = node.extension?.toLowerCase() || '';
@@ -76,13 +76,7 @@ export const getThumbnailUrl = (node: FileSystemNode): string => {
     return '';
   }
 
-  // 如果是mxweb文件（MxCAD转换后的格式），尝试获取对应的缩略图
-  if (extension === '.mxweb') {
-    // mxweb 文件通常有对应的 jpg 缩略图
-    const basePath = node.path.replace('.mxweb', '');
-    return `${basePath}2__mxole__.jpg`;
-  }
-
-  // 直接返回文件路径（前端会通过代理访问）
-  return node.path;
+  // 使用后端代理 URL（通过 Session 认证）
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+  return `${apiBaseUrl}/file-system/nodes/${node.id}/thumbnail`;
 };

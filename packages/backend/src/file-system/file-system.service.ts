@@ -5,7 +5,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { FileStatus, ProjectStatus } from '@prisma/client';
+import { FileStatus, ProjectStatus, FileSystemNode as PrismaFileSystemNode } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
 import { FileHashService } from './file-hash.service';
@@ -890,6 +890,85 @@ export class FileSystemService {
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
       return false;
+    }
+  }
+
+  /**
+   * 检查用户是否有权限访问指定文件
+   * @param nodeId 文件节点 ID
+   * @param userId 用户 ID
+   * @returns 是否有访问权限
+   */
+  async checkFileAccess(nodeId: string, userId: string): Promise<boolean> {
+    try {
+      // 获取文件节点信息
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+      });
+
+      if (!node) {
+        return false;
+      }
+
+      // 文件所有者可以访问
+      if (node.ownerId === userId) {
+        return true;
+      }
+
+      // 如果是项目根节点，检查 FileAccess
+      if (node.isRoot) {
+        const access = await this.prisma.fileAccess.findFirst({
+          where: {
+            nodeId,
+            userId,
+          },
+        });
+
+        return !!access;
+      }
+
+      // 如果不是根节点，需要向上查找项目根节点
+      let currentNode: PrismaFileSystemNode | null = node;
+      while (currentNode?.parentId) {
+        currentNode = await this.prisma.fileSystemNode.findUnique({
+          where: { id: currentNode.parentId },
+        });
+
+        if (!currentNode) {
+          return false;
+        }
+
+        // 找到项目根节点，检查权限
+        if (currentNode.isRoot) {
+          const access = await this.prisma.fileAccess.findFirst({
+            where: {
+              nodeId: currentNode.id,
+              userId,
+            },
+          });
+
+          return !!access;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`检查文件访问权限失败: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * 获取文件流（用于图片代理）
+   * @param path MinIO 存储路径
+   * @returns 文件流
+   */
+  async getFileStream(path: string): Promise<NodeJS.ReadableStream> {
+    try {
+      return await this.storage.getFileStream(path);
+    } catch (error) {
+      this.logger.error(`获取文件流失败: ${error.message}`, error.stack);
+      throw error;
     }
   }
 

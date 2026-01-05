@@ -117,21 +117,26 @@ export class MinioStorageProvider implements StorageProvider {
     }
   }
 
-  // 预签名 URL
-  async getPresignedUrl(key: string, expiry = 3600): Promise<string> {
-    try {
-      return await this.client.presignedGetObject(this.bucket, key, expiry);
-    } catch (error) {
-      this.logger.error(`生成预签名下载URL失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
   async getPresignedPutUrl(key: string, expiry = 3600): Promise<string> {
     try {
       return await this.client.presignedPutObject(this.bucket, key, expiry);
     } catch (error) {
       this.logger.error(`生成预签名上传URL失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取文件流（用于图片代理）
+   * @param key 文件键名
+   * @returns 文件流
+   */
+  async getFileStream(key: string): Promise<NodeJS.ReadableStream> {
+    try {
+      const stream = await this.client.getObject(this.bucket, key);
+      return stream;
+    } catch (error) {
+      this.logger.error(`获取文件流失败: ${error.message}`, error.stack);
       throw error;
     }
   }
