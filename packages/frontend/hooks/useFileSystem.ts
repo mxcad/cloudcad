@@ -41,9 +41,6 @@ export const useFileSystem = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
-  const [statusFilter, setStatusFilter] = useState<
-    'ALL' | 'ACTIVE' | 'ARCHIVED'
-  >('ALL');
 
   // 拖拽状态
   const [draggedNodes, setDraggedNodes] = useState<FileSystemNode[]>([]);
@@ -124,7 +121,14 @@ export const useFileSystem = () => {
     async (
       node: FileSystemNode
     ): Promise<{ hasMissing: boolean; count: number }> => {
-      if (!node.fileHash || node.isFolder) {
+      // 只有 DWG/DXF 文件才需要检查外部参照
+      const cadExtensions = ['.dwg', '.dxf'];
+      if (!node.fileHash || node.isFolder || !node.extension) {
+        return { hasMissing: false, count: 0 };
+      }
+
+      // 检查文件扩展名是否为 CAD 文件
+      if (!cadExtensions.includes(node.extension.toLowerCase())) {
         return { hasMissing: false, count: 0 };
       }
 
@@ -259,13 +263,6 @@ export const useFileSystem = () => {
     setSelectedNodes(new Set<string>()); // 清除选中状态
     setIsMultiSelectMode(false); // 清除多选模式
 
-    console.log(
-      '[loadData] 开始加载: urlProjectId=',
-      urlProjectId,
-      ', urlNodeId=',
-      urlNodeId
-    );
-
     try {
       if (isProjectRootMode) {
         // 项目根目录模式：加载项目列表
@@ -282,22 +279,12 @@ export const useFileSystem = () => {
       } else {
         // 文件夹模式：加载项目/文件夹内容
         const currentNodeId = urlNodeId || urlProjectId;
-        console.log('[loadData] 文件夹模式: currentNodeId=', currentNodeId);
         const [nodeResponse, childrenResponse] = await Promise.all([
           projectsApi.getNode(currentNodeId),
           projectsApi.getChildren(currentNodeId),
         ]);
         const nodeData = nodeResponse.data;
         const childrenData = childrenResponse.data || [];
-
-        console.log(
-          '[loadData] 获取到节点数据: id=',
-          nodeData?.id,
-          'name=',
-          nodeData?.name,
-          'parentId=',
-          nodeData?.parentId
-        );
         setCurrentNode(nodeData);
 
         // 检查每个文件是否缺失外部参照（任务008）
@@ -663,11 +650,9 @@ export const useFileSystem = () => {
         node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (node.description &&
           node.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesStatus =
-        statusFilter === 'ALL' || node.projectStatus === statusFilter;
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
-  }, [nodes, searchQuery, statusFilter]);
+  }, [nodes, searchQuery]);
 
   // 进入项目
   const handleEnterProject = useCallback(
@@ -712,8 +697,6 @@ export const useFileSystem = () => {
     folderName,
     setFolderName,
     editingNode,
-    statusFilter,
-    setStatusFilter,
 
     // 拖拽状态
     draggedNodes,

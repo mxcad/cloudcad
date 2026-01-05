@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { FolderPlus, Filter, AlertCircle } from 'lucide-react';
+import { FolderPlus, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -71,8 +71,6 @@ export const FileSystemManager: React.FC = () => {
     folderName,
     setFolderName,
     editingNode,
-    statusFilter,
-    setStatusFilter,
     setShowCreateFolderModal,
     setShowRenameModal,
     setEditingNode,
@@ -212,10 +210,6 @@ export const FileSystemManager: React.FC = () => {
   useEffect(() => {
     if (currentNode?.id) {
       currentNodeIdRef.current = currentNode.id;
-      console.log(
-        '[getCurrentParentId] 更新 ref 为 currentNode.id:',
-        currentNode.id
-      );
     }
   }, [currentNode?.id]);
 
@@ -615,19 +609,6 @@ export const FileSystemManager: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-            >
-              <option value="ALL">全部</option>
-              <option value="ACTIVE">活跃</option>
-              <option value="ARCHIVED">已归档</option>
-            </select>
-          </div>
-
           <Button
             variant={isMultiSelectMode ? 'primary' : 'ghost'}
             size="sm"
@@ -684,7 +665,7 @@ export const FileSystemManager: React.FC = () => {
         {isProjectsEmpty ? '暂无项目' : '这个文件夹是空的'}
       </h3>
       <p className="text-slate-500 text-sm mb-6">
-        {searchQuery || statusFilter !== 'ALL'
+        {searchQuery
           ? '没有找到匹配的内容'
           : isProjectsEmpty
             ? '开始创建您的第一个项目'

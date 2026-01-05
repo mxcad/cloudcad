@@ -75,9 +75,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   } | null>(null);
 
   // 外部参照上传 Hook（任务008/009）
-  console.log('[FileItem] 初始化 useExternalReferenceUpload');
-  console.log('[FileItem] node.id =', node.id);
-  console.log('[FileItem] node =', node);
   const externalReferenceUpload = useExternalReferenceUpload({
     nodeId: node.id, // 传递节点 ID 用于权限验证
     fileHash: node.fileHash || '',
@@ -150,12 +147,6 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      console.log(
-        '[FileItem] handleClick 被调用, blockItemClickRef:',
-        blockItemClickRef.current,
-        'node:',
-        node.name
-      );
 
       // 检查是否应该阻止点击（例如：刚从菜单操作返回）
       if (blockItemClickRef.current) {

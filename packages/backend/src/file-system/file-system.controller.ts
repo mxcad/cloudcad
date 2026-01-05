@@ -319,6 +319,7 @@ export class FileSystemController {
     const mimeType = this.getMimeType(node.name);
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     // 返回图片流
     stream.pipe(res);
