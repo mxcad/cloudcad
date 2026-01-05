@@ -602,4 +602,13 @@ export class MxCadService {
   private isValidFileHash(fileHash: string): boolean {
     return /^[a-f0-9]{32}$/i.test(fileHash);
   }
+
+  /**
+   * 根据存储路径查找文件节点（用于路径转换）
+   * @param storagePath MinIO 存储路径
+   * @returns 文件节点或 null
+   */
+  async getFileSystemNodeByPath(storagePath: string): Promise<any | null> {
+    return await this.fileSystemNodeService.findByPath(storagePath);
+  }
 }

@@ -5,7 +5,11 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { FileStatus, ProjectStatus, FileSystemNode as PrismaFileSystemNode } from '@prisma/client';
+import {
+  FileStatus,
+  ProjectStatus,
+  FileSystemNode as PrismaFileSystemNode,
+} from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
 import { FileHashService } from './file-hash.service';

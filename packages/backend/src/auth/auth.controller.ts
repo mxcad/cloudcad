@@ -7,7 +7,6 @@ import {
   Post,
   Request,
   Req,
-  Res,
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/types/request.types';
 import {
@@ -83,7 +82,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: '账号或密码错误' })
   async login(
     @Body() loginDto: LoginDto,
-    @Req() req: Request,
+    @Req() req: Request
   ): Promise<AuthResponseDto> {
     return this.authService.login(loginDto, req);
   }

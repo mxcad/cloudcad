@@ -1186,14 +1186,37 @@ export class MxCadController {
         return res.status(400).json({ code: -1, message: '无效的文件路径' });
       }
 
+      // 处理存储路径：支持新旧路径格式
+      let actualStorageKey = storageKey;
+      if (storageKey.startsWith('files/')) {
+        // 旧路径格式：files/{userId}/{timestamp}-{filename}
+        // 尝试从数据库查询对应的节点，获取 fileHash
+        this.logger.log(`[getNonCadFile] 检测到旧路径格式: ${storageKey}`);
+        try {
+          const node =
+            await this.mxCadService.getFileSystemNodeByPath(storageKey);
+          if (node && node.fileHash) {
+            actualStorageKey = `mxcad/file/${node.fileHash}/${node.name}`;
+            this.logger.log(
+              `[getNonCadFile] 路径转换: ${storageKey} -> ${actualStorageKey}`
+            );
+          }
+        } catch (queryError) {
+          this.logger.warn(
+            `[getNonCadFile] 查询节点失败，使用原路径: ${queryError.message}`
+          );
+        }
+      }
+
       // 从 MinIO 获取文件流
-      const fileStream = await this.minioSyncService.getFileStream(storageKey);
+      const fileStream =
+        await this.minioSyncService.getFileStream(actualStorageKey);
 
       // 设置响应头
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader(
         'Content-Disposition',
-        `inline; filename="${storageKey.split('/').pop()}"`
+        `inline; filename="${actualStorageKey.split('/').pop()}"`
       );
 
       // 返回文件流
@@ -1217,7 +1240,6 @@ export class MxCadController {
       return res.status(500).json({ code: -1, message: '获取文件失败' });
     }
   }
-
 
   /**
    * 访问转换后的文件 (.mxweb) - GET 方法
@@ -1271,16 +1293,17 @@ export class MxCadController {
       },
     },
   })
-  async getFile(
-    @Res() res: Response,
-    @Req() req: any
-  ) {
+  async getFile(@Res() res: Response, @Req() req: any) {
     // 从 req.params.path 获取完整的路径（支持多层路径）
     // req.params.path 可能是数组，需要拼接成字符串
     const pathArray = req.params.path;
-    const filename = Array.isArray(pathArray) ? pathArray.join('/') : (pathArray || '');
+    const filename = Array.isArray(pathArray)
+      ? pathArray.join('/')
+      : pathArray || '';
     if (!filename) {
-      this.logger.error(`无法获取文件路径，req.params: ${JSON.stringify(req.params)}`);
+      this.logger.error(
+        `无法获取文件路径，req.params: ${JSON.stringify(req.params)}`
+      );
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
     return this.handleFileRequest(filename, res, req, false);
@@ -1307,16 +1330,17 @@ export class MxCadController {
     status: 500,
     description: '服务器内部错误',
   })
-  async getFileHead(
-    @Res() res: Response,
-    @Req() req: any
-  ) {
+  async getFileHead(@Res() res: Response, @Req() req: any) {
     // 从 req.params.path 获取完整的路径（支持多层路径）
     // req.params.path 可能是数组，需要拼接成字符串
     const pathArray = req.params.path;
-    const filename = Array.isArray(pathArray) ? pathArray.join('/') : (pathArray || '');
+    const filename = Array.isArray(pathArray)
+      ? pathArray.join('/')
+      : pathArray || '';
     if (!filename) {
-      this.logger.error(`无法获取文件路径，req.params: ${JSON.stringify(req.params)}`);
+      this.logger.error(
+        `无法获取文件路径，req.params: ${JSON.stringify(req.params)}`
+      );
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
     return this.handleFileRequest(filename, res, req, true);
@@ -1342,7 +1366,7 @@ export class MxCadController {
       // 调试日志
       this.logger.log(`原始 filename 参数: "${filename}"`);
       this.logger.log(
-        `访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`,
+        `访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`
       );
       this.logger.log(`Session 信息: ${JSON.stringify(req.session)}`);
       this.logger.log(`Cookies: ${JSON.stringify(req.cookies)}`);
@@ -1440,9 +1464,8 @@ export class MxCadController {
       // 尝试找到文件
       for (const mxcadPath of possiblePaths) {
         try {
-          const exists = await this.mxCadService['minioSyncService'].fileExists(
-            mxcadPath,
-          );
+          const exists =
+            await this.mxCadService['minioSyncService'].fileExists(mxcadPath);
           if (exists) {
             foundMinioPath = mxcadPath;
             this.logger.log(`找到 MinIO 文件: ${mxcadPath}`);
@@ -1823,6 +1846,7 @@ export class MxCadController {
           ownerId: true,
           parentId: true,
           isRoot: true,
+          fileHash: true,
         },
       });
 

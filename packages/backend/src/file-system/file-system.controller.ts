@@ -7,7 +7,6 @@
   Body,
   Param,
   Request,
-  Req,
   Res,
   UseGuards,
   HttpCode,
@@ -19,7 +18,12 @@
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 
-import { ApiTags, ApiResponse, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileSystemService } from './file-system.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -263,7 +267,7 @@ export class FileSystemController {
   async getThumbnail(
     @Param('nodeId') nodeId: string,
     @Request() req: any,
-    @Res() res: any,
+    @Res() res: any
   ) {
     // 从 Session 获取用户 ID
     const userId = req.session?.userId;
@@ -275,7 +279,7 @@ export class FileSystemController {
     // 检查文件访问权限
     const hasAccess = await this.fileSystemService.checkFileAccess(
       nodeId,
-      userId,
+      userId
     );
 
     if (!hasAccess) {
@@ -297,8 +301,19 @@ export class FileSystemController {
       throw new BadRequestException('该文件不是图片文件');
     }
 
+    // 处理存储路径：支持新旧路径格式
+    let storagePath = node.path;
+    if (node.path.startsWith('files/')) {
+      // 旧路径格式：files/{userId}/{timestamp}-{filename}
+      // 转换为新路径格式：mxcad/file/{fileHash}/{filename}
+      if (node.fileHash) {
+        storagePath = `mxcad/file/${node.fileHash}/${node.name}`;
+        this.logger.log(`路径转换: ${node.path} -> ${storagePath}`);
+      }
+    }
+
     // 从 MinIO 获取文件流
-    const stream = await this.fileSystemService.getFileStream(node.path);
+    const stream = await this.fileSystemService.getFileStream(storagePath);
 
     // 设置响应头
     const mimeType = this.getMimeType(node.name);

@@ -656,6 +656,36 @@ export class FileSystemNodeService {
   }
 
   /**
+   * 根据存储路径查找节点（用于路径转换）
+   * @param storagePath MinIO 存储路径
+   * @returns 节点或 null
+   */
+  async findByPath(storagePath: string): Promise<any | null> {
+    try {
+      const node = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          path: storagePath,
+          isFolder: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          fileHash: true,
+          path: true,
+        },
+      });
+
+      return node;
+    } catch (error) {
+      this.logger.error(
+        `根据存储路径查找节点失败: ${error.message}`,
+        error.stack
+      );
+      return null;
+    }
+  }
+
+  /**
    * 更新文件节点的外部参照信息
    * @param nodeId 节点ID
    * @param hasMissing 是否有缺失的外部参照

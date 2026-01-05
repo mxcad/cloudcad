@@ -140,4 +140,26 @@ export class MinioStorageProvider implements StorageProvider {
       throw error;
     }
   }
+
+  /**
+   * 在 MinIO 内部拷贝文件
+   * @param sourceKey 源文件键名
+   * @param destKey 目标文件键名
+   * @returns 是否拷贝成功
+   */
+  async copyFile(sourceKey: string, destKey: string): Promise<boolean> {
+    try {
+      // MinIO 不支持直接拷贝，需要先下载再上传
+      const data = await this.downloadFile(sourceKey);
+      await this.uploadFile(destKey, data);
+      this.logger.log(`文件拷贝成功: ${sourceKey} -> ${destKey}`);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `文件拷贝失败: ${sourceKey} -> ${destKey}`,
+        error.stack
+      );
+      return false;
+    }
+  }
 }

@@ -138,10 +138,7 @@ export class AuthService {
     };
   }
 
-  async login(
-    loginDto: LoginDto,
-    req?: any,
-  ): Promise<AuthResponseDto> {
+  async login(loginDto: LoginDto, req?: any): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
 
     this.logger.log(`用户登录尝试: ${account}`);

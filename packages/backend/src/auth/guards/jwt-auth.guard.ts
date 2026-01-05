@@ -22,7 +22,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     this.logger.debug(`[JwtAuthGuard] URL: ${request.url}`);
     this.logger.debug(`[JwtAuthGuard] Token: ${token ? 'present' : 'missing'}`);
-    this.logger.debug(`[JwtAuthGuard] Session: ${request.session?.userId ? 'present' : 'missing'}`);
+    this.logger.debug(
+      `[JwtAuthGuard] Session: ${request.session?.userId ? 'present' : 'missing'}`
+    );
 
     // 如果没有Token，检查 Session
     if (!token) {

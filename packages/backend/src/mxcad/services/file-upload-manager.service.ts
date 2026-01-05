@@ -652,11 +652,12 @@ export class FileUploadManagerService {
         return { ret: MxUploadReturn.kConvertFileError };
       }
     } else {
-      // 非CAD文件：直接上传到存储服务
+      // 非CAD文件：直接上传到存储服务（统一使用 MxCAD-App 存储方式）
       this.logger.log(`检测到非CAD文件，直接上传到存储服务: ${name}`);
       try {
         const fileSize = await this.fileSystemService.getFileSize(filePath);
-        const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
+        // 统一使用 mxcad/file/{hash}/{name} 路径，与 MxCAD-App 保持一致
+        const storageKey = `mxcad/file/${hash}/${name}`;
 
         // 上传文件到 MinIO
         const uploadSuccess = await this.fileStorageService.uploadFileFromLocal(

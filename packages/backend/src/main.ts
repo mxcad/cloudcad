@@ -38,8 +38,7 @@ async function bootstrap() {
   const sessionMiddleware = session({
     store: redisStore,
     secret:
-      process.env.JWT_SECRET ||
-      'mxcad-session-secret-key-change-in-production',
+      process.env.JWT_SECRET || 'mxcad-session-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
     cookie: {
