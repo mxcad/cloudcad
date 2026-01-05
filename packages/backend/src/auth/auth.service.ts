@@ -138,7 +138,10 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+  async login(
+    loginDto: LoginDto,
+    req?: any,
+  ): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
 
     this.logger.log(`用户登录尝试: ${account}`);
@@ -195,6 +198,14 @@ export class AuthService {
 
     // 生成Token
     const tokens = await this.generateTokens(userWithoutPassword);
+
+    // 设置 Session 数据（用于图片访问等需要 Cookie 的场景）
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userEmail = user.email;
+      this.logger.log(`Session 已设置: userId=${user.id}, role=${user.role}`);
+    }
 
     this.logger.log(
       `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`

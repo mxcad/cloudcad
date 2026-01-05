@@ -20,10 +20,28 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const request = context.switchToHttp().getRequest();
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
-    // 如果没有Token，让父类处理
+    this.logger.debug(`[JwtAuthGuard] URL: ${request.url}`);
+    this.logger.debug(`[JwtAuthGuard] Token: ${token ? 'present' : 'missing'}`);
+    this.logger.debug(`[JwtAuthGuard] Session: ${request.session?.userId ? 'present' : 'missing'}`);
+
+    // 如果没有Token，检查 Session
     if (!token) {
-      this.logger.debug('请求未提供Token');
-      return super.canActivate(context) as Promise<boolean>;
+      // 检查 Session 是否有用户信息
+      if (request.session?.userId) {
+        this.logger.debug(`使用 Session 认证: ${request.session.userId}`);
+        // 将 Session 用户信息附加到 request.user
+        request.user = {
+          id: request.session.userId,
+          role: request.session.userRole,
+          email: request.session.userEmail,
+        };
+        // Session 认证成功，直接返回 true，不要调用 super.canActivate
+        return true;
+      }
+
+      // 既没有 Token 也没有 Session，抛出异常
+      this.logger.debug('请求未提供Token且无有效Session');
+      throw new UnauthorizedException('未登录或登录已过期');
     }
 
     try {

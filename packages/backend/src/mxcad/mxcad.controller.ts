@@ -58,6 +58,18 @@ export class MxCadController {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
   }
 
+  @Get('test')
+  @ApiResponse({
+    status: 200,
+    description: '测试端点',
+  })
+  async test(@Req() req: any) {
+    this.logger.log(`[Test Endpoint] Called`);
+    this.logger.log(`[Test Endpoint] Session: ${JSON.stringify(req.session)}`);
+    this.logger.log(`[Test Endpoint] User: ${JSON.stringify(req.user)}`);
+    return { message: 'OK', session: req.session, user: req.user };
+  }
+
   /**
    * 检查分片是否存在
    */
@@ -1206,16 +1218,17 @@ export class MxCadController {
     }
   }
 
+
   /**
    * 访问转换后的文件 (.mxweb) - GET 方法
    * 支持 MxCAD-App 访问路径: /mxcad/file/{filename}
    * 优先从 MinIO 读取，失败时降级到本地文件系统
    *
-   * @param filename 文件名，支持跨目录路径，例如: 53c2fbd5c71f81794af465cc02a845e2/A1.dwg.mxweb
    * @param res Express Response 对象
+   * @param req Express Request 对象
    * @returns 返回文件流或错误信息
    */
-  @Get('file/*filename')
+  @Get('file/*path')
   @ApiResponse({
     status: 200,
     description: '成功获取文件',
@@ -1252,17 +1265,24 @@ export class MxCadController {
           type: 'object',
           properties: {
             code: { type: 'number', example: -1 },
-            message: { type: 'string', example: '访问文件失败' },
+            message: { type: 'string', example: '获取文件失败' },
           },
         },
       },
     },
   })
   async getFile(
-    @Param('filename') filename: string,
     @Res() res: Response,
     @Req() req: any
   ) {
+    // 从 req.params.path 获取完整的路径（支持多层路径）
+    // req.params.path 可能是数组，需要拼接成字符串
+    const pathArray = req.params.path;
+    const filename = Array.isArray(pathArray) ? pathArray.join('/') : (pathArray || '');
+    if (!filename) {
+      this.logger.error(`无法获取文件路径，req.params: ${JSON.stringify(req.params)}`);
+      return res.status(400).json({ code: -1, message: '无效的文件路径' });
+    }
     return this.handleFileRequest(filename, res, req, false);
   }
 
@@ -1270,11 +1290,11 @@ export class MxCadController {
    * 访问转换后的文件 (.mxweb) - HEAD 方法
    * 用于获取文件信息而不下载文件内容
    *
-   * @param filename 文件名，支持跨目录路径，例如: 53c2fbd5c71f81794af465cc02a845e2/A1.dwg.mxweb
    * @param res Express Response 对象
+   * @param req Express Request 对象
    * @returns 返回文件头信息或错误信息
    */
-  @Head('file/*filename')
+  @Head('file/*path')
   @ApiResponse({
     status: 200,
     description: '成功获取文件信息',
@@ -1288,10 +1308,17 @@ export class MxCadController {
     description: '服务器内部错误',
   })
   async getFileHead(
-    @Param('filename') filename: string,
     @Res() res: Response,
     @Req() req: any
   ) {
+    // 从 req.params.path 获取完整的路径（支持多层路径）
+    // req.params.path 可能是数组，需要拼接成字符串
+    const pathArray = req.params.path;
+    const filename = Array.isArray(pathArray) ? pathArray.join('/') : (pathArray || '');
+    if (!filename) {
+      this.logger.error(`无法获取文件路径，req.params: ${JSON.stringify(req.params)}`);
+      return res.status(400).json({ code: -1, message: '无效的文件路径' });
+    }
     return this.handleFileRequest(filename, res, req, true);
   }
 
@@ -1309,21 +1336,32 @@ export class MxCadController {
     isHeadRequest: boolean
   ) {
     try {
-      // 对于文件访问请求，验证 JWT token 但不强制要求 nodeId
+      // 对于文件访问请求，优先使用 Session 认证，如果 Session 不存在则回退到 JWT token
       // 通过文件路径查找 FileSystemNode 并验证权限
 
       // 调试日志
+      this.logger.log(`原始 filename 参数: "${filename}"`);
       this.logger.log(
-        `访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`
+        `访问文件请求: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}, Authorization: ${req.headers.authorization ? 'present' : 'missing'}`,
       );
+      this.logger.log(`Session 信息: ${JSON.stringify(req.session)}`);
+      this.logger.log(`Cookies: ${JSON.stringify(req.cookies)}`);
 
       let userId: string;
-      try {
-        userId = await this.validateTokenAndGetUserId(req);
-        this.logger.log(`用户ID验证成功: ${userId}`);
-      } catch (authError) {
-        this.logger.warn(`JWT验证失败: ${authError.message}`);
-        return res.status(401).json({ code: -1, message: authError.message });
+
+      // 优先尝试从 Session 获取用户 ID（用于 img.src 等无法携带请求头的场景）
+      if (req.session?.userId) {
+        userId = req.session.userId;
+        this.logger.log(`使用 Session 认证成功: ${userId}`);
+      } else {
+        // Session 不存在，回退到 JWT Token 认证
+        try {
+          userId = await this.validateTokenAndGetUserId(req);
+          this.logger.log(`使用 JWT Token 认证成功: ${userId}`);
+        } catch (authError) {
+          this.logger.warn(`认证失败: ${authError.message}`);
+          return res.status(401).json({ code: -1, message: authError.message });
+        }
       }
 
       // Express 的 *filename 通配符会将路径中的 / 替换为 ,，需要先还原
@@ -1397,16 +1435,15 @@ export class MxCadController {
 
       this.logger.log(`访问文件 - 尝试路径: ${possiblePaths.join(', ')}`);
 
-      let minioUrl: string | null = null;
       let foundMinioPath: string | null = null;
 
-      // 尝试获取文件 URL
+      // 尝试找到文件
       for (const mxcadPath of possiblePaths) {
         try {
-          const url =
-            await this.mxCadService['minioSyncService'].getFileUrl(mxcadPath);
-          if (url) {
-            minioUrl = url;
+          const exists = await this.mxCadService['minioSyncService'].fileExists(
+            mxcadPath,
+          );
+          if (exists) {
             foundMinioPath = mxcadPath;
             this.logger.log(`找到 MinIO 文件: ${mxcadPath}`);
             break;
@@ -1416,7 +1453,7 @@ export class MxCadController {
         }
       }
 
-      if (minioUrl) {
+      if (foundMinioPath) {
         // MinIO 中存在文件
         if (isHeadRequest) {
           // 对于 HEAD 请求，直接使用 MinIO SDK 获取文件信息
@@ -1450,8 +1487,42 @@ export class MxCadController {
             // 如果获取文件信息失败，降级到本地文件系统
           }
         } else {
-          // GET 请求重定向到预签名 URL
-          return res.redirect(302, minioUrl);
+          // GET 请求直接返回文件流
+          try {
+            this.logger.log(`准备返回文件流: ${foundMinioPath}`);
+            const fileStream = await this.mxCadService[
+              'minioSyncService'
+            ].getFileStream(foundMinioPath!);
+
+            // 设置响应头
+            const fileInfo = await this.mxCadService[
+              'minioSyncService'
+            ].getFileInfo(foundMinioPath!);
+
+            if (fileInfo) {
+              res.setHeader('Content-Type', fileInfo.contentType);
+              res.setHeader('Content-Length', fileInfo.contentLength);
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+
+            // 返回文件流
+            this.logger.log(`开始返回文件流: ${foundMinioPath}`);
+
+            // 监听流错误
+            fileStream.on('error', (error) => {
+              this.logger.error(`文件流错误: ${error.message}`, error);
+              if (!res.headersSent) {
+                res.status(500).json({ code: -1, message: '文件流错误' });
+              }
+            });
+
+            fileStream.pipe(res);
+            return;
+          } catch (error) {
+            this.logger.error(`获取 MinIO 文件流失败: ${error.message}`, error);
+            // 如果获取文件流失败，降级到本地文件系统
+          }
         }
       }
 
