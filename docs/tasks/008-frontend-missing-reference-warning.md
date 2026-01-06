@@ -37,7 +37,7 @@ export interface FileSystemNode {
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // 新增：缺失外部参照标识
   hasMissingExternalReferences?: boolean;
   missingExternalReferencesCount?: number;
@@ -74,7 +74,7 @@ interface FileItemProps {
 
 /**
  * 文件项组件（增强版本）
- * 
+ *
  * 新增功能：
  * - 显示缺失外部参照警告标识
  * - 提供"上传外部参照"按钮
@@ -115,7 +115,7 @@ export const FileItem: React.FC<FileItemProps> = ({
    */
   const handleUploadExternalReference = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!node.fileHash) {
       console.error('[FileItem] 文件哈希不存在');
       return;
@@ -123,7 +123,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
     console.log('[FileItem] 开始检查外部参照');
     const hasMissing = await externalReferenceUpload.checkMissingReferences();
-    
+
     if (!hasMissing) {
       console.log('[FileItem] 无缺失的外部参照');
     }
@@ -154,7 +154,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         <div className="text-sm font-medium text-slate-900 truncate">
           {node.name}
         </div>
-        
+
         {/* 缺失外部参照警告 */}
         {node.hasMissingExternalReferences && (
           <div className="flex items-center justify-center gap-1 mt-1">
@@ -301,8 +301,9 @@ const loadNodes = useCallback(async () => {
           return node;
         }
 
-        const { hasMissing, count } = await checkMissingExternalReferences(node);
-        
+        const { hasMissing, count } =
+          await checkMissingExternalReferences(node);
+
         return {
           ...node,
           hasMissingExternalReferences: hasMissing,

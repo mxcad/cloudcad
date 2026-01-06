@@ -22,7 +22,7 @@
 ```typescript
 /**
  * 上传外部参照 DWG（增强版本）
- * 
+ *
  * 验证逻辑：
  * 1. 验证文件是否存在
  * 2. 验证参数完整性
@@ -84,10 +84,10 @@ async uploadExtReferenceDwg(
   }
 
   // 4. 验证外部参照文件是否在预加载数据列表中
-  const isValidReference = 
+  const isValidReference =
     preloadingData.externalReference.includes(body.ext_ref_file) ||
     preloadingData.images.includes(body.ext_ref_file);
-  
+
   if (!isValidReference) {
     this.logger.warn(`[uploadExtReferenceDwg] 无效的外部参照文件: ${body.ext_ref_file}`);
     return res.json({ code: -1, message: '无效的外部参照文件' });
@@ -97,7 +97,7 @@ async uploadExtReferenceDwg(
   try {
     const userId = await this.validateTokenAndGetUserId(request);
     this.logger.log(`[uploadExtReferenceDwg] 用户ID: ${userId}`);
-    
+
     // 检查用户是否有权限访问该图纸
     // const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
     // if (node) {
@@ -169,7 +169,7 @@ async uploadExtReferenceDwg(
 ```typescript
 /**
  * 上传外部参照图片（增强版本）
- * 
+ *
  * 验证逻辑：
  * 1. 验证文件是否存在
  * 2. 验证参数完整性
@@ -231,10 +231,10 @@ async uploadExtReferenceImage(
   }
 
   // 4. 验证外部参照文件是否在预加载数据列表中
-  const isValidReference = 
+  const isValidReference =
     preloadingData.externalReference.includes(body.ext_ref_file) ||
     preloadingData.images.includes(body.ext_ref_file);
-  
+
   if (!isValidReference) {
     this.logger.warn(`[uploadExtReferenceImage] 无效的外部参照文件: ${body.ext_ref_file}`);
     return res.json({ code: -1, message: '无效的外部参照文件' });
@@ -244,7 +244,7 @@ async uploadExtReferenceImage(
   try {
     const userId = await this.validateTokenAndGetUserId(request);
     this.logger.log(`[uploadExtReferenceImage] 用户ID: ${userId}`);
-    
+
     // 检查用户是否有权限访问该图纸
     // const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
     // if (node) {
@@ -277,7 +277,7 @@ async uploadExtReferenceImage(
 
     const targetFile = path.join(hashDir, body.ext_ref_file);
     fs.copyFileSync(file.path, targetFile);
-    
+
     this.logger.log(`[uploadExtReferenceImage] 文件复制成功: ${targetFile}`);
   } catch (error) {
     this.logger.error(`[uploadExtReferenceImage] 文件复制失败: ${error.message}`, error.stack);
@@ -315,9 +315,15 @@ describe('uploadExtReferenceDwg', () => {
 
     const mockConvertResult = { code: 0, message: 'ok' };
 
-    jest.spyOn(service, 'getPreloadingData').mockResolvedValue(mockPreloadingData);
-    jest.spyOn(service, 'convertServerFile').mockResolvedValue(mockConvertResult);
-    jest.spyOn(controller['mxCadService']['logger'], 'log').mockImplementation();
+    jest
+      .spyOn(service, 'getPreloadingData')
+      .mockResolvedValue(mockPreloadingData);
+    jest
+      .spyOn(service, 'convertServerFile')
+      .mockResolvedValue(mockConvertResult);
+    jest
+      .spyOn(controller['mxCadService']['logger'], 'log')
+      .mockImplementation();
 
     const response = await controller.uploadExtReferenceDwg(
       mockFile,
@@ -340,10 +346,15 @@ describe('uploadExtReferenceDwg', () => {
       null,
       mockBody,
       {} as any,
-      { json: jest.fn().mockReturnValue({ code: -1, message: '缺少文件' }) } as any
+      {
+        json: jest.fn().mockReturnValue({ code: -1, message: '缺少文件' }),
+      } as any
     );
 
-    expect(response.json).toHaveBeenCalledWith({ code: -1, message: '缺少文件' });
+    expect(response.json).toHaveBeenCalledWith({
+      code: -1,
+      message: '缺少文件',
+    });
   });
 
   it('应该在图纸不存在时返回错误', async () => {
@@ -363,11 +374,18 @@ describe('uploadExtReferenceDwg', () => {
       mockFile,
       mockBody,
       {} as any,
-      { json: jest.fn().mockReturnValue({ code: -1, message: '图纸文件不存在' }) } as any
+      {
+        json: jest
+          .fn()
+          .mockReturnValue({ code: -1, message: '图纸文件不存在' }),
+      } as any
     );
 
     expect(service.getPreloadingData).toHaveBeenCalledWith('nonexistent');
-    expect(response.json).toHaveBeenCalledWith({ code: -1, message: '图纸文件不存在' });
+    expect(response.json).toHaveBeenCalledWith({
+      code: -1,
+      message: '图纸文件不存在',
+    });
   });
 
   it('应该拒绝无效的外部参照文件', async () => {
@@ -388,16 +406,25 @@ describe('uploadExtReferenceDwg', () => {
       externalReference: ['ref1.dwg', 'ref2.dwg'],
     };
 
-    jest.spyOn(service, 'getPreloadingData').mockResolvedValue(mockPreloadingData);
+    jest
+      .spyOn(service, 'getPreloadingData')
+      .mockResolvedValue(mockPreloadingData);
 
     const response = await controller.uploadExtReferenceDwg(
       mockFile,
       mockBody,
       {} as any,
-      { json: jest.fn().mockReturnValue({ code: -1, message: '无效的外部参照文件' }) } as any
+      {
+        json: jest
+          .fn()
+          .mockReturnValue({ code: -1, message: '无效的外部参照文件' }),
+      } as any
     );
 
-    expect(response.json).toHaveBeenCalledWith({ code: -1, message: '无效的外部参照文件' });
+    expect(response.json).toHaveBeenCalledWith({
+      code: -1,
+      message: '无效的外部参照文件',
+    });
   });
 });
 ```
@@ -476,7 +503,7 @@ curl -X POST http://localhost:3001/api/mxcad/up_ext_reference_dwg \
 **完成日期**：2025-12-29  
 **预计工时**：3 小时  
 **实际工时**：4 小时  
-**负责人**：iFlow CLI  
+**负责人**：iFlow CLI
 
 ## 完成总结
 
@@ -538,6 +565,7 @@ curl -X POST http://localhost:3001/api/mxcad/up_ext_reference_dwg \
 ### 安全增强详情
 
 #### 1. 路径遍历攻击防护
+
 - **validateFileName 方法**：
   - 检查文件名是否包含 `..`、`/`、`\` 等路径遍历字符
   - 检查文件名是否为空
@@ -545,12 +573,14 @@ curl -X POST http://localhost:3001/api/mxcad/up_ext_reference_dwg \
   - 检查文件名是否包含非法字符（`<>:"|?*` 及控制字符）
 
 #### 2. 文件大小验证
+
 - **validateFileSize 方法**：
   - 默认最大文件大小：100MB（104857600 字节）
   - 验证文件大小 > 0 且 ≤ 最大限制
   - 返回明确的错误消息："文件大小超出限制（最大 100MB）"
 
 #### 3. 文件类型验证
+
 - **validateFileType 方法**：
   - DWG 上传：仅支持 `.dwg` 和 `.dxf` 文件
   - 图片上传：仅支持 `.png`、`.jpg`、`.jpeg`、`.gif`、`.bmp`、`.webp` 文件
@@ -564,6 +594,7 @@ Tests:       39 passed, 39 total
 ```
 
 **说明**：
+
 - 所有测试用例全部通过 ✅
 - 新增的 12 个测试用例全部通过 ✅
 - 原有的 4 个失败测试已修复 ✅
@@ -571,6 +602,7 @@ Tests:       39 passed, 39 total
 ### 代码变更
 
 **修改文件**：
+
 - `packages/backend/src/mxcad/mxcad.controller.ts` - 增强两个上传接口的验证逻辑，添加安全验证方法
 - `packages/backend/src/mxcad/mxcad.controller.spec.ts` - 添加完整的单元测试，修复测试失败问题
 
@@ -591,13 +623,14 @@ Tests:       39 passed, 39 total
 ### 后续工作
 
 任务 003 已完成，所有高优先级问题已修复。可以继续进行后续任务：
+
 - 任务 004：前端 - 获取预加载数据 API 方法
 - 任务 005：前端 - useExternalReferenceUpload Hook
 - 任务 006：前端 - ExternalReferenceModal 组件
 - 任务 007：前端 - 集成到 MxCadUploader
 - 任务 008：前端 - 文件列表缺失外部参照提醒
 - 任务 009：前端 - 随时上传外部参照功能
-- 任务 010：集成测试  
+- 任务 010：集成测试
 
 ## 完成总结
 
@@ -650,6 +683,7 @@ Tests:       4 failed, 35 passed, 39 total
 ```
 
 **说明**：
+
 - 新增的 12 个测试用例全部通过 ✅
 - 失败的 4 个测试是原有测试的问题，与本任务无关
   - `checkChunkExist` - 参数不匹配
@@ -660,6 +694,7 @@ Tests:       4 failed, 35 passed, 39 total
 ### 代码变更
 
 **修改文件**：
+
 - `packages/backend/src/mxcad/mxcad.controller.ts` - 增强两个上传接口的验证逻辑
 - `packages/backend/src/mxcad/mxcad.controller.spec.ts` - 添加完整的单元测试
 
@@ -677,6 +712,7 @@ Tests:       4 failed, 35 passed, 39 total
 ### 后续工作
 
 任务 003 已完成，可以继续进行后续任务：
+
 - 任务 004：前端 - 获取预加载数据 API 方法
 - 任务 005：前端 - useExternalReferenceUpload Hook
 - 任务 006：前端 - ExternalReferenceModal 组件

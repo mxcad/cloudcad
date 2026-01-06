@@ -2,14 +2,14 @@ name: 测试
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -24,7 +24,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7-alpine
         options: >-
@@ -36,107 +36,107 @@ jobs:
           - 6379:6379
 
     steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-    - name: 设置 Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.19.5'
-        
-    - name: 安装 pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9.15.4
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.5'
 
-    - name: 获取 pnpm 存储目录
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.4
 
-    - name: 设置 pnpm 缓存
-      uses: actions/cache@v4
-      with:
-        path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
+      - name: 获取 pnpm 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-    - name: 安装依赖
-      run: pnpm install --frozen-lockfile
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-    - name: 设置测试环境变量
-      run: |
-        cat > packages/backend/.env << EOF
-        NODE_ENV=test
-        PORT=3001
-        JWT_SECRET=test-jwt-secret-key
-        JWT_EXPIRES_IN=1h
-        JWT_REFRESH_EXPIRES_IN=7d
-        DB_HOST=localhost
-        DB_PORT=5432
-        DB_USERNAME=postgres
-        DB_PASSWORD=password
-        DB_DATABASE=cloucad
-        DB_SSL=false
-        DB_MAX_CONNECTIONS=20
-        DB_CONNECTION_TIMEOUT=30000
-        DB_IDLE_TIMEOUT=30000
-        REDIS_HOST=localhost
-        REDIS_PORT=6379
-        REDIS_PASSWORD=
-        REDIS_DB=0
-        REDIS_MAX_RETRIES=3
-        REDIS_RETRY_DELAY=100
-        MINIO_ENDPOINT=localhost
-        MINIO_PORT=9000
-        MINIO_USE_SSL=false
-        MINIO_ACCESS_KEY=minioadmin
-        MINIO_SECRET_KEY=minioadmin
-        MINIO_REGION=us-east-1
-        MINIO_BUCKET=cloucad
-        UPLOAD_MAX_SIZE=104857600
-        UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
-        EOF
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
 
-    - name: 等待数据库就绪
-      run: |
-        timeout 60 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done'
-        
-    - name: 等待 Redis 就绪
-      run: |
-        timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
+      - name: 设置测试环境变量
+        run: |
+          cat > packages/backend/.env << EOF
+          NODE_ENV=test
+          PORT=3001
+          JWT_SECRET=test-jwt-secret-key
+          JWT_EXPIRES_IN=1h
+          JWT_REFRESH_EXPIRES_IN=7d
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USERNAME=postgres
+          DB_PASSWORD=password
+          DB_DATABASE=cloucad
+          DB_SSL=false
+          DB_MAX_CONNECTIONS=20
+          DB_CONNECTION_TIMEOUT=30000
+          DB_IDLE_TIMEOUT=30000
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          REDIS_DB=0
+          REDIS_MAX_RETRIES=3
+          REDIS_RETRY_DELAY=100
+          MINIO_ENDPOINT=localhost
+          MINIO_PORT=9000
+          MINIO_USE_SSL=false
+          MINIO_ACCESS_KEY=minioadmin
+          MINIO_SECRET_KEY=minioadmin
+          MINIO_REGION=us-east-1
+          MINIO_BUCKET=cloucad
+          UPLOAD_MAX_SIZE=104857600
+          UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
+          EOF
 
-    - name: 生成 Prisma 客户端
-      run: |
-        cd packages/backend
-        pnpm db:generate
+      - name: 等待数据库就绪
+        run: |
+          timeout 60 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done'
 
-    - name: 推送数据库模式
-      run: |
-        cd packages/backend
-        pnpm db:push
+      - name: 等待 Redis 就绪
+        run: |
+          timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
 
-    - name: 运行代码质量检查
-      run: |
-        pnpm lint
-        pnpm format:check
-        pnpm type-check
+      - name: 生成 Prisma 客户端
+        run: |
+          cd packages/backend
+          pnpm db:generate
 
-    - name: 运行后端测试
-      run: |
-        cd packages/backend
-        pnpm test:ci
+      - name: 推送数据库模式
+        run: |
+          cd packages/backend
+          pnpm db:push
 
-    - name: 运行前端测试
-      run: |
-        cd packages/frontend
-        pnpm type-check
+      - name: 运行代码质量检查
+        run: |
+          pnpm lint
+          pnpm format:check
+          pnpm type-check
 
-    - name: 上传测试覆盖率报告
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./packages/backend/coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+      - name: 运行后端测试
+        run: |
+          cd packages/backend
+          pnpm test:ci
+
+      - name: 运行前端测试
+        run: |
+          cd packages/frontend
+          pnpm type-check
+
+      - name: 上传测试覆盖率报告
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./packages/backend/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false

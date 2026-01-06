@@ -19,7 +19,7 @@
 ```typescript
 /**
  * 检查外部参照文件是否存在
- * 
+ *
  * @param fileHash 源图纸文件的哈希值
  * @param fileName 外部参照文件名
  * @returns 文件是否存在
@@ -33,19 +33,19 @@ async checkExternalReferenceExists(
     const path = require('path');
     const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
     const hashDir = path.join(uploadPath, fileHash);
-    
+
     // 检查哈希目录是否存在
     if (!fs.existsSync(hashDir)) {
       this.logger.log(`[checkExternalReferenceExists] 目录不存在: ${hashDir}`);
       return false;
     }
-    
+
     // 读取目录中的所有文件
     const files = await fs.promises.readdir(hashDir);
-    
+
     // 提取文件名的基本部分（不含扩展名）
     const baseName = path.basename(fileName, path.extname(fileName));
-    
+
     // 检查是否存在匹配的文件
     // DWG 文件会被转换为 .mxweb，所以需要检查 .mxweb 文件
     // 图片文件保持原扩展名
@@ -53,9 +53,9 @@ async checkExternalReferenceExists(
       const fileBaseName = path.basename(file, path.extname(file));
       return fileBaseName === baseName;
     });
-    
+
     this.logger.log(`[checkExternalReferenceExists] fileHash=${fileHash}, fileName=${fileName}, exists=${exists}`);
-    
+
     return exists;
   } catch (error) {
     this.logger.error(`[checkExternalReferenceExists] 检查失败: ${error.message}`, error.stack);
@@ -71,7 +71,7 @@ async checkExternalReferenceExists(
 ```typescript
 /**
  * 检查外部参照文件是否存在
- * 
+ *
  * @param fileHash 源图纸文件的哈希值
  * @param body 请求体，包含 fileName 字段
  * @returns 文件是否存在
@@ -104,19 +104,19 @@ async checkExternalReference(
   @Res() res: Response
 ) {
   this.logger.log(`[checkExternalReference] 请求参数: fileHash=${fileHash}, fileName=${body.fileName}`);
-  
+
   // 验证参数
   if (!body.fileName) {
     return res.status(400).json({ code: -1, message: '缺少必要参数: fileName' });
   }
-  
+
   const exists = await this.mxCadService.checkExternalReferenceExists(
     fileHash,
     body.fileName
   );
-  
+
   this.logger.log(`[checkExternalReference] 检查结果: ${exists}`);
-  
+
   return res.json({ exists });
 }
 ```
@@ -154,9 +154,7 @@ describe('checkExternalReferenceExists', () => {
   });
 
   it('应该在文件不存在时返回 false', async () => {
-    const mockFiles = [
-      '25e89b5adf19984330f4e68b0f99db64.dwg.mxweb',
-    ];
+    const mockFiles = ['25e89b5adf19984330f4e68b0f99db64.dwg.mxweb'];
 
     jest.spyOn(fs, 'existsSync').mockReturnValue(true);
     jest.spyOn(fs.promises, 'readdir').mockResolvedValue(mockFiles);
@@ -182,7 +180,9 @@ describe('checkExternalReferenceExists', () => {
 
   it('应该在读取失败时返回 false', async () => {
     jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-    jest.spyOn(fs.promises, 'readdir').mockRejectedValue(new Error('Read error'));
+    jest
+      .spyOn(fs.promises, 'readdir')
+      .mockRejectedValue(new Error('Read error'));
 
     const exists = await service.checkExternalReferenceExists(
       '25e89b5adf19984330f4e68b0f99db64',

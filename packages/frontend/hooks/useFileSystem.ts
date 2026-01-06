@@ -13,7 +13,9 @@ import { ToastType, Toast } from '../components/ui/Toast';
  * 验证文件夹/文件名称
  * 返回验证结果和错误消息
  */
-const validateFolderName = (name: string): { valid: boolean; error?: string } => {
+const validateFolderName = (
+  name: string
+): { valid: boolean; error?: string } => {
   const trimmedName = name.trim();
 
   // 检查空值
@@ -211,7 +213,9 @@ export const useFileSystem = () => {
       }
 
       try {
-        const response = await mxcadApi.getPreloadingData(node.fileHash, { signal });
+        const response = await mxcadApi.getPreloadingData(node.fileHash, {
+          signal,
+        });
         const preloadingData = response.data;
 
         if (!preloadingData || typeof preloadingData !== 'object') {
@@ -273,54 +277,57 @@ export const useFileSystem = () => {
   }, [refreshCount]);
 
   // 从节点构建面包屑
-  const buildBreadcrumbsFromNode = useCallback(async (node: FileSystemNode, signal?: AbortSignal) => {
-    const crumbs: BreadcrumbItem[] = [];
-    const visited = new Set<string>();
-    let currentNode: FileSystemNode | null = node;
+  const buildBreadcrumbsFromNode = useCallback(
+    async (node: FileSystemNode, signal?: AbortSignal) => {
+      const crumbs: BreadcrumbItem[] = [];
+      const visited = new Set<string>();
+      let currentNode: FileSystemNode | null = node;
 
-    try {
-      // 向上遍历构建面包屑
-      while (currentNode && !visited.has(currentNode.id)) {
-        // 检查是否已取消
-        if (signal?.aborted) {
-          throw new Error('Request aborted');
+      try {
+        // 向上遍历构建面包屑
+        while (currentNode && !visited.has(currentNode.id)) {
+          // 检查是否已取消
+          if (signal?.aborted) {
+            throw new Error('Request aborted');
+          }
+
+          visited.add(currentNode.id);
+          crumbs.unshift({
+            id: currentNode.id,
+            name: currentNode.name,
+            isRoot: currentNode.isRoot,
+          });
+
+          if (currentNode.parentId) {
+            const parentResponse = await projectsApi.getNode(
+              currentNode.parentId,
+              { signal }
+            );
+            currentNode = parentResponse.data;
+          } else {
+            break;
+          }
         }
 
-        visited.add(currentNode.id);
-        crumbs.unshift({
-          id: currentNode.id,
-          name: currentNode.name,
-          isRoot: currentNode.isRoot,
-        });
-
-        if (currentNode.parentId) {
-          const parentResponse = await projectsApi.getNode(
-            currentNode.parentId,
-            { signal }
-          );
-          currentNode = parentResponse.data;
-        } else {
-          break;
+        setBreadcrumbs(crumbs);
+      } catch (error) {
+        // 如果是取消请求导致的错误，不处理
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw error;
         }
-      }
 
-      setBreadcrumbs(crumbs);
-    } catch (error) {
-      // 如果是取消请求导致的错误，不处理
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw error;
+        // 构建面包屑失败，至少显示当前节点
+        setBreadcrumbs([
+          {
+            id: node.id,
+            name: node.name,
+            isRoot: node.isRoot,
+          },
+        ]);
       }
-
-      // 构建面包屑失败，至少显示当前节点
-      setBreadcrumbs([
-        {
-          id: node.id,
-          name: node.name,
-          isRoot: node.isRoot,
-        },
-      ]);
-    }
-  }, []);
+    },
+    []
+  );
 
   // 兼容性方法
   const loadCurrentNode = useCallback(() => {
@@ -354,7 +361,9 @@ export const useFileSystem = () => {
     try {
       if (isProjectRootMode) {
         // 项目根目录模式：加载项目列表
-        const response = await projectsApi.list({ signal: abortController.signal });
+        const response = await projectsApi.list({
+          signal: abortController.signal,
+        });
         const allProjects = response.data || [];
         setNodes(allProjects);
         setCurrentNode(null);
@@ -363,8 +372,12 @@ export const useFileSystem = () => {
         // 文件夹模式：加载项目/文件夹内容
         const currentNodeId = urlNodeId || urlProjectId;
         const [nodeResponse, childrenResponse] = await Promise.all([
-          projectsApi.getNode(currentNodeId, { signal: abortController.signal }),
-          projectsApi.getChildren(currentNodeId, { signal: abortController.signal }),
+          projectsApi.getNode(currentNodeId, {
+            signal: abortController.signal,
+          }),
+          projectsApi.getChildren(currentNodeId, {
+            signal: abortController.signal,
+          }),
         ]);
         const nodeData = nodeResponse.data;
         const childrenData = childrenResponse.data || [];
@@ -377,8 +390,10 @@ export const useFileSystem = () => {
               return node;
             }
 
-            const { hasMissing, count } =
-              await checkMissingExternalReferences(node, abortController.signal);
+            const { hasMissing, count } = await checkMissingExternalReferences(
+              node,
+              abortController.signal
+            );
 
             return {
               ...node,
@@ -400,9 +415,7 @@ export const useFileSystem = () => {
       }
 
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : '加载数据失败';
+        error instanceof Error ? error.message : '加载数据失败';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
@@ -494,7 +507,11 @@ export const useFileSystem = () => {
       let errorMessage = '创建文件夹失败';
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error
+      ) {
         const err = error as { response?: { data?: { message?: string } } };
         errorMessage = err.response?.data?.message || errorMessage;
       }
@@ -528,7 +545,11 @@ export const useFileSystem = () => {
       let errorMessage = '重命名失败';
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error
+      ) {
         const err = error as { response?: { data?: { message?: string } } };
         errorMessage = err.response?.data?.message || errorMessage;
       }
@@ -580,8 +601,14 @@ export const useFileSystem = () => {
             let errorMessage = '删除失败';
             if (error instanceof Error) {
               errorMessage = error.message;
-            } else if (typeof error === 'object' && error !== null && 'response' in error) {
-              const err = error as { response?: { data?: { message?: string } } };
+            } else if (
+              typeof error === 'object' &&
+              error !== null &&
+              'response' in error
+            ) {
+              const err = error as {
+                response?: { data?: { message?: string } };
+              };
               errorMessage = err.response?.data?.message || errorMessage;
             }
             showToast(errorMessage, 'error');
@@ -626,8 +653,14 @@ export const useFileSystem = () => {
             let errorMessage = '批量删除失败';
             if (error instanceof Error) {
               errorMessage = error.message;
-            } else if (typeof error === 'object' && error !== null && 'response' in error) {
-              const err = error as { response?: { data?: { message?: string } } };
+            } else if (
+              typeof error === 'object' &&
+              error !== null &&
+              'response' in error
+            ) {
+              const err = error as {
+                response?: { data?: { message?: string } };
+              };
               errorMessage = err.response?.data?.message || errorMessage;
             }
             showToast(errorMessage, 'error');
@@ -703,9 +736,7 @@ export const useFileSystem = () => {
         showToast('文件下载成功', 'success');
       } catch (error) {
         const errorMessage =
-          error instanceof Error
-            ? error.message
-            : '文件下载失败';
+          error instanceof Error ? error.message : '文件下载失败';
         showToast(errorMessage, 'error');
       }
     },
@@ -733,7 +764,11 @@ export const useFileSystem = () => {
         let errorMessage = '创建项目失败';
         if (error instanceof Error) {
           errorMessage = error.message;
-        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        } else if (
+          typeof error === 'object' &&
+          error !== null &&
+          'response' in error
+        ) {
           const err = error as { response?: { data?: { message?: string } } };
           errorMessage = err.response?.data?.message || errorMessage;
         }
@@ -754,7 +789,11 @@ export const useFileSystem = () => {
         let errorMessage = '更新项目失败';
         if (error instanceof Error) {
           errorMessage = error.message;
-        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        } else if (
+          typeof error === 'object' &&
+          error !== null &&
+          'response' in error
+        ) {
           const err = error as { response?: { data?: { message?: string } } };
           errorMessage = err.response?.data?.message || errorMessage;
         }
@@ -775,7 +814,11 @@ export const useFileSystem = () => {
         let errorMessage = '删除项目失败';
         if (error instanceof Error) {
           errorMessage = error.message;
-        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        } else if (
+          typeof error === 'object' &&
+          error !== null &&
+          'response' in error
+        ) {
           const err = error as { response?: { data?: { message?: string } } };
           errorMessage = err.response?.data?.message || errorMessage;
         }

@@ -11,10 +11,12 @@
 **修改文件**: `packages/backend/src/mxcad/services/file-upload-manager.service.ts`
 
 **变更**:
+
 - **旧路径**: `files/{userId}/{timestamp}-{filename}`
 - **新路径**: `mxcad/file/{fileHash}/{filename}`
 
 **代码变更**:
+
 ```typescript
 // 修改前
 const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
@@ -28,10 +30,12 @@ const storageKey = `mxcad/file/${hash}/${name}`;
 **修改文件**: `packages/backend/src/file-system/file-system.controller.ts`
 
 **变更**:
+
 - 添加新旧路径自动转换逻辑
 - 支持向后兼容旧路径格式
 
 **代码变更**:
+
 ```typescript
 // 处理存储路径：支持新旧路径格式
 let storagePath = node.path;
@@ -52,11 +56,13 @@ const stream = await this.fileSystemService.getFileStream(storagePath);
 **修改文件**: `packages/backend/src/mxcad/mxcad.controller.ts`
 
 **变更**:
+
 - 添加新旧路径自动转换逻辑
 - 支持向后兼容旧路径格式
 - 依赖 `MxCadService.getFileSystemNodeByPath()` 查询节点信息
 
 **代码变更**:
+
 ```typescript
 // 处理存储路径：支持新旧路径格式
 let actualStorageKey = storageKey;
@@ -66,10 +72,14 @@ if (storageKey.startsWith('files/')) {
     const node = await this.mxCadService.getFileSystemNodeByPath(storageKey);
     if (node && node.fileHash) {
       actualStorageKey = `mxcad/file/${node.fileHash}/${node.name}`;
-      this.logger.log(`[getNonCadFile] 路径转换: ${storageKey} -> ${actualStorageKey}`);
+      this.logger.log(
+        `[getNonCadFile] 路径转换: ${storageKey} -> ${actualStorageKey}`
+      );
     }
   } catch (queryError) {
-    this.logger.warn(`[getNonCadFile] 查询节点失败，使用原路径: ${queryError.message}`);
+    this.logger.warn(
+      `[getNonCadFile] 查询节点失败，使用原路径: ${queryError.message}`
+    );
   }
 }
 
@@ -81,9 +91,11 @@ const fileStream = await this.minioSyncService.getFileStream(actualStorageKey);
 **修改文件**: `packages/backend/src/storage/minio-storage.provider.ts`
 
 **变更**:
+
 - 添加 `copyFile()` 方法，用于在 MinIO 内部拷贝文件
 
 **代码变更**:
+
 ```typescript
 /**
  * 在 MinIO 内部拷贝文件
@@ -110,9 +122,11 @@ async copyFile(sourceKey: string, destKey: string): Promise<boolean> {
 **修改文件**: `packages/backend/src/mxcad/services/filesystem-node.service.ts`
 
 **变更**:
+
 - 添加 `findByPath()` 方法，用于根据存储路径查询文件节点
 
 **代码变更**:
+
 ```typescript
 /**
  * 根据存储路径查找节点（用于路径转换）
@@ -150,9 +164,11 @@ async findByPath(storagePath: string): Promise<any | null> {
 **修改文件**: `packages/backend/src/mxcad/mxcad.service.ts`
 
 **变更**:
+
 - 添加 `getFileSystemNodeByPath()` 方法，委托给 `FileSystemNodeService`
 
 **代码变更**:
+
 ```typescript
 /**
  * 根据存储路径查找文件节点（用于路径转换）
@@ -169,18 +185,21 @@ async getFileSystemNodeByPath(storagePath: string): Promise<any | null> {
 **新增文件**: `packages/backend/scripts/migrate-storage-paths.ts`
 
 **功能**:
+
 - 查询所有使用旧路径格式的文件节点
 - 将文件从旧路径拷贝到新路径
 - 更新数据库中的存储路径
 - 提供详细的迁移统计信息
 
 **运行方式**:
+
 ```bash
 cd packages/backend
 pnpm migrate:storage-paths
 ```
 
 **脚本特性**:
+
 - 自动跳过已迁移的文件
 - 处理文件不存在的情况
 - 提供详细的日志输出
@@ -188,11 +207,11 @@ pnpm migrate:storage-paths
 
 ## 存储路径对比
 
-| 文件类型 | 旧路径格式 | 新路径格式 |
-|---------|-----------|-----------|
-| 非CAD文件 | `files/{userId}/{timestamp}-{filename}` | `mxcad/file/{fileHash}/{filename}` |
-| CAD文件 | `mxcad/file/{fileHash}.mxweb` | `mxcad/file/{fileHash}.mxweb` (不变) |
-| 外部参照 DWG | `mxcad/file/{srcDwgFileHash}/{filename}.mxweb` | `mxcad/file/{srcDwgFileHash}/{filename}.mxweb` (不变) |
+| 文件类型     | 旧路径格式                                                                         | 新路径格式                                                                    |
+| ------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 非CAD文件    | `files/{userId}/{timestamp}-{filename}`                                            | `mxcad/file/{fileHash}/{filename}`                                            |
+| CAD文件      | `mxcad/file/{fileHash}.mxweb`                                                      | `mxcad/file/{fileHash}.mxweb` (不变)                                          |
+| 外部参照 DWG | `mxcad/file/{srcDwgFileHash}/{filename}.mxweb`                                     | `mxcad/file/{srcDwgFileHash}/{filename}.mxweb` (不变)                         |
 | 外部参照图片 | `files/{userId}/{timestamp}-{filename}` + `mxcad/file/{srcDwgFileHash}/{filename}` | `mxcad/file/{fileHash}/{filename}` + `mxcad/file/{srcDwgFileHash}/{filename}` |
 
 ## 向后兼容性
@@ -206,23 +225,27 @@ pnpm migrate:storage-paths
 ## 迁移步骤
 
 ### 阶段 1：部署新代码（已完成）
+
 - ✅ 修改非 CAD 文件上传逻辑
 - ✅ 添加新旧路径自动转换
 - ✅ 所有代码质量检查通过
 
 ### 阶段 2：数据迁移（待执行）
+
 ```bash
 cd packages/backend
 pnpm migrate:storage-paths
 ```
 
 ### 阶段 3：验证迁移结果
+
 - 检查迁移日志
 - 验证图片预览功能
 - 验证非 CAD 文件访问功能
 - 验证外部参照上传功能
 
 ### 阶段 4：清理旧文件（可选）
+
 - 确认所有功能正常后
 - 删除 MinIO 中的旧路径文件
 - 节省存储空间

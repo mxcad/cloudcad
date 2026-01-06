@@ -3,12 +3,14 @@
 ## 已完成的工作
 
 ### 1. 前端改造 ✅
+
 - **安装依赖**: 成功安装 `webuploader` 依赖包
 - **集成上传器**: 将 `createDwgFileUploader.ts` 集成到前端项目，适配项目结构
 - **新上传组件**: 创建 `MxCadFileUploader.tsx` 组件，替换原有的 `FileUploader.tsx`
 - **页面更新**: 更新 `FileSystemManager.tsx` 使用新的上传组件
 
 ### 2. 后端集成 ✅
+
 - **上下文增强**: 修改 `MxCadContextInterceptor` 支持从请求体获取项目ID和父文件夹ID
 - **DTO扩展**: 为 `ChunkExistDto` 和 `FileExistDto` 添加项目关联字段
 - **控制器更新**: 修改相关接口传递项目上下文信息
@@ -16,6 +18,7 @@
 - **自动同步**: 文件上传成功后自动创建 FileSystemNode 记录
 
 ### 3. 系统验证 ✅
+
 - **后端构建**: 成功通过编译，无错误
 - **前端构建**: 成功通过构建，生成可部署文件
 - **代码质量**: TypeScript 类型检查通过
@@ -23,11 +26,13 @@
 ## 技术实现亮点
 
 ### 统一上传流程
+
 ```
 用户选择文件 → WebUploader 分片上传 → MxCAD 转换服务 → 自动创建文件系统记录
 ```
 
 ### 核心优势
+
 1. **复用成熟方案**: 完全复用 MxCAD-App 的上传和转换逻辑
 2. **自动图纸转换**: DWG/DXF 文件自动转换为 MXWEB 格式
 3. **分片上传**: 支持大文件分片上传和断点续传
@@ -38,10 +43,12 @@
 ## 接口变更
 
 ### 新增参数
+
 - `projectId`: 项目ID，用于文件系统关联
 - `parentId`: 父文件夹ID，用于文件层级管理
 
 ### 影响的接口
+
 - `POST /mxcad/files/chunkisExist` - 检查分片存在性
 - `POST /mxcad/files/fileisExist` - 检查文件存在性
 - `POST /mxcad/files/uploadFiles` - 文件上传
@@ -49,6 +56,7 @@
 ## 测试指南
 
 ### 启动服务
+
 ```bash
 # 启动后端服务
 cd packages/backend
@@ -60,6 +68,7 @@ pnpm dev
 ```
 
 ### 测试步骤
+
 1. 访问前端应用 http://localhost:3000
 2. 登录系统并进入项目管理
 3. 创建或选择一个项目
@@ -70,6 +79,7 @@ pnpm dev
 8. 检查文件是否成功转换为 MXWEB 格式
 
 ### 预期结果
+
 - 文件上传显示详细进度（哈希计算、上传、转换）
 - CAD 文件自动转换为 MXWEB 格式
 - 文件自动关联到当前项目和文件夹
@@ -79,11 +89,13 @@ pnpm dev
 ## 配置说明
 
 ### 前端配置
+
 - `packages/frontend/public/ini/myServerConfig.json` - MxCAD 服务配置
 - 支持的文件格式：`.dwg, .dxf, .mxweb`
 - 分片上传：默认启用
 
 ### 后端配置
+
 - `MXCAD_ASSEMBLY_PATH`: 转换工具路径
 - `MXCAD_UPLOAD_PATH`: 文件上传路径
 - `MXCAD_TEMP_PATH`: 临时文件路径
@@ -91,12 +103,14 @@ pnpm dev
 ## 故障排查
 
 ### 常见问题
+
 1. **转换失败**: 检查 `mxcadassembly.exe` 路径是否正确
 2. **权限错误**: 确认用户有项目成员权限
 3. **文件格式不支持**: 检查文件扩展名是否在允许列表中
 4. **上传中断**: 检查网络连接和服务器状态
 
 ### 日志查看
+
 - 后端日志：查看 NestJS 控制台输出
 - 前端日志：查看浏览器开发者工具 Console
 - 转换日志：查看 MxCAD 服务转换记录

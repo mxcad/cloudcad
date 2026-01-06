@@ -55,30 +55,19 @@
                   "tab": "起点、圆心、端点(S)",
                   "icon": "a-tubiao_qidianyuanxinduandianfuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "",
-                    "C"
-                  ]
+                  "commandOptions": ["", "C"]
                 },
                 {
                   "tab": "起点、圆心、角度(T)",
                   "icon": "a-tubiao_qidianyuanxinjiaodufuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "",
-                    "C",
-                    "A"
-                  ]
+                  "commandOptions": ["", "C", "A"]
                 },
                 {
                   "tab": "起点、圆心、长度(A)",
                   "icon": "a-tubiao_qidianyuanxinchangdufuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "",
-                    "C",
-                    "L"
-                  ]
+                  "commandOptions": ["", "C", "L"]
                 },
                 {
                   "type": "divider"
@@ -87,31 +76,19 @@
                   "tab": "起点、端点、角度(N)",
                   "icon": "a-tubiao_qidianduandianjiaodufuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "",
-                    "E",
-                    "A"
-                  ]
+                  "commandOptions": ["", "E", "A"]
                 },
                 {
                   "tab": "起点、端点、方向(D)",
                   "icon": "a-tubiao_qidianduandianfangxiangfuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "",
-                    "E",
-                    "A"
-                  ]
+                  "commandOptions": ["", "E", "A"]
                 },
                 {
                   "tab": "起点、端点、半径(R)",
                   "icon": "a-tubiao_qidianduandianbanjingfuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "",
-                    "E",
-                    "A"
-                  ]
+                  "commandOptions": ["", "E", "A"]
                 },
                 {
                   "type": "divider"
@@ -120,29 +97,19 @@
                   "tab": "圆心、起点、端点(C)",
                   "icon": "a-tubiao_yuandianqidianduandianfuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "C"
-                  ]
+                  "commandOptions": ["C"]
                 },
                 {
                   "tab": "圆心、起点、角度(E)",
                   "icon": "a-tubiao_yuandianqidianjiaodufuben2",
                   "cmd": "Mx_Arc",
-                  "commandOptions": [
-                    "C",
-                    "",
-                    "A"
-                  ]
+                  "commandOptions": ["C", "", "A"]
                 },
                 {
                   "tab": "圆心、起点、长度(L)",
                   "cmd": "Mx_Arc",
                   "icon": "a-tubiao_yuandianqidianchangdufuben2",
-                  "commandOptions": [
-                    "C",
-                    "",
-                    "L"
-                  ]
+                  "commandOptions": ["C", "", "L"]
                 }
               ]
             },
@@ -165,10 +132,7 @@
                   "tab": "圆心、直径(D)",
                   "cmd": "Mx_Circle",
                   "icon": "a-tubiao_yuanxinzhijingfuben2",
-                  "commandOptions": [
-                    "",
-                    "D"
-                  ]
+                  "commandOptions": ["", "D"]
                 },
                 {
                   "type": "divider"
@@ -176,18 +140,14 @@
                 {
                   "tab": "两点(2)",
                   "cmd": "Mx_Circle",
-                  "commandOptions": [
-                    "2P"
-                  ],
+                  "commandOptions": ["2P"],
                   "icon": "a-tubiao_liangdianfuben2"
                 },
                 {
                   "tab": "三点(3)",
                   "cmd": "Mx_Circle",
                   "icon": "a-tubiao_sandianfuben4",
-                  "commandOptions": [
-                    "3P"
-                  ]
+                  "commandOptions": ["3P"]
                 }
               ]
             },
@@ -214,9 +174,7 @@
               "tab": "椭圆弧",
               "cmd": "Mx_EllipseArc",
               "icon": "tuoyuanhu",
-              "commandOptions": [
-                "C"
-              ],
+              "commandOptions": ["C"],
               "isSeparateMenuArrowIcon": true,
               "isShowToMainPanelRight": true,
               "list": [
@@ -224,9 +182,7 @@
                   "tab": "圆心",
                   "cmd": "Mx_Ellipse",
                   "icon": "a-tubiao_yuanxinfuben2",
-                  "commandOptions": [
-                    "C"
-                  ]
+                  "commandOptions": ["C"]
                 },
                 {
                   "tab": "轴、端点",
@@ -281,25 +237,19 @@
               "icon": "yunxianpizhu",
               "cmd": "_Revcloud",
               "isSeparateMenuArrowIcon": true,
-              "commandOptions": [
-                "R"
-              ],
+              "commandOptions": ["R"],
               "list": [
                 {
                   "tab": "矩形",
                   "icon": "yunxianpizhu",
                   "cmd": "_Revcloud",
-                  "commandOptions": [
-                    "R"
-                  ]
+                  "commandOptions": ["R"]
                 },
                 {
                   "tab": "多边形",
                   "icon": "yunxianpizhu",
                   "cmd": "_Revcloud",
-                  "commandOptions": [
-                    "P"
-                  ]
+                  "commandOptions": ["P"]
                 },
                 {
                   "tab": "徒手画",
@@ -887,33 +837,25 @@
                   "tab": "距离(D)",
                   "icon": "class: iconfont juli",
                   "cmd": "_MEASUREGEOM",
-                  "commandOptions": [
-                    "D"
-                  ]
+                  "commandOptions": ["D"]
                 },
                 {
                   "tab": "半径(R)",
                   "icon": "banjingbiaozhu",
                   "cmd": "_MEASUREGEOM",
-                  "commandOptions": [
-                    "R"
-                  ]
+                  "commandOptions": ["R"]
                 },
                 {
                   "tab": "角度(G)",
                   "icon": "celiangjiaodu",
                   "cmd": "_MEASUREGEOM",
-                  "commandOptions": [
-                    "A"
-                  ]
+                  "commandOptions": ["A"]
                 },
                 {
                   "tab": "面积(A)",
                   "icon": "celiangmianji",
                   "cmd": "_MEASUREGEOM",
-                  "commandOptions": [
-                    "AR"
-                  ]
+                  "commandOptions": ["AR"]
                 },
                 {
                   "tab": "点坐标(I)",

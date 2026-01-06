@@ -52,7 +52,7 @@ export interface MxCadUploaderRef {
 
 /**
  * MxCAD 文件上传组件（增强版本）
- * 
+ *
  * 新增功能：
  * - 自动检测外部参照
  * - 支持外部参照上传
@@ -132,7 +132,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(({
         // 检查外部参照
         console.log('[MxCadUploader] 开始检查外部参照');
         const hasMissingReferences = await externalReferenceUpload.checkMissingReferences();
-        
+
         if (hasMissingReferences) {
           console.log('[MxCadUploader] 检测到缺失的外部参照，显示上传模态框');
           setMessage('检测到缺失的外部参照');

@@ -31,13 +31,13 @@
 
 ```typescript
 enum MxUploadReturn {
-  kOk = "ok",                           // 成功
-  kErrorParam = "errorparam",           // 参数错误
-  kChunkAlreadyExist = "chunkAlreadyExist",  // 分片已存在
-  kChunkNoExist = "chunkNoExist",       // 分片不存在
-  kFileAlreadyExist = "fileAlreadyExist",    // 文件已存在
-  kFileNoExist = "fileNoExist",         // 文件不存在
-  kConvertFileError = "convertFileError"     // 文件转换错误
+  kOk = 'ok', // 成功
+  kErrorParam = 'errorparam', // 参数错误
+  kChunkAlreadyExist = 'chunkAlreadyExist', // 分片已存在
+  kChunkNoExist = 'chunkNoExist', // 分片不存在
+  kFileAlreadyExist = 'fileAlreadyExist', // 文件已存在
+  kFileNoExist = 'fileNoExist', // 文件不存在
+  kConvertFileError = 'convertFileError', // 文件转换错误
 }
 ```
 
@@ -53,15 +53,16 @@ enum MxUploadReturn {
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| chunk | number | 是 | 分片索引（从 0 开始） |
-| fileHash | string | 是 | 文件 MD5 哈希值 |
-| size | number | 是 | 当前分片大小（字节） |
-| chunks | number | 是 | 总分片数量 |
-| fileName | string | 是 | 原始文件名 |
+| 参数名   | 类型   | 必填 | 说明                  |
+| -------- | ------ | ---- | --------------------- |
+| chunk    | number | 是   | 分片索引（从 0 开始） |
+| fileHash | string | 是   | 文件 MD5 哈希值       |
+| size     | number | 是   | 当前分片大小（字节）  |
+| chunks   | number | 是   | 总分片数量            |
+| fileName | string | 是   | 原始文件名            |
 
 **请求示例**:
+
 ```json
 {
   "chunk": 0,
@@ -74,11 +75,12 @@ enum MxUploadReturn {
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| ret | string | 返回状态码（见枚举） |
+| 参数名 | 类型   | 说明                 |
+| ------ | ------ | -------------------- |
+| ret    | string | 返回状态码（见枚举） |
 
 **返回示例**:
+
 ```json
 {
   "ret": "chunkAlreadyExist"
@@ -103,12 +105,13 @@ enum MxUploadReturn {
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| filename | string | 是 | 原始文件名（含扩展名） |
-| fileHash | string | 是 | 文件 MD5 哈希值 |
+| 参数名   | 类型   | 必填 | 说明                   |
+| -------- | ------ | ---- | ---------------------- |
+| filename | string | 是   | 原始文件名（含扩展名） |
+| fileHash | string | 是   | 文件 MD5 哈希值        |
 
 **请求示例**:
+
 ```json
 {
   "filename": "example.dwg",
@@ -118,11 +121,12 @@ enum MxUploadReturn {
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| ret | string | 返回状态码（见枚举） |
+| 参数名 | 类型   | 说明                 |
+| ------ | ------ | -------------------- |
+| ret    | string | 返回状态码（见枚举） |
 
 **返回示例**:
+
 ```json
 {
   "ret": "fileAlreadyExist"
@@ -147,11 +151,12 @@ enum MxUploadReturn {
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| fileHash | string | 是 | 文件 MD5 哈希值 |
+| 参数名   | 类型   | 必填 | 说明            |
+| -------- | ------ | ---- | --------------- |
+| fileHash | string | 是   | 文件 MD5 哈希值 |
 
 **请求示例**:
+
 ```json
 {
   "fileHash": "d41d8cd98f00b204e9800998ecf8427e"
@@ -160,11 +165,12 @@ enum MxUploadReturn {
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, 1: 失败） |
+| 参数名 | 类型   | 说明                       |
+| ------ | ------ | -------------------------- |
+| code   | number | 状态码（0: 成功, 1: 失败） |
 
 **返回示例**:
+
 ```json
 {
   "code": 0
@@ -183,16 +189,17 @@ enum MxUploadReturn {
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 上传的文件或分片 |
-| hash | string | 是 | 文件 MD5 哈希值 |
-| name | string | 是 | 原始文件名 |
-| size | number | 是 | 文件总大小（字节） |
-| chunk | number | 否 | 分片索引（分片上传时必填） |
-| chunks | number | 否 | 总分片数量（分片上传时必填） |
+| 参数名 | 类型   | 必填 | 说明                         |
+| ------ | ------ | ---- | ---------------------------- |
+| file   | File   | 是   | 上传的文件或分片             |
+| hash   | string | 是   | 文件 MD5 哈希值              |
+| name   | string | 是   | 原始文件名                   |
+| size   | number | 是   | 文件总大小（字节）           |
+| chunk  | number | 否   | 分片索引（分片上传时必填）   |
+| chunks | number | 否   | 总分片数量（分片上传时必填） |
 
 **请求示例（分片上传）**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', chunkBlob);
@@ -204,6 +211,7 @@ formData.append('chunks', 10);
 ```
 
 **请求示例（完整文件上传）**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', fileBlob);
@@ -214,12 +222,13 @@ formData.append('size', 10485760);
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| ret | string | 返回状态码（见枚举） |
-| tz | boolean | 可选，是否包含 tz 处理 |
+| 参数名 | 类型    | 说明                   |
+| ------ | ------- | ---------------------- |
+| ret    | string  | 返回状态码（见枚举）   |
+| tz     | boolean | 可选，是否包含 tz 处理 |
 
 **返回示例（成功）**:
+
 ```json
 {
   "ret": "ok",
@@ -228,6 +237,7 @@ formData.append('size', 10485760);
 ```
 
 **返回示例（转换失败）**:
+
 ```json
 {
   "ret": "convertFileError"
@@ -235,6 +245,7 @@ formData.append('size', 10485760);
 ```
 
 **返回示例（参数错误）**:
+
 ```json
 {
   "ret": "errorparam"
@@ -253,9 +264,9 @@ formData.append('size', 10485760);
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 上传的文件 |
+| 参数名 | 类型 | 必填 | 说明       |
+| ------ | ---- | ---- | ---------- |
+| file   | File | 是   | 上传的文件 |
 
 #### 返回参数
 
@@ -271,16 +282,17 @@ formData.append('size', 10485760);
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| param | object/string | 是 | 转换参数对象或 JSON 字符串 |
-| param.srcpath | string | 是 | 源文件路径 |
-| param.outjpg | string | 否 | 输出 JPG 参数 |
-| param.async | string | 否 | 是否异步（"true"/"false"） |
-| param.resultposturl | string | 否 | 异步结果回调 URL |
-| param.traceid | string | 否 | 追踪 ID |
+| 参数名              | 类型          | 必填 | 说明                       |
+| ------------------- | ------------- | ---- | -------------------------- |
+| param               | object/string | 是   | 转换参数对象或 JSON 字符串 |
+| param.srcpath       | string        | 是   | 源文件路径                 |
+| param.outjpg        | string        | 否   | 输出 JPG 参数              |
+| param.async         | string        | 否   | 是否异步（"true"/"false"） |
+| param.resultposturl | string        | 否   | 异步结果回调 URL           |
+| param.traceid       | string        | 否   | 追踪 ID                    |
 
 **请求示例（同步转换）**:
+
 ```json
 {
   "param": {
@@ -290,6 +302,7 @@ formData.append('size', 10485760);
 ```
 
 **请求示例（异步转换）**:
+
 ```json
 {
   "param": {
@@ -311,6 +324,7 @@ formData.append('size', 10485760);
 | ... | any | 其他转换结果数据 |
 
 **异步返回**:
+
 ```json
 {
   "code": 0,
@@ -319,6 +333,7 @@ formData.append('size', 10485760);
 ```
 
 **错误返回**:
+
 ```json
 {
   "code": 12,
@@ -338,20 +353,21 @@ formData.append('size', 10485760);
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 上传的文件 |
+| 参数名 | 类型 | 必填 | 说明       |
+| ------ | ---- | ---- | ---------- |
+| file   | File | 是   | 上传的文件 |
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| message | string | 返回消息 |
-| filename | string | 生成的文件名（UUID） |
-| ... | any | 其他转换结果数据 |
+| 参数名   | 类型   | 说明                        |
+| -------- | ------ | --------------------------- |
+| code     | number | 状态码（0: 成功, -1: 失败） |
+| message  | string | 返回消息                    |
+| filename | string | 生成的文件名（UUID）        |
+| ...      | any    | 其他转换结果数据            |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -361,6 +377,7 @@ formData.append('size', 10485760);
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -380,13 +397,14 @@ formData.append('size', 10485760);
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 外部参照 DWG 文件 |
-| src_dwgfile_hash | string | 是 | 源 DWG 文件的 MD5 哈希值 |
-| ext_ref_file | string | 是 | 外部参照文件名 |
+| 参数名           | 类型   | 必填 | 说明                     |
+| ---------------- | ------ | ---- | ------------------------ |
+| file             | File   | 是   | 外部参照 DWG 文件        |
+| src_dwgfile_hash | string | 是   | 源 DWG 文件的 MD5 哈希值 |
+| ext_ref_file     | string | 是   | 外部参照文件名           |
 
 **请求示例**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', refDwgFile);
@@ -396,12 +414,13 @@ formData.append('ext_ref_file', 'reference.dwg');
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| message | string | 返回消息 |
+| 参数名  | 类型   | 说明                        |
+| ------- | ------ | --------------------------- |
+| code    | number | 状态码（0: 成功, -1: 失败） |
+| message | string | 返回消息                    |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -410,6 +429,7 @@ formData.append('ext_ref_file', 'reference.dwg');
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -429,13 +449,14 @@ formData.append('ext_ref_file', 'reference.dwg');
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 外部参照图片文件 |
-| src_dwgfile_hash | string | 是 | 源 DWG 文件的 MD5 哈希值 |
-| ext_ref_file | string | 是 | 外部参照文件名 |
+| 参数名           | 类型   | 必填 | 说明                     |
+| ---------------- | ------ | ---- | ------------------------ |
+| file             | File   | 是   | 外部参照图片文件         |
+| src_dwgfile_hash | string | 是   | 源 DWG 文件的 MD5 哈希值 |
+| ext_ref_file     | string | 是   | 外部参照文件名           |
 
 **请求示例**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', imageFile);
@@ -445,12 +466,13 @@ formData.append('ext_ref_file', 'image.png');
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| message | string | 返回消息 |
+| 参数名  | 类型   | 说明                        |
+| ------- | ------ | --------------------------- |
+| code    | number | 状态码（0: 成功, -1: 失败） |
+| message | string | 返回消息                    |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -459,6 +481,7 @@ formData.append('ext_ref_file', 'image.png');
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -478,19 +501,20 @@ formData.append('ext_ref_file', 'image.png');
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | MXWEB 文件 |
+| 参数名 | 类型 | 必填 | 说明       |
+| ------ | ---- | ---- | ---------- |
+| file   | File | 是   | MXWEB 文件 |
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功） |
-| file | string | 保存的文件名（UUID） |
-| ret | string | 返回状态 "ok" |
+| 参数名 | 类型   | 说明                 |
+| ------ | ------ | -------------------- |
+| code   | number | 状态码（0: 成功）    |
+| file   | string | 保存的文件名（UUID） |
+| ret    | string | 返回状态 "ok"        |
 
 **返回示例**:
+
 ```json
 {
   "code": 0,
@@ -511,20 +535,21 @@ formData.append('ext_ref_file', 'image.png');
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 源文件 |
+| 参数名 | 类型 | 必填 | 说明   |
+| ------ | ---- | ---- | ------ |
+| file   | File | 是   | 源文件 |
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, 其他: 失败） |
-| file | string | 输出的 DWG 文件名 |
-| ret | string | 返回状态 "ok" 或 "failed" |
-| message | string | 可选，错误消息 |
+| 参数名  | 类型   | 说明                          |
+| ------- | ------ | ----------------------------- |
+| code    | number | 状态码（0: 成功, 其他: 失败） |
+| file    | string | 输出的 DWG 文件名             |
+| ret     | string | 返回状态 "ok" 或 "failed"     |
+| message | string | 可选，错误消息                |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -534,6 +559,7 @@ formData.append('ext_ref_file', 'image.png');
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -554,35 +580,40 @@ formData.append('ext_ref_file', 'image.png');
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 源文件 |
-| param | object/string | 否 | 转换参数 |
-| param.width | string | 否 | PDF 宽度（默认 "2000"） |
-| param.height | string | 否 | PDF 高度（默认 "2000"） |
-| param.colorPolicy | string | 否 | 颜色策略（默认 "mono"） |
+| 参数名            | 类型          | 必填 | 说明                    |
+| ----------------- | ------------- | ---- | ----------------------- |
+| file              | File          | 是   | 源文件                  |
+| param             | object/string | 否   | 转换参数                |
+| param.width       | string        | 否   | PDF 宽度（默认 "2000"） |
+| param.height      | string        | 否   | PDF 高度（默认 "2000"） |
+| param.colorPolicy | string        | 否   | 颜色策略（默认 "mono"） |
 
 **请求示例**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', sourceFile);
-formData.append('param', JSON.stringify({
-  width: "3000",
-  height: "3000",
-  colorPolicy: "mono"
-}));
+formData.append(
+  'param',
+  JSON.stringify({
+    width: '3000',
+    height: '3000',
+    colorPolicy: 'mono',
+  })
+);
 ```
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, 其他: 失败） |
-| file | string | 输出的 PDF 文件名 |
-| ret | string | 返回状态 "ok" 或 "failed" |
-| message | string | 可选，错误消息 |
+| 参数名  | 类型   | 说明                          |
+| ------- | ------ | ----------------------------- |
+| code    | number | 状态码（0: 成功, 其他: 失败） |
+| file    | string | 输出的 PDF 文件名             |
+| ret     | string | 返回状态 "ok" 或 "failed"     |
+| message | string | 可选，错误消息                |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -592,6 +623,7 @@ formData.append('param', JSON.stringify({
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -612,33 +644,38 @@ formData.append('param', JSON.stringify({
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 源文件 |
-| param | object/string | 是 | 打印参数 |
-| param.colorPolicy | string | 否 | 颜色策略（默认 "mono"） |
-| param.* | any | 否 | 其他打印参数 |
+| 参数名            | 类型          | 必填 | 说明                    |
+| ----------------- | ------------- | ---- | ----------------------- |
+| file              | File          | 是   | 源文件                  |
+| param             | object/string | 是   | 打印参数                |
+| param.colorPolicy | string        | 否   | 颜色策略（默认 "mono"） |
+| param.\*          | any           | 否   | 其他打印参数            |
 
 **请求示例**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', sourceFile);
-formData.append('param', JSON.stringify({
-  colorPolicy: "color",
-  paperSize: "A4"
-}));
+formData.append(
+  'param',
+  JSON.stringify({
+    colorPolicy: 'color',
+    paperSize: 'A4',
+  })
+);
 ```
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| file | string | 输出的 PDF 文件名 |
-| ret | string | 返回状态 "ok" 或 "failed" |
-| message | string | 可选，错误消息 |
+| 参数名  | 类型   | 说明                        |
+| ------- | ------ | --------------------------- |
+| code    | number | 状态码（0: 成功, -1: 失败） |
+| file    | string | 输出的 PDF 文件名           |
+| ret     | string | 返回状态 "ok" 或 "failed"   |
+| message | string | 可选，错误消息              |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -648,6 +685,7 @@ formData.append('param', JSON.stringify({
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -668,34 +706,39 @@ formData.append('param', JSON.stringify({
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 源文件 |
-| param | object/string | 是 | 裁剪参数 |
-| param.* | any | 是 | 裁剪区域等参数 |
+| 参数名   | 类型          | 必填 | 说明           |
+| -------- | ------------- | ---- | -------------- |
+| file     | File          | 是   | 源文件         |
+| param    | object/string | 是   | 裁剪参数       |
+| param.\* | any           | 是   | 裁剪区域等参数 |
 
 **请求示例**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', sourceFile);
-formData.append('param', JSON.stringify({
-  x: 0,
-  y: 0,
-  width: 1000,
-  height: 1000
-}));
+formData.append(
+  'param',
+  JSON.stringify({
+    x: 0,
+    y: 0,
+    width: 1000,
+    height: 1000,
+  })
+);
 ```
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| file | string | 输出的 DWG 文件名 |
-| ret | string | 返回状态 "ok" 或 "failed" |
-| message | string | 可选，错误消息 |
+| 参数名  | 类型   | 说明                        |
+| ------- | ------ | --------------------------- |
+| code    | number | 状态码（0: 成功, -1: 失败） |
+| file    | string | 输出的 DWG 文件名           |
+| ret     | string | 返回状态 "ok" 或 "failed"   |
+| message | string | 可选，错误消息              |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -705,6 +748,7 @@ formData.append('param', JSON.stringify({
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -725,34 +769,39 @@ formData.append('param', JSON.stringify({
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 源文件 |
-| param | object/string | 是 | 裁剪参数 |
-| param.* | any | 是 | 裁剪区域等参数 |
+| 参数名   | 类型          | 必填 | 说明           |
+| -------- | ------------- | ---- | -------------- |
+| file     | File          | 是   | 源文件         |
+| param    | object/string | 是   | 裁剪参数       |
+| param.\* | any           | 是   | 裁剪区域等参数 |
 
 **请求示例**:
+
 ```javascript
 const formData = new FormData();
 formData.append('file', sourceFile);
-formData.append('param', JSON.stringify({
-  x: 0,
-  y: 0,
-  width: 1000,
-  height: 1000
-}));
+formData.append(
+  'param',
+  JSON.stringify({
+    x: 0,
+    y: 0,
+    width: 1000,
+    height: 1000,
+  })
+);
 ```
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| file | string | 输出的 MXWEB 文件名 |
-| ret | string | 返回状态 "ok" 或 "failed" |
-| message | string | 可选，错误消息 |
+| 参数名  | 类型   | 说明                        |
+| ------- | ------ | --------------------------- |
+| code    | number | 状态码（0: 成功, -1: 失败） |
+| file    | string | 输出的 MXWEB 文件名         |
+| ret     | string | 返回状态 "ok" 或 "failed"   |
+| message | string | 可选，错误消息              |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -762,6 +811,7 @@ formData.append('param', JSON.stringify({
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -782,19 +832,20 @@ formData.append('param', JSON.stringify({
 
 **Content-Type**: `multipart/form-data`
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 图片文件 |
+| 参数名 | 类型 | 必填 | 说明     |
+| ------ | ---- | ---- | -------- |
+| file   | File | 是   | 图片文件 |
 
 #### 返回参数
 
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| code | number | 状态码（0: 成功, -1: 失败） |
-| message | string | 返回消息 |
-| file | string | 保存的文件名（UUID） |
+| 参数名  | 类型   | 说明                        |
+| ------- | ------ | --------------------------- |
+| code    | number | 状态码（0: 成功, -1: 失败） |
+| message | string | 返回消息                    |
+| file    | string | 保存的文件名（UUID）        |
 
 **返回示例（成功）**:
+
 ```json
 {
   "code": 0,
@@ -804,6 +855,7 @@ formData.append('param', JSON.stringify({
 ```
 
 **返回示例（失败）**:
+
 ```json
 {
   "code": -1,
@@ -827,8 +879,8 @@ const existResponse = await fetch('/mxcad/files/fileisExist', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     filename: file.name,
-    fileHash: fileHash
-  })
+    fileHash: fileHash,
+  }),
 });
 
 if (existResponse.ret === 'fileAlreadyExist') {
@@ -844,7 +896,7 @@ for (let i = 0; i < chunks; i++) {
   const start = i * chunkSize;
   const end = Math.min(start + chunkSize, file.size);
   const chunk = file.slice(start, end);
-  
+
   // 检查分片是否已存在
   const chunkExistResponse = await fetch('/mxcad/files/chunkisExist', {
     method: 'POST',
@@ -854,14 +906,14 @@ for (let i = 0; i < chunks; i++) {
       fileHash: fileHash,
       size: chunk.size,
       chunks: chunks,
-      fileName: file.name
-    })
+      fileName: file.name,
+    }),
   });
-  
+
   if (chunkExistResponse.ret === 'chunkAlreadyExist') {
     continue; // 跳过已存在的分片
   }
-  
+
   // 上传分片
   const formData = new FormData();
   formData.append('file', chunk);
@@ -870,10 +922,10 @@ for (let i = 0; i < chunks; i++) {
   formData.append('size', file.size);
   formData.append('chunk', i);
   formData.append('chunks', chunks);
-  
+
   await fetch('/mxcad/files/uploadFiles', {
     method: 'POST',
-    body: formData
+    body: formData,
   });
 }
 ```
@@ -892,15 +944,15 @@ for (let i = 0; i < chunks; i++) {
 
 ## 错误码说明
 
-| 错误码 | 说明 | 解决方案 |
-|--------|------|----------|
-| ok | 操作成功 | - |
-| errorparam | 参数错误 | 检查请求参数是否完整 |
-| chunkAlreadyExist | 分片已存在 | 跳过该分片，继续下一个 |
-| chunkNoExist | 分片不存在 | 重新上传该分片 |
-| fileAlreadyExist | 文件已存在 | 秒传成功，无需再次上传 |
-| fileNoExist | 文件不存在 | 需要上传文件 |
-| convertFileError | 文件转换错误 | 检查文件格式是否支持，或联系管理员 |
+| 错误码            | 说明         | 解决方案                           |
+| ----------------- | ------------ | ---------------------------------- |
+| ok                | 操作成功     | -                                  |
+| errorparam        | 参数错误     | 检查请求参数是否完整               |
+| chunkAlreadyExist | 分片已存在   | 跳过该分片，继续下一个             |
+| chunkNoExist      | 分片不存在   | 重新上传该分片                     |
+| fileAlreadyExist  | 文件已存在   | 秒传成功，无需再次上传             |
+| fileNoExist       | 文件不存在   | 需要上传文件                       |
+| convertFileError  | 文件转换错误 | 检查文件格式是否支持，或联系管理员 |
 
 ---
 
@@ -927,25 +979,25 @@ class FileUploader {
     this.concurrency = options.concurrency || 3; // 并发数
     this.baseUrl = options.baseUrl || '/mxcad';
   }
-  
+
   async calculateMD5() {
     // 使用 SparkMD5 或其他库计算 MD5
     return await md5(this.file);
   }
-  
+
   async checkFileExist(fileHash) {
     const response = await fetch(`${this.baseUrl}/files/fileisExist`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         filename: this.file.name,
-        fileHash: fileHash
-      })
+        fileHash: fileHash,
+      }),
     });
     const data = await response.json();
     return data.ret === 'fileAlreadyExist';
   }
-  
+
   async checkChunkExist(chunk, fileHash, chunks) {
     const response = await fetch(`${this.baseUrl}/files/chunkisExist`, {
       method: 'POST',
@@ -955,13 +1007,13 @@ class FileUploader {
         fileHash: fileHash,
         size: this.chunkSize,
         chunks: chunks,
-        fileName: this.file.name
-      })
+        fileName: this.file.name,
+      }),
     });
     const data = await response.json();
     return data.ret === 'chunkAlreadyExist';
   }
-  
+
   async uploadChunk(chunk, index, fileHash, totalChunks) {
     const formData = new FormData();
     formData.append('file', chunk);
@@ -970,50 +1022,50 @@ class FileUploader {
     formData.append('size', this.file.size);
     formData.append('chunk', index);
     formData.append('chunks', totalChunks);
-    
+
     const response = await fetch(`${this.baseUrl}/files/uploadFiles`, {
       method: 'POST',
-      body: formData
+      body: formData,
     });
     return await response.json();
   }
-  
+
   async upload(onProgress) {
     // 1. 计算文件哈希
     const fileHash = await this.calculateMD5();
-    
+
     // 2. 检查文件是否已存在
     if (await this.checkFileExist(fileHash)) {
       onProgress && onProgress(100);
       return { success: true, message: '文件已存在，秒传成功' };
     }
-    
+
     // 3. 分片上传
     const chunks = Math.ceil(this.file.size / this.chunkSize);
     const tasks = [];
-    
+
     for (let i = 0; i < chunks; i++) {
       const start = i * this.chunkSize;
       const end = Math.min(start + this.chunkSize, this.file.size);
       const chunk = this.file.slice(start, end);
-      
+
       tasks.push(async () => {
         // 检查分片是否已存在
         if (await this.checkChunkExist(i, fileHash, chunks)) {
           onProgress && onProgress(((i + 1) / chunks) * 100);
           return;
         }
-        
+
         // 上传分片
         const result = await this.uploadChunk(chunk, i, fileHash, chunks);
         onProgress && onProgress(((i + 1) / chunks) * 100);
         return result;
       });
     }
-    
+
     // 并发执行上传任务
     const results = await this.runConcurrent(tasks, this.concurrency);
-    
+
     // 检查最后一个结果
     const lastResult = results[results.length - 1];
     if (lastResult && lastResult.ret === 'ok') {
@@ -1022,25 +1074,25 @@ class FileUploader {
       return { success: false, message: '上传失败' };
     }
   }
-  
+
   async runConcurrent(tasks, concurrency) {
     const results = [];
     const executing = [];
-    
+
     for (const task of tasks) {
-      const promise = task().then(result => {
+      const promise = task().then((result) => {
         executing.splice(executing.indexOf(promise), 1);
         return result;
       });
-      
+
       results.push(promise);
       executing.push(promise);
-      
+
       if (executing.length >= concurrency) {
         await Promise.race(executing);
       }
     }
-    
+
     return Promise.all(results);
   }
 }
@@ -1049,7 +1101,7 @@ class FileUploader {
 const uploader = new FileUploader(file, {
   chunkSize: 2 * 1024 * 1024, // 2MB
   concurrency: 5,
-  baseUrl: '/mxcad'
+  baseUrl: '/mxcad',
 });
 
 await uploader.upload((progress) => {

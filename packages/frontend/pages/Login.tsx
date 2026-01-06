@@ -58,23 +58,30 @@ export const Login: React.FC = () => {
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        <div
+          className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: '1s' }}
+        />
       </div>
 
       <div className="max-w-md w-full relative z-10 animate-scale-in">
         {/* Logo 和标题 */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float">
-            <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="w-10 h-10 text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
           <h2 className="text-4xl font-bold text-slate-900 mb-2">
             <span className="text-gradient-primary">CloudCAD</span>
           </h2>
-          <p className="text-slate-600">
-            专业云端 CAD 图纸管理平台
-          </p>
+          <p className="text-slate-600">专业云端 CAD 图纸管理平台</p>
         </div>
 
         {/* 登录卡片 */}
@@ -83,7 +90,13 @@ export const Login: React.FC = () => {
             {error && (
               <div className="rounded-xl bg-error-50 border border-error-200 p-4 animate-slide-up">
                 <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-error-600 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="w-5 h-5 text-error-600 mt-0.5 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -95,11 +108,20 @@ export const Login: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="account" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="account"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   邮箱或用户名
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
@@ -118,11 +140,20 @@ export const Login: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   密码
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>

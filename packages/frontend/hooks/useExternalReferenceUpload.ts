@@ -23,7 +23,7 @@ export const useExternalReferenceUpload = (
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<ExternalReferenceFile[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // 使用 ref 存储 nodeId，确保闭包中始终使用最新值
   const nodeIdRef = useRef(config.nodeId);
   nodeIdRef.current = config.nodeId;
@@ -279,9 +279,15 @@ export const useExternalReferenceUpload = (
         } else {
           // DWG 外部参照：使用 DWG 外部参照上传接口
           console.log('[useExternalReferenceUpload] 使用 DWG 外部参照上传接口');
-          console.log('[useExternalReferenceUpload] config.fileHash =', config.fileHash);
-          console.log('[useExternalReferenceUpload] fileInfo.name =', fileInfo.name);
-          
+          console.log(
+            '[useExternalReferenceUpload] config.fileHash =',
+            config.fileHash
+          );
+          console.log(
+            '[useExternalReferenceUpload] fileInfo.name =',
+            fileInfo.name
+          );
+
           await mxcadApi.uploadExtReferenceDwg(
             fileInfo.source,
             config.fileHash,
@@ -419,17 +425,23 @@ export const useExternalReferenceUpload = (
             existingFile.source = file;
             existingFile.uploadState = 'notSelected';
             matchedCount++;
-            console.log(`[useExternalReferenceUpload] 匹配文件: ${file.name}, 设置 source`);
+            console.log(
+              `[useExternalReferenceUpload] 匹配文件: ${file.name}, 设置 source`
+            );
           } else {
-            console.warn(`[useExternalReferenceUpload] 未找到匹配的缺失文件: ${file.name}`);
+            console.warn(
+              `[useExternalReferenceUpload] 未找到匹配的缺失文件: ${file.name}`
+            );
           }
         });
-        console.log(`[useExternalReferenceUpload] 匹配了 ${matchedCount}/${selectedFiles.length} 个文件`);
+        console.log(
+          `[useExternalReferenceUpload] 匹配了 ${matchedCount}/${selectedFiles.length} 个文件`
+        );
         return newFiles;
       });
 
       // 等待状态更新后再开始上传
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // 自动开始上传
       console.log('[useExternalReferenceUpload] 自动开始上传');

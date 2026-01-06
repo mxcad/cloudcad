@@ -12,9 +12,13 @@ interface ProjectFormData {
   description: string;
 }
 
-export function useProjectManagement(options: UseProjectManagementOptions = {}) {
+export function useProjectManagement(
+  options: UseProjectManagementOptions = {}
+) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<FileSystemNode | null>(null);
+  const [editingProject, setEditingProject] = useState<FileSystemNode | null>(
+    null
+  );
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
     description: '',
@@ -43,7 +47,9 @@ export function useProjectManagement(options: UseProjectManagementOptions = {}) 
   }, []);
 
   const handleCreate = useCallback(
-    async (createProject: (name: string, description: string) => Promise<void>) => {
+    async (
+      createProject: (name: string, description: string) => Promise<void>
+    ) => {
       if (!formData.name.trim()) return;
 
       setLoading(true);
@@ -60,7 +66,10 @@ export function useProjectManagement(options: UseProjectManagementOptions = {}) 
 
   const handleUpdate = useCallback(
     async (
-      updateProject: (id: string, data: { name: string; description?: string }) => Promise<void>
+      updateProject: (
+        id: string,
+        data: { name: string; description?: string }
+      ) => Promise<void>
     ) => {
       if (!editingProject || !formData.name.trim()) return;
 
@@ -84,7 +93,9 @@ export function useProjectManagement(options: UseProjectManagementOptions = {}) 
       project: FileSystemNode,
       deleteProject: (id: string, name: string) => Promise<void>
     ) => {
-      if (window.confirm(`确定要删除项目"${project.name}"吗？此操作不可恢复。`)) {
+      if (
+        window.confirm(`确定要删除项目"${project.name}"吗？此操作不可恢复。`)
+      ) {
         await deleteProject(project.id, project.name);
         options.onProjectDeleted?.();
       }

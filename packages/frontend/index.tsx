@@ -10,7 +10,6 @@ import './styles/app.css';
 // 在应用启动时设置全局认证
 setupGlobalAuth();
 
-
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Could not find root element to mount to');

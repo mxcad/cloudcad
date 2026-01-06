@@ -142,22 +142,22 @@ export const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-if (!validateForm()) {
-return;
+    if (!validateForm()) {
+      return;
     }
 
     setLoading(true);
     setError(null);
 
     try {
-await registerUser(formData);
-// 跳转到邮箱验证页面
+      await registerUser(formData);
+      // 跳转到邮箱验证页面
       navigate('/verify-email', {
         state: { email: formData.email },
         replace: true,
       });
     } catch (err: any) {
-setError(err.response?.data?.message || '注册失败，请稍后重试');
+      setError(err.response?.data?.message || '注册失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -168,23 +168,30 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        <div
+          className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: '1s' }}
+        />
       </div>
 
       <div className="max-w-md w-full relative z-10 animate-scale-in">
         {/* Logo 和标题 */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float">
-            <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="w-10 h-10 text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
           <h2 className="text-4xl font-bold text-slate-900 mb-2">
             <span className="text-gradient-primary">CloudCAD</span>
           </h2>
-          <p className="text-slate-600">
-            创建您的账户，开启云端 CAD 之旅
-          </p>
+          <p className="text-slate-600">创建您的账户，开启云端 CAD 之旅</p>
         </div>
 
         {/* 注册卡片 */}
@@ -193,7 +200,13 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
             {error && (
               <div className="rounded-xl bg-error-50 border border-error-200 p-4 animate-slide-up">
                 <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-error-600 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="w-5 h-5 text-error-600 mt-0.5 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -205,11 +218,20 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   用户名 <span className="text-error-500">*</span>
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
@@ -219,7 +241,9 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                     type="text"
                     required
                     className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
-                      fieldErrors.username ? 'border-error-500' : 'border-slate-200'
+                      fieldErrors.username
+                        ? 'border-error-500'
+                        : 'border-slate-200'
                     } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
                     placeholder="请输入用户名"
                     value={formData.username}
@@ -229,7 +253,13 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                 </div>
                 {fieldErrors.username && (
                   <p className="mt-1.5 text-sm text-error-600 flex items-center gap-1">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <circle cx="12" cy="12" r="10" />
                       <line x1="12" y1="8" x2="12" y2="12" />
                       <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -240,11 +270,20 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
               </div>
 
               <div>
-                <label htmlFor="nickname" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="nickname"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   昵称
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
@@ -253,7 +292,9 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                     name="nickname"
                     type="text"
                     className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
-                      fieldErrors.nickname ? 'border-error-500' : 'border-slate-200'
+                      fieldErrors.nickname
+                        ? 'border-error-500'
+                        : 'border-slate-200'
                     } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
                     placeholder="请输入昵称（可选）"
                     value={formData.nickname || ''}
@@ -262,16 +303,27 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                   />
                 </div>
                 {fieldErrors.nickname && (
-                  <p className="mt-1.5 text-sm text-error-600">{fieldErrors.nickname}</p>
+                  <p className="mt-1.5 text-sm text-error-600">
+                    {fieldErrors.nickname}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   邮箱地址 <span className="text-error-500">*</span>
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
@@ -282,7 +334,9 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                     autoComplete="email"
                     required
                     className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
-                      fieldErrors.email ? 'border-error-500' : 'border-slate-200'
+                      fieldErrors.email
+                        ? 'border-error-500'
+                        : 'border-slate-200'
                     } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
                     placeholder="请输入邮箱地址"
                     value={formData.email}
@@ -291,16 +345,27 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                   />
                 </div>
                 {fieldErrors.email && (
-                  <p className="mt-1.5 text-sm text-error-600">{fieldErrors.email}</p>
+                  <p className="mt-1.5 text-sm text-error-600">
+                    {fieldErrors.email}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   密码 <span className="text-error-500">*</span>
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
@@ -311,7 +376,9 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                     autoComplete="new-password"
                     required
                     className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
-                      fieldErrors.password ? 'border-error-500' : 'border-slate-200'
+                      fieldErrors.password
+                        ? 'border-error-500'
+                        : 'border-slate-200'
                     } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
                     placeholder="至少8位，包含大小写字母、数字和特殊字符"
                     value={formData.password}
@@ -320,16 +387,27 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                   />
                 </div>
                 {fieldErrors.password && (
-                  <p className="mt-1.5 text-sm text-error-600">{fieldErrors.password}</p>
+                  <p className="mt-1.5 text-sm text-error-600">
+                    {fieldErrors.password}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
                   确认密码 <span className="text-error-500">*</span>
                 </label>
                 <div className="relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
@@ -340,7 +418,9 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                     autoComplete="new-password"
                     required
                     className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
-                      fieldErrors.confirmPassword ? 'border-error-500' : 'border-slate-200'
+                      fieldErrors.confirmPassword
+                        ? 'border-error-500'
+                        : 'border-slate-200'
                     } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
                     placeholder="请再次输入密码"
                     value={confirmPassword}
@@ -349,7 +429,9 @@ setError(err.response?.data?.message || '注册失败，请稍后重试');
                   />
                 </div>
                 {fieldErrors.confirmPassword && (
-                  <p className="mt-1.5 text-sm text-error-600">{fieldErrors.confirmPassword}</p>
+                  <p className="mt-1.5 text-sm text-error-600">
+                    {fieldErrors.confirmPassword}
+                  </p>
                 )}
               </div>
             </div>

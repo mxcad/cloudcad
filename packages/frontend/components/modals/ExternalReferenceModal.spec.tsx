@@ -91,12 +91,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={successFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={successFiles} />);
 
     const successMessage = screen.getByText('所有外部参照文件上传成功');
     expect(successMessage).not.toBeNull();
@@ -111,12 +106,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={failFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={failFiles} />);
 
     const failMessage = screen.getByText(/部分文件上传失败/);
     expect(failMessage).not.toBeNull();
@@ -138,12 +128,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={uploadingFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={uploadingFiles} />);
 
     const statusText = screen.getByText('上传中');
     expect(statusText).not.toBeNull();
@@ -161,12 +146,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={successFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={successFiles} />);
 
     const selectButton = screen.getByText('选择文件');
     expect(selectButton.getAttribute('disabled')).toBe('');
@@ -181,12 +161,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={uploadingFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={uploadingFiles} />);
 
     const selectButton = screen.getByText('选择文件');
     expect(selectButton.getAttribute('disabled')).toBe('');
@@ -201,12 +176,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={successFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={successFiles} />);
 
     const statusText = screen.getByText('上传成功');
     expect(statusText).not.toBeNull();
@@ -224,12 +194,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={failFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={failFiles} />);
 
     const statusText = screen.getByText('上传失败');
     expect(statusText).not.toBeNull();
@@ -239,12 +204,7 @@ describe('ExternalReferenceModal', () => {
   });
 
   it('应该在 loading 时禁用取消和稍后上传按钮', () => {
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        loading={true}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} loading={true} />);
 
     const cancelButton = screen.getByRole('button', { name: /取消/ });
     expect(cancelButton.getAttribute('disabled')).toBe('');
@@ -262,12 +222,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={uploadingFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={uploadingFiles} />);
 
     const uploadingText = screen.getByText('正在上传...');
     expect(uploadingText).not.toBeNull();
@@ -287,12 +242,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={mixedFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={mixedFiles} />);
 
     const failMessage = screen.getByText(/部分文件上传失败/);
     expect(failMessage).not.toBeNull();
@@ -300,29 +250,34 @@ describe('ExternalReferenceModal', () => {
 
   it('应该正确显示文件数量', () => {
     const files: ExternalReferenceFile[] = [
-      { name: 'test1.dwg', type: 'ref', uploadState: 'notSelected', progress: 0 },
-      { name: 'test2.dwg', type: 'ref', uploadState: 'notSelected', progress: 0 },
-      { name: 'test3.dwg', type: 'ref', uploadState: 'notSelected', progress: 0 },
+      {
+        name: 'test1.dwg',
+        type: 'ref',
+        uploadState: 'notSelected',
+        progress: 0,
+      },
+      {
+        name: 'test2.dwg',
+        type: 'ref',
+        uploadState: 'notSelected',
+        progress: 0,
+      },
+      {
+        name: 'test3.dwg',
+        type: 'ref',
+        uploadState: 'notSelected',
+        progress: 0,
+      },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={files}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={files} />);
 
     const warningText = screen.getByText(/检测到 3 个缺失的外部参照文件/);
     expect(warningText).not.toBeNull();
   });
 
   it('应该在无文件时正确显示', () => {
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={[]}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={[]} />);
 
     const warningText = screen.getByText(/检测到 0 个缺失的外部参照文件/);
     expect(warningText).not.toBeNull();
@@ -346,12 +301,7 @@ describe('ExternalReferenceModal', () => {
       },
     ];
 
-    render(
-      <ExternalReferenceModal
-        {...defaultProps}
-        files={successFiles}
-      />
-    );
+    render(<ExternalReferenceModal {...defaultProps} files={successFiles} />);
 
     expect(document.querySelector('.text-green-500')).not.toBeNull();
   });

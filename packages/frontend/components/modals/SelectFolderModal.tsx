@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Folder, ChevronRight, ChevronDown, Check, Home, Loader2 } from 'lucide-react';
+import {
+  Folder,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  Home,
+  Loader2,
+} from 'lucide-react';
 import { projectsApi } from '../../services/apiService';
 import { FileSystemNode } from '../../types/filesystem';
 
@@ -39,31 +46,31 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const [projectName, setProjectName] = useState<string>('');
 
   // 懒加载子文件夹
-  const loadChildren = useCallback(async (
-    nodeId: string,
-    excludeNodeId: string
-  ): Promise<FolderNode[]> => {
-    try {
-      const childrenResponse = await projectsApi.getChildren(nodeId);
-      const children = childrenResponse.data || [];
+  const loadChildren = useCallback(
+    async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
+      try {
+        const childrenResponse = await projectsApi.getChildren(nodeId);
+        const children = childrenResponse.data || [];
 
-      // 过滤出文件夹，并排除当前节点及其子节点
-      const folders = children
-        .filter((child) => child.isFolder && child.id !== excludeNodeId)
-        .map((folder) => ({
-          ...folder,
-          expanded: false,
-          children: [],
-          loading: false,
-          hasChildren: true,
-        }));
+        // 过滤出文件夹，并排除当前节点及其子节点
+        const folders = children
+          .filter((child) => child.isFolder && child.id !== excludeNodeId)
+          .map((folder) => ({
+            ...folder,
+            expanded: false,
+            children: [],
+            loading: false,
+            hasChildren: true,
+          }));
 
-      return folders;
-    } catch (err) {
-      console.error('[SelectFolderModal] 加载子文件夹失败:', err);
-      return [];
-    }
-  }, []);
+        return folders;
+      } catch (err) {
+        console.error('[SelectFolderModal] 加载子文件夹失败:', err);
+        return [];
+      }
+    },
+    []
+  );
 
   // 加载项目根文件夹
   const loadFolderTree = useCallback(async () => {
@@ -131,7 +138,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
           if (node.id === nodeId) {
             // 如果是展开操作且子文件夹未加载，则懒加载
-            if (!node.expanded && (!node.children || node.children.length === 0)) {
+            if (
+              !node.expanded &&
+              (!node.children || node.children.length === 0)
+            ) {
               const updatedNode = { ...node, loading: true };
               nodes[i] = updatedNode;
               setFolderTree([...nodes]);
@@ -187,9 +197,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       <div key={node.id}>
         <div
           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200
-            ${selectedFolderId === node.id
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-              : 'hover:bg-slate-50 border border-transparent'
+            ${
+              selectedFolderId === node.id
+                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                : 'hover:bg-slate-50 border border-transparent'
             }
           `}
           style={{ paddingLeft: `${level * 20 + 8}px` }}
@@ -292,7 +303,9 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {projectName && (
           <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
             <Folder size={16} className="text-amber-500" />
-            <span className="text-sm font-medium text-slate-700">{projectName}</span>
+            <span className="text-sm font-medium text-slate-700">
+              {projectName}
+            </span>
             <span className="text-xs text-slate-500 ml-auto">项目根目录</span>
           </div>
         )}

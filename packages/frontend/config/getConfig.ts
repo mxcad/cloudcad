@@ -1,4 +1,3 @@
-
 ///////////////////////////////////////////////////////////////////////////////
 //版权所有（C）2002-2022，成都梦想凯德科技有限公司。
 //本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
@@ -6,17 +5,17 @@
 //https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-const configMap = new Map()
-export const getConfig = async <T = object>(url: string)=> {
-  if(configMap.has(url)) {
-    return configMap.get(url) as T
-  }else {
+const configMap = new Map();
+export const getConfig = async <T = object>(url: string) => {
+  if (configMap.has(url)) {
+    return configMap.get(url) as T;
+  } else {
     try {
-      const config = await (await fetch(url)).json()
-      configMap.set(url, config)
-      return config as T
-    } catch(e) {
+      const config = await (await fetch(url)).json();
+      configMap.set(url, config);
+      return config as T;
+    } catch (e) {
       // 静默处理配置获取错误
     }
   }
-}
+};

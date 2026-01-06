@@ -147,7 +147,6 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-
       // 检查是否应该阻止点击（例如：刚从菜单操作返回）
       if (blockItemClickRef.current) {
         console.log('[FileItem] 阻止文件项点击');

@@ -97,7 +97,10 @@ export interface ExternalReferenceStats {
 **文件位置**：`packages/backend/src/mxcad/services/file-conversion.service.ts`
 
 ```typescript
-import { ExternalReferenceStats, ExternalReferenceInfo } from '../types/external-reference.types';
+import {
+  ExternalReferenceStats,
+  ExternalReferenceInfo,
+} from '../types/external-reference.types';
 
 @Injectable()
 export class FileConversionService implements IFileConversionService {
@@ -110,11 +113,13 @@ export class FileConversionService implements IFileConversionService {
     try {
       const fs = require('fs');
       const path = require('path');
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
 
       const files = await fs.promises.readdir(uploadPath);
-      const preloadingFile = files.find(file => 
-        file.startsWith(fileHash) && file.endsWith('_preloading.json')
+      const preloadingFile = files.find(
+        (file) => file.startsWith(fileHash) && file.endsWith('_preloading.json')
       );
 
       if (!preloadingFile) {
@@ -140,7 +145,9 @@ export class FileConversionService implements IFileConversionService {
     try {
       const fs = require('fs');
       const path = require('path');
-      const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, fileHash);
 
       if (!fs.existsSync(hashDir)) {
@@ -149,8 +156,8 @@ export class FileConversionService implements IFileConversionService {
 
       const files = await fs.promises.readdir(hashDir);
       const baseName = path.basename(fileName, path.extname(fileName));
-      
-      return files.some(file => {
+
+      return files.some((file) => {
         const fileBaseName = path.basename(file, path.extname(file));
         return fileBaseName === baseName;
       });
@@ -163,7 +170,9 @@ export class FileConversionService implements IFileConversionService {
   /**
    * 获取外部参照统计信息
    */
-  async getExternalReferenceStats(fileHash: string): Promise<ExternalReferenceStats> {
+  async getExternalReferenceStats(
+    fileHash: string
+  ): Promise<ExternalReferenceStats> {
     const preloadingData = await this.parsePreloadingData(fileHash);
 
     if (!preloadingData) {
@@ -205,7 +214,7 @@ export class FileConversionService implements IFileConversionService {
       });
     }
 
-    const missingCount = references.filter(ref => !ref.exists).length;
+    const missingCount = references.filter((ref) => !ref.exists).length;
 
     return {
       hasMissing: missingCount > 0,
@@ -299,9 +308,9 @@ async getExternalReferences(
 
   try {
     const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
-    
+
     this.logger.log(`[getExternalReferences] 检查结果: 缺失=${stats.missingCount}, 总数=${stats.totalCount}`);
-    
+
     return res.json(stats);
   } catch (error) {
     this.logger.error(`[getExternalReferences] 获取失败: ${error.message}`);
@@ -334,9 +343,9 @@ async refreshExternalReferences(
   try {
     const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
     await this.mxCadService.updateExternalReferenceInfo(fileHash, stats);
-    
+
     this.logger.log(`[refreshExternalReferences] 刷新成功: ${fileHash}`);
-    
+
     return res.json({
       code: 0,
       message: '刷新成功',
@@ -364,7 +373,7 @@ async createOrReferenceNode(options: CreateNodeOptions): Promise<FileSystemNode>
   if (!options.isFolder && options.fileHash) {
     try {
       const stats = await this.fileConversionService.getExternalReferenceStats(options.fileHash);
-      
+
       if (stats.totalCount > 0) {
         await this.prisma.fileSystemNode.update({
           where: { id: node.id },
@@ -374,7 +383,7 @@ async createOrReferenceNode(options: CreateNodeOptions): Promise<FileSystemNode>
             externalReferencesJson: JSON.stringify(stats.references),
           },
         });
-        
+
         this.logger.log(
           `节点创建时更新外部参照信息: ${options.originalName}, 缺失数量: ${stats.missingCount}`
         );
@@ -404,13 +413,15 @@ describe('External Reference Tracking', () => {
     };
 
     // Mock 文件系统操作
-    jest.spyOn(fs.promises, 'readdir').mockResolvedValue([
-      'testhash123.dwg.mxweb',
-      'testhash123.dwg.mxweb_preloading.json',
-    ]);
-    jest.spyOn(fs.promises, 'readFile').mockResolvedValue(
-      JSON.stringify(mockPreloadingData)
-    );
+    jest
+      .spyOn(fs.promises, 'readdir')
+      .mockResolvedValue([
+        'testhash123.dwg.mxweb',
+        'testhash123.dwg.mxweb_preloading.json',
+      ]);
+    jest
+      .spyOn(fs.promises, 'readFile')
+      .mockResolvedValue(JSON.stringify(mockPreloadingData));
 
     const result = await service.parsePreloadingData('testhash123');
 
@@ -425,14 +436,16 @@ describe('External Reference Tracking', () => {
       externalReference: ['ref1.dwg', 'ref2.dwg'],
     };
 
-    jest.spyOn(fs.promises, 'readdir').mockResolvedValue([
-      'testhash123.dwg.mxweb',
-      'testhash123.dwg.mxweb_preloading.json',
-      'ref1.dwg.mxweb',
-    ]);
-    jest.spyOn(fs.promises, 'readFile').mockResolvedValue(
-      JSON.stringify(mockPreloadingData)
-    );
+    jest
+      .spyOn(fs.promises, 'readdir')
+      .mockResolvedValue([
+        'testhash123.dwg.mxweb',
+        'testhash123.dwg.mxweb_preloading.json',
+        'ref1.dwg.mxweb',
+      ]);
+    jest
+      .spyOn(fs.promises, 'readFile')
+      .mockResolvedValue(JSON.stringify(mockPreloadingData));
     jest.spyOn(fs, 'existsSync').mockReturnValue(true);
 
     const stats = await service.getExternalReferenceStats('testhash123');

@@ -32,7 +32,11 @@ const setupXHR = (): void => {
   originalXHROpen = XMLHttpRequest.prototype.open;
   originalXHRSend = XMLHttpRequest.prototype.send;
 
-  XMLHttpRequest.prototype.open = function (method: string, url: string | URL, ...args: any[]) {
+  XMLHttpRequest.prototype.open = function (
+    method: string,
+    url: string | URL,
+    ...args: any[]
+  ) {
     (this as any)._url = url.toString();
     (this as any)._method = method.toUpperCase();
     return originalXHROpen!.call(this, method, url, ...args);
@@ -42,7 +46,7 @@ const setupXHR = (): void => {
     const url = (this as any)._url;
     if (needsAuth(url)) {
       const token = localStorage.getItem('accessToken');
-      
+
       // 检查是否已存在 Authorization header，避免重复
       const existingAuth = this.getRequestHeader?.('Authorization');
       if (!existingAuth && token) {
@@ -57,7 +61,10 @@ const setupXHR = (): void => {
 const setupFetch = (): void => {
   originalFetch = window.fetch;
 
-  window.fetch = function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  window.fetch = function (
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> {
     const urlString = typeof input === 'string' ? input : input.toString();
     if (needsAuth(urlString)) {
       const token = localStorage.getItem('accessToken');

@@ -48,7 +48,7 @@ interface ExternalReferenceModalProps {
 
 /**
  * 外部参照上传模态框组件
- * 
+ *
  * 功能：
  * - 显示缺失的外部参照列表
  * - 显示上传进度和状态

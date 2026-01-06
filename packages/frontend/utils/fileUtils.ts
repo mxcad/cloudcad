@@ -2,11 +2,11 @@ import { FileSystemNode } from '../types/filesystem';
 
 export const formatFileSize = (bytes: number | null | undefined): string => {
   if (!bytes) return '-';
-  
+
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
@@ -14,9 +14,9 @@ export const getFileIcon = (node: FileSystemNode) => {
   if (node.isFolder) {
     return '📁';
   }
-  
+
   const extension = node.extension?.toLowerCase() || '';
-  
+
   switch (extension) {
     case '.dwg':
       return '📐';
@@ -77,6 +77,7 @@ export const getThumbnailUrl = (node: FileSystemNode): string => {
   }
 
   // 使用后端代理 URL（通过 Session 认证）
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
   return `${apiBaseUrl}/file-system/nodes/${node.id}/thumbnail`;
 };

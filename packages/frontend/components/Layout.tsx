@@ -180,7 +180,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 <span className="text-gradient-primary">CloudCAD</span>
               </span>
             </div>
-            <button className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors" onClick={() => setSidebarOpen(false)}>
+            <button
+              className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              onClick={() => setSidebarOpen(false)}
+            >
               <X size={20} className="text-slate-500" />
             </button>
           </div>

@@ -100,7 +100,7 @@ import type {
 
 /**
  * MxCAD 外部参照上传 Hook
- * 
+ *
  * 功能：
  * - 检测缺失的外部参照
  * - 上传外部参照文件
@@ -117,15 +117,19 @@ export const useExternalReferenceUpload = (
   /**
    * 获取预加载数据
    */
-  const fetchPreloadingData = useCallback(async (): Promise<PreloadingData | null> => {
-    try {
-      const response = await mxcadApi.getPreloadingData(config.fileHash);
-      return response.data;
-    } catch (error) {
-      console.error('[useExternalReferenceUpload] 获取预加载数据失败:', error);
-      return null;
-    }
-  }, [config.fileHash]);
+  const fetchPreloadingData =
+    useCallback(async (): Promise<PreloadingData | null> => {
+      try {
+        const response = await mxcadApi.getPreloadingData(config.fileHash);
+        return response.data;
+      } catch (error) {
+        console.error(
+          '[useExternalReferenceUpload] 获取预加载数据失败:',
+          error
+        );
+        return null;
+      }
+    }, [config.fileHash]);
 
   /**
    * 检查外部参照是否存在
@@ -294,7 +298,8 @@ export const useExternalReferenceUpload = (
           fileInfo.name,
           (progressEvent) => {
             if (progressEvent.total) {
-              const progress = (progressEvent.loaded / progressEvent.total) * 100;
+              const progress =
+                (progressEvent.loaded / progressEvent.total) * 100;
               setFiles((prevFiles) =>
                 prevFiles.map((f) =>
                   f.name === fileInfo.name ? { ...f, progress } : f
@@ -315,7 +320,10 @@ export const useExternalReferenceUpload = (
 
         console.log(`[useExternalReferenceUpload] 上传成功: ${fileInfo.name}`);
       } catch (error) {
-        console.error(`[useExternalReferenceUpload] 上传失败: ${fileInfo.name}`, error);
+        console.error(
+          `[useExternalReferenceUpload] 上传失败: ${fileInfo.name}`,
+          error
+        );
         config.onError?.(`上传 ${fileInfo.name} 失败`);
 
         // 更新状态为失败
@@ -430,7 +438,9 @@ describe('useExternalReferenceUpload', () => {
       data: mockPreloadingData,
     } as any);
 
-    vi.mocked(apiService.mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+    vi.mocked(
+      apiService.mxcadApi.checkExternalReferenceExists
+    ).mockResolvedValue({
       data: { exists: false },
     } as any);
 
@@ -485,7 +495,9 @@ describe('useExternalReferenceUpload', () => {
     );
 
     // 模拟文件选择
-    const mockFile = new File(['content'], 'ref1.dwg', { type: 'application/octet-stream' });
+    const mockFile = new File(['content'], 'ref1.dwg', {
+      type: 'application/octet-stream',
+    });
     const mockFiles = [mockFile];
 
     // Mock input 元素

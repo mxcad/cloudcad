@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { mxcadManager } from '../services/mxcadManager';
 import { useFileInfo } from './useMxCadEditor';
-import { Logger, ErrorHandler, FileStatusHelper, UrlHelper, ValidationHelper } from '../utils/mxcadUtils';
+import {
+  Logger,
+  ErrorHandler,
+  FileStatusHelper,
+  UrlHelper,
+  ValidationHelper,
+} from '../utils/mxcadUtils';
 
 /**
  * MxCAD 实例管理 Hook
@@ -13,15 +19,22 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
   const initializeMxCAD = async () => {
     try {
       Logger.info('初始化 MxCADView（永不销毁容器）');
-      
+
       const isFirstInit = !mxcadManager.isReady();
       let resolvedFileUrl: string | undefined;
 
-      if (isFirstInit && initialFileUrl && ValidationHelper.isValidNodeId(initialFileUrl)) {
+      if (
+        isFirstInit &&
+        initialFileUrl &&
+        ValidationHelper.isValidNodeId(initialFileUrl)
+      ) {
         try {
           const fileInfo = await getFileInfo(initialFileUrl);
           if (fileInfo?.fileHash) {
-            resolvedFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.fileHash, fileInfo.originalName);
+            resolvedFileUrl = UrlHelper.buildMxCadFileUrl(
+              fileInfo.fileHash,
+              fileInfo.originalName
+            );
             Logger.info('首次初始化，准备打开文件', { url: resolvedFileUrl });
           }
         } catch (error) {
@@ -30,11 +43,11 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
       }
 
       const view = await mxcadManager.initializeMxCADView(resolvedFileUrl);
-  
+
       setIsMxCADReady(true);
-      
+
       Logger.success('MxCADView 初始化完成');
-      
+
       if (isFirstInit && resolvedFileUrl) {
         Logger.info('首次初始化文件已处理，跳过后续文件切换逻辑');
       }
@@ -78,7 +91,9 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
 
       // 检查文件状态
       if (!FileStatusHelper.canOpen(fileInfo.fileStatus)) {
-        const statusText = FileStatusHelper.getStatusText(fileInfo.fileStatus || '');
+        const statusText = FileStatusHelper.getStatusText(
+          fileInfo.fileStatus || ''
+        );
         Logger.error('文件尚未转换完成', { status: fileInfo.fileStatus });
         alert(`文件状态: ${statusText}`);
         return;
@@ -90,25 +105,31 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
         return;
       }
 
-      const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.fileHash, fileInfo.originalName);
+      const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(
+        fileInfo.fileHash,
+        fileInfo.originalName
+      );
       const targetFileName = `${fileInfo.fileHash}.mxweb`;
-      
-      Logger.info('准备打开文件', { 
-        url: mxcadFileUrl, 
+
+      Logger.info('准备打开文件', {
+        url: mxcadFileUrl,
         originalName: fileInfo.originalName,
         fileHash: fileInfo.fileHash,
-        targetFileName
+        targetFileName,
       });
-      
+
       // 检查是否已有打开的文件
       const currentFileName = mxcadManager.getCurrentFileName();
       if (currentFileName && currentFileName.includes(targetFileName)) {
-        Logger.success('目标文件已打开，跳过重复操作', { currentFileName, targetFileName });
+        Logger.success('目标文件已打开，跳过重复操作', {
+          currentFileName,
+          targetFileName,
+        });
         return;
       }
-      
+
       Logger.info('MxCADView 状态检查通过，开始打开文件');
-      
+
       // 第二次打开文件需要调用 openFile 方法
       await mxcadManager.openFile(mxcadFileUrl);
       Logger.success('第二次打开文件命令已执行');

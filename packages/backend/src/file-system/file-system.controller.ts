@@ -224,7 +224,7 @@ export class FileSystemController {
 
     return this.fileSystemService.uploadFile(req.user.id, parentId, mockFile);
   }
-  
+
   @Get('storage')
   @ApiResponse({ status: 200, description: '获取存储空间信息成功' })
   async getStorageInfo(@Request() req) {

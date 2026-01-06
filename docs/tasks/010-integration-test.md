@@ -52,7 +52,8 @@ describe('MxCAD External Reference Integration', () => {
 
     beforeAll(() => {
       // 创建测试文件和预加载数据
-      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, testFileHash);
 
       if (!fs.existsSync(hashDir)) {
@@ -75,7 +76,8 @@ describe('MxCAD External Reference Integration', () => {
 
     afterAll(() => {
       // 清理测试文件
-      const uploadPath = process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
       const hashDir = path.join(uploadPath, testFileHash);
 
       if (fs.existsSync(hashDir)) {
@@ -108,7 +110,7 @@ describe('MxCAD External Reference Integration', () => {
 
     it('应该成功上传外部参照 DWG', async () => {
       const testFilePath = path.join(__dirname, 'fixtures', 'test_ref.dwg');
-      
+
       // 创建测试文件
       if (!fs.existsSync(testFilePath)) {
         fs.writeFileSync(testFilePath, 'test content');
@@ -143,7 +145,7 @@ describe('MxCAD External Reference Integration', () => {
 
     it('应该拒绝无效的外部参照文件', async () => {
       const testFilePath = path.join(__dirname, 'fixtures', 'test_invalid.dwg');
-      
+
       if (!fs.existsSync(testFilePath)) {
         fs.writeFileSync(testFilePath, 'test content');
       }
@@ -417,14 +419,19 @@ test.describe('外部参照上传 E2E 测试', () => {
     await file?.click();
 
     // 选择测试文件
-    await page.setInputFiles('input[type="file"]', 'test/fixtures/test_with_references.dwg');
+    await page.setInputFiles(
+      'input[type="file"]',
+      'test/fixtures/test_with_references.dwg'
+    );
 
     // 等待上传完成
     await page.waitForSelector('text=文件上传成功');
 
     // 验证外部参照检测模态框显示
     await expect(page.locator('text=上传外部参照文件')).toBeVisible();
-    await expect(page.locator('text=/检测到.*个缺失的外部参照文件/')).toBeVisible();
+    await expect(
+      page.locator('text=/检测到.*个缺失的外部参照文件/')
+    ).toBeVisible();
   });
 
   test('应该支持跳过外部参照上传', async ({ page }) => {
@@ -472,18 +479,18 @@ test.describe('外部参照上传 E2E 测试', () => {
 
 ### 4. 测试场景清单
 
-| 场景 | 描述 | 优先级 |
-|------|------|--------|
-| 场景 1 | 上传有外部参照的文件，自动检测 | 高 |
-| 场景 2 | 立即上传所有外部参照 | 高 |
-| 场景 3 | 跳过外部参照上传 | 高 |
-| 场景 4 | 从文件列表上传外部参照 | 高 |
-| 场景 5 | 从操作菜单上传外部参照 | 中 |
-| 场景 6 | 无缺失外部参照时不显示警告 | 中 |
-| 场景 7 | 上传失败时显示错误提示 | 中 |
-| 场景 8 | 部分文件上传失败的处理 | 中 |
-| 场景 9 | 并发上传多个外部参照 | 低 |
-| 场景 10 | 大文件上传性能测试 | 低 |
+| 场景    | 描述                           | 优先级 |
+| ------- | ------------------------------ | ------ |
+| 场景 1  | 上传有外部参照的文件，自动检测 | 高     |
+| 场景 2  | 立即上传所有外部参照           | 高     |
+| 场景 3  | 跳过外部参照上传               | 高     |
+| 场景 4  | 从文件列表上传外部参照         | 高     |
+| 场景 5  | 从操作菜单上传外部参照         | 中     |
+| 场景 6  | 无缺失外部参照时不显示警告     | 中     |
+| 场景 7  | 上传失败时显示错误提示         | 中     |
+| 场景 8  | 部分文件上传失败的处理         | 中     |
+| 场景 9  | 并发上传多个外部参照           | 低     |
+| 场景 10 | 大文件上传性能测试             | 低     |
 
 ## 验收标准
 

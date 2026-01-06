@@ -86,7 +86,10 @@ export const mxcadApi = {
 
   // 检查外部参照是否存在
   checkExternalReferenceExists: (fileHash: string, fileName: string) =>
-    apiService.post<CheckReferenceExistsResult>(`/mxcad/file/${fileHash}/check-reference`, { fileName }),
+    apiService.post<CheckReferenceExistsResult>(
+      `/mxcad/file/${fileHash}/check-reference`,
+      { fileName }
+    ),
 
   // 上传外部参照 DWG
   uploadExtReferenceDwg: (
@@ -174,7 +177,9 @@ describe('MxCAD API Methods', () => {
 
       const result = await apiService.getPreloadingData('testhash123');
 
-      expect(apiService['client'].get).toHaveBeenCalledWith('/mxcad/file/testhash123/preloading');
+      expect(apiService['client'].get).toHaveBeenCalledWith(
+        '/mxcad/file/testhash123/preloading'
+      );
       expect(result.data).toEqual(mockData);
     });
 
@@ -188,7 +193,9 @@ describe('MxCAD API Methods', () => {
 
       apiService['client'].get = vi.fn().mockRejectedValue(mockResponse);
 
-      await expect(apiService.getPreloadingData('nonexistent')).rejects.toThrow();
+      await expect(
+        apiService.getPreloadingData('nonexistent')
+      ).rejects.toThrow();
     });
   });
 
@@ -253,7 +260,9 @@ import { apiService } from './services/apiService';
 // 测试获取预加载数据
 async function testGetPreloadingData() {
   try {
-    const response = await apiService.getPreloadingData('25e89b5adf19984330f4e68b0f99db64');
+    const response = await apiService.getPreloadingData(
+      '25e89b5adf19984330f4e68b0f99db64'
+    );
     console.log('预加载数据:', response.data);
   } catch (error) {
     console.error('获取失败:', error);

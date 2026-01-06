@@ -37,7 +37,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           <Button variant="ghost" onClick={handleClose}>
             取消
           </Button>
-          <Button onClick={onSubmit} disabled={loading || !formData.name.trim()}>
+          <Button
+            onClick={onSubmit}
+            disabled={loading || !formData.name.trim()}
+          >
             {loading ? '处理中...' : editingProject ? '保存' : '创建'}
           </Button>
         </>
@@ -60,7 +63,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             autoFocus
             maxLength={100}
           />
-          <p className="text-xs text-slate-500 mt-1">{formData.name.length}/100</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {formData.name.length}/100
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">

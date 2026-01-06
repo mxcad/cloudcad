@@ -38,26 +38,31 @@ export const TrashPage: React.FC = () => {
   // Toast 操作
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = Date.now().toString();
-    setToasts(prev => [...prev, { id, type, message }]);
+    setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 5000);
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   // 确认对话框操作
   const showConfirm = useCallback(
-    (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'warning') => {
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void,
+      type: 'danger' | 'warning' | 'info' = 'warning'
+    ) => {
       setConfirmDialog({
         isOpen: true,
         title,
         message,
         onConfirm: () => {
           onConfirm();
-          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         },
         type,
       });
@@ -73,7 +78,8 @@ export const TrashPage: React.FC = () => {
       setTrashItems(response.data || []);
       setSelectedIds(new Set()); // 清空选择
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || '加载回收站失败';
+      const errorMessage =
+        err.response?.data?.message || err.message || '加载回收站失败';
       showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
@@ -86,7 +92,7 @@ export const TrashPage: React.FC = () => {
 
   // 选择/取消选择
   const handleSelect = useCallback((id: string, isMultiSelect = true) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (isMultiSelect) {
         // 多选模式：切换选择状态
@@ -109,7 +115,7 @@ export const TrashPage: React.FC = () => {
     if (selectedIds.size === trashItems.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(trashItems.map(item => item.id)));
+      setSelectedIds(new Set(trashItems.map((item) => item.id)));
     }
   }, [selectedIds.size, trashItems]);
 
@@ -129,7 +135,8 @@ export const TrashPage: React.FC = () => {
           showToast(`已恢复 ${selectedIds.size} 个项目`, 'success');
           loadTrashItems();
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || '恢复失败';
+          const errorMessage =
+            err.response?.data?.message || err.message || '恢复失败';
           showToast(errorMessage, 'error');
         }
       },
@@ -153,7 +160,8 @@ export const TrashPage: React.FC = () => {
           showToast(`已彻底删除 ${selectedIds.size} 个项目`, 'success');
           loadTrashItems();
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || '删除失败';
+          const errorMessage =
+            err.response?.data?.message || err.message || '删除失败';
           showToast(errorMessage, 'error');
         }
       },
@@ -177,7 +185,8 @@ export const TrashPage: React.FC = () => {
           showToast('回收站已清空', 'success');
           loadTrashItems();
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || '清空失败';
+          const errorMessage =
+            err.response?.data?.message || err.message || '清空失败';
           showToast(errorMessage, 'error');
         }
       },
@@ -194,9 +203,16 @@ export const TrashPage: React.FC = () => {
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center py-16">
       <Trash2 size={64} className="text-slate-300 mb-4" />
-      <h3 className="text-base font-semibold text-slate-900 mb-2">回收站是空的</h3>
+      <h3 className="text-base font-semibold text-slate-900 mb-2">
+        回收站是空的
+      </h3>
       <p className="text-slate-500 text-sm">删除的项目和文件会出现在这里</p>
-      <Button onClick={handleGoBack} variant="outline" size="sm" className="mt-4">
+      <Button
+        onClick={handleGoBack}
+        variant="outline"
+        size="sm"
+        className="mt-4"
+      >
         返回文件管理
       </Button>
     </div>
@@ -240,7 +256,8 @@ export const TrashPage: React.FC = () => {
             showToast(`已恢复 "${node.name}"`, 'success');
             loadTrashItems();
           } catch (err: any) {
-            const errorMessage = err.response?.data?.message || err.message || '恢复失败';
+            const errorMessage =
+              err.response?.data?.message || err.message || '恢复失败';
             showToast(errorMessage, 'error');
           }
         },
@@ -251,7 +268,8 @@ export const TrashPage: React.FC = () => {
   );
 
   const hasSelection = selectedIds.size > 0;
-  const isAllSelected = selectedIds.size === trashItems.length && trashItems.length > 0;
+  const isAllSelected =
+    selectedIds.size === trashItems.length && trashItems.length > 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative">
@@ -262,7 +280,9 @@ export const TrashPage: React.FC = () => {
         title={confirmDialog.title}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onCancel={() =>
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }))
+        }
         type={confirmDialog.type}
       />
 
@@ -275,13 +295,22 @@ export const TrashPage: React.FC = () => {
               className="p-1.5 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all"
               title="返回"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M19 12H5M5 12L12 19M5 12L12 5" />
               </svg>
             </button>
             <div>
               <h1 className="text-lg font-semibold text-slate-900">回收站</h1>
-              <p className="text-sm text-slate-500">{trashItems.length} 个项目</p>
+              <p className="text-sm text-slate-500">
+                {trashItems.length} 个项目
+              </p>
             </div>
           </div>
 
@@ -292,7 +321,10 @@ export const TrashPage: React.FC = () => {
               onClick={loadTrashItems}
               disabled={loading}
             >
-              <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                size={16}
+                className={`mr-2 ${loading ? 'animate-spin' : ''}`}
+              />
               刷新
             </Button>
 
@@ -309,7 +341,7 @@ export const TrashPage: React.FC = () => {
                     清空回收站
                   </Button>
                 )}
-                
+
                 {hasSelection && (
                   <>
                     <Button
@@ -322,7 +354,7 @@ export const TrashPage: React.FC = () => {
                       ) : null}
                       {isAllSelected ? '取消全选' : '全选'}
                     </Button>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -331,7 +363,7 @@ export const TrashPage: React.FC = () => {
                       <RefreshCw size={16} className="mr-2" />
                       恢复 ({selectedIds.size})
                     </Button>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"

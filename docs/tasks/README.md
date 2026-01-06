@@ -15,19 +15,19 @@
 
 ## 任务列表
 
-| 任务 | 描述 | 状态 | 预计工时 | 依赖 |
-|------|------|------|----------|------|
-| [001](./001-backend-get-preloading-data.md) | 后端 - 获取外部参照预加载数据接口 | ✅ 已完成 | 2h | - |
-| [002](./002-backend-check-reference-exists.md) | 后端 - 检查外部参照文件是否存在接口 | ✅ 已完成 | 2h | 001 |
-| [003](./003-backend-enhance-upload-validation.md) | 后端 - 增强上传接口验证 | ✅ 已完成 | 3h | 001, 002 |
-| [011](./011-backend-external-reference-tracking.md) | 后端 - 文件系统外部参照跟踪 | ✅ 已完成 | 3h | 001, 002 |
-| [004](./004-frontend-api-methods.md) | 前端 - 获取预加载数据 API 方法 | ✅ 已完成 | 1.5h | 001, 002 |
-| [005](./005-frontend-use-external-reference-upload-hook.md) | 前端 - useExternalReferenceUpload Hook | ✅ 已完成 | 3h | 004 |
-| [006](./006-frontend-external-reference-modal.md) | 前端 - ExternalReferenceModal 组件 | ✅ 已完成 | 2.5h | 005 |
-| [007](./007-frontend-integrate-to-mxcad-uploader.md) | 前端 - 集成到 MxCadUploader | ✅ 已完成 | 1.5h | 005, 006 |
-| [008](./008-frontend-missing-reference-warning.md) | 前端 - 文件列表缺失外部参照提醒 | ✅ 已完成 | 2.5h | 005, 006, 007, 011 |
-| [009](./009-frontend-upload-anytime.md) | 前端 - 随时上传外部参照功能 | ✅ 已完成 | 2h | 005, 006, 008 |
-| [010](./010-integration-test.md) | 集成测试 | ⬜ 待开始 | 4h | 001-009 |
+| 任务                                                        | 描述                                   | 状态      | 预计工时 | 依赖               |
+| ----------------------------------------------------------- | -------------------------------------- | --------- | -------- | ------------------ |
+| [001](./001-backend-get-preloading-data.md)                 | 后端 - 获取外部参照预加载数据接口      | ✅ 已完成 | 2h       | -                  |
+| [002](./002-backend-check-reference-exists.md)              | 后端 - 检查外部参照文件是否存在接口    | ✅ 已完成 | 2h       | 001                |
+| [003](./003-backend-enhance-upload-validation.md)           | 后端 - 增强上传接口验证                | ✅ 已完成 | 3h       | 001, 002           |
+| [011](./011-backend-external-reference-tracking.md)         | 后端 - 文件系统外部参照跟踪            | ✅ 已完成 | 3h       | 001, 002           |
+| [004](./004-frontend-api-methods.md)                        | 前端 - 获取预加载数据 API 方法         | ✅ 已完成 | 1.5h     | 001, 002           |
+| [005](./005-frontend-use-external-reference-upload-hook.md) | 前端 - useExternalReferenceUpload Hook | ✅ 已完成 | 3h       | 004                |
+| [006](./006-frontend-external-reference-modal.md)           | 前端 - ExternalReferenceModal 组件     | ✅ 已完成 | 2.5h     | 005                |
+| [007](./007-frontend-integrate-to-mxcad-uploader.md)        | 前端 - 集成到 MxCadUploader            | ✅ 已完成 | 1.5h     | 005, 006           |
+| [008](./008-frontend-missing-reference-warning.md)          | 前端 - 文件列表缺失外部参照提醒        | ✅ 已完成 | 2.5h     | 005, 006, 007, 011 |
+| [009](./009-frontend-upload-anytime.md)                     | 前端 - 随时上传外部参照功能            | ✅ 已完成 | 2h       | 005, 006, 008      |
+| [010](./010-integration-test.md)                            | 集成测试                               | ⬜ 待开始 | 4h       | 001-009            |
 
 **总预计工时**：27 小时  
 **已完成工时**：18 小时  
@@ -204,13 +204,13 @@
 
 ## 风险和挑战
 
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| MxCAD 转换服务不稳定 | 高 | 充分测试，添加重试机制 |
-| 大文件上传性能问题 | 中 | 使用分片上传，显示进度 |
-| 外部参照检测不准确 | 中 | 多次验证，提供手动触发 |
-| 用户界面复杂度高 | 低 | 简化流程，提供清晰指引 |
-| 测试覆盖率不足 | 中 | 编写完整的单元测试和集成测试 |
+| 风险                 | 影响 | 缓解措施                     |
+| -------------------- | ---- | ---------------------------- |
+| MxCAD 转换服务不稳定 | 高   | 充分测试，添加重试机制       |
+| 大文件上传性能问题   | 中   | 使用分片上传，显示进度       |
+| 外部参照检测不准确   | 中   | 多次验证，提供手动触发       |
+| 用户界面复杂度高     | 低   | 简化流程，提供清晰指引       |
+| 测试覆盖率不足       | 中   | 编写完整的单元测试和集成测试 |
 
 ## 成功标准
 

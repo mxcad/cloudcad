@@ -57,24 +57,24 @@ async getPreloadingData(fileHash: string): Promise<PreloadingDataDto | null> {
     const fs = require('fs');
     const path = require('path');
     const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
-    
+
     // 查找所有以 fileHash 开头的文件
     const files = await fs.promises.readdir(uploadPath);
-    const preloadingFile = files.find(file => 
+    const preloadingFile = files.find(file =>
       file.startsWith(fileHash) && file.endsWith('_preloading.json')
     );
-    
+
     if (!preloadingFile) {
       this.logger.log(`预加载数据文件不存在: ${fileHash}`);
       return null;
     }
-    
+
     const filePath = path.join(uploadPath, preloadingFile);
     const content = await fs.promises.readFile(filePath, 'utf-8');
     const data = JSON.parse(content);
-    
+
     this.logger.log(`成功获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`);
-    
+
     return data;
   } catch (error) {
     this.logger.error(`获取预加载数据失败: ${error.message}`, error.stack);
@@ -92,7 +92,7 @@ import { PreloadingDataDto } from './dto/preloading-data.dto';
 
 /**
  * 获取外部参照预加载数据
- * 
+ *
  * @param fileHash 文件哈希值
  * @returns 预加载数据或错误信息
  */
@@ -115,14 +115,14 @@ import { PreloadingDataDto } from './dto/preloading-data.dto';
 })
 async getPreloadingData(@Param('hash') fileHash: string, @Res() res: Response) {
   this.logger.log(`[getPreloadingData] 请求参数: fileHash=${fileHash}`);
-  
+
   const data = await this.mxCadService.getPreloadingData(fileHash);
-  
+
   if (!data) {
     this.logger.warn(`[getPreloadingData] 预加载数据不存在: ${fileHash}`);
     return res.status(404).json({ code: -1, message: '预加载数据不存在' });
   }
-  
+
   this.logger.log(`[getPreloadingData] 成功返回预加载数据: ${fileHash}`);
   return res.json(data);
 }
@@ -143,13 +143,15 @@ describe('getPreloadingData', () => {
     };
 
     // Mock 文件系统操作
-    jest.spyOn(fs.promises, 'readdir').mockResolvedValue([
-      'testhash123.dwg.mxweb',
-      'testhash123.dwg.mxweb_preloading.json',
-    ]);
-    jest.spyOn(fs.promises, 'readFile').mockResolvedValue(
-      JSON.stringify(mockPreloadingData)
-    );
+    jest
+      .spyOn(fs.promises, 'readdir')
+      .mockResolvedValue([
+        'testhash123.dwg.mxweb',
+        'testhash123.dwg.mxweb_preloading.json',
+      ]);
+    jest
+      .spyOn(fs.promises, 'readFile')
+      .mockResolvedValue(JSON.stringify(mockPreloadingData));
 
     const result = await service.getPreloadingData('testhash123');
 
@@ -165,7 +167,9 @@ describe('getPreloadingData', () => {
   });
 
   it('应该在读取失败时返回 null', async () => {
-    jest.spyOn(fs.promises, 'readdir').mockRejectedValue(new Error('Read error'));
+    jest
+      .spyOn(fs.promises, 'readdir')
+      .mockRejectedValue(new Error('Read error'));
 
     const result = await service.getPreloadingData('errorhash');
 

@@ -9,7 +9,10 @@ interface IconProps {
 }
 
 // 文件夹图标 - 精致版本
-export const FolderIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+export const FolderIcon: React.FC<IconProps> = ({
+  size = 24,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -46,7 +49,14 @@ export const FolderIcon: React.FC<IconProps> = ({ size = 24, className = '' }) =
       fillOpacity="0.5"
     />
     <defs>
-      <linearGradient id="folderGradient" x1="12" y1="20" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <linearGradient
+        id="folderGradient"
+        x1="12"
+        y1="20"
+        x2="52"
+        y2="52"
+        gradientUnits="userSpaceOnUse"
+      >
         <stop stopColor="white" stopOpacity="0.6" />
         <stop offset="1" stopColor="white" stopOpacity="0" />
       </linearGradient>
@@ -55,7 +65,10 @@ export const FolderIcon: React.FC<IconProps> = ({ size = 24, className = '' }) =
 );
 
 // 文件夹打开状态
-export const FolderOpenIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+export const FolderOpenIcon: React.FC<IconProps> = ({
+  size = 24,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -79,9 +92,33 @@ export const FolderOpenIcon: React.FC<IconProps> = ({ size = 24, className = '' 
       strokeWidth="2"
     />
     {/* 内部文件示意 */}
-    <rect x="14" y="32" width="36" height="4" rx="1" fill="#F59E0B" fillOpacity="0.3" />
-    <rect x="14" y="40" width="28" height="4" rx="1" fill="#F59E0B" fillOpacity="0.3" />
-    <rect x="14" y="48" width="32" height="4" rx="1" fill="#F59E0B" fillOpacity="0.3" />
+    <rect
+      x="14"
+      y="32"
+      width="36"
+      height="4"
+      rx="1"
+      fill="#F59E0B"
+      fillOpacity="0.3"
+    />
+    <rect
+      x="14"
+      y="40"
+      width="28"
+      height="4"
+      rx="1"
+      fill="#F59E0B"
+      fillOpacity="0.3"
+    />
+    <rect
+      x="14"
+      y="48"
+      width="32"
+      height="4"
+      rx="1"
+      fill="#F59E0B"
+      fillOpacity="0.3"
+    />
   </svg>
 );
 
@@ -103,23 +140,82 @@ export const DwgIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
       strokeWidth="2"
     />
     {/* 文件折角 */}
-    <path d="M40 4V16H52" fill="#60A5FA" stroke="#3B82F6" strokeWidth="2" strokeLinejoin="round"/>
-    
+    <path
+      d="M40 4V16H52"
+      fill="#60A5FA"
+      stroke="#3B82F6"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+
     {/* CAD 图案 - 建筑平面图风格 */}
-    <rect x="16" y="20" width="32" height="28" rx="2" fill="none" stroke="white" strokeWidth="2"/>
-    <path d="M16 32H48" stroke="white" strokeWidth="1.5" strokeDasharray="4 2"/>
-    <path d="M32 20V48" stroke="white" strokeWidth="1.5" strokeDasharray="4 2"/>
+    <rect
+      x="16"
+      y="20"
+      width="32"
+      height="28"
+      rx="2"
+      fill="none"
+      stroke="white"
+      strokeWidth="2"
+    />
+    <path
+      d="M16 32H48"
+      stroke="white"
+      strokeWidth="1.5"
+      strokeDasharray="4 2"
+    />
+    <path
+      d="M32 20V48"
+      stroke="white"
+      strokeWidth="1.5"
+      strokeDasharray="4 2"
+    />
     {/* 门符号 */}
-    <path d="M44 32L48 28" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M44 32L48 36" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round"/>
+    <path
+      d="M44 32L48 28"
+      stroke="#60A5FA"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M44 32L48 36"
+      stroke="#60A5FA"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
     {/* 标注线 */}
-    <path d="M14 18L10 18" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M50 18L54 18" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M32 18V16M32 48V50" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round"/>
-    
+    <path
+      d="M14 18L10 18"
+      stroke="#60A5FA"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M50 18L54 18"
+      stroke="#60A5FA"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M32 18V16M32 48V50"
+      stroke="#60A5FA"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+
     {/* DWG 标签 */}
-    <rect x="16" y="49" width="20" height="7" rx="1" fill="#3B82F6"/>
-    <text x="26" y="54.5" fontSize="7" fill="white" textAnchor="middle" fontWeight="bold">DWG</text>
+    <rect x="16" y="49" width="20" height="7" rx="1" fill="#3B82F6" />
+    <text
+      x="26"
+      y="54.5"
+      fontSize="7"
+      fill="white"
+      textAnchor="middle"
+      fontWeight="bold"
+    >
+      DWG
+    </text>
   </svg>
 );
 
@@ -141,21 +237,58 @@ export const DxfIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
       strokeWidth="2"
     />
     {/* 文件折角 */}
-    <path d="M40 4V16H52" fill="#34D399" stroke="#10B981" strokeWidth="2" strokeLinejoin="round"/>
-    
+    <path
+      d="M40 4V16H52"
+      fill="#34D399"
+      stroke="#10B981"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+
     {/* DXF 图案 - 数据流和几何图形 */}
     {/* 箭头数据流 */}
-    <path d="M14 24H50" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M46 20L50 24L46 28" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 24H50" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M46 20L50 24L46 28"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
     {/* 几何元素 */}
-    <circle cx="20" cy="38" r="8" stroke="#34D399" strokeWidth="2" fill="none"/>
-    <rect x="34" y="34" width="12" height="12" transform="rotate(45 40 40)" stroke="#34D399" strokeWidth="2" fill="none"/>
+    <circle
+      cx="20"
+      cy="38"
+      r="8"
+      stroke="#34D399"
+      strokeWidth="2"
+      fill="none"
+    />
+    <rect
+      x="34"
+      y="34"
+      width="12"
+      height="12"
+      transform="rotate(45 40 40)"
+      stroke="#34D399"
+      strokeWidth="2"
+      fill="none"
+    />
     {/* 坐标点 */}
-    <circle cx="32" cy="44" r="2" fill="#34D399"/>
-    
+    <circle cx="32" cy="44" r="2" fill="#34D399" />
+
     {/* DXF 标签 */}
-    <rect x="16" y="49" width="20" height="7" rx="1" fill="#10B981"/>
-    <text x="26" y="54.5" fontSize="7" fill="white" textAnchor="middle" fontWeight="bold">DXF</text>
+    <rect x="16" y="49" width="20" height="7" rx="1" fill="#10B981" />
+    <text
+      x="26"
+      y="54.5"
+      fontSize="7"
+      fill="white"
+      textAnchor="middle"
+      fontWeight="bold"
+    >
+      DXF
+    </text>
   </svg>
 );
 
@@ -177,20 +310,54 @@ export const PdfIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
       strokeWidth="2"
     />
     {/* 文件折角 */}
-    <path d="M40 4V16H52" fill="#FECACA" stroke="#DC2626" strokeWidth="2" strokeLinejoin="round"/>
+    <path
+      d="M40 4V16H52"
+      fill="#FECACA"
+      stroke="#DC2626"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
     {/* PDF 标识 - 文档图标 */}
     <rect x="14" y="20" width="24" height="28" rx="2" fill="#DC2626" />
     <rect x="16" y="22" width="20" height="24" rx="1" fill="#FEE2E2" />
     {/* PDF 文字 */}
-    <text x="26" y="34" fontSize="8" fill="#DC2626" textAnchor="middle" fontWeight="bold">PDF</text>
+    <text
+      x="26"
+      y="34"
+      fontSize="8"
+      fill="#DC2626"
+      textAnchor="middle"
+      fontWeight="bold"
+    >
+      PDF
+    </text>
     {/* 线条示意 */}
-    <line x1="18" y1="40" x2="34" y2="40" stroke="#DC2626" strokeWidth="2" strokeLinecap="round"/>
-    <line x1="18" y1="44" x2="30" y2="44" stroke="#DC2626" strokeWidth="2" strokeLinecap="round"/>
+    <line
+      x1="18"
+      y1="40"
+      x2="34"
+      y2="40"
+      stroke="#DC2626"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <line
+      x1="18"
+      y1="44"
+      x2="30"
+      y2="44"
+      stroke="#DC2626"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
 // 图片文件图标
-export const ImageIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+export const ImageIcon: React.FC<IconProps> = ({
+  size = 24,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -207,21 +374,57 @@ export const ImageIcon: React.FC<IconProps> = ({ size = 24, className = '' }) =>
       strokeWidth="2"
     />
     {/* 文件折角 */}
-    <path d="M40 4V16H52" fill="#93C5FD" stroke="#2563EB" strokeWidth="2" strokeLinejoin="round"/>
+    <path
+      d="M40 4V16H52"
+      fill="#93C5FD"
+      stroke="#2563EB"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
     {/* 图片内容 */}
-    <rect x="14" y="20" width="24" height="24" rx="2" fill="#2563EB" fillOpacity="0.2" />
+    <rect
+      x="14"
+      y="20"
+      width="24"
+      height="24"
+      rx="2"
+      fill="#2563EB"
+      fillOpacity="0.2"
+    />
     {/* 山峰和太阳 */}
-    <path d="M14 44L22 32L28 40L34 28L44 44" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path
+      d="M14 44L22 32L28 40L34 28L44 44"
+      stroke="#2563EB"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
     <circle cx="32" cy="26" r="4" fill="#FCD34D" />
     {/* 相机图标 */}
-    <circle cx="28" cy="48" r="4" stroke="#2563EB" strokeWidth="1.5" fill="none"/>
+    <circle
+      cx="28"
+      cy="48"
+      r="4"
+      stroke="#2563EB"
+      strokeWidth="1.5"
+      fill="none"
+    />
     <circle cx="28" cy="48" r="1.5" fill="#2563EB" />
-    <path d="M26 48L24 50" stroke="#2563EB" strokeWidth="1" strokeLinecap="round"/>
+    <path
+      d="M26 48L24 50"
+      stroke="#2563EB"
+      strokeWidth="1"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
 // 通用文件图标
-export const FileIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+export const FileIcon: React.FC<IconProps> = ({
+  size = 24,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -238,11 +441,41 @@ export const FileIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => 
       strokeWidth="2"
     />
     {/* 文件折角 */}
-    <path d="M40 4V16H52" fill="#E2E8F0" stroke="#64748B" strokeWidth="2" strokeLinejoin="round"/>
+    <path
+      d="M40 4V16H52"
+      fill="#E2E8F0"
+      stroke="#64748B"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
     {/* 文件内容线 */}
-    <line x1="16" y1="26" x2="36" y2="26" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
-    <line x1="16" y1="34" x2="40" y2="34" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
-    <line x1="16" y1="42" x2="32" y2="42" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+    <line
+      x1="16"
+      y1="26"
+      x2="36"
+      y2="26"
+      stroke="#64748B"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <line
+      x1="16"
+      y1="34"
+      x2="40"
+      y2="34"
+      stroke="#64748B"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <line
+      x1="16"
+      y1="42"
+      x2="32"
+      y2="42"
+      stroke="#64748B"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
@@ -283,7 +516,10 @@ export const getFileIconComponent = (
 
 // ============ 状态图标 ============
 
-export const LoadingIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+export const LoadingIcon: React.FC<IconProps> = ({
+  size = 24,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -304,7 +540,10 @@ export const LoadingIcon: React.FC<IconProps> = ({ size = 24, className = '' }) 
   </svg>
 );
 
-export const EmptyFolderIcon: React.FC<IconProps> = ({ size = 64, className = '' }) => (
+export const EmptyFolderIcon: React.FC<IconProps> = ({
+  size = 64,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -331,13 +570,18 @@ export const EmptyFolderIcon: React.FC<IconProps> = ({ size = 64, className = ''
     <circle cx="24" cy="42" r="6" fill="white" fillOpacity="0.6" />
     <circle cx="40" cy="42" r="6" fill="white" fillOpacity="0.6" />
     {/* 文字 */}
-    <text x="32" y="56" fontSize="8" fill="#F59E0B" textAnchor="middle">空</text>
+    <text x="32" y="56" fontSize="8" fill="#F59E0B" textAnchor="middle">
+      空
+    </text>
   </svg>
 );
 
 // ============ 面包屑图标 ============
 
-export const HomeIcon: React.FC<IconProps> = ({ size = 16, className = '' }) => (
+export const HomeIcon: React.FC<IconProps> = ({
+  size = 16,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -364,7 +608,10 @@ export const HomeIcon: React.FC<IconProps> = ({ size = 16, className = '' }) => 
   </svg>
 );
 
-export const ChevronRightIcon: React.FC<IconProps> = ({ size = 16, className = '' }) => (
+export const ChevronRightIcon: React.FC<IconProps> = ({
+  size = 16,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -385,7 +632,10 @@ export const ChevronRightIcon: React.FC<IconProps> = ({ size = 16, className = '
 
 // ============ 操作图标 ============
 
-export const UploadIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const UploadIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -418,7 +668,10 @@ export const UploadIcon: React.FC<IconProps> = ({ size = 20, className = '' }) =
   </svg>
 );
 
-export const DownloadIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const DownloadIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -451,7 +704,10 @@ export const DownloadIcon: React.FC<IconProps> = ({ size = 20, className = '' })
   </svg>
 );
 
-export const AddFolderIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const AddFolderIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -467,12 +723,25 @@ export const AddFolderIcon: React.FC<IconProps> = ({ size = 20, className = '' }
       stroke="currentColor"
       strokeWidth="2"
     />
-    <path d="M10 12V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M8 14H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path
+      d="M10 12V16"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M8 14H12"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
-export const DeleteIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const DeleteIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -508,7 +777,10 @@ export const DeleteIcon: React.FC<IconProps> = ({ size = 20, className = '' }) =
   </svg>
 );
 
-export const EditIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const EditIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -527,7 +799,10 @@ export const EditIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => 
   </svg>
 );
 
-export const SearchIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const SearchIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -536,13 +811,7 @@ export const SearchIcon: React.FC<IconProps> = ({ size = 20, className = '' }) =
     xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    <circle
-      cx="11"
-      cy="11"
-      r="8"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
+    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
     <path
       d="M21 21L16.65 16.65"
       stroke="currentColor"
@@ -552,7 +821,10 @@ export const SearchIcon: React.FC<IconProps> = ({ size = 20, className = '' }) =
   </svg>
 );
 
-export const RefreshIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const RefreshIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -584,7 +856,10 @@ export const RefreshIcon: React.FC<IconProps> = ({ size = 20, className = '' }) 
   </svg>
 );
 
-export const GridIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const GridIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -593,14 +868,49 @@ export const GridIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => 
     xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-    <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+    <rect
+      x="3"
+      y="3"
+      width="7"
+      height="7"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <rect
+      x="14"
+      y="3"
+      width="7"
+      height="7"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <rect
+      x="3"
+      y="14"
+      width="7"
+      height="7"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <rect
+      x="14"
+      y="14"
+      width="7"
+      height="7"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
   </svg>
 );
 
-export const ListIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const ListIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -627,13 +937,16 @@ export const ListIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => 
       strokeWidth="2"
       strokeLinecap="round"
     />
-    <circle cx="4" cy="6" r="1.5" fill="currentColor"/>
-    <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
-    <circle cx="4" cy="18" r="1.5" fill="currentColor"/>
+    <circle cx="4" cy="6" r="1.5" fill="currentColor" />
+    <circle cx="4" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="4" cy="18" r="1.5" fill="currentColor" />
   </svg>
 );
 
-export const BackIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const BackIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -652,7 +965,10 @@ export const BackIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => 
   </svg>
 );
 
-export const CheckIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const CheckIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -671,7 +987,10 @@ export const CheckIcon: React.FC<IconProps> = ({ size = 20, className = '' }) =>
   </svg>
 );
 
-export const MoreIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const MoreIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -680,13 +999,16 @@ export const MoreIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => 
     xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    <circle cx="12" cy="12" r="1" fill="currentColor"/>
-    <circle cx="12" cy="5" r="1" fill="currentColor"/>
-    <circle cx="12" cy="19" r="1" fill="currentColor"/>
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
+    <circle cx="12" cy="5" r="1" fill="currentColor" />
+    <circle cx="12" cy="19" r="1" fill="currentColor" />
   </svg>
 );
 
-export const UsersIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const UsersIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -698,14 +1020,17 @@ export const UsersIcon: React.FC<IconProps> = ({ size = 20, className = '' }) =>
     strokeLinejoin="round"
     className={className}
   >
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-    <circle cx="9" cy="7" r="4"/>
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
 
-export const ProjectIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+export const ProjectIcon: React.FC<IconProps> = ({
+  size = 24,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}
@@ -723,19 +1048,39 @@ export const ProjectIcon: React.FC<IconProps> = ({ size = 24, className = '' }) 
       strokeWidth="2"
     />
     {/* 建筑正立面 */}
-    <rect x="16" y="28" width="32" height="24" rx="1" fill="white" fillOpacity="0.9"/>
+    <rect
+      x="16"
+      y="28"
+      width="32"
+      height="24"
+      rx="1"
+      fill="white"
+      fillOpacity="0.9"
+    />
     {/* 门 */}
-    <rect x="26" y="38" width="12" height="14" rx="1" fill="#06B6D4"/>
+    <rect x="26" y="38" width="12" height="14" rx="1" fill="#06B6D4" />
     {/* 窗户 */}
-    <rect x="20" y="32" width="8" height="6" rx="1" fill="#0891B2"/>
-    <rect x="36" y="32" width="8" height="6" rx="1" fill="#0891B2"/>
+    <rect x="20" y="32" width="8" height="6" rx="1" fill="#0891B2" />
+    <rect x="36" y="32" width="8" height="6" rx="1" fill="#0891B2" />
     {/* 项目标签 */}
-    <text x="32" y="18" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">PROJ</text>
+    <text
+      x="32"
+      y="18"
+      fontSize="10"
+      fill="white"
+      textAnchor="middle"
+      fontWeight="bold"
+    >
+      PROJ
+    </text>
   </svg>
 );
 
 // 恢复图标 - 用于回收站恢复功能
-export const RestoreIcon: React.FC<IconProps> = ({ size = 20, className = '' }) => (
+export const RestoreIcon: React.FC<IconProps> = ({
+  size = 20,
+  className = '',
+}) => (
   <svg
     width={size}
     height={size}

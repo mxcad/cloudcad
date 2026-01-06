@@ -162,14 +162,14 @@ Content-Type: multipart/form-data
    - JWT 认证获取 userId
    - 从会话获取当前工作目录 (parentId)
    - 验证用户对 parentId 的写权限
-   
+
 2. 分片上传处理
    if (chunk !== undefined) {
      a. 创建/更新 UploadSession 记录
      b. 上传分片到 MinIO: `temp/${fileHash}/chunk_${chunk}`
      c. 更新 Redis: `upload:chunk:${fileHash}:${chunk}` = size
      d. 更新上传进度: uploadedParts++
-     
+
      if (uploadedParts === chunks) {
        // 所有分片上传完成，触发合并
        e. 调用 MinIO ComposeObject API 合并分片
@@ -180,14 +180,14 @@ Content-Type: multipart/form-data
        j. 删除 UploadSession 记录
      }
    }
-   
+
 3. 完整文件上传处理
    else {
      a. 直接上传到 MinIO: `${projectId}/${Date.now()}-${filename}`
      b. 调用转换服务转换为 MXWEB 格式
      c. 创建 FileSystemNode 记录
    }
-   
+
 4. 返回响应
    return { ret: "ok", tz: convertResult.tz }
 ```
@@ -230,7 +230,7 @@ Content-Type: multipart/form-data
 1. 权限验证
    - 从 srcpath 解析 fileId 或 fileHash
    - 验证用户对该文件的读权限
-   
+
 2. 调用转换服务
    if (async === "true") {
      a. 创建后台任务
@@ -246,7 +246,8 @@ Content-Type: multipart/form-data
 
 #### 3.4.1 上传外部参照
 
-**原始接口**: 
+**原始接口**:
+
 - `POST /mxcad/up_ext_reference_dwg`
 - `POST /mxcad/up_ext_reference_image`
 
@@ -271,6 +272,7 @@ Content-Type: multipart/form-data
 #### 3.4.2 保存文件
 
 **原始接口**:
+
 - `POST /mxcad/savemxweb`
 - `POST /mxcad/savedwg`
 - `POST /mxcad/savepdf`
@@ -396,11 +398,11 @@ async checkProjectPermission(projectId: string, userId: string) {
   const member = await prisma.projectMember.findFirst({
     where: { nodeId: projectId, userId }
   });
-  
+
   if (!member) {
     throw new ForbiddenException('没有项目访问权限');
   }
-  
+
   return member.role; // OWNER, ADMIN, MEMBER, VIEWER
 }
 
@@ -410,24 +412,24 @@ async checkFilePermission(fileId: string, userId: string, action: string) {
     where: { id: fileId },
     include: { parent: true }
   });
-  
+
   // 文件所有者拥有所有权限
   if (file.ownerId === userId) {
     return true;
   }
-  
+
   // 查找根节点（项目）
   const rootNode = await this.getRootNode(fileId);
-  
+
   // 检查项目成员权限
   const member = await prisma.projectMember.findFirst({
     where: { nodeId: rootNode.id, userId }
   });
-  
+
   if (!member) {
     return false;
   }
-  
+
   // 权限映射
   const permissions = {
     OWNER: ['read', 'write', 'delete', 'share'],
@@ -435,22 +437,22 @@ async checkFilePermission(fileId: string, userId: string, action: string) {
     MEMBER: ['read', 'write'],
     VIEWER: ['read']
   };
-  
+
   return permissions[member.role].includes(action);
 }
 ```
 
 ### 5.2 权限矩阵
 
-| 操作 | OWNER | ADMIN | MEMBER | VIEWER |
-|------|-------|-------|--------|--------|
-| 上传文件 | ✅ | ✅ | ✅ | ❌ |
-| 下载文件 | ✅ | ✅ | ✅ | ✅ |
-| 删除文件 | ✅ | ✅ | ❌ | ❌ |
-| 转换文件 | ✅ | ✅ | ✅ | ✅ |
-| 分享文件 | ✅ | ✅ | ❌ | ❌ |
-| 修改项目 | ✅ | ✅ | ❌ | ❌ |
-| 删除项目 | ✅ | ❌ | ❌ | ❌ |
+| 操作     | OWNER | ADMIN | MEMBER | VIEWER |
+| -------- | ----- | ----- | ------ | ------ |
+| 上传文件 | ✅    | ✅    | ✅     | ❌     |
+| 下载文件 | ✅    | ✅    | ✅     | ✅     |
+| 删除文件 | ✅    | ✅    | ❌     | ❌     |
+| 转换文件 | ✅    | ✅    | ✅     | ✅     |
+| 分享文件 | ✅    | ✅    | ❌     | ❌     |
+| 修改项目 | ✅    | ✅    | ❌     | ❌     |
+| 删除项目 | ✅    | ❌    | ❌     | ❌     |
 
 ---
 
@@ -463,6 +465,7 @@ async checkFilePermission(fileId: string, userId: string, action: string) {
 **任务清单**:
 
 1. **创建模块结构**
+
    ```bash
    mkdir -p packages/backend/src/mxcad/{guards,dto,interfaces}
    touch packages/backend/src/mxcad/mxcad.module.ts
@@ -593,7 +596,12 @@ async checkFilePermission(fileId: string, userId: string, action: string) {
 ```typescript
 // packages/backend/src/mxcad/mxcad-adapter.service.ts
 
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SessionService } from '../common/services/session.service';
 import { FileSystemService } from '../file-system/file-system.service';
@@ -609,13 +617,16 @@ export class MxcadAdapterService {
     private readonly sessionService: SessionService,
     private readonly fileSystemService: FileSystemService,
     private readonly uploadService: MxcadUploadService,
-    private readonly convertService: MxcadConvertService,
+    private readonly convertService: MxcadConvertService
   ) {}
 
   /**
    * 检查文件是否存在（秒传检查）
    */
-  async checkFileExists(fileHash: string, filename: string): Promise<{ ret: string }> {
+  async checkFileExists(
+    fileHash: string,
+    filename: string
+  ): Promise<{ ret: string }> {
     try {
       const existingFile = await this.prisma.fileSystemNode.findFirst({
         where: {
@@ -646,7 +657,7 @@ export class MxcadAdapterService {
     size: number,
     chunks: number,
     fileName: string,
-    userId: string,
+    userId: string
   ): Promise<{ ret: string }> {
     try {
       // 从 Redis 检查分片状态
@@ -657,14 +668,22 @@ export class MxcadAdapterService {
         const parsedData = JSON.parse(chunkData);
         if (parsedData.size === size) {
           this.logger.log(`分片已存在: ${fileName}, chunk: ${chunk}`);
-          
+
           // 检查是否所有分片都已上传完成
-          const uploadedChunks = await this.getUploadedChunksCount(fileHash, userId);
+          const uploadedChunks = await this.getUploadedChunksCount(
+            fileHash,
+            userId
+          );
           if (uploadedChunks === chunks) {
             // 触发合并
-            await this.uploadService.mergeChunks(fileHash, fileName, chunks, userId);
+            await this.uploadService.mergeChunks(
+              fileHash,
+              fileName,
+              chunks,
+              userId
+            );
           }
-          
+
           return { ret: 'chunkAlreadyExist' };
         }
       }
@@ -679,10 +698,13 @@ export class MxcadAdapterService {
   /**
    * 获取已上传分片数量
    */
-  private async getUploadedChunksCount(fileHash: string, userId: string): Promise<number> {
+  private async getUploadedChunksCount(
+    fileHash: string,
+    userId: string
+  ): Promise<number> {
     const sessionKey = `upload:session:${fileHash}`;
     const sessionData = await this.sessionService.get(userId, sessionKey);
-    
+
     if (!sessionData) {
       return 0;
     }
@@ -694,11 +716,15 @@ export class MxcadAdapterService {
   /**
    * 验证用户对父节点的写权限
    */
-  async validateUploadPermission(userId: string, parentId?: string): Promise<string> {
+  async validateUploadPermission(
+    userId: string,
+    parentId?: string
+  ): Promise<string> {
     // 如果没有提供 parentId，从会话获取
     let actualParentId = parentId;
     if (!actualParentId) {
-      actualParentId = await this.sessionService.getCurrentWorkingDirectory(userId);
+      actualParentId =
+        await this.sessionService.getCurrentWorkingDirectory(userId);
     }
 
     if (!actualParentId) {
@@ -722,7 +748,7 @@ export class MxcadAdapterService {
     // 检查写权限
     const hasPermission = await this.fileSystemService.checkNodeAccess(
       actualParentId,
-      userId,
+      userId
     );
 
     if (!hasPermission) {
@@ -755,7 +781,7 @@ export class MxcadUploadService {
     private readonly storage: MinioStorageProvider,
     private readonly sessionService: SessionService,
     private readonly fileHashService: FileHashService,
-    private readonly convertService: MxcadConvertService,
+    private readonly convertService: MxcadConvertService
   ) {}
 
   /**
@@ -769,7 +795,7 @@ export class MxcadUploadService {
     fileName: string,
     fileSize: number,
     userId: string,
-    parentId: string,
+    parentId: string
   ): Promise<{ ret: string; tz?: boolean }> {
     try {
       // 1. 上传分片到 MinIO 临时目录
@@ -782,11 +808,18 @@ export class MxcadUploadService {
         userId,
         chunkDataKey,
         JSON.stringify({ size: file.size, uploadedAt: new Date() }),
-        3600 * 24, // 24小时过期
+        3600 * 24 // 24小时过期
       );
 
       // 3. 更新上传会话
-      await this.updateUploadSession(fileHash, fileName, fileSize, chunks, userId, parentId);
+      await this.updateUploadSession(
+        fileHash,
+        fileName,
+        fileSize,
+        chunks,
+        userId,
+        parentId
+      );
 
       // 4. 检查是否所有分片都已上传
       const session = await this.getUploadSession(fileHash, userId);
@@ -809,7 +842,7 @@ export class MxcadUploadService {
     fileHash: string,
     fileName: string,
     chunks: number,
-    userId: string,
+    userId: string
   ): Promise<{ ret: string; tz?: boolean }> {
     try {
       this.logger.log(`开始合并分片: ${fileName}, 总分片数: ${chunks}`);
@@ -826,7 +859,7 @@ export class MxcadUploadService {
       // 3. 使用 MinIO ComposeObject 合并分片
       const extension = fileName.split('.').pop()?.toLowerCase() || '';
       const finalKey = `projects/${session.parentId}/${Date.now()}-${fileName}`;
-      
+
       await this.storage.composeObjects(chunkKeys, finalKey);
       this.logger.log(`分片合并成功: ${finalKey}`);
 
@@ -834,7 +867,7 @@ export class MxcadUploadService {
       const convertResult = await this.convertService.convertFile(
         finalKey,
         fileHash,
-        fileName,
+        fileName
       );
 
       // 5. 创建 FileSystemNode 记录
@@ -875,7 +908,7 @@ export class MxcadUploadService {
     fileSize: number,
     chunks: number,
     userId: string,
-    parentId: string,
+    parentId: string
   ): Promise<void> {
     const sessionKey = `upload:session:${fileHash}`;
     const existingSession = await this.sessionService.get(userId, sessionKey);
@@ -901,7 +934,7 @@ export class MxcadUploadService {
       userId,
       sessionKey,
       JSON.stringify(session),
-      3600 * 24, // 24小时过期
+      3600 * 24 // 24小时过期
     );
 
     // 同时更新数据库记录（持久化）
@@ -928,7 +961,10 @@ export class MxcadUploadService {
   /**
    * 获取上传会话
    */
-  private async getUploadSession(fileHash: string, userId: string): Promise<any> {
+  private async getUploadSession(
+    fileHash: string,
+    userId: string
+  ): Promise<any> {
     const sessionKey = `upload:session:${fileHash}`;
     const sessionData = await this.sessionService.get(userId, sessionKey);
 
@@ -945,7 +981,7 @@ export class MxcadUploadService {
   private async cleanupUpload(
     fileHash: string,
     chunkKeys: string[],
-    userId: string,
+    userId: string
   ): Promise<void> {
     try {
       // 1. 删除 MinIO 临时分片
@@ -1029,7 +1065,7 @@ export class MxcadController {
   constructor(
     private readonly adapterService: MxcadAdapterService,
     private readonly uploadService: MxcadUploadService,
-    private readonly convertService: MxcadConvertService,
+    private readonly convertService: MxcadConvertService
   ) {}
 
   /**
@@ -1051,7 +1087,7 @@ export class MxcadController {
       dto.size,
       dto.chunks,
       dto.fileName,
-      req.user.id,
+      req.user.id
     );
   }
 
@@ -1063,14 +1099,14 @@ export class MxcadController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     const userId = req.user.id;
 
     // 验证上传权限并获取父节点 ID
     const parentId = await this.adapterService.validateUploadPermission(
       userId,
-      body.parentId,
+      body.parentId
     );
 
     // 分片上传
@@ -1083,7 +1119,7 @@ export class MxcadController {
         body.name,
         parseInt(body.size),
         userId,
-        parentId,
+        parentId
       );
     }
 
@@ -1094,7 +1130,7 @@ export class MxcadController {
       body.name,
       parseInt(body.size),
       userId,
-      parentId,
+      parentId
     );
   }
 
@@ -1103,9 +1139,8 @@ export class MxcadController {
    */
   @Post('convert')
   async convertFile(@Body() body: any, @Request() req) {
-    const param = typeof body.param === 'string' 
-      ? JSON.parse(body.param) 
-      : body.param;
+    const param =
+      typeof body.param === 'string' ? JSON.parse(body.param) : body.param;
 
     return this.convertService.convertServerFile(param, req.user.id);
   }
@@ -1117,7 +1152,7 @@ export class MxcadController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadAndConvert(
     @UploadedFile() file: Express.Multer.File,
-    @Request() req,
+    @Request() req
   ) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
@@ -1133,14 +1168,14 @@ export class MxcadController {
   async uploadExtReferenceDwg(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     return this.uploadService.uploadExtReference(
       file,
       body.src_dwgfile_hash,
       body.ext_ref_file,
       'dwg',
-      req.user.id,
+      req.user.id
     );
   }
 
@@ -1152,14 +1187,14 @@ export class MxcadController {
   async uploadExtReferenceImage(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     return this.uploadService.uploadExtReference(
       file,
       body.src_dwgfile_hash,
       body.ext_ref_file,
       'image',
-      req.user.id,
+      req.user.id
     );
   }
 
@@ -1168,10 +1203,7 @@ export class MxcadController {
    */
   @Post('savemxweb')
   @UseInterceptors(FileInterceptor('file'))
-  async saveMxweb(
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req,
-  ) {
+  async saveMxweb(@UploadedFile() file: Express.Multer.File, @Request() req) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
@@ -1183,10 +1215,7 @@ export class MxcadController {
    */
   @Post('savedwg')
   @UseInterceptors(FileInterceptor('file'))
-  async saveDwg(
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req,
-  ) {
+  async saveDwg(@UploadedFile() file: Express.Multer.File, @Request() req) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
@@ -1201,14 +1230,15 @@ export class MxcadController {
   async savePdf(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
-    const param = typeof body.param === 'string' 
-      ? JSON.parse(body.param) 
-      : body.param || { width: '2000', height: '2000', colorPolicy: 'mono' };
+    const param =
+      typeof body.param === 'string'
+        ? JSON.parse(body.param)
+        : body.param || { width: '2000', height: '2000', colorPolicy: 'mono' };
 
     return this.uploadService.savePdf(file, param, userId, parentId);
   }
@@ -1221,14 +1251,13 @@ export class MxcadController {
   async printToPdf(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
-    const param = typeof body.param === 'string' 
-      ? JSON.parse(body.param) 
-      : body.param;
+    const param =
+      typeof body.param === 'string' ? JSON.parse(body.param) : body.param;
 
     if (!param) {
       return { ret: 'failed', code: -1, message: 'param error' };
@@ -1245,14 +1274,13 @@ export class MxcadController {
   async cutDwg(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
-    const param = typeof body.param === 'string' 
-      ? JSON.parse(body.param) 
-      : body.param;
+    const param =
+      typeof body.param === 'string' ? JSON.parse(body.param) : body.param;
 
     if (!param) {
       return { ret: 'failed', code: -1, message: 'param error' };
@@ -1269,14 +1297,13 @@ export class MxcadController {
   async cutMxweb(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Request() req,
+    @Request() req
   ) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
-    const param = typeof body.param === 'string' 
-      ? JSON.parse(body.param) 
-      : body.param;
+    const param =
+      typeof body.param === 'string' ? JSON.parse(body.param) : body.param;
 
     if (!param) {
       return { ret: 'failed', code: -1, message: 'param error' };
@@ -1290,10 +1317,7 @@ export class MxcadController {
    */
   @Post('up_image')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadImage(
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req,
-  ) {
+  async uploadImage(@UploadedFile() file: Express.Multer.File, @Request() req) {
     const userId = req.user.id;
     const parentId = await this.adapterService.validateUploadPermission(userId);
 
@@ -1342,7 +1366,7 @@ location /mxcad/ {
     proxy_set_header Connection 'upgrade';
     proxy_set_header Host $host;
     proxy_cache_bypass $http_upgrade;
-    
+
     # 超时设置
     proxy_connect_timeout 600;
     proxy_send_timeout 600;
@@ -1387,7 +1411,7 @@ export class MxcadCleanupService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly storage: MinioStorageProvider,
+    private readonly storage: MinioStorageProvider
   ) {}
 
   /**
@@ -1423,7 +1447,7 @@ export class MxcadCleanupService {
           this.logger.log(`清理过期会话: ${session.uploadId}`);
         } catch (error) {
           this.logger.error(
-            `清理会话失败: ${session.uploadId}, ${error.message}`,
+            `清理会话失败: ${session.uploadId}, ${error.message}`
           );
         }
       }
@@ -1607,22 +1631,22 @@ describe('MxCAD API (e2e)', () => {
 
 ### 11.1 常见问题
 
-| 问题 | 原因 | 解决方案 |
-|------|------|----------|
-| 分片上传失败 | Redis 会话丢失 | 增加 Redis 持久化，使用 PostgreSQL 备份会话 |
-| 文件转换超时 | 大文件转换时间过长 | 增加超时时间，使用异步转换 |
-| 权限验证失败 | JWT 过期或无效 | 刷新 token，检查认证配置 |
-| MinIO 连接失败 | 网络问题或配置错误 | 检查 MinIO 服务状态和配置 |
-| 文件去重失败 | fileHash 计算不一致 | 统一使用 SHA-256 算法 |
+| 问题           | 原因                | 解决方案                                    |
+| -------------- | ------------------- | ------------------------------------------- |
+| 分片上传失败   | Redis 会话丢失      | 增加 Redis 持久化，使用 PostgreSQL 备份会话 |
+| 文件转换超时   | 大文件转换时间过长  | 增加超时时间，使用异步转换                  |
+| 权限验证失败   | JWT 过期或无效      | 刷新 token，检查认证配置                    |
+| MinIO 连接失败 | 网络问题或配置错误  | 检查 MinIO 服务状态和配置                   |
+| 文件去重失败   | fileHash 计算不一致 | 统一使用 SHA-256 算法                       |
 
 ### 11.2 日志级别
 
 ```typescript
 // 开发环境
-LOG_LEVEL=debug
+LOG_LEVEL = debug;
 
 // 生产环境
-LOG_LEVEL=info
+LOG_LEVEL = info;
 
 // 关键操作日志
 this.logger.log(`[uploadChunk] 用户 ${userId} 上传分片 ${chunk}/${chunks}`);

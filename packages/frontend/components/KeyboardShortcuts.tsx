@@ -28,7 +28,10 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
         if (selectedNode && !selectedNode.isFolder && !selectedNode.isRoot) {
           const ext = selectedNode.extension?.toLowerCase();
           if (ext === '.dwg' || ext === '.dxf') {
-            console.log('[KeyboardShortcuts] 快捷键触上传外部参照:', selectedNode.name);
+            console.log(
+              '[KeyboardShortcuts] 快捷键触上传外部参照:',
+              selectedNode.name
+            );
             onUploadExternalReference?.(selectedNode);
           } else {
             console.log('[KeyboardShortcuts] 选中的文件不是 CAD 文件，跳过');

@@ -26,7 +26,7 @@
   ["_Erase", "E", "_E", "Erase"],
   ["Mx_Copy", "_Copy", "Co", "_Co", "Copy", "cp"],
   ["Mx_Move", "_Move", "M", "Mo", "_Mo", "Move"],
-  ["Mx_Scale","_Scale", "Sc", "_Sc", "Scale"],
+  ["Mx_Scale", "_Scale", "Sc", "_Sc", "Scale"],
   ["Mx_Offset", "Offset", "_Offset", "O"],
   ["Mx_Rotate", "_Rotation", "Ro", "_Ro", "Rotation", "_rotate", "rotate"],
   ["Mx_Chamfer", "Cha", "Chamfer", "_Chamfer"],

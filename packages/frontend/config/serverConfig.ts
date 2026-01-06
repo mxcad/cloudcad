@@ -5,47 +5,41 @@
 //https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { getConfig } from './getConfig';
+import type ServerConfigType from '../public/ini/myServerConfig.json';
 
-import { getConfig } from './getConfig'
-import type ServerConfigType from "../public/ini/myServerConfig.json"
+export let serverConfig: Partial<typeof ServerConfigType>;
 
+export type UploadFileConfig = Partial<
+  (typeof ServerConfigType)['uploadFileConfig']
+>;
 
-
-
-export let serverConfig: (Partial<typeof ServerConfigType>)
-
-export type UploadFileConfig = Partial<typeof ServerConfigType["uploadFileConfig"]>
-
-
-export const fetchServerConfig = async ()=> {
-  if(!serverConfig) {
+export const fetchServerConfig = async () => {
+  if (!serverConfig) {
     const url = new URL('/public/mxServerConfig.json', import.meta.url).href;
-    serverConfig = await getConfig(url) 
+    serverConfig = await getConfig(url);
   }
-  return serverConfig
-}
+  return serverConfig;
+};
 
-export const getUploadFileConfig = ()=> {
-  return serverConfig?.uploadFileConfig
-}
+export const getUploadFileConfig = () => {
+  return serverConfig?.uploadFileConfig;
+};
 
+export const getWasmConfig = () => {
+  return serverConfig?.wasmConfig;
+};
 
+export const getAiConfig = () => {
+  return serverConfig?.aiConfig;
+};
 
-export const getWasmConfig = ()=> {
-  return serverConfig?.wasmConfig
-}
-
-
-export const getAiConfig = ()=> {
-  return serverConfig?.aiConfig
-}
-
-export const getMxCADFileExtName = (ret_dot:boolean = false)=> {
-  if(serverConfig && serverConfig["file_ext_name"]){
-    return ret_dot ? "."+serverConfig["file_ext_name"]:serverConfig["file_ext_name"];
+export const getMxCADFileExtName = (ret_dot: boolean = false) => {
+  if (serverConfig && serverConfig['file_ext_name']) {
+    return ret_dot
+      ? '.' + serverConfig['file_ext_name']
+      : serverConfig['file_ext_name'];
+  } else {
+    return ret_dot ? '.mxweb' : 'mxweb';
   }
-  else{
-    return  ret_dot ? ".mxweb":"mxweb";
-  }
-}
-
+};

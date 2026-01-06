@@ -81,7 +81,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   const handleUploadExternalReference = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    
+
     if (!node.fileHash) {
       console.error('[FileItem] 文件哈希不存在');
       return;
@@ -89,7 +89,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
     console.log('[FileItem] 开始检查外部参照');
     const hasMissing = await externalReferenceUpload.checkMissingReferences();
-    
+
     if (!hasMissing) {
       console.log('[FileItem] 无缺失的外部参照');
       // 显示提示：所有外部参照已存在
@@ -120,7 +120,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         <div className="text-sm font-medium text-slate-900 truncate">
           {node.name}
         </div>
-        
+
         {/* 缺失外部参照警告 */}
         {node.hasMissingExternalReferences && (
           <div className="flex items-center justify-center gap-1 mt-1">
@@ -255,7 +255,7 @@ interface KeyboardShortcutsProps {
 
 /**
  * 键盘快捷键组件
- * 
+ *
  * 支持的快捷键：
  * - Ctrl/Cmd + U: 上传外部参照
  */

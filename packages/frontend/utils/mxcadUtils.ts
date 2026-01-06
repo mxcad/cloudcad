@@ -2,23 +2,18 @@
  * 日志工具
  */
 export class Logger {
-  static info(message: string, ...args: any[]): void {
-}
+  static info(message: string, ...args: any[]): void {}
 
-  static error(message: string, ...args: any[]): void {
-}
+  static error(message: string, ...args: any[]): void {}
 
-  static warn(message: string, ...args: any[]): void {
-}
+  static warn(message: string, ...args: any[]): void {}
 
-  static success(message: string, ...args: any[]): void {
-}
+  static success(message: string, ...args: any[]): void {}
 
   /**
    * 强制输出日志（仅在调试时启用）
    */
-  static force(message: string, ...args: any[]): void {
-}
+  static force(message: string, ...args: any[]): void {}
 
   /**
    * 静默所有日志输出
@@ -34,7 +29,7 @@ export class Logger {
 export class ErrorHandler {
   static handle(error: Error | unknown, context: string): void {
     const message = error instanceof Error ? error.message : String(error);
-    
+
     // 静默处理错误，不输出日志
     // 可以在这里添加错误上报逻辑
     this.reportError(error, context);
@@ -42,7 +37,7 @@ export class ErrorHandler {
 
   static handleAsync(error: Error | unknown, context: string): void {
     const message = error instanceof Error ? error.message : String(error);
-    
+
     // 静默处理异步错误，不输出日志
     // 可以在这里添加错误上报逻辑
     this.reportError(error, context);
@@ -73,15 +68,17 @@ export class ErrorHandler {
  */
 export class FileStatusHelper {
   private static statusTextMap = {
-    'UPLOADING': '正在上传',
-    'PROCESSING': '正在处理',
-    'COMPLETED': '已完成',
-    'FAILED': '处理失败',
-    'DELETED': '已删除'
+    UPLOADING: '正在上传',
+    PROCESSING: '正在处理',
+    COMPLETED: '已完成',
+    FAILED: '处理失败',
+    DELETED: '已删除',
   } as const;
 
   static getStatusText(status: string): string {
-    return this.statusTextMap[status as keyof typeof this.statusTextMap] || status;
+    return (
+      this.statusTextMap[status as keyof typeof this.statusTextMap] || status
+    );
   }
 
   static isCompleted(status?: string | null): boolean {
@@ -106,18 +103,17 @@ export class UrlHelper {
     // 根据原始文件扩展名动态构建 mxweb 文件名
     // 格式：{fileHash}.{原始扩展名}.mxweb
     let suffix = 'dwg'; // 默认扩展名
-    
+
     if (originalName) {
       const lastDotIndex = originalName.lastIndexOf('.');
       if (lastDotIndex > 0) {
         suffix = originalName.substring(lastDotIndex + 1).toLowerCase();
       }
     }
-    
+
     return `/mxcad/file/${fileHash}.${suffix}.mxweb`;
   }
-
-  }
+}
 
 /**
  * 验证工具
@@ -135,7 +131,7 @@ export class ValidationHelper {
     projectId?: string;
     parentId?: string;
   }): boolean {
-    return !!(context.nodeId);
+    return !!context.nodeId;
   }
 }
 
@@ -143,7 +139,7 @@ export class ValidationHelper {
  * 延迟工具
  */
 export const delay = (ms: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 /**
@@ -163,7 +159,7 @@ export class RetryHelper {
         return await fn();
       } catch (error) {
         lastError = error;
-        
+
         if (i === maxRetries) {
           throw error;
         }

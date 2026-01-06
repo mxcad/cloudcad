@@ -14,13 +14,13 @@ export const useMxCadConfig = () => {
     try {
       const configUrl = window.location.origin;
 
-      mxcadApp.setStaticAssetPath("/mxcadAppAssets/")
+      mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
       mxcadApp.initConfig({
         uiConfig: `${configUrl}/ini/myUiConfig.json`,
         sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
         serverConfig: `${configUrl}/ini/myServerConfig.json`,
         quickCommandConfig: `${configUrl}/ini/myQuickCommand.json`,
-        themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`
+        themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`,
       });
       Logger.success('MxCAD 配置初始化成功');
       return true;
@@ -59,7 +59,7 @@ export const useProjectContext = () => {
 
   useEffect(() => {
     const context = UrlHelper.getProjectContext(location.search);
-    
+
     if (context.projectId || context.parentId) {
       setProjectContext(context);
       Logger.info('项目上下文', context);
@@ -68,8 +68,6 @@ export const useProjectContext = () => {
 
   return projectContext;
 };
-
-
 
 /**
  * 文件信息获取 Hook
@@ -98,11 +96,14 @@ export const useMxCadServerConfig = (
 ) => {
   const setupServerConfig = async () => {
     try {
-      const serverConfig = await ((window as any).MxPluginContext).getServerConfig();
+      const serverConfig = await (
+        window as any
+      ).MxPluginContext.getServerConfig();
       Logger.info('当前 MxCAD 服务器配置', serverConfig);
-      
+
       if (serverConfig?.uploadFileConfig?.create) {
-        const originalFormData = serverConfig.uploadFileConfig.create.formData || {};
+        const originalFormData =
+          serverConfig.uploadFileConfig.create.formData || {};
 
         serverConfig.uploadFileConfig.create.formData = {
           ...originalFormData,
@@ -113,9 +114,11 @@ export const useMxCadServerConfig = (
         };
 
         // Authorization header 由 apiService 拦截器统一处理
-        
-        Logger.info('修改 MxCAD 服务器配置，添加上下文参数', 
-          serverConfig.uploadFileConfig.create.formData);
+
+        Logger.info(
+          '修改 MxCAD 服务器配置，添加上下文参数',
+          serverConfig.uploadFileConfig.create.formData
+        );
       }
     } catch (error) {
       ErrorHandler.handle(error, '设置服务器配置');

@@ -76,7 +76,7 @@ export const UserManagement = () => {
       setHasPermission(hasAccess);
       return hasAccess;
     } catch (error) {
-setHasPermission(false);
+      setHasPermission(false);
       return false;
     }
   };
@@ -88,7 +88,7 @@ setHasPermission(false);
       const response = await usersApi.list();
       setUsers(response.data);
     } catch (error) {
-setError('加载用户列表失败');
+      setError('加载用户列表失败');
     } finally {
       setLoading(false);
     }
@@ -151,7 +151,7 @@ setError('加载用户列表失败');
       setIsModalOpen(false);
       await loadData();
     } catch (error) {
-setError(editingUser ? '更新用户失败' : '创建用户失败');
+      setError(editingUser ? '更新用户失败' : '创建用户失败');
     } finally {
       setLoading(false);
     }
@@ -164,7 +164,7 @@ setError(editingUser ? '更新用户失败' : '创建用户失败');
         await usersApi.delete(id);
         await loadData();
       } catch (error) {
-setError('删除用户失败');
+        setError('删除用户失败');
       } finally {
         setLoading(false);
       }
