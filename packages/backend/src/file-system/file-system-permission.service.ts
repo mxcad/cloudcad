@@ -41,13 +41,11 @@ export class FileSystemPermissionService {
       throw new NotFoundException('节点不存在');
     }
 
-    // 检查所有者权限
     if (node.ownerId === userId) {
       this.cache.set(cacheKey, true, 600000);
       return true;
     }
 
-    // 查询 FileAccess 表获取权限
     const nodeAccess = await this.prisma.fileAccess.findUnique({
       where: { userId_nodeId: { userId, nodeId } },
     });
@@ -59,7 +57,6 @@ export class FileSystemPermissionService {
       return hasPermission;
     }
 
-    // 向上查找根节点的权限（继承机制）
     const rootNode = await this.findRootNode(nodeId);
     if (rootNode && rootNode.id !== nodeId) {
       const rootAccess = await this.prisma.fileAccess.findUnique({
@@ -94,12 +91,10 @@ export class FileSystemPermissionService {
       return null;
     }
 
-    // 所有者拥有 OWNER 角色
     if (node.ownerId === userId) {
       return NodeAccessRole.OWNER;
     }
 
-    // 查询直接权限
     const directAccess = await this.prisma.fileAccess.findUnique({
       where: { userId_nodeId: { userId, nodeId } },
     });
@@ -108,7 +103,6 @@ export class FileSystemPermissionService {
       return directAccess.role as NodeAccessRole;
     }
 
-    // 查询根节点权限（继承）
     const rootNode = await this.findRootNode(nodeId);
     if (rootNode && rootNode.id !== nodeId) {
       const rootAccess = await this.prisma.fileAccess.findUnique({
@@ -149,7 +143,6 @@ export class FileSystemPermissionService {
       create: { userId, nodeId, role },
     });
 
-    // 清除相关缓存
     this.cache.clearNodeCache(nodeId);
   }
 
@@ -161,7 +154,6 @@ export class FileSystemPermissionService {
       where: { userId, nodeId },
     });
 
-    // 清除相关缓存
     this.cache.clearNodeCache(nodeId);
   }
 

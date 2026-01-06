@@ -78,8 +78,6 @@ export class FileSystemController {
     return this.fileSystemService.deleteProject(projectId, body?.permanently);
   }
 
-  // ============ 回收站相关 API ============
-
   @Get('trash')
   @ApiResponse({ status: 200, description: '获取回收站列表成功' })
   async getTrash(@Request() req) {
@@ -176,7 +174,6 @@ export class FileSystemController {
       throw new BadRequestException('缺少父节点ID');
     }
 
-    // 验证父节点是否存在且是文件夹
     const parentNode = await this.fileSystemService.getNode(parentId);
     if (!parentNode) {
       throw new NotFoundException('父节点不存在');
@@ -186,10 +183,8 @@ export class FileSystemController {
       throw new BadRequestException('只能上传文件到文件夹');
     }
 
-    // 获取项目根节点ID（用于权限检查）
     let projectId = parentId;
     if (!parentNode.isRoot) {
-      // 如果不是根节点，需要向上查找项目根节点
       let currentNode = parentNode;
       while (currentNode.parentId) {
         currentNode = await this.fileSystemService.getNode(
@@ -202,7 +197,6 @@ export class FileSystemController {
       }
     }
 
-    // 检查用户是否是项目成员
     const hasPermission = await this.fileSystemService.checkProjectPermission(
       projectId,
       req.user.id,
@@ -213,13 +207,10 @@ export class FileSystemController {
       throw new ForbiddenException('没有权限上传文件到此项目');
     }
 
-    // 将文件内容转为 buffer
     let buffer: Buffer;
     if (fileContent) {
-      // 如果是 base64 编码的内容
       buffer = Buffer.from(fileContent, 'base64');
     } else {
-      // 如果没有内容，创建一个空的文本文件作为占位符
       buffer = Buffer.from(`文件内容: ${fileName}`, 'utf-8');
     }
 
@@ -239,8 +230,6 @@ export class FileSystemController {
   async getStorageInfo(@Request() req) {
     return this.fileSystemService.getUserStorageInfo(req.user.id);
   }
-
-  // ============ 项目成员管理 API ============
 
   @Get('projects/:projectId/members')
   @ApiOperation({ summary: '获取项目成员列表' })
@@ -342,14 +331,12 @@ export class FileSystemController {
     @Request() req: any,
     @Res() res: any
   ) {
-    // 从 Session 获取用户 ID
     const userId = req.session?.userId;
 
     if (!userId) {
       throw new UnauthorizedException('未登录');
     }
 
-    // 检查文件访问权限
     const hasAccess = await this.fileSystemService.checkFileAccess(
       nodeId,
       userId
@@ -359,14 +346,12 @@ export class FileSystemController {
       throw new ForbiddenException('无权访问该文件');
     }
 
-    // 获取文件信息
     const node = await this.fileSystemService.getNode(nodeId);
 
     if (!node || node.isFolder || !node.path) {
       throw new NotFoundException('文件不存在');
     }
 
-    // 判断文件类型
     const extension = node.extension?.toLowerCase() || '';
     const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
 
@@ -374,26 +359,20 @@ export class FileSystemController {
       throw new BadRequestException('该文件不是图片文件');
     }
 
-    // 处理存储路径：支持新旧路径格式
     let storagePath = node.path;
     if (node.path.startsWith('files/')) {
-      // 旧路径格式：files/{userId}/{timestamp}-{filename}
-      // 转换为新路径格式：mxcad/file/{fileHash}/{filename}
       if (node.fileHash) {
         storagePath = `mxcad/file/${node.fileHash}/${node.name}`;
         this.logger.log(`路径转换: ${node.path} -> ${storagePath}`);
       }
     }
 
-    // 从 MinIO 获取文件流
     const stream = await this.fileSystemService.getFileStream(storagePath);
 
-    // 设置响应头
     const mimeType = this.getMimeType(node.name);
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
 
-    // 返回图片流
     stream.pipe(res);
   }
 }

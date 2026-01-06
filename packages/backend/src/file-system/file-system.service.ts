@@ -976,8 +976,6 @@ export class FileSystemService {
     }
   }
 
-  // ============ 回收站相关方法 ============
-
   /**
    * 获取用户的回收站列表（已删除的项目和文件）
    * 统一返回所有被删除的节点，不区分项目和目录
@@ -1162,7 +1160,6 @@ export class FileSystemService {
         });
 
         for (const child of children) {
-          // 恢复子节点
           await tx.fileSystemNode.update({
             where: { id: child.id },
             data: {
@@ -1171,7 +1168,6 @@ export class FileSystemService {
             },
           });
 
-          // 如果是文件夹，递归恢复其子项
           if (child.isFolder) {
             await restoreDescendants(tx, child.id);
           }
@@ -1179,7 +1175,6 @@ export class FileSystemService {
       };
 
       await this.prisma.$transaction(async (tx) => {
-        // 恢复当前节点
         await tx.fileSystemNode.update({
           where: { id: nodeId },
           data: {
@@ -1188,12 +1183,10 @@ export class FileSystemService {
           },
         });
 
-        // 如果是文件夹，递归恢复所有子项
         if (node.isFolder) {
           await restoreDescendants(tx, nodeId);
         }
 
-        // 如果有父节点且父节点也被删除，需要恢复父节点
         if (node.parentId) {
           const parent = await tx.fileSystemNode.findFirst({
             where: { id: node.parentId, deletedAt: { not: null } },
@@ -1208,7 +1201,6 @@ export class FileSystemService {
               },
             });
 
-            // 如果父节点是文件夹，递归恢复其子项
             if (parent.isFolder) {
               await restoreDescendants(tx, node.parentId);
             }
@@ -1229,7 +1221,6 @@ export class FileSystemService {
    */
   async permanentlyDeleteProject(projectId: string) {
     try {
-      // 先收集项目下所有文件的哈希值，用于清理 uploads 目录
       const files = await this.prisma.fileSystemNode.findMany({
         where: {
           parentId: projectId,
@@ -1239,7 +1230,6 @@ export class FileSystemService {
         select: { fileHash: true },
       });
 
-      // 递归收集所有子目录中的文件哈希值
       const collectFileHashes = async (nodeId: string): Promise<string[]> => {
         const children = await this.prisma.fileSystemNode.findMany({
           where: { parentId: nodeId },
@@ -1263,7 +1253,6 @@ export class FileSystemService {
         ...(await collectFileHashes(projectId)),
       ];
 
-      // 删除 uploads 目录中的物理文件
       if (allFileHashes.length > 0) {
         const deletedCount =
           await this.deleteMxCadFilesFromUploadsBatch(allFileHashes);
@@ -1299,7 +1288,6 @@ export class FileSystemService {
         throw new NotFoundException('节点不存在');
       }
 
-      // 如果是文件且有文件哈希，删除 uploads 目录中的物理文件
       if (!node.isFolder && node.fileHash) {
         await this.deleteMxCadFilesFromUploads(node.fileHash);
       }
@@ -1329,7 +1317,6 @@ export class FileSystemService {
         return { message: '请选择要恢复的项目' };
       }
 
-      // 获取所有要恢复的节点
       const items = await this.prisma.fileSystemNode.findMany({
         where: {
           id: { in: itemIds },
@@ -1342,7 +1329,6 @@ export class FileSystemService {
         throw new NotFoundException('未找到要恢复的项目');
       }
 
-      // 分别恢复项目和节点
       for (const item of items) {
         if (item.isRoot) {
           await this.restoreProject(item.id);
@@ -1368,7 +1354,6 @@ export class FileSystemService {
         return { message: '请选择要删除的项目' };
       }
 
-      // 获取所有要删除的节点
       const items = await this.prisma.fileSystemNode.findMany({
         where: {
           id: { in: itemIds },
@@ -1381,7 +1366,6 @@ export class FileSystemService {
         throw new NotFoundException('未找到要删除的项目');
       }
 
-      // 分别删除项目和节点
       for (const item of items) {
         if (item.isRoot) {
           await this.permanentlyDeleteProject(item.id);
@@ -1403,7 +1387,6 @@ export class FileSystemService {
    */
   async clearTrash(userId: string) {
     try {
-      // 获取用户回收站中的所有项目
       const projects = await this.prisma.fileSystemNode.findMany({
         where: {
           isRoot: true,
@@ -1413,7 +1396,6 @@ export class FileSystemService {
         select: { id: true },
       });
 
-      // 获取用户回收站中的所有节点
       const nodes = await this.prisma.fileSystemNode.findMany({
         where: {
           deletedAt: { not: null },
@@ -1422,19 +1404,16 @@ export class FileSystemService {
         select: { id: true, isFolder: true, path: true, fileHash: true },
       });
 
-      // 收集所有文件的哈希值，用于清理 uploads 目录
       const fileHashes = nodes
         .filter((node) => !node.isFolder && node.fileHash)
         .map((node) => node.fileHash!);
 
-      // 删除 uploads 目录中的物理文件
       if (fileHashes.length > 0) {
         const deletedCount =
           await this.deleteMxCadFilesFromUploadsBatch(fileHashes);
         this.logger.log(`清空回收站时删除 uploads 文件: ${deletedCount} 个`);
       }
 
-      // 彻底删除所有
       for (const project of projects) {
         await this.permanentlyDeleteProject(project.id);
       }
@@ -1463,11 +1442,8 @@ export class FileSystemService {
     }
   }
 
-  // ============ 权限检查方法 ============
-
   async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
-      // 获取节点
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
         select: { ownerId: true, isRoot: true, parentId: true },
@@ -1477,12 +1453,10 @@ export class FileSystemService {
         return false;
       }
 
-      // 如果是节点所有者，直接允许访问
       if (node.ownerId === userId) {
         return true;
       }
 
-      // 如果是根节点，检查节点访问权限
       if (node.isRoot) {
         const rootAccess = await this.prisma.fileAccess.findUnique({
           where: {
@@ -1492,7 +1466,6 @@ export class FileSystemService {
         return !!rootAccess;
       }
 
-      // 如果不是根节点，向上查找根节点并检查权限
       const rootNode = await this.getRootNode(nodeId);
       if (rootNode) {
         const rootAccess = await this.prisma.fileAccess.findUnique({
@@ -1541,7 +1514,6 @@ export class FileSystemService {
 
   async getUserStorageInfo(userId: string) {
     try {
-      // 获取用户所有文件的总大小
       const files = await this.prisma.fileSystemNode.findMany({
         where: {
           ownerId: userId,
@@ -1555,7 +1527,6 @@ export class FileSystemService {
 
       const totalUsed = files.reduce((sum, file) => sum + (file.size || 0), 0);
 
-      // 设置存储限制为 5GB (5 * 1024 * 1024 * 1024 bytes)
       const totalLimit = 5 * 1024 * 1024 * 1024;
       const available = totalLimit - totalUsed;
       const usagePercentage = Math.round((totalUsed / totalLimit) * 100);
@@ -1592,7 +1563,6 @@ export class FileSystemService {
     let totalDeleted = 0;
 
     try {
-      // 1. 删除 uploads 目录中的文件
       const uploadPath =
         process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
 
@@ -1600,7 +1570,6 @@ export class FileSystemService {
         await fsPromises.access(uploadPath);
         const files = await fsPromises.readdir(uploadPath);
 
-        // 筛选出与 fileHash 相关的文件
         const relatedFiles = files.filter((file) => file.startsWith(fileHash));
 
         for (const fileName of relatedFiles) {
@@ -1616,7 +1585,6 @@ export class FileSystemService {
           }
         }
 
-        // 删除外部参照子目录（如果存在）
         const hashDir = path.join(uploadPath, fileHash);
         try {
           await fsPromises.access(hashDir);
@@ -1637,11 +1605,9 @@ export class FileSystemService {
             }
           }
 
-          // 删除空目录
           await fsPromises.rmdir(hashDir);
           this.logger.log(`删除 uploads 外部参照目录成功: ${hashDir}`);
         } catch (error) {
-          // 子目录不存在或无权限，忽略
           this.logger.debug(`外部参照子目录不存在: ${hashDir}`);
         }
       } catch (error) {
@@ -1650,9 +1616,7 @@ export class FileSystemService {
         );
       }
 
-      // 2. 删除 MinIO 中的相关文件
       try {
-        // 获取 mxcad/file/ 路径下所有以 fileHash 开头的文件
         const minioFiles = await this.storage.listFiles(
           `mxcad/file/`,
           `${fileHash}`
@@ -1670,7 +1634,6 @@ export class FileSystemService {
           }
         }
 
-        // 删除外部参照子目录（如果存在）
         try {
           const extRefFiles = await this.storage.listFiles(
             `mxcad/file/${fileHash}/`
@@ -1687,7 +1650,6 @@ export class FileSystemService {
             }
           }
         } catch (error) {
-          // 子目录不存在或无权限，忽略
           this.logger.debug(`外部参照子目录不存在: mxcad/file/${fileHash}/`);
         }
       } catch (error) {
@@ -1739,8 +1701,6 @@ export class FileSystemService {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  // ============ 项目成员管理方法 ============
-
   /**
    * 获取项目成员列表
    * @param projectId 项目 ID
@@ -1748,7 +1708,6 @@ export class FileSystemService {
    */
   async getProjectMembers(projectId: string) {
     try {
-      // 验证项目是否存在且是根节点
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
       });
@@ -1757,7 +1716,6 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      // 获取所有成员
       const members = await this.prisma.fileAccess.findMany({
         where: { nodeId: projectId },
         include: {
@@ -1800,7 +1758,6 @@ export class FileSystemService {
     operatorId: string
   ) {
     try {
-      // 验证项目是否存在且是根节点
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
       });
@@ -1809,7 +1766,6 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      // 检查操作者权限（只有 OWNER 和 ADMIN 可以添加成员）
       const hasPermission = await this.checkProjectPermission(
         projectId,
         operatorId,
@@ -1820,7 +1776,6 @@ export class FileSystemService {
         throw new ForbiddenException('没有权限添加项目成员');
       }
 
-      // 检查用户是否存在
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
       });
@@ -1829,7 +1784,6 @@ export class FileSystemService {
         throw new NotFoundException('用户不存在');
       }
 
-      // 检查是否已经是成员
       const existingMember = await this.prisma.fileAccess.findUnique({
         where: {
           userId_nodeId: {
@@ -1843,7 +1797,6 @@ export class FileSystemService {
         throw new ForbiddenException('用户已经是项目成员');
       }
 
-      // 添加成员
       const member = await this.prisma.fileAccess.create({
         data: {
           nodeId: projectId,
@@ -1889,7 +1842,6 @@ export class FileSystemService {
     operatorId: string
   ) {
     try {
-      // 验证项目是否存在且是根节点
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
       });
@@ -1898,12 +1850,10 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      // 检查是否是项目所有者（不能修改所有者的角色）
       if (project.ownerId === userId) {
         throw new ForbiddenException('不能修改项目所有者的角色');
       }
 
-      // 检查操作者权限（只有 OWNER 和 ADMIN 可以更新成员角色）
       const hasPermission = await this.checkProjectPermission(
         projectId,
         operatorId,
@@ -1914,13 +1864,11 @@ export class FileSystemService {
         throw new ForbiddenException('没有权限更新项目成员角色');
       }
 
-      // 验证角色是否合法
       const validRoles = ['OWNER', 'ADMIN', 'MEMBER', 'EDITOR', 'VIEWER'];
       if (!validRoles.includes(role)) {
         throw new BadRequestException('无效的角色');
       }
 
-      // 更新成员角色
       const member = await this.prisma.fileAccess.update({
         where: {
           userId_nodeId: {
@@ -1966,7 +1914,6 @@ export class FileSystemService {
     operatorId: string
   ) {
     try {
-      // 验证项目是否存在且是根节点
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
       });
@@ -1975,7 +1922,6 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      // 检查操作者权限（只有 OWNER 和 ADMIN 可以移除成员）
       const hasPermission = await this.checkProjectPermission(
         projectId,
         operatorId,
@@ -1986,12 +1932,10 @@ export class FileSystemService {
         throw new ForbiddenException('没有权限移除项目成员');
       }
 
-      // 检查是否是项目所有者（不能移除所有者）
       if (project.ownerId === userId) {
         throw new ForbiddenException('不能移除项目所有者');
       }
 
-      // 移除成员
       await this.prisma.fileAccess.delete({
         where: {
           userId_nodeId: {
