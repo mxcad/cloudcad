@@ -119,5 +119,6 @@ module.exports = {
     'conversionProgram/**',
     '代码参考/**',
     'test-*.js',
+    'mxcadassembly/**',
   ],
 };

@@ -80,9 +80,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .getProfile()
         .then((response) => {
           setUser(response.data);
-})
+        })
         .catch((error) => {
-// Token 无效，清除本地存储
+          // Token 无效，清除本地存储
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -111,12 +111,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         credentials: 'include', // 包含 cookies
         body: JSON.stringify({ user: userData }),
       });
-      
+
       if (sessionResponse.ok) {
-} else {
-}
+        // Session 创建成功，继续
+      } else {
+        // Session 创建失败，但仍然使用 JWT 认证
+        console.error('Session creation failed');
+      }
     } catch (error) {
-}
+      // Session 创建失败，但仍然使用 JWT 认证
+      console.error('Session creation error:', error);
+    }
 
     // 更新状态
     setToken(accessToken);
@@ -130,34 +135,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       username: string;
       nickname?: string;
     }) => {
-      try {
-        const response = await authApi.register(data);
-        // 注册成功但不自动登录，返回注册成功信息
-return response.data; // { message: string; email: string }
-      } catch (error) {
-throw error;
-      }
+      const response = await authApi.register(data);
+      // 注册成功但不自动登录，返回注册成功信息
+      return response.data; // { message: string; email: string }
     },
     []
   );
-
   const verifyEmailAndLogin = useCallback(
     async (email: string, code: string) => {
-      try {
-        const response = await authApi.verifyEmail({ email, code });
-// 注意：现在验证邮箱不再返回 tokens，只是验证成功
-        // 用户需要重新登录
-      } catch (error) {
-throw error;
-      }
+      const response = await authApi.verifyEmail({ email, code });
+      // 注意：现在验证邮箱不再返回 tokens，只是验证成功
+      // 用户需要重新登录
+      return response.data;
     },
     []
   );
-
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
-      
+
       // 清除 Session
       try {
         await fetch('/api/session/destroy', {
@@ -165,9 +161,12 @@ throw error;
           credentials: 'include', // 包含 cookies
         });
       } catch (error) {
-}
+        // Session 清除失败，但仍然清除本地状态
+        console.error('Session destroy error:', error);
+      }
     } catch (error) {
-} finally {
+      console.error('Logout error:', error);
+    } finally {
       // 清除本地存储
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');

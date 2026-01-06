@@ -340,7 +340,10 @@ export const projectsApi = {
     apiService.delete(`/file-system/projects/${projectId}/members/${userId}`),
 
   updateMember: (projectId: string, userId: string, data: { role: string }) =>
-    apiService.patch(`/file-system/projects/${projectId}/members/${userId}`, data),
+    apiService.patch(
+      `/file-system/projects/${projectId}/members/${userId}`,
+      data
+    ),
 };
 
 // 回收站相关的 API 方法
@@ -448,43 +451,45 @@ export const mxcadApi = {
     extRefFile: string,
     onProgress?: (progressEvent: any) => void
   ) => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // 计算上传文件的哈希
-        const hash = await calculateFileHash(file);
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          // 计算上传文件的哈希
+          const hash = await calculateFileHash(file);
 
-        const formData = new FormData();
-        // 先添加字段，再添加文件，确保 Multer 能正确解析字段
-        formData.append('hash', hash); // 使用上传文件的哈希
-        formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
-        formData.append('ext_ref_file', extRefFile);
-        formData.append('file', file);
+          const formData = new FormData();
+          // 先添加字段，再添加文件，确保 Multer 能正确解析字段
+          formData.append('hash', hash); // 使用上传文件的哈希
+          formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
+          formData.append('ext_ref_file', extRefFile);
+          formData.append('file', file);
 
-        // 调试日志：打印 FormData 内容
-        console.log('[uploadExtReferenceDwg] FormData 内容:');
-        for (const [key, value] of formData.entries()) {
-          console.log(
-            `  ${key}: ${value instanceof File ? `File(${value.name})` : value}`
-          );
-        }
-
-        const response = await apiService.post(
-          '/mxcad/up_ext_reference_dwg',
-          formData,
-          {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: onProgress,
+          // 调试日志：打印 FormData 内容
+          console.log('[uploadExtReferenceDwg] FormData 内容:');
+          for (const [key, value] of formData.entries()) {
+            console.log(
+              `  ${key}: ${value instanceof File ? `File(${value.name})` : value}`
+            );
           }
-        );
-        // 根据新的返回格式判断成功或失败
-        if (response.data?.code === 0) {
-          resolve(response);
-        } else {
-          reject(new Error(response.data?.message || '上传失败'));
+
+          const response = await apiService.post(
+            '/mxcad/up_ext_reference_dwg',
+            formData,
+            {
+              headers: { 'Content-Type': 'multipart/form-data' },
+              onUploadProgress: onProgress,
+            }
+          );
+          // 根据新的返回格式判断成功或失败
+          if (response.data?.code === 0) {
+            resolve(response);
+          } else {
+            reject(new Error(response.data?.message || '上传失败'));
+          }
+        } catch (error) {
+          reject(error);
         }
-      } catch (error) {
-        reject(error);
-      }
+      })();
     });
   },
 
@@ -495,35 +500,37 @@ export const mxcadApi = {
     extRefFile: string,
     onProgress?: (progressEvent: any) => void
   ) => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // 计算上传文件的哈希
-        const hash = await calculateFileHash(file);
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          // 计算上传文件的哈希
+          const hash = await calculateFileHash(file);
 
-        const formData = new FormData();
-        // 先添加字段，再添加文件，确保 Multer 能正确解析字段
-        formData.append('hash', hash); // 使用上传文件的哈希
-        formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
-        formData.append('ext_ref_file', extRefFile);
-        formData.append('file', file);
+          const formData = new FormData();
+          // 先添加字段，再添加文件，确保 Multer 能正确解析字段
+          formData.append('hash', hash); // 使用上传文件的哈希
+          formData.append('src_dwgfile_hash', srcDwgFileHash); // 源图纸哈希
+          formData.append('ext_ref_file', extRefFile);
+          formData.append('file', file);
 
-        const response = await apiService.post(
-          '/mxcad/up_ext_reference_image',
-          formData,
-          {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: onProgress,
+          const response = await apiService.post(
+            '/mxcad/up_ext_reference_image',
+            formData,
+            {
+              headers: { 'Content-Type': 'multipart/form-data' },
+              onUploadProgress: onProgress,
+            }
+          );
+          // 根据新的返回格式判断成功或失败
+          if (response.data?.code === 0) {
+            resolve(response);
+          } else {
+            reject(new Error(response.data?.message || '上传失败'));
           }
-        );
-        // 根据新的返回格式判断成功或失败
-        if (response.data?.code === 0) {
-          resolve(response);
-        } else {
-          reject(new Error(response.data?.message || '上传失败'));
+        } catch (error) {
+          reject(error);
         }
-      } catch (error) {
-        reject(error);
-      }
+      })();
     });
   },
 };

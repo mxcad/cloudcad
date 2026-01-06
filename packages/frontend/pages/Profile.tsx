@@ -53,7 +53,8 @@ export const Profile: React.FC = () => {
       try {
         await logout();
       } catch (logoutErr) {
-}
+        console.error('Logout error during password change:', logoutErr);
+      }
 
       navigate('/login', {
         state: { message: '密码已修改，请使用新密码登录' },

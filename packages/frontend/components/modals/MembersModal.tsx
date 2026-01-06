@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { RefreshCw, X, UserPlus, AlertCircle, HelpCircle, Loader2 } from 'lucide-react';
+import { RefreshCw, X, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { projectsApi, usersApi } from '../../services/apiService';
@@ -59,7 +59,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const [filterRole, setFilterRole] = useState<string>('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
+    null
+  );
 
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -84,29 +86,34 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     : members;
 
   // 搜索用户
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  const searchUsers = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
+      }
 
-    setSearching(true);
-    try {
-      const response = await usersApi.search({ search: query, limit: 10 });
-      const users = (response.data?.data || []) as UserSearchResult[];
+      setSearching(true);
+      try {
+        const response = await usersApi.search({ search: query, limit: 10 });
+        const users = (response.data?.data || []) as UserSearchResult[];
 
-      // 过滤掉已经是成员的用户
-      const memberUserIds = members.map((m) => m.userId);
-      const availableUsers = users.filter((u) => !memberUserIds.includes(u.id));
+        // 过滤掉已经是成员的用户
+        const memberUserIds = members.map((m) => m.userId);
+        const availableUsers = users.filter(
+          (u) => !memberUserIds.includes(u.id)
+        );
 
-      setSearchResults(availableUsers);
-    } catch (error) {
-      console.error('Failed to search users:', error);
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [members]);
+        setSearchResults(availableUsers);
+      } catch (error) {
+        console.error('Failed to search users:', error);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [members]
+  );
 
   // 防抖搜索
   useEffect(() => {
@@ -165,9 +172,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       await projectsApi.removeMember(projectId, userId);
-      setMembers((prev) =>
-        prev.filter((m) => m.userId !== userId)
-      );
+      setMembers((prev) => prev.filter((m) => m.userId !== userId));
     } catch (error: any) {
       console.error('Failed to remove member:', error);
       if (error.response?.status === 403) {
@@ -271,7 +276,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 />
                 {searching && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
                   </div>
                 )}
               </div>
@@ -292,13 +300,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium">
-                          {(user.nickname || user.username || user.email)[0].toUpperCase()}
+                          {(user.nickname ||
+                            user.username ||
+                            user.email)[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-slate-900 truncate">
                             {user.nickname || user.username}
                           </p>
-                          <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {user.email}
+                          </p>
                         </div>
                       </div>
                     </button>
@@ -310,13 +322,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               {selectedUser && (
                 <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
                   <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium">
-                    {(selectedUser.nickname || selectedUser.username || selectedUser.email)[0].toUpperCase()}
+                    {(selectedUser.nickname ||
+                      selectedUser.username ||
+                      selectedUser.email)[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-900 truncate">
                       {selectedUser.nickname || selectedUser.username}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">{selectedUser.email}</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {selectedUser.email}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -391,7 +407,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           ) : (
             filteredMembers.map((member) => {
               const isOwner = member.role === 'OWNER';
-              const displayName = member.user.nickname || member.user.username || member.user.email || '未知用户';
+              const displayName =
+                member.user.nickname ||
+                member.user.username ||
+                member.user.email ||
+                '未知用户';
               const avatarLetter = displayName[0]?.toUpperCase() || '?';
 
               return (
@@ -406,7 +426,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     <p className="text-sm font-medium text-slate-900 truncate">
                       {displayName}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">{member.user.email || '无邮箱'}</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {member.user.email || '无邮箱'}
+                    </p>
                   </div>
                   <select
                     value={member.role}

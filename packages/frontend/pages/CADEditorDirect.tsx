@@ -27,7 +27,7 @@ export const CADEditorDirect: React.FC = () => {
   const fileId = location.pathname.split('/').pop() || '';
 
   const loadMxCADDependencies = async () => {
-    //@ts-ignore
+    // @ts-expect-error - mxcad-app 没有类型定义
     await import('mxcad-app/style');
     const { mxcadManager } = await import('../services/mxcadManager');
     return { mxcadManager };
@@ -52,7 +52,8 @@ export const CADEditorDirect: React.FC = () => {
     if (serverConfig?.uploadFileConfig?.create) {
       const nodeId =
         new URLSearchParams(location.search).get('nodeId') ||
-        new URLSearchParams(location.search).get('parent') || '';
+        new URLSearchParams(location.search).get('parent') ||
+        '';
 
       // 验证节点信息
       if (!nodeId) {
@@ -92,7 +93,7 @@ export const CADEditorDirect: React.FC = () => {
           existingWarning.remove();
         }
       }
-   
+
       serverConfig.uploadFileConfig.create.formData = {
         ...serverConfig.uploadFileConfig.create.formData,
         nodeId: nodeId,
