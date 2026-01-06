@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useMemo } from 'react';
+﻿import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   projectsApi,
@@ -8,6 +8,70 @@ import {
 } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
+
+/**
+ * 验证文件夹/文件名称
+ * 返回验证结果和错误消息
+ */
+const validateFolderName = (name: string): { valid: boolean; error?: string } => {
+  const trimmedName = name.trim();
+
+  // 检查空值
+  if (!trimmedName) {
+    return { valid: false, error: '名称不能为空' };
+  }
+
+  // 检查长度限制（Windows 限制为 255 字符）
+  if (trimmedName.length > 255) {
+    return { valid: false, error: '名称长度不能超过 255 个字符' };
+  }
+
+  // 检查非法字符
+  const illegalChars = /[<>:"|?*/\\]/;
+  if (illegalChars.test(trimmedName)) {
+    return { valid: false, error: '名称包含非法字符：< > : " | ? * / \\' };
+  }
+
+  // 检查控制字符
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
+    return { valid: false, error: '名称包含非法字符' };
+  }
+
+  // 检查保留名称（Windows）
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedNames.test(trimmedName)) {
+    return { valid: false, error: '该名称为系统保留名称' };
+  }
+
+  // 检查是否以点开头或结尾（Unix 隐藏文件）
+  if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
+    return { valid: false, error: '名称不能以点开头或结尾' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * 清理文件名，防止 XSS 攻击
+ * 移除或转义危险字符，保留安全的文件名字符
+ */
+const sanitizeFileName = (fileName: string): string => {
+  // 移除路径遍历字符
+  let sanitized = fileName.replace(/[/\\]/g, '_');
+  // 移除控制字符
+  // eslint-disable-next-line no-control-regex
+  sanitized = sanitized.replace(/[\x00-\x1F\x7F]/gu, '');
+  // 移除 HTML/JS 特殊字符（防止 XSS）
+  sanitized = sanitized.replace(/[<>:"|?*]/g, '');
+  // 限制文件名长度（Windows 限制为 255 字符）
+  if (sanitized.length > 250) {
+    const ext = sanitized.split('.').pop() || '';
+    const nameWithoutExt = sanitized.substring(0, sanitized.lastIndexOf('.'));
+    sanitized = nameWithoutExt.substring(0, 250 - ext.length - 1) + '.' + ext;
+  }
+  return sanitized || 'unnamed';
+};
 
 export const useFileSystem = () => {
   const navigate = useNavigate();
@@ -46,19 +110,33 @@ export const useFileSystem = () => {
   const [draggedNodes, setDraggedNodes] = useState<FileSystemNode[]>([]);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
-  // 强制刷新计数器，用于解决闭包中 URL 参数过期问题
   const [refreshCount, setRefreshCount] = useState(0);
 
-  // 模态框状态
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
   const [folderName, setFolderName] = useState('');
 
-  // Toast 状态
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // 确认对话框状态
+  // 存储所有定时器 ID，用于组件卸载时清理
+  const timerRefs = useRef<Set<NodeJS.Timeout>>(new Set());
+
+  // 存储 AbortController，用于取消网络请求
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 组件卸载时清理所有定时器和取消网络请求
+  useEffect(() => {
+    return () => {
+      timerRefs.current.forEach((timerId) => clearTimeout(timerId));
+      timerRefs.current.clear();
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -73,22 +151,21 @@ export const useFileSystem = () => {
     type: 'warning',
   });
 
-  // Toast 操作
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, message }]);
 
-    // 自动移除 Toast
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      timerRefs.current.delete(timerId);
     }, 5000);
+    timerRefs.current.add(timerId);
   }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  // 确认对话框操作
   const showConfirm = useCallback(
     (
       title: string,
@@ -119,7 +196,8 @@ export const useFileSystem = () => {
    */
   const checkMissingExternalReferences = useCallback(
     async (
-      node: FileSystemNode
+      node: FileSystemNode,
+      signal?: AbortSignal
     ): Promise<{ hasMissing: boolean; count: number }> => {
       // 只有 DWG/DXF 文件才需要检查外部参照
       const cadExtensions = ['.dwg', '.dxf'];
@@ -133,7 +211,7 @@ export const useFileSystem = () => {
       }
 
       try {
-        const response = await mxcadApi.getPreloadingData(node.fileHash);
+        const response = await mxcadApi.getPreloadingData(node.fileHash, { signal });
         const preloadingData = response.data;
 
         if (!preloadingData || typeof preloadingData !== 'object') {
@@ -155,40 +233,32 @@ export const useFileSystem = () => {
           return { hasMissing: false, count: 0 };
         }
 
-        // 检查哪些文件缺失
-        let missingCount = 0;
+        // 合并所有需要检查的文件
+        const allMissingFiles = [...missingRefs, ...missingImages];
 
-        for (const name of missingRefs) {
+        // 使用 Promise.all 并行检查所有文件（性能优化）
+        const checkPromises = allMissingFiles.map(async (name) => {
           try {
             const existsResponse = await mxcadApi.checkExternalReferenceExists(
               node.fileHash!,
-              name
+              name,
+              { signal }
             );
-            if (!existsResponse.data.exists) {
-              missingCount++;
-            }
+            return !existsResponse.data.exists ? 1 : 0;
           } catch {
-            missingCount++;
+            return 1;
           }
-        }
+        });
 
-        for (const name of missingImages) {
-          try {
-            const existsResponse = await mxcadApi.checkExternalReferenceExists(
-              node.fileHash!,
-              name
-            );
-            if (!existsResponse.data.exists) {
-              missingCount++;
-            }
-          } catch {
-            missingCount++;
-          }
-        }
+        const results = await Promise.all(checkPromises);
+        const missingCount = results.reduce((sum, count) => sum + count, 0);
 
         return { hasMissing: missingCount > 0, count: missingCount };
       } catch (error) {
-        console.error('[useFileSystem] 检查外部参照失败:', error);
+        // 如果是取消请求导致的错误，不处理
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw error;
+        }
         return { hasMissing: false, count: 0 };
       }
     },
@@ -199,12 +269,11 @@ export const useFileSystem = () => {
   const handleRefresh = useCallback(() => {
     // 增加计数器，强制 useEffect 重新执行 loadData
     // 这样可以确保 loadData 使用最新的 projectId 和 nodeId
-    console.log('[handleRefresh] 触发刷新，refreshCount=', refreshCount + 1);
     setRefreshCount((prev) => prev + 1);
   }, [refreshCount]);
 
   // 从节点构建面包屑
-  const buildBreadcrumbsFromNode = useCallback(async (node: FileSystemNode) => {
+  const buildBreadcrumbsFromNode = useCallback(async (node: FileSystemNode, signal?: AbortSignal) => {
     const crumbs: BreadcrumbItem[] = [];
     const visited = new Set<string>();
     let currentNode: FileSystemNode | null = node;
@@ -212,6 +281,11 @@ export const useFileSystem = () => {
     try {
       // 向上遍历构建面包屑
       while (currentNode && !visited.has(currentNode.id)) {
+        // 检查是否已取消
+        if (signal?.aborted) {
+          throw new Error('Request aborted');
+        }
+
         visited.add(currentNode.id);
         crumbs.unshift({
           id: currentNode.id,
@@ -221,7 +295,8 @@ export const useFileSystem = () => {
 
         if (currentNode.parentId) {
           const parentResponse = await projectsApi.getNode(
-            currentNode.parentId
+            currentNode.parentId,
+            { signal }
           );
           currentNode = parentResponse.data;
         } else {
@@ -230,9 +305,13 @@ export const useFileSystem = () => {
       }
 
       setBreadcrumbs(crumbs);
-    } catch (err: any) {
-      // 静默：构建面包屑失败
-      // 如果构建失败，至少显示当前节点
+    } catch (error) {
+      // 如果是取消请求导致的错误，不处理
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
+
+      // 构建面包屑失败，至少显示当前节点
       setBreadcrumbs([
         {
           id: node.id,
@@ -258,6 +337,15 @@ export const useFileSystem = () => {
 
   // 统一的数据加载函数
   const loadData = useCallback(async () => {
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // 创建新的 AbortController
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setLoading(true);
     setError(null);
     setSelectedNodes(new Set<string>()); // 清除选中状态
@@ -266,22 +354,17 @@ export const useFileSystem = () => {
     try {
       if (isProjectRootMode) {
         // 项目根目录模式：加载项目列表
-        const response = await projectsApi.list();
+        const response = await projectsApi.list({ signal: abortController.signal });
         const allProjects = response.data || [];
         setNodes(allProjects);
         setCurrentNode(null);
         setBreadcrumbs([]);
-        console.log(
-          '[loadData] 项目根目录模式，加载项目列表:',
-          allProjects.length,
-          '个项目'
-        );
       } else {
         // 文件夹模式：加载项目/文件夹内容
         const currentNodeId = urlNodeId || urlProjectId;
         const [nodeResponse, childrenResponse] = await Promise.all([
-          projectsApi.getNode(currentNodeId),
-          projectsApi.getChildren(currentNodeId),
+          projectsApi.getNode(currentNodeId, { signal: abortController.signal }),
+          projectsApi.getChildren(currentNodeId, { signal: abortController.signal }),
         ]);
         const nodeData = nodeResponse.data;
         const childrenData = childrenResponse.data || [];
@@ -295,7 +378,7 @@ export const useFileSystem = () => {
             }
 
             const { hasMissing, count } =
-              await checkMissingExternalReferences(node);
+              await checkMissingExternalReferences(node, abortController.signal);
 
             return {
               ...node,
@@ -308,11 +391,18 @@ export const useFileSystem = () => {
         setNodes(nodesWithExternalReferenceCheck);
 
         // 构建面包屑
-        await buildBreadcrumbsFromNode(nodeData);
+        await buildBreadcrumbsFromNode(nodeData, abortController.signal);
       }
-    } catch (err: any) {
+    } catch (error) {
+      // 如果是取消请求导致的错误，不处理
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+
       const errorMessage =
-        err.response?.data?.message || err.message || '加载数据失败';
+        error instanceof Error
+          ? error.message
+          : '加载数据失败';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
@@ -373,8 +463,15 @@ export const useFileSystem = () => {
 
   // 创建文件夹
   const handleCreateFolder = useCallback(async () => {
-    if (!folderName.trim() || !urlProjectId) {
-      showToast('文件夹名称不能为空', 'error');
+    if (!urlProjectId) {
+      showToast('项目 ID 不能为空', 'error');
+      return null;
+    }
+
+    // 验证文件夹名称
+    const validation = validateFolderName(folderName);
+    if (!validation.valid) {
+      showToast(validation.error || '文件夹名称无效', 'error');
       return null;
     }
 
@@ -393,9 +490,14 @@ export const useFileSystem = () => {
       loadData();
 
       return newFolder;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || err.message || '创建文件夹失败';
+    } catch (error) {
+      let errorMessage = '创建文件夹失败';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        errorMessage = err.response?.data?.message || errorMessage;
+      }
       showToast(errorMessage, 'error');
       return null;
     }
@@ -403,8 +505,15 @@ export const useFileSystem = () => {
 
   // 重命名
   const handleRename = useCallback(async () => {
-    if (!folderName.trim() || !editingNode || !urlProjectId) {
-      showToast('名称不能为空', 'error');
+    if (!editingNode || !urlProjectId) {
+      showToast('参数错误', 'error');
+      return;
+    }
+
+    // 验证新名称
+    const validation = validateFolderName(folderName);
+    if (!validation.valid) {
+      showToast(validation.error || '名称无效', 'error');
       return;
     }
 
@@ -415,9 +524,14 @@ export const useFileSystem = () => {
       setShowRenameModal(false);
       setEditingNode(null);
       loadData();
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || err.message || '重命名失败';
+    } catch (error) {
+      let errorMessage = '重命名失败';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        errorMessage = err.response?.data?.message || errorMessage;
+      }
       showToast(errorMessage, 'error');
     }
   }, [folderName, editingNode, urlProjectId, loadData, showToast]);
@@ -462,9 +576,14 @@ export const useFileSystem = () => {
             await deleteApi;
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             loadData();
-          } catch (err: any) {
-            const errorMessage =
-              err.response?.data?.message || err.message || '删除失败';
+          } catch (error) {
+            let errorMessage = '删除失败';
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            } else if (typeof error === 'object' && error !== null && 'response' in error) {
+              const err = error as { response?: { data?: { message?: string } } };
+              errorMessage = err.response?.data?.message || errorMessage;
+            }
             showToast(errorMessage, 'error');
           }
         },
@@ -503,9 +622,14 @@ export const useFileSystem = () => {
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             setSelectedNodes(new Set<string>());
             loadData();
-          } catch (err: any) {
-            const errorMessage =
-              err.response?.data?.message || err.message || '批量删除失败';
+          } catch (error) {
+            let errorMessage = '批量删除失败';
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            } else if (typeof error === 'object' && error !== null && 'response' in error) {
+              const err = error as { response?: { data?: { message?: string } } };
+              errorMessage = err.response?.data?.message || errorMessage;
+            }
             showToast(errorMessage, 'error');
           }
         },
@@ -569,15 +693,19 @@ export const useFileSystem = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = node.originalName || node.name;
+        // 使用清理后的文件名，防止 XSS 攻击
+        const fileName = node.originalName || node.name;
+        a.download = sanitizeFileName(fileName);
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         showToast('文件下载成功', 'success');
-      } catch (err: any) {
+      } catch (error) {
         const errorMessage =
-          err.response?.data?.message || err.message || '文件下载失败';
+          error instanceof Error
+            ? error.message
+            : '文件下载失败';
         showToast(errorMessage, 'error');
       }
     },
@@ -601,11 +729,16 @@ export const useFileSystem = () => {
         });
         showToast('项目创建成功', 'success');
         loadData();
-      } catch (err: any) {
-        const errorMessage =
-          err.response?.data?.message || err.message || '创建项目失败';
+      } catch (error) {
+        let errorMessage = '创建项目失败';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+          const err = error as { response?: { data?: { message?: string } } };
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
         showToast(errorMessage, 'error');
-        throw err;
+        throw error;
       }
     },
     [loadData, showToast]
@@ -617,11 +750,16 @@ export const useFileSystem = () => {
         await projectsApi.update(id, data);
         showToast('项目更新成功', 'success');
         loadData();
-      } catch (err: any) {
-        const errorMessage =
-          err.response?.data?.message || err.message || '更新项目失败';
+      } catch (error) {
+        let errorMessage = '更新项目失败';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+          const err = error as { response?: { data?: { message?: string } } };
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
         showToast(errorMessage, 'error');
-        throw err;
+        throw error;
       }
     },
     [loadData, showToast]
@@ -633,11 +771,16 @@ export const useFileSystem = () => {
         await projectsApi.delete(id);
         showToast('项目删除成功', 'success');
         loadData();
-      } catch (err: any) {
-        const errorMessage =
-          err.response?.data?.message || err.message || '删除项目失败';
+      } catch (error) {
+        let errorMessage = '删除项目失败';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+          const err = error as { response?: { data?: { message?: string } } };
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
         showToast(errorMessage, 'error');
-        throw err;
+        throw error;
       }
     },
     [loadData, showToast]
