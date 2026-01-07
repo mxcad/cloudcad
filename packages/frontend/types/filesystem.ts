@@ -128,3 +128,56 @@ export interface UseExternalReferenceUploadReturn {
   /** 打开模态框准备上传（任务009 - 随时上传） */
   openModalForUpload: () => void;
 }
+
+/**
+ * 项目查询参数
+ */
+export interface QueryProjectsParams {
+  /** 搜索关键词（匹配名称或描述） */
+  search?: string;
+  /** 项目状态 */
+  projectStatus?: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
+  /** 页码 */
+  page?: number;
+  /** 每页数量 */
+  limit?: number;
+  /** 排序字段 */
+  sortBy?: string;
+  /** 排序方向 */
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * 子节点查询参数
+ */
+export interface QueryChildrenParams {
+  /** 搜索关键词（匹配名称或描述） */
+  search?: string;
+  /** 节点类型 */
+  nodeType?: 'folder' | 'file';
+  /** 文件扩展名 */
+  extension?: string;
+  /** 文件状态 */
+  fileStatus?: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'DELETED';
+  /** 页码 */
+  page?: number;
+  /** 每页数量 */
+  limit?: number;
+  /** 排序字段 */
+  sortBy?: string;
+  /** 排序方向 */
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * 分页响应
+ */
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}

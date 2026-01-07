@@ -4,6 +4,7 @@ import { SearchIcon, GridIcon, ListIcon } from './FileIcons';
 interface ToolbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onSearchSubmit?: () => void;
   viewMode: 'grid' | 'list';
   onViewModeChange: (mode: 'grid' | 'list') => void;
 }
@@ -11,6 +12,7 @@ interface ToolbarProps {
 export const Toolbar: React.FC<ToolbarProps> = ({
   searchQuery,
   onSearchChange,
+  onSearchSubmit,
   viewMode,
   onViewModeChange,
 }) => {
@@ -28,6 +30,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           placeholder="搜索文件..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && onSearchSubmit) {
+              onSearchSubmit();
+            }
+          }}
           className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-lg 
                      text-sm text-slate-900 placeholder:text-slate-400
                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent

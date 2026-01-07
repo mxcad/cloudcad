@@ -104,6 +104,8 @@ export const useFileSystem = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBackendSearch, setIsBackendSearch] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20 });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
@@ -831,6 +833,10 @@ export const useFileSystem = () => {
 
   // 项目过滤
   const getFilteredProjects = useCallback(() => {
+    if (!searchQuery || isBackendSearch) {
+      return nodes;
+    }
+
     return nodes.filter((node) => {
       const matchesSearch =
         node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -838,7 +844,67 @@ export const useFileSystem = () => {
           node.description.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesSearch;
     });
-  }, [nodes, searchQuery]);
+  }, [nodes, searchQuery, isBackendSearch]);
+
+  // 后端深度搜索
+  const handleBackendSearch = useCallback(async () => {
+    if (!searchQuery) {
+      setIsBackendSearch(false);
+      await loadData();
+      return;
+    }
+
+    setIsBackendSearch(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isProjectRootMode) {
+        const response = await projectsApi.list({
+          params: {
+            search: searchQuery,
+            page: pagination.page,
+            limit: pagination.limit,
+          },
+        });
+
+        if (response.data?.data) {
+          setNodes(response.data.data);
+        }
+      } else if (currentNode?.id) {
+        const response = await projectsApi.getChildren(currentNode.id, {
+          params: {
+            search: searchQuery,
+            page: pagination.page,
+            limit: pagination.limit,
+          },
+        });
+
+        if (response.data?.data) {
+          setNodes(response.data.data);
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : '搜索失败';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [isProjectRootMode, currentNode, searchQuery, pagination, loadData, showToast]);
+
+  // 搜索输入处理
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    setIsBackendSearch(false);
+    setPagination({ ...pagination, page: 1 });
+  }, [pagination]);
+
+  // 搜索提交
+  const handleSearchSubmit = useCallback(() => {
+    handleBackendSearch();
+  }, [handleBackendSearch]);
 
   // 进入项目
   const handleEnterProject = useCallback(
@@ -870,7 +936,11 @@ export const useFileSystem = () => {
     loading,
     error,
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: handleSearchChange,
+    handleSearchSubmit,
+    isBackendSearch,
+    pagination,
+    setPagination,
     viewMode,
     setViewMode,
     selectedNodes,

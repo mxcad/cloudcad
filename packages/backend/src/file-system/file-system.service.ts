@@ -16,6 +16,8 @@ import { FileHashService } from './file-hash.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
+import { QueryProjectsDto } from './dto/query-projects.dto';
+import { QueryChildrenDto } from './dto/query-children.dto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
@@ -71,7 +73,73 @@ export class FileSystemService {
     }
   }
 
-  async getUserProjects(userId: string) {
+  async getUserProjects(userId: string, query?: QueryProjectsDto) {
+    const { search, projectStatus, page = 1, limit = 20, sortBy, sortOrder } = query || {};
+
+    if (search || projectStatus) {
+      const skip = (page - 1) * limit;
+
+      const where: any = {
+        isRoot: true,
+        deletedAt: null,
+        nodeAccesses: {
+          some: { userId },
+        },
+      };
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (projectStatus) {
+        where.projectStatus = projectStatus;
+      }
+
+      const [projects, total] = await Promise.all([
+        this.prisma.fileSystemNode.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: sortBy ? { [sortBy]: sortOrder } : { updatedAt: 'desc' },
+          include: {
+            nodeAccesses: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    username: true,
+                    nickname: true,
+                    avatar: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                children: true,
+                nodeAccesses: true,
+              },
+            },
+          },
+        }),
+        this.prisma.fileSystemNode.count({ where }),
+      ]);
+
+      return {
+        data: projects,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
     try {
       const projects = await this.prisma.fileSystemNode.findMany({
         where: {
@@ -438,7 +506,71 @@ export class FileSystemService {
     }
   }
 
-  async getChildren(nodeId: string, userId?: string) {
+  async getChildren(nodeId: string, userId?: string, query?: QueryChildrenDto) {
+    const { search, nodeType, extension, fileStatus, page = 1, limit = 50, sortBy, sortOrder } = query || {};
+
+    if (search || nodeType || extension || fileStatus) {
+      const skip = (page - 1) * limit;
+
+      const where: any = {
+        parentId: nodeId,
+        deletedAt: null,
+      };
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (nodeType) {
+        where.isFolder = nodeType === 'folder';
+      }
+
+      if (extension) {
+        where.extension = extension;
+      }
+
+      if (fileStatus) {
+        where.fileStatus = fileStatus;
+      }
+
+      const [nodes, total] = await Promise.all([
+        this.prisma.fileSystemNode.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: sortBy ? { [sortBy]: sortOrder } : [{ isFolder: 'desc' }, { name: 'asc' }],
+          include: {
+            owner: {
+              select: {
+                id: true,
+                username: true,
+                nickname: true,
+              },
+            },
+            _count: {
+              select: {
+                children: true,
+              },
+            },
+          },
+        }),
+        this.prisma.fileSystemNode.count({ where }),
+      ]);
+
+      return {
+        data: nodes,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
     try {
       // 如果提供了userId，检查权限
       if (userId) {

@@ -8,6 +8,7 @@
   Param,
   Request,
   Res,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -31,6 +32,8 @@ import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { MoveNodeDto } from './dto/move-node.dto';
 import { CopyNodeDto } from './dto/copy-node.dto';
+import { QueryProjectsDto } from './dto/query-projects.dto';
+import { QueryChildrenDto } from './dto/query-children.dto';
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard)
@@ -49,10 +52,12 @@ export class FileSystemController {
 
   @Get('projects')
   @ApiResponse({ status: 200, description: '获取项目列表成功' })
-  async getProjects(@Request() req) {
-    return this.fileSystemService.getUserProjects(req.user.id);
+  async getProjects(
+    @Request() req,
+    @Query() query?: QueryProjectsDto
+  ) {
+    return this.fileSystemService.getUserProjects(req.user.id, query);
   }
-
   @Get('projects/:projectId')
   @ApiResponse({ status: 200, description: '获取项目详情成功' })
   async getProject(@Param('projectId') projectId: string) {
@@ -123,10 +128,13 @@ export class FileSystemController {
 
   @Get('nodes/:nodeId/children')
   @ApiResponse({ status: 200, description: '获取子节点列表成功' })
-  async getChildren(@Param('nodeId') nodeId: string, @Request() req) {
-    return this.fileSystemService.getChildren(nodeId, req.user.id);
+  async getChildren(
+    @Param('nodeId') nodeId: string,
+    @Request() req,
+    @Query() query?: QueryChildrenDto
+  ) {
+    return this.fileSystemService.getChildren(nodeId, req.user.id, query);
   }
-
   @Patch('nodes/:nodeId')
   @ApiResponse({ status: 200, description: '更新节点成功' })
   async updateNode(
