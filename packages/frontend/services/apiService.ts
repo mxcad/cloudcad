@@ -390,7 +390,7 @@ export const filesApi = {
   get: (id: string) => apiService.get(`/files/${id}`),
 
   download: (id: string) =>
-    apiService.get(`/files/${id}/download`, { responseType: 'blob' }),
+    apiService.get(`/file-system/nodes/${id}/download`, { responseType: 'blob' }),
 
   update: (id: string, data: any) => apiService.patch(`/files/${id}`, data),
 

@@ -128,6 +128,17 @@ export const useFileSystem = () => {
 
   const [refreshCount, setRefreshCount] = useState(0);
 
+  // 跟踪上一次的值，防止重复调用
+  // 初始值设为 null，确保首次加载时能正确触发
+  const prevParamsRef = useRef<{
+    urlProjectId: string;
+    urlNodeId: string | undefined;
+    refreshCount: number;
+  } | null>(null);
+
+  // 标志：是否已经完成初始加载
+  const hasInitialLoadedRef = useRef(false);
+
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
@@ -212,7 +223,7 @@ export const useFileSystem = () => {
     // 增加计数器，强制 useEffect 重新执行 loadData
     // 这样可以确保 loadData 使用最新的 projectId 和 nodeId
     setRefreshCount((prev) => prev + 1);
-  }, [refreshCount]);
+  }, []);
 
   // 从节点构建面包屑
   const buildBreadcrumbsFromNode = useCallback(
@@ -282,8 +293,18 @@ export const useFileSystem = () => {
 
   // 统一的数据加载函数
   const loadData = useCallback(async () => {
+    console.log('[useFileSystem] loadData 开始', {
+      urlProjectId,
+      urlNodeId,
+      isProjectRootMode,
+      searchQuery,
+      pagination: paginationRef.current,
+      timestamp: Date.now(),
+    });
+
     // 取消之前的请求
     if (abortControllerRef.current) {
+      console.log('[useFileSystem] 取消之前的请求');
       abortControllerRef.current.abort();
     }
 
@@ -373,14 +394,31 @@ export const useFileSystem = () => {
     } catch (error) {
       // 如果是取消请求导致的错误，不处理
       if (error instanceof Error && error.name === 'AbortError') {
+        console.log('[useFileSystem] 请求被取消 (AbortError)', {
+          urlProjectId,
+          urlNodeId,
+          timestamp: Date.now(),
+        });
         return;
       }
+
+      console.error('[useFileSystem] 加载数据失败', {
+        error,
+        urlProjectId,
+        urlNodeId,
+        timestamp: Date.now(),
+      });
 
       const errorMessage =
         error instanceof Error ? error.message : '加载数据失败';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
+      console.log('[useFileSystem] loadData 完成', {
+        urlProjectId,
+        urlNodeId,
+        timestamp: Date.now(),
+      });
       setLoading(false);
     }
   }, [
@@ -686,9 +724,13 @@ export const useFileSystem = () => {
   // 文件下载
   const handleDownload = useCallback(
     async (node: FileSystemNode) => {
-      if (node.isFolder) return;
-
       try {
+        console.log('[useFileSystem] 开始下载文件', {
+          nodeId: node.id,
+          fileName: node.name,
+          isFolder: node.isFolder,
+        });
+
         const response = await filesApi.download(node.id);
         const blob = new Blob([response.data]);
         const url = window.URL.createObjectURL(blob);
@@ -696,15 +738,32 @@ export const useFileSystem = () => {
         a.href = url;
         // 使用清理后的文件名，防止 XSS 攻击
         const fileName = node.originalName || node.name;
-        a.download = sanitizeFileName(fileName);
+        // 如果是文件夹，添加 .zip 扩展名
+        const finalFileName = node.isFolder
+          ? `${sanitizeFileName(fileName)}.zip`
+          : sanitizeFileName(fileName);
+        a.download = finalFileName;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        showToast('文件下载成功', 'success');
+
+        console.log('[useFileSystem] 下载成功', { fileName: finalFileName });
+        showToast(node.isFolder ? '目录压缩下载成功' : '文件下载成功', 'success');
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : '文件下载失败';
+        console.error('[useFileSystem] 下载失败', error);
+
+        let errorMessage = '文件下载失败';
+
+        if (error instanceof Error) {
+          // 检查是否是 CORS 错误
+          if (error.message.includes('CORS') || error.message.includes('Network Error')) {
+            errorMessage = '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
         showToast(errorMessage, 'error');
       }
     },
@@ -851,29 +910,92 @@ export const useFileSystem = () => {
 
   // 添加初始加载和参数变化监听
   useEffect(() => {
+    const currentParams = {
+      urlProjectId,
+      urlNodeId,
+      refreshCount,
+    };
+
+    console.log('[useFileSystem] useEffect 触发', {
+      currentParams,
+      prevParams: prevParamsRef.current,
+      pathname: location.pathname,
+      timestamp: Date.now(),
+    });
+
+    // 检查参数是否真正变化
+    // 如果 prevParamsRef.current 为 null，说明是首次加载，应该加载数据
+    const hasChanged =
+      prevParamsRef.current === null ||
+      prevParamsRef.current.urlProjectId !== currentParams.urlProjectId ||
+      prevParamsRef.current.urlNodeId !== currentParams.urlNodeId ||
+      prevParamsRef.current.refreshCount !== currentParams.refreshCount;
+
+    // 如果参数未变化，跳过
+    if (!hasChanged) {
+      console.log('[useFileSystem] 参数未变化，跳过 loadData');
+      return;
+    }
+
+    // 更新 ref
+    prevParamsRef.current = currentParams;
+
     // 当 urlProjectId 或 urlNodeId 变化时，重置页码到第一页
     setPagination((prev) => ({ ...prev, page: 1 }));
-    loadData();
-  }, [urlProjectId, urlNodeId, refreshCount]);
+
+    // 使用防抖，避免短时间内多次调用
+    const timeoutId = setTimeout(() => {
+      console.log('[useFileSystem] 执行 loadData', {
+        urlProjectId,
+        urlNodeId,
+        refreshCount,
+        timestamp: Date.now(),
+      });
+      loadData();
+    }, 150); // 增加防抖时间到 150ms
+
+    return () => {
+      console.log('[useFileSystem] 清理 timeout', {
+        urlProjectId,
+        urlNodeId,
+        refreshCount,
+        timestamp: Date.now(),
+      });
+      clearTimeout(timeoutId);
+    };
+  }, [urlProjectId, urlNodeId, refreshCount]); // 移除 location.pathname
 
   // 监听 pagination 变化，当标志为 true 时加载数据
   useEffect(() => {
+    console.log('[useFileSystem] pagination useEffect', {
+      pagination,
+      shouldLoadData: shouldLoadDataRef.current,
+      timestamp: Date.now(),
+    });
+
     if (shouldLoadDataRef.current) {
       // 清除标志
       shouldLoadDataRef.current = false;
+      console.log('[useFileSystem] pagination 变化，执行 loadData');
       // 加载数据（使用 ref 获取最新的函数）
       loadDataRef.current();
     }
   }, [pagination]);
 
   // 监听 searchQuery 变化，当搜索清空时自动加载数据
+  const prevSearchQueryRef = useRef('');
   useEffect(() => {
-    if (searchQuery === '') {
+    if (searchQuery === '' && prevSearchQueryRef.current !== '') {
       // 搜索清空时，重置页码并加载数据
+      console.log('[useFileSystem] 搜索清空，重新加载数据');
       setPagination((prev) => ({ ...prev, page: 1 }));
-      // 延迟加载数据，避免与上面的 useEffect 冲突
-      setTimeout(() => loadDataRef.current(), 0);
+      // 延迟加载数据，避免与主 useEffect 冲突
+      setTimeout(() => {
+        console.log('[useFileSystem] 搜索清空后执行 loadData');
+        loadDataRef.current();
+      }, 200);
     }
+    prevSearchQueryRef.current = searchQuery;
   }, [searchQuery]);
 
   return {

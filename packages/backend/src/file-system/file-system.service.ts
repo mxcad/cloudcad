@@ -20,16 +20,73 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import * as archiver from 'archiver';
+import { PassThrough } from 'stream';
 
 @Injectable()
 export class FileSystemService {
   private readonly logger = new Logger(FileSystemService.name);
+
+  // ZIP 压缩配置
+  private readonly ZIP_CONFIG = {
+    MAX_TOTAL_SIZE: 2 * 1024 * 1024 * 1024, // 2GB
+    MAX_FILE_COUNT: 10000,
+    MAX_DEPTH: 50,
+    MAX_SINGLE_FILE_SIZE: 500 * 1024 * 1024, // 500MB
+    COMPRESSION_LEVEL: 1, // 快速压缩
+  } as const;
 
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storage: MinioStorageProvider,
     private readonly fileHashService: FileHashService
   ) {}
+
+  /**
+   * 验证并清理文件名，防止路径遍历攻击
+   * @param fileName 原始文件名
+   * @returns 清理后的文件名
+   */
+  private sanitizeFileName(fileName: string): string {
+    // 移除路径遍历字符
+    // eslint-disable-next-line no-useless-escape
+    let sanitized = fileName.replace(/[\/\\]/g, '_');
+
+    // 移除控制字符
+    // eslint-disable-next-line no-control-regex
+    sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '_');
+
+    // 限制文件名长度
+    const MAX_FILENAME_LENGTH = 255;
+    if (sanitized.length > MAX_FILENAME_LENGTH) {
+      const ext = path.extname(sanitized);
+      const nameWithoutExt = path.basename(sanitized, ext);
+      const maxNameLength = MAX_FILENAME_LENGTH - ext.length;
+      sanitized = nameWithoutExt.substring(0, maxNameLength) + ext;
+    }
+
+    // 确保文件名不为空
+    if (sanitized.trim() === '' || sanitized === '.') {
+      sanitized = 'unnamed';
+    }
+
+    return sanitized;
+  }
+
+  /**
+   * 获取存储路径
+   * @param node 文件系统节点
+   * @returns MinIO 存储路径
+   */
+  private getStoragePath(node: PrismaFileSystemNode): string {
+    if (!node.path) {
+      throw new NotFoundException('文件路径不存在');
+    }
+
+    return node.path.startsWith('files/') && node.fileHash
+      ? `mxcad/file/${node.fileHash}/${node.name}`
+      : node.path;
+  }
 
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
@@ -2021,5 +2078,304 @@ export class FileSystemService {
       this.logger.error(`移除项目成员失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 下载节点（文件或目录）
+   * @param nodeId 节点 ID
+   * @param userId 用户 ID
+   * @returns 文件流或 ZIP 压缩流
+   */
+  async downloadNode(
+    nodeId: string,
+    userId: string
+  ): Promise<{ stream: NodeJS.ReadableStream; filename: string; mimeType: string }> {
+    try {
+      // 检查文件访问权限
+      const hasAccess = await this.checkFileAccess(nodeId, userId);
+      if (!hasAccess) {
+        throw new ForbiddenException('无权访问该文件');
+      }
+
+      // 获取节点信息
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      // 如果是文件，直接返回文件流
+      if (!node.isFolder) {
+        const storagePath = this.getStoragePath(node);
+        const stream = await this.getFileStream(storagePath);
+        const filename = node.originalName || node.name;
+        const mimeType = this.getMimeType(filename);
+
+        this.logger.log(`文件下载: ${filename} (${nodeId}) by user ${userId}`);
+        return { stream, filename, mimeType };
+      }
+
+      // 如果是文件夹，返回 ZIP 压缩流
+      const zipResult = await this.downloadNodeAsZip(nodeId, userId);
+      this.logger.log(`目录下载: ${node.name} (${nodeId}) by user ${userId}`);
+      return zipResult;
+    } catch (error) {
+      this.logger.error(`节点下载失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 将目录压缩为 ZIP 下载
+   * @param nodeId 节点 ID
+   * @param userId 用户 ID
+   * @returns ZIP 压缩流
+   */
+  private async downloadNodeAsZip(
+    nodeId: string,
+    userId: string
+  ): Promise<{ stream: NodeJS.ReadableStream; filename: string; mimeType: string }> {
+    try {
+      // 获取节点信息
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      // 创建 ZIP 压缩流
+      const output = new PassThrough();
+      const archive = archiver.create('zip', {
+        zlib: { level: this.ZIP_CONFIG.COMPRESSION_LEVEL }, // 快速压缩
+      });
+
+      // 错误处理
+      archive.on('error', (error) => {
+        this.logger.error(`ZIP 压缩失败: ${error.message}`, error.stack);
+        output.emit('error', error);
+      });
+
+      // 将 archive 管道输出到 PassThrough
+      archive.pipe(output);
+
+      // 递归收集并添加所有文件到 ZIP
+      const result = await this.addFilesToArchive(nodeId, archive, node.name, 0, 0, 0);
+
+      // 完成压缩
+      await archive.finalize();
+
+      const filename = `${node.name}.zip`;
+      const mimeType = 'application/zip';
+
+      this.logger.log(
+        `目录压缩下载: ${node.name} (${nodeId}), files: ${result.fileCount}, size: ${result.totalSize} bytes by user ${userId}`
+      );
+
+      return { stream: output, filename, mimeType };
+    } catch (error) {
+      this.logger.error(`目录压缩下载失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 递归添加文件到压缩包
+   * @param nodeId 节点 ID
+   * @param archive archiver 实例
+   * @param basePath 基础路径
+   * @param depth 当前深度
+   * @param currentTotalSize 当前总大小
+   * @param currentFileCount 当前文件数量
+   */
+  private async addFilesToArchive(
+    nodeId: string,
+    archive: archiver.Archiver,
+    basePath: string,
+    depth: number = 0,
+    currentTotalSize: number = 0,
+    currentFileCount: number = 0
+  ): Promise<{ totalSize: number; fileCount: number }> {
+    // 检查深度限制
+    if (depth > this.ZIP_CONFIG.MAX_DEPTH) {
+      this.logger.warn(`目录深度超过限制: ${depth}`);
+      throw new BadRequestException('目录深度超过限制');
+    }
+
+    // 获取节点信息
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId },
+    });
+
+    if (!node) {
+      return { totalSize: currentTotalSize, fileCount: currentFileCount };
+    }
+
+    // 如果是文件，添加到压缩包
+    if (!node.isFolder && node.path) {
+      // 检查单文件大小限制
+      if (node.size && node.size > this.ZIP_CONFIG.MAX_SINGLE_FILE_SIZE) {
+        this.logger.warn(`文件大小超过限制: ${node.name} (${node.size} bytes)`);
+        throw new BadRequestException(`文件大小超过限制: ${node.name}`);
+      }
+
+      const storagePath = this.getStoragePath(node);
+      let stream: NodeJS.ReadableStream | null = null;
+
+      try {
+        stream = await this.getFileStream(storagePath);
+        const filename = node.originalName || node.name;
+        // 验证文件名，防止路径遍历
+        const sanitizedFileName = this.sanitizeFileName(filename);
+        archive.append(stream as any, { name: sanitizedFileName });
+
+        // 监听流关闭事件
+        stream.on('close', () => {
+          this.logger.debug(`文件流已关闭: ${filename}`);
+        });
+
+        // 更新统计信息
+        const fileSize = node.size || 0;
+        currentTotalSize += fileSize;
+        currentFileCount++;
+
+        return { totalSize: currentTotalSize, fileCount: currentFileCount };
+      } catch (error) {
+        this.logger.warn(`添加文件到压缩包失败: ${node.name} - ${error.message}`);
+        // 确保流被关闭
+        if (stream && typeof (stream as any).destroy === 'function') {
+          (stream as any).destroy();
+        }
+        throw error;
+      }
+    }
+
+    // 如果是文件夹，递归处理子节点
+    if (node.isFolder) {
+      const children = await this.prisma.fileSystemNode.findMany({
+        where: {
+          parentId: nodeId,
+          deletedAt: null,
+        },
+      });
+
+      for (const child of children) {
+        // 验证文件名，防止路径遍历
+        const sanitizedChildName = this.sanitizeFileName(child.name);
+        const childPath = path.join(basePath, sanitizedChildName);
+
+        const result = await this.addFilesToArchive(
+          child.id,
+          archive,
+          childPath,
+          depth + 1,
+          currentTotalSize,
+          currentFileCount
+        );
+
+        currentTotalSize = result.totalSize;
+        currentFileCount = result.fileCount;
+
+        // 检查资源限制
+        if (currentTotalSize > this.ZIP_CONFIG.MAX_TOTAL_SIZE) {
+          this.logger.warn(`压缩包总大小超过限制: ${currentTotalSize} bytes`);
+          throw new BadRequestException('压缩包总大小超过限制');
+        }
+        if (currentFileCount > this.ZIP_CONFIG.MAX_FILE_COUNT) {
+          this.logger.warn(`文件数量超过限制: ${currentFileCount}`);
+          throw new BadRequestException('文件数量超过限制');
+        }
+      }
+    }
+
+    return { totalSize: currentTotalSize, fileCount: currentFileCount };
+  }
+
+  /**
+   * 获取文件的 MIME 类型
+   * @param filename 文件名
+   * @returns MIME 类型
+   */
+  private getMimeType(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      // CAD 文件
+      dwg: 'application/acad',
+      dxf: 'application/dxf',
+
+      // 文档文件
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      txt: 'text/plain; charset=utf-8',
+      rtf: 'application/rtf',
+      odt: 'application/vnd.oasis.opendocument.text',
+      ods: 'application/vnd.oasis.opendocument.spreadsheet',
+      odp: 'application/vnd.oasis.opendocument.presentation',
+
+      // 图片文件
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      bmp: 'image/bmp',
+      svg: 'image/svg+xml',
+      ico: 'image/x-icon',
+      tiff: 'image/tiff',
+      tif: 'image/tiff',
+
+      // 音频文件
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/mp4',
+      flac: 'audio/flac',
+
+      // 视频文件
+      mp4: 'video/mp4',
+      avi: 'video/x-msvideo',
+      mov: 'video/quicktime',
+      wmv: 'video/x-ms-wmv',
+      mkv: 'video/x-matroska',
+      webm: 'video/webm',
+
+      // 压缩文件
+      zip: 'application/zip',
+      rar: 'application/vnd.rar',
+      '7z': 'application/x-7z-compressed',
+      tar: 'application/x-tar',
+      gz: 'application/gzip',
+      bz2: 'application/x-bzip2',
+
+      // 数据文件
+      json: 'application/json',
+      xml: 'application/xml',
+      yaml: 'application/x-yaml',
+      yml: 'application/x-yaml',
+      csv: 'text/csv',
+      sql: 'application/sql',
+
+      // 代码文件
+      js: 'application/javascript',
+      ts: 'application/typescript',
+      html: 'text/html',
+      css: 'text/css',
+      md: 'text/markdown',
+      py: 'text/x-python',
+      java: 'text/x-java-source',
+      c: 'text/x-c',
+      cpp: 'text/x-c++',
+      h: 'text/x-c',
+      hpp: 'text/x-c++',
+    };
+    return mimeTypes[ext || ''] || 'application/octet-stream';
   }
 }

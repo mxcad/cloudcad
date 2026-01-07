@@ -4,6 +4,7 @@
   Post,
   Patch,
   Delete,
+  Options,
   Body,
   Param,
   Request,
@@ -382,5 +383,132 @@ export class FileSystemController {
     res.setHeader('Cache-Control', 'public, max-age=3600');
 
     stream.pipe(res);
+  }
+
+  /**
+   * 下载节点（文件或目录）
+   * 文件直接下载，目录压缩为 ZIP 下载
+   */
+  @Options('nodes/:nodeId/download')
+  @ApiOperation({ summary: '下载接口 OPTIONS 预检' })
+  async downloadNodeOptions(@Request() req: any, @Res() res: any) {
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24小时
+    res.status(204).end();
+  }
+
+  @Get('nodes/:nodeId/download')
+  @ApiOperation({ summary: '下载节点（文件或目录）' })
+  @ApiResponse({ status: 200, description: '下载成功', type: 'stream' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权访问该节点' })
+  @ApiResponse({ status: 404, description: '节点不存在' })
+  async downloadNode(
+    @Param('nodeId') nodeId: string,
+    @Request() req: any,
+    @Res() res: any
+  ) {
+    const userId = req.user?.id || req.session?.userId;
+    const clientIp = req.ip || req.connection.remoteAddress;
+
+    if (!userId) {
+      throw new UnauthorizedException('未登录');
+    }
+
+    try {
+      const { stream, filename, mimeType } =
+        await this.fileSystemService.downloadNode(nodeId, userId);
+
+      // 先设置所有响应头，再开始传输
+      // 1. CORS 头（必须在最前面）
+      const origin = req.headers.origin || '*';
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      this.logger.log(`[下载] CORS 头已设置: ${origin}`);
+
+      // 2. Content-Type
+      res.setHeader('Content-Type', mimeType);
+
+      // 3. Content-Disposition
+      const encodedFilename = encodeURIComponent(filename);
+      // eslint-disable-next-line no-control-regex
+      const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, '_');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
+      );
+
+      // 4. Cache-Control 和 ETag
+      const node = await this.fileSystemService.getNode(nodeId);
+      if (node && !node.isFolder && (node.fileHash || node.id)) {
+        const etag = `"${node.fileHash || node.id}"`;
+        res.setHeader('ETag', etag);
+
+        // 检查 If-None-Match
+        if (req.headers['if-none-match'] === etag) {
+          if (typeof (stream as any).destroy === 'function') {
+            (stream as any).destroy();
+          }
+          return res.status(304).end();
+        }
+
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+      } else {
+        // 对于动态生成的 ZIP，不缓存
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+
+      // 记录下载开始
+      this.logger.log(
+        `下载开始: ${filename} (${nodeId}) by user ${userId} from IP ${clientIp}`
+      );
+
+      // 流式传输
+      stream.pipe(res);
+
+      // 错误处理
+      stream.on('error', (error) => {
+        this.logger.error(`文件下载流错误: ${error.message}`, error.stack);
+
+        // 尝试清理资源
+        if (typeof (stream as any).destroy === 'function') {
+          (stream as any).destroy();
+        }
+
+        if (!res.headersSent) {
+          res.status(500).json({ message: '文件下载失败' });
+        } else if (!res.writableEnded) {
+          // 如果响应已发送但未结束，尝试结束响应
+          res.end();
+        }
+      });
+
+      // 记录下载完成
+      stream.on('finish', () => {
+        this.logger.log(
+          `下载完成: ${filename} (${nodeId}) by user ${userId}, size: ${node?.size || 0} bytes`
+        );
+      });
+    } catch (error) {
+      this.logger.error(`下载失败: ${nodeId} by user ${userId} - ${error.message}`, error.stack);
+
+      if (!res.headersSent) {
+        const status = error instanceof NotFoundException
+          ? 404
+          : error instanceof ForbiddenException
+          ? 403
+          : 500;
+        res.status(status).json({
+          message: error.message || '文件下载失败',
+        });
+      }
+    }
   }
 }

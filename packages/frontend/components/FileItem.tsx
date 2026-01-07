@@ -800,18 +800,16 @@ export const FileItem: React.FC<FileItemProps> = ({
               </>
             ) : (
               <>
-                {!node.isFolder && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDownload(node);
-                    }}
-                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                    title="下载"
-                  >
-                    <DownloadIcon size={18} />
-                  </button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDownload(node);
+                  }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  title={node.isFolder ? "下载（ZIP）" : "下载"}
+                >
+                  <DownloadIcon size={18} />
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
