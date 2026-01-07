@@ -122,6 +122,10 @@ export const useFileSystem = () => {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
 
+  // 跟踪上一次点击的节点，用于 Shift+点击范围选择
+  const lastSelectedNodeIdRef = useRef<string | null>(null);
+  const lastSelectedIndexRef = useRef<number>(-1);
+
   // 拖拽状态
   const [draggedNodes, setDraggedNodes] = useState<FileSystemNode[]>([]);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -447,38 +451,103 @@ export const useFileSystem = () => {
 
   // 节点选择
   const handleNodeSelect = useCallback(
-    (nodeId: string, isMultiSelect: boolean = false) => {
+    (nodeId: string, isMultiSelect: boolean = false, isShift: boolean = false) => {
       setSelectedNodes((prev) => {
-        if (isMultiSelect) {
-          // 多选模式：toggle
-          const newSet = new Set(prev);
+        const newSet = new Set(prev);
+
+        // 查找当前节点在列表中的索引
+        const currentIndex = nodes.findIndex((node) => node.id === nodeId);
+
+        if (isShift && lastSelectedNodeIdRef.current && lastSelectedIndexRef.current !== -1) {
+          // Shift+点击：范围选择
+          const lastIndex = lastSelectedIndexRef.current;
+          const startIndex = Math.min(lastIndex, currentIndex);
+          const endIndex = Math.max(lastIndex, currentIndex);
+
+          // 清除之前的选中（如果不在多选模式）
+          if (!isMultiSelectMode) {
+            newSet.clear();
+          }
+
+          // 选择范围内的所有节点
+          for (let i = startIndex; i <= endIndex; i++) {
+            newSet.add(nodes[i].id);
+          }
+
+          // 更新最后选中的节点
+          lastSelectedNodeIdRef.current = nodeId;
+          lastSelectedIndexRef.current = currentIndex;
+        } else if (isMultiSelect) {
+          // Ctrl+点击：多选模式 toggle
           if (newSet.has(nodeId)) {
             newSet.delete(nodeId);
+            // 如果取消选中的是最后一个选中的节点，重置最后选中的索引
+            if (lastSelectedNodeIdRef.current === nodeId) {
+              lastSelectedNodeIdRef.current = null;
+              lastSelectedIndexRef.current = -1;
+            }
           } else {
             newSet.add(nodeId);
+            lastSelectedNodeIdRef.current = nodeId;
+            lastSelectedIndexRef.current = currentIndex;
           }
-          return newSet;
         } else {
           // 单选模式：只选中当前
-          return new Set([nodeId]);
+          newSet.clear();
+          newSet.add(nodeId);
+          lastSelectedNodeIdRef.current = nodeId;
+          lastSelectedIndexRef.current = currentIndex;
         }
+
+        return newSet;
       });
     },
-    []
+    [nodes, isMultiSelectMode]
   );
 
   // 全选/取消全选
   const handleSelectAll = useCallback(() => {
-    const filteredNodes = nodes.filter((node) =>
-      node.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const allNodeIds = nodes.map((node) => node.id);
 
-    if (selectedNodes.size === filteredNodes.length) {
+    if (selectedNodes.size === allNodeIds.length) {
+      // 如果已全选，则取消全选
       setSelectedNodes(new Set());
+      lastSelectedNodeIdRef.current = null;
+      lastSelectedIndexRef.current = -1;
     } else {
-      setSelectedNodes(new Set(filteredNodes.map((node) => node.id)));
+      // 否则全选
+      setSelectedNodes(new Set(allNodeIds));
+      // 设置最后选中的节点为第一个节点
+      if (allNodeIds.length > 0) {
+        lastSelectedNodeIdRef.current = allNodeIds[0];
+        lastSelectedIndexRef.current = 0;
+      }
     }
-  }, [nodes, searchQuery, selectedNodes.size]);
+  }, [nodes, selectedNodes.size]);
+
+  // 键盘快捷键：Ctrl+A 全选
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+A 或 Cmd+A (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        // 只在多选模式下响应
+        if (!isMultiSelectMode) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        handleSelectAll();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMultiSelectMode, handleSelectAll]);
 
   // 创建文件夹
   const handleCreateFolder = useCallback(async () => {

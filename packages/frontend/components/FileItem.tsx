@@ -190,7 +190,8 @@ export const FileItem: React.FC<FileItemProps> = ({
       if (isMultiSelectMode) {
         // 多选模式：处理选择
         const isCtrl = e.ctrlKey || e.metaKey;
-        onSelect(node.id, isCtrl || true);
+        const isShift = e.shiftKey;
+        onSelect(node.id, isCtrl || true, isShift);
       } else {
         // 非多选模式：直接进入
         console.log('[FileItem] 调用 onEnter:', node.name);
@@ -253,7 +254,8 @@ export const FileItem: React.FC<FileItemProps> = ({
             `}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect(node.id, true); // 点击选择框使用多选模式（toggle）
+              const isShift = e.shiftKey;
+              onSelect(node.id, true, isShift); // 点击选择框使用多选模式（toggle）
             }}
             title={isSelected ? '单击取消选择' : '单击选择'}
           >
@@ -634,7 +636,8 @@ export const FileItem: React.FC<FileItemProps> = ({
           }`}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(node.id, true); // 点击选择框使用多选模式（toggle）
+            const isShift = e.shiftKey;
+            onSelect(node.id, true, isShift); // 点击选择框使用多选模式（toggle）
           }}
           title={isSelected ? '单击取消选择' : '单击选择'}
         >
