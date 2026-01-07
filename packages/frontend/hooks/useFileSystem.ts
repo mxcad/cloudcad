@@ -541,7 +541,18 @@ export const useFileSystem = () => {
     }
 
     try {
-      await projectsApi.updateNode(editingNode.id, { name: folderName.trim() });
+      let finalName = folderName.trim();
+
+      // 对于文件节点，自动添加原扩展名
+      if (!editingNode.isFolder && editingNode.name) {
+        const lastDotIndex = editingNode.name.lastIndexOf('.');
+        if (lastDotIndex !== -1) {
+          const originalExtension = editingNode.name.substring(lastDotIndex);
+          finalName = `${finalName}${originalExtension}`;
+        }
+      }
+
+      await projectsApi.updateNode(editingNode.id, { name: finalName });
       showToast('重命名成功', 'success');
       setFolderName('');
       setShowRenameModal(false);
@@ -773,7 +784,19 @@ export const useFileSystem = () => {
   // 打开重命名对话框
   const handleOpenRename = useCallback((node: FileSystemNode) => {
     setEditingNode(node);
-    setFolderName(node.name);
+
+    // 对于文件，只提取文件名部分（不包含扩展名）
+    if (!node.isFolder && node.name) {
+      const lastDotIndex = node.name.lastIndexOf('.');
+      const nameWithoutExtension = lastDotIndex !== -1
+        ? node.name.substring(0, lastDotIndex)
+        : node.name;
+      setFolderName(nameWithoutExtension);
+    } else {
+      // 文件夹或没有扩展名的文件，使用完整名称
+      setFolderName(node.name);
+    }
+
     setShowRenameModal(true);
   }, []);
 

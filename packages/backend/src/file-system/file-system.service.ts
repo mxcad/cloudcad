@@ -600,6 +600,34 @@ export class FileSystemService {
 
   async updateNode(nodeId: string, dto: UpdateNodeDto) {
     try {
+      // 获取当前节点信息
+      const currentNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { name: true, isFolder: true, extension: true },
+      });
+
+      if (!currentNode) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      // 对于文件节点，验证扩展名是否被修改
+      if (!currentNode.isFolder && dto.name && currentNode.extension) {
+        const newExtension = path.extname(dto.name).toLowerCase();
+        const currentExtension = currentNode.extension.toLowerCase();
+
+        // 如果新名称的扩展名与原扩展名不同，抛出异常
+        if (newExtension && newExtension !== currentExtension) {
+          throw new BadRequestException(
+            `不允许修改文件扩展名。文件扩展名必须保持为 ${currentExtension}`
+          );
+        }
+
+        // 如果用户没有输入扩展名，自动添加原扩展名
+        if (!newExtension && currentExtension) {
+          dto.name = `${dto.name}${currentExtension}`;
+        }
+      }
+
       const node = await this.prisma.fileSystemNode.update({
         where: { id: nodeId },
         data: {
