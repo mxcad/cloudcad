@@ -33,7 +33,7 @@ export const CADEditorDirect: React.FC = () => {
     return { mxcadManager };
   };
 
-  const initMxCADConfig = async () => {
+  const initMxCADConfig = async (currentFile?: any) => {
     const { mxcadApp } = await import('mxcad-app');
     const configUrl = window.location.origin;
     mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
@@ -50,10 +50,16 @@ export const CADEditorDirect: React.FC = () => {
       window as any
     ).MxPluginContext.getServerConfig();
     if (serverConfig?.uploadFileConfig?.create) {
-      const nodeId =
-        new URLSearchParams(location.search).get('nodeId') ||
-        new URLSearchParams(location.search).get('parent') ||
-        '';
+      // 优先使用当前打开文件的父节点作为上传目标
+      // 如果没有当前文件信息，则从 URL 获取
+      let nodeId = currentFile?.parentId || '';
+      
+      if (!nodeId) {
+        nodeId =
+          new URLSearchParams(location.search).get('nodeId') ||
+          new URLSearchParams(location.search).get('parent') ||
+          '';
+      }
 
       // 验证节点信息
       if (!nodeId) {
@@ -135,11 +141,17 @@ export const CADEditorDirect: React.FC = () => {
           return;
         }
 
+        // 设置全局变量，供 mxcadManager 拦截器使用
+        // 优先使用文件的父节点作为上传目标
+        if (file.parentId) {
+          (window as any).__MXCAD_UPLOAD_NODE_ID__ = file.parentId;
+        }
+
         // 按需加载 MxCAD 依赖
         const { mxcadManager } = await loadMxCADDependencies();
 
-        // 初始化 MxCAD 配置
-        await initMxCADConfig();
+        // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
+        await initMxCADConfig(file);
 
         // 直接使用数据库中的path字段
         const mxcadFileUrl = file.path;
@@ -157,6 +169,11 @@ export const CADEditorDirect: React.FC = () => {
     initEditor();
 
     return () => {
+      // 清理全局变量
+      if (typeof window !== 'undefined') {
+        delete (window as any).__MXCAD_UPLOAD_NODE_ID__;
+      }
+      
       // 动态导入 mxcadManager 进行清理
       import('../services/mxcadManager').then(({ mxcadManager }) => {
         mxcadManager.showMxCAD(false);

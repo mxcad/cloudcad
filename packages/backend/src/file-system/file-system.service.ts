@@ -291,7 +291,7 @@ export class FileSystemService {
   async deleteProject(projectId: string, permanently: boolean = false) {
     try {
       if (permanently) {
-        // 彻底删除
+        // 彻底删除：递归删除所有子节点和文件
         await this.prisma.$transaction(async (tx) => {
           await this.deleteDescendantsWithFiles(tx, projectId);
           await tx.fileSystemNode.delete({
@@ -300,18 +300,14 @@ export class FileSystemService {
         });
         this.logger.log(`项目彻底删除成功: ${projectId}`);
       } else {
-        // 软删除到回收站
-        await this.prisma.$transaction(async (tx) => {
-          // 递归软删除所有后代节点
-          await this.softDeleteDescendants(tx, projectId);
-          // 软删除根节点
-          await tx.fileSystemNode.update({
-            where: { id: projectId, isRoot: true },
-            data: {
-              deletedAt: new Date(),
-              projectStatus: ProjectStatus.DELETED,
-            },
-          });
+        // 软删除到回收站：只删除项目根节点，不递归删除子节点
+        await this.prisma.fileSystemNode.update({
+          where: { id: projectId, isRoot: true },
+          data: {
+            deletedAt: new Date(),
+            projectStatus: ProjectStatus.DELETED,
+            deletedByCascade: false, // 主动删除标记
+          },
         });
         this.logger.log(`项目已移至回收站: ${projectId}`);
       }
@@ -405,7 +401,7 @@ export class FileSystemService {
       });
 
       if (referenceCount > 0) {
-        this.logger.log(`文件被其他项目引用，保留MinIO文件: ${path}`);
+        this.logger.log(`文件被其他项目引用，保留MinIO和uploads文件: ${path}`);
         return;
       }
     }
@@ -417,6 +413,17 @@ export class FileSystemService {
     } catch (error) {
       this.logger.error(`MinIO文件删除失败: ${path}`, error);
       // 不抛出错误，继续处理
+    }
+
+    // 删除 uploads 文件
+    if (fileHash) {
+      try {
+        const deletedCount = await this.deleteMxCadFilesFromUploads(fileHash);
+        this.logger.log(`删除 uploads 文件成功，共删除 ${deletedCount} 个文件`);
+      } catch (error) {
+        this.logger.error(`删除 uploads 文件失败: ${error.message}`, error);
+        // 不抛出错误，继续处理
+      }
     }
   }
 
@@ -669,23 +676,21 @@ export class FileSystemService {
       }
 
       if (permanently) {
-        // 彻底删除
+        // 彻底删除：递归删除所有子节点和文件
         await this.prisma.$transaction(async (tx) => {
           await this.deleteDescendantsWithFiles(tx, nodeId);
           await tx.fileSystemNode.delete({ where: { id: nodeId } });
         });
         this.logger.log(`节点彻底删除成功: ${nodeId}`);
       } else {
-        // 软删除到回收站
-        await this.prisma.$transaction(async (tx) => {
-          await this.softDeleteDescendants(tx, nodeId);
-          await tx.fileSystemNode.update({
-            where: { id: nodeId },
-            data: {
-              deletedAt: new Date(),
-              fileStatus: FileStatus.DELETED,
-            },
-          });
+        // 软删除到回收站：只删除当前节点，不递归删除子节点
+        await this.prisma.fileSystemNode.update({
+          where: { id: nodeId },
+          data: {
+            deletedAt: new Date(),
+            fileStatus: FileStatus.DELETED,
+            deletedByCascade: false, // 主动删除标记
+          },
         });
         this.logger.log(`节点已移至回收站: ${nodeId}`);
       }
@@ -1131,7 +1136,7 @@ export class FileSystemService {
   /**
    * 获取用户的回收站列表（已删除的项目和文件）
    * 统一返回所有被删除的节点，不区分项目和目录
-   * 只显示被删除的项目和顶级文件夹/文件，不显示已删除项目的子项
+   * 显示所有被删除的节点，包括项目的子节点
    */
   async getTrashItems(userId: string) {
     try {
@@ -1176,21 +1181,13 @@ export class FileSystemService {
         },
       });
 
-      // 获取所有已删除项目的 ID
-      const deletedProjectIds = projects.map((p) => p.id);
-
-      // 获取用户删除的文件和文件夹（不属于项目的）
-      // 过滤掉已删除项目的子项和自动删除的节点
+      // 获取用户主动删除的所有节点（包括项目的子节点）
       const nodes = await this.prisma.fileSystemNode.findMany({
         where: {
           deletedAt: { not: null },
           ownerId: userId,
           isRoot: false,
           deletedByCascade: false, // 只显示主动删除的节点
-          // 排除已删除项目的子项
-          parentId: {
-            notIn: deletedProjectIds,
-          },
         },
         include: {
           owner: {
@@ -1236,45 +1233,14 @@ export class FileSystemService {
         throw new NotFoundException('回收站中不存在该项目');
       }
 
-      // 递归恢复所有后代节点
-      const restoreDescendants = async (
-        tx: any,
-        nodeId: string
-      ): Promise<void> => {
-        const children = await tx.fileSystemNode.findMany({
-          where: { parentId: nodeId, deletedAt: { not: null } },
-          select: { id: true, isFolder: true },
-        });
-
-        for (const child of children) {
-          // 恢复子节点
-          await tx.fileSystemNode.update({
-            where: { id: child.id },
-            data: {
-              deletedAt: null,
-              fileStatus: FileStatus.COMPLETED,
-            },
-          });
-
-          // 如果是文件夹，递归恢复其子项
-          if (child.isFolder) {
-            await restoreDescendants(tx, child.id);
-          }
-        }
-      };
-
-      await this.prisma.$transaction(async (tx) => {
-        // 恢复根节点
-        await tx.fileSystemNode.update({
-          where: { id: projectId },
-          data: {
-            deletedAt: null,
-            projectStatus: ProjectStatus.ACTIVE,
-          },
-        });
-
-        // 递归恢复所有后代节点
-        await restoreDescendants(tx, projectId);
+      // 只恢复项目根节点，不递归恢复子节点
+      await this.prisma.fileSystemNode.update({
+        where: { id: projectId },
+        data: {
+          deletedAt: null,
+          projectStatus: ProjectStatus.ACTIVE,
+          deletedByCascade: false, // 重置级联删除标记
+        },
       });
 
       this.logger.log(`项目恢复成功: ${projectId}`);
@@ -1301,63 +1267,14 @@ export class FileSystemService {
         return { message: '节点已恢复或不存在' };
       }
 
-      // 递归恢复所有子节点
-      const restoreDescendants = async (
-        tx: any,
-        parentId: string
-      ): Promise<void> => {
-        const children = await tx.fileSystemNode.findMany({
-          where: { parentId, deletedAt: { not: null } },
-          select: { id: true, isFolder: true },
-        });
-
-        for (const child of children) {
-          await tx.fileSystemNode.update({
-            where: { id: child.id },
-            data: {
-              deletedAt: null,
-              fileStatus: FileStatus.COMPLETED,
-            },
-          });
-
-          if (child.isFolder) {
-            await restoreDescendants(tx, child.id);
-          }
-        }
-      };
-
-      await this.prisma.$transaction(async (tx) => {
-        await tx.fileSystemNode.update({
-          where: { id: nodeId },
-          data: {
-            deletedAt: null,
-            fileStatus: FileStatus.COMPLETED,
-          },
-        });
-
-        if (node.isFolder) {
-          await restoreDescendants(tx, nodeId);
-        }
-
-        if (node.parentId) {
-          const parent = await tx.fileSystemNode.findFirst({
-            where: { id: node.parentId, deletedAt: { not: null } },
-          });
-
-          if (parent) {
-            await tx.fileSystemNode.update({
-              where: { id: node.parentId },
-              data: {
-                deletedAt: null,
-                fileStatus: FileStatus.COMPLETED,
-              },
-            });
-
-            if (parent.isFolder) {
-              await restoreDescendants(tx, node.parentId);
-            }
-          }
-        }
+      // 只恢复当前节点，不递归恢复子节点，也不恢复父节点
+      await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: {
+          deletedAt: null,
+          fileStatus: FileStatus.COMPLETED,
+          deletedByCascade: false, // 重置级联删除标记
+        },
       });
 
       this.logger.log(`节点恢复成功: ${nodeId}`);
@@ -1373,46 +1290,10 @@ export class FileSystemService {
    */
   async permanentlyDeleteProject(projectId: string) {
     try {
-      const files = await this.prisma.fileSystemNode.findMany({
-        where: {
-          parentId: projectId,
-          isFolder: false,
-          fileHash: { not: null },
-        },
-        select: { fileHash: true },
-      });
-
-      const collectFileHashes = async (nodeId: string): Promise<string[]> => {
-        const children = await this.prisma.fileSystemNode.findMany({
-          where: { parentId: nodeId },
-          select: { id: true, isFolder: true, fileHash: true },
-        });
-
-        const hashes: string[] = [];
-        for (const child of children) {
-          if (child.isFolder) {
-            const childHashes = await collectFileHashes(child.id);
-            hashes.push(...childHashes);
-          } else if (child.fileHash) {
-            hashes.push(child.fileHash);
-          }
-        }
-        return hashes;
-      };
-
-      const allFileHashes = [
-        ...files.map((f) => f.fileHash!),
-        ...(await collectFileHashes(projectId)),
-      ];
-
-      if (allFileHashes.length > 0) {
-        const deletedCount =
-          await this.deleteMxCadFilesFromUploadsBatch(allFileHashes);
-        this.logger.log(`删除项目时删除 uploads 文件: ${deletedCount} 个`);
-      }
-
       await this.prisma.$transaction(async (tx) => {
+        // 递归删除所有子节点和文件（检查文件引用）
         await this.deleteDescendantsWithFiles(tx, projectId);
+        // 删除项目根节点
         await tx.fileSystemNode.delete({
           where: { id: projectId, isRoot: true, deletedAt: { not: null } },
         });
@@ -1440,15 +1321,14 @@ export class FileSystemService {
         throw new NotFoundException('节点不存在');
       }
 
-      if (!node.isFolder && node.fileHash) {
-        await this.deleteMxCadFilesFromUploads(node.fileHash);
-      }
-
       await this.prisma.$transaction(async (tx) => {
+        // 如果是文件节点，检查是否需要删除 MinIO 文件和 uploads 文件
         if (!node.isFolder && node.path) {
           await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
         }
+        // 递归删除所有子节点和文件（检查文件引用）
         await this.deleteDescendantsWithFiles(tx, nodeId);
+        // 删除当前节点
         await tx.fileSystemNode.delete({ where: { id: nodeId } });
       });
 

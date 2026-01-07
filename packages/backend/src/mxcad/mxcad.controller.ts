@@ -850,25 +850,65 @@ export class MxCadController {
     }
 
     // 验证用户权限
+    let sourceNode: any = null;
     try {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceDwg] 用户ID: ${userId}`);
 
-      // 检查用户是否有权限访问该图纸
+      // 检查用户是否有权限访问该图纸（全局查找，不限制项目）
       const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
-      if (node) {
-        const hasPermission = await this.checkFileAccessPermission(
-          node.id,
+      if (!node) {
+        this.logger.warn(
+          `[uploadExtReferenceDwg] 未找到源图纸: ${body.src_dwgfile_hash}`
+        );
+        return res.json({ code: -1, message: '未找到源图纸' });
+      }
+
+      // 检查用户对任何一个具有相同 fileHash 的节点是否有权限
+      const allNodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          fileHash: body.src_dwgfile_hash,
+          isFolder: false,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          parentId: true,
+          isRoot: true,
+          fileHash: true,
+        },
+      });
+
+      let hasPermission = false;
+      let authorizedNode: any = null;
+
+      for (const n of allNodes) {
+        const permission = await this.checkFileAccessPermission(
+          n.id,
           userId,
           userId
         );
-        if (!hasPermission) {
-          this.logger.warn(
-            `[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
-          );
-          return res.json({ code: -1, message: '无权限访问该图纸' });
+        if (permission) {
+          hasPermission = true;
+          authorizedNode = n;
+          break;
         }
       }
+
+      if (!hasPermission) {
+        this.logger.warn(
+          `[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
+        );
+        return res.json({ code: -1, message: '无权限访问该图纸' });
+      }
+
+      // 保存授权的节点，供后续使用
+      sourceNode = authorizedNode;
+      this.logger.log(
+        `[uploadExtReferenceDwg] 用户有权限访问图纸: ${sourceNode.name} (ID: ${sourceNode.id})`
+      );
     } catch (authError) {
       this.logger.warn(
         `[uploadExtReferenceDwg] 权限验证失败: ${authError.message}`
@@ -904,30 +944,18 @@ export class MxCadController {
       );
     }
 
-    // 获取源图纸节点信息
-    const sourceNode = await this.getFileSystemNodeByHash(
-      body.src_dwgfile_hash
+    // 外部参照文件应该创建在源图纸所在目录中
+    // 如果源图纸在项目根目录，则使用项目根目录
+    // 否则使用源图纸的父节点（图纸所在目录）
+    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+
+    this.logger.log(
+      `[uploadExtReferenceDwg] 外部参照文件将存储在目录: ${nodeId} (源图纸: ${sourceNode?.name})`
     );
-
-    // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
-    // 如果源图纸没有 parentId（说明是项目根目录），则使用源图纸的 ID
-    // 否则递归查找项目根目录（isRoot=true 的节点）
-    let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
-
-    // 如果源图纸有 parentId，尝试查找项目根目录
-    if (sourceNode?.parentId && !sourceNode.isRoot) {
-      const projectRoot = await this.getProjectRootByNodeId(
-        sourceNode.parentId
-      );
-      if (projectRoot) {
-        nodeId = projectRoot.id;
-        this.logger.log(`[uploadExtReferenceDwg] 找到项目根目录: ${nodeId}`);
-      }
-    }
 
     // 构建上下文（外部参照上传）
     const context = {
-      nodeId: nodeId, // 使用源图纸的父节点 ID（项目目录）
+      nodeId: nodeId, // 使用源图纸所在目录
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
       srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
@@ -1003,25 +1031,65 @@ export class MxCadController {
     }
 
     // 验证用户权限
+    let sourceNode: any = null;
     try {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceImage] 用户ID: ${userId}`);
 
-      // 检查用户是否有权限访问该图纸
+      // 检查用户是否有权限访问该图纸（全局查找，不限制项目）
       const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
-      if (node) {
-        const hasPermission = await this.checkFileAccessPermission(
-          node.id,
+      if (!node) {
+        this.logger.warn(
+          `[uploadExtReferenceImage] 未找到源图纸: ${body.src_dwgfile_hash}`
+        );
+        return res.json({ code: -1, message: '未找到源图纸' });
+      }
+
+      // 检查用户对任何一个具有相同 fileHash 的节点是否有权限
+      const allNodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          fileHash: body.src_dwgfile_hash,
+          isFolder: false,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          parentId: true,
+          isRoot: true,
+          fileHash: true,
+        },
+      });
+
+      let hasPermission = false;
+      let authorizedNode: any = null;
+
+      for (const n of allNodes) {
+        const permission = await this.checkFileAccessPermission(
+          n.id,
           userId,
           userId
         );
-        if (!hasPermission) {
-          this.logger.warn(
-            `[uploadExtReferenceImage] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
-          );
-          return res.json({ code: -1, message: '无权限访问该图纸' });
+        if (permission) {
+          hasPermission = true;
+          authorizedNode = n;
+          break;
         }
       }
+
+      if (!hasPermission) {
+        this.logger.warn(
+          `[uploadExtReferenceImage] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
+        );
+        return res.json({ code: -1, message: '无权限访问该图纸' });
+      }
+
+      // 保存授权的节点，供后续使用
+      sourceNode = authorizedNode;
+      this.logger.log(
+        `[uploadExtReferenceImage] 用户有权限访问图纸: ${sourceNode.name} (ID: ${sourceNode.id})`
+      );
     } catch (authError) {
       this.logger.warn(
         `[uploadExtReferenceImage] 权限验证失败: ${authError.message}`
@@ -1046,28 +1114,18 @@ export class MxCadController {
       );
     }
 
-    // 获取源图纸节点信息
-    const sourceNode = await this.getFileSystemNodeByHash(
-      body.src_dwgfile_hash
+    // 外部参照文件应该创建在源图纸所在目录中
+    // 如果源图纸在项目根目录，则使用项目根目录
+    // 否则使用源图纸的父节点（图纸所在目录）
+    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+
+    this.logger.log(
+      `[uploadExtReferenceImage] 外部参照文件将存储在目录: ${nodeId} (源图纸: ${sourceNode?.name})`
     );
-
-    // 外部参照文件应该创建在源图纸所在的目录（项目目录）下，而不是源图纸节点本身
-    let nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
-
-    // 如果源图纸有 parentId，尝试查找项目根目录
-    if (sourceNode?.parentId && !sourceNode.isRoot) {
-      const projectRoot = await this.getProjectRootByNodeId(
-        sourceNode.parentId
-      );
-      if (projectRoot) {
-        nodeId = projectRoot.id;
-        this.logger.log(`[uploadExtReferenceImage] 找到项目根目录: ${nodeId}`);
-      }
-    }
 
     // 构建上下文（外部参照上传）
     const context = {
-      nodeId: nodeId, // 使用源图纸的父节点 ID（项目目录）
+      nodeId: nodeId, // 使用源图纸所在目录
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
       srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
@@ -1403,24 +1461,52 @@ export class MxCadController {
         `提取的fileHash: ${fileHash}, actualFilename: ${actualFilename}`
       );
 
-      // 通过哈希值查找 FileSystemNode，验证用户是否有访问权限
-      const node = await this.getFileSystemNodeByHash(fileHash);
-      this.logger.log(`查找文件节点: hash=${fileHash}, 找到=${!!node}`);
+      // 通过哈希值查找所有具有相同 fileHash 的节点，验证用户是否有访问权限
+      const allNodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          fileHash: fileHash,
+          isFolder: false,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          parentId: true,
+          isRoot: true,
+          fileHash: true,
+        },
+      });
 
-      if (!node) {
+      this.logger.log(
+        `查找文件节点: hash=${fileHash}, 找到=${allNodes.length}个节点`
+      );
+
+      if (allNodes.length === 0) {
         // 文件节点不存在，降级到本地文件系统查找（兼容旧文件）
         this.logger.log(
           `文件节点不存在，降级到本地文件系统: ${normalizedFilename}`
         );
       } else {
-        // 验证用户是否有权限访问该文件
-        const hasPermission = await this.checkFileAccessPermission(
-          node.id,
-          userId,
-          userId // 简化处理，使用用户ID作为检查对象
-        );
+        // 检查用户对任何一个节点是否有权限
+        let hasPermission = false;
+        let authorizedNodeId: string | null = null;
+
+        for (const node of allNodes) {
+          const permission = await this.checkFileAccessPermission(
+            node.id,
+            userId,
+            userId
+          );
+          if (permission) {
+            hasPermission = true;
+            authorizedNodeId = node.id;
+            break;
+          }
+        }
+
         this.logger.log(
-          `权限检查结果: nodeId=${node.id}, userId=${userId}, hasPermission=${hasPermission}`
+          `权限检查结果: userId=${userId}, hasPermission=${hasPermission}, authorizedNodeId=${authorizedNodeId}`
         );
 
         if (!hasPermission) {
@@ -1828,18 +1914,59 @@ export class MxCadController {
   }
 
   /**
+   * 获取项目中的所有节点ID（递归）
+   * @param projectId 项目根目录ID
+   * @returns 所有节点ID数组
+   */
+  private async getAllNodeIdsInProject(projectId: string): Promise<string[]> {
+    const nodeIds: string[] = [];
+
+    const collectNodeIds = async (nodeId: string): Promise<void> => {
+      const children = await this.prisma.fileSystemNode.findMany({
+        where: { parentId: nodeId, deletedAt: null },
+        select: { id: true, isFolder: true },
+      });
+
+      for (const child of children) {
+        nodeIds.push(child.id);
+        if (child.isFolder) {
+          await collectNodeIds(child.id);
+        }
+      }
+    };
+
+    nodeIds.push(projectId); // 包含项目根目录本身
+    await collectNodeIds(projectId);
+
+    return nodeIds;
+  }
+
+  /**
    * 通过文件哈希值查找 FileSystemNode
    * @param fileHash 文件哈希值
+   * @param projectId 项目ID（可选，如果指定则只查找该项目中的节点）
    * @returns FileSystemNode 或 null
    */
-  private async getFileSystemNodeByHash(fileHash: string): Promise<any> {
+  private async getFileSystemNodeByHash(
+    fileHash: string,
+    projectId?: string
+  ): Promise<any> {
     try {
+      const where: any = {
+        fileHash: fileHash,
+        isFolder: false,
+        deletedAt: null,
+      };
+
+      // 如果指定了 projectId，只查找该项目中的节点
+      if (projectId) {
+        const allNodeIds = await this.getAllNodeIdsInProject(projectId);
+        where.id = { in: allNodeIds };
+      }
+
       // 查找文件哈希匹配的文件节点
       const node = await this.prisma.fileSystemNode.findFirst({
-        where: {
-          fileHash: fileHash,
-          isFolder: false,
-        },
+        where,
         select: {
           id: true,
           name: true,
@@ -1903,20 +2030,36 @@ export class MxCadController {
     checkUserId: string
   ): Promise<boolean> {
     try {
-      // 如果是文件所有者，有权限
+      this.logger.log(
+        `[checkFileAccessPermission] 开始检查权限: nodeId=${nodeId}, checkUserId=${checkUserId}`
+      );
+
+      // 获取节点信息
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { ownerId: true },
+        select: { ownerId: true, parentId: true, isRoot: true },
       });
 
       if (!node) {
+        this.logger.warn(`[checkFileAccessPermission] 节点不存在: ${nodeId}`);
         return false;
       }
 
+      this.logger.log(
+        `[checkFileAccessPermission] 节点信息: ownerId=${node.ownerId}, parentId=${node.parentId}, isRoot=${node.isRoot}`
+      );
+
       // 文件所有者有权限
       if (node.ownerId === checkUserId) {
+        this.logger.log(
+          `[checkFileAccessPermission] 用户是文件所有者，有权限`
+        );
         return true;
       }
+
+      this.logger.log(
+        `[checkFileAccessPermission] 用户不是文件所有者，检查直接访问权限`
+      );
 
       // 检查是否有文件访问权限
       const access = await this.prisma.fileAccess.findFirst({
@@ -1926,7 +2069,48 @@ export class MxCadController {
         },
       });
 
-      return !!access;
+      if (access) {
+        this.logger.log(
+          `[checkFileAccessPermission] 用户有直接访问权限`
+        );
+        return true;
+      }
+
+      this.logger.log(
+        `[checkFileAccessPermission] 用户没有直接访问权限，检查项目根目录权限`
+      );
+
+      // 检查是否有项目根目录的访问权限
+      const projectRoot = await this.getProjectRootByNodeId(nodeId);
+      if (projectRoot) {
+        this.logger.log(
+          `[checkFileAccessPermission] 找到项目根目录: ${projectRoot.id}`
+        );
+        const projectAccess = await this.prisma.fileAccess.findFirst({
+          where: {
+            nodeId: projectRoot.id,
+            userId: checkUserId,
+          },
+        });
+
+        if (projectAccess) {
+          this.logger.log(
+            `[checkFileAccessPermission] 用户有项目根目录访问权限`
+          );
+          return true;
+        } else {
+          this.logger.log(
+            `[checkFileAccessPermission] 用户没有项目根目录访问权限`
+          );
+        }
+      } else {
+        this.logger.log(`[checkFileAccessPermission] 未找到项目根目录`);
+      }
+
+      this.logger.warn(
+        `[checkFileAccessPermission] 用户 ${checkUserId} 没有任何访问权限`
+      );
+      return false;
     } catch (error) {
       this.logger.error(`检查文件访问权限失败: ${error.message}`, error);
       return false;
