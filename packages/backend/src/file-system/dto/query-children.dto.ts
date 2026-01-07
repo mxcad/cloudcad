@@ -60,19 +60,17 @@ export class QueryChildrenDto {
   @ApiProperty({
     description: '排序字段',
     required: false,
-    default: 'name',
   })
   @IsOptional()
   @IsString()
-  sortBy?: string = 'name';
+  sortBy?: string;
 
   @ApiProperty({
     description: '排序方向',
     required: false,
     enum: ['asc', 'desc'],
-    default: 'asc',
   })
   @IsOptional()
   @IsString()
-  sortOrder?: 'asc' | 'desc' = 'asc';
+  sortOrder?: 'asc' | 'desc';
 }

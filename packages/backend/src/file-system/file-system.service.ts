@@ -75,29 +75,28 @@ export class FileSystemService {
 
   async getUserProjects(userId: string, query?: QueryProjectsDto) {
     const { search, projectStatus, page = 1, limit = 20, sortBy, sortOrder } = query || {};
+    const skip = (page - 1) * limit;
 
-    if (search || projectStatus) {
-      const skip = (page - 1) * limit;
+    const where: any = {
+      isRoot: true,
+      deletedAt: null,
+      nodeAccesses: {
+        some: { userId },
+      },
+    };
 
-      const where: any = {
-        isRoot: true,
-        deletedAt: null,
-        nodeAccesses: {
-          some: { userId },
-        },
-      };
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ];
-      }
+    if (projectStatus) {
+      where.projectStatus = projectStatus;
+    }
 
-      if (projectStatus) {
-        where.projectStatus = projectStatus;
-      }
-
+    try {
       const [projects, total] = await Promise.all([
         this.prisma.fileSystemNode.findMany({
           where,
@@ -138,46 +137,6 @@ export class FileSystemService {
           totalPages: Math.ceil(total / limit),
         },
       };
-    }
-
-    try {
-      const projects = await this.prisma.fileSystemNode.findMany({
-        where: {
-          isRoot: true,
-          deletedAt: null,
-          nodeAccesses: {
-            some: {
-              userId,
-            },
-          },
-        },
-        include: {
-          nodeAccesses: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  username: true,
-                  nickname: true,
-                  avatar: true,
-                },
-              },
-            },
-          },
-          _count: {
-            select: {
-              children: true,
-              nodeAccesses: true,
-            },
-          },
-        },
-        orderBy: {
-          updatedAt: 'desc',
-        },
-      });
-
-      return projects;
     } catch (error) {
       this.logger.error(`查询项目列表失败: ${error.message}`, error.stack);
       throw error;
@@ -508,32 +467,39 @@ export class FileSystemService {
 
   async getChildren(nodeId: string, userId?: string, query?: QueryChildrenDto) {
     const { search, nodeType, extension, fileStatus, page = 1, limit = 50, sortBy, sortOrder } = query || {};
+    const skip = (page - 1) * limit;
 
-    if (search || nodeType || extension || fileStatus) {
-      const skip = (page - 1) * limit;
+    const where: any = {
+      parentId: nodeId,
+      deletedAt: null,
+    };
 
-      const where: any = {
-        parentId: nodeId,
-        deletedAt: null,
-      };
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ];
-      }
+    if (nodeType) {
+      where.isFolder = nodeType === 'folder';
+    }
 
-      if (nodeType) {
-        where.isFolder = nodeType === 'folder';
-      }
+    if (extension) {
+      where.extension = extension;
+    }
 
-      if (extension) {
-        where.extension = extension;
-      }
+    if (fileStatus) {
+      where.fileStatus = fileStatus;
+    }
 
-      if (fileStatus) {
-        where.fileStatus = fileStatus;
+    try {
+      // 如果提供了userId，检查权限
+      if (userId) {
+        const hasPermission = await this.checkNodeAccess(nodeId, userId);
+        if (!hasPermission) {
+          throw new ForbiddenException('没有权限访问此节点');
+        }
       }
 
       const [nodes, total] = await Promise.all([
@@ -569,37 +535,6 @@ export class FileSystemService {
           totalPages: Math.ceil(total / limit),
         },
       };
-    }
-
-    try {
-      // 如果提供了userId，检查权限
-      if (userId) {
-        const hasPermission = await this.checkNodeAccess(nodeId, userId);
-        if (!hasPermission) {
-          throw new ForbiddenException('没有权限访问此节点');
-        }
-      }
-
-      const children = await this.prisma.fileSystemNode.findMany({
-        where: { parentId: nodeId, deletedAt: null },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              username: true,
-              nickname: true,
-            },
-          },
-          _count: {
-            select: {
-              children: true,
-            },
-          },
-        },
-        orderBy: [{ isFolder: 'desc' }, { name: 'asc' }],
-      });
-
-      return children;
     } catch (error) {
       this.logger.error(`查询子节点失败: ${error.message}`, error.stack);
       throw error;

@@ -7,6 +7,7 @@ import {
 } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
+import { PaginationMeta } from '../components/ui/Pagination';
 
 /**
  * 验证文件夹/文件名称
@@ -103,9 +104,21 @@ export const useFileSystem = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isBackendSearch, setIsBackendSearch] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 20 });
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(null);
+
+  // 使用 ref 存储最新的 pagination 值，避免闭包问题
+  const paginationRef = useRef(pagination);
+
+  // 同步更新 ref
+  useEffect(() => {
+    paginationRef.current = pagination;
+  }, [pagination]);
+
+  // 使用 ref 标志来控制是否应该加载数据，避免循环调用
+  const shouldLoadDataRef = useRef(false);
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
 
@@ -284,13 +297,40 @@ export const useFileSystem = () => {
     setIsMultiSelectMode(false); // 清除多选模式
 
     try {
+      // 构建请求参数
+      const params: any = {
+        page: paginationRef.current.page,
+        limit: paginationRef.current.limit,
+      };
+
+      // 如果有搜索查询，添加到参数中
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+
       if (isProjectRootMode) {
         // 项目根目录模式：加载项目列表
         const response = await projectsApi.list({
+          params,
           signal: abortController.signal,
         });
-        const allProjects = response.data || [];
-        setNodes(allProjects);
+
+        // 处理分页响应
+        if (response.data?.data) {
+          setNodes(response.data.data);
+          setPaginationMeta(response.data.meta);
+        } else {
+          // 兼容旧格式（如果后端还未更新）
+          const allProjects = response.data || [];
+          setNodes(allProjects);
+          setPaginationMeta({
+            total: allProjects.length,
+            page: paginationRef.current.page,
+            limit: paginationRef.current.limit,
+            totalPages: Math.ceil(allProjects.length / paginationRef.current.limit),
+          });
+        }
+
         setCurrentNode(null);
         setBreadcrumbs([]);
       } else {
@@ -301,15 +341,31 @@ export const useFileSystem = () => {
             signal: abortController.signal,
           }),
           projectsApi.getChildren(currentNodeId, {
+            params,
             signal: abortController.signal,
           }),
         ]);
         const nodeData = nodeResponse.data;
-        const childrenData = childrenResponse.data || [];
+
+        // 处理分页响应
+        if (childrenResponse.data?.data) {
+          setNodes(childrenResponse.data.data);
+          setPaginationMeta(childrenResponse.data.meta);
+        } else {
+          // 兼容旧格式（如果后端还未更新）
+          const childrenData = childrenResponse.data || [];
+          setNodes(childrenData);
+          setPaginationMeta({
+            total: childrenData.length,
+            page: paginationRef.current.page,
+            limit: paginationRef.current.limit,
+            totalPages: Math.ceil(childrenData.length / paginationRef.current.limit),
+          });
+        }
+
         setCurrentNode(nodeData);
 
         // 后端已返回外部参照状态信息，直接使用（避免重复请求 preloading 接口）
-        setNodes(childrenData);
 
         // 构建面包屑
         await buildBreadcrumbsFromNode(nodeData, abortController.signal);
@@ -331,9 +387,16 @@ export const useFileSystem = () => {
     urlProjectId,
     urlNodeId,
     isProjectRootMode,
+    searchQuery,
     showToast,
     buildBreadcrumbsFromNode,
   ]);
+
+  // 使用 ref 存储 loadData 的最新版本，确保 useEffect 使用最新的函数
+  const loadDataRef = useRef(loadData);
+  useEffect(() => {
+    loadDataRef.current = loadData;
+  }, [loadData]);
 
   // 返回上级
   const handleGoBack = useCallback(() => {
@@ -734,80 +797,44 @@ export const useFileSystem = () => {
     [loadData, showToast]
   );
 
-  // 项目过滤
-  const getFilteredProjects = useCallback(() => {
-    if (!searchQuery || isBackendSearch) {
-      return nodes;
-    }
-
-    return nodes.filter((node) => {
-      const matchesSearch =
-        node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (node.description &&
-          node.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesSearch;
-    });
-  }, [nodes, searchQuery, isBackendSearch]);
-
-  // 后端深度搜索
-  const handleBackendSearch = useCallback(async () => {
-    if (!searchQuery) {
-      setIsBackendSearch(false);
-      await loadData();
-      return;
-    }
-
-    setIsBackendSearch(true);
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (isProjectRootMode) {
-        const response = await projectsApi.list({
-          params: {
-            search: searchQuery,
-            page: pagination.page,
-            limit: pagination.limit,
-          },
-        });
-
-        if (response.data?.data) {
-          setNodes(response.data.data);
-        }
-      } else if (currentNode?.id) {
-        const response = await projectsApi.getChildren(currentNode.id, {
-          params: {
-            search: searchQuery,
-            page: pagination.page,
-            limit: pagination.limit,
-          },
-        });
-
-        if (response.data?.data) {
-          setNodes(response.data.data);
-        }
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : '搜索失败';
-      setError(errorMessage);
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [isProjectRootMode, currentNode, searchQuery, pagination, loadData, showToast]);
-
   // 搜索输入处理
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
-    setIsBackendSearch(false);
-    setPagination({ ...pagination, page: 1 });
-  }, [pagination]);
+    // 搜索时重置页码到第一页
+    setPagination({ ...paginationRef.current, page: 1 });
+  }, []);
 
   // 搜索提交
   const handleSearchSubmit = useCallback(() => {
-    handleBackendSearch();
-  }, [handleBackendSearch]);
+    // 直接调用 loadData，它会自动处理搜索参数
+    loadData();
+  }, [loadData]);
+
+  // 页码变化处理
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      // 先更新 ref，确保 loadData 使用最新的值
+      paginationRef.current = { ...paginationRef.current, page: newPage };
+      // 设置标志，表示应该加载数据
+      shouldLoadDataRef.current = true;
+      // 更新状态
+      setPagination(paginationRef.current);
+    },
+    []
+  );
+
+  // 每页显示数量变化处理
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      // 先更新 ref，确保 loadData 使用最新的值
+      paginationRef.current = { page: 1, limit: newPageSize };
+      // 设置标志，表示应该加载数据
+      shouldLoadDataRef.current = true;
+      // 更新状态
+      setPagination(paginationRef.current);
+    },
+    []
+  );
 
   // 进入项目
   const handleEnterProject = useCallback(
@@ -824,8 +851,30 @@ export const useFileSystem = () => {
 
   // 添加初始加载和参数变化监听
   useEffect(() => {
+    // 当 urlProjectId 或 urlNodeId 变化时，重置页码到第一页
+    setPagination((prev) => ({ ...prev, page: 1 }));
     loadData();
-  }, [urlProjectId, urlNodeId, refreshCount, loadData]);
+  }, [urlProjectId, urlNodeId, refreshCount]);
+
+  // 监听 pagination 变化，当标志为 true 时加载数据
+  useEffect(() => {
+    if (shouldLoadDataRef.current) {
+      // 清除标志
+      shouldLoadDataRef.current = false;
+      // 加载数据（使用 ref 获取最新的函数）
+      loadDataRef.current();
+    }
+  }, [pagination]);
+
+  // 监听 searchQuery 变化，当搜索清空时自动加载数据
+  useEffect(() => {
+    if (searchQuery === '') {
+      // 搜索清空时，重置页码并加载数据
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      // 延迟加载数据，避免与上面的 useEffect 冲突
+      setTimeout(() => loadDataRef.current(), 0);
+    }
+  }, [searchQuery]);
 
   return {
     // 模式状态
@@ -841,9 +890,11 @@ export const useFileSystem = () => {
     searchQuery,
     setSearchQuery: handleSearchChange,
     handleSearchSubmit,
-    isBackendSearch,
     pagination,
     setPagination,
+    paginationMeta,
+    handlePageChange,
+    handlePageSizeChange,
     viewMode,
     setViewMode,
     selectedNodes,
@@ -891,7 +942,6 @@ export const useFileSystem = () => {
     handleCreateProject,
     handleUpdateProject,
     handleDeleteProject,
-    getFilteredProjects,
     handleEnterProject,
     handleShowMembers,
 

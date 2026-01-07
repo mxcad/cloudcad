@@ -4,6 +4,7 @@ import { FolderPlus, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { Pagination } from '../components/ui/Pagination';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
@@ -91,6 +92,9 @@ export const FileSystemManager: React.FC = () => {
     setDraggedNodes,
     dropTargetId,
     setDropTargetId,
+    paginationMeta,
+    handlePageChange,
+    handlePageSizeChange,
   } = useFileSystem();
 
   // 项目管理 hooks
@@ -215,13 +219,9 @@ export const FileSystemManager: React.FC = () => {
     }
   }, [currentNode?.id]);
 
-  // 过滤后的数据
-  const filteredProjects = isAtRoot ? nodes.filter((n) => n.isRoot) : nodes;
-  const filteredNodes = !isAtRoot
-    ? nodes.filter((node) =>
-        node.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : filteredProjects;
+  // 直接使用后端返回的数据（已包含分页和搜索）
+  // 不再进行前端过滤，避免破坏分页的正确性
+  const displayNodes = nodes;
 
   // 打开成员管理模态框
   const handleShowMembers = useCallback(
@@ -713,47 +713,61 @@ export const FileSystemManager: React.FC = () => {
   );
 
   const renderContent = () => {
-    if (filteredNodes.length === 0) {
+    if (displayNodes.length === 0) {
       return renderEmpty(isAtRoot);
     }
 
     return (
-      <div
-        className={
-          viewMode === 'grid'
-            ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6'
-            : 'divide-y divide-slate-100'
-        }
-      >
-        {filteredNodes.map((node) => (
-          <FileItem
-            key={node.id}
-            node={node}
-            isSelected={selectedNodes.has(node.id)}
-            viewMode={viewMode}
-            isMultiSelectMode={isMultiSelectMode}
-            onSelect={handleNodeSelect}
-            onEnter={handleFileOpen}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            onRename={handleOpenRename}
-            onEdit={node.isRoot ? (e) => openEditProject(node, e) : undefined}
-            onDeleteNode={
-              node.isRoot ? (e) => handleRemoveProject(node, e) : undefined
-            }
-            onShowMembers={
-              node.isRoot ? (e) => handleShowMembers(node, e) : undefined
-            }
-            onMove={!node.isRoot ? handleMove : undefined}
-            onCopy={!node.isRoot ? handleCopy : undefined}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            isDropTarget={dropTargetId === node.id}
-          />
-        ))}
-      </div>
+      <>
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6'
+              : 'divide-y divide-slate-100'
+          }
+        >
+          {displayNodes.map((node) => (
+            <FileItem
+              key={node.id}
+              node={node}
+              isSelected={selectedNodes.has(node.id)}
+              viewMode={viewMode}
+              isMultiSelectMode={isMultiSelectMode}
+              onSelect={handleNodeSelect}
+              onEnter={handleFileOpen}
+              onDownload={handleDownload}
+              onDelete={handleDelete}
+              onRename={handleOpenRename}
+              onEdit={node.isRoot ? (e) => openEditProject(node, e) : undefined}
+              onDeleteNode={
+                node.isRoot ? (e) => handleRemoveProject(node, e) : undefined
+              }
+              onShowMembers={
+                node.isRoot ? (e) => handleShowMembers(node, e) : undefined
+              }
+              onMove={!node.isRoot ? handleMove : undefined}
+              onCopy={!node.isRoot ? handleCopy : undefined}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              isDropTarget={dropTargetId === node.id}
+            />
+          ))}
+        </div>
+
+        {/* 分页组件 */}
+        {paginationMeta && (
+          <div className="px-6 py-4 border-t border-slate-100">
+            <Pagination
+              meta={paginationMeta}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              showSizeChanger={true}
+            />
+          </div>
+        )}
+      </>
     );
   };
 

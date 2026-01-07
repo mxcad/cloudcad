@@ -285,7 +285,7 @@ export const usersApi = {
 // 项目相关的 API 方法（基于 FileSystemNode 统一模型）
 export const projectsApi = {
   // 项目管理
-  list: () => apiService.get('/file-system/projects'),
+  list: (config?: AxiosRequestConfig) => apiService.get('/file-system/projects', config),
 
   create: (data: { name: string; description?: string }) =>
     apiService.post('/file-system/projects', data),
@@ -306,10 +306,10 @@ export const projectsApi = {
     apiService.post(`/file-system/nodes/${parentId}/folders`, data),
 
   // 节点管理
-  getNode: (nodeId: string) => apiService.get(`/file-system/nodes/${nodeId}`),
+  getNode: (nodeId: string, config?: AxiosRequestConfig) => apiService.get(`/file-system/nodes/${nodeId}`, config),
 
-  getChildren: (nodeId: string) =>
-    apiService.get(`/file-system/nodes/${nodeId}/children`),
+  getChildren: (nodeId: string, config?: AxiosRequestConfig) =>
+    apiService.get(`/file-system/nodes/${nodeId}/children`, config),
 
   updateNode: (nodeId: string, data: { name?: string; description?: string }) =>
     apiService.patch(`/file-system/nodes/${nodeId}`, data),
