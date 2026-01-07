@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DownloadIcon,
   DeleteIcon,
@@ -69,10 +70,42 @@ export const FileItem: React.FC<FileItemProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const isRoot = node.isRoot;
   const modalRef = useRef<{
     checkMissingReferences: () => Promise<boolean>;
   } | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    if (!showMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuButtonRef.current && !menuButtonRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+        setMenuPosition(null);
+      }
+    };
+
+    const handleScroll = () => {
+      if (showMenu && menuButtonRef.current) {
+        const rect = menuButtonRef.current.getBoundingClientRect();
+        setMenuPosition({
+          top: rect.bottom + 4,
+          left: rect.right - 120,
+        });
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [showMenu]);
 
   // 外部参照上传 Hook（任务008/009）
   const externalReferenceUpload = useExternalReferenceUpload({
@@ -310,8 +343,18 @@ export const FileItem: React.FC<FileItemProps> = ({
         >
           <div className="relative flex items-center gap-1">
             <button
+              ref={menuButtonRef}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!showMenu && menuButtonRef.current) {
+                  const rect = menuButtonRef.current.getBoundingClientRect();
+                  setMenuPosition({
+                    top: rect.bottom + 4,
+                    left: rect.right - 120,
+                  });
+                } else {
+                  setMenuPosition(null);
+                }
                 setShowMenu(!showMenu);
               }}
               className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200
@@ -319,212 +362,218 @@ export const FileItem: React.FC<FileItemProps> = ({
                          transition-colors"
             >
               <MoreIcon size={16} />
-            </button>
-
-            {/* 下拉菜单 */}
-            {showMenu && (
-              <div
-                className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200
-                           py-1 min-w-[120px] z-50 animate-scale-in origin-top-right"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* 回收站场景：只显示恢复和删除 */}
-                {isTrash ? (
-                  <>
-                    {onRestore && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMenuAction(() => onRestore(node));
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <RestoreIcon size={16} />
-                        恢复
-                      </button>
-                    )}
-                    <hr className="my-1 border-slate-100" />
+                          </button>
+                        </div>
+                      </div>
+        {/* 下拉菜单 - 使用 Portal 渲染到 body 层级 */}
+        {showMenu &&
+          menuPosition &&
+          createPortal(
+            <div
+              className="fixed bg-white rounded-lg shadow-xl border border-slate-200
+                         py-1 min-w-[120px] z-[9999] animate-scale-in origin-top-right"
+              style={{
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 回收站场景：只显示恢复和删除 */}
+              {isTrash ? (
+                <>
+                  {onRestore && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleMenuAction(() => onDelete(node));
+                        handleMenuAction(() => onRestore(node));
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                      className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
                                  flex items-center gap-2 transition-colors"
                     >
-                      <DeleteIcon size={16} />
-                      彻底删除
+                      <RestoreIcon size={16} />
+                      恢复
                     </button>
-                  </>
-                ) : (
-                  <>
-                    {/* 上传外部参照按钮（任务009 - 始终显示，仅 CAD 文件） */}
-                    {isCadFile() && (
-                      <button
-                        onClick={handleUploadExternalReference}
-                        className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
-                          node.hasMissingExternalReferences
-                            ? 'text-amber-600 hover:bg-amber-50'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Upload size={16} />
-                        {node.hasMissingExternalReferences
-                          ? '上传外部参照'
-                          : '上传外部参照'}
-                      </button>
-                    )}
+                  )}
+                  <hr className="my-1 border-slate-100" />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMenuAction(() => onDelete(node));
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                               flex items-center gap-2 transition-colors"
+                  >
+                    <DeleteIcon size={16} />
+                    彻底删除
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* 上传外部参照按钮（任务009 - 始终显示，仅 CAD 文件） */}
+                  {isCadFile() && (
+                    <button
+                      onClick={handleUploadExternalReference}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                        node.hasMissingExternalReferences
+                          ? 'text-amber-600 hover:bg-amber-50'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Upload size={16} />
+                      {node.hasMissingExternalReferences
+                        ? '上传外部参照'
+                        : '上传外部参照'}
+                    </button>
+                  )}
 
-                    {/* 项目根节点显示编辑和成员 */}
-                    {isRoot ? (
-                      <>
+                  {/* 项目根节点显示编辑和成员 */}
+                  {isRoot ? (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onEdit?.(e));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <EditIcon size={16} />
+                        编辑
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onShowMembers?.(e));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <UsersIcon size={16} />
+                        成员
+                      </button>
+                      <hr className="my-1 border-slate-100" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onDelete(node));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <DeleteIcon size={16} />
+                        删除
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {!node.isFolder && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMenuAction(() => onEdit?.(e));
+                            handleMenuAction(() => onDownload(node));
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                      flex items-center gap-2 transition-colors"
                         >
-                          <EditIcon size={16} />
-                          编辑
+                          <DownloadIcon size={16} />
+                          下载
                         </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onRename(node));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <EditIcon size={16} />
+                        重命名
+                      </button>
+                      {onMove && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMenuAction(() => onShowMembers?.(e));
+                            handleMenuAction(() => onMove(node));
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                      flex items-center gap-2 transition-colors"
                         >
-                          <UsersIcon size={16} />
-                          成员
-                        </button>
-                        <hr className="my-1 border-slate-100" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMenuAction(() => onDelete(node));
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
-                                     flex items-center gap-2 transition-colors"
-                        >
-                          <DeleteIcon size={16} />
-                          删除
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        {!node.isFolder && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuAction(() => onDownload(node));
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                       flex items-center gap-2 transition-colors"
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
                           >
-                            <DownloadIcon size={16} />
-                            下载
-                          </button>
-                        )}
+                            <path d="M5 9l7-7 7 7M5 15l7 7 7-7" />
+                          </svg>
+                          移动到...
+                        </button>
+                      )}
+                      {onCopy && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMenuAction(() => onRename(node));
+                            handleMenuAction(() => onCopy(node));
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
                                      flex items-center gap-2 transition-colors"
                         >
-                          <EditIcon size={16} />
-                          重命名
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect
+                              x="9"
+                              y="9"
+                              width="13"
+                              height="13"
+                              rx="2"
+                              ry="2"
+                            />
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                          </svg>
+                          复制到...
                         </button>
-                        {onMove && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuAction(() => onMove(node));
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                       flex items-center gap-2 transition-colors"
-                          >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M5 9l7-7 7 7M5 15l7 7 7-7" />
-                            </svg>
-                            移动到...
-                          </button>
-                        )}
-                        {onCopy && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuAction(() => onCopy(node));
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                       flex items-center gap-2 transition-colors"
-                          >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <rect
-                                x="9"
-                                y="9"
-                                width="13"
-                                height="13"
-                                rx="2"
-                                ry="2"
-                              />
-                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                            </svg>
-                            复制到...
-                          </button>
-                        )}
-                        {onRestore && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuAction(() => onRestore(node));
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
-                                       flex items-center gap-2 transition-colors"
-                          >
-                            <RestoreIcon size={16} />
-                            恢复
-                          </button>
-                        )}
-                        <hr className="my-1 border-slate-100" />
+                      )}
+                      {onRestore && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMenuAction(() => onDelete(node));
+                            handleMenuAction(() => onRestore(node));
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                          className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
                                      flex items-center gap-2 transition-colors"
                         >
-                          <DeleteIcon size={16} />
-                          {onRestore ? '彻底删除' : '删除'}
+                          <RestoreIcon size={16} />
+                          恢复
                         </button>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+                      )}
+                      <hr className="my-1 border-slate-100" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(() => onDelete(node));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
+                                   flex items-center gap-2 transition-colors"
+                      >
+                        <DeleteIcon size={16} />
+                        {onRestore ? '彻底删除' : '删除'}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>,
+            document.body
+          )}
 
         {/* 外部参照上传模态框（任务008） */}
         <ExternalReferenceModal

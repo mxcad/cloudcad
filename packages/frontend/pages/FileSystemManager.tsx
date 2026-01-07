@@ -772,9 +772,10 @@ export const FileSystemManager: React.FC = () => {
 
       {renderHeader()}
 
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 relative min-h-[400px] shadow-sm overflow-hidden">
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-16">
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 relative min-h-[400px] shadow-sm overflow-visible">
+        <div className="overflow-hidden h-full rounded-2xl">
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-16">
             <div className="relative">
               <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
               <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
@@ -797,6 +798,7 @@ export const FileSystemManager: React.FC = () => {
         )}
 
         {!loading && !error && renderContent()}
+        </div>
 
         {isMultiSelectMode && selectedNodes.size > 0 && (
           <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up">

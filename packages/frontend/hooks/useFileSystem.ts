@@ -4,7 +4,6 @@ import {
   projectsApi,
   filesApi,
   trashApi,
-  mxcadApi,
 } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
@@ -195,82 +194,6 @@ export const useFileSystem = () => {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  /**
-   * 检查文件是否缺失外部参照（任务008）
-   */
-  const checkMissingExternalReferences = useCallback(
-    async (
-      node: FileSystemNode,
-      signal?: AbortSignal
-    ): Promise<{ hasMissing: boolean; count: number }> => {
-      // 只有 DWG/DXF 文件才需要检查外部参照
-      const cadExtensions = ['.dwg', '.dxf'];
-      if (!node.fileHash || node.isFolder || !node.extension) {
-        return { hasMissing: false, count: 0 };
-      }
-
-      // 检查文件扩展名是否为 CAD 文件
-      if (!cadExtensions.includes(node.extension.toLowerCase())) {
-        return { hasMissing: false, count: 0 };
-      }
-
-      try {
-        const response = await mxcadApi.getPreloadingData(node.fileHash, {
-          signal,
-        });
-        const preloadingData = response.data;
-
-        if (!preloadingData || typeof preloadingData !== 'object') {
-          return { hasMissing: false, count: 0 };
-        }
-
-        // 确保 images 和 externalReference 存在
-        const images = preloadingData.images || [];
-        const externalReference = preloadingData.externalReference || [];
-
-        // 过滤掉 http/https 开头的 URL（已有外部参照）
-        const missingImages = images.filter(
-          (name: string) =>
-            !name.startsWith('http:') && !name.startsWith('https:')
-        );
-        const missingRefs = externalReference;
-
-        if (missingImages.length === 0 && missingRefs.length === 0) {
-          return { hasMissing: false, count: 0 };
-        }
-
-        // 合并所有需要检查的文件
-        const allMissingFiles = [...missingRefs, ...missingImages];
-
-        // 使用 Promise.all 并行检查所有文件（性能优化）
-        const checkPromises = allMissingFiles.map(async (name) => {
-          try {
-            const existsResponse = await mxcadApi.checkExternalReferenceExists(
-              node.fileHash!,
-              name,
-              { signal }
-            );
-            return !existsResponse.data.exists ? 1 : 0;
-          } catch {
-            return 1;
-          }
-        });
-
-        const results = await Promise.all(checkPromises);
-        const missingCount = results.reduce((sum, count) => sum + count, 0);
-
-        return { hasMissing: missingCount > 0, count: missingCount };
-      } catch (error) {
-        // 如果是取消请求导致的错误，不处理
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw error;
-        }
-        return { hasMissing: false, count: 0 };
-      }
-    },
-    []
-  );
-
   // 刷新操作 - 使用 forceRefresh 确保获取最新 URL 参数
   const handleRefresh = useCallback(() => {
     // 增加计数器，强制 useEffect 重新执行 loadData
@@ -385,27 +308,8 @@ export const useFileSystem = () => {
         const childrenData = childrenResponse.data || [];
         setCurrentNode(nodeData);
 
-        // 检查每个文件是否缺失外部参照（任务008）
-        const nodesWithExternalReferenceCheck = await Promise.all(
-          childrenData.map(async (node: FileSystemNode) => {
-            if (node.isFolder) {
-              return node;
-            }
-
-            const { hasMissing, count } = await checkMissingExternalReferences(
-              node,
-              abortController.signal
-            );
-
-            return {
-              ...node,
-              hasMissingExternalReferences: hasMissing,
-              missingExternalReferencesCount: count,
-            };
-          })
-        );
-
-        setNodes(nodesWithExternalReferenceCheck);
+        // 后端已返回外部参照状态信息，直接使用（避免重复请求 preloading 接口）
+        setNodes(childrenData);
 
         // 构建面包屑
         await buildBreadcrumbsFromNode(nodeData, abortController.signal);
@@ -429,7 +333,6 @@ export const useFileSystem = () => {
     isProjectRootMode,
     showToast,
     buildBreadcrumbsFromNode,
-    checkMissingExternalReferences,
   ]);
 
   // 返回上级
