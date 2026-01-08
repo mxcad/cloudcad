@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 
@@ -141,6 +140,15 @@ export const CADEditorDirect: React.FC = () => {
           return;
         }
 
+        // 设置当前文件信息和 navigate 函数（用于返回命令）
+        const { setCurrentFileInfo, setNavigateFunction } = await import('../services/mxcadManager');
+        setCurrentFileInfo({
+          fileId: file.id,
+          parentId: file.parentId || null,
+          projectId: file.parentId || null, // 向上查找项目根节点
+        });
+        setNavigateFunction(navigate);
+
         // 按需加载 MxCAD 依赖
         const { mxcadManager } = await loadMxCADDependencies();
 
@@ -164,8 +172,9 @@ export const CADEditorDirect: React.FC = () => {
 
     return () => {
       // 动态导入 mxcadManager 进行清理
-      import('../services/mxcadManager').then(({ mxcadManager }) => {
+      import('../services/mxcadManager').then(({ mxcadManager, clearCurrentFileInfo }) => {
         mxcadManager.showMxCAD(false);
+        clearCurrentFileInfo(); // 清除文件信息
       });
     };
   }, [shouldLoadEditor, fileId, user, location.search]);
@@ -195,13 +204,7 @@ export const CADEditorDirect: React.FC = () => {
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      <button
-        onClick={() => navigate('/projects')}
-        className="fixed top-4 left-4 z-[9999] flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-medium text-gray-700"
-      >
-        <ArrowLeft size={16} />
-        返回项目列表
-      </button>
+      {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
     </div>
   );
 };

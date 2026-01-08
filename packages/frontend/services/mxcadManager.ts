@@ -2,6 +2,97 @@
 import { Logger } from '../utils/mxcadUtils';
 import { MxFun } from 'mxdraw';
 
+// 当前打开的文件信息（用于返回逻辑）
+let currentFileInfo: {
+  fileId: string;
+  parentId: string | null;
+  projectId: string | null;
+} | null = null;
+
+// React Router navigate 函数（由 CADEditorDirect 组件设置）
+let navigateFunction: ((path: string) => void) | null = null;
+
+/**
+ * 设置当前文件信息（由 CADEditorDirect 组件调用）
+ */
+export function setCurrentFileInfo(fileInfo: {
+  fileId: string;
+  parentId: string | null;
+  projectId: string | null;
+}) {
+  currentFileInfo = fileInfo;
+  Logger.info('设置当前文件信息', fileInfo);
+}
+
+/**
+ * 设置 navigate 函数（由 CADEditorDirect 组件调用）
+ */
+export function setNavigateFunction(navigate: (path: string) => void) {
+  navigateFunction = navigate;
+  Logger.info('设置 navigate 函数');
+}
+
+/**
+ * 清除当前文件信息和 navigate 函数
+ */
+export function clearCurrentFileInfo() {
+  currentFileInfo = null;
+  navigateFunction = null;
+  Logger.info('清除当前文件信息');
+}
+
+MxFun.addCommand("return-to-cloud-map-management", () => {
+  Logger.info('执行返回命令', { currentFileInfo });
+
+  if (!currentFileInfo) {
+    Logger.warn('当前文件信息不存在，返回项目列表');
+    if (navigateFunction) {
+      navigateFunction('/projects');
+    } else {
+      console.warn('navigate 函数未设置，无法返回');
+    }
+    return;
+  }
+
+  const { fileId, parentId, projectId } = currentFileInfo;
+
+  // 优先返回到文件所在的父文件夹
+  if (parentId) {
+    // 如果有项目 ID，返回到项目内的文件夹
+    if (projectId) {
+      Logger.info(`返回到项目文件夹: /projects/${projectId}/files/${parentId}`);
+      if (navigateFunction) {
+        navigateFunction(`/projects/${projectId}/files/${parentId}`);
+      } else {
+        console.warn('navigate 函数未设置，无法返回');
+      }
+    } else {
+      // 如果没有项目 ID，尝试直接使用 parentId 作为项目 ID
+      Logger.info(`返回到项目文件夹: /projects/${parentId}/files`);
+      if (navigateFunction) {
+        navigateFunction(`/projects/${parentId}/files`);
+      } else {
+        console.warn('navigate 函数未设置，无法返回');
+      }
+    }
+  } else if (projectId) {
+    // 如果没有父文件夹但有项目 ID，返回到项目根目录
+    Logger.info(`返回到项目根目录: /projects/${projectId}/files`);
+    if (navigateFunction) {
+      navigateFunction(`/projects/${projectId}/files`);
+    } else {
+      console.warn('navigate 函数未设置，无法返回');
+    }
+  } else {
+    // 最后备用：返回项目列表
+    Logger.warn('无法确定返回路径，返回项目列表');
+    if (navigateFunction) {
+      navigateFunction('/projects');
+    } else {
+      console.warn('navigate 函数未设置，无法返回');
+    }
+  }
+})
 /**
  * MxCAD 容器管理器
  * 负责创建和管理永不销毁的全局容器
