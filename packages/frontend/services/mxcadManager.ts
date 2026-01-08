@@ -64,6 +64,19 @@ class MxCADContainerManager {
 }
 
 /**
+ * 获取当前上传节点 ID
+ *
+ * 从 URL 查询参数中读取 nodeId
+ */
+const getCurrentUploadNodeId = (): string => {
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('nodeId') || '';
+  }
+  return '';
+};
+
+/**
  * MxCAD 认证管理器
  * 负责配置全面的网络认证拦截器
  */
@@ -124,27 +137,20 @@ class MxCADAuthManager {
         // Authorization 由 globalAuth.ts 在底层统一处理
         // 这里只添加 MxCAD 项目上下文
 
-        // 动态获取 nodeId：优先从全局变量获取，否则从 URL 获取
-        let currentNodeId = '';
-        if (typeof window !== 'undefined' && (window as any).__MXCAD_UPLOAD_NODE_ID__) {
-          currentNodeId = (window as any).__MXCAD_UPLOAD_NODE_ID__;
-        } else {
-          const urlParams = new URLSearchParams(window.location.search);
-          currentNodeId = urlParams.get('nodeId') || urlParams.get('parent') || '';
-        }
-
         const method = (this as any)._mxCadMethod;
-        if (
-          (method === 'POST' || method === 'PUT') &&
-          typeof body === 'string'
-        ) {
+        if (method === 'POST' || method === 'PUT') {
           try {
             const bodyData = JSON.parse(body);
-            // 后端 buildContextFromRequest 只期望 nodeId 参数
-            // 移除 projectId 和 parentId 参数，保持接口一致性
-            if (currentNodeId && !bodyData.nodeId) {
-              bodyData.nodeId = currentNodeId;
+
+            // 优先保留请求体中已有的 nodeId
+            // 只有在请求体中没有 nodeId 时，才从 URL 参数读取
+            if (!bodyData.nodeId) {
+              const currentNodeId = getCurrentUploadNodeId();
+              if (currentNodeId) {
+                bodyData.nodeId = currentNodeId;
+              }
             }
+
             // 清理冗余参数
             if (bodyData.projectId) {
               delete bodyData.projectId;
@@ -152,6 +158,7 @@ class MxCADAuthManager {
             if (bodyData.parentId) {
               delete bodyData.parentId;
             }
+
             const newBody = JSON.stringify(bodyData);
             return originalSend.call(this, newBody);
           } catch (error) {
@@ -173,15 +180,6 @@ class MxCADAuthManager {
         // Authorization 由 globalAuth.ts 在底层统一处理
         // 这里只添加 MxCAD 项目上下文
 
-        // 动态获取 nodeId：优先从全局变量获取，否则从 URL 获取
-        let currentNodeId = '';
-        if (typeof window !== 'undefined' && (window as any).__MXCAD_UPLOAD_NODE_ID__) {
-          currentNodeId = (window as any).__MXCAD_UPLOAD_NODE_ID__;
-        } else {
-          const urlParams = new URLSearchParams(window.location.search);
-          currentNodeId = urlParams.get('nodeId') || urlParams.get('parent') || '';
-        }
-
         const headers = new Headers(init?.headers || {});
 
         const modifiedInit: RequestInit = {
@@ -197,11 +195,16 @@ class MxCADAuthManager {
         ) {
           try {
             const bodyData = JSON.parse(init.body);
-            // 后端 buildContextFromRequest 只期望 nodeId 参数
-            // 移除 projectId 和 parentId 参数，保持接口一致性
-            if (currentNodeId && !bodyData.nodeId) {
-              bodyData.nodeId = currentNodeId;
+
+            // 优先保留请求体中已有的 nodeId
+            // 只有在请求体中没有 nodeId 时，才从 URL 参数读取
+            if (!bodyData.nodeId) {
+              const currentNodeId = getCurrentUploadNodeId();
+              if (currentNodeId) {
+                bodyData.nodeId = currentNodeId;
+              }
             }
+
             // 清理冗余参数
             if (bodyData.projectId) {
               delete bodyData.projectId;
@@ -209,6 +212,7 @@ class MxCADAuthManager {
             if (bodyData.parentId) {
               delete bodyData.parentId;
             }
+
             modifiedInit.body = JSON.stringify(bodyData);
           } catch (error) {
             // 静默处理 JSON 解析错误

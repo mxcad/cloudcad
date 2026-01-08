@@ -161,12 +161,12 @@ export class FileSystemNodeService {
       throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
-    // 使用当前节点的父节点作为目标父节点
-    // 如果当前节点是项目根目录（没有父节点），则使用当前节点本身
-    const parentId = currentNode.parentId || currentNode.id;
+    // 如果当前节点是文件夹，则直接使用它作为父节点
+    // 如果当前节点是文件，则使用它的父节点
+    const parentId = currentNode.isFolder ? currentNode.id : currentNode.parentId;
 
     this.logger.log(
-      `开始创建非CAD文件系统节点: ${originalName}, 大小: ${fileSize}字节, 存储路径: ${accessPath}, currentNode=${currentNode.name} (${currentNode.id}), parentId=${parentId}`
+      `开始创建非CAD文件系统节点: ${originalName}, 大小: ${fileSize}字节, 存储路径: ${accessPath}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), parentId=${parentId}`
     );
 
     try {
@@ -505,12 +505,12 @@ export class FileSystemNodeService {
       throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
-    // 使用当前节点的父节点作为目标父节点
-    // 如果当前节点是项目根目录（没有父节点），则使用当前节点本身
-    const parentId = currentNode.parentId || currentNode.id;
+    // 如果当前节点是文件夹，则直接使用它作为父节点
+    // 如果当前节点是文件，则使用它的父节点
+    const parentId = currentNode.isFolder ? currentNode.id : currentNode.parentId;
 
     this.logger.log(
-      `[createNewNode] 创建新节点: name=${name}, currentNode=${currentNode.name} (${currentNode.id}), parentId=${parentId}`
+      `[createNewNode] 创建新节点: name=${name}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), parentId=${parentId}`
     );
 
     const fileNode = await tx.fileSystemNode.create({
@@ -602,12 +602,12 @@ export class FileSystemNodeService {
       throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
-    // 使用当前节点的父节点作为目标父节点
-    // 如果当前节点是项目根目录（没有父节点），则使用当前节点本身
-    const targetParentId = currentNode.parentId || currentNode.id;
+    // 如果当前节点是文件夹，则直接使用它作为父节点
+    // 如果当前节点是文件，则使用它的父节点
+    const targetParentId = currentNode.isFolder ? currentNode.id : currentNode.parentId;
 
     this.logger.log(
-      `[handleExistingNode] 处理现有节点: originalName=${originalName}, currentNode=${currentNode.name} (${currentNode.id}), targetParentId=${targetParentId}, existingNodeId=${existingNode.id}, fileHash=${existingNode.fileHash}`
+      `[handleExistingNode] 处理现有节点: originalName=${originalName}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), targetParentId=${targetParentId}, existingNodeId=${existingNode.id}, fileHash=${existingNode.fileHash}`
     );
 
     // 检查是否在当前目录下已存在相同哈希值的文件
