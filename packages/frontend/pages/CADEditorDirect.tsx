@@ -146,6 +146,7 @@ export const CADEditorDirect: React.FC = () => {
           fileId: file.id,
           parentId: file.parentId || null,
           projectId: file.parentId || null, // 向上查找项目根节点
+          name: file.name
         });
         setNavigateFunction(navigate);
 
@@ -163,6 +164,7 @@ export const CADEditorDirect: React.FC = () => {
         mxcadManager.showMxCAD(true);
         setLoading(false);
       } catch (err) {
+        console.log(err)
         setError('CAD编辑器初始化失败');
         setLoading(false);
       }
