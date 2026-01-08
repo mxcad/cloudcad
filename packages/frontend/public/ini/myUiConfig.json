@@ -28,6 +28,11 @@
   "isShowTitleButtonBar": true,
   "mTitleButtonBarData": [
     {
+      "icon": "houtui",
+      "cmd": "return-to-cloud-map-management",
+      "prompt": "返回项目"
+    },
+    {
       "icon": "dakaidwg",
       "cmd": "OpenDwg",
       "prompt": "打开文件"
