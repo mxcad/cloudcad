@@ -784,13 +784,9 @@ export const useFileSystem = () => {
           cadExtensions.includes(node.extension.toLowerCase())
         ) {
           // 跳转到CAD编辑器，传递项目上下文
-          const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
           const queryParams = new URLSearchParams();
-          // 后端 buildContextFromRequest 期望 nodeId 参数
-          queryParams.set(
-            'nodeId',
-            currentNode?.id || effectiveProjectId || ''
-          );
+          // nodeId: 图纸的父节点 ID（用于上传时确定目标目录）
+          queryParams.set('nodeId', node.parentId || '');
           navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
         } else {
           // 非CAD文件，执行下载

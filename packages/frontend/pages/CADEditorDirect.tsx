@@ -141,12 +141,6 @@ export const CADEditorDirect: React.FC = () => {
           return;
         }
 
-        // 设置全局变量，供 mxcadManager 拦截器使用
-        // 优先使用文件的父节点作为上传目标
-        if (file.parentId) {
-          (window as any).__MXCAD_UPLOAD_NODE_ID__ = file.parentId;
-        }
-
         // 按需加载 MxCAD 依赖
         const { mxcadManager } = await loadMxCADDependencies();
 
@@ -169,11 +163,6 @@ export const CADEditorDirect: React.FC = () => {
     initEditor();
 
     return () => {
-      // 清理全局变量
-      if (typeof window !== 'undefined') {
-        delete (window as any).__MXCAD_UPLOAD_NODE_ID__;
-      }
-      
       // 动态导入 mxcadManager 进行清理
       import('../services/mxcadManager').then(({ mxcadManager }) => {
         mxcadManager.showMxCAD(false);
