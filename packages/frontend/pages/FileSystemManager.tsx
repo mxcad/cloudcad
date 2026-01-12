@@ -828,28 +828,28 @@ export const FileSystemManager: React.FC = () => {
         <div className="overflow-hidden h-full rounded-2xl">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
-              <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
+                <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
+              </div>
+              <p className="mt-4 text-slate-500 font-medium">加载中...</p>
             </div>
-            <p className="mt-4 text-slate-500 font-medium">加载中...</p>
-          </div>
-        )}
+          )}
 
-        {!loading && error && (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-16 h-16 rounded-full bg-error-100 flex items-center justify-center mb-4">
-              <AlertCircle size={32} className="text-error-600" />
+          {!loading && error && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 rounded-full bg-error-100 flex items-center justify-center mb-4">
+                <AlertCircle size={32} className="text-error-600" />
+              </div>
+              <p className="text-error-600 font-medium mb-4">{error}</p>
+              <Button onClick={handleRefresh} variant="outline">
+                <RefreshIcon size={16} className="mr-2" />
+                重试
+              </Button>
             </div>
-            <p className="text-error-600 font-medium mb-4">{error}</p>
-            <Button onClick={handleRefresh} variant="outline">
-              <RefreshIcon size={16} className="mr-2" />
-              重试
-            </Button>
-          </div>
-        )}
+          )}
 
-        {!loading && !error && renderContent()}
+          {!loading && !error && renderContent()}
         </div>
 
         {isMultiSelectMode && selectedNodes.size > 0 && (

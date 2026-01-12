@@ -1,10 +1,6 @@
 ﻿import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import {
-  projectsApi,
-  filesApi,
-  trashApi,
-} from '../services/apiService';
+import { projectsApi, filesApi, trashApi } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
 import { PaginationMeta } from '../components/ui/Pagination';
@@ -105,7 +101,9 @@ export const useFileSystem = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20 });
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(null);
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  );
 
   // 使用 ref 存储最新的 pagination 值，避免闭包问题
   const paginationRef = useRef(pagination);
@@ -352,7 +350,9 @@ export const useFileSystem = () => {
             total: allProjects.length,
             page: paginationRef.current.page,
             limit: paginationRef.current.limit,
-            totalPages: Math.ceil(allProjects.length / paginationRef.current.limit),
+            totalPages: Math.ceil(
+              allProjects.length / paginationRef.current.limit
+            ),
           });
         }
 
@@ -384,7 +384,9 @@ export const useFileSystem = () => {
             total: childrenData.length,
             page: paginationRef.current.page,
             limit: paginationRef.current.limit,
-            totalPages: Math.ceil(childrenData.length / paginationRef.current.limit),
+            totalPages: Math.ceil(
+              childrenData.length / paginationRef.current.limit
+            ),
           });
         }
 
@@ -451,14 +453,22 @@ export const useFileSystem = () => {
 
   // 节点选择
   const handleNodeSelect = useCallback(
-    (nodeId: string, isMultiSelect: boolean = false, isShift: boolean = false) => {
+    (
+      nodeId: string,
+      isMultiSelect: boolean = false,
+      isShift: boolean = false
+    ) => {
       setSelectedNodes((prev) => {
         const newSet = new Set(prev);
 
         // 查找当前节点在列表中的索引
         const currentIndex = nodes.findIndex((node) => node.id === nodeId);
 
-        if (isShift && lastSelectedNodeIdRef.current && lastSelectedIndexRef.current !== -1) {
+        if (
+          isShift &&
+          lastSelectedNodeIdRef.current &&
+          lastSelectedIndexRef.current !== -1
+        ) {
           // Shift+点击：范围选择
           const lastIndex = lastSelectedIndexRef.current;
           const startIndex = Math.min(lastIndex, currentIndex);
@@ -825,7 +835,10 @@ export const useFileSystem = () => {
         document.body.removeChild(a);
 
         console.log('[useFileSystem] 下载成功', { fileName: finalFileName });
-        showToast(node.isFolder ? '目录压缩下载成功' : '文件下载成功', 'success');
+        showToast(
+          node.isFolder ? '目录压缩下载成功' : '文件下载成功',
+          'success'
+        );
       } catch (error) {
         console.error('[useFileSystem] 下载失败', error);
 
@@ -833,8 +846,12 @@ export const useFileSystem = () => {
 
         if (error instanceof Error) {
           // 检查是否是 CORS 错误
-          if (error.message.includes('CORS') || error.message.includes('Network Error')) {
-            errorMessage = '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
+          if (
+            error.message.includes('CORS') ||
+            error.message.includes('Network Error')
+          ) {
+            errorMessage =
+              '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
           } else {
             errorMessage = error.message;
           }
@@ -853,9 +870,8 @@ export const useFileSystem = () => {
     // 对于文件，只提取文件名部分（不包含扩展名）
     if (!node.isFolder && node.name) {
       const lastDotIndex = node.name.lastIndexOf('.');
-      const nameWithoutExtension = lastDotIndex !== -1
-        ? node.name.substring(0, lastDotIndex)
-        : node.name;
+      const nameWithoutExtension =
+        lastDotIndex !== -1 ? node.name.substring(0, lastDotIndex) : node.name;
       setFolderName(nameWithoutExtension);
     } else {
       // 文件夹或没有扩展名的文件，使用完整名称
@@ -958,30 +974,24 @@ export const useFileSystem = () => {
   }, [loadData]);
 
   // 页码变化处理
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      // 先更新 ref，确保 loadData 使用最新的值
-      paginationRef.current = { ...paginationRef.current, page: newPage };
-      // 设置标志，表示应该加载数据
-      shouldLoadDataRef.current = true;
-      // 更新状态
-      setPagination(paginationRef.current);
-    },
-    []
-  );
+  const handlePageChange = useCallback((newPage: number) => {
+    // 先更新 ref，确保 loadData 使用最新的值
+    paginationRef.current = { ...paginationRef.current, page: newPage };
+    // 设置标志，表示应该加载数据
+    shouldLoadDataRef.current = true;
+    // 更新状态
+    setPagination(paginationRef.current);
+  }, []);
 
   // 每页显示数量变化处理
-  const handlePageSizeChange = useCallback(
-    (newPageSize: number) => {
-      // 先更新 ref，确保 loadData 使用最新的值
-      paginationRef.current = { page: 1, limit: newPageSize };
-      // 设置标志，表示应该加载数据
-      shouldLoadDataRef.current = true;
-      // 更新状态
-      setPagination(paginationRef.current);
-    },
-    []
-  );
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    // 先更新 ref，确保 loadData 使用最新的值
+    paginationRef.current = { page: 1, limit: newPageSize };
+    // 设置标志，表示应该加载数据
+    shouldLoadDataRef.current = true;
+    // 更新状态
+    setPagination(paginationRef.current);
+  }, []);
 
   // 进入项目
   const handleEnterProject = useCallback(

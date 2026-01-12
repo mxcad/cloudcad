@@ -7,7 +7,7 @@ let currentFileInfo: {
   fileId: string;
   parentId: string | null;
   projectId: string | null;
-  name: string
+  name: string;
 } | null = null;
 
 // React Router navigate 函数（由 CADEditorDirect 组件设置）
@@ -20,7 +20,7 @@ export function setCurrentFileInfo(fileInfo: {
   fileId: string;
   parentId: string | null;
   projectId: string | null;
-  name: string
+  name: string;
 }) {
   currentFileInfo = fileInfo;
   Logger.info('设置当前文件信息', fileInfo);
@@ -43,7 +43,7 @@ export function clearCurrentFileInfo() {
   Logger.info('清除当前文件信息');
 }
 
-MxFun.addCommand("return-to-cloud-map-management", () => {
+MxFun.addCommand('return-to-cloud-map-management', () => {
   Logger.info('执行返回命令', { currentFileInfo });
 
   if (!currentFileInfo) {
@@ -94,7 +94,7 @@ MxFun.addCommand("return-to-cloud-map-management", () => {
       console.warn('navigate 函数未设置，无法返回');
     }
   }
-})
+});
 /**
  * MxCAD 容器管理器
  * 负责创建和管理永不销毁的全局容器
@@ -436,11 +436,12 @@ class MxCADInstanceManager {
       // 使用 viewOptions 创建实例
       // 如果设置了 openFile 参数，MxCADView 会自动打开该文件
       this.mxcadView.create();
-      const onOpen = ()=> {
-        globalThis.MxPluginContext.useFileName().fileName.value = ' - ' + currentFileInfo.name
-        this.mxcadView.mxcad.off("openFileComplete", onOpen)
-      }
-      this.mxcadView.mxcad.on("openFileComplete", onOpen)
+      const onOpen = () => {
+        globalThis.MxPluginContext.useFileName().fileName.value =
+          ' - ' + currentFileInfo.name;
+        this.mxcadView.mxcad.off('openFileComplete', onOpen);
+      };
+      this.mxcadView.mxcad.on('openFileComplete', onOpen);
       // 监听 MxCAD 应用创建完成事件
       MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
         this.isInitialized = true;

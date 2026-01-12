@@ -70,7 +70,10 @@ export const FileItem: React.FC<FileItemProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const isRoot = node.isRoot;
   const modalRef = useRef<{
     checkMissingReferences: () => Promise<boolean>;
@@ -82,7 +85,10 @@ export const FileItem: React.FC<FileItemProps> = ({
     if (!showMenu) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuButtonRef.current && !menuButtonRef.current.contains(e.target as Node)) {
+      if (
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(e.target as Node)
+      ) {
         setShowMenu(false);
         setMenuPosition(null);
       }
@@ -364,9 +370,9 @@ export const FileItem: React.FC<FileItemProps> = ({
                          transition-colors"
             >
               <MoreIcon size={16} />
-                          </button>
-                        </div>
-                      </div>
+            </button>
+          </div>
+        </div>
         {/* 下拉菜单 - 使用 Portal 渲染到 body 层级 */}
         {showMenu &&
           menuPosition &&
@@ -809,7 +815,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                     onDownload(node);
                   }}
                   className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  title={node.isFolder ? "下载（ZIP）" : "下载"}
+                  title={node.isFolder ? '下载（ZIP）' : '下载'}
                 >
                   <DownloadIcon size={18} />
                 </button>

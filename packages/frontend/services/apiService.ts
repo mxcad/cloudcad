@@ -94,10 +94,21 @@ class ApiService {
     // 响应拦截器 - 自动解包后端响应格式和处理 token 刷新
     this.client.interceptors.response.use(
       (response) => {
-        // 静默：API响应
-
         // 检查是否为 MxCAD 接口，如果是则跳过自动解包
         const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
+
+        console.log('[响应拦截器] URL:', response.config.url);
+        console.log('[响应拦截器] 原始响应:', response.data);
+        console.log('[响应拦截器] 是否为 MxCAD 接口:', isMxCadEndpoint);
+        console.log('[响应拦截器] response.data 存在:', !!response.data);
+        console.log(
+          '[响应拦截器] response.data 是对象:',
+          typeof response.data === 'object'
+        );
+        console.log(
+          '[响应拦截器] response.data 有 data 属性:',
+          'data' in response.data
+        );
 
         if (
           !isMxCadEndpoint &&
@@ -107,9 +118,11 @@ class ApiService {
         ) {
           const originalData = response.data;
           response.data = originalData.data;
-          // 静默：自动解包
+          console.log('[响应拦截器] 解包后:', response.data);
         } else if (isMxCadEndpoint) {
-          // 静默：MxCAD接口跳过自动解包，保持原始格式
+          console.log('[响应拦截器] MxCAD 接口跳过解包');
+        } else {
+          console.log('[响应拦截器] 不满足解包条件');
         }
 
         return response;
@@ -285,7 +298,8 @@ export const usersApi = {
 // 项目相关的 API 方法（基于 FileSystemNode 统一模型）
 export const projectsApi = {
   // 项目管理
-  list: (config?: AxiosRequestConfig) => apiService.get('/file-system/projects', config),
+  list: (config?: AxiosRequestConfig) =>
+    apiService.get('/file-system/projects', config),
 
   create: (data: { name: string; description?: string }) =>
     apiService.post('/file-system/projects', data),
@@ -306,7 +320,8 @@ export const projectsApi = {
     apiService.post(`/file-system/nodes/${parentId}/folders`, data),
 
   // 节点管理
-  getNode: (nodeId: string, config?: AxiosRequestConfig) => apiService.get(`/file-system/nodes/${nodeId}`, config),
+  getNode: (nodeId: string, config?: AxiosRequestConfig) =>
+    apiService.get(`/file-system/nodes/${nodeId}`, config),
 
   getChildren: (nodeId: string, config?: AxiosRequestConfig) =>
     apiService.get(`/file-system/nodes/${nodeId}/children`, config),
@@ -390,7 +405,9 @@ export const filesApi = {
   get: (id: string) => apiService.get(`/files/${id}`),
 
   download: (id: string) =>
-    apiService.get(`/file-system/nodes/${id}/download`, { responseType: 'blob' }),
+    apiService.get(`/file-system/nodes/${id}/download`, {
+      responseType: 'blob',
+    }),
 
   update: (id: string, data: any) => apiService.patch(`/files/${id}`, data),
 
@@ -427,6 +444,39 @@ export const adminApi = {
 
   getUserPermissions: (userId: string) =>
     apiService.get(`/admin/permissions/user/${userId}`),
+};
+
+// 字体管理相关的 API 方法
+export const fontsApi = {
+  // 获取字体列表（返回所有数据）
+  getFonts: () => apiService.get('/font-management'),
+
+  // 上传字体
+  uploadFont: (
+    file: File,
+    target: 'backend' | 'frontend' | 'both' = 'both'
+  ) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiService.post('/font-management/upload', formData, {
+      params: { target },
+    });
+  },
+
+  // 删除字体
+  deleteFont: (
+    fileName: string,
+    target: 'backend' | 'frontend' | 'both' = 'both'
+  ) =>
+    apiService.delete(`/font-management/${fileName}`, { params: { target } }),
+
+  // 下载字体
+  downloadFont: (fileName: string, location: 'backend' | 'frontend') => {
+    return apiService.get(`/font-management/download/${fileName}`, {
+      params: { location },
+      responseType: 'blob',
+    });
+  },
 };
 
 // MxCAD 相关的 API 方法

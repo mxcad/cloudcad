@@ -98,7 +98,9 @@ describe('useExternalReferenceUpload', () => {
   it('应该在预加载数据获取失败时返回false', async () => {
     const { mxcadApi } = await import('../services/apiService');
 
-    vi.mocked(mxcadApi.getPreloadingData).mockRejectedValue(new Error('网络错误'));
+    vi.mocked(mxcadApi.getPreloadingData).mockRejectedValue(
+      new Error('网络错误')
+    );
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
@@ -183,8 +185,12 @@ describe('useExternalReferenceUpload', () => {
     });
 
     // 直接设置文件源
-    const mockFile = new File(['content'], 'ref1.dwg', { type: 'application/octet-stream' });
-    const mockImageFile = new File(['image'], 'image1.png', { type: 'image/png' });
+    const mockFile = new File(['content'], 'ref1.dwg', {
+      type: 'application/octet-stream',
+    });
+    const mockImageFile = new File(['image'], 'image1.png', {
+      type: 'image/png',
+    });
 
     // 通过直接更新状态来设置文件源
     result.current.files.forEach((file) => {
@@ -242,7 +248,10 @@ describe('useExternalReferenceUpload', () => {
 
     expect(hasMissing).toBe(true);
     expect(result.current.files.length).toBe(2);
-    expect(result.current.files.map((f) => f.name)).toEqual(['ref2.dwg', 'image2.png']);
+    expect(result.current.files.map((f) => f.name)).toEqual([
+      'ref2.dwg',
+      'image2.png',
+    ]);
   });
 
   it('应该过滤掉HTTP/HTTPS开头的URL（已有外部参照）', async () => {
@@ -275,12 +284,20 @@ describe('useExternalReferenceUpload', () => {
 
     expect(hasMissing).toBe(true);
     expect(result.current.files.length).toBe(2);
-    expect(result.current.files.map((f) => f.name)).toContain('local_image.png');
-    expect(result.current.files.map((f) => f.name)).not.toContain('http://example.com/image1.png');
+    expect(result.current.files.map((f) => f.name)).toContain(
+      'local_image.png'
+    );
+    expect(result.current.files.map((f) => f.name)).not.toContain(
+      'http://example.com/image1.png'
+    );
   });
 });
 
 // 辅助函数：设置文件源
-function setFiles(_updater: (prev: import('../types/filesystem').ExternalReferenceFile[]) => import('../types/filesystem').ExternalReferenceFile[]) {
+function setFiles(
+  _updater: (
+    prev: import('../types/filesystem').ExternalReferenceFile[]
+  ) => import('../types/filesystem').ExternalReferenceFile[]
+) {
   // 此函数用于测试中的状态更新，实际状态更新在Hook内部处理
 }

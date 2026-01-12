@@ -25,7 +25,9 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const getSpy = vi.spyOn(apiService, 'get').mockResolvedValue(mockResponse);
+      const getSpy = vi
+        .spyOn(apiService, 'get')
+        .mockResolvedValue(mockResponse);
 
       const result = await apiService.getPreloadingData('testhash123');
 
@@ -43,7 +45,9 @@ describe('MxCAD API Methods', () => {
 
       const getSpy = vi.spyOn(apiService, 'get').mockRejectedValue(mockError);
 
-      await expect(apiService.getPreloadingData('nonexistent')).rejects.toThrow();
+      await expect(
+        apiService.getPreloadingData('nonexistent')
+      ).rejects.toThrow();
       expect(getSpy).toHaveBeenCalledWith('/mxcad/file/nonexistent/preloading');
     });
   });
@@ -55,7 +59,9 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const postSpy = vi.spyOn(apiService, 'post').mockResolvedValue(mockResponse);
+      const postSpy = vi
+        .spyOn(apiService, 'post')
+        .mockResolvedValue(mockResponse);
 
       const result = await apiService.checkExternalReferenceExists(
         'testhash123',
@@ -75,7 +81,9 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const postSpy = vi.spyOn(apiService, 'post').mockResolvedValue(mockResponse);
+      const postSpy = vi
+        .spyOn(apiService, 'post')
+        .mockResolvedValue(mockResponse);
 
       const result = await apiService.checkExternalReferenceExists(
         'testhash123',
@@ -104,7 +112,9 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const getSpy = vi.spyOn(apiService, 'get').mockResolvedValue(mockResponse);
+      const getSpy = vi
+        .spyOn(apiService, 'get')
+        .mockResolvedValue(mockResponse);
 
       const result = await mxcadApi.getPreloadingData('abc123');
 
@@ -118,9 +128,14 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const postSpy = vi.spyOn(apiService, 'post').mockResolvedValue(mockResponse);
+      const postSpy = vi
+        .spyOn(apiService, 'post')
+        .mockResolvedValue(mockResponse);
 
-      const result = await mxcadApi.checkExternalReferenceExists('abc123', 'test.dwg');
+      const result = await mxcadApi.checkExternalReferenceExists(
+        'abc123',
+        'test.dwg'
+      );
 
       expect(postSpy).toHaveBeenCalledWith(
         '/mxcad/file/abc123/check-reference',
@@ -135,9 +150,13 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const postSpy = vi.spyOn(apiService, 'post').mockResolvedValue(mockResponse);
+      const postSpy = vi
+        .spyOn(apiService, 'post')
+        .mockResolvedValue(mockResponse);
 
-      const testFile = new File(['test content'], 'test.dwg', { type: 'application/dwg' });
+      const testFile = new File(['test content'], 'test.dwg', {
+        type: 'application/dwg',
+      });
       await mxcadApi.uploadExtReferenceDwg(testFile, 'srcHash', 'refFile.dwg');
 
       expect(postSpy).toHaveBeenCalledWith(
@@ -161,10 +180,18 @@ describe('MxCAD API Methods', () => {
         status: 200,
       };
 
-      const postSpy = vi.spyOn(apiService, 'post').mockResolvedValue(mockResponse);
+      const postSpy = vi
+        .spyOn(apiService, 'post')
+        .mockResolvedValue(mockResponse);
 
-      const testFile = new File(['test content'], 'test.png', { type: 'image/png' });
-      await mxcadApi.uploadExtReferenceImage(testFile, 'srcHash', 'refImage.png');
+      const testFile = new File(['test content'], 'test.png', {
+        type: 'image/png',
+      });
+      await mxcadApi.uploadExtReferenceImage(
+        testFile,
+        'srcHash',
+        'refImage.png'
+      );
 
       expect(postSpy).toHaveBeenCalledWith(
         '/mxcad/up_ext_reference_image',

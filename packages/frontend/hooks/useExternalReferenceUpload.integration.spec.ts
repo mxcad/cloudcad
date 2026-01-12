@@ -58,7 +58,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
   describe('checkMissingReferences - 外部参照检测', () => {
     it('应该正确检测到缺失的外部参照并打开模态框', async () => {
       const { mxcadApi } = await import('../services/apiService');
-      
+
       const mockPreloadingData: PreloadingData = {
         tz: false,
         src_file_md5: testFileHash,
@@ -124,7 +124,9 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     it('应该在获取预加载数据失败时返回false', async () => {
       const { mxcadApi } = await import('../services/apiService');
 
-      vi.mocked(mxcadApi.getPreloadingData).mockRejectedValue(new Error('网络错误'));
+      vi.mocked(mxcadApi.getPreloadingData).mockRejectedValue(
+        new Error('网络错误')
+      );
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
@@ -175,7 +177,10 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       expect(hasMissing).toBe(true);
       expect(result.current.files.length).toBe(2);
-      expect(result.current.files.map((f) => f.name)).toEqual(['ref2.dwg', 'image2.png']);
+      expect(result.current.files.map((f) => f.name)).toEqual([
+        'ref2.dwg',
+        'image2.png',
+      ]);
     });
 
     it('应该过滤掉HTTP/HTTPS开头的URL外部参照', async () => {
@@ -184,7 +189,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       const mockPreloadingData: PreloadingData = {
         tz: false,
         src_file_md5: testFileHash,
-        images: ['http://example.com/remote.png', 'https://secure.com/secure.png', 'local.png'],
+        images: [
+          'http://example.com/remote.png',
+          'https://secure.com/secure.png',
+          'local.png',
+        ],
         externalReference: ['local.dwg'],
       };
 
@@ -212,8 +221,12 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       expect(result.current.files.length).toBe(2);
       expect(result.current.files.map((f) => f.name)).toContain('local.png');
       expect(result.current.files.map((f) => f.name)).toContain('local.dwg');
-      expect(result.current.files.map((f) => f.name)).not.toContain('http://example.com/remote.png');
-      expect(result.current.files.map((f) => f.name)).not.toContain('https://secure.com/secure.png');
+      expect(result.current.files.map((f) => f.name)).not.toContain(
+        'http://example.com/remote.png'
+      );
+      expect(result.current.files.map((f) => f.name)).not.toContain(
+        'https://secure.com/secure.png'
+      );
     });
   });
 
@@ -284,13 +297,17 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       });
 
       // 应该打印"没有需要上传的文件"
-      expect(consoleSpy).toHaveBeenCalledWith('[useExternalReferenceUpload] 没有需要上传的文件');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useExternalReferenceUpload] 没有需要上传的文件'
+      );
       consoleSpy.mockRestore();
     });
 
     it('应该处理上传失败的情况', async () => {
       const { mxcadApi } = await import('../services/apiService');
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -477,7 +494,9 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       });
 
       // 应该触发警告日志（因为文件状态不是 success）
-      expect(consoleSpy).toHaveBeenCalledWith('[useExternalReferenceUpload] 部分文件上传失败');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useExternalReferenceUpload] 部分文件上传失败'
+      );
       consoleSpy.mockRestore();
     });
   });

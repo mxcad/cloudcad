@@ -52,7 +52,7 @@ export const CADEditorDirect: React.FC = () => {
       // 优先使用当前打开文件的父节点作为上传目标
       // 如果没有当前文件信息，则从 URL 获取
       let nodeId = currentFile?.parentId || '';
-      
+
       if (!nodeId) {
         nodeId =
           new URLSearchParams(location.search).get('nodeId') ||
@@ -141,12 +141,13 @@ export const CADEditorDirect: React.FC = () => {
         }
 
         // 设置当前文件信息和 navigate 函数（用于返回命令）
-        const { setCurrentFileInfo, setNavigateFunction } = await import('../services/mxcadManager');
+        const { setCurrentFileInfo, setNavigateFunction } =
+          await import('../services/mxcadManager');
         setCurrentFileInfo({
           fileId: file.id,
           parentId: file.parentId || null,
           projectId: file.parentId || null, // 向上查找项目根节点
-          name: file.name
+          name: file.name,
         });
         setNavigateFunction(navigate);
 
@@ -164,7 +165,7 @@ export const CADEditorDirect: React.FC = () => {
         mxcadManager.showMxCAD(true);
         setLoading(false);
       } catch (err) {
-        console.log(err)
+        console.log(err);
         setError('CAD编辑器初始化失败');
         setLoading(false);
       }
@@ -174,10 +175,12 @@ export const CADEditorDirect: React.FC = () => {
 
     return () => {
       // 动态导入 mxcadManager 进行清理
-      import('../services/mxcadManager').then(({ mxcadManager, clearCurrentFileInfo }) => {
-        mxcadManager.showMxCAD(false);
-        clearCurrentFileInfo(); // 清除文件信息
-      });
+      import('../services/mxcadManager').then(
+        ({ mxcadManager, clearCurrentFileInfo }) => {
+          mxcadManager.showMxCAD(false);
+          clearCurrentFileInfo(); // 清除文件信息
+        }
+      );
     };
   }, [shouldLoadEditor, fileId, user, location.search]);
 
