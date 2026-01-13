@@ -58,7 +58,10 @@ export class UsersService {
           password: hashedPassword,
           nickname: createUserDto.nickname,
           avatar: createUserDto.avatar,
-          role: UserRole.USER, // 强制新用户为普通用户角色
+          role: createUserDto.role || UserRole.USER, // 使用传入的角色，默认为普通用户
+          status: 'ACTIVE', // 管理员创建的用户直接激活
+          emailVerified: true, // 视为已验证
+          emailVerifiedAt: new Date(),
         },
         select: {
           id: true,

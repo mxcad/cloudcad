@@ -131,7 +131,14 @@ export class FileSystemService {
   }
 
   async getUserProjects(userId: string, query?: QueryProjectsDto) {
-    const { search, projectStatus, page = 1, limit = 20, sortBy, sortOrder } = query || {};
+    const {
+      search,
+      projectStatus,
+      page = 1,
+      limit = 20,
+      sortBy,
+      sortOrder,
+    } = query || {};
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -530,7 +537,16 @@ export class FileSystemService {
   }
 
   async getChildren(nodeId: string, userId?: string, query?: QueryChildrenDto) {
-    const { search, nodeType, extension, fileStatus, page = 1, limit = 50, sortBy, sortOrder } = query || {};
+    const {
+      search,
+      nodeType,
+      extension,
+      fileStatus,
+      page = 1,
+      limit = 50,
+      sortBy,
+      sortOrder,
+    } = query || {};
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -571,7 +587,9 @@ export class FileSystemService {
           where,
           skip,
           take: limit,
-          orderBy: sortBy ? { [sortBy]: sortOrder } : [{ isFolder: 'desc' }, { name: 'asc' }],
+          orderBy: sortBy
+            ? { [sortBy]: sortOrder }
+            : [{ isFolder: 'desc' }, { name: 'asc' }],
           include: {
             owner: {
               select: {
@@ -1997,7 +2015,11 @@ export class FileSystemService {
   async downloadNode(
     nodeId: string,
     userId: string
-  ): Promise<{ stream: NodeJS.ReadableStream; filename: string; mimeType: string }> {
+  ): Promise<{
+    stream: NodeJS.ReadableStream;
+    filename: string;
+    mimeType: string;
+  }> {
     try {
       // 检查文件访问权限
       const hasAccess = await this.checkFileAccess(nodeId, userId);
@@ -2044,7 +2066,11 @@ export class FileSystemService {
   private async downloadNodeAsZip(
     nodeId: string,
     userId: string
-  ): Promise<{ stream: NodeJS.ReadableStream; filename: string; mimeType: string }> {
+  ): Promise<{
+    stream: NodeJS.ReadableStream;
+    filename: string;
+    mimeType: string;
+  }> {
     try {
       // 获取节点信息
       const node = await this.prisma.fileSystemNode.findUnique({
@@ -2071,7 +2097,14 @@ export class FileSystemService {
       archive.pipe(output);
 
       // 递归收集并添加所有文件到 ZIP
-      const result = await this.addFilesToArchive(nodeId, archive, node.name, 0, 0, 0);
+      const result = await this.addFilesToArchive(
+        nodeId,
+        archive,
+        node.name,
+        0,
+        0,
+        0
+      );
 
       // 完成压缩
       await archive.finalize();
@@ -2152,7 +2185,9 @@ export class FileSystemService {
 
         return { totalSize: currentTotalSize, fileCount: currentFileCount };
       } catch (error) {
-        this.logger.warn(`添加文件到压缩包失败: ${node.name} - ${error.message}`);
+        this.logger.warn(
+          `添加文件到压缩包失败: ${node.name} - ${error.message}`
+        );
         // 确保流被关闭
         if (stream && typeof (stream as any).destroy === 'function') {
           (stream as any).destroy();

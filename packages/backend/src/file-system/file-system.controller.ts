@@ -53,10 +53,7 @@ export class FileSystemController {
 
   @Get('projects')
   @ApiResponse({ status: 200, description: '获取项目列表成功' })
-  async getProjects(
-    @Request() req,
-    @Query() query?: QueryProjectsDto
-  ) {
+  async getProjects(@Request() req, @Query() query?: QueryProjectsDto) {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
   @Get('projects/:projectId')
@@ -395,8 +392,14 @@ export class FileSystemController {
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization'
+    );
     res.setHeader('Access-Control-Max-Age', '86400'); // 24小时
     res.status(204).end();
   }
@@ -428,8 +431,14 @@ export class FileSystemController {
       const origin = req.headers.origin || '*';
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS'
+      );
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization'
+      );
 
       this.logger.log(`[下载] CORS 头已设置: ${origin}`);
 
@@ -497,14 +506,18 @@ export class FileSystemController {
         );
       });
     } catch (error) {
-      this.logger.error(`下载失败: ${nodeId} by user ${userId} - ${error.message}`, error.stack);
+      this.logger.error(
+        `下载失败: ${nodeId} by user ${userId} - ${error.message}`,
+        error.stack
+      );
 
       if (!res.headersSent) {
-        const status = error instanceof NotFoundException
-          ? 404
-          : error instanceof ForbiddenException
-          ? 403
-          : 500;
+        const status =
+          error instanceof NotFoundException
+            ? 404
+            : error instanceof ForbiddenException
+              ? 403
+              : 500;
         res.status(status).json({
           message: error.message || '文件下载失败',
         });

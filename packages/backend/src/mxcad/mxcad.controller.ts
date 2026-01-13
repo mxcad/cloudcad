@@ -947,7 +947,8 @@ export class MxCadController {
     // 外部参照文件应该创建在源图纸所在目录中
     // 如果源图纸在项目根目录，则使用项目根目录
     // 否则使用源图纸的父节点（图纸所在目录）
-    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+    const nodeId =
+      sourceNode?.parentId || sourceNode?.id || 'external-reference';
 
     this.logger.log(
       `[uploadExtReferenceDwg] 外部参照文件将存储在目录: ${nodeId} (源图纸: ${sourceNode?.name})`
@@ -1117,7 +1118,8 @@ export class MxCadController {
     // 外部参照文件应该创建在源图纸所在目录中
     // 如果源图纸在项目根目录，则使用项目根目录
     // 否则使用源图纸的父节点（图纸所在目录）
-    const nodeId = sourceNode?.parentId || sourceNode?.id || 'external-reference';
+    const nodeId =
+      sourceNode?.parentId || sourceNode?.id || 'external-reference';
 
     this.logger.log(
       `[uploadExtReferenceImage] 外部参照文件将存储在目录: ${nodeId} (源图纸: ${sourceNode?.name})`
@@ -2051,9 +2053,7 @@ export class MxCadController {
 
       // 文件所有者有权限
       if (node.ownerId === checkUserId) {
-        this.logger.log(
-          `[checkFileAccessPermission] 用户是文件所有者，有权限`
-        );
+        this.logger.log(`[checkFileAccessPermission] 用户是文件所有者，有权限`);
         return true;
       }
 
@@ -2070,9 +2070,7 @@ export class MxCadController {
       });
 
       if (access) {
-        this.logger.log(
-          `[checkFileAccessPermission] 用户有直接访问权限`
-        );
+        this.logger.log(`[checkFileAccessPermission] 用户有直接访问权限`);
         return true;
       }
 

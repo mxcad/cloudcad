@@ -277,6 +277,13 @@ export const authApi = {
 
 // 用户相关的 API 方法
 export const usersApi = {
+  list: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+  }) => apiService.get('/users', { params }),
+
   search: (params?: { page?: number; limit?: number; search?: string }) =>
     apiService.get('/users/search', { params }),
 
@@ -299,6 +306,7 @@ export const usersApi = {
       nickname?: string;
       role?: string;
       status?: string;
+      password?: string;
     }
   ) => apiService.patch(`/users/${id}`, data),
 

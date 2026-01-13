@@ -11,8 +11,20 @@ describe('FontsService', () => {
   let configService: ConfigService;
 
   // 测试目录路径
-  const testBackendDir = path.join(__dirname, '..', '..', '..', 'test-fonts-backend');
-  const testFrontendDir = path.join(__dirname, '..', '..', '..', 'test-fonts-frontend');
+  const testBackendDir = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'test-fonts-backend'
+  );
+  const testFrontendDir = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'test-fonts-frontend'
+  );
 
   // 测试字体文件
   const testFontBuffer = Buffer.from('test font content');
@@ -74,7 +86,10 @@ describe('FontsService', () => {
 
     it('应该返回后端目录中的字体', async () => {
       // 创建测试字体文件
-      await fs.writeFile(path.join(testBackendDir, 'test-font.ttf'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testBackendDir, 'test-font.ttf'),
+        testFontBuffer
+      );
 
       const result = await service.getFonts();
 
@@ -87,7 +102,10 @@ describe('FontsService', () => {
 
     it('应该返回前端目录中的字体', async () => {
       // 创建测试字体文件
-      await fs.writeFile(path.join(testFrontendDir, 'test-font.woff'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testFrontendDir, 'test-font.woff'),
+        testFontBuffer
+      );
 
       const result = await service.getFonts();
 
@@ -100,14 +118,26 @@ describe('FontsService', () => {
 
     it('应该合并两个目录中的字体', async () => {
       // 在两个目录创建相同的字体文件
-      await fs.writeFile(path.join(testBackendDir, 'shared-font.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testFrontendDir, 'shared-font.ttf'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testBackendDir, 'shared-font.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testFrontendDir, 'shared-font.ttf'),
+        testFontBuffer
+      );
 
       // 在后端目录创建独有的字体
-      await fs.writeFile(path.join(testBackendDir, 'backend-only.ttf'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testBackendDir, 'backend-only.ttf'),
+        testFontBuffer
+      );
 
       // 在前端目录创建独有的字体
-      await fs.writeFile(path.join(testFrontendDir, 'frontend-only.woff'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testFrontendDir, 'frontend-only.woff'),
+        testFontBuffer
+      );
 
       const result = await service.getFonts();
 
@@ -121,13 +151,17 @@ describe('FontsService', () => {
       expect(sharedFont.existsInFrontend).toBe(true);
 
       // 检查后端独有字体
-      const backendFont = result.fonts.find((f) => f.name === 'backend-only.ttf');
+      const backendFont = result.fonts.find(
+        (f) => f.name === 'backend-only.ttf'
+      );
       expect(backendFont).toBeDefined();
       expect(backendFont.existsInBackend).toBe(true);
       expect(backendFont.existsInFrontend).toBe(false);
 
       // 检查前端独有字体
-      const frontendFont = result.fonts.find((f) => f.name === 'frontend-only.woff');
+      const frontendFont = result.fonts.find(
+        (f) => f.name === 'frontend-only.woff'
+      );
       expect(frontendFont).toBeDefined();
       expect(frontendFont.existsInBackend).toBe(false);
       expect(frontendFont.existsInFrontend).toBe(true);
@@ -135,8 +169,14 @@ describe('FontsService', () => {
 
     it('应该忽略非字体文件', async () => {
       // 创建非字体文件
-      await fs.writeFile(path.join(testBackendDir, 'readme.txt'), Buffer.from('text'));
-      await fs.writeFile(path.join(testBackendDir, 'image.png'), Buffer.from('image'));
+      await fs.writeFile(
+        path.join(testBackendDir, 'readme.txt'),
+        Buffer.from('text')
+      );
+      await fs.writeFile(
+        path.join(testBackendDir, 'image.png'),
+        Buffer.from('image')
+      );
 
       const result = await service.getFonts();
 
@@ -145,9 +185,18 @@ describe('FontsService', () => {
     });
 
     it('应该按名称排序字体列表', async () => {
-      await fs.writeFile(path.join(testBackendDir, 'z-font.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testBackendDir, 'a-font.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testBackendDir, 'm-font.ttf'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testBackendDir, 'z-font.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testBackendDir, 'a-font.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testBackendDir, 'm-font.ttf'),
+        testFontBuffer
+      );
 
       const result = await service.getFonts();
 
@@ -159,7 +208,10 @@ describe('FontsService', () => {
 
   describe('uploadFont', () => {
     it('应该成功上传字体到后端目录', async () => {
-      const result = await service.uploadFont(testFontFile, FontUploadTarget.BACKEND);
+      const result = await service.uploadFont(
+        testFontFile,
+        FontUploadTarget.BACKEND
+      );
 
       expect(result.message).toContain('上传成功');
       expect(result.font.name).toBe('test-font.ttf');
@@ -172,7 +224,10 @@ describe('FontsService', () => {
     });
 
     it('应该成功上传字体到前端目录', async () => {
-      const result = await service.uploadFont(testFontFile, FontUploadTarget.FRONTEND);
+      const result = await service.uploadFont(
+        testFontFile,
+        FontUploadTarget.FRONTEND
+      );
 
       expect(result.message).toContain('上传成功');
       expect(result.font.name).toBe('test-font.ttf');
@@ -185,7 +240,10 @@ describe('FontsService', () => {
     });
 
     it('应该成功上传字体到两个目录', async () => {
-      const result = await service.uploadFont(testFontFile, FontUploadTarget.BOTH);
+      const result = await service.uploadFont(
+        testFontFile,
+        FontUploadTarget.BOTH
+      );
 
       expect(result.message).toContain('上传成功');
       expect(result.font.name).toBe('test-font.ttf');
@@ -205,9 +263,9 @@ describe('FontsService', () => {
         originalname: 'test.txt',
       };
 
-      await expect(service.uploadFont(invalidFile, FontUploadTarget.BOTH)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.uploadFont(invalidFile, FontUploadTarget.BOTH)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('应该拒绝过大的文件', async () => {
@@ -218,9 +276,9 @@ describe('FontsService', () => {
         size: largeBuffer.length,
       };
 
-      await expect(service.uploadFont(largeFile, FontUploadTarget.BOTH)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.uploadFont(largeFile, FontUploadTarget.BOTH)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('应该拒绝无效的文件名', async () => {
@@ -229,9 +287,9 @@ describe('FontsService', () => {
         originalname: '',
       };
 
-      await expect(service.uploadFont(invalidFile, FontUploadTarget.BOTH)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.uploadFont(invalidFile, FontUploadTarget.BOTH)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('应该支持所有允许的字体扩展名', async () => {
@@ -243,7 +301,10 @@ describe('FontsService', () => {
           originalname: `test${ext}`,
         };
 
-        const result = await service.uploadFont(fontFile, FontUploadTarget.BOTH);
+        const result = await service.uploadFont(
+          fontFile,
+          FontUploadTarget.BOTH
+        );
         expect(result.font.extension).toBe(ext);
       }
     });
@@ -252,10 +313,22 @@ describe('FontsService', () => {
   describe('deleteFont', () => {
     beforeEach(async () => {
       // 在两个目录创建测试字体
-      await fs.writeFile(path.join(testBackendDir, 'delete-test.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testFrontendDir, 'delete-test.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testBackendDir, 'backend-only.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testFrontendDir, 'frontend-only.woff'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testBackendDir, 'delete-test.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testFrontendDir, 'delete-test.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testBackendDir, 'backend-only.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testFrontendDir, 'frontend-only.woff'),
+        testFontBuffer
+      );
     });
 
     it('应该成功从后端目录删除字体', async () => {
@@ -338,8 +411,14 @@ describe('FontsService', () => {
   describe('downloadFont', () => {
     beforeEach(async () => {
       // 在两个目录创建测试字体
-      await fs.writeFile(path.join(testBackendDir, 'download-test.ttf'), testFontBuffer);
-      await fs.writeFile(path.join(testFrontendDir, 'download-test.woff'), testFontBuffer);
+      await fs.writeFile(
+        path.join(testBackendDir, 'download-test.ttf'),
+        testFontBuffer
+      );
+      await fs.writeFile(
+        path.join(testFrontendDir, 'download-test.woff'),
+        testFontBuffer
+      );
     });
 
     it('应该成功从后端目录下载字体', async () => {
@@ -354,7 +433,10 @@ describe('FontsService', () => {
     });
 
     it('应该成功从前端目录下载字体', async () => {
-      const result = await service.downloadFont('download-test.woff', 'frontend');
+      const result = await service.downloadFont(
+        'download-test.woff',
+        'frontend'
+      );
 
       expect(result.fileName).toBe('download-test.woff');
       expect(result.path).toContain('test-fonts-frontend');

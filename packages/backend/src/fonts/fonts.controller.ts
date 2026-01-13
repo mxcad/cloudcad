@@ -14,7 +14,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiQuery,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -38,8 +44,16 @@ export class FontsController {
    * 获取字体列表（返回所有数据，由前端处理分页、筛选、排序）
    */
   @Get()
-  @ApiOperation({ summary: '获取字体列表', description: '获取所有字体文件，前端负责分页、筛选和排序' })
-  @ApiQuery({ name: 'location', enum: ['backend', 'frontend'], required: false, description: '字体位置：backend 或 frontend，不指定则返回全部' })
+  @ApiOperation({
+    summary: '获取字体列表',
+    description: '获取所有字体文件，前端负责分页、筛选和排序',
+  })
+  @ApiQuery({
+    name: 'location',
+    enum: ['backend', 'frontend'],
+    required: false,
+    description: '字体位置：backend 或 frontend，不指定则返回全部',
+  })
   async getFonts(@Query('location') location?: 'backend' | 'frontend') {
     try {
       const result = await this.fontsService.getFonts(location);
@@ -59,20 +73,27 @@ export class FontsController {
    * 上传字体文件
    */
   @Post('upload')
-  @ApiOperation({ summary: '上传字体文件', description: '上传字体文件到指定目录' })
+  @ApiOperation({
+    summary: '上传字体文件',
+    description: '上传字体文件到指定目录',
+  })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFont(
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadFontDto: UploadFontDto,
-    @Req() req: Request,
+    @Req() req: Request
   ) {
     try {
       this.logger.log(`[uploadFont] 收到上传请求`);
       this.logger.log(`[uploadFont] 文件对象: ${file ? '存在' : '不存在'}`);
       this.logger.log(`[uploadFont] target: ${uploadFontDto?.target}`);
-      this.logger.log(`[uploadFont] req.files: ${(req as any).files ? '存在' : '不存在'}`);
-      this.logger.log(`[uploadFont] req.file: ${(req as any).file ? '存在' : '不存在'}`);
+      this.logger.log(
+        `[uploadFont] req.files: ${(req as any).files ? '存在' : '不存在'}`
+      );
+      this.logger.log(
+        `[uploadFont] req.file: ${(req as any).file ? '存在' : '不存在'}`
+      );
 
       // 验证管理员权限
       this.validateAdminAccess(req);
@@ -97,12 +118,20 @@ export class FontsController {
    * 删除字体文件
    */
   @Delete(':fileName')
-  @ApiOperation({ summary: '删除字体文件', description: '从指定目录删除字体文件' })
-  @ApiQuery({ name: 'target', enum: FontUploadTarget, required: false, description: '删除目标' })
+  @ApiOperation({
+    summary: '删除字体文件',
+    description: '从指定目录删除字体文件',
+  })
+  @ApiQuery({
+    name: 'target',
+    enum: FontUploadTarget,
+    required: false,
+    description: '删除目标',
+  })
   async deleteFont(
     @Req() req: Request,
     @Param('fileName') fileName: string,
-    @Query() deleteFontDto: DeleteFontDto,
+    @Query() deleteFontDto: DeleteFontDto
   ) {
     try {
       // 验证管理员权限
@@ -127,13 +156,21 @@ export class FontsController {
    * 下载字体文件
    */
   @Get('download/:fileName')
-  @ApiOperation({ summary: '下载字体文件', description: '下载指定位置的字体文件' })
-  @ApiQuery({ name: 'location', enum: ['backend', 'frontend'], required: true, description: '下载位置' })
+  @ApiOperation({
+    summary: '下载字体文件',
+    description: '下载指定位置的字体文件',
+  })
+  @ApiQuery({
+    name: 'location',
+    enum: ['backend', 'frontend'],
+    required: true,
+    description: '下载位置',
+  })
   async downloadFont(
     @Req() req: Request,
     res: Response,
     @Param('fileName') fileName: string,
-    @Query('location') location: 'backend' | 'frontend',
+    @Query('location') location: 'backend' | 'frontend'
   ) {
     try {
       // 验证管理员权限

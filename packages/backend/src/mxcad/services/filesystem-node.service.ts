@@ -157,13 +157,17 @@ export class FileSystemNodeService {
     });
 
     if (!currentNode) {
-      this.logger.error(`[createNonCadNode] 节点不存在或已被删除: ${context.nodeId}`);
+      this.logger.error(
+        `[createNonCadNode] 节点不存在或已被删除: ${context.nodeId}`
+      );
       throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
     // 如果当前节点是文件夹，则直接使用它作为父节点
     // 如果当前节点是文件，则使用它的父节点
-    const parentId = currentNode.isFolder ? currentNode.id : currentNode.parentId;
+    const parentId = currentNode.isFolder
+      ? currentNode.id
+      : currentNode.parentId;
 
     this.logger.log(
       `开始创建非CAD文件系统节点: ${originalName}, 大小: ${fileSize}字节, 存储路径: ${accessPath}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), parentId=${parentId}`
@@ -501,13 +505,17 @@ export class FileSystemNodeService {
     });
 
     if (!currentNode) {
-      this.logger.error(`[createNewNode] 节点不存在或已被删除: ${context.nodeId}`);
+      this.logger.error(
+        `[createNewNode] 节点不存在或已被删除: ${context.nodeId}`
+      );
       throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
     // 如果当前节点是文件夹，则直接使用它作为父节点
     // 如果当前节点是文件，则使用它的父节点
-    const parentId = currentNode.isFolder ? currentNode.id : currentNode.parentId;
+    const parentId = currentNode.isFolder
+      ? currentNode.id
+      : currentNode.parentId;
 
     this.logger.log(
       `[createNewNode] 创建新节点: name=${name}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), parentId=${parentId}`
@@ -598,13 +606,17 @@ export class FileSystemNodeService {
     });
 
     if (!currentNode) {
-      this.logger.error(`[handleExistingNode] 节点不存在或已被删除: ${context.nodeId}`);
+      this.logger.error(
+        `[handleExistingNode] 节点不存在或已被删除: ${context.nodeId}`
+      );
       throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
     // 如果当前节点是文件夹，则直接使用它作为父节点
     // 如果当前节点是文件，则使用它的父节点
-    const targetParentId = currentNode.isFolder ? currentNode.id : currentNode.parentId;
+    const targetParentId = currentNode.isFolder
+      ? currentNode.id
+      : currentNode.parentId;
 
     this.logger.log(
       `[handleExistingNode] 处理现有节点: originalName=${originalName}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), targetParentId=${targetParentId}, existingNodeId=${existingNode.id}, fileHash=${existingNode.fileHash}`
@@ -657,20 +669,24 @@ export class FileSystemNodeService {
 
     // 创建新节点（引用现有存储路径，节省空间）
     this.logger.log(`[handleExistingNode] 开始创建引用节点...`);
-    
+
     // 检查父节点是否存在
     const parentExists = await tx.fileSystemNode.findUnique({
       where: { id: targetParentId, deletedAt: null },
       select: { id: true, name: true, isFolder: true },
     });
-    
+
     if (!parentExists) {
-      this.logger.error(`[handleExistingNode] 父节点不存在或已被删除: ${targetParentId}`);
+      this.logger.error(
+        `[handleExistingNode] 父节点不存在或已被删除: ${targetParentId}`
+      );
       throw new Error(`父节点不存在或已被删除: ${targetParentId}`);
     }
-    
-    this.logger.log(`[handleExistingNode] 父节点存在: ${parentExists.name} (${parentExists.id})`);
-    
+
+    this.logger.log(
+      `[handleExistingNode] 父节点存在: ${parentExists.name} (${parentExists.id})`
+    );
+
     const newNode = await tx.fileSystemNode.create({
       data: {
         name: uniqueName,

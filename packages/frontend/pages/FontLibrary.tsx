@@ -539,9 +539,15 @@ interface UploadFontModalProps {
   defaultTarget?: 'backend' | 'frontend' | 'both';
 }
 
-function UploadFontModal({ onClose, onSuccess, defaultTarget = 'both' }: UploadFontModalProps) {
+function UploadFontModal({
+  onClose,
+  onSuccess,
+  defaultTarget = 'both',
+}: UploadFontModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [target, setTarget] = useState<'backend' | 'frontend' | 'both'>(defaultTarget);
+  const [target, setTarget] = useState<'backend' | 'frontend' | 'both'>(
+    defaultTarget
+  );
   const [uploading, setUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

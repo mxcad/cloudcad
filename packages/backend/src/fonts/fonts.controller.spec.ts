@@ -95,9 +95,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理服务错误', async () => {
-      jest.spyOn(service, 'getFonts').mockRejectedValue(
-        new Error('服务错误')
-      );
+      jest.spyOn(service, 'getFonts').mockRejectedValue(new Error('服务错误'));
 
       await expect(controller.getFonts()).rejects.toThrow('服务错误');
     });
@@ -127,7 +125,10 @@ describe('FontsController', () => {
       expect(result.code).toBe('SUCCESS');
       expect(result.message).toContain('上传成功');
       expect(result.data.name).toBe('test-font.ttf');
-      expect(service.uploadFont).toHaveBeenCalledWith(req.file, FontUploadTarget.BOTH);
+      expect(service.uploadFont).toHaveBeenCalledWith(
+        req.file,
+        FontUploadTarget.BOTH
+      );
     });
 
     it('应该拒绝非管理员上传字体', async () => {
@@ -165,7 +166,10 @@ describe('FontsController', () => {
       expect(result.code).toBe('SUCCESS');
       expect(result.data.existsInBackend).toBe(true);
       expect(result.data.existsInFrontend).toBe(false);
-      expect(service.uploadFont).toHaveBeenCalledWith(req.file, FontUploadTarget.BACKEND);
+      expect(service.uploadFont).toHaveBeenCalledWith(
+        req.file,
+        FontUploadTarget.BACKEND
+      );
     });
 
     it('应该处理上传到前端目录', async () => {
@@ -191,7 +195,10 @@ describe('FontsController', () => {
       expect(result.code).toBe('SUCCESS');
       expect(result.data.existsInBackend).toBe(false);
       expect(result.data.existsInFrontend).toBe(true);
-      expect(service.uploadFont).toHaveBeenCalledWith(req.file, FontUploadTarget.FRONTEND);
+      expect(service.uploadFont).toHaveBeenCalledWith(
+        req.file,
+        FontUploadTarget.FRONTEND
+      );
     });
 
     it('应该默认上传到两个目录', async () => {
@@ -217,7 +224,10 @@ describe('FontsController', () => {
       expect(result.code).toBe('SUCCESS');
       expect(result.data.existsInBackend).toBe(true);
       expect(result.data.existsInFrontend).toBe(true);
-      expect(service.uploadFont).toHaveBeenCalledWith(req.file, FontUploadTarget.BOTH);
+      expect(service.uploadFont).toHaveBeenCalledWith(
+        req.file,
+        FontUploadTarget.BOTH
+      );
     });
   });
 
@@ -232,11 +242,18 @@ describe('FontsController', () => {
 
       jest.spyOn(service, 'deleteFont').mockResolvedValue(mockResult);
 
-      const result = await controller.deleteFont(req, 'test-font.ttf', deleteFontDto);
+      const result = await controller.deleteFont(
+        req,
+        'test-font.ttf',
+        deleteFontDto
+      );
 
       expect(result.code).toBe('SUCCESS');
       expect(result.message).toContain('删除成功');
-      expect(service.deleteFont).toHaveBeenCalledWith('test-font.ttf', FontUploadTarget.BOTH);
+      expect(service.deleteFont).toHaveBeenCalledWith(
+        'test-font.ttf',
+        FontUploadTarget.BOTH
+      );
     });
 
     it('应该拒绝非管理员删除字体', async () => {
@@ -261,10 +278,17 @@ describe('FontsController', () => {
 
       jest.spyOn(service, 'deleteFont').mockResolvedValue(mockResult);
 
-      const result = await controller.deleteFont(req, 'test-font.ttf', deleteFontDto);
+      const result = await controller.deleteFont(
+        req,
+        'test-font.ttf',
+        deleteFontDto
+      );
 
       expect(result.code).toBe('SUCCESS');
-      expect(service.deleteFont).toHaveBeenCalledWith('test-font.ttf', FontUploadTarget.BACKEND);
+      expect(service.deleteFont).toHaveBeenCalledWith(
+        'test-font.ttf',
+        FontUploadTarget.BACKEND
+      );
     });
 
     it('应该处理从前端目录删除', async () => {
@@ -277,10 +301,17 @@ describe('FontsController', () => {
 
       jest.spyOn(service, 'deleteFont').mockResolvedValue(mockResult);
 
-      const result = await controller.deleteFont(req, 'test-font.ttf', deleteFontDto);
+      const result = await controller.deleteFont(
+        req,
+        'test-font.ttf',
+        deleteFontDto
+      );
 
       expect(result.code).toBe('SUCCESS');
-      expect(service.deleteFont).toHaveBeenCalledWith('test-font.ttf', FontUploadTarget.FRONTEND);
+      expect(service.deleteFont).toHaveBeenCalledWith(
+        'test-font.ttf',
+        FontUploadTarget.FRONTEND
+      );
     });
 
     it('应该默认从两个目录删除', async () => {
@@ -293,10 +324,17 @@ describe('FontsController', () => {
 
       jest.spyOn(service, 'deleteFont').mockResolvedValue(mockResult);
 
-      const result = await controller.deleteFont(req, 'test-font.ttf', deleteFontDto);
+      const result = await controller.deleteFont(
+        req,
+        'test-font.ttf',
+        deleteFontDto
+      );
 
       expect(result.code).toBe('SUCCESS');
-      expect(service.deleteFont).toHaveBeenCalledWith('test-font.ttf', FontUploadTarget.BOTH);
+      expect(service.deleteFont).toHaveBeenCalledWith(
+        'test-font.ttf',
+        FontUploadTarget.BOTH
+      );
     });
   });
 
@@ -314,7 +352,10 @@ describe('FontsController', () => {
 
       await controller.downloadFont(req, res, 'test-font.ttf', 'backend');
 
-      expect(service.downloadFont).toHaveBeenCalledWith('test-font.ttf', 'backend');
+      expect(service.downloadFont).toHaveBeenCalledWith(
+        'test-font.ttf',
+        'backend'
+      );
       expect(res.download).toHaveBeenCalledWith(
         mockResult.path,
         mockResult.fileName,
@@ -335,7 +376,10 @@ describe('FontsController', () => {
 
       await controller.downloadFont(req, res, 'test-font.woff', 'frontend');
 
-      expect(service.downloadFont).toHaveBeenCalledWith('test-font.woff', 'frontend');
+      expect(service.downloadFont).toHaveBeenCalledWith(
+        'test-font.woff',
+        'frontend'
+      );
       expect(res.download).toHaveBeenCalledWith(
         mockResult.path,
         mockResult.fileName,
@@ -367,11 +411,13 @@ describe('FontsController', () => {
       jest.spyOn(service, 'downloadFont').mockResolvedValue(mockResult);
 
       // 模拟下载错误
-      res.download = jest.fn().mockImplementation((path, filename, callback) => {
-        if (typeof callback === 'function') {
-          callback(new Error('下载失败'));
-        }
-      }) as any;
+      res.download = jest
+        .fn()
+        .mockImplementation((path, filename, callback) => {
+          if (typeof callback === 'function') {
+            callback(new Error('下载失败'));
+          }
+        }) as any;
 
       await controller.downloadFont(req, res, 'test-font.ttf', 'backend');
 
@@ -388,9 +434,9 @@ describe('FontsController', () => {
       const req = mockRequest('ADMIN');
       const res = mockResponse();
 
-      jest.spyOn(service, 'downloadFont').mockRejectedValue(
-        new Error('服务错误')
-      );
+      jest
+        .spyOn(service, 'downloadFont')
+        .mockRejectedValue(new Error('服务错误'));
 
       await expect(
         controller.downloadFont(req, res, 'test-font.ttf', 'backend')

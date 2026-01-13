@@ -12,28 +12,16 @@ import {
 
 const MOCK_ROLES: Role[] = [
   {
-    id: 'role_admin',
+    id: 'ADMIN',
     name: '超级管理员',
     description: '拥有系统所有权限',
     isSystem: true,
     permissions: Object.values(Permission) as Permission[],
   },
   {
-    id: 'role_manager',
-    name: '项目经理',
-    description: '可以创建项目和管理图库',
-    permissions: [
-      Permission.VIEW_DASHBOARD,
-      Permission.PROJECT_CREATE,
-      Permission.PROJECT_DELETE,
-      Permission.LIBRARY_MANAGE,
-      Permission.ASSET_UPLOAD,
-    ],
-  },
-  {
-    id: 'role_engineer',
-    name: '工程师',
-    description: '参与项目设计，上传资源',
+    id: 'USER',
+    name: '普通用户',
+    description: '可以参与项目设计，上传资源',
     permissions: [Permission.VIEW_DASHBOARD, Permission.ASSET_UPLOAD],
   },
 ];

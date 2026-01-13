@@ -19,7 +19,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
-import { Permission, type Role } from '../types';
+import { type Role } from '../types';
 import { projectsApi, mockApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from './ui/Modal';
@@ -137,13 +137,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       to: '/users',
       icon: Users,
       label: '用户管理',
-      visible: role?.permissions.includes(Permission.MANAGE_USERS),
+      visible: user?.role === 'ADMIN',
     },
     {
       to: '/roles',
       icon: ShieldCheck,
       label: '角色权限',
-      visible: role?.permissions.includes(Permission.MANAGE_ROLES),
+      visible: user?.role === 'ADMIN',
     },
   ];
 

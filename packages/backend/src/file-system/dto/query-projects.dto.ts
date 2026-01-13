@@ -9,7 +9,11 @@ export class QueryProjectsDto {
   @IsString()
   search?: string;
 
-  @ApiProperty({ description: '项目状态', enum: ProjectStatus, required: false })
+  @ApiProperty({
+    description: '项目状态',
+    enum: ProjectStatus,
+    required: false,
+  })
   @IsOptional()
   @IsEnum(ProjectStatus)
   projectStatus?: ProjectStatus;

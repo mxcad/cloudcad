@@ -24,7 +24,15 @@ export class FontsService {
   private readonly frontendFontsDir: string;
 
   /** 支持的字体文件扩展名 */
-  private readonly allowedExtensions = ['.ttf', '.otf', '.woff', '.woff2', '.eot', '.ttc', '.shx'];
+  private readonly allowedExtensions = [
+    '.ttf',
+    '.otf',
+    '.woff',
+    '.woff2',
+    '.eot',
+    '.ttc',
+    '.shx',
+  ];
 
   /** 最大文件大小（10MB） */
   private readonly maxFileSize = 10 * 1024 * 1024;
@@ -33,12 +41,26 @@ export class FontsService {
     // 从环境变量获取目录路径
     this.backendFontsDir = this.configService.get<string>(
       'MXCAD_FONTS_PATH',
-      path.join(process.cwd(), '..', 'mxcadassembly', 'windows', 'release', 'fonts')
+      path.join(
+        process.cwd(),
+        '..',
+        'mxcadassembly',
+        'windows',
+        'release',
+        'fonts'
+      )
     );
 
     this.frontendFontsDir = this.configService.get<string>(
       'FRONTEND_FONTS_PATH',
-      path.join(process.cwd(), '..', 'frontend', 'dist', 'mxcadAppAssets', 'fonts')
+      path.join(
+        process.cwd(),
+        '..',
+        'frontend',
+        'dist',
+        'mxcadAppAssets',
+        'fonts'
+      )
     );
 
     this.logger.log(`后端字体目录: ${this.backendFontsDir}`);
@@ -265,7 +287,10 @@ export class FontsService {
   /**
    * 下载字体文件
    */
-  async downloadFont(fileName: string, location: 'backend' | 'frontend'): Promise<{ path: string; fileName: string }> {
+  async downloadFont(
+    fileName: string,
+    location: 'backend' | 'frontend'
+  ): Promise<{ path: string; fileName: string }> {
     try {
       // 验证文件名
       if (!fileName || fileName.includes('..') || fileName.includes('/')) {
@@ -273,9 +298,7 @@ export class FontsService {
       }
 
       const fontDir =
-        location === 'backend'
-          ? this.backendFontsDir
-          : this.frontendFontsDir;
+        location === 'backend' ? this.backendFontsDir : this.frontendFontsDir;
 
       const filePath = path.join(fontDir, fileName);
 

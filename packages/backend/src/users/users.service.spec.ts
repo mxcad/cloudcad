@@ -118,8 +118,15 @@ describe('UsersService', () => {
       expect(bcrypt.hash).toHaveBeenCalledWith('password123', 12);
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
-          ...createUserDto,
+          email: createUserDto.email,
+          username: createUserDto.username,
           password: 'hashedPassword',
+          nickname: createUserDto.nickname,
+          avatar: createUserDto.avatar,
+          role: createUserDto.role,
+          status: 'ACTIVE',
+          emailVerified: true,
+          emailVerifiedAt: expect.any(Date),
         },
         select: {
           id: true,

@@ -4,6 +4,9 @@
   Shield,
   Trash2,
   User as UserIcon,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
@@ -22,6 +25,15 @@ export const UserManagement = () => {
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 搜索、筛选、排序、分页状态
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   // 静态角色列表（后端只有ADMIN和USER两种角色）
   const [roles] = useState<Role[]>([
@@ -56,6 +68,13 @@ export const UserManagement = () => {
     nickname: '',
   });
 
+  // 表单验证错误
+  const [formErrors, setFormErrors] = useState({
+    username: '',
+    email: '',
+    password: '',
+  });
+
   useEffect(() => {
     initialize();
   }, []);
@@ -85,14 +104,29 @@ export const UserManagement = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await usersApi.list();
-      setUsers(response.data);
+      const response = await usersApi.list({
+        search: searchQuery || undefined,
+        role: roleFilter || undefined,
+        page: currentPage,
+        limit: pageSize,
+        sortBy,
+        sortOrder,
+      });
+      setUsers(response.data.data);
+      setTotalUsers(response.data.pagination.total);
     } catch (error) {
       setError('加载用户列表失败');
     } finally {
       setLoading(false);
     }
   };
+
+  // 当搜索、筛选、排序或分页改变时重新加载数据
+  useEffect(() => {
+    if (hasPermission) {
+      loadData();
+    }
+  }, [searchQuery, roleFilter, sortBy, sortOrder, currentPage, hasPermission]);
 
   const handleOpenCreate = () => {
     setEditingUser(null);
@@ -103,6 +137,7 @@ export const UserManagement = () => {
       roleId: 'USER',
       nickname: '',
     });
+    setFormErrors({ username: '', email: '', password: '' });
     setIsModalOpen(true);
   };
 
@@ -115,11 +150,61 @@ export const UserManagement = () => {
       roleId: user.role,
       nickname: user.nickname || '',
     });
+    setFormErrors({ username: '', email: '', password: '' });
     setIsModalOpen(true);
+  };
+
+  // 表单验证函数
+  const validateForm = (): boolean => {
+    const errors = {
+      username: '',
+      email: '',
+      password: '',
+    };
+
+    // 验证用户名
+    if (!formData.username) {
+      errors.username = '用户名不能为空';
+    } else if (formData.username.length < 3) {
+      errors.username = '用户名至少3个字符';
+    } else if (formData.username.length > 20) {
+      errors.username = '用户名最多20个字符';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      errors.username = '用户名只能包含字母、数字和下划线';
+    }
+
+    // 验证邮箱
+    if (!formData.email) {
+      errors.email = '邮箱不能为空';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = '请输入有效的邮箱地址';
+    }
+
+    // 验证密码（创建用户时必填，编辑用户时可选）
+    if (!editingUser) {
+      if (!formData.password) {
+        errors.password = '密码不能为空';
+      } else if (formData.password.length < 8) {
+        errors.password = '密码至少8个字符';
+      } else if (formData.password.length > 50) {
+        errors.password = '密码最多50个字符';
+      }
+    } else if (formData.password && formData.password.length < 8) {
+      errors.password = '密码至少8个字符';
+    }
+
+    setFormErrors(errors);
+    return !errors.username && !errors.email && !errors.password;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 验证表单
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -221,6 +306,105 @@ export const UserManagement = () => {
         </Button>
       </div>
 
+      {/* 搜索、筛选、排序控件 */}
+      <div className="bg-white shadow-sm border border-slate-200 rounded-xl p-4 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 搜索框 */}
+          <div className="relative group">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"
+              size={20}
+            />
+            <input
+              type="text"
+              placeholder="搜索用户（邮箱、用户名、昵称）"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // 搜索时重置到第一页
+              }}
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all shadow-sm hover:shadow-md"
+            />
+          </div>
+
+          {/* 角色筛选 */}
+          <div className="relative">
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setCurrentPage(1); // 筛选时重置到第一页
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all shadow-sm hover:shadow-md"
+            >
+              <option value="">所有角色</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 排序方式 */}
+          <div className="relative">
+            <select
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [field, order] = e.target.value.split('-');
+                setSortBy(field);
+                setSortOrder(order as 'asc' | 'desc');
+                setCurrentPage(1); // 排序时重置到第一页
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all shadow-sm hover:shadow-md"
+            >
+              <option value="createdAt-desc">创建时间（降序）</option>
+              <option value="createdAt-asc">创建时间（升序）</option>
+              <option value="username-asc">用户名（升序）</option>
+              <option value="username-desc">用户名（降序）</option>
+              <option value="email-asc">邮箱（升序）</option>
+              <option value="email-desc">邮箱（降序）</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 分页信息 */}
+        <div className="flex items-center justify-between text-sm text-slate-600">
+          <span>
+            共 {totalUsers} 位用户，每页 {pageSize} 条，共{' '}
+            {Math.ceil(totalUsers / pageSize)} 页
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1 || loading}
+              variant="ghost"
+              size="xsmall"
+            >
+              <ChevronLeft size={16} />
+            </Button>
+            <span className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium">
+              {currentPage} / {Math.ceil(totalUsers / pageSize)}
+            </span>
+            <Button
+              onClick={() =>
+                setCurrentPage(
+                  Math.min(Math.ceil(totalUsers / pageSize), currentPage + 1)
+                )
+              }
+              disabled={
+                currentPage >= Math.ceil(totalUsers / pageSize) || loading
+              }
+              variant="ghost"
+              size="xsmall"
+            >
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* 用户列表表格 */}
       <div className="bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -336,14 +520,23 @@ export const UserManagement = () => {
             </label>
             <input
               type="text"
-              required
               value={formData.username}
-              onChange={(e) =>
-                setFormData({ ...formData, username: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
-              placeholder="请输入用户名"
+              onChange={(e) => {
+                setFormData({ ...formData, username: e.target.value });
+                if (formErrors.username) {
+                  setFormErrors({ ...formErrors, username: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                formErrors.username
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-slate-300 focus:border-indigo-500'
+              }`}
+              placeholder="请输入用户名（3-20个字符，只能包含字母、数字和下划线）"
             />
+            {formErrors.username && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -351,14 +544,23 @@ export const UserManagement = () => {
             </label>
             <input
               type="email"
-              required
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                if (formErrors.email) {
+                  setFormErrors({ ...formErrors, email: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                formErrors.email
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-slate-300 focus:border-indigo-500'
+              }`}
               placeholder="请输入邮箱地址"
             />
+            {formErrors.email && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -366,14 +568,25 @@ export const UserManagement = () => {
             </label>
             <input
               type="password"
-              required={!editingUser}
               value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
+              onChange={(e) => {
+                setFormData({ ...formData, password: e.target.value });
+                if (formErrors.password) {
+                  setFormErrors({ ...formErrors, password: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                formErrors.password
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-slate-300 focus:border-indigo-500'
+              }`}
+              placeholder={
+                editingUser ? '留空保持原密码' : '请输入密码（至少8个字符）'
               }
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
-              placeholder={editingUser ? '留空保持原密码' : '请输入密码'}
             />
+            {formErrors.password && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -381,12 +594,11 @@ export const UserManagement = () => {
                 角色 *
               </label>
               <select
-                required
                 value={formData.roleId}
                 onChange={(e) =>
                   setFormData({ ...formData, roleId: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 bg-white"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
               >
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
@@ -405,7 +617,7 @@ export const UserManagement = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, nickname: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="请输入昵称"
               />
             </div>
