@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -8,6 +9,7 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -37,9 +39,10 @@ export class FontsController {
    */
   @Get()
   @ApiOperation({ summary: '获取字体列表', description: '获取所有字体文件，前端负责分页、筛选和排序' })
-  async getFonts() {
+  @ApiQuery({ name: 'location', enum: ['backend', 'frontend'], required: false, description: '字体位置：backend 或 frontend，不指定则返回全部' })
+  async getFonts(@Query('location') location?: 'backend' | 'frontend') {
     try {
-      const result = await this.fontsService.getFonts();
+      const result = await this.fontsService.getFonts(location);
       return {
         code: 'SUCCESS',
         message: '获取字体列表成功',
@@ -60,14 +63,20 @@ export class FontsController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFont(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() uploadFontDto: UploadFontDto,
     @Req() req: Request,
-    @Query() uploadFontDto: UploadFontDto,
   ) {
     try {
+      this.logger.log(`[uploadFont] 收到上传请求`);
+      this.logger.log(`[uploadFont] 文件对象: ${file ? '存在' : '不存在'}`);
+      this.logger.log(`[uploadFont] target: ${uploadFontDto?.target}`);
+      this.logger.log(`[uploadFont] req.files: ${(req as any).files ? '存在' : '不存在'}`);
+      this.logger.log(`[uploadFont] req.file: ${(req as any).file ? '存在' : '不存在'}`);
+
       // 验证管理员权限
       this.validateAdminAccess(req);
 
-      const file = req.file as Express.Multer.File;
       const target = uploadFontDto.target || FontUploadTarget.BOTH;
 
       const result = await this.fontsService.uploadFont(file, target);

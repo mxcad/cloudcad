@@ -46,14 +46,44 @@ export class FontsService {
   }
 
   /**
-   * 获取所有字体列表
+   * 获取字体列表
+   * @param location 指定返回的字体位置：'backend'、'frontend' 或不指定返回全部
    */
-  async getFonts(): Promise<any[]> {
+  async getFonts(location?: 'backend' | 'frontend'): Promise<any[]> {
     try {
       // 确保目录存在
       await this.ensureDirectoriesExist();
 
-      // 获取两个目录的字体文件
+      // 根据参数获取对应目录的字体文件
+      if (location === 'backend') {
+        const backendFonts = await this.getFontsFromDirectory(
+          this.backendFontsDir,
+          'backend'
+        );
+        return backendFonts.map((font) => ({
+          ...font,
+          existsInBackend: true,
+          existsInFrontend: false,
+          creator: '系统管理员',
+          updatedAt: font.createdAt,
+        }));
+      }
+
+      if (location === 'frontend') {
+        const frontendFonts = await this.getFontsFromDirectory(
+          this.frontendFontsDir,
+          'frontend'
+        );
+        return frontendFonts.map((font) => ({
+          ...font,
+          existsInBackend: false,
+          existsInFrontend: true,
+          creator: '系统管理员',
+          updatedAt: font.createdAt,
+        }));
+      }
+
+      // 如果不指定 location，返回合并后的完整列表
       const backendFonts = await this.getFontsFromDirectory(
         this.backendFontsDir,
         'backend'

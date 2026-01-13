@@ -46,6 +46,16 @@ class ApiService {
       (config) => {
         // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
 
+        // 如果是 FormData，移除默认的 Content-Type，让浏览器自动设置
+        if (config.data instanceof FormData) {
+          delete config.headers['Content-Type'];
+          console.log('[apiService] 检测到 FormData，已移除 Content-Type');
+          console.log('[apiService] FormData 内容:');
+          config.data.forEach((value, key) => {
+            console.log(`  ${key}:`, value);
+          });
+        }
+
         // 为所有 MxCAD 接口添加节点上下文
         if (config.url?.includes('/mxcad/')) {
           Logger.info('[apiService] 请求拦截器 - URL:', config.url);
@@ -449,7 +459,10 @@ export const adminApi = {
 // 字体管理相关的 API 方法
 export const fontsApi = {
   // 获取字体列表（返回所有数据）
-  getFonts: () => apiService.get('/font-management'),
+  getFonts: (location?: 'backend' | 'frontend') =>
+    apiService.get('/font-management', {
+      params: location ? { location } : undefined,
+    }),
 
   // 上传字体
   uploadFont: (
@@ -458,9 +471,8 @@ export const fontsApi = {
   ) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiService.post('/font-management/upload', formData, {
-      params: { target },
-    });
+    formData.append('target', target);
+    return apiService.post('/font-management/upload', formData);
   },
 
   // 删除字体

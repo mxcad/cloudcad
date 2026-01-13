@@ -10,6 +10,9 @@ export default function FontLibrary(props: FontLibraryProps) {
   const [fonts, setFonts] = useState<FontInfo[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 当前标签页：'backend' 或 'frontend'
+  const [activeTab, setActiveTab] = useState<'backend' | 'frontend'>('backend');
+
   // 筛选条件
   const [filters, setFilters] = useState({
     name: '',
@@ -32,7 +35,7 @@ export default function FontLibrary(props: FontLibraryProps) {
   const fetchFonts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fontsApi.getFonts();
+      const response = await fontsApi.getFonts(activeTab);
 
       // 获取所有字体数据 - 响应拦截器应该已经解包，但如果没有解包则手动解包
       let fontsData = response.data || [];
@@ -47,7 +50,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeTab]);
 
   // 处理筛选、排序
   useEffect(() => {
@@ -103,7 +106,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     });
 
     setFonts(filtered);
-  }, [allFonts, filters, sortBy, sortOrder]);
+  }, [allFonts, filters, sortBy, sortOrder, activeTab]);
 
   useEffect(() => {
     fetchFonts();
@@ -163,7 +166,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     }
 
     try {
-      await fontsApi.deleteFont(fontName, 'both');
+      await fontsApi.deleteFont(fontName, activeTab);
       await fetchFonts();
     } catch (error) {
       console.error('删除字体失败:', error);
@@ -185,7 +188,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     try {
       await Promise.all(
         Array.from(selectedFonts).map((fontName) =>
-          fontsApi.deleteFont(fontName, 'both')
+          fontsApi.deleteFont(fontName, activeTab)
         )
       );
       setSelectedFonts(new Set());
@@ -199,7 +202,7 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 下载字体
   const handleDownload = async (fontName: string) => {
     try {
-      const response = await fontsApi.downloadFont(fontName, 'backend');
+      const response = await fontsApi.downloadFont(fontName, activeTab);
       const url = window.URL.createObjectURL(new Blob([response]));
       const link = document.createElement('a');
       link.href = url;
@@ -241,6 +244,38 @@ export default function FontLibrary(props: FontLibraryProps) {
       <div className="max-w-7xl mx-auto">
         {/* 页面标题 */}
         <h1 className="text-2xl font-bold text-gray-900 mb-6">字体管理</h1>
+
+        {/* 标签页切换 */}
+        <div className="bg-white rounded-lg shadow-sm mb-4">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => {
+                setActiveTab('backend');
+                setSelectedFonts(new Set());
+              }}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'backend'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              后端字体（转换程序）
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('frontend');
+                setSelectedFonts(new Set());
+              }}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'frontend'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              前端字体（资源目录）
+            </button>
+          </div>
+        </div>
 
         {/* 筛选区 */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -365,7 +400,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                   字体文件名
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  特色功能
+                  操作
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                   字体类型
@@ -489,6 +524,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               setShowUploadModal(false);
               fetchFonts();
             }}
+            defaultTarget={activeTab}
           />
         )}
       </div>
@@ -500,11 +536,12 @@ export default function FontLibrary(props: FontLibraryProps) {
 interface UploadFontModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  defaultTarget?: 'backend' | 'frontend' | 'both';
 }
 
-function UploadFontModal({ onClose, onSuccess }: UploadFontModalProps) {
+function UploadFontModal({ onClose, onSuccess, defaultTarget = 'both' }: UploadFontModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [target, setTarget] = useState<'backend' | 'frontend' | 'both'>('both');
+  const [target, setTarget] = useState<'backend' | 'frontend' | 'both'>(defaultTarget);
   const [uploading, setUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -589,9 +626,9 @@ function UploadFontModal({ onClose, onSuccess }: UploadFontModalProps) {
             onChange={(e) => setTarget(e.target.value as any)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
-            <option value="both">后端和前端</option>
-            <option value="backend">仅后端（转换程序）</option>
-            <option value="frontend">仅前端（资源目录）</option>
+            <option value="both">后端和前端（同时上传）</option>
+            <option value="backend">仅后端（转换程序使用）</option>
+            <option value="frontend">仅前端（Web 显示使用）</option>
           </select>
         </div>
 
