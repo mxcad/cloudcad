@@ -4,8 +4,6 @@ import {
   NODE_ACCESS_PERMISSIONS,
   NodeAccessRole,
   Permission,
-  ROLE_PERMISSIONS,
-  UserRole,
 } from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
 
@@ -50,11 +48,10 @@ export class PermissionService {
 
     try {
       // 从角色的权限列表中检查
-      const userPermissions = user.role?.permissions?.map(p => p.permission) || [];
+      const userPermissions =
+        user.role?.permissions?.map((p) => p.permission) || [];
       if (userPermissions.includes(permission)) {
-        this.logger.debug(
-          `用户 ${user.id} 通过角色权限检查: ${permission}`
-        );
+        this.logger.debug(`用户 ${user.id} 通过角色权限检查: ${permission}`);
         return true;
       }
 
@@ -181,7 +178,7 @@ export class PermissionService {
 
   async getUserPermissions(user: UserWithPermissions): Promise<Permission[]> {
     try {
-      return user.role?.permissions?.map(p => p.permission) || [];
+      return user.role?.permissions?.map((p) => p.permission) || [];
     } catch (error) {
       this.logger.error(`获取用户权限失败: ${error.message}`, error.stack);
       return [];

@@ -63,7 +63,8 @@ async function main() {
 
     // 4. 创建 ADMIN 角色
     const adminRoleId = 'role-admin-001';
-    const adminExists = await prisma.$queryRaw`SELECT id FROM "roles" WHERE id = ${adminRoleId}`;
+    const adminExists =
+      await prisma.$queryRaw`SELECT id FROM "roles" WHERE id = ${adminRoleId}`;
     if (!adminExists || (adminExists as any[]).length === 0) {
       await prisma.$executeRaw`
         INSERT INTO "roles" ("id", "name", "description", "isSystem", "createdAt", "updatedAt")
@@ -104,7 +105,8 @@ async function main() {
 
     // 5. 创建 USER 角色
     const userRoleId = 'role-user-001';
-    const userExists = await prisma.$queryRaw`SELECT id FROM "roles" WHERE id = ${userRoleId}`;
+    const userExists =
+      await prisma.$queryRaw`SELECT id FROM "roles" WHERE id = ${userRoleId}`;
     if (!userExists || (userExists as any[]).length === 0) {
       await prisma.$executeRaw`
         INSERT INTO "roles" ("id", "name", "description", "isSystem", "createdAt", "updatedAt")
@@ -140,9 +142,9 @@ async function main() {
 
     // 7. 为现有用户分配角色
     // 首先检查是否有用户还没有分配角色
-    const usersWithoutRole = await prisma.$queryRaw`
+    const usersWithoutRole = (await prisma.$queryRaw`
       SELECT id, role FROM "users" WHERE "roleId" IS NULL
-    ` as any[];
+    `) as any[];
 
     console.log(`找到 ${usersWithoutRole.length} 个未分配角色的用户`);
 

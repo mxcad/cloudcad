@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min, Matches } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class QueryUsersDto {
   @ApiProperty({ description: '搜索关键词', required: false })
@@ -11,7 +11,6 @@ export class QueryUsersDto {
   @ApiProperty({ description: '用户角色ID筛选', required: false })
   @IsOptional()
   @IsString()
-  @Matches(/^c[a-z0-9]{23,31}$/)
   roleId?: string;
 
   @ApiProperty({ description: '页码', required: false, minimum: 1, default: 1 })

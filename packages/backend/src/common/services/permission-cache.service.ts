@@ -1,9 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  NodeAccessRole,
-  Permission,
-  UserRole,
-} from '../enums/permissions.enum';
+import { NodeAccessRole, Permission } from '../enums/permissions.enum';
 import { Role } from './permission.service';
 
 @Injectable()

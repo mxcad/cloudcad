@@ -60,7 +60,7 @@ export class CreateUserDto {
 
   @ApiProperty({
     description: '角色ID',
-    example: 'role-user-001',
+    example: 'clh8x9y0z1a2b3c4d5e6f7g8h9',
     required: false,
   })
   @IsOptional()
