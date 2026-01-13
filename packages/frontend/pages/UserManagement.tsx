@@ -11,18 +11,25 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Permission, type Role } from '../types';
-import { usersApi, authApi } from '../services/apiService';
+import { usersApi, authApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
 
 // 使用API类型
 type UserDto = components['schemas']['UserDto'];
-type CreateUserDto = components['schemas']['CreateUserDto'];
-type UpdateUserDto = components['schemas']['UpdateUserDto'];
+type RoleDto = {
+  id: string;
+  name: string;
+  description?: string;
+  isSystem: boolean;
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 
 export const UserManagement = () => {
   const [hasPermission, setHasPermission] = useState(false);
   const [users, setUsers] = useState<UserDto[]>([]);
+  const [roles, setRoles] = useState<RoleDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,28 +42,6 @@ export const UserManagement = () => {
   const [pageSize] = useState(20);
   const [totalUsers, setTotalUsers] = useState(0);
 
-  // 静态角色列表（后端只有ADMIN和USER两种角色）
-  const [roles] = useState<Role[]>([
-    {
-      id: 'ADMIN',
-      name: '管理员',
-      description: '系统管理员，拥有所有权限',
-      permissions: [
-        Permission.MANAGE_USERS,
-        Permission.MANAGE_ROLES,
-        Permission.VIEW_DASHBOARD,
-      ],
-      isSystem: true,
-    },
-    {
-      id: 'USER',
-      name: '用户',
-      description: '普通用户，基础权限',
-      permissions: [Permission.VIEW_DASHBOARD],
-      isSystem: true,
-    },
-  ]);
-
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserDto | null>(null);
@@ -64,7 +49,7 @@ export const UserManagement = () => {
     username: '',
     email: '',
     password: '',
-    roleId: 'USER',
+    roleId: '',
     nickname: '',
   });
 
@@ -82,7 +67,16 @@ export const UserManagement = () => {
   const initialize = async () => {
     const hasAccess = await checkAccess();
     if (hasAccess) {
-      await loadData();
+      await Promise.all([loadData(), loadRoles()]);
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const response = await rolesApi.list();
+      setRoles(response.data);
+    } catch (error) {
+      console.error('加载角色列表失败:', error);
     }
   };
 
@@ -91,7 +85,7 @@ export const UserManagement = () => {
       const response = await authApi.getProfile();
       const currentUser = response.data;
       // 只有ADMIN角色可以管理用户
-      const hasAccess = currentUser.role === 'ADMIN';
+      const hasAccess = currentUser.role?.name === 'ADMIN';
       setHasPermission(hasAccess);
       return hasAccess;
     } catch (error) {
@@ -106,7 +100,7 @@ export const UserManagement = () => {
     try {
       const response = await usersApi.list({
         search: searchQuery || undefined,
-        role: roleFilter || undefined,
+        roleId: roleFilter || undefined,
         page: currentPage,
         limit: pageSize,
         sortBy,
@@ -130,11 +124,13 @@ export const UserManagement = () => {
 
   const handleOpenCreate = () => {
     setEditingUser(null);
+    // 获取默认角色（USER）
+    const defaultRole = roles.find((r) => r.name === 'USER');
     setFormData({
       username: '',
       email: '',
       password: '',
-      roleId: 'USER',
+      roleId: defaultRole?.id || '',
       nickname: '',
     });
     setFormErrors({ username: '', email: '', password: '' });
@@ -147,7 +143,7 @@ export const UserManagement = () => {
       username: user.username,
       email: user.email,
       password: '', // 编辑时不显示密码
-      roleId: user.role,
+      roleId: (user.role as any)?.id || '',
       nickname: user.nickname || '',
     });
     setFormErrors({ username: '', email: '', password: '' });
@@ -210,24 +206,24 @@ export const UserManagement = () => {
     try {
       if (editingUser) {
         // 更新用户
-        const updateData: UpdateUserDto = {
+        const updateData = {
           username: formData.username,
           email: formData.email,
-          role: formData.roleId as 'ADMIN' | 'USER',
+          roleId: formData.roleId,
           nickname: formData.nickname,
         };
         // 只有在输入密码时才更新密码
         if (formData.password) {
-          updateData.password = formData.password;
+          (updateData as any).password = formData.password;
         }
         await usersApi.update(editingUser.id, updateData);
       } else {
         // 创建用户
-        const createData: CreateUserDto = {
+        const createData = {
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          role: formData.roleId as 'ADMIN' | 'USER',
+          roleId: formData.roleId,
           nickname: formData.nickname,
         };
         await usersApi.create(createData);
@@ -256,8 +252,15 @@ export const UserManagement = () => {
     }
   };
 
-  const getRoleName = (roleId: string) => {
-    return roles.find((r) => r.id === roleId)?.name || '未知角色';
+  const getRoleName = (role: any) => {
+    if (typeof role === 'string') {
+      // 兼容旧格式：role 是字符串
+      return roles.find((r) => r.id === role)?.name || '未知角色';
+    } else if (role && role.name) {
+      // 新格式：role 是对象
+      return role.name;
+    }
+    return '未知角色';
   };
 
   if (!hasPermission) {

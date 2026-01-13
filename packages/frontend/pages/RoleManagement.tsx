@@ -2,34 +2,87 @@ import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Permission, Role } from '../types';
-import { mockApi } from '../services/api';
+import { rolesApi, authApi } from '../services/apiService';
+
+// 权限定义（与后端保持一致）
+enum Permission {
+  // 用户权限
+  USER_READ = 'user:read',
+  USER_WRITE = 'user:write',
+  USER_DELETE = 'user:delete',
+  USER_ADMIN = 'user:admin',
+
+  // 项目权限
+  PROJECT_CREATE = 'project:create',
+  PROJECT_READ = 'project:read',
+  PROJECT_WRITE = 'project:write',
+  PROJECT_DELETE = 'project:delete',
+  PROJECT_ADMIN = 'project:admin',
+  PROJECT_MEMBER_MANAGE = 'project:member:manage',
+
+  // 文件权限
+  FILE_CREATE = 'file:create',
+  FILE_READ = 'file:read',
+  FILE_WRITE = 'file:write',
+  FILE_DELETE = 'file:delete',
+  FILE_SHARE = 'file:share',
+  FILE_DOWNLOAD = 'file:download',
+
+  // 系统权限
+  SYSTEM_ADMIN = 'system:admin',
+  SYSTEM_MONITOR = 'system:monitor',
+}
 
 const PERMISSION_GROUPS = [
   {
-    label: '系统管理',
+    label: '用户权限',
     items: [
-      { key: Permission.MANAGE_USERS, label: '用户管理 (增删改)' },
-      { key: Permission.MANAGE_ROLES, label: '角色权限管理' },
-      { key: Permission.VIEW_DASHBOARD, label: '查看工作台' },
+      { key: Permission.USER_READ, label: '查看用户' },
+      { key: Permission.USER_WRITE, label: '编辑用户' },
+      { key: Permission.USER_DELETE, label: '删除用户' },
+      { key: Permission.USER_ADMIN, label: '用户管理' },
     ],
   },
   {
-    label: '项目管理',
+    label: '项目权限',
     items: [
-      { key: Permission.PROJECT_CREATE, label: '创建新项目' },
+      { key: Permission.PROJECT_CREATE, label: '创建项目' },
+      { key: Permission.PROJECT_READ, label: '查看项目' },
+      { key: Permission.PROJECT_WRITE, label: '编辑项目' },
       { key: Permission.PROJECT_DELETE, label: '删除项目' },
-      { key: Permission.PROJECT_VIEW_ALL, label: '查看所有项目 (全局权限)' },
+      { key: Permission.PROJECT_ADMIN, label: '项目管理' },
+      { key: Permission.PROJECT_MEMBER_MANAGE, label: '成员管理' },
     ],
   },
   {
-    label: '资源库管理',
+    label: '文件权限',
     items: [
-      { key: Permission.LIBRARY_MANAGE, label: '管理图块/字体库' },
-      { key: Permission.ASSET_UPLOAD, label: '上传资源' },
+      { key: Permission.FILE_CREATE, label: '创建文件' },
+      { key: Permission.FILE_READ, label: '查看文件' },
+      { key: Permission.FILE_WRITE, label: '编辑文件' },
+      { key: Permission.FILE_DELETE, label: '删除文件' },
+      { key: Permission.FILE_SHARE, label: '分享文件' },
+      { key: Permission.FILE_DOWNLOAD, label: '下载文件' },
+    ],
+  },
+  {
+    label: '系统权限',
+    items: [
+      { key: Permission.SYSTEM_ADMIN, label: '系统管理' },
+      { key: Permission.SYSTEM_MONITOR, label: '系统监控' },
     ],
   },
 ];
+
+type Role = {
+  id: string;
+  name: string;
+  description?: string;
+  isSystem: boolean;
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 
 export const RoleManagement = () => {
   const [hasPermission, setHasPermission] = useState(true);
@@ -40,57 +93,77 @@ export const RoleManagement = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState('');
   const [roleDesc, setRoleDesc] = useState('');
-  const [selectedPerms, setSelectedPerms] = useState<Permission[]>([]);
+  const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
 
   useEffect(() => {
     checkAccess();
   }, []);
 
   const checkAccess = async () => {
-    const role = await mockApi.auth.getRole();
-    if (!role?.permissions.includes(Permission.MANAGE_ROLES)) {
+    try {
+      const response = await authApi.getProfile();
+      // 只有 ADMIN 角色可以管理角色
+      const hasAccess = response.data.role?.name === 'ADMIN';
+      setHasPermission(hasAccess);
+      if (hasAccess) {
+        loadRoles();
+      }
+    } catch (error) {
       setHasPermission(false);
-      return;
     }
-    loadRoles();
   };
 
   const loadRoles = async () => {
-    const data = await mockApi.roles.list();
-    setRoles(data);
+    try {
+      const response = await rolesApi.list();
+      setRoles(response.data);
+    } catch (error) {
+      console.error('加载角色列表失败:', error);
+    }
   };
 
   const handleCreate = () => {
     setEditingRole(null);
     setRoleName('');
     setRoleDesc('');
-    setSelectedPerms([Permission.VIEW_DASHBOARD]);
+    setSelectedPerms([]);
     setIsModalOpen(true);
   };
 
   const handleEdit = (role: Role) => {
     setEditingRole(role);
     setRoleName(role.name);
-    setRoleDesc(role.description);
+    setRoleDesc(role.description || '');
     setSelectedPerms(role.permissions);
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!roleName) return;
-
-    if (editingRole) {
-      await mockApi.roles.update(editingRole.id, {
-        name: roleName,
-        description: roleDesc,
-        permissions: selectedPerms,
-      });
-    } else {
-      await mockApi.roles.create(roleName, roleDesc, selectedPerms);
+    if (!roleName) {
+      alert('请输入角色名称');
+      return;
     }
 
-    setIsModalOpen(false);
-    loadRoles();
+    try {
+      if (editingRole) {
+        await rolesApi.update(editingRole.id, {
+          name: roleName,
+          description: roleDesc,
+          permissions: selectedPerms,
+        });
+      } else {
+        await rolesApi.create({
+          name: roleName,
+          description: roleDesc,
+          permissions: selectedPerms,
+        });
+      }
+
+      setIsModalOpen(false);
+      loadRoles();
+    } catch (error: any) {
+      alert(error.response?.data?.message || '保存失败');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -100,10 +173,16 @@ export const RoleManagement = () => {
       )
     ) {
       try {
-        await mockApi.roles.delete(id);
+        await rolesApi.delete(id);
         loadRoles();
-      } catch (e: any) {
-        alert(e.message);
+      } catch (error: any) {
+        console.error('删除角色失败:', error);
+        // 如果是 404 错误，可能是角色已被删除，尝试刷新列表
+        if (error.response?.status === 404) {
+          loadRoles();
+        } else {
+          alert(error.response?.data?.message || '删除失败');
+        }
       }
     }
   };

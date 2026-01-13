@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
 import {
   NODE_ACCESS_PERMISSIONS,
   NodeAccessRole,
@@ -26,8 +25,18 @@ export class FileSystemPermissionService {
     const cached = this.cache.get<boolean>(cacheKey);
     if (cached !== null) return cached;
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (user?.role === UserRole.ADMIN) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        role: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (user?.role?.name === 'ADMIN') {
       this.cache.set(cacheKey, true, 600000);
       return true;
     }

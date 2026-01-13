@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { UserRole } from '../../common/enums/permissions.enum';
+import { IsInt, IsOptional, IsString, Max, Min, Matches } from 'class-validator';
 
 export class QueryUsersDto {
   @ApiProperty({ description: '搜索关键词', required: false })
@@ -9,10 +8,11 @@ export class QueryUsersDto {
   @IsString()
   search?: string;
 
-  @ApiProperty({ description: '用户角色筛选', enum: UserRole, required: false })
+  @ApiProperty({ description: '用户角色ID筛选', required: false })
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsString()
+  @Matches(/^c[a-z0-9]{23,31}$/)
+  roleId?: string;
 
   @ApiProperty({ description: '页码', required: false, minimum: 1, default: 1 })
   @IsOptional()

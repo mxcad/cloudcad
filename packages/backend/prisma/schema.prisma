@@ -14,7 +14,8 @@ model User {
   password  String
   nickname  String?
   avatar    String?
-  role      UserRole @default(USER)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   status    UserStatus @default(INACTIVE)
   emailVerified    Boolean  @default(false)
   emailVerifiedAt  DateTime?
@@ -26,6 +27,34 @@ model User {
   nodeAccesses       FileAccess[]
 
   @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)  // 是否为系统角色（不可删除）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联关系
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  roleId      String
+  permission  Permission
+  createdAt   DateTime @default(now())
+
+  // 关联关系
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
 }
 
 // ============ 文件系统统一模型 ============
@@ -152,15 +181,38 @@ model UploadSession {
 }
 
 // 枚举类型
-enum UserRole {
-  ADMIN
-  USER
-}
-
 enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+}
+
+enum Permission {
+  // 用户权限
+  USER_READ
+  USER_WRITE
+  USER_DELETE
+  USER_ADMIN
+
+  // 项目权限
+  PROJECT_CREATE
+  PROJECT_READ
+  PROJECT_WRITE
+  PROJECT_DELETE
+  PROJECT_ADMIN
+  PROJECT_MEMBER_MANAGE
+
+  // 文件权限
+  FILE_CREATE
+  FILE_READ
+  FILE_WRITE
+  FILE_DELETE
+  FILE_SHARE
+  FILE_DOWNLOAD
+
+  // 系统权限
+  SYSTEM_ADMIN
+  SYSTEM_MONITOR
 }
 
 enum ProjectStatus {

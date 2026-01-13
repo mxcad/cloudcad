@@ -949,10 +949,14 @@ export interface components {
       avatar?: string;
       /**
        * @description 用户角色
-       * @example USER
-       * @enum {string}
        */
-      role: 'ADMIN' | 'USER';
+      role: {
+        id: string;
+        name: string;
+        description?: string;
+        isSystem: boolean;
+        permissions?: Array<{ permission: string }>;
+      };
       /**
        * @description 用户状态
        * @example ACTIVE
@@ -1133,11 +1137,10 @@ export interface components {
       /** @description 头像URL */
       avatar?: string;
       /**
-       * @description 用户角色
+       * @description 用户角色ID
        * @default USER
-       * @enum {string}
        */
-      role: 'ADMIN' | 'USER';
+      roleId: string;
     };
     UpdateUserDto: {
       /** @description 用户邮箱 */
@@ -1151,10 +1154,9 @@ export interface components {
       /** @description 头像URL */
       avatar?: string;
       /**
-       * @description 用户角色
-       * @enum {string}
+       * @description 用户角色ID
        */
-      role?: 'ADMIN' | 'USER';
+      roleId?: string;
       /**
        * @description 用户状态
        * @enum {string}

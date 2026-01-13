@@ -43,6 +43,17 @@ async function seedTestData() {
   const hashedPassword = '$2a$10$example.hashed.password'; // Mock hashed password
 
   try {
+    // 获取或创建 ADMIN 角色
+    const adminRole = await prisma.role.upsert({
+      where: { name: 'ADMIN' },
+      update: {},
+      create: {
+        name: 'ADMIN',
+        description: '系统管理员，拥有所有权限',
+        isSystem: true,
+      },
+    });
+
     await prisma.user.create({
       data: {
         id: '00000000-0000-0000-0000-000000000001',
@@ -50,7 +61,7 @@ async function seedTestData() {
         username: 'admin',
         password: hashedPassword,
         nickname: 'Test Admin',
-        role: 'ADMIN',
+        roleId: adminRole.id,
         status: 'ACTIVE',
       },
     });
@@ -60,6 +71,17 @@ async function seedTestData() {
 
   // Create default regular user if it doesn't exist
   try {
+    // 获取或创建 USER 角色
+    const userRole = await prisma.role.upsert({
+      where: { name: 'USER' },
+      update: {},
+      create: {
+        name: 'USER',
+        description: '普通用户，基础权限',
+        isSystem: true,
+      },
+    });
+
     await prisma.user.create({
       data: {
         id: '00000000-0000-0000-0000-000000000002',
@@ -67,7 +89,7 @@ async function seedTestData() {
         username: 'user',
         password: hashedPassword,
         nickname: 'Test User',
-        role: 'USER',
+        roleId: userRole.id,
         status: 'ACTIVE',
       },
     });

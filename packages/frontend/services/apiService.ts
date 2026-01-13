@@ -281,7 +281,7 @@ export const usersApi = {
     page?: number;
     limit?: number;
     search?: string;
-    role?: string;
+    roleId?: string;
   }) => apiService.get('/users', { params }),
 
   search: (params?: { page?: number; limit?: number; search?: string }) =>
@@ -295,7 +295,7 @@ export const usersApi = {
     password: string;
     username: string;
     nickname?: string;
-    role?: string;
+    roleId?: string;
   }) => apiService.post('/users', data),
 
   update: (
@@ -304,7 +304,7 @@ export const usersApi = {
       email?: string;
       username?: string;
       nickname?: string;
-      role?: string;
+      roleId?: string;
       status?: string;
       password?: string;
     }
@@ -497,6 +497,35 @@ export const fontsApi = {
       responseType: 'blob',
     });
   },
+};
+
+// 角色相关的 API 方法
+export const rolesApi = {
+  // 获取所有角色
+  list: () => apiService.get('/roles'),
+
+  // 根据 ID 获取角色
+  get: (id: string) => apiService.get(`/roles/${id}`),
+
+  // 创建角色
+  create: (data: {
+    name: string;
+    description?: string;
+    permissions: string[];
+  }) => apiService.post('/roles', data),
+
+  // 更新角色
+  update: (
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      permissions?: string[];
+    }
+  ) => apiService.patch(`/roles/${id}`, data),
+
+  // 删除角色
+  delete: (id: string) => apiService.delete(`/roles/${id}`),
 };
 
 // MxCAD 相关的 API 方法

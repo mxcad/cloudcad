@@ -21,6 +21,7 @@ import { HealthModule } from './health/health.module';
 import { MxCadModule } from './mxcad/mxcad.module';
 // import { ProjectsModule } from './projects/projects.module'; // 已废弃
 import { RedisModule } from './redis/redis.module';
+import { RolesModule } from './roles/roles.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 
@@ -36,6 +37,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     CommonModule,
     UsersModule,
+    RolesModule,
     // ProjectsModule, // 已废弃，功能迁移到 FileSystemModule
     // FilesModule, // 已废弃，功能迁移到 FileSystemModule
     FileSystemModule,

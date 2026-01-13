@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { UserRole } from '../common/enums/permissions.enum';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -45,6 +44,15 @@ export class UsersService {
         throw new ConflictException('用户名已存在');
       }
 
+      // 获取默认角色（USER 角色）
+      const defaultRole = await this.prisma.role.findFirst({
+        where: { name: 'USER' },
+      });
+
+      if (!defaultRole) {
+        throw new NotFoundException('默认角色不存在，请联系管理员');
+      }
+
       // 加密密码
       const hashedPassword = await bcrypt.hash(
         createUserDto.password,
@@ -58,7 +66,7 @@ export class UsersService {
           password: hashedPassword,
           nickname: createUserDto.nickname,
           avatar: createUserDto.avatar,
-          role: createUserDto.role || UserRole.USER, // 使用传入的角色，默认为普通用户
+          roleId: createUserDto.roleId || defaultRole.id, // 使用传入的角色ID，默认为普通用户
           status: 'ACTIVE', // 管理员创建的用户直接激活
           emailVerified: true, // 视为已验证
           emailVerifiedAt: new Date(),
@@ -69,7 +77,12 @@ export class UsersService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
           createdAt: true,
           updatedAt: true,
@@ -89,7 +102,7 @@ export class UsersService {
    */
   async findAll(query: QueryUsersDto) {
     try {
-      const { search, role, page = 1, limit = 10, sortBy, sortOrder } = query;
+      const { search, roleId, page = 1, limit = 10, sortBy, sortOrder } = query;
       const skip = (page - 1) * limit;
 
       const where: any = {};
@@ -104,8 +117,8 @@ export class UsersService {
       }
 
       // 角色筛选
-      if (role) {
-        where.role = role;
+      if (roleId) {
+        where.roleId = roleId;
       }
 
       const [users, total] = await Promise.all([
@@ -120,7 +133,12 @@ export class UsersService {
             username: true,
             nickname: true,
             avatar: true,
-            role: true,
+            role: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             status: true,
             createdAt: true,
             updatedAt: true,
@@ -157,7 +175,12 @@ export class UsersService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
           createdAt: true,
           updatedAt: true,
@@ -188,7 +211,12 @@ export class UsersService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
           createdAt: true,
           updatedAt: true,
@@ -219,7 +247,12 @@ export class UsersService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
           password: true, // 登录时需要密码
           createdAt: true,
@@ -272,7 +305,13 @@ export class UsersService {
       }
 
       // 如果更新密码，需要加密
-      const updateData: any = { ...updateUserDto };
+      const updateData: any = {};
+      if (updateUserDto.email) updateData.email = updateUserDto.email;
+      if (updateUserDto.username) updateData.username = updateUserDto.username;
+      if (updateUserDto.nickname !== undefined) updateData.nickname = updateUserDto.nickname;
+      if (updateUserDto.avatar !== undefined) updateData.avatar = updateUserDto.avatar;
+      if (updateUserDto.roleId) updateData.roleId = updateUserDto.roleId;
+      if (updateUserDto.status) updateData.status = updateUserDto.status;
       if (updateUserDto.password) {
         updateData.password = await bcrypt.hash(
           updateUserDto.password,
@@ -289,7 +328,12 @@ export class UsersService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
           createdAt: true,
           updatedAt: true,
@@ -299,7 +343,7 @@ export class UsersService {
       this.logger.log(`用户更新成功: ${user.email}`);
 
       // 如果更新了角色或状态，清除相关缓存
-      if (updateUserDto.role || updateUserDto.status) {
+      if (updateUserDto.roleId || updateUserDto.status) {
         this.permissionCacheService.clearUserCache(id);
       }
 

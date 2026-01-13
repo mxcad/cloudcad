@@ -9,13 +9,21 @@ import {
 } from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
 
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  isSystem: boolean;
+  permissions?: { permission: Permission }[];
+}
+
 export interface UserWithPermissions {
   id: string;
   email: string;
   username: string;
   nickname?: string;
   avatar?: string;
-  role: UserRole;
+  role: Role;
   status: string;
 }
 
@@ -41,10 +49,11 @@ export class PermissionService {
     );
 
     try {
-      const userPermissions = ROLE_PERMISSIONS[user.role] || [];
+      // 从角色的权限列表中检查
+      const userPermissions = user.role?.permissions?.map(p => p.permission) || [];
       if (userPermissions.includes(permission)) {
         this.logger.debug(
-          `用户 ${user.id} 通过基础角色权限检查: ${permission}`
+          `用户 ${user.id} 通过角色权限检查: ${permission}`
         );
         return true;
       }
@@ -166,14 +175,13 @@ export class PermissionService {
     return NODE_ACCESS_PERMISSIONS[role] || [];
   }
 
-  hasRole(user: UserWithPermissions, roles: UserRole[]): boolean {
-    return roles.includes(user.role);
+  hasRole(user: UserWithPermissions, roleNames: string[]): boolean {
+    return roleNames.includes(user.role?.name || '');
   }
 
   async getUserPermissions(user: UserWithPermissions): Promise<Permission[]> {
     try {
-      const basePermissions = ROLE_PERMISSIONS[user.role] || [];
-      return basePermissions;
+      return user.role?.permissions?.map(p => p.permission) || [];
     } catch (error) {
       this.logger.error(`获取用户权限失败: ${error.message}`, error.stack);
       return [];

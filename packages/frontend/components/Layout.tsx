@@ -137,13 +137,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       to: '/users',
       icon: Users,
       label: '用户管理',
-      visible: user?.role === 'ADMIN',
+      visible: user?.role?.name === 'ADMIN',
     },
     {
       to: '/roles',
       icon: ShieldCheck,
       label: '角色权限',
-      visible: user?.role === 'ADMIN',
+      visible: user?.role?.name === 'ADMIN',
     },
   ];
 

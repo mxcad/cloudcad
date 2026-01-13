@@ -4,6 +4,7 @@ import {
   Permission,
   UserRole,
 } from '../enums/permissions.enum';
+import { Role } from './permission.service';
 
 @Injectable()
 export class PermissionCacheService {
@@ -146,7 +147,7 @@ export class PermissionCacheService {
   /**
    * 缓存用户角色
    */
-  cacheUserRole(userId: string, role: UserRole): void {
+  cacheUserRole(userId: string, role: Role): void {
     const key = `role:user:${userId}`;
     this.set(key, role, 10 * 60 * 1000); // 用户角色缓存10分钟
   }
@@ -154,9 +155,9 @@ export class PermissionCacheService {
   /**
    * 获取用户角色缓存
    */
-  getUserRole(userId: string): UserRole | null {
+  getUserRole(userId: string): any | null {
     const key = `role:user:${userId}`;
-    return this.get<UserRole>(key);
+    return this.get<any>(key);
   }
 
   /**

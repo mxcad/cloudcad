@@ -107,12 +107,22 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerData.password, 12);
     this.logger.log(`密码加密完成`);
 
+    // 获取默认角色（USER）
+    const defaultRole = await this.prisma.role.findFirst({
+      where: { name: 'USER' },
+    });
+
+    if (!defaultRole) {
+      throw new Error('默认角色不存在');
+    }
+
     await this.prisma.user.create({
       data: {
         email: registerData.email,
         username: registerData.username,
         password: hashedPassword,
         nickname: registerData.nickname,
+        roleId: defaultRole.id,
         status: 'ACTIVE',
         emailVerified: true,
         emailVerifiedAt: new Date(),
@@ -143,7 +153,12 @@ export class AuthService {
         username: true,
         nickname: true,
         avatar: true,
-        role: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         status: true,
         emailVerified: true,
         password: true,
@@ -183,13 +198,13 @@ export class AuthService {
 
     if (req && req.session) {
       req.session.userId = user.id;
-      req.session.userRole = user.role;
+      req.session.userRole = user.role.name;
       req.session.userEmail = user.email;
-      this.logger.log(`Session 已设置: userId=${user.id}, role=${user.role}`);
+      this.logger.log(`Session 已设置: userId=${user.id}, role=${user.role.name}`);
     }
 
     this.logger.log(
-      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`
+      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role.name})`
     );
 
     return {
@@ -198,7 +213,7 @@ export class AuthService {
         ...userWithoutPassword,
         nickname: userWithoutPassword.nickname || undefined,
         avatar: userWithoutPassword.avatar || undefined,
-        role: userWithoutPassword.role,
+        role: userWithoutPassword.role.name,
         status: userWithoutPassword.status,
       },
     };
@@ -230,7 +245,12 @@ export class AuthService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
         },
       });
@@ -247,7 +267,7 @@ export class AuthService {
           ...user,
           nickname: user.nickname || undefined,
           avatar: user.avatar || undefined,
-          role: user.role,
+          role: user.role.name,
           status: user.status,
         },
       };

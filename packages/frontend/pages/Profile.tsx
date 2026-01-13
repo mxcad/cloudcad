@@ -139,7 +139,7 @@ export const Profile: React.FC = () => {
                   </label>
                   <div className="mt-1">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      {user?.role === 'ADMIN' ? '管理员' : '普通用户'}
+                      {user?.role?.name === 'ADMIN' ? '管理员' : '普通用户'}
                     </span>
                   </div>
                 </div>
