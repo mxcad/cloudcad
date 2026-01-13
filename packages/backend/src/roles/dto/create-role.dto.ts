@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { Permission } from '../../common/enums/permissions.enum';
 
 export class CreateRoleDto {
@@ -9,7 +15,11 @@ export class CreateRoleDto {
   @MaxLength(50)
   name: string;
 
-  @ApiProperty({ description: '角色描述', example: '负责设计团队的管理工作', required: false })
+  @ApiProperty({
+    description: '角色描述',
+    example: '负责设计团队的管理工作',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   @MaxLength(200)

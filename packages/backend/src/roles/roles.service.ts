@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
@@ -130,11 +135,15 @@ export class RolesService {
       where: { id },
       data: {
         ...(updateRoleDto.name && { name: updateRoleDto.name }),
-        ...(updateRoleDto.description !== undefined && { description: updateRoleDto.description }),
+        ...(updateRoleDto.description !== undefined && {
+          description: updateRoleDto.description,
+        }),
         ...(updateRoleDto.permissions && {
           permissions: {
             deleteMany: {}, // 删除所有旧权限
-            create: updateRoleDto.permissions.map((permission) => ({ permission: permission as unknown as PrismaPermission })), // 创建新权限
+            create: updateRoleDto.permissions.map((permission) => ({
+              permission: permission as unknown as PrismaPermission,
+            })), // 创建新权限
           },
         }),
       },

@@ -308,8 +308,10 @@ export class UsersService {
       const updateData: any = {};
       if (updateUserDto.email) updateData.email = updateUserDto.email;
       if (updateUserDto.username) updateData.username = updateUserDto.username;
-      if (updateUserDto.nickname !== undefined) updateData.nickname = updateUserDto.nickname;
-      if (updateUserDto.avatar !== undefined) updateData.avatar = updateUserDto.avatar;
+      if (updateUserDto.nickname !== undefined)
+        updateData.nickname = updateUserDto.nickname;
+      if (updateUserDto.avatar !== undefined)
+        updateData.avatar = updateUserDto.avatar;
       if (updateUserDto.roleId) updateData.roleId = updateUserDto.roleId;
       if (updateUserDto.status) updateData.status = updateUserDto.status;
       if (updateUserDto.password) {

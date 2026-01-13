@@ -200,7 +200,9 @@ export class AuthService {
       req.session.userId = user.id;
       req.session.userRole = user.role.name;
       req.session.userEmail = user.email;
-      this.logger.log(`Session 已设置: userId=${user.id}, role=${user.role.name}`);
+      this.logger.log(
+        `Session 已设置: userId=${user.id}, role=${user.role.name}`
+      );
     }
 
     this.logger.log(

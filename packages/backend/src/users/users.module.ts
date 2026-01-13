@@ -9,7 +9,12 @@ import { UsersService } from './users.service';
 @Module({
   imports: [DatabaseModule],
   controllers: [UsersController],
-  providers: [UsersService, PermissionService, PermissionCacheService, RolesCacheService],
+  providers: [
+    UsersService,
+    PermissionService,
+    PermissionCacheService,
+    RolesCacheService,
+  ],
   exports: [UsersService],
 })
 export class UsersModule {}

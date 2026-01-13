@@ -27,11 +27,13 @@ export class RolesCacheService implements OnModuleInit {
       });
 
       this.systemRoles.clear();
-      roles.forEach(role => {
+      roles.forEach((role) => {
         this.systemRoles.set(role.name, role.id);
       });
 
-      this.logger.log(`已加载 ${this.systemRoles.size} 个系统角色: ${Array.from(this.systemRoles.keys()).join(', ')}`);
+      this.logger.log(
+        `已加载 ${this.systemRoles.size} 个系统角色: ${Array.from(this.systemRoles.keys()).join(', ')}`
+      );
     } catch (error) {
       this.logger.error('加载系统角色失败:', error);
       throw error;
