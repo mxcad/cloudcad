@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
+import * as fsSync from 'fs';
 import * as path from 'path';
 import { FontUploadTarget } from './dto/font.dto';
 
@@ -290,7 +291,7 @@ export class FontsService {
   async downloadFont(
     fileName: string,
     location: 'backend' | 'frontend'
-  ): Promise<{ path: string; fileName: string }> {
+  ): Promise<{ stream: fsSync.ReadStream; fileName: string }> {
     try {
       // 验证文件名
       if (!fileName || fileName.includes('..') || fileName.includes('/')) {
@@ -309,7 +310,10 @@ export class FontsService {
         throw new NotFoundException(`字体文件 ${fileName} 不存在`);
       }
 
-      return { path: filePath, fileName };
+      // 创建文件流
+      const stream = fsSync.createReadStream(filePath);
+
+      return { stream, fileName };
     } catch (error) {
       this.logger.error(`下载字体失败: ${error.message}`, error.stack);
       if (error instanceof NotFoundException) {

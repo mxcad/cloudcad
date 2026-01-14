@@ -4,11 +4,13 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Logger,
   Param,
   Post,
   Query,
   Req,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -22,7 +24,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
-import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FontsService } from './fonts.service';
 import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
@@ -166,37 +167,22 @@ export class FontsController {
     required: true,
     description: '下载位置',
   })
+  @Header('Content-Type', 'application/octet-stream')
   async downloadFont(
     @Req() req: Request,
-    res: Response,
     @Param('fileName') fileName: string,
     @Query('location') location: 'backend' | 'frontend'
   ) {
-    try {
-      // 验证管理员权限
-      this.validateAdminAccess(req);
+    // 验证管理员权限
+    this.validateAdminAccess(req);
 
-      const result = await this.fontsService.downloadFont(fileName, location);
+    const result = await this.fontsService.downloadFont(fileName, location);
 
-      // 设置响应头
-      res.download(result.path, result.fileName, (error) => {
-        if (error) {
-          this.logger.error(`下载字体失败: ${error.message}`, error.stack);
-          if (!res.headersSent) {
-            res.status(500).json({
-              code: 'ERROR',
-              message: '下载字体失败',
-              timestamp: new Date().toISOString(),
-            });
-          }
-        }
-      });
-    } catch (error) {
-      this.logger.error(`下载字体失败: ${error.message}`, error.stack);
-      if (!res.headersSent) {
-        throw error;
-      }
-    }
+    // 设置 Content-Disposition 响应头
+    return new StreamableFile(result.stream, {
+      type: 'application/octet-stream',
+      disposition: `attachment; filename="${encodeURIComponent(result.fileName)}"`,
+    });
   }
 
   /**
@@ -204,7 +190,7 @@ export class FontsController {
    */
   private validateAdminAccess(req: Request): void {
     const user = (req as any).user;
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !user.role || user.role.name !== 'ADMIN') {
       throw new BadRequestException('仅管理员可访问此功能');
     }
   }
