@@ -226,8 +226,7 @@ export const FileSystemManager: React.FC = () => {
 
   // 打开成员管理模态框
   const handleShowMembers = useCallback(
-    (project: FileSystemNode, e: React.MouseEvent) => {
-      e.stopPropagation();
+    (project: FileSystemNode) => {
       setEditingProject(project);
       setIsMembersModalOpen(true);
     },
@@ -256,8 +255,7 @@ export const FileSystemManager: React.FC = () => {
 
   // 删除项目
   const handleRemoveProject = useCallback(
-    (project: FileSystemNode, e: React.MouseEvent) => {
-      e.stopPropagation();
+    (project: FileSystemNode) => {
       handleDeleteProject(project, handleRefresh);
     },
     [handleDeleteProject, handleRefresh]
@@ -776,12 +774,13 @@ export const FileSystemManager: React.FC = () => {
               onDownload={handleDownload}
               onDelete={handleDelete}
               onRename={handleOpenRename}
-              onEdit={node.isRoot ? (e) => openEditProject(node, e) : undefined}
+              onRefresh={handleRefresh}
+              onEdit={node.isRoot ? () => openEditProject(node) : undefined}
               onDeleteNode={
-                node.isRoot ? (e) => handleRemoveProject(node, e) : undefined
+                node.isRoot ? () => handleRemoveProject(node) : undefined
               }
               onShowMembers={
-                node.isRoot ? (e) => handleShowMembers(node, e) : undefined
+                node.isRoot ? () => handleShowMembers(node) : undefined
               }
               onMove={!node.isRoot ? handleMove : undefined}
               onCopy={!node.isRoot ? handleCopy : undefined}

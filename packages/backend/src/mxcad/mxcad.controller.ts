@@ -974,6 +974,21 @@ export class MxCadController {
 
     // 统一返回格式：与参考代码保持一致
     if (result.ret === 'ok' || result.ret === 'fileAlreadyExist') {
+      // 更新源图纸的外部参照信息
+      try {
+        await this.mxCadService.updateExternalReferenceAfterUpload(
+          body.src_dwgfile_hash
+        );
+        this.logger.log(
+          `[uploadExtReferenceDwg] 外部参照信息已更新: ${body.src_dwgfile_hash}`
+        );
+      } catch (updateError) {
+        this.logger.error(
+          `[uploadExtReferenceDwg] 更新外部参照信息失败: ${updateError.message}`,
+          updateError.stack
+        );
+        // 更新失败不影响主流程
+      }
       return res.json({ code: 0, message: 'ok' });
     } else {
       return res.json({ code: -1, message: result.ret || 'upload failed' });
@@ -1145,6 +1160,21 @@ export class MxCadController {
 
     // 统一返回格式：与参考代码保持一致
     if (result.ret === 'ok' || result.ret === 'fileAlreadyExist') {
+      // 更新源图纸的外部参照信息
+      try {
+        await this.mxCadService.updateExternalReferenceAfterUpload(
+          body.src_dwgfile_hash
+        );
+        this.logger.log(
+          `[uploadExtReferenceImage] 外部参照信息已更新: ${body.src_dwgfile_hash}`
+        );
+      } catch (updateError) {
+        this.logger.error(
+          `[uploadExtReferenceImage] 更新外部参照信息失败: ${updateError.message}`,
+          updateError.stack
+        );
+        // 更新失败不影响主流程
+      }
       return res.json({ code: 0, message: 'ok' });
     } else {
       return res.json({ code: -1, message: result.ret || 'upload failed' });

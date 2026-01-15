@@ -209,8 +209,12 @@ export class FileSystemService {
 
   async getProject(projectId: string) {
     try {
-      const project = await this.prisma.fileSystemNode.findUnique({
-        where: { id: projectId, isRoot: true },
+      const project = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          id: projectId,
+          isRoot: true,
+          deletedAt: null,
+        },
         include: {
           nodeAccesses: {
             include: {
@@ -227,6 +231,9 @@ export class FileSystemService {
             },
           },
           children: {
+            where: {
+              deletedAt: null,
+            },
             select: {
               id: true,
               name: true,
@@ -251,7 +258,7 @@ export class FileSystemService {
       });
 
       if (!project) {
-        throw new NotFoundException('项目不存在');
+        throw new NotFoundException(`项目不存在或已被删除: ${projectId}`);
       }
 
       return project;

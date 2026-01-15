@@ -13,6 +13,11 @@
   "isShowUseAiFunctionButton": false,
   "headerTopBarCustomRightBtns": [
     {
+      "icon": "houtui",
+      "cmd": "return-to-cloud-map-management",
+      "prompt": "返回项目"
+    },
+    {
       "icon": "qiehuan",
       "cmd": "Mx_switchSketchesAndNotesUiMode",
       "prompt": "切换UI模式",
@@ -27,11 +32,6 @@
   ],
   "isShowTitleButtonBar": true,
   "mTitleButtonBarData": [
-    {
-      "icon": "houtui",
-      "cmd": "return-to-cloud-map-management",
-      "prompt": "返回项目"
-    },
     {
       "icon": "dakaidwg",
       "cmd": "OpenDwg",

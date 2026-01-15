@@ -50,11 +50,31 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
       try {
         const childrenResponse = await projectsApi.getChildren(nodeId);
-        const children = childrenResponse.data || [];
+        
+        // 响应拦截器解包后，childrenResponse.data 是 {data: [...], meta: {...}}
+        // 需要访问 childrenResponse.data.data 来获取数组
+        let children: FileSystemNode[] = [];
+
+        if (childrenResponse.data) {
+          if (Array.isArray(childrenResponse.data)) {
+            // 直接是数组
+            children = childrenResponse.data;
+          } else if (childrenResponse.data.data && Array.isArray(childrenResponse.data.data)) {
+            // 是 {data: [...], meta: {...}} 格式
+            children = childrenResponse.data.data;
+          } else if (childrenResponse.data.data && Array.isArray(childrenResponse.data.data.data)) {
+            // 双层嵌套 {data: {data: [...]}}
+            children = childrenResponse.data.data.data;
+          }
+        }
 
         // 过滤出文件夹，并排除当前节点及其子节点
         const folders = children
-          .filter((child) => child.isFolder && child.id !== excludeNodeId)
+          .filter((child) => {
+            const isFolder = child.isFolder;
+            const isExcluded = child.id === excludeNodeId;
+            return isFolder && !isExcluded;
+          })
           .map((folder) => ({
             ...folder,
             expanded: false,
