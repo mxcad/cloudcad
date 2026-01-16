@@ -634,6 +634,196 @@ export const mxcadApi = {
   },
 };
 
+// 图库相关的 API 方法
+export const galleryApi = {
+  // 获取图纸库分类列表
+  getDrawingsTypes: () =>
+    apiService.post<{
+      code: string;
+      result: {
+        allblocks: Array<{
+          id: number;
+          pid: number;
+          name: string;
+          pname: string;
+          status: number;
+        }>;
+      };
+    }>('/gallery/drawings/types'),
+
+  // 获取图纸列表
+  getDrawingsFileList: (params: {
+    keywords?: string;
+    firstType?: number;
+    secondType?: number;
+    pageIndex: number;
+    pageSize: number;
+  }) =>
+    apiService.post<{
+      sharedwgs: Array<{
+        uuid: string;
+        filename: string;
+        firstType: number;
+        secondType: number;
+        filehash: string;
+        type: string;
+        lookNum: number;
+        likeNum: number;
+        collect: boolean;
+      }>;
+      page: {
+        index: number;
+        size: number;
+        count: number;
+        max: number;
+        up: boolean;
+        down: boolean;
+      };
+    }>('/gallery/drawings/filelist', params),
+
+  // 获取图块库分类列表
+  getBlocksTypes: () =>
+    apiService.post<{
+      code: string;
+      result: {
+        allblocks: Array<{
+          id: number;
+          pid: number;
+          name: string;
+          pname: string;
+          status: number;
+        }>;
+      };
+    }>('/gallery/blocks/types'),
+
+  // 获取图块列表
+  getBlocksFileList: (params: {
+    keywords?: string;
+    firstType?: number;
+    secondType?: number;
+    pageIndex: number;
+    pageSize: number;
+  }) =>
+    apiService.post<{
+      sharedwgs: Array<{
+        uuid: string;
+        filename: string;
+        firstType: number;
+        secondType: number;
+        filehash: string;
+        type: string;
+        lookNum: number;
+        likeNum: number;
+        collect: boolean;
+      }>;
+      page: {
+        index: number;
+        size: number;
+        count: number;
+        max: number;
+        up: boolean;
+        down: boolean;
+      };
+    }>('/gallery/blocks/filelist', params),
+
+  // 创建分类
+  createType: (galleryType: 'drawings' | 'blocks', name: string, pid: number) =>
+    apiService.post<{
+      code: string;
+      data: {
+        id: number;
+        pid: number;
+        name: string;
+        pname: string;
+        status: number;
+      };
+    }>(`/gallery/${galleryType}/types/create`, { name, pid }),
+
+  // 更新分类
+  updateType: (galleryType: 'drawings' | 'blocks', typeId: number, name: string) =>
+    apiService.put<{
+      code: string;
+      data: {
+        id: number;
+        pid: number;
+        name: string;
+        pname: string;
+        status: number;
+      };
+    }>(`/gallery/${galleryType}/types/${typeId}`, { name }),
+
+  // 删除分类
+  deleteType: (galleryType: 'drawings' | 'blocks', typeId: number) =>
+    apiService.delete<{
+      code: string;
+      message: string;
+    }>(`/gallery/${galleryType}/types/${typeId}`),
+
+  // 获取图库文件访问 URL
+  getFileUrl: (galleryType: 'drawings' | 'blocks', secondType: number, firstType: number, filehash: string) => {
+    const baseUrl = (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
+    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.mxweb`;
+  },
+
+  // 获取图库文件预览图 URL
+  getPreviewImageUrl: (galleryType: 'drawings' | 'blocks', secondType: number, firstType: number, filehash: string) => {
+    const baseUrl = (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
+    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.jpg`;
+  },
+
+  // 收藏/取消收藏
+  toggleCollect: (galleryType: 'drawings' | 'blocks', itemId: string) =>
+    apiService.post<{
+      code: string;
+      data: {
+        collect: boolean;
+      };
+    }>(`/gallery/${galleryType}/collect`, { itemId }),
+
+  // 获取我的收藏列表
+  getCollectList: (galleryType: 'drawings' | 'blocks', pageIndex: number = 0, pageSize: number = 20) =>
+    apiService.get<{
+      sharedwgs: Array<{
+        uuid: string;
+        filename: string;
+        firstType: number;
+        secondType: number;
+        filehash: string;
+        type: string;
+        lookNum: number;
+        likeNum: number;
+        collect: boolean;
+      }>;
+      page: {
+        index: number;
+        size: number;
+        count: number;
+        max: number;
+        up: boolean;
+        down: boolean;
+      };
+    }>(`/gallery/${galleryType}/collect`, { params: { pageIndex, pageSize } }),
+
+  // 添加文件到图库
+  addToGallery: (galleryType: 'drawings' | 'blocks', params: {
+    nodeId: string;
+    firstType: number;
+    secondType: number;
+    thirdType?: number;
+  }) =>
+    apiService.post<{
+      code: string;
+      data: {
+        id: string;
+        nodeId: string;
+        firstType: number;
+        secondType: number;
+        thirdType?: number;
+        galleryType: string;
+      };
+    }>(`/gallery/${galleryType}/items`, params),
+};
+
 // 在类定义后添加辅助方法
 ApiService.prototype.getNodeIdFromMultipleSources = function (
   config: any

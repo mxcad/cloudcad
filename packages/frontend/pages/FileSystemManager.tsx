@@ -25,6 +25,7 @@ import { ProjectModal } from '../components/modals/ProjectModal';
 import { MembersModal } from '../components/modals/MembersModal';
 import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
+import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -129,6 +130,10 @@ export const FileSystemManager: React.FC = () => {
   const [copySourceNode, setCopySourceNode] = useState<FileSystemNode | null>(
     null
   );
+
+  // 图库相关状态
+  const [showAddToGalleryModal, setShowAddToGalleryModal] = useState(false);
+  const [selectedNodeForGallery, setSelectedNodeForGallery] = useState<FileSystemNode | null>(null);
 
   // 是否在根级别（无 projectId）
   const isAtRoot = !urlProjectId;
@@ -299,6 +304,15 @@ export const FileSystemManager: React.FC = () => {
     setMoveSourceNode(null);
     setShowSelectFolderModal(true);
   }, []);
+
+  /**
+   * 添加到图库
+   */
+  const handleAddToGallery = useCallback((node: FileSystemNode) => {
+    console.log('[FileSystemManager] 添加到图库:', node.name);
+    setSelectedNodeForGallery(node);
+    setShowAddToGalleryModal(true);
+  }, [setSelectedNodeForGallery, setShowAddToGalleryModal]);
 
   /**
    * 确认移动/拷贝
@@ -784,6 +798,7 @@ export const FileSystemManager: React.FC = () => {
               }
               onMove={!node.isRoot ? handleMove : undefined}
               onCopy={!node.isRoot ? handleCopy : undefined}
+              onAddToGallery={!node.isFolder ? handleAddToGallery : undefined}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -953,6 +968,18 @@ export const FileSystemManager: React.FC = () => {
           setCopySourceNode(null);
         }}
         onConfirm={handleConfirmMoveOrCopy}
+      />
+
+      {/* 添加到图库模态框 */}
+      <AddToGalleryModal
+        isOpen={showAddToGalleryModal}
+        onClose={() => {
+          setShowAddToGalleryModal(false);
+          setSelectedNodeForGallery(null);
+        }}
+        onSuccess={handleRefresh}
+        nodeId={selectedNodeForGallery?.id || ''}
+        fileName={selectedNodeForGallery?.name || ''}
       />
 
       {/* 键盘快捷键组件（任务009 - 可选功能） */}

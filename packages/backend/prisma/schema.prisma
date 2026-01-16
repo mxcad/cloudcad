@@ -25,6 +25,7 @@ model User {
   // 关联关系
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   nodeAccesses       FileAccess[]
+  galleryCollects    GalleryCollect[]
 
   @@map("users")
 }
@@ -97,7 +98,8 @@ model FileSystemNode {
 
   // 关联关系
   nodeAccesses FileAccess[]    @relation("NodeAccesses")
-  
+  galleryItems GalleryItem[]   @relation("GalleryItems")
+
   // 索引优化
   @@index([parentId])
   @@index([ownerId])
@@ -178,6 +180,74 @@ model UploadSession {
   updatedAt   DateTime @updatedAt
 
   @@map("upload_sessions")
+}
+
+// ============ 图库模块 ============
+
+// 图库分类
+model GalleryType {
+  id          Int      @id @default(autoincrement())
+  pid         Int      @default(0)  // 父分类 ID，0 表示一级分类
+  name        String
+  status      Int      @default(1)  // 状态：1=启用，0=禁用
+  galleryType String  // 图库类型：'drawings' 或 'blocks'
+  items       GalleryItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([pid])
+  @@index([galleryType])
+  @@map("gallery_types")
+}
+
+// 图库项目
+model GalleryItem {
+  id          String   @id @default(cuid())
+  nodeId      String   @unique  // 关联到 FileSystemNode
+  firstType   Int      // 一级分类 ID
+  secondType  Int      // 二级分类 ID
+  thirdType   Int?     // 三级分类 ID（可选）
+  galleryType String   // 图库类型：'drawings' 或 'blocks'
+  node        FileSystemNode @relation("GalleryItems", fields: [nodeId], references: [id], onDelete: Cascade)
+  type        GalleryType @relation(fields: [secondType], references: [id])
+  statistics  GalleryStatistics?
+  collects    GalleryCollect[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([firstType])
+  @@index([secondType])
+  @@index([thirdType])
+  @@index([galleryType])
+  @@map("gallery_items")
+}
+
+// 图库统计
+model GalleryStatistics {
+  id        String   @id @default(cuid())
+  itemId    String   @unique  // 关联 GalleryItem
+  lookNum   Int      @default(0)  // 浏览次数
+  likeNum   Int      @default(0)  // 收藏次数
+  item      GalleryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("gallery_statistics")
+}
+
+// 图库收藏
+model GalleryCollect {
+  id        String   @id @default(cuid())
+  itemId    String   // 关联 GalleryItem
+  userId    String   // 收藏用户
+  item      GalleryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([itemId, userId])
+  @@index([itemId])
+  @@index([userId])
+  @@map("gallery_collects")
 }
 
 // 枚举类型

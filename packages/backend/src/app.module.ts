@@ -17,6 +17,7 @@ import { DatabaseModule } from './database/database.module';
 // import { FilesModule } from './files/files.module'; // 已废弃
 import { FileSystemModule } from './file-system/file-system.module';
 import { FontsModule } from './fonts/fonts.module';
+import { GalleryModule } from './gallery/gallery.module';
 import { HealthModule } from './health/health.module';
 import { MxCadModule } from './mxcad/mxcad.module';
 // import { ProjectsModule } from './projects/projects.module'; // 已废弃
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module';
     // FilesModule, // 已废弃，功能迁移到 FileSystemModule
     FileSystemModule,
     FontsModule,
+    GalleryModule,
     MxCadModule,
     AdminModule,
     SchedulerModule,

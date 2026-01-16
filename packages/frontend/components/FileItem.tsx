@@ -7,6 +7,7 @@ import {
   MoreIcon,
   UsersIcon,
   RestoreIcon,
+  GalleryIcon,
   getFileIconComponent,
 } from './FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
@@ -37,6 +38,8 @@ interface FileItemProps {
   // 移动和拷贝操作
   onMove?: (node: FileSystemNode) => void;
   onCopy?: (node: FileSystemNode) => void;
+  // 添加到图库操作
+  onAddToGallery?: (node: FileSystemNode) => void;
   // 拖拽操作
   onDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
@@ -63,6 +66,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onRestore,
   onMove,
   onCopy,
+  onAddToGallery,
   onDragStart,
   onDragOver,
   onDragLeave,
@@ -550,21 +554,38 @@ export const FileItem: React.FC<FileItemProps> = ({
                   ) : (
                     <>
                       {!node.isFolder && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('[FileItem] 下载按钮被点击', { node });
-                            handleMenuAction(() => {
-                              console.log('[FileItem] 执行 onDownload 回调');
-                              onDownload(node);
-                            });
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                     flex items-center gap-2 transition-colors"
-                        >
-                          <DownloadIcon size={16} />
-                          下载
-                        </button>
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('[FileItem] 下载按钮被点击', { node });
+                              handleMenuAction(() => {
+                                console.log('[FileItem] 执行 onDownload 回调');
+                                onDownload(node);
+                              });
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
+                                       flex items-center gap-2 transition-colors"
+                          >
+                            <DownloadIcon size={16} />
+                            下载
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('[FileItem] 添加到图库按钮被点击', { node });
+                              handleMenuAction(() => {
+                                console.log('[FileItem] 执行 onAddToGallery 回调');
+                                onAddToGallery?.(node);
+                              });
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-indigo-600 hover:bg-indigo-50
+                                       flex items-center gap-2 transition-colors"
+                          >
+                            <GalleryIcon size={16} />
+                            添加到图库
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={(e) => {
@@ -901,16 +922,30 @@ export const FileItem: React.FC<FileItemProps> = ({
               </>
             ) : (
               <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDownload(node);
-                  }}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  title={node.isFolder ? '下载（ZIP）' : '下载'}
-                >
-                  <DownloadIcon size={18} />
-                </button>
+                {!node.isFolder && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDownload(node);
+                      }}
+                      className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                      title="下载"
+                    >
+                      <DownloadIcon size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToGallery?.(node);
+                      }}
+                      className="p-2 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
+                      title="添加到图库"
+                    >
+                      <GalleryIcon size={18} />
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

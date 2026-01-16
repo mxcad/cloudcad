@@ -20,6 +20,7 @@ import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
 import { TrashPage } from './pages/TrashPage';
 import FontLibrary from './pages/FontLibrary';
+import Gallery from './pages/Gallery';
 import { useAuth } from './contexts/AuthContext';
 
 // 受保护的路由组件
@@ -102,22 +103,15 @@ function AppContent() {
                     element={<Navigate to="/projects" replace />}
                   />
 
-                  {/* Block Library Routes */}
-                  <Route
-                    path="/blocks"
-                    element={<AssetLibrary type="block" />}
-                  />
-                  <Route
-                    path="/blocks/:libraryId"
-                    element={<AssetLibrary type="block" />}
-                  />
-
                   <Route path="/users" element={<UserManagement />} />
                   <Route path="/roles" element={<RoleManagement />} />
                   <Route path="/profile" element={<Profile />} />
 
                   {/* 字体库 */}
                   <Route path="/font-library" element={<FontLibrary />} />
+
+                  {/* 图库 */}
+                  <Route path="/blocks" element={<Gallery />} />
 
                   {/* 回收站 */}
                   <Route path="/trash" element={<TrashPage />} />
