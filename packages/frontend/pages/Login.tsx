@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,6 +7,7 @@ type LoginDto = components['schemas']['LoginDto'];
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
   // 静默：login函数信息
   // 静默：login函数类型
@@ -19,9 +20,11 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      navigate('/', { replace: true });
+      // 获取重定向路径，如果没有则跳转到首页
+      const from = (location.state as any)?.from || '/';
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, location]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

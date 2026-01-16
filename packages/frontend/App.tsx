@@ -4,6 +4,7 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
+  useLocation,
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 
@@ -26,6 +27,7 @@ import { useAuth } from './contexts/AuthContext';
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
   ({ children }) => {
     const { isAuthenticated, loading, user, token } = useAuth();
+    const location = useLocation();
 
     // 如果已经有 token 或 user 信息，直接显示内容，避免闪烁
     const shouldShowContent = token || user;
@@ -39,7 +41,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
     }
 
     if (!isAuthenticated && !loading) {
-      return <Navigate to="/login" replace />;
+      // 保存当前路径和查询参数到 location state，以便登录后跳转回原页面
+      return (
+        <Navigate
+          to="/login"
+          replace
+          state={{ from: location.pathname + location.search }}
+        />
+      );
     }
 
     return <>{children}</>;
