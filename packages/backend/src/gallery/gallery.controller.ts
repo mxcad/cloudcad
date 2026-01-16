@@ -4,6 +4,7 @@ import {
   Get,
   Put,
   Delete,
+  Head,
   Body,
   Res,
   Logger,
@@ -306,6 +307,64 @@ export class GalleryController {
   })
   async getDrawingsFile(@Res() res: Response, @Req() req: any) {
     return this.handleGalleryFileRequest(req, res, 'drawings');
+  }
+
+  /**
+   * 访问图块文件 (.mxweb) - HEAD 方法
+   * 路由: HEAD /gallery/blocks/{secondType}/{firstType}/{filehash}.mxweb
+   *
+   * @param res Express Response 对象
+   * @param req Express Request 对象
+   * @returns 返回文件头信息或错误信息
+   */
+  @Head('blocks/*path')
+  @ApiOperation({
+    summary: '获取图块文件信息',
+    description: '获取图块库中转换后文件的元信息（不返回文件内容）',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '成功获取文件信息',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '文件不存在',
+  })
+  async getBlocksFileHead(@Res() res: Response, @Req() req: any) {
+    return this.handleGalleryFileRequest(req, res, 'blocks', true);
+  }
+
+  /**
+   * 访问图纸文件 (.mxweb) - HEAD 方法
+   * 路由: HEAD /gallery/drawings/{secondType}/{firstType}/{filehash}.mxweb
+   *
+   * @param res Express Response 对象
+   * @param req Express Request 对象
+   * @returns 返回文件头信息或错误信息
+   */
+  @Head('drawings/*path')
+  @ApiOperation({
+    summary: '获取图纸文件信息',
+    description: '获取图纸库中转换后文件的元信息（不返回文件内容）',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '成功获取文件信息',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '文件不存在',
+  })
+  async getDrawingsFileHead(@Res() res: Response, @Req() req: any) {
+    return this.handleGalleryFileRequest(req, res, 'drawings', true);
   }
 
   /**
@@ -648,11 +707,13 @@ export class GalleryController {
    * @param req Express Request 对象
    * @param res Express Response 对象
    * @param galleryType 图库类型：'blocks' 或 'drawings'
+   * @param isHeadRequest 是否为 HEAD 请求（默认 false）
    */
   private async handleGalleryFileRequest(
     req: any,
     res: Response,
-    galleryType: 'blocks' | 'drawings'
+    galleryType: 'blocks' | 'drawings',
+    isHeadRequest: boolean = false
   ) {
     try {
       // 从 req.params.path 获取完整的路径（支持多层路径）
@@ -823,32 +884,56 @@ export class GalleryController {
       // 如果 MinIO 中找到文件，直接返回
       if (foundMinioPath) {
         try {
-          const fileStream = await this.minioSyncService.getFileStream(foundMinioPath);
+          // 对于 HEAD 请求，只返回文件头信息
+          if (isHeadRequest) {
+            const fileInfo = await this.minioSyncService.getFileInfo(foundMinioPath);
 
-          // 更新浏览次数
-          await this.galleryService.incrementLookNum(fileHash, galleryType);
+            if (fileInfo) {
+              // 设置响应头
+              res.setHeader('Content-Type', fileInfo.contentType);
+              res.setHeader('Content-Length', fileInfo.contentLength);
+              res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+              res.setHeader('Access-Control-Allow-Origin', '*');
 
-          // 设置响应头
-          res.setHeader('Content-Type', 'application/octet-stream');
-          res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
-
-          // 返回文件流
-          fileStream.pipe(res);
-
-          fileStream.on('error', (error) => {
-            this.logger.error(
-              `[handleGalleryFileRequest] MinIO 文件流错误: ${error.message}`,
-              error
-            );
-            if (!res.headersSent) {
-              res.status(500).json({ code: -1, message: '获取文件失败' });
+              // HEAD 请求只返回头部信息
+              res.end();
+              return;
+            } else {
+              // 获取文件信息失败，降级到本地文件系统
+              this.logger.warn(
+                `[handleGalleryFileRequest] 获取 MinIO 文件信息失败，降级到本地文件系统: ${foundMinioPath}`
+              );
             }
-          });
+          } else {
+            // GET 请求返回文件流
+            const fileStream = await this.minioSyncService.getFileStream(foundMinioPath);
 
-          return;
+            // 更新浏览次数
+            await this.galleryService.incrementLookNum(fileHash, galleryType);
+
+            // 设置响应头
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
+
+            // 返回文件流
+            fileStream.pipe(res);
+
+            fileStream.on('error', (error) => {
+              this.logger.error(
+                `[handleGalleryFileRequest] MinIO 文件流错误: ${error.message}`,
+                error
+              );
+              if (!res.headersSent) {
+                res.status(500).json({ code: -1, message: '获取文件失败' });
+              }
+            });
+
+            return;
+          }
         } catch (error) {
           this.logger.error(
-            `[handleGalleryFileRequest] 获取 MinIO 文件流失败: ${error.message}`,
+            `[handleGalleryFileRequest] 获取 MinIO 文件失败: ${error.message}`,
             error
           );
           // 继续尝试本地文件
@@ -891,29 +976,45 @@ export class GalleryController {
         return res.status(404).json({ code: -1, message: '文件不存在' });
       }
 
-      // 读取本地文件流
+      // 读取本地文件
       try {
-        const fileStream = fs.createReadStream(foundLocalPath);
+        if (isHeadRequest) {
+          // HEAD 请求：获取文件统计信息
+          const stats = fs.statSync(foundLocalPath);
 
-        // 更新浏览次数
-        await this.galleryService.incrementLookNum(fileHash, galleryType);
+          // 设置响应头
+          res.setHeader('Content-Type', 'application/octet-stream');
+          res.setHeader('Content-Length', stats.size);
+          res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.setHeader('Access-Control-Allow-Origin', '*');
 
-        // 设置响应头
-        res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
+          // HEAD 请求只返回头部信息
+          res.end();
+        } else {
+          // GET 请求：返回文件流
+          const fileStream = fs.createReadStream(foundLocalPath);
 
-        // 返回文件流
-        fileStream.pipe(res);
+          // 更新浏览次数
+          await this.galleryService.incrementLookNum(fileHash, galleryType);
 
-        fileStream.on('error', (error) => {
-          this.logger.error(
-            `[handleGalleryFileRequest] 本地文件流错误: ${error.message}`,
-            error
-          );
-          if (!res.headersSent) {
-            res.status(500).json({ code: -1, message: '获取文件失败' });
-          }
-        });
+          // 设置响应头
+          res.setHeader('Content-Type', 'application/octet-stream');
+          res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
+
+          // 返回文件流
+          fileStream.pipe(res);
+
+          fileStream.on('error', (error) => {
+            this.logger.error(
+              `[handleGalleryFileRequest] 本地文件流错误: ${error.message}`,
+              error
+            );
+            if (!res.headersSent) {
+              res.status(500).json({ code: -1, message: '获取文件失败' });
+            }
+          });
+        }
       } catch (error) {
         this.logger.error(
           `[handleGalleryFileRequest] 读取本地文件失败: ${error.message}`,
