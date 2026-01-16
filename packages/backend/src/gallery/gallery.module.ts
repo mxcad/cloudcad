@@ -1,0 +1,33 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { GalleryController } from './gallery.controller';
+import { GalleryService } from './gallery.service';
+import { DatabaseModule } from '../database/database.module';
+import { MxCadModule } from '../mxcad/mxcad.module';
+import { CommonModule } from '../common/common.module';
+
+/**
+ * 图库模块
+ */
+@Module({
+  imports: [
+    DatabaseModule,
+    MxCadModule,
+    CommonModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('jwt.secret'),
+        signOptions: {
+          expiresIn: configService.get<string>('jwt.expiresIn', '1h') as any,
+        },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [GalleryController],
+  providers: [GalleryService],
+  exports: [GalleryService],
+})
+export class GalleryModule {}

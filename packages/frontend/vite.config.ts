@@ -23,6 +23,24 @@ export default defineConfig(({ mode }) => {
           secure: false,
           rewrite: (path) => path.replace(/^\/mxcad/, '/api/mxcad'),
         },
+        '/gallery': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/gallery/, '/api/gallery'),
+        },
+        '/drawings': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/drawings/, '/api/gallery/drawings'),
+        },
+        '/blocks': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/blocks/, '/api/gallery/blocks'),
+        },
       },
     },
     plugins: [
