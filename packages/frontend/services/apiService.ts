@@ -49,48 +49,18 @@ class ApiService {
         // 如果是 FormData，移除默认的 Content-Type，让浏览器自动设置
         if (config.data instanceof FormData) {
           delete config.headers['Content-Type'];
-          console.log('[apiService] 检测到 FormData，已移除 Content-Type');
-          console.log('[apiService] FormData 内容:');
-          config.data.forEach((value, key) => {
-            console.log(`  ${key}:`, value);
-          });
         }
 
         // 为所有 MxCAD 接口添加节点上下文
         if (config.url?.includes('/mxcad/')) {
-          Logger.info('[apiService] 请求拦截器 - URL:', config.url);
-          Logger.info(
-            '[apiService] 请求拦截器 - 原始 data:',
-            JSON.stringify(config.data)
-          );
-
           // 从多个来源获取节点上下文
           const nodeId = this.getNodeIdFromMultipleSources(config);
-          Logger.info('[apiService] 请求拦截器 - 获取的 nodeId:', nodeId);
 
           if (nodeId) {
             // 验证 nodeId 格式
-            if (!this.isValidNodeId(nodeId)) {
-              Logger.warn('[apiService] 无效的 nodeId 格式:', nodeId);
-              return config; // 不添加无效参数
-            }
-
-            // 根据请求类型补充 nodeId 参数
-            this.supplementNodeIdToRequest(config, nodeId);
-            Logger.info(
-              '[apiService] 请求拦截器 - 处理后的 data:',
-              JSON.stringify(config.data)
-            );
-          } else {
-            // 对于关键的上传接口，如果缺少 nodeId 则记录警告
-            if (
-              config.url?.includes('/mxcad/files/uploadFiles') ||
-              config.url?.includes('/mxcad/files/fileisExist') ||
-              config.url?.includes('/mxcad/files/chunkisExist')
-            ) {
-              Logger.warn(
-                '[apiService] MxCAD 接口缺少 nodeId 参数，可能影响文件系统集成'
-              );
+            if (this.isValidNodeId(nodeId)) {
+              // 根据请求类型补充 nodeId 参数
+              this.supplementNodeIdToRequest(config, nodeId);
             }
           }
         }
@@ -104,35 +74,20 @@ class ApiService {
     // 响应拦截器 - 自动解包后端响应格式和处理 token 刷新
     this.client.interceptors.response.use(
       (response) => {
-        // 检查是否为 MxCAD 接口，如果是则跳过自动解包
+        // 检查是否为 MxCAD 接口或图库接口，如果是则跳过自动解包
+        // 因为这些接口绕过了全局响应包装，直接返回原始 JSON 格式
         const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
-
-        console.log('[响应拦截器] URL:', response.config.url);
-        console.log('[响应拦截器] 原始响应:', response.data);
-        console.log('[响应拦截器] 是否为 MxCAD 接口:', isMxCadEndpoint);
-        console.log('[响应拦截器] response.data 存在:', !!response.data);
-        console.log(
-          '[响应拦截器] response.data 是对象:',
-          typeof response.data === 'object'
-        );
-        console.log(
-          '[响应拦截器] response.data 有 data 属性:',
-          'data' in response.data
-        );
+        const isGalleryEndpoint = response.config.url?.includes('/gallery/');
+        const shouldSkipUnwrap = isMxCadEndpoint || isGalleryEndpoint;
 
         if (
-          !isMxCadEndpoint &&
+          !shouldSkipUnwrap &&
           response.data &&
           typeof response.data === 'object' &&
           'data' in response.data
         ) {
           const originalData = response.data;
           response.data = originalData.data;
-          console.log('[响应拦截器] 解包后:', response.data);
-        } else if (isMxCadEndpoint) {
-          console.log('[响应拦截器] MxCAD 接口跳过解包');
-        } else {
-          console.log('[响应拦截器] 不满足解包条件');
         }
 
         return response;
@@ -822,6 +777,31 @@ export const galleryApi = {
         galleryType: string;
       };
     }>(`/gallery/${galleryType}/items`, params),
+
+  // 从图库中移除文件
+  removeFromGallery: (galleryType: 'drawings' | 'blocks', nodeId: string) =>
+    apiService.delete<{
+      code: string;
+      message: string;
+    }>(`/gallery/${galleryType}/items/${nodeId}`),
+
+  // 更新图库文件的分类
+  updateGalleryItem: (galleryType: 'drawings' | 'blocks', nodeId: string, params: {
+    firstType: number;
+    secondType: number;
+    thirdType?: number;
+  }) =>
+    apiService.put<{
+      code: string;
+      data: {
+        id: string;
+        nodeId: string;
+        firstType: number;
+        secondType: number;
+        thirdType?: number;
+        galleryType: string;
+      };
+    }>(`/gallery/${galleryType}/items/${nodeId}`, params),
 };
 
 // 在类定义后添加辅助方法

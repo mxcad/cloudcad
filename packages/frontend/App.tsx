@@ -111,7 +111,7 @@ function AppContent() {
                   <Route path="/font-library" element={<FontLibrary />} />
 
                   {/* 图库 */}
-                  <Route path="/blocks" element={<Gallery />} />
+                  <Route path="/library-blocks" element={<Gallery />} />
 
                   {/* 回收站 */}
                   <Route path="/trash" element={<TrashPage />} />

@@ -211,9 +211,12 @@ export class MinioSyncService {
    * 获取 MinIO 文件信息（用于 HEAD 请求）
    * MinIO 的预签名 GET URL 不支持 HEAD 请求，需要使用 SDK 直接获取文件信息
    */
-  public async getFileInfo(
-    minioPath: string
-  ): Promise<{ contentType: string; contentLength: string } | null> {
+  public async getFileInfo(minioPath: string): Promise<{
+    contentType: string;
+    contentLength: string;
+    etag: string;
+    lastModified: string;
+  } | null> {
     try {
       await this.ensureBucketExists();
 
@@ -226,6 +229,9 @@ export class MinioSyncService {
         contentType:
           statResult.metaData?.['content-type'] || 'application/octet-stream',
         contentLength: statResult.size.toString(),
+        etag: statResult.etag || '',
+        lastModified:
+          statResult.lastModified?.toISOString() || new Date().toISOString(),
       };
     } catch (error) {
       this.logger.error(

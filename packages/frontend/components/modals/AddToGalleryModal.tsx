@@ -83,8 +83,8 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         secondType: selectedSecondType,
       });
 
-      // 检查响应状态码和响应体
-      if (response.status === 200 && response.data?.code === 'success') {
+      // 检查响应状态码和响应体（201 表示创建成功）
+      if ((response.status === 200 || response.status === 201) && response.data?.code === 'success') {
         alert('添加成功！');
         onSuccess();
         onClose();

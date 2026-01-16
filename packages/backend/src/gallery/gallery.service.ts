@@ -42,6 +42,7 @@ export class GalleryService {
         pid: 0,
         status: 1,
         galleryType: galleryType,
+        ownerId: userId,
       },
       orderBy: {
         id: 'asc',
@@ -56,6 +57,7 @@ export class GalleryService {
         },
         status: 1,
         galleryType: galleryType,
+        ownerId: userId,
       },
       orderBy: {
         id: 'asc',
@@ -117,13 +119,13 @@ export class GalleryService {
 
     // 参数类型转换和验证
     const keywords = dto.keywords || '';
-    let firstType =
+    const firstType =
       typeof dto.firstType === 'string'
         ? parseInt(dto.firstType, 10)
         : dto.firstType || 0;
 
     // 分页参数验证
-    let pageIndex = dto.pageIndex ;
+    const pageIndex = dto.pageIndex;
     let pageSize =
       typeof dto.pageSize === 'string'
         ? parseInt(dto.pageSize, 10)
@@ -138,7 +140,6 @@ export class GalleryService {
     }
 
     // 如果 pageIndex 为 -1，设置为 0（兼容参考代码逻辑）
-    // 但会通过 skip = count 或其他方式返回空数组
     const originalPageIndex = pageIndex;
     let effectivePageIndex = pageIndex;
     if (pageIndex === -1) {
@@ -147,13 +148,15 @@ export class GalleryService {
       effectivePageIndex = 0;
     }
 
-    // 构建查询条件
+    // 构建查询条件（直接查询 FileSystemNode）
     const whereClause: any = {
+      isInGallery: true,
       galleryType: galleryType,
+      isFolder: false,
+      deletedAt: null,
     };
 
-    // 按一级分类筛选（firstType）
-    // 如果传入的是二级分类 ID，自动查找其父分类 ID
+    // 按一级分类筛选（galleryFirstType）
     if (firstType && firstType !== 0) {
       // 检查是否为二级分类（pid != 0）
       const type = await this.database.galleryType.findUnique({
@@ -167,79 +170,66 @@ export class GalleryService {
           this.logger.log(
             `[getFileList] firstType ${firstType} 是二级分类，使用父分类 ID ${type.pid} 进行查询`
           );
-          whereClause.firstType = type.pid;
+          whereClause.galleryFirstType = type.pid;
         } else {
           // 是一级分类，直接使用
-          whereClause.firstType = firstType;
+          whereClause.galleryFirstType = firstType;
         }
       } else {
         // 分类不存在，使用原值（会导致返回空结果）
-        whereClause.firstType = firstType;
+        whereClause.galleryFirstType = firstType;
       }
     }
 
-    // 按二级分类筛选（secondType）
+    // 按二级分类筛选（gallerySecondType）
     if (dto.secondType && dto.secondType !== 0) {
       const secondTypeValue =
         typeof dto.secondType === 'string'
           ? parseInt(dto.secondType, 10)
           : dto.secondType;
-      whereClause.secondType = secondTypeValue;
+      whereClause.gallerySecondType = secondTypeValue;
     }
 
-    // 按三级分类筛选（thirdType）
+    // 按三级分类筛选（galleryThirdType）
     if (dto.thirdType && dto.thirdType !== 0) {
       const thirdTypeValue =
         typeof dto.thirdType === 'string'
           ? parseInt(dto.thirdType, 10)
           : dto.thirdType;
-      whereClause.thirdType = thirdTypeValue;
+      whereClause.galleryThirdType = thirdTypeValue;
     }
 
     // 关键字搜索（通过文件名）
     if (keywords && keywords.trim()) {
-      whereClause.node = {
-        originalName: {
-          contains: keywords,
-          mode: 'insensitive',
-        },
-      };
+      whereClause.OR = [
+        { originalName: { contains: keywords, mode: 'insensitive' } },
+        { name: { contains: keywords, mode: 'insensitive' } },
+      ];
     }
 
     // 查询总数
-    const count = await this.database.galleryItem.count({
+    const count = await this.database.fileSystemNode.count({
       where: whereClause,
     });
 
     // 查询文件列表
-    // 如果 pageIndex 为 -1，设置 skip 为一个很大的数，确保返回空数组
-    const skip = originalPageIndex === -1 ? 999999999 : effectivePageIndex * pageSize;
+    const skip =
+      originalPageIndex === -1 ? 999999999 : effectivePageIndex * pageSize;
 
-    const items = await this.database.galleryItem.findMany({
+    const nodes = await this.database.fileSystemNode.findMany({
       where: whereClause,
       select: {
         id: true,
-        nodeId: true,
-        firstType: true,
-        secondType: true,
-        thirdType: true,
-        galleryType: true,
-        node: {
-          select: {
-            id: true,
-            originalName: true,
-            name: true,
-            fileHash: true,
-            path: true,
-            createdAt: true,
-          },
-        },
-        type: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        originalName: true,
+        name: true,
+        fileHash: true,
+        path: true,
+        createdAt: true,
+        galleryFirstType: true,
+        gallerySecondType: true,
+        galleryThirdType: true,
+        galleryLookNum: true,
+        galleryLikeNum: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -250,13 +240,13 @@ export class GalleryService {
 
     // 转换为 API 格式
     const sharedwgs = await Promise.all(
-      items.map((item) => this.convertItemToFileItem(item, userId))
+      nodes.map((node) => this.convertNodeToFileItem(node, userId))
     );
 
     // 计算分页信息
     const max = Math.ceil(count / pageSize);
     const page = {
-      index: originalPageIndex, // 保持原始的 pageIndex 值
+      index: originalPageIndex,
       size: pageSize,
       count: count,
       max: max,
@@ -264,7 +254,6 @@ export class GalleryService {
       down: originalPageIndex < max - 1,
     };
 
-    // 直接返回 { sharedwgs, page } 格式（不包含 data 包装层）
     return {
       sharedwgs,
       page,
@@ -272,58 +261,58 @@ export class GalleryService {
   }
 
   /**
-   * 将图库项目转换为 API 格式
-   * @param item 图库项目
+   * 将文件节点转换为 API 格式
+   * @param node 文件节点
    * @param userId 用户 ID（用于判断收藏状态）
    * @returns API 格式的文件项
    */
-  private async convertItemToFileItem(
-    item: {
+  private async convertNodeToFileItem(
+    node: {
       id: string;
-      nodeId: string;
-      firstType: number;
-      secondType: number;
-      thirdType: number | null;
-      galleryType: string;
-      node: {
-        id: string;
-        originalName: string | null;
-        name: string;
-        fileHash: string | null;
-        path: string | null;
-        createdAt: Date;
-      };
-      type: {
-        id: number;
-        name: string;
-      } | null;
+      originalName: string | null;
+      name: string;
+      fileHash: string | null;
+      path: string | null;
+      createdAt: Date;
+      galleryFirstType: number | null;
+      gallerySecondType: number | null;
+      galleryThirdType: number | null;
+      galleryLookNum: number;
+      galleryLikeNum: number;
     },
     userId: string
   ): Promise<GalleryFileItemDto> {
     // 获取文件名
-    const filename = item.node.originalName || item.node.name;
+    const filename = node.originalName || node.name;
 
     // 提取文件哈希
-    const filehash = item.node.fileHash || this.extractHashFromPath(item.node.path) || '';
+    const filehash = node.fileHash || this.extractHashFromPath(node.path) || '';
 
     // 获取分类名称
-    const typeName = item.type?.name || '';
+    let typeName = '';
+    if (node.gallerySecondType) {
+      const type = await this.database.galleryType.findUnique({
+        where: { id: node.gallerySecondType },
+        select: { name: true },
+      });
+      typeName = type?.name || '';
+    }
 
     // 查询收藏状态
     const collect = await this.database.galleryCollect.findUnique({
       where: {
-        itemId_userId: {
-          itemId: item.id,
+        nodeId_userId: {
+          nodeId: node.id,
           userId: userId,
         },
       },
     });
 
     return {
-      uuid: item.node.id,
+      uuid: node.id,
       filename: filename,
-      firstType: item.firstType,
-      secondType: item.secondType,
+      firstType: node.galleryFirstType || 0,
+      secondType: node.gallerySecondType || 0,
       filehash: filehash,
       type: typeName,
       collect: !!collect,
@@ -370,6 +359,11 @@ export class GalleryService {
         throw new Error('父分类不存在');
       }
 
+      // 验证父分类是否属于当前用户
+      if (parentType.ownerId !== userId) {
+        throw new Error('父分类不存在');
+      }
+
       if (parentType.galleryType !== galleryType) {
         throw new Error('父分类类型不匹配');
       }
@@ -392,6 +386,7 @@ export class GalleryService {
         name,
         pid,
         galleryType,
+        ownerId: userId,
       },
     });
 
@@ -406,6 +401,7 @@ export class GalleryService {
         pid,
         galleryType,
         status: 1,
+        ownerId: userId,
       },
     });
 
@@ -413,7 +409,10 @@ export class GalleryService {
       id: newType.id,
       pid: newType.pid,
       name: newType.name,
-      pname: pid === 0 ? newType.name : (await this.getParentTypeName(newType.pid, galleryType)),
+      pname:
+        pid === 0
+          ? newType.name
+          : await this.getParentTypeName(newType.pid, galleryType, userId),
       status: newType.status,
     };
   }
@@ -445,6 +444,11 @@ export class GalleryService {
       throw new Error('分类不存在');
     }
 
+    // 验证分类是否属于当前用户
+    if (existingType.ownerId !== userId) {
+      throw new Error('分类不存在');
+    }
+
     if (existingType.galleryType !== galleryType) {
       throw new Error('分类类型不匹配');
     }
@@ -456,6 +460,7 @@ export class GalleryService {
         pid: existingType.pid,
         galleryType,
         id: { not: typeId },
+        ownerId: userId,
       },
     });
 
@@ -473,7 +478,10 @@ export class GalleryService {
       id: updatedType.id,
       pid: updatedType.pid,
       name: updatedType.name,
-      pname: updatedType.pid === 0 ? updatedType.name : (await this.getParentTypeName(updatedType.pid, galleryType)),
+      pname:
+        updatedType.pid === 0
+          ? updatedType.name
+          : await this.getParentTypeName(updatedType.pid, galleryType, userId),
       status: updatedType.status,
     };
   }
@@ -502,6 +510,11 @@ export class GalleryService {
       throw new Error('分类不存在');
     }
 
+    // 验证分类是否属于当前用户
+    if (existingType.ownerId !== userId) {
+      throw new Error('分类不存在');
+    }
+
     if (existingType.galleryType !== galleryType) {
       throw new Error('分类类型不匹配');
     }
@@ -511,6 +524,7 @@ export class GalleryService {
       where: {
         pid: typeId,
         galleryType,
+        ownerId: userId,
       },
     });
 
@@ -519,14 +533,16 @@ export class GalleryService {
     }
 
     // 检查是否有文件关联
-    const relatedItems = await this.database.galleryItem.findMany({
+    const relatedNodes = await this.database.fileSystemNode.findMany({
       where: {
-        secondType: typeId,
+        gallerySecondType: typeId,
         galleryType,
+        isInGallery: true,
+        ownerId: userId,
       },
     });
 
-    if (relatedItems.length > 0) {
+    if (relatedNodes.length > 0) {
       throw new Error('该分类下有文件，无法删除');
     }
 
@@ -540,18 +556,23 @@ export class GalleryService {
    * 获取父分类名称
    * @param pid 父分类 ID
    * @param galleryType 图库类型
+   * @param userId 用户 ID
    * @returns 父分类名称
    */
   private async getParentTypeName(
     pid: number,
-    galleryType: 'drawings' | 'blocks'
+    galleryType: 'drawings' | 'blocks',
+    userId: string
   ): Promise<string> {
     if (pid === 0) {
       return '';
     }
 
-    const parentType = await this.database.galleryType.findUnique({
-      where: { id: pid },
+    const parentType = await this.database.galleryType.findFirst({
+      where: {
+        id: pid,
+        ownerId: userId,
+      },
     });
 
     return parentType?.name || '';
@@ -567,41 +588,32 @@ export class GalleryService {
     galleryType: 'drawings' | 'blocks'
   ): Promise<void> {
     try {
-      // 查找对应的 GalleryItem
-      const item = await this.database.galleryItem.findFirst({
+      // 查找对应的 FileSystemNode
+      const node = await this.database.fileSystemNode.findFirst({
         where: {
-          node: {
-            fileHash: fileHash,
-          },
+          fileHash: fileHash,
+          isInGallery: true,
           galleryType: galleryType,
-        },
-        include: {
-          statistics: true,
         },
       });
 
-      if (!item) {
-        this.logger.warn(`[incrementLookNum] 未找到图库项目: ${fileHash}, ${galleryType}`);
+      if (!node) {
+        this.logger.warn(
+          `[incrementLookNum] 未找到图库文件: ${fileHash}, ${galleryType}`
+        );
         return;
       }
 
-      // 更新或创建统计数据
-      if (item.statistics) {
-        await this.database.galleryStatistics.update({
-          where: { id: item.statistics.id },
-          data: { lookNum: { increment: 1 } },
-        });
-      } else {
-        await this.database.galleryStatistics.create({
-          data: {
-            itemId: item.id,
-            lookNum: 1,
-            likeNum: 0,
-          },
-        });
-      }
+      // 更新浏览次数
+      await this.database.fileSystemNode.update({
+        where: { id: node.id },
+        data: { galleryLookNum: { increment: 1 } },
+      });
     } catch (error) {
-      this.logger.error(`[incrementLookNum] 更新浏览次数失败: ${error.message}`, error);
+      this.logger.error(
+        `[incrementLookNum] 更新浏览次数失败: ${error.message}`,
+        error
+      );
     }
   }
 
@@ -611,31 +623,32 @@ export class GalleryService {
    * @param userId 用户 ID
    * @returns 是否已收藏
    */
-  async toggleCollect(
-    nodeId: string,
-    userId: string
-  ): Promise<boolean> {
+  async toggleCollect(nodeId: string, userId: string): Promise<boolean> {
     try {
-      this.logger.log(`[toggleCollect] 收藏操作: nodeId=${nodeId}, userId=${userId}`);
+      this.logger.log(
+        `[toggleCollect] 收藏操作: nodeId=${nodeId}, userId=${userId}`
+      );
 
-      // 根据 nodeId 查找对应的 GalleryItem
-      const galleryItem = await this.database.galleryItem.findUnique({
-        where: { nodeId: nodeId },
+      // 查找文件节点
+      const node = await this.database.fileSystemNode.findUnique({
+        where: { id: nodeId },
       });
 
-      if (!galleryItem) {
+      if (!node) {
+        this.logger.warn(`[toggleCollect] 文件不存在: nodeId=${nodeId}`);
+        throw new Error('文件不存在');
+      }
+
+      if (!node.isInGallery) {
         this.logger.warn(`[toggleCollect] 文件不在图库中: nodeId=${nodeId}`);
         throw new Error('文件不在图库中');
       }
 
-      const itemId = galleryItem.id;
-      this.logger.log(`[toggleCollect] 找到 GalleryItem: itemId=${itemId}`);
-
       // 查找现有的收藏记录
       const existingCollect = await this.database.galleryCollect.findUnique({
         where: {
-          itemId_userId: {
-            itemId: itemId,
+          nodeId_userId: {
+            nodeId: nodeId,
             userId: userId,
           },
         },
@@ -643,26 +656,33 @@ export class GalleryService {
 
       if (existingCollect) {
         // 取消收藏
-        this.logger.log(`[toggleCollect] 取消收藏: itemId=${itemId}, userId=${userId}`);
+        this.logger.log(
+          `[toggleCollect] 取消收藏: nodeId=${nodeId}, userId=${userId}`
+        );
         await this.database.galleryCollect.delete({
           where: { id: existingCollect.id },
         });
-        await this.updateLikeNum(itemId, -1);
+        await this.updateLikeNum(nodeId, -1);
         return false;
       } else {
         // 添加收藏
-        this.logger.log(`[toggleCollect] 添加收藏: itemId=${itemId}, userId=${userId}`);
+        this.logger.log(
+          `[toggleCollect] 添加收藏: nodeId=${nodeId}, userId=${userId}`
+        );
         await this.database.galleryCollect.create({
           data: {
-            itemId: itemId,
+            nodeId: nodeId,
             userId: userId,
           },
         });
-        await this.updateLikeNum(itemId, 1);
+        await this.updateLikeNum(nodeId, 1);
         return true;
       }
     } catch (error) {
-      this.logger.error(`[toggleCollect] 收藏操作失败: ${error.message}`, error);
+      this.logger.error(
+        `[toggleCollect] 收藏操作失败: ${error.message}`,
+        error
+      );
       throw error;
     }
   }
@@ -685,7 +705,6 @@ export class GalleryService {
       `[getCollectList] 获取收藏列表: ${galleryType}, userId: ${userId}`
     );
 
- 
     if (pageSize < 1) {
       pageSize = DEFAULT_PAGE_SIZE;
     }
@@ -697,7 +716,7 @@ export class GalleryService {
     const count = await this.database.galleryCollect.count({
       where: {
         userId: userId,
-        item: {
+        node: {
           galleryType: galleryType,
         },
       },
@@ -707,29 +726,22 @@ export class GalleryService {
     const collects = await this.database.galleryCollect.findMany({
       where: {
         userId: userId,
-        item: {
+        node: {
           galleryType: galleryType,
         },
       },
       include: {
-        item: {
-          include: {
-            node: {
-              select: {
-                id: true,
-                originalName: true,
-                name: true,
-                fileHash: true,
-                path: true,
-                createdAt: true,
-              },
-            },
-            type: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+        node: {
+          select: {
+            id: true,
+            originalName: true,
+            name: true,
+            fileHash: true,
+            path: true,
+            createdAt: true,
+            galleryFirstType: true,
+            gallerySecondType: true,
+            galleryThirdType: true,
           },
         },
       },
@@ -741,22 +753,36 @@ export class GalleryService {
     });
 
     // 转换为 API 格式
-    const sharedwgs = collects.map((collect) => {
-      const item = collect.item;
-      const filename = item.node.originalName || item.node.name;
-      const filehash = item.node.fileHash || (this.extractHashFromPath(item.node.path) as string) || '';
-      const typeName = item.type?.name || '';
+    const sharedwgs = await Promise.all(
+      collects.map(async (collect) => {
+        const node = collect.node;
+        const filename = node.originalName || node.name;
+        const filehash =
+          node.fileHash ||
+          (this.extractHashFromPath(node.path) as string) ||
+          '';
 
-      return {
-        uuid: item.node.id,
-        filename: filename,
-        firstType: item.firstType,
-        secondType: item.secondType,
-        filehash: filehash,
-        type: typeName,
-        collect: true,
-      };
-    });
+        // 获取分类名称
+        let typeName = '';
+        if (node.gallerySecondType) {
+          const type = await this.database.galleryType.findUnique({
+            where: { id: node.gallerySecondType },
+            select: { name: true },
+          });
+          typeName = type?.name || '';
+        }
+
+        return {
+          uuid: node.id,
+          filename: filename,
+          firstType: node.galleryFirstType || 0,
+          secondType: node.gallerySecondType || 0,
+          filehash: filehash,
+          type: typeName,
+          collect: true,
+        };
+      })
+    );
 
     // 计算分页信息
     const max = Math.ceil(count / pageSize);
@@ -777,44 +803,21 @@ export class GalleryService {
 
   /**
    * 更新收藏次数
-   * @param itemId 图库项目 ID
+   * @param nodeId 文件节点 ID
    * @param delta 增量（1 或 -1）
    */
-  private async updateLikeNum(
-    itemId: string,
-    delta: number
-  ): Promise<void> {
+  private async updateLikeNum(nodeId: string, delta: number): Promise<void> {
     try {
-      // 查找图库项目
-      const item = await this.database.galleryItem.findUnique({
-        where: { id: itemId },
-        include: {
-          statistics: true,
-        },
+      // 直接更新 FileSystemNode 的收藏次数
+      await this.database.fileSystemNode.update({
+        where: { id: nodeId },
+        data: { galleryLikeNum: { increment: delta } },
       });
-
-      if (!item) {
-        this.logger.warn(`[updateLikeNum] 未找到图库项目: ${itemId}`);
-        return;
-      }
-
-      // 更新统计数据
-      if (item.statistics) {
-        await this.database.galleryStatistics.update({
-          where: { id: item.statistics.id },
-          data: { likeNum: { increment: delta } },
-        });
-      } else {
-        await this.database.galleryStatistics.create({
-          data: {
-            itemId: itemId,
-            lookNum: 0,
-            likeNum: delta > 0 ? 1 : 0,
-          },
-        });
-      }
     } catch (error) {
-      this.logger.error(`[updateLikeNum] 更新收藏次数失败: ${error.message}`, error);
+      this.logger.error(
+        `[updateLikeNum] 更新收藏次数失败: ${error.message}`,
+        error
+      );
     }
   }
 
@@ -866,42 +869,173 @@ export class GalleryService {
       throw new Error('分类类型不匹配');
     }
 
-    // 检查是否已经添加到图库
-    const existingItem = await this.database.galleryItem.findUnique({
-      where: { nodeId: nodeId },
+    // 验证一级分类存在且为一级分类（pid = 0）
+    const firstTypeRecord = await this.database.galleryType.findUnique({
+      where: { id: firstType },
     });
 
-    if (existingItem) {
+    if (!firstTypeRecord) {
+      throw new Error('一级分类不存在');
+    }
+
+    if (firstTypeRecord.pid !== 0) {
+      throw new Error('一级分类必须是顶级分类');
+    }
+
+    if (firstTypeRecord.galleryType !== galleryType) {
+      throw new Error('一级分类类型不匹配');
+    }
+
+    // 验证二级分类属于一级分类
+    if (type.pid !== firstType) {
+      throw new Error('二级分类不属于选择的一级分类');
+    }
+
+    // 检查是否已经添加到图库
+    if (node.isInGallery) {
       throw new Error('该文件已经在图库中');
     }
 
-    // 创建图库项目
-    const item = await this.database.galleryItem.create({
+    // 更新文件节点的图库属性
+    const updatedNode = await this.database.fileSystemNode.update({
+      where: { id: nodeId },
       data: {
-        nodeId: nodeId,
-        firstType: firstType,
-        secondType: secondType,
-        thirdType: thirdType,
+        isInGallery: true,
         galleryType: galleryType,
-      },
-    });
-
-    // 创建统计数据
-    await this.database.galleryStatistics.create({
-      data: {
-        itemId: item.id,
-        lookNum: 0,
-        likeNum: 0,
+        galleryFirstType: firstType,
+        gallerySecondType: secondType,
+        galleryThirdType: thirdType,
+        galleryLookNum: 0,
+        galleryLikeNum: 0,
       },
     });
 
     return {
-      id: item.id,
-      nodeId: item.nodeId,
-      firstType: item.firstType,
-      secondType: item.secondType,
-      thirdType: item.thirdType,
-      galleryType: item.galleryType,
+      id: updatedNode.id,
+      nodeId: updatedNode.id,
+      firstType: updatedNode.galleryFirstType,
+      secondType: updatedNode.gallerySecondType,
+      thirdType: updatedNode.galleryThirdType,
+      galleryType: updatedNode.galleryType,
+    };
+  }
+
+  /**
+   * 从图库中移除文件
+   * @param nodeId 文件节点 ID
+   * @param galleryType 图库类型
+   * @param userId 用户 ID
+   */
+  async removeFromGallery(
+    nodeId: string,
+    galleryType: 'drawings' | 'blocks',
+    userId: string
+  ): Promise<void> {
+    this.logger.log(
+      `[removeFromGallery] 从图库移除文件: nodeId=${nodeId}, galleryType=${galleryType}, userId=${userId}`
+    );
+
+    // 查找文件节点
+    const node = await this.database.fileSystemNode.findUnique({
+      where: { id: nodeId },
+    });
+
+    if (!node) {
+      throw new Error('文件不存在');
+    }
+
+    if (!node.isInGallery) {
+      throw new Error('文件不在图库中');
+    }
+
+    if (node.galleryType !== galleryType) {
+      throw new Error('图库类型不匹配');
+    }
+
+    // 更新文件节点，清空图库属性
+    await this.database.fileSystemNode.update({
+      where: { id: nodeId },
+      data: {
+        isInGallery: false,
+        galleryType: null,
+        galleryFirstType: null,
+        gallerySecondType: null,
+        galleryThirdType: null,
+      },
+    });
+
+    this.logger.log(`[removeFromGallery] 成功从图库移除文件: nodeId=${nodeId}`);
+  }
+
+  /**
+   * 更新图库文件的分类
+   * @param nodeId 文件节点 ID
+   * @param firstType 一级分类 ID
+   * @param secondType 二级分类 ID
+   * @param thirdType 三级分类 ID（可选）
+   * @param galleryType 图库类型
+   * @param userId 用户 ID
+   * @returns 更新后的图库项目
+   */
+  async updateGalleryItem(
+    nodeId: string,
+    firstType: number,
+    secondType: number,
+    thirdType: number | undefined,
+    galleryType: 'drawings' | 'blocks',
+    userId: string
+  ): Promise<any> {
+    this.logger.log(
+      `[updateGalleryItem] 更新图库文件分类: nodeId=${nodeId}, firstType=${firstType}, secondType=${secondType}, galleryType=${galleryType}, userId=${userId}`
+    );
+
+    // 查找文件节点
+    const node = await this.database.fileSystemNode.findUnique({
+      where: { id: nodeId },
+    });
+
+    if (!node) {
+      throw new Error('文件不存在');
+    }
+
+    if (!node.isInGallery) {
+      throw new Error('文件不在图库中');
+    }
+
+    if (node.galleryType !== galleryType) {
+      throw new Error('图库类型不匹配');
+    }
+
+    // 验证分类存在
+    const type = await this.database.galleryType.findUnique({
+      where: { id: secondType },
+    });
+
+    if (!type) {
+      throw new Error('分类不存在');
+    }
+
+    if (type.galleryType !== galleryType) {
+      throw new Error('分类类型不匹配');
+    }
+
+    // 更新文件节点的分类
+    const updatedNode = await this.database.fileSystemNode.update({
+      where: { id: nodeId },
+      data: {
+        galleryFirstType: firstType,
+        gallerySecondType: secondType,
+        galleryThirdType: thirdType,
+      },
+    });
+
+    return {
+      id: updatedNode.id,
+      nodeId: updatedNode.id,
+      firstType: updatedNode.galleryFirstType,
+      secondType: updatedNode.gallerySecondType,
+      thirdType: updatedNode.galleryThirdType,
+      galleryType: updatedNode.galleryType,
     };
   }
 }

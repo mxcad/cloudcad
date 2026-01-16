@@ -437,8 +437,9 @@ class MxCADInstanceManager {
       // 如果设置了 openFile 参数，MxCADView 会自动打开该文件
       this.mxcadView.create();
       const onOpen = () => {
-        globalThis.MxPluginContext.useFileName().fileName.value =
+        if(currentFileInfo) globalThis.MxPluginContext.useFileName().fileName.value =
           ' - ' + currentFileInfo.name;
+         currentFileInfo = null
         this.mxcadView.mxcad.off('openFileComplete', onOpen);
       };
       this.mxcadView.mxcad.on('openFileComplete', onOpen);
@@ -487,7 +488,13 @@ class MxCADInstanceManager {
         Logger.error('mxcad 对象不可用，无法打开文件');
         throw new Error('mxcad 对象不可用');
       }
-
+      const onOpen = () => {
+        if(currentFileInfo) globalThis.MxPluginContext.useFileName().fileName.value =
+          ' - ' + currentFileInfo.name;
+         currentFileInfo = null
+        this.mxcadView.mxcad.off('openFileComplete', onOpen);
+      };
+      this.mxcadView.mxcad.on('openFileComplete', onOpen);
       // 使用 openWebFile 方法打开文件
       // 这是 MxCADView 实例创建后打开文件的正确方式
       this.mxcadView.mxcad.openWebFile(fileUrl);

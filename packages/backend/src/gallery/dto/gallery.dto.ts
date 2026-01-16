@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsNumber, IsInt, Min } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -169,12 +169,14 @@ export class AddToGalleryDto {
   @IsNumber()
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   firstType: number;
 
   @ApiProperty({ description: '二级分类 ID', example: 2 })
   @IsNumber()
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   secondType: number;
 
   @ApiPropertyOptional({ description: '三级分类 ID', example: 3 })
@@ -182,5 +184,6 @@ export class AddToGalleryDto {
   @IsNumber()
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   thirdType?: number;
 }

@@ -12,6 +12,7 @@ import {
   Settings,
   SortAsc,
   Tag as TagIcon,
+  Trash2,
   X,
 } from 'lucide-react';
 import type React from 'react';
@@ -77,6 +78,13 @@ export default function Gallery() {
   const [isTypeManagementOpen, setIsTypeManagementOpen] = useState(false);
   const [showCollectOnly, setShowCollectOnly] = useState(false);
 
+  // 编辑分类模态框状态
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingFile, setEditingFile] = useState<GalleryFile | null>(null);
+  const [editFirstType, setEditFirstType] = useState<number>(-1);
+  const [editSecondType, setEditSecondType] = useState<number>(-1);
+  const [editThirdType, setEditThirdType] = useState<number>(-1);
+
   // 获取分类列表
   const fetchTypes = async () => {
     try {
@@ -86,7 +94,10 @@ export default function Gallery() {
           ? await galleryApi.getDrawingsTypes()
           : await galleryApi.getBlocksTypes();
       if (response.data?.code === 'success') {
-        setTypes(response.data.result?.allblocks || []);
+        const newTypes = response.data.result?.allblocks || [];
+        setTypes(newTypes);
+        // 分类加载完成后自动获取文件列表
+        fetchFiles(0);
       }
     } catch (error) {
       console.error('获取分类列表失败:', error);
@@ -165,10 +176,8 @@ export default function Gallery() {
 
   // 当分类或搜索关键词变化时，重新获取文件列表
   useEffect(() => {
-    if (types.length > 0) {
-      fetchFiles(0);
-    }
-  }, [selectedFirstType, selectedSecondType, selectedThirdType]);
+    fetchFiles(0);
+  }, [selectedFirstType, selectedSecondType, selectedThirdType, searchKeyword]);
 
   // 当切换"我的收藏"模式时，重置分类筛选
   useEffect(() => {
@@ -285,6 +294,120 @@ export default function Gallery() {
       } else {
         // 其他错误
         alert('收藏操作失败，请稍后重试');
+      }
+    }
+  };
+
+  // 处理从图库中移除文件
+  const handleRemoveFromGallery = async (file: GalleryFile) => {
+    if (!confirm(`确定要将 "${file.filename}" 从图库中移除吗？\n\n注意：文件本身不会被删除，只是从图库中移除。`)) {
+      return;
+    }
+
+    try {
+      const response = await galleryApi.removeFromGallery(galleryType, file.uuid);
+
+      if (response.status === 200 && response.data?.code === 'success') {
+        alert('已从图库中移除');
+        // 刷新文件列表
+        fetchFiles(pageIndex);
+      } else if (response.status === 400) {
+        const errorMessage = response.data?.message || '移除失败';
+        alert(errorMessage);
+      } else {
+        const errorMessage = response.data?.message || '移除失败，请稍后重试';
+        alert(errorMessage);
+      }
+    } catch (error: any) {
+      console.error('移除文件失败:', error);
+
+      if (error.response) {
+        const status = error.response.status;
+        const errorMessage = error.response.data?.message || '移除失败';
+
+        if (status === 400) {
+          alert(errorMessage);
+        } else if (status === 401) {
+          alert('登录已过期，请重新登录');
+        } else if (status === 500) {
+          alert('服务器内部错误，请稍后重试');
+        } else {
+          alert(`移除失败: ${errorMessage}`);
+        }
+      } else if (error.request) {
+        alert('网络错误，请检查网络连接');
+      } else {
+        alert('移除失败，请稍后重试');
+      }
+    }
+  };
+
+  // 打开编辑分类模态框
+  const handleOpenEditModal = (file: GalleryFile) => {
+    setEditingFile(file);
+    setEditFirstType(file.firstType);
+    setEditSecondType(file.secondType);
+    setEditThirdType(-1);
+    setIsEditModalOpen(true);
+  };
+
+  // 关闭编辑分类模态框
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingFile(null);
+    setEditFirstType(-1);
+    setEditSecondType(-1);
+    setEditThirdType(-1);
+  };
+
+  // 保存分类修改
+  const handleSaveEdit = async () => {
+    if (!editingFile) return;
+
+    if (editSecondType === -1) {
+      alert('请选择分类');
+      return;
+    }
+
+    try {
+      const response = await galleryApi.updateGalleryItem(galleryType, editingFile.uuid, {
+        firstType: editFirstType,
+        secondType: editSecondType,
+        thirdType: editThirdType === -1 ? undefined : editThirdType,
+      });
+
+      if (response.status === 200 && response.data?.code === 'success') {
+        alert('分类已更新');
+        handleCloseEditModal();
+        // 刷新文件列表
+        fetchFiles(pageIndex);
+      } else if (response.status === 400) {
+        const errorMessage = response.data?.message || '更新失败';
+        alert(errorMessage);
+      } else {
+        const errorMessage = response.data?.message || '更新失败，请稍后重试';
+        alert(errorMessage);
+      }
+    } catch (error: any) {
+      console.error('更新分类失败:', error);
+
+      if (error.response) {
+        const status = error.response.status;
+        const errorMessage = error.response.data?.message || '更新失败';
+
+        if (status === 400) {
+          alert(errorMessage);
+        } else if (status === 401) {
+          alert('登录已过期，请重新登录');
+        } else if (status === 500) {
+          alert('服务器内部错误，请稍后重试');
+        } else {
+          alert(`更新失败: ${errorMessage}`);
+        }
+      } else if (error.request) {
+        alert('网络错误，请检查网络连接');
+      } else {
+        alert('更新失败，请稍后重试');
       }
     }
   };
@@ -516,8 +639,33 @@ export default function Gallery() {
                             handleDownload(file);
                           }}
                           className="bg-white/90 hover:bg-white"
+                          title="下载"
                         >
                           <Download size={16} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditModal(file);
+                          }}
+                          className="bg-white/90 hover:bg-white"
+                          title="修改分类"
+                        >
+                          <Settings size={16} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFromGallery(file);
+                          }}
+                          className="bg-white/90 hover:bg-white"
+                          title="从图库移除"
+                        >
+                          <Trash2 size={16} />
                         </Button>
                       </div>
                     </div>
@@ -612,6 +760,133 @@ export default function Gallery() {
             fetchTypes();
           }}
         />
+      </Modal>
+
+      {/* 编辑分类模态框 */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">修改分类</h2>
+            <button
+              onClick={handleCloseEditModal}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {editingFile && (
+            <div className="space-y-6">
+              {/* 文件信息 */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">文件名</p>
+                <p className="text-sm font-medium text-gray-900">{editingFile.filename}</p>
+              </div>
+
+              {/* 分类选择 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  选择新分类
+                </label>
+                <div className="space-y-3">
+                  {/* 一级分类 */}
+                  <select
+                    value={editFirstType}
+                    onChange={(e) => {
+                      setEditFirstType(Number(e.target.value));
+                      setEditSecondType(-1);
+                      setEditThirdType(-1);
+                    }}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  >
+                    <option value={-1}>请选择一级分类</option>
+                    {firstLevelTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* 二级分类 */}
+                  <select
+                    value={editSecondType}
+                    onChange={(e) => {
+                      setEditSecondType(Number(e.target.value));
+                      setEditThirdType(-1);
+                    }}
+                    disabled={editFirstType === -1}
+                    className={`w-full px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
+                      editFirstType === -1
+                        ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    <option value={-1}>
+                      {editFirstType !== -1
+                        ? `请选择${types.find(t => t.id === editFirstType)?.name}的子分类`
+                        : '请先选择一级分类'}
+                    </option>
+                    {types
+                      .filter((t) => t.pid === editFirstType)
+                      .map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                  </select>
+
+                  {/* 三级分类 */}
+                  <select
+                    value={editThirdType}
+                    onChange={(e) => setEditThirdType(Number(e.target.value))}
+                    disabled={editSecondType === -1}
+                    className={`w-full px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
+                      editSecondType === -1
+                        ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    <option value={-1}>全部子分类</option>
+                    {types
+                      .filter((t) => t.pid === editSecondType)
+                      .map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 提示信息 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-700">
+                  💡 提示：选择新分类后，该文件将被移动到新的分类中。
+                </p>
+              </div>
+
+              {/* 底部按钮 */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCloseEditModal}
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={editSecondType === -1}
+                  className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );
