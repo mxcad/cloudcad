@@ -200,55 +200,6 @@ export class GalleryController {
   }
 
   /**
-   * 获取我的收藏列表
-   * 路由: GET /gallery/{galleryType}/collect
-   */
-  @Get(':galleryType/collect')
-  @ApiOperation({
-    summary: '获取我的收藏列表',
-    description: '获取当前用户的收藏列表',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-  })
-  async getCollectList(
-    @Param('galleryType') galleryType: string,
-    @Req() req: any,
-    @Res() res: Response
-  ) {
-    try {
-      this.logger.log(`[getCollectList] 获取收藏列表: ${galleryType}`);
-
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        throw new InternalServerErrorException('无效的图库类型');
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      const pageIndex = req.query.pageIndex;
-      const pageSize = parseInt(req.query.pageSize as string) || 20;
-
-      const result = await this.galleryService.getCollectList(
-        galleryType as 'drawings' | 'blocks',
-        userId,
-        pageIndex,
-        pageSize
-      );
-
-      // 绕过全局响应包装，直接返回原始 JSON 格式
-      return res.status(200).json(result);
-    } catch (error) {
-      this.logger.error('[getCollectList] 错误:', error);
-      throw error;
-    }
-  }
-
-  /**
    * 访问图块文件 (.mxweb)
    * 路由: GET /gallery/blocks/{secondType}/{firstType}/{filehash}.mxweb
    *
@@ -719,66 +670,6 @@ export class GalleryController {
         code: 'error',
         message: '服务器内部错误，请稍后重试',
       });
-    }
-  }
-
-  /**
-   * 收藏/取消收藏
-   * 路由: POST /gallery/{galleryType}/collect
-   */
-  @Post(':galleryType/collect')
-  @ApiOperation({
-    summary: '收藏/取消收藏',
-    description: '收藏或取消收藏图库文件',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '操作成功',
-  })
-  async toggleCollect(
-    @Param('galleryType') galleryType: string,
-    @Req() req: any,
-    @Body() body: { nodeId: string },
-    @Res() res: Response
-  ) {
-    try {
-      this.logger.log(
-        `[toggleCollect] 收藏操作: ${galleryType}, nodeId: ${body.nodeId}`
-      );
-
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        throw new InternalServerErrorException('无效的图库类型');
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      const isCollected = await this.galleryService.toggleCollect(
-        body.nodeId,
-        userId
-      );
-
-      return res.status(200).json({
-        code: 'success',
-        data: { collect: isCollected },
-      });
-    } catch (error) {
-      this.logger.error('[toggleCollect] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        if (error.message.includes('文件不在图库中')) {
-          return res.status(400).json({
-            code: 'error',
-            message: error.message,
-          });
-        }
-      }
-
-      throw error;
     }
   }
 

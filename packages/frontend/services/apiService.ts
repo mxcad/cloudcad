@@ -726,39 +726,6 @@ export const galleryApi = {
     return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.jpg`;
   },
 
-  // 收藏/取消收藏
-  toggleCollect: (galleryType: 'drawings' | 'blocks', itemId: string) =>
-    apiService.post<{
-      code: string;
-      data: {
-        collect: boolean;
-      };
-    }>(`/gallery/${galleryType}/collect`, { itemId }),
-
-  // 获取我的收藏列表
-  getCollectList: (galleryType: 'drawings' | 'blocks', pageIndex: number = 0, pageSize: number = 20) =>
-    apiService.get<{
-      sharedwgs: Array<{
-        uuid: string;
-        filename: string;
-        firstType: number;
-        secondType: number;
-        filehash: string;
-        type: string;
-        lookNum: number;
-        likeNum: number;
-        collect: boolean;
-      }>;
-      page: {
-        index: number;
-        size: number;
-        count: number;
-        max: number;
-        up: boolean;
-        down: boolean;
-      };
-    }>(`/gallery/${galleryType}/collect`, { params: { pageIndex, pageSize } }),
-
   // 添加文件到图库
   addToGallery: (galleryType: 'drawings' | 'blocks', params: {
     nodeId: string;

@@ -65,9 +65,6 @@ export class GalleryFileItemDto {
 
   @ApiProperty({ description: '分类名称', example: '门' })
   type: string;
-
-  @ApiProperty({ description: '是否已收藏', example: false })
-  collect: boolean;
 }
 
 /**
@@ -179,11 +176,10 @@ export class AddToGalleryDto {
   @Type(() => Number)
   secondType: number;
 
-  @ApiPropertyOptional({ description: '三级分类 ID', example: 3 })
+  @ApiPropertyOptional({ description: '三级分类 ID（可选）', example: 3 })
   @IsOptional()
   @IsNumber()
   @IsInt()
-  @Min(1)
   @Type(() => Number)
   thirdType?: number;
 }

@@ -25,7 +25,6 @@ model User {
   // 关联关系
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   nodeAccesses       FileAccess[]
-  galleryCollects    GalleryCollect[] @relation("UserGalleryCollects")
 
   @@map("users")
 }
@@ -95,7 +94,6 @@ model FileSystemNode {
   gallerySecondType Int?                      // 二级分类 ID
   galleryThirdType  Int?                      // 三级分类 ID（可选）
   galleryLookNum   Int      @default(0)      // 浏览次数
-  galleryLikeNum   Int      @default(0)      // 收藏次数
 
   // 权限与审计
   ownerId     String
@@ -107,7 +105,6 @@ model FileSystemNode {
 
   // 关联关系
   nodeAccesses FileAccess[]    @relation("NodeAccesses")
-  galleryCollects GalleryCollect[] @relation("NodeGalleryCollects")
 
   // 索引优化
   @@index([parentId])
@@ -208,21 +205,6 @@ model GalleryType {
   @@index([galleryType])
   @@index([ownerId])
   @@map("gallery_types")
-}
-
-// 图库收藏
-model GalleryCollect {
-  id        String   @id @default(cuid())
-  nodeId    String   // 关联到 FileSystemNode
-  userId    String   // 收藏用户
-  node      FileSystemNode @relation("NodeGalleryCollects", fields: [nodeId], references: [id], onDelete: Cascade)
-  user      User     @relation("UserGalleryCollects", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([nodeId, userId])
-  @@index([nodeId])
-  @@index([userId])
-  @@map("gallery_collects")
 }
 
 // 枚举类型

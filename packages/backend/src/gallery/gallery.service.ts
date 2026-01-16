@@ -191,7 +191,7 @@ export class GalleryService {
     }
 
     // 按三级分类筛选（galleryThirdType）
-    if (dto.thirdType && dto.thirdType !== 0) {
+    if (dto.thirdType !== undefined && dto.thirdType !== null && dto.thirdType !== 0) {
       const thirdTypeValue =
         typeof dto.thirdType === 'string'
           ? parseInt(dto.thirdType, 10)
@@ -229,7 +229,6 @@ export class GalleryService {
         gallerySecondType: true,
         galleryThirdType: true,
         galleryLookNum: true,
-        galleryLikeNum: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -278,7 +277,6 @@ export class GalleryService {
       gallerySecondType: number | null;
       galleryThirdType: number | null;
       galleryLookNum: number;
-      galleryLikeNum: number;
     },
     userId: string
   ): Promise<GalleryFileItemDto> {
@@ -298,16 +296,6 @@ export class GalleryService {
       typeName = type?.name || '';
     }
 
-    // 查询收藏状态
-    const collect = await this.database.galleryCollect.findUnique({
-      where: {
-        nodeId_userId: {
-          nodeId: node.id,
-          userId: userId,
-        },
-      },
-    });
-
     return {
       uuid: node.id,
       filename: filename,
@@ -315,7 +303,6 @@ export class GalleryService {
       secondType: node.gallerySecondType || 0,
       filehash: filehash,
       type: typeName,
-      collect: !!collect,
     };
   }
 
@@ -618,210 +605,6 @@ export class GalleryService {
   }
 
   /**
-   * 收藏/取消收藏
-   * @param nodeId 文件节点 ID（FileSystemNode 的 id）
-   * @param userId 用户 ID
-   * @returns 是否已收藏
-   */
-  async toggleCollect(nodeId: string, userId: string): Promise<boolean> {
-    try {
-      this.logger.log(
-        `[toggleCollect] 收藏操作: nodeId=${nodeId}, userId=${userId}`
-      );
-
-      // 查找文件节点
-      const node = await this.database.fileSystemNode.findUnique({
-        where: { id: nodeId },
-      });
-
-      if (!node) {
-        this.logger.warn(`[toggleCollect] 文件不存在: nodeId=${nodeId}`);
-        throw new Error('文件不存在');
-      }
-
-      if (!node.isInGallery) {
-        this.logger.warn(`[toggleCollect] 文件不在图库中: nodeId=${nodeId}`);
-        throw new Error('文件不在图库中');
-      }
-
-      // 查找现有的收藏记录
-      const existingCollect = await this.database.galleryCollect.findUnique({
-        where: {
-          nodeId_userId: {
-            nodeId: nodeId,
-            userId: userId,
-          },
-        },
-      });
-
-      if (existingCollect) {
-        // 取消收藏
-        this.logger.log(
-          `[toggleCollect] 取消收藏: nodeId=${nodeId}, userId=${userId}`
-        );
-        await this.database.galleryCollect.delete({
-          where: { id: existingCollect.id },
-        });
-        await this.updateLikeNum(nodeId, -1);
-        return false;
-      } else {
-        // 添加收藏
-        this.logger.log(
-          `[toggleCollect] 添加收藏: nodeId=${nodeId}, userId=${userId}`
-        );
-        await this.database.galleryCollect.create({
-          data: {
-            nodeId: nodeId,
-            userId: userId,
-          },
-        });
-        await this.updateLikeNum(nodeId, 1);
-        return true;
-      }
-    } catch (error) {
-      this.logger.error(
-        `[toggleCollect] 收藏操作失败: ${error.message}`,
-        error
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 获取我的收藏列表
-   * @param galleryType 图库类型
-   * @param userId 用户 ID
-   * @param pageIndex 页码
-   * @param pageSize 每页数量
-   * @returns 收藏列表
-   */
-  async getCollectList(
-    galleryType: 'drawings' | 'blocks',
-    userId: string,
-    pageIndex: number = 0,
-    pageSize: number = 20
-  ): Promise<GalleryFileListResponseDto> {
-    this.logger.log(
-      `[getCollectList] 获取收藏列表: ${galleryType}, userId: ${userId}`
-    );
-
-    if (pageSize < 1) {
-      pageSize = DEFAULT_PAGE_SIZE;
-    }
-    if (pageSize > MAX_PAGE_SIZE) {
-      pageSize = MAX_PAGE_SIZE;
-    }
-
-    // 查询总数
-    const count = await this.database.galleryCollect.count({
-      where: {
-        userId: userId,
-        node: {
-          galleryType: galleryType,
-        },
-      },
-    });
-
-    // 查询收藏列表
-    const collects = await this.database.galleryCollect.findMany({
-      where: {
-        userId: userId,
-        node: {
-          galleryType: galleryType,
-        },
-      },
-      include: {
-        node: {
-          select: {
-            id: true,
-            originalName: true,
-            name: true,
-            fileHash: true,
-            path: true,
-            createdAt: true,
-            galleryFirstType: true,
-            gallerySecondType: true,
-            galleryThirdType: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip: pageIndex * pageSize,
-      take: pageSize,
-    });
-
-    // 转换为 API 格式
-    const sharedwgs = await Promise.all(
-      collects.map(async (collect) => {
-        const node = collect.node;
-        const filename = node.originalName || node.name;
-        const filehash =
-          node.fileHash ||
-          (this.extractHashFromPath(node.path) as string) ||
-          '';
-
-        // 获取分类名称
-        let typeName = '';
-        if (node.gallerySecondType) {
-          const type = await this.database.galleryType.findUnique({
-            where: { id: node.gallerySecondType },
-            select: { name: true },
-          });
-          typeName = type?.name || '';
-        }
-
-        return {
-          uuid: node.id,
-          filename: filename,
-          firstType: node.galleryFirstType || 0,
-          secondType: node.gallerySecondType || 0,
-          filehash: filehash,
-          type: typeName,
-          collect: true,
-        };
-      })
-    );
-
-    // 计算分页信息
-    const max = Math.ceil(count / pageSize);
-    const page = {
-      index: pageIndex,
-      size: pageSize,
-      count: count,
-      max: max,
-      up: pageIndex > 0,
-      down: pageIndex < max - 1,
-    };
-
-    return {
-      sharedwgs,
-      page,
-    };
-  }
-
-  /**
-   * 更新收藏次数
-   * @param nodeId 文件节点 ID
-   * @param delta 增量（1 或 -1）
-   */
-  private async updateLikeNum(nodeId: string, delta: number): Promise<void> {
-    try {
-      // 直接更新 FileSystemNode 的收藏次数
-      await this.database.fileSystemNode.update({
-        where: { id: nodeId },
-        data: { galleryLikeNum: { increment: delta } },
-      });
-    } catch (error) {
-      this.logger.error(
-        `[updateLikeNum] 更新收藏次数失败: ${error.message}`,
-        error
-      );
-    }
-  }
-
-  /**
    * 添加文件到图库
    * @param nodeId 文件节点 ID
    * @param firstType 一级分类 ID
@@ -906,7 +689,6 @@ export class GalleryService {
         gallerySecondType: secondType,
         galleryThirdType: thirdType,
         galleryLookNum: 0,
-        galleryLikeNum: 0,
       },
     });
 

@@ -6,7 +6,6 @@ import {
   Routes,
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { AssetLibrary } from './pages/AssetLibrary';
 
 import { CADEditorDirect } from './pages/CADEditorDirect';
 import { EmailVerification } from './pages/EmailVerification';
