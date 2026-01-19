@@ -614,6 +614,15 @@ export class MxCadService {
   }
 
   /**
+   * 根据节点 ID 查找文件节点
+   * @param nodeId 文件系统节点 ID
+   * @returns 文件节点或 null
+   */
+  async getFileSystemNodeByNodeId(nodeId: string): Promise<any | null> {
+    return await this.fileSystemNodeService.findById(nodeId);
+  }
+
+  /**
    * 查询缩略图是否存在
    * 查询逻辑：先检查 MinIO 中是否存在，如果不存在则检查本地文件系统
    * 缩略图文件名格式：{hash}.{图片后缀}

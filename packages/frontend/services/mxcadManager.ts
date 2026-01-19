@@ -1,6 +1,8 @@
 ﻿import { MxCADView } from 'mxcad-app';
 import { Logger } from '../utils/mxcadUtils';
+import { apiService } from './apiService';
 import { MxFun } from 'mxdraw';
+import { McGePoint3d, MxCpp } from 'mxcad';
 
 // 当前打开的文件信息（用于返回逻辑）
 let currentFileInfo: {
@@ -405,12 +407,123 @@ class MxCADInstanceManager {
 
     return this.mxcadView!;
   }
+
+  /**
+   * 获取图框截图并生成缩略图
+   */
+  private async generateThumbnail(): Promise<string | undefined> {
+    try {
+      const mxcad = MxCpp.getCurrentMxCAD();
+      mxcad.setAttribute({ ShowCoordinate: false });
+
+      const { minPt, maxPt } = mxcad
+        .getDatabase()
+        .currentSpace.getBoundingBox();
+
+      const w = Math.abs(minPt.x - maxPt.x);
+      const h = Math.abs(minPt.y - maxPt.y);
+
+      if (w < 1 || h < 1) {
+        Logger.warn('图纸范围太小，无法生成缩略图');
+        return undefined;
+      }
+
+      // 固定宽度，按原始宽高比计算高度
+      const targetWidth = 800;
+      let jpgWidth: number;
+      let jpgHeight: number;
+
+      if (w <= targetWidth) {
+        jpgWidth = w;
+        jpgHeight = h;
+      } else {
+        jpgWidth = targetWidth;
+        jpgHeight = targetWidth * (h / w);
+      }
+
+      return new Promise<string | undefined>((resolve, reject) => {
+        mxcad.mxdraw.createCanvasImageData(
+          (imageData: string) => {
+            mxcad.setAttribute({ ShowCoordinate: true });
+            resolve(imageData);
+          },
+          {
+            width: jpgWidth,
+            height: jpgHeight,
+            range_pt1: minPt.toVector3(),
+            range_pt2: maxPt.toVector3(),
+          }
+        );
+      });
+    } catch (error) {
+      Logger.error('生成缩略图失败', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * 上传缩略图
+   */
+  private async uploadThumbnail(
+    nodeId: string,
+    imageData: string
+  ): Promise<boolean> {
+    try {
+      const blob = this.dataURLtoBlob(imageData);
+      const formData = new FormData();
+      formData.append('file', blob, 'thumbnail.png');
+
+      await apiService.uploadThumbnail(nodeId, formData);
+      Logger.success('缩略图上传成功');
+      return true;
+    } catch (error) {
+      Logger.error('缩略图上传失败', error);
+      return false;
+    }
+  }
+
+  /**
+   * 将 DataURL 转换为 Blob
+   */
+  private dataURLtoBlob(dataURL: string): Blob {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+
   private _openFile() {
-      const onOpen = () => {
-        if(currentFileInfo) globalThis.MxPluginContext.useFileName().fileName.value =
-          ' - ' + currentFileInfo.name;
+      const onOpen = async () => {
+        if(currentFileInfo) {
+          globalThis.MxPluginContext.useFileName().fileName.value =
+            ' - ' + currentFileInfo.name;
+          
+          // 查询缩略图
+          try {
+            const fileId = currentFileInfo.fileId;
+            const thumbnailResult = await apiService.checkThumbnail(fileId);
+            
+            // 如果缩略图不存在，生成并上传
+            if (!thumbnailResult.data.exists) {
+              Logger.info('缩略图不存在，开始生成...');
+              const imageData = await this.generateThumbnail();
+      
+              if (imageData) {
+                Logger.info('缩略图生成成功，开始上传...');
+                await this.uploadThumbnail(fileId, imageData);
+              }
+            }
+          } catch (error) {
+            Logger.error('缩略图处理失败', error);
+          }
+        }
          currentFileInfo = null
-         
+        
         this.mxcadView.mxcad.off('openFileComplete', onOpen);
       };
       this.mxcadView.mxcad.on('openFileComplete', onOpen);
@@ -429,7 +542,7 @@ class MxCADInstanceManager {
       const viewOptions: any = {
         rootContainer: containerManager.getContainer(),
       };
-
+  
       // 第一次初始化时传入 mxweb 文件 URL
       // 注意：只有第一次创建实例时才设置 openFile 参数
       // 后续文件切换应该使用 openWebFile 方法
@@ -465,7 +578,6 @@ class MxCADInstanceManager {
     if (!this.mxcadView || !this.isInitialized) {
       throw new Error('MxCADView 实例未初始化');
     }
-
     try {
       // 检查当前是否已有打开的文件
       const currentFileName = this.getCurrentFileName();

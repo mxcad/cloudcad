@@ -195,6 +195,25 @@ class ApiService {
   ): Promise<AxiosResponse<import('../types/api').CheckReferenceExistsResult>> {
     return this.post(`/mxcad/file/${fileHash}/check-reference`, { fileName });
   }
+
+  // 查询缩略图是否存在
+  async checkThumbnail(
+    nodeId: string
+  ): Promise<AxiosResponse<{
+    exists: boolean;
+  }>> {
+    return this.get(`/mxcad/thumbnail/${nodeId}`);
+  }
+
+  // 上传缩略图
+  async uploadThumbnail(
+    nodeId: string,
+    formData: FormData
+  ): Promise<AxiosResponse<any>> {
+    return this.post(`/mxcad/thumbnail/${nodeId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
 }
 
 // 创建 API 服务实例

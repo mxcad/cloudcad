@@ -730,6 +730,34 @@ export class FileSystemNodeService {
   }
 
   /**
+   * 根据节点 ID 查找文件节点
+   * @param nodeId 节点 ID
+   * @returns 文件节点，如果不存在则返回 null
+   */
+  async findById(nodeId: string): Promise<any | null> {
+    try {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: {
+          id: true,
+          name: true,
+          fileHash: true,
+          isFolder: true,
+          originalName: true,
+        },
+      });
+
+      return node;
+    } catch (error) {
+      this.logger.error(
+        `根据节点 ID 查找节点失败: ${error.message}`,
+        error.stack
+      );
+      return null;
+    }
+  }
+
+  /**
    * 根据存储路径查找节点（用于路径转换）
    * @param storagePath MinIO 存储路径
    * @returns 节点或 null
