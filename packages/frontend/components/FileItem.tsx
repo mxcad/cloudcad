@@ -11,7 +11,7 @@ import {
   getFileIconComponent,
 } from './FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
-import { formatDate, formatFileSize, getCadThumbnailUrl, getOriginalFileUrl } from '../utils/fileUtils';
+import { formatDate, formatFileSize, getCadThumbnailUrl, getThumbnailUrl, getOriginalFileUrl } from '../utils/fileUtils';
 import { AlertTriangle, Upload, Eye } from 'lucide-react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
@@ -47,6 +47,67 @@ interface FileItemProps {
   onDrop?: (e: React.DragEvent, node: FileSystemNode) => void;
   isDropTarget?: boolean;
 }
+
+// 通用缩略图组件
+interface ThumbnailProps {
+  node: FileSystemNode;
+  size: number;
+  onPreview?: (src: string) => void;
+}
+
+const Thumbnail: React.FC<ThumbnailProps> = ({ node, size, onPreview }) => {
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const isImage = !node.isFolder && ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
+    node.extension?.toLowerCase() || ''
+  );
+  const isCad = !node.isFolder && ['.dwg', '.dxf'].includes(
+    node.extension?.toLowerCase() || ''
+  );
+
+  if (node.isFolder || (!isImage && !isCad)) {
+    return getFileIconComponent(node, size);
+  }
+
+  if (imageLoadError) {
+    return getFileIconComponent(node, size);
+  }
+
+  const thumbnailSrc = isImage ? getThumbnailUrl(node) : getCadThumbnailUrl(node);
+  const previewSrc = isImage ? getOriginalFileUrl(node) : thumbnailSrc;
+
+  return (
+    <div className="relative w-full h-full group">
+      <img
+        src={thumbnailSrc}
+        alt={node.name}
+        className="w-full h-full object-contain rounded-lg bg-slate-50"
+        style={{ width: size, height: size }}
+        onError={() => setImageLoadError(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview?.(previewSrc);
+        }}
+      />
+      {onPreview && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreview(previewSrc);
+          }}
+          className="absolute inset-0 flex items-center justify-center
+            bg-black/0 group-hover:bg-black/20
+            transition-all duration-200 opacity-0 group-hover:opacity-100"
+          title="查看原图"
+          style={{ width: size, height: size }}
+        >
+          <div className="p-2 bg-white/90 rounded-full shadow-lg">
+            <Eye size={Math.max(16, size / 4)} className="text-slate-700" />
+          </div>
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const FileItem: React.FC<FileItemProps> = ({
   node,
@@ -334,74 +395,14 @@ export const FileItem: React.FC<FileItemProps> = ({
               ${showSelection ? 'scale-105' : ''}
             `}
           >
-                            {/* 图片文件显示缩略图 */}
-                            {!node.isFolder &&
-                            ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
-                              node.extension?.toLowerCase() || ''
-                                                        ) ? (
-                                                          imageLoadError ? (
-                                                            getFileIconComponent(node, 64)
-                                                          ) : (
-                                                            <div className="relative w-full h-full group">
-                                                              <img
-                                                                src={getThumbnailUrl(node)}
-                                                                alt={node.name}
-                                                                className="w-full h-full object-contain rounded-lg bg-slate-50 cursor-pointer"
-                                                                onError={() => setImageLoadError(true)}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                              />
-                                                              {/* 眼睛图标 - 查看原图 */}
-                                                              <button
-                                                                onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  setPreviewImageSrc(getOriginalFileUrl(node));
-                                                                  setIsPreviewOpen(true);
-                                                                }}
-                                                                className="absolute inset-0 flex items-center justify-center
-                                                                  bg-black/0 group-hover:bg-black/20
-                                                                  transition-all duration-200 opacity-0 group-hover:opacity-100"
-                                                                title="查看原图"
-                                                              >
-                                                                <div className="p-2 bg-white/90 rounded-full shadow-lg">
-                                                                  <Eye size={24} className="text-slate-700" />
-                                                                </div>
-                                                              </button>
-                                                            </div>
-                                                          )
-                                                        ) : !node.isFolder && ['.dwg', '.dxf'].includes(              node.extension?.toLowerCase() || ''
-            ) ? (
-              imageLoadError ? (
-                getFileIconComponent(node, 64)
-              ) : (
-                <div className="relative w-full h-full group">
-                  <img
-                    src={getCadThumbnailUrl(node)}
-                    alt={node.name}
-                    className="w-full h-full object-contain rounded-lg bg-slate-50 cursor-pointer"
-                    onError={() => setImageLoadError(true)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  {/* 眼睛图标 - 查看原图 */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewImageSrc(getOriginalFileUrl(node));
-                      setIsPreviewOpen(true);
-                    }}
-                    className="absolute inset-0 flex items-center justify-center
-                      bg-black/0 group-hover:bg-black/20
-                      transition-all duration-200 opacity-0 group-hover:opacity-100"
-                    title="查看原图"
-                  >
-                    <div className="p-2 bg-white/90 rounded-full shadow-lg">
-                      <Eye size={24} className="text-slate-700" />
-                    </div>
-                  </button>
-                </div>
-              )
-            ) : (
-              getFileIconComponent(node, 64)
-            )}
+            <Thumbnail
+              node={node}
+              size={64}
+              onPreview={(src) => {
+                setPreviewImageSrc(src);
+                setIsPreviewOpen(true);
+              }}
+            />
           </div>
 
           {/* 文件名 */}
@@ -833,37 +834,15 @@ export const FileItem: React.FC<FileItemProps> = ({
 
       {/* 图标 */}
       <div className="w-10 h-10 flex-shrink-0">
-        {/* 图片文件显示缩略图 */}
-        {!node.isFolder &&
-        ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
-          node.extension?.toLowerCase() || ''
-        ) ? (
-          imageLoadError ? (
-            getFileIconComponent(node, 40)
-          ) : (
-            <img
-              src={getThumbnailUrl(node)}
-              alt={node.name}
-              className="w-full h-full object-contain rounded-lg bg-slate-50"
-              onError={() => setImageLoadError(true)}
-            />
-          )
-                    ) : !node.isFolder && ['.dwg', '.dxf'].includes(
-                      node.extension?.toLowerCase() || ''
-                    ) ? (
-                      imageLoadError ? (
-                        getFileIconComponent(node, 40)
-                      ) : (
-                        <img
-                          src={getCadThumbnailUrl(node)}
-                          alt={node.name}
-                          className="w-full h-full object-contain rounded-lg bg-slate-50"
-                          onError={() => setImageLoadError(true)}
-                        />
-                      )
-                    ) : (
-                      getFileIconComponent(node, 40)
-                    )}      </div>
+        <Thumbnail
+          node={node}
+          size={40}
+          onPreview={(src) => {
+            setPreviewImageSrc(src);
+            setIsPreviewOpen(true);
+          }}
+        />
+      </div>
 
       {/* 文件信息 */}
       <div className="flex-1 min-w-0">
@@ -1104,6 +1083,14 @@ export const FileItem: React.FC<FileItemProps> = ({
           </>
         )}
       </div>
+
+      {/* 图片预览模态框 */}
+      <ImagePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        src={previewImageSrc}
+        alt={node.name}
+      />
     </div>
   );
 };

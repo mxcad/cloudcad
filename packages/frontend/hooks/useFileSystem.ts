@@ -116,7 +116,19 @@ export const useFileSystem = () => {
   // 使用 ref 标志来控制是否应该加载数据，避免循环调用
   const shouldLoadDataRef = useRef(false);
 
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  // 从 localStorage 读取保存的视图模式
+  const getInitialViewMode = (): 'grid' | 'list' => {
+    if (typeof window === 'undefined') return 'list';
+    const saved = localStorage.getItem('fileViewMode');
+    return saved === 'grid' || saved === 'list' ? saved : 'list';
+  };
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(getInitialViewMode);
+
+  // 视图模式变化时保存到 localStorage
+  useEffect(() => {
+    localStorage.setItem('fileViewMode', viewMode);
+  }, [viewMode]);
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
 
