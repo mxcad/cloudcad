@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { mxcadApp } from 'mxcad-app';
 import { apiService } from '../services/apiService';
 import { Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
+import { initMxCadConfig } from '../services/mxcadManager';
 
 /**
  * MxCAD 配置管理 Hook
@@ -10,37 +10,20 @@ import { Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
 export const useMxCadConfig = () => {
   const [configInitialized, setConfigInitialized] = useState(false);
 
-  const initMxCadConfig = () => {
+  const initConfig = async () => {
     try {
-      const configUrl = window.location.origin;
-
-      mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
-      mxcadApp.initConfig({
-        uiConfig: `${configUrl}/ini/myUiConfig.json`,
-        sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
-        serverConfig: `${configUrl}/ini/myServerConfig.json`,
-        quickCommandConfig: `${configUrl}/ini/myQuickCommand.json`,
-        themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`,
-      });
-      Logger.success('MxCAD 配置初始化成功');
-      return true;
+      const success = await initMxCadConfig();
+      setConfigInitialized(success);
+      return success;
     } catch (error) {
       ErrorHandler.handle(error, 'MxCAD 配置初始化');
-      try {
-        mxcadApp.initConfig({});
-        Logger.success('MxCAD 默认配置初始化成功');
-        return true;
-      } catch (defaultError) {
-        ErrorHandler.handle(defaultError, 'MxCAD 默认配置初始化');
-        return false;
-      }
+      return false;
     }
   };
 
   useEffect(() => {
     if (!configInitialized) {
-      const success = initMxCadConfig();
-      setConfigInitialized(success);
+      initConfig();
     }
   }, [configInitialized]);
 

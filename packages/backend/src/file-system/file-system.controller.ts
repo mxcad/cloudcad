@@ -368,7 +368,9 @@ export class FileSystemController {
     let storagePath = node.path;
     if (node.path.startsWith('files/')) {
       if (node.fileHash) {
-        storagePath = `mxcad/file/${node.fileHash}/${node.name}`;
+        // 使用与 MxCAD 缩略图上传一致的路径格式: {hash}.{extension}
+        const extension = node.extension?.toLowerCase() || '';
+        storagePath = `mxcad/file/${node.fileHash}${extension}`;
         this.logger.log(`路径转换: ${node.path} -> ${storagePath}`);
       }
     }

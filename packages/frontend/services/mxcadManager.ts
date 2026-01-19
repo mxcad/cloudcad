@@ -405,7 +405,16 @@ class MxCADInstanceManager {
 
     return this.mxcadView!;
   }
-
+  private _openFile() {
+      const onOpen = () => {
+        if(currentFileInfo) globalThis.MxPluginContext.useFileName().fileName.value =
+          ' - ' + currentFileInfo.name;
+         currentFileInfo = null
+         
+        this.mxcadView.mxcad.off('openFileComplete', onOpen);
+      };
+      this.mxcadView.mxcad.on('openFileComplete', onOpen);
+  }
   private async createInstance(openFile?: string): Promise<void> {
     try {
       Logger.info('创建新的 MxCADView 实例', { openFile });
@@ -436,13 +445,7 @@ class MxCADInstanceManager {
       // 使用 viewOptions 创建实例
       // 如果设置了 openFile 参数，MxCADView 会自动打开该文件
       this.mxcadView.create();
-      const onOpen = () => {
-        if(currentFileInfo) globalThis.MxPluginContext.useFileName().fileName.value =
-          ' - ' + currentFileInfo.name;
-         currentFileInfo = null
-        this.mxcadView.mxcad.off('openFileComplete', onOpen);
-      };
-      this.mxcadView.mxcad.on('openFileComplete', onOpen);
+      this._openFile()
       // 监听 MxCAD 应用创建完成事件
       MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
         this.isInitialized = true;
@@ -488,13 +491,7 @@ class MxCADInstanceManager {
         Logger.error('mxcad 对象不可用，无法打开文件');
         throw new Error('mxcad 对象不可用');
       }
-      const onOpen = () => {
-        if(currentFileInfo) globalThis.MxPluginContext.useFileName().fileName.value =
-          ' - ' + currentFileInfo.name;
-         currentFileInfo = null
-        this.mxcadView.mxcad.off('openFileComplete', onOpen);
-      };
-      this.mxcadView.mxcad.on('openFileComplete', onOpen);
+      this._openFile()
       // 使用 openWebFile 方法打开文件
       // 这是 MxCADView 实例创建后打开文件的正确方式
       this.mxcadView.mxcad.openWebFile(fileUrl);

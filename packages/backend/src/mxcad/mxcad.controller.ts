@@ -1182,6 +1182,168 @@ export class MxCadController {
   }
 
   /**
+   * 查询缩略图是否存在
+   *
+   * 查询逻辑：先检查 MinIO 中是否存在缩略图，如果不存在则检查本地文件系统
+   * 缩略图文件名格式：{hash}.{图片后缀}
+   *
+   * @param fileHash 文件哈希值（DWG 文件的 hash）
+   * @returns 缩略图信息
+   */
+  @Get('thumbnail/:hash')
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 0 },
+        message: { type: 'string', example: 'ok' },
+        data: {
+          type: 'object',
+          properties: {
+            exists: { type: 'boolean', description: '缩略图是否存在' },
+            location: {
+              type: 'string',
+              enum: ['minio', 'local', 'none'],
+              description: '存储位置',
+            },
+            fileName: { type: 'string', description: '文件名' },
+            mimeType: { type: 'string', description: 'MIME 类型' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+  })
+  async checkThumbnail(@Param('hash') fileHash: string, @Res() res: Response) {
+    this.logger.log(`[checkThumbnail] 查询缩略图: ${fileHash}`);
+
+    // 验证哈希值格式
+    if (!/^[a-f0-9]{32}$/i.test(fileHash)) {
+      return res.status(400).json({
+        code: -1,
+        message: '无效的文件哈希格式',
+      });
+    }
+
+    try {
+      const result = await this.mxCadService.checkThumbnailExists(fileHash);
+
+      return res.json({
+        code: 0,
+        message: 'ok',
+        data: result,
+      });
+    } catch (error) {
+      this.logger.error(
+        `[checkThumbnail] 查询缩略图失败: ${error.message}`,
+        error.stack
+      );
+      return res.status(500).json({
+        code: -1,
+        message: '查询缩略图失败',
+      });
+    }
+  }
+
+  /**
+   * 上传缩略图
+   *
+   * 上传到本地和 MinIO 相同的位置，并重命名为 {hash}.{图片后缀}
+   * DWG 转 mxweb 文件的 hash 与 DWG 的 hash 一致
+   *
+   * @param fileHash 文件哈希值（DWG 文件的 hash）
+   * @param file 上传的缩略图文件
+   * @returns 上传结果
+   */
+  @Post('thumbnail/:hash')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 200,
+    description: '上传成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 0 },
+        message: { type: 'string', example: 'ok' },
+        data: {
+          type: 'object',
+          properties: {
+            fileName: { type: 'string', description: '文件名' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '上传失败',
+  })
+  async uploadThumbnail(
+    @Param('hash') fileHash: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ) {
+    this.logger.log(`[uploadThumbnail] 上传缩略图: ${fileHash}`);
+
+    // 验证文件是否存在
+    if (!file) {
+      return res.status(400).json({
+        code: -1,
+        message: '缺少文件',
+      });
+    }
+
+    // 验证哈希值格式
+    if (!/^[a-f0-9]{32}$/i.test(fileHash)) {
+      return res.status(400).json({
+        code: -1,
+        message: '无效的文件哈希格式',
+      });
+    }
+
+    try {
+      const result = await this.mxCadService.uploadThumbnail(
+        fileHash,
+        file.path
+      );
+
+      if (result.success) {
+        return res.json({
+          code: 0,
+          message: result.message,
+          data: {
+            fileName: result.fileName,
+          },
+        });
+      } else {
+        return res.status(500).json({
+          code: -1,
+          message: result.message,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `[uploadThumbnail] 上传缩略图失败: ${error.message}`,
+        error.stack
+      );
+      return res.status(500).json({
+        code: -1,
+        message: '上传缩略图失败',
+      });
+    }
+  }
+
+  /**
    * 上传图片
    */
   @Post('up_image')

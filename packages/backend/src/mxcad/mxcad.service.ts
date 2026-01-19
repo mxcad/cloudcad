@@ -10,6 +10,7 @@ import {
   ExternalReferenceStats,
   ExternalReferenceInfo,
 } from './types/external-reference.types';
+import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
 
@@ -610,5 +611,242 @@ export class MxCadService {
    */
   async getFileSystemNodeByPath(storagePath: string): Promise<any | null> {
     return await this.fileSystemNodeService.findByPath(storagePath);
+  }
+
+  /**
+   * 查询缩略图是否存在
+   * 查询逻辑：先检查 MinIO 中是否存在，如果不存在则检查本地文件系统
+   * 缩略图文件名格式：{hash}.{图片后缀}
+   * @param fileHash 文件哈希值（DWG 文件的 hash）
+   * @returns 缩略图信息（是否存在、存储位置、文件名）
+   */
+  async checkThumbnailExists(fileHash: string): Promise<{
+    exists: boolean;
+    location: 'minio' | 'local' | 'none';
+    fileName?: string;
+    mimeType?: string;
+  }> {
+    try {
+      // 验证哈希值格式
+      if (!this.isValidFileHash(fileHash)) {
+        this.logger.warn(
+          `[checkThumbnailExists] 无效的文件哈希格式: ${fileHash}`
+        );
+        return {
+          exists: false,
+          location: 'none',
+        };
+      }
+
+      // 支持的图片后缀
+      const imageExtensions = [
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.bmp',
+        '.webp',
+      ];
+
+      // 1. 先检查 MinIO 中是否存在缩略图
+      // MinIO 路径格式：mxcad/file/{hash}.{ext}
+      for (const ext of imageExtensions) {
+        const minioPath = `mxcad/file/${fileHash}${ext}`;
+        const existsInMinio = await this.minioSyncService.fileExists(minioPath);
+
+        if (existsInMinio) {
+          this.logger.log(
+            `[checkThumbnailExists] 缩略图存在于 MinIO: ${minioPath}`
+          );
+          return {
+            exists: true,
+            location: 'minio',
+            fileName: `${fileHash}${ext}`,
+            mimeType: this.getMimeType(ext),
+          };
+        }
+      }
+
+      // 2. 如果 MinIO 中不存在，检查本地文件系统
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
+
+      for (const ext of imageExtensions) {
+        const localPath = path.join(uploadPath, `${fileHash}${ext}`);
+
+        try {
+          await fsPromises.access(localPath);
+          this.logger.log(
+            `[checkThumbnailExists] 缩略图存在于本地: ${localPath}`
+          );
+          return {
+            exists: true,
+            location: 'local',
+            fileName: `${fileHash}${ext}`,
+            mimeType: this.getMimeType(ext),
+          };
+        } catch (error) {
+          // 文件不存在，继续检查下一个后缀
+          continue;
+        }
+      }
+
+      // 3. 都不存在
+      this.logger.log(`[checkThumbnailExists] 缩略图不存在: ${fileHash}`);
+      return {
+        exists: false,
+        location: 'none',
+      };
+    } catch (error) {
+      this.logger.error(
+        `[checkThumbnailExists] 查询缩略图失败: ${error.message}`,
+        error.stack
+      );
+      return {
+        exists: false,
+        location: 'none',
+      };
+    }
+  }
+
+  /**
+   * 上传缩略图
+   * 上传到本地和 MinIO 相同的位置，并重命名为 {hash}.{图片后缀}
+   * @param fileHash 文件哈希值（DWG 文件的 hash）
+   * @param filePath 上传的缩略图文件路径
+   * @returns 上传结果
+   */
+  async uploadThumbnail(
+    fileHash: string,
+    filePath: string
+  ): Promise<{ success: boolean; message: string; fileName?: string }> {
+    try {
+      // 验证哈希值格式
+      if (!this.isValidFileHash(fileHash)) {
+        return {
+          success: false,
+          message: '无效的文件哈希格式',
+        };
+      }
+
+      // 验证文件是否存在
+      if (!fs.existsSync(filePath)) {
+        return {
+          success: false,
+          message: '上传文件不存在',
+        };
+      }
+
+      // 获取文件扩展名
+      const ext = path.extname(filePath).toLowerCase();
+
+      // 验证是否为支持的图片格式
+      const supportedExtensions = [
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.bmp',
+        '.webp',
+      ];
+      if (!supportedExtensions.includes(ext)) {
+        return {
+          success: false,
+          message: `不支持的图片格式: ${ext}`,
+        };
+      }
+
+      // 构建目标文件名
+      const targetFileName = `${fileHash}${ext}`;
+      const uploadPath =
+        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        path.join(process.cwd(), 'uploads');
+      const targetLocalPath = path.join(uploadPath, targetFileName);
+      const targetMinioPath = `mxcad/file/${targetFileName}`;
+
+      // 1. 上传到本地文件系统
+      try {
+        // 如果目标文件已存在，先删除
+        if (fs.existsSync(targetLocalPath)) {
+          fs.unlinkSync(targetLocalPath);
+          this.logger.log(
+            `[uploadThumbnail] 删除已存在的本地缩略图: ${targetLocalPath}`
+          );
+        }
+
+        // 拷贝文件到目标位置
+        fs.copyFileSync(filePath, targetLocalPath);
+        this.logger.log(
+          `[uploadThumbnail] 缩略图上传到本地成功: ${filePath} -> ${targetLocalPath}`
+        );
+      } catch (error) {
+        this.logger.error(
+          `[uploadThumbnail] 上传到本地文件系统失败: ${error.message}`,
+          error.stack
+        );
+        return {
+          success: false,
+          message: `上传到本地失败: ${error.message}`,
+        };
+      }
+
+      // 2. 上传到 MinIO
+      try {
+        const success = await this.minioSyncService.syncFileToMinio(
+          targetLocalPath,
+          targetMinioPath
+        );
+
+        if (!success) {
+          this.logger.warn(
+            `[uploadThumbnail] 上传到 MinIO 失败，但本地上传成功`
+          );
+          // MinIO 上传失败不影响整体结果，因为本地已有文件
+        } else {
+          this.logger.log(
+            `[uploadThumbnail] 缩略图上传到 MinIO 成功: ${targetMinioPath}`
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `[uploadThumbnail] 上传到 MinIO 失败: ${error.message}`,
+          error.stack
+        );
+        // MinIO 上传失败不影响整体结果
+      }
+
+      return {
+        success: true,
+        message: '缩略图上传成功',
+        fileName: targetFileName,
+      };
+    } catch (error) {
+      this.logger.error(
+        `[uploadThumbnail] 上传缩略图失败: ${error.message}`,
+        error.stack
+      );
+      return {
+        success: false,
+        message: `上传失败: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * 根据文件扩展名获取 MIME 类型
+   * @param ext 文件扩展名（包含点号，如 .png）
+   * @returns MIME 类型
+   */
+  private getMimeType(ext: string): string {
+    const mimeTypes: Record<string, string> = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+      '.webp': 'image/webp',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
   }
 }

@@ -2,9 +2,13 @@
  * 日志工具
  */
 export class Logger {
-  static info(message: string, ...args: any[]): void {}
+  static info(message: string, ...args: any[]): void {
+    console.log(message, ...args);
+  }
 
-  static error(message: string, ...args: any[]): void {}
+  static error(message: string, ...args: any[]): void {
+    console.error(message, ...args);
+  }
 
   static warn(message: string, ...args: any[]): void {}
 

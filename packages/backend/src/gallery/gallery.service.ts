@@ -191,7 +191,11 @@ export class GalleryService {
     }
 
     // 按三级分类筛选（galleryThirdType）
-    if (dto.thirdType !== undefined && dto.thirdType !== null && dto.thirdType !== 0) {
+    if (
+      dto.thirdType !== undefined &&
+      dto.thirdType !== null &&
+      dto.thirdType !== 0
+    ) {
       const thirdTypeValue =
         typeof dto.thirdType === 'string'
           ? parseInt(dto.thirdType, 10)
