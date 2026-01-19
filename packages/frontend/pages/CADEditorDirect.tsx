@@ -143,10 +143,37 @@ export const CADEditorDirect: React.FC = () => {
         // 设置当前文件信息和 navigate 函数（用于返回命令）
         const { setCurrentFileInfo, setNavigateFunction } =
           await import('../services/mxcadManager');
+
+        // 获取项目根节点 ID
+        let projectId = file.parentId || null;
+        if (!file.isRoot && file.parentId) {
+          try {
+            const rootResponse = await apiService.get(
+              `/file-system/nodes/${file.id}/root`
+            );
+            if (rootResponse.data?.id) {
+              projectId = rootResponse.data.id;
+            }
+          } catch (error) {
+            console.error('获取根节点失败:', error);
+            // 失败时使用 parentId 作为后备
+          }
+        } else if (file.isRoot) {
+          projectId = file.id;
+        }
+
+        console.log('========== 设置文件信息 ==========');
+        console.log('file.id:', file.id);
+        console.log('file.name:', file.name);
+        console.log('file.parentId:', file.parentId);
+        console.log('file.isRoot:', file.isRoot);
+        console.log('计算得到的 projectId:', projectId);
+        console.log('===================================');
+
         setCurrentFileInfo({
           fileId: file.id,
           parentId: file.parentId || null,
-          projectId: file.parentId || null, // 向上查找项目根节点
+          projectId,
           name: file.name,
         });
         setNavigateFunction(navigate);

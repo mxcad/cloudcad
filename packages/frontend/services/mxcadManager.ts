@@ -46,11 +46,13 @@ export function clearCurrentFileInfo() {
 }
 
 MxFun.addCommand('return-to-cloud-map-management', () => {
-  Logger.info('执行返回命令', { currentFileInfo });
+  Logger.info('========== 执行返回命令 ==========');
+  Logger.info('currentFileInfo:', JSON.stringify(currentFileInfo, null, 2));
 
   if (!currentFileInfo) {
     Logger.warn('当前文件信息不存在，返回项目列表');
     if (navigateFunction) {
+      Logger.info('调用 navigateFunction("/projects")');
       navigateFunction('/projects');
     } else {
       console.warn('navigate 函数未设置，无法返回');
@@ -59,31 +61,38 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
   }
 
   const { fileId, parentId, projectId } = currentFileInfo;
+  Logger.info(`解析结果: fileId=${fileId}, parentId=${parentId}, projectId=${projectId}`);
 
   // 优先返回到文件所在的父文件夹
   if (parentId) {
     // 如果有项目 ID，返回到项目内的文件夹
     if (projectId) {
-      Logger.info(`返回到项目文件夹: /projects/${projectId}/files/${parentId}`);
+      const targetPath = `/projects/${projectId}/files/${parentId}`;
+      Logger.info(`路径A - 有parentId和projectId: ${targetPath}`);
       if (navigateFunction) {
-        navigateFunction(`/projects/${projectId}/files/${parentId}`);
+        Logger.info('调用 navigateFunction(pathA)');
+        navigateFunction(targetPath);
       } else {
         console.warn('navigate 函数未设置，无法返回');
       }
     } else {
       // 如果没有项目 ID，尝试直接使用 parentId 作为项目 ID
-      Logger.info(`返回到项目文件夹: /projects/${parentId}/files`);
+      const targetPath = `/projects/${parentId}/files`;
+      Logger.info(`路径B - 有parentId无projectId: ${targetPath}`);
       if (navigateFunction) {
-        navigateFunction(`/projects/${parentId}/files`);
+        Logger.info('调用 navigateFunction(pathB)');
+        navigateFunction(targetPath);
       } else {
         console.warn('navigate 函数未设置，无法返回');
       }
     }
   } else if (projectId) {
     // 如果没有父文件夹但有项目 ID，返回到项目根目录
-    Logger.info(`返回到项目根目录: /projects/${projectId}/files`);
+    const targetPath = `/projects/${projectId}/files`;
+    Logger.info(`路径C - 无parentId有projectId: ${targetPath}`);
     if (navigateFunction) {
-      navigateFunction(`/projects/${projectId}/files`);
+      Logger.info('调用 navigateFunction(pathC)');
+      navigateFunction(targetPath);
     } else {
       console.warn('navigate 函数未设置，无法返回');
     }
@@ -91,11 +100,13 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
     // 最后备用：返回项目列表
     Logger.warn('无法确定返回路径，返回项目列表');
     if (navigateFunction) {
+      Logger.info('调用 navigateFunction("/projects")');
       navigateFunction('/projects');
     } else {
       console.warn('navigate 函数未设置，无法返回');
     }
   }
+  Logger.info('========== 返回命令执行完毕 ==========');
 });
 /**
  * MxCAD 容器管理器
@@ -522,7 +533,8 @@ class MxCADInstanceManager {
             Logger.error('缩略图处理失败', error);
           }
         }
-         currentFileInfo = null
+        // 注意：不要在这里清除 currentFileInfo，返回命令需要用到它
+        // currentFileInfo 只在组件卸载时通过 clearCurrentFileInfo() 清除
         
         this.mxcadView.mxcad.off('openFileComplete', onOpen);
       };

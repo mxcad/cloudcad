@@ -124,6 +124,12 @@ export class FileSystemController {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
+  @Get('nodes/:nodeId/root')
+  @ApiResponse({ status: 200, description: '获取根节点成功' })
+  async getRootNode(@Param('nodeId') nodeId: string) {
+    return this.fileSystemService.getRootNode(nodeId);
+  }
+
   @Get('nodes/:nodeId/children')
   @ApiResponse({ status: 200, description: '获取子节点列表成功' })
   async getChildren(
