@@ -647,58 +647,38 @@ export class MxCadService {
         };
       }
 
-      // 支持的图片后缀
-      const imageExtensions = [
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.bmp',
-        '.webp',
-      ];
+      // 1. 直接检查 MinIO 中的 JPG 缩略图
+      // MinIO 路径格式：mxcad/file/{hash}.jpg
+      const minioPath = `mxcad/file/${fileHash}.jpg`;
+      const existsInMinio = await this.minioSyncService.fileExists(minioPath);
 
-      // 1. 先检查 MinIO 中是否存在缩略图
-      // MinIO 路径格式：mxcad/file/{hash}.{ext}
-      for (const ext of imageExtensions) {
-        const minioPath = `mxcad/file/${fileHash}${ext}`;
-        const existsInMinio = await this.minioSyncService.fileExists(minioPath);
-
-        if (existsInMinio) {
-          this.logger.log(
-            `[checkThumbnailExists] 缩略图存在于 MinIO: ${minioPath}`
-          );
-          return {
-            exists: true,
-            location: 'minio',
-            fileName: `${fileHash}${ext}`,
-            mimeType: this.getMimeType(ext),
-          };
-        }
+      if (existsInMinio) {
+        this.logger.log(`[checkThumbnailExists] 缩略图存在于 MinIO: ${minioPath}`);
+        return {
+          exists: true,
+          location: 'minio',
+          fileName: `${fileHash}.jpg`,
+          mimeType: 'image/jpeg',
+        };
       }
 
       // 2. 如果 MinIO 中不存在，检查本地文件系统
       const uploadPath =
         this.configService.get('MXCAD_UPLOAD_PATH') ||
         path.join(process.cwd(), 'uploads');
+      const localPath = path.join(uploadPath, `${fileHash}.jpg`);
 
-      for (const ext of imageExtensions) {
-        const localPath = path.join(uploadPath, `${fileHash}${ext}`);
-
-        try {
-          await fsPromises.access(localPath);
-          this.logger.log(
-            `[checkThumbnailExists] 缩略图存在于本地: ${localPath}`
-          );
-          return {
-            exists: true,
-            location: 'local',
-            fileName: `${fileHash}${ext}`,
-            mimeType: this.getMimeType(ext),
-          };
-        } catch (error) {
-          // 文件不存在，继续检查下一个后缀
-          continue;
-        }
+      try {
+        await fsPromises.access(localPath);
+        this.logger.log(`[checkThumbnailExists] 缩略图存在于本地: ${localPath}`);
+        return {
+          exists: true,
+          location: 'local',
+          fileName: `${fileHash}.jpg`,
+          mimeType: 'image/jpeg',
+        };
+      } catch (error) {
+        // 文件不存在
       }
 
       // 3. 都不存在
@@ -766,8 +746,8 @@ export class MxCadService {
         };
       }
 
-      // 构建目标文件名
-      const targetFileName = `${fileHash}${ext}`;
+      // 构建目标文件名（固定为 jpg 格式）
+      const targetFileName = `${fileHash}.jpg`;
       const uploadPath =
         this.configService.get('MXCAD_UPLOAD_PATH') ||
         path.join(process.cwd(), 'uploads');

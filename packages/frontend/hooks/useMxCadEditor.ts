@@ -2,33 +2,6 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiService } from '../services/apiService';
 import { Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
-import { initMxCadConfig } from '../services/mxcadManager';
-
-/**
- * MxCAD 配置管理 Hook
- */
-export const useMxCadConfig = () => {
-  const [configInitialized, setConfigInitialized] = useState(false);
-
-  const initConfig = async () => {
-    try {
-      const success = await initMxCadConfig();
-      setConfigInitialized(success);
-      return success;
-    } catch (error) {
-      ErrorHandler.handle(error, 'MxCAD 配置初始化');
-      return false;
-    }
-  };
-
-  useEffect(() => {
-    if (!configInitialized) {
-      initConfig();
-    }
-  }, [configInitialized]);
-
-  return { configInitialized };
-};
 
 /**
  * 项目上下文管理 Hook

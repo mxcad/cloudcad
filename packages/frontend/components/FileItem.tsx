@@ -11,11 +11,11 @@ import {
   getFileIconComponent,
 } from './FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
-import { formatDate, formatFileSize } from '../utils/fileUtils';
-import { getThumbnailUrl } from '../utils/fileUtils';
-import { AlertTriangle, Upload } from 'lucide-react';
+import { formatDate, formatFileSize, getCadThumbnailUrl, getOriginalFileUrl } from '../utils/fileUtils';
+import { AlertTriangle, Upload, Eye } from 'lucide-react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
+import { ImagePreviewModal } from './modals/ImagePreviewModal';
 
 interface FileItemProps {
   node: FileSystemNode;
@@ -80,6 +80,8 @@ export const FileItem: React.FC<FileItemProps> = ({
     top: number;
     left: number;
   } | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewImageSrc, setPreviewImageSrc] = useState('');
   const isRoot = node.isRoot;
   const modalRef = useRef<{
     checkMissingReferences: () => Promise<boolean>;
@@ -249,9 +251,10 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (isPreviewOpen) return;
       onEnter(node);
     },
-    [node, onEnter]
+    [node, onEnter, isPreviewOpen]
   );
 
   const handleMenuAction = useCallback((action: () => void) => {
@@ -268,6 +271,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     return (
       <div
         className={`group relative rounded-xl transition-all duration-200 cursor-pointer pointer-events-auto
+          ${isPreviewOpen ? 'pointer-events-none' : ''}
           ${
             showSelection
               ? 'bg-indigo-50 border-2 border-indigo-500 shadow-md'
@@ -330,20 +334,70 @@ export const FileItem: React.FC<FileItemProps> = ({
               ${showSelection ? 'scale-105' : ''}
             `}
           >
-            {/* 图片文件显示缩略图 */}
-            {!node.isFolder &&
-            ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
-              node.extension?.toLowerCase() || ''
+                            {/* 图片文件显示缩略图 */}
+                            {!node.isFolder &&
+                            ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
+                              node.extension?.toLowerCase() || ''
+                                                        ) ? (
+                                                          imageLoadError ? (
+                                                            getFileIconComponent(node, 64)
+                                                          ) : (
+                                                            <div className="relative w-full h-full group">
+                                                              <img
+                                                                src={getThumbnailUrl(node)}
+                                                                alt={node.name}
+                                                                className="w-full h-full object-contain rounded-lg bg-slate-50 cursor-pointer"
+                                                                onError={() => setImageLoadError(true)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                              />
+                                                              {/* 眼睛图标 - 查看原图 */}
+                                                              <button
+                                                                onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  setPreviewImageSrc(getOriginalFileUrl(node));
+                                                                  setIsPreviewOpen(true);
+                                                                }}
+                                                                className="absolute inset-0 flex items-center justify-center
+                                                                  bg-black/0 group-hover:bg-black/20
+                                                                  transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                                                title="查看原图"
+                                                              >
+                                                                <div className="p-2 bg-white/90 rounded-full shadow-lg">
+                                                                  <Eye size={24} className="text-slate-700" />
+                                                                </div>
+                                                              </button>
+                                                            </div>
+                                                          )
+                                                        ) : !node.isFolder && ['.dwg', '.dxf'].includes(              node.extension?.toLowerCase() || ''
             ) ? (
               imageLoadError ? (
                 getFileIconComponent(node, 64)
               ) : (
-                <img
-                  src={getThumbnailUrl(node)}
-                  alt={node.name}
-                  className="w-full h-full object-cover rounded-lg"
-                  onError={() => setImageLoadError(true)}
-                />
+                <div className="relative w-full h-full group">
+                  <img
+                    src={getCadThumbnailUrl(node)}
+                    alt={node.name}
+                    className="w-full h-full object-contain rounded-lg bg-slate-50 cursor-pointer"
+                    onError={() => setImageLoadError(true)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {/* 眼睛图标 - 查看原图 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewImageSrc(getOriginalFileUrl(node));
+                      setIsPreviewOpen(true);
+                    }}
+                    className="absolute inset-0 flex items-center justify-center
+                      bg-black/0 group-hover:bg-black/20
+                      transition-all duration-200 opacity-0 group-hover:opacity-100"
+                    title="查看原图"
+                  >
+                    <div className="p-2 bg-white/90 rounded-full shadow-lg">
+                      <Eye size={24} className="text-slate-700" />
+                    </div>
+                  </button>
+                </div>
               )
             ) : (
               getFileIconComponent(node, 64)
@@ -707,6 +761,14 @@ export const FileItem: React.FC<FileItemProps> = ({
           onClose={externalReferenceUpload.close}
         />
 
+        {/* 图片预览模态框 */}
+        <ImagePreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          src={previewImageSrc}
+          alt={node.name}
+        />
+
         
       </div>
     );
@@ -782,14 +844,26 @@ export const FileItem: React.FC<FileItemProps> = ({
             <img
               src={getThumbnailUrl(node)}
               alt={node.name}
-              className="w-full h-full object-cover rounded-lg"
+              className="w-full h-full object-contain rounded-lg bg-slate-50"
               onError={() => setImageLoadError(true)}
             />
           )
-        ) : (
-          getFileIconComponent(node, 40)
-        )}
-      </div>
+                    ) : !node.isFolder && ['.dwg', '.dxf'].includes(
+                      node.extension?.toLowerCase() || ''
+                    ) ? (
+                      imageLoadError ? (
+                        getFileIconComponent(node, 40)
+                      ) : (
+                        <img
+                          src={getCadThumbnailUrl(node)}
+                          alt={node.name}
+                          className="w-full h-full object-contain rounded-lg bg-slate-50"
+                          onError={() => setImageLoadError(true)}
+                        />
+                      )
+                    ) : (
+                      getFileIconComponent(node, 40)
+                    )}      </div>
 
       {/* 文件信息 */}
       <div className="flex-1 min-w-0">

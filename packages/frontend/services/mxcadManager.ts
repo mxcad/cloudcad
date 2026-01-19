@@ -2,7 +2,7 @@
 import { Logger } from '../utils/mxcadUtils';
 import { apiService } from './apiService';
 import { MxFun } from 'mxdraw';
-import { McGePoint3d, MxCpp } from 'mxcad';
+import { MxCpp } from 'mxcad';
 
 // 当前打开的文件信息（用于返回逻辑）
 let currentFileInfo: {
@@ -512,7 +512,7 @@ class MxCADInstanceManager {
             if (!thumbnailResult.data.exists) {
               Logger.info('缩略图不存在，开始生成...');
               const imageData = await this.generateThumbnail();
-      
+   
               if (imageData) {
                 Logger.info('缩略图生成成功，开始上传...');
                 await this.uploadThumbnail(fileId, imageData);

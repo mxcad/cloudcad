@@ -81,3 +81,44 @@ export const getThumbnailUrl = (node: FileSystemNode): string => {
     import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
   return `${apiBaseUrl}/file-system/nodes/${node.id}/thumbnail`;
 };
+
+/**
+ * 获取 CAD 文件的缩略图 URL
+ * 缩略图路径格式：/api/mxcad/file/{fileHash}.jpg
+ * 复用现有的 /mxcad/file/*path 接口
+ */
+export const getCadThumbnailUrl = (node: FileSystemNode): string => {
+  if (!node.fileHash) return '';
+
+  const extension = node.extension?.toLowerCase() || '';
+  const cadExtensions = ['.dwg', '.dxf'];
+  if (!cadExtensions.includes(extension)) {
+    return '';
+  }
+
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+  return `${apiBaseUrl}/mxcad/file/${node.fileHash}.jpg`;
+};
+
+/**
+ * 获取原图/预览 URL
+ * CAD 文件返回缩略图路径（用于预览）
+ * 图片文件返回原图下载链接
+ */
+export const getOriginalFileUrl = (node: FileSystemNode): string => {
+  if (!node.id) return '';
+
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
+  // CAD 文件使用缩略图路径预览
+  const extension = node.extension?.toLowerCase() || '';
+  const cadExtensions = ['.dwg', '.dxf'];
+  if (cadExtensions.includes(extension) && node.fileHash) {
+    return `${apiBaseUrl}/mxcad/file/${node.fileHash}.jpg`;
+  }
+
+  // 图片文件返回原图下载链接
+  return `${apiBaseUrl}/file-system/nodes/${node.id}/download`;
+};

@@ -33,11 +33,16 @@ export const CADEditorDirect: React.FC = () => {
   };
 
   const initMxCADConfig = async (currentFile?: any) => {
-    // 使用统一的配置初始化方法
-    const { initMxCadConfig: initConfig } = await import(
-      '../services/mxcadManager'
-    );
-    await initConfig();
+    const { mxcadApp } = await import('mxcad-app');
+    const configUrl = window.location.origin;
+    mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
+    mxcadApp.initConfig({
+      uiConfig: `${configUrl}/ini/myUiConfig.json`,
+      sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
+      serverConfig: `${configUrl}/ini/myServerConfig.json`,
+      quickCommandConfig: `${configUrl}/ini/myQuickCommand.json`,
+      themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`,
+    });
 
     // 设置MxCAD服务器配置
     const serverConfig = await (
