@@ -1199,12 +1199,7 @@ export class MxCadController {
       properties: {
         code: { type: 'number', example: 0 },
         message: { type: 'string', example: 'ok' },
-        data: {
-          type: 'object',
-          properties: {
-            exists: { type: 'boolean', description: '缩略图是否存在' },
-          },
-        },
+        exists: { type: 'boolean', description: '缩略图是否存在' },
       },
     },
   })
@@ -1241,9 +1236,7 @@ export class MxCadController {
       return res.json({
         code: 0,
         message: 'ok',
-        data: {
-          exists: result.exists,
-        },
+        exists: result.exists,
       });
     } catch (error) {
       this.logger.error(

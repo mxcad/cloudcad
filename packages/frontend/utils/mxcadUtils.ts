@@ -10,7 +10,9 @@ export class Logger {
     console.error(message, ...args);
   }
 
-  static warn(message: string, ...args: any[]): void {}
+  static warn(message: string, ...args: any[]): void {
+    console.warn(message, ...args);
+  }
 
   static success(message: string, ...args: any[]): void {}
 

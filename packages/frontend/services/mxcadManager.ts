@@ -525,12 +525,10 @@ class MxCADInstanceManager {
           try {
             const fileId = currentFileInfo.fileId;
             const thumbnailResult = await apiService.checkThumbnail(fileId);
-            
             // 如果缩略图不存在，生成并上传
             if (!thumbnailResult.data.exists) {
               Logger.info('缩略图不存在，开始生成...');
               const imageData = await this.generateThumbnail();
-   
               if (imageData) {
                 Logger.info('缩略图生成成功，开始上传...');
                 await this.uploadThumbnail(fileId, imageData);
