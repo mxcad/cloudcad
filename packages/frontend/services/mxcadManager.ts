@@ -2,7 +2,7 @@
 import { Logger } from '../utils/mxcadUtils';
 import { apiService } from './apiService';
 import { MxFun } from 'mxdraw';
-import { MxCpp } from 'mxcad';
+import { McGePoint3d, MxCpp } from 'mxcad';
 
 // 当前打开的文件信息（用于返回逻辑）
 let currentFileInfo: {
@@ -439,18 +439,33 @@ class MxCADInstanceManager {
         return undefined;
       }
 
-      // 固定宽度，按原始宽高比计算高度
-      const targetWidth = 800;
-      let jpgWidth: number;
-      let jpgHeight: number;
+      // 目标正方形边长
+      const targetSize = 100;
 
-      if (w <= targetWidth) {
-        jpgWidth = w;
-        jpgHeight = h;
-      } else {
-        jpgWidth = targetWidth;
-        jpgHeight = targetWidth * (h / w);
-      }
+      // 计算缩放比例（取宽高中较大的，确保图纸完整显示）
+      const scale = Math.min(targetSize / w, targetSize / h);
+
+      // 计算缩放后的尺寸
+      const scaledWidth = w * scale;
+      const scaledHeight = h * scale;
+
+      // 计算居中偏移量
+      const offsetX = (targetSize - scaledWidth) / 2;
+      const offsetY = (targetSize - scaledHeight) / 2;
+
+      // 调整边界框以居中显示
+      const centerX = (minPt.x + maxPt.x) / 2;
+      const centerY = (minPt.y + maxPt.y) / 2;
+
+      const newMinPt = new McGePoint3d({
+        x: centerX - (targetSize / 2) / scale,
+        y: centerY - (targetSize / 2) / scale,
+      });
+
+      const newMaxPt = new McGePoint3d({
+        x: centerX + (targetSize / 2) / scale,
+        y: centerY + (targetSize / 2) / scale,
+      });
 
       return new Promise<string | undefined>((resolve, reject) => {
         mxcad.mxdraw.createCanvasImageData(
@@ -459,10 +474,10 @@ class MxCADInstanceManager {
             resolve(imageData);
           },
           {
-            width: jpgWidth,
-            height: jpgHeight,
-            range_pt1: minPt.toVector3(),
-            range_pt2: maxPt.toVector3(),
+            width: targetSize,
+            height: targetSize,
+            range_pt1: newMinPt,
+            range_pt2: newMaxPt,
           }
         );
       });
