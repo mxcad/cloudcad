@@ -911,10 +911,25 @@ export class GalleryController {
       // 提取文件哈希（去掉扩展名）
       const fileHashPart = pathParts[pathParts.length - 1];
       const fileHash = path.basename(fileHashPart, path.extname(fileHashPart));
+      const fileExtension = path.extname(fileHashPart).toLowerCase();
 
       this.logger.log(
-        `[handleGalleryFileRequest] 提取的 fileHash: ${fileHash}`
+        `[handleGalleryFileRequest] 提取的 fileHash: ${fileHash}, 扩展名: ${fileExtension}`
       );
+
+      // 如果是缩略图请求（.jpg），使用缩略图处理逻辑
+      if (fileExtension === '.jpg') {
+        this.logger.log(
+          `[handleGalleryFileRequest] 检测到缩略图请求，调用 handleThumbnailRequest`
+        );
+        return this.handleThumbnailRequest(
+          req,
+          res,
+          galleryType,
+          fileHash,
+          isHeadRequest
+        );
+      }
 
       // 通过哈希值查找所有具有相同 fileHash 的节点，验证用户是否有访问权限
       const allNodes = await this.database.fileSystemNode.findMany({
@@ -1201,6 +1216,260 @@ export class GalleryController {
     } catch (error) {
       this.logger.error(
         `[handleGalleryFileRequest] 处理失败: ${error.message}`,
+        error
+      );
+      if (!res.headersSent) {
+        res.status(500).json({ code: -1, message: '服务器内部错误' });
+      }
+    }
+  }
+
+  /**
+   * 处理缩略图请求
+   * 支持 .jpg 缩略图的访问，用于图库中的缩略图显示
+   *
+   * @param req Express Request 对象
+   * @param res Express Response 对象
+   * @param galleryType 图库类型：'blocks' 或 'drawings'
+   * @param fileHash 文件哈希值
+   * @param isHeadRequest 是否为 HEAD 请求（默认 false）
+   */
+  private async handleThumbnailRequest(
+    req: any,
+    res: Response,
+    galleryType: 'blocks' | 'drawings',
+    fileHash: string,
+    isHeadRequest: boolean = false
+  ) {
+    try {
+      this.logger.log(
+        `[handleThumbnailRequest] 处理缩略图请求: galleryType=${galleryType}, fileHash=${fileHash}`
+      );
+
+      // 获取用户 ID（从 JWT token）
+      const userId = req.user?.id;
+      if (!userId) {
+        this.logger.warn('[handleThumbnailRequest] 用户 ID 不存在');
+        return res.status(401).json({ code: -1, message: 'Unauthorized' });
+      }
+
+      // 通过哈希值查找所有具有相同 fileHash 的节点，验证用户是否有访问权限
+      const allNodes = await this.database.fileSystemNode.findMany({
+        where: {
+          fileHash: fileHash,
+          isFolder: false,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          parentId: true,
+          isRoot: true,
+          fileHash: true,
+        },
+      });
+
+      this.logger.log(
+        `[handleThumbnailRequest] 查找文件节点: hash=${fileHash}, 找到=${allNodes.length}个节点`
+      );
+
+      if (allNodes.length === 0) {
+        this.logger.warn(
+          `[handleThumbnailRequest] 文件节点不存在: ${fileHash}`
+        );
+        return res.status(404).json({ code: -1, message: '文件不存在' });
+      }
+
+      // 检查用户对任何一个节点是否有权限
+      let hasPermission = false;
+
+      for (const node of allNodes) {
+        // 检查文件所有者
+        if (node.ownerId === userId) {
+          hasPermission = true;
+          break;
+        }
+
+        // 检查 FileAccess 表中的权限
+        const fileAccess = await this.database.fileAccess.findUnique({
+          where: {
+            userId_nodeId: {
+              userId: userId,
+              nodeId: node.id,
+            },
+          },
+        });
+
+        if (fileAccess) {
+          hasPermission = true;
+          break;
+        }
+
+        // 检查项目成员权限
+        if (node.parentId) {
+          const projectRoot = await this.findProjectRoot(node.id);
+
+          if (projectRoot) {
+            const projectAccess = await this.database.fileAccess.findUnique({
+              where: {
+                userId_nodeId: {
+                  userId: userId,
+                  nodeId: projectRoot.id,
+                },
+              },
+            });
+
+            if (projectAccess) {
+              hasPermission = true;
+              break;
+            }
+          }
+        }
+      }
+
+      this.logger.log(
+        `[handleThumbnailRequest] 权限检查结果: userId=${userId}, hasPermission=${hasPermission}`
+      );
+
+      if (!hasPermission) {
+        return res.status(401).json({
+          code: -1,
+          message: 'Unauthorized',
+        });
+      }
+
+      // 缩略图路径格式：mxcad/file/{fileHash}.jpg
+      const thumbnailPath = `mxcad/file/${fileHash}.jpg`;
+
+      this.logger.log(
+        `[handleThumbnailRequest] 尝试从 MinIO 获取缩略图: ${thumbnailPath}`
+      );
+
+      // 尝试从 MinIO 获取缩略图
+      try {
+        const existsInMinio =
+          await this.minioSyncService.fileExists(thumbnailPath);
+
+        if (existsInMinio) {
+          this.logger.log(
+            `[handleThumbnailRequest] 缩略图存在于 MinIO: ${thumbnailPath}`
+          );
+
+          // 对于 HEAD 请求，只返回文件头信息
+          if (isHeadRequest) {
+            const fileInfo =
+              await this.minioSyncService.getFileInfo(thumbnailPath);
+
+            if (fileInfo) {
+              res.setHeader('Content-Type', 'image/jpeg');
+              res.setHeader('Content-Length', fileInfo.contentLength);
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              res.end();
+              return;
+            }
+          } else {
+            // GET 请求返回文件流
+            const fileStream =
+              await this.minioSyncService.getFileStream(thumbnailPath);
+
+            // 设置响应头
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+
+            // 返回文件流
+            fileStream.pipe(res);
+
+            fileStream.on('error', (error) => {
+              this.logger.error(
+                `[handleThumbnailRequest] MinIO 文件流错误: ${error.message}`,
+                error
+              );
+              if (!res.headersSent) {
+                res.status(500).json({ code: -1, message: '获取缩略图失败' });
+              }
+            });
+
+            return;
+          }
+        }
+      } catch (error) {
+        this.logger.error(
+          `[handleThumbnailRequest] 从 MinIO 获取缩略图失败: ${error.message}`,
+          error
+        );
+      }
+
+      // MinIO 中没有找到，尝试从本地文件系统获取
+      this.logger.log(
+        `[handleThumbnailRequest] MinIO 中未找到缩略图，尝试本地文件系统`
+      );
+
+      const uploadPath = this.configService.get<string>(
+        'MXCAD_UPLOAD_PATH',
+        'D:\\web\\MxCADOnline\\cloudcad\\uploads'
+      );
+      const localThumbnailPath = path.join(uploadPath, `${fileHash}.jpg`);
+
+      this.logger.log(
+        `[handleThumbnailRequest] 尝试本地路径: ${localThumbnailPath}`
+      );
+
+      if (fs.existsSync(localThumbnailPath)) {
+        this.logger.log(
+          `[handleThumbnailRequest] 缩略图存在于本地: ${localThumbnailPath}`
+        );
+
+        try {
+          if (isHeadRequest) {
+            // HEAD 请求：获取文件统计信息
+            const stats = fs.statSync(localThumbnailPath);
+
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Content-Length', stats.size);
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.end();
+          } else {
+            // GET 请求：返回文件流
+            const fileStream = fs.createReadStream(localThumbnailPath);
+
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+
+            fileStream.pipe(res);
+
+            fileStream.on('error', (error) => {
+              this.logger.error(
+                `[handleThumbnailRequest] 本地文件流错误: ${error.message}`,
+                error
+              );
+              if (!res.headersSent) {
+                res.status(500).json({ code: -1, message: '获取缩略图失败' });
+              }
+            });
+          }
+        } catch (error) {
+          this.logger.error(
+            `[handleThumbnailRequest] 读取本地缩略图失败: ${error.message}`,
+            error
+          );
+          if (!res.headersSent) {
+            res.status(500).json({ code: -1, message: '获取缩略图失败' });
+          }
+        }
+      } else {
+        this.logger.warn(
+          `[handleThumbnailRequest] 缩略图不存在: ${fileHash}`
+        );
+        return res.status(404).json({ code: -1, message: '缩略图不存在' });
+      }
+    } catch (error) {
+      this.logger.error(
+        `[handleThumbnailRequest] 处理失败: ${error.message}`,
         error
       );
       if (!res.headersSent) {
