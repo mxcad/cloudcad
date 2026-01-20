@@ -445,14 +445,6 @@ class MxCADInstanceManager {
       // 计算缩放比例（取宽高中较大的，确保图纸完整显示）
       const scale = Math.min(targetSize / w, targetSize / h);
 
-      // 计算缩放后的尺寸
-      const scaledWidth = w * scale;
-      const scaledHeight = h * scale;
-
-      // 计算居中偏移量
-      const offsetX = (targetSize - scaledWidth) / 2;
-      const offsetY = (targetSize - scaledHeight) / 2;
-
       // 调整边界框以居中显示
       const centerX = (minPt.x + maxPt.x) / 2;
       const centerY = (minPt.y + maxPt.y) / 2;
