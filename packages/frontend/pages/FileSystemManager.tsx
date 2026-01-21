@@ -179,17 +179,12 @@ export const FileSystemManager: React.FC = () => {
   const getCurrentParentId = useCallback(() => {
     // 优先使用 ref 中的最新值（实时更新）
     if (currentNodeIdRef.current) {
-      console.log(
-        '[getCurrentParentId] 模式0 - 使用 ref 最新值:',
-        currentNodeIdRef.current
-      );
       return currentNodeIdRef.current;
     }
 
     // 备用方案：使用 URL 参数
     // 优先使用 URL nodeId（最可靠，因为 URL 是页面状态的权威来源）
     if (urlNodeId) {
-      console.log('[getCurrentParentId] 模式1 - 使用 URL nodeId:', urlNodeId);
       return urlNodeId;
     }
 
@@ -197,24 +192,15 @@ export const FileSystemManager: React.FC = () => {
     if (urlNodeId && nodes.length > 0) {
       const currentNodeData = nodes.find((n) => n.id === urlNodeId);
       if (currentNodeData) {
-        console.log(
-          '[getCurrentParentId] 模式2 - 从 nodes 中找到:',
-          currentNodeData.id
-        );
         return currentNodeData.id;
       }
     }
 
     // 最后使用 projectId（项目根目录）
     if (urlProjectId) {
-      console.log(
-        '[getCurrentParentId] 模式3 - 使用 URL projectId:',
-        urlProjectId
-      );
       return urlProjectId;
     }
 
-    console.log('[getCurrentParentId] 警告: 无法确定目标目录');
     return '';
   }, [urlNodeId, urlProjectId, nodes]);
 
@@ -271,25 +257,20 @@ export const FileSystemManager: React.FC = () => {
    * 获取当前选中的 CAD 文件并触发上传
    */
   const handleUploadExternalReference = useCallback((node: FileSystemNode) => {
-    console.log('[FileSystemManager] 上传外部参照:', node.name);
-
     // 检查是否为 CAD 文件
     const ext = node.extension?.toLowerCase();
     if (ext !== '.dwg' && ext !== '.dxf') {
-      console.log('[FileSystemManager] 仅支持 DWG/DXF 文件的外部参照上传');
       return;
     }
 
     // TODO: 触发外部参照上传逻辑
     // 这里可以打开 ExternalReferenceModal 或触发 FileItem 中的上传逻辑
-    console.log('[FileSystemManager] 准备上传外部参照:', node.name);
   }, []);
 
   /**
    * 处理移动节点
    */
   const handleMove = useCallback((node: FileSystemNode) => {
-    console.log('[FileSystemManager] 移动节点:', node.name);
     setMoveSourceNode(node);
     setCopySourceNode(null);
     setShowSelectFolderModal(true);
@@ -299,7 +280,6 @@ export const FileSystemManager: React.FC = () => {
    * 处理复制节点
    */
   const handleCopy = useCallback((node: FileSystemNode) => {
-    console.log('[FileSystemManager] 复制节点:', node.name);
     setCopySourceNode(node);
     setMoveSourceNode(null);
     setShowSelectFolderModal(true);
@@ -309,7 +289,6 @@ export const FileSystemManager: React.FC = () => {
    * 添加到图库
    */
   const handleAddToGallery = useCallback((node: FileSystemNode) => {
-    console.log('[FileSystemManager] 添加到图库:', node.name);
     setSelectedNodeForGallery(node);
     setShowAddToGalleryModal(true);
   }, [setSelectedNodeForGallery, setShowAddToGalleryModal]);
@@ -331,26 +310,18 @@ export const FileSystemManager: React.FC = () => {
               await projectsApi.copyNode(nodeId, targetParentId);
             }
           }
-          console.log(
-            '[FileSystemManager] 批量操作成功:',
-            nodeIds.length,
-            '项'
-          );
         }
         // 单个节点模式
         else if (moveSourceNode) {
           await projectsApi.moveNode(moveSourceNode.id, targetParentId);
-          console.log('[FileSystemManager] 移动成功:', moveSourceNode.name);
         } else if (copySourceNode) {
           await projectsApi.copyNode(copySourceNode.id, targetParentId);
-          console.log('[FileSystemManager] 复制成功:', copySourceNode.name);
         }
         handleRefresh();
         setShowSelectFolderModal(false);
         setMoveSourceNode(null);
         setCopySourceNode(null);
       } catch (error) {
-        console.error('[FileSystemManager] 移动/复制失败:', error);
         alert('操作失败，请重试');
       }
     },
@@ -421,24 +392,11 @@ export const FileSystemManager: React.FC = () => {
       try {
         if (isCopy) {
           await projectsApi.copyNode(draggedNodeId, targetNode.id);
-          console.log(
-            '[FileSystemManager] 拖拽复制成功:',
-            draggedNodeId,
-            '->',
-            targetNode.id
-          );
         } else {
           await projectsApi.moveNode(draggedNodeId, targetNode.id);
-          console.log(
-            '[FileSystemManager] 拖拽移动成功:',
-            draggedNodeId,
-            '->',
-            targetNode.id
-          );
         }
         handleRefresh();
       } catch (error) {
-        console.error('[FileSystemManager] 拖拽操作失败:', error);
         alert('操作失败，请重试');
       } finally {
         setDraggedNodes([]);
@@ -585,7 +543,9 @@ export const FileSystemManager: React.FC = () => {
               buttonText=""
               buttonClassName="hidden"
               onSuccess={handleRefresh}
-              onError={(err: string) => console.error('Upload error:', err)}
+              onError={(err: string) => {
+                // 错误已通过 MxCadUploader 组件处理
+              }}
             />
           )}
         </div>
