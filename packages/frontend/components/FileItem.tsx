@@ -1,115 +1,45 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import {
-  DownloadIcon,
-  DeleteIcon,
-  EditIcon,
-  MoreIcon,
-  UsersIcon,
-  RestoreIcon,
-  GalleryIcon,
-  getFileIconComponent,
-} from './FileIcons';
-import { FileSystemNode } from '../../types/filesystem';
-import { formatDate, formatFileSize, getCadThumbnailUrl, getThumbnailUrl, getOriginalFileUrl } from '../utils/fileUtils';
-import { AlertTriangle, Upload, Eye } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react';
+import { Upload } from 'lucide-react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
+import {
+  Thumbnail,
+  FileItemSelection,
+  FileItemExternalReferenceWarning,
+  FileItemInfo,
+  FileItemTypeTag,
+  FileItemMenu,
+} from './file-item';
+import { FileSystemNode } from '../../types/filesystem';
 
 interface FileItemProps {
   node: FileSystemNode;
   isSelected: boolean;
   viewMode: 'grid' | 'list';
   isMultiSelectMode?: boolean;
-  isTrash?: boolean; // 是否在回收站场景
+  isTrash?: boolean;
   onSelect: (nodeId: string, isMultiSelect?: boolean) => void;
   onEnter: (node: FileSystemNode) => void;
   onDownload: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;
   onRename: (node: FileSystemNode) => void;
-  onRefresh?: () => void; // 刷新文件列表
-  // 项目特有操作（仅 isRoot 时使用）
+  onRefresh?: () => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDeleteNode?: (e: React.MouseEvent) => void;
   onShowMembers?: (e: React.MouseEvent) => void;
-  // 回收站特有操作
   onRestore?: (node: FileSystemNode) => void;
-  // 移动和拷贝操作
   onMove?: (node: FileSystemNode) => void;
   onCopy?: (node: FileSystemNode) => void;
-  // 添加到图库操作
   onAddToGallery?: (node: FileSystemNode) => void;
-  // 拖拽操作
   onDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragLeave?: () => void;
   onDrop?: (e: React.DragEvent, node: FileSystemNode) => void;
   isDropTarget?: boolean;
 }
-
-// 通用缩略图组件
-interface ThumbnailProps {
-  node: FileSystemNode;
-  size: number;
-  onPreview?: (src: string) => void;
-}
-
-const Thumbnail: React.FC<ThumbnailProps> = ({ node, size, onPreview }) => {
-  const [imageLoadError, setImageLoadError] = useState(false);
-  const isImage = !node.isFolder && ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(
-    node.extension?.toLowerCase() || ''
-  );
-  const isCad = !node.isFolder && ['.dwg', '.dxf'].includes(
-    node.extension?.toLowerCase() || ''
-  );
-
-  if (node.isFolder || (!isImage && !isCad)) {
-    return getFileIconComponent(node, size);
-  }
-
-  if (imageLoadError) {
-    return getFileIconComponent(node, size);
-  }
-
-  const thumbnailSrc = isImage ? getThumbnailUrl(node) : getCadThumbnailUrl(node);
-  const previewSrc = isImage ? getOriginalFileUrl(node) : thumbnailSrc;
-
-  return (
-    <div className="relative w-full h-full group">
-      <img
-        src={thumbnailSrc}
-        alt={node.name}
-        className="w-full h-full object-contain rounded-lg bg-slate-50"
-        style={{ width: size, height: size }}
-        onError={() => setImageLoadError(true)}
-        onClick={(e) => {
-          e.stopPropagation();
-          onPreview?.(previewSrc);
-        }}
-      />
-      {onPreview && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onPreview(previewSrc);
-          }}
-          className="absolute inset-0 flex items-center justify-center
-            bg-black/0 group-hover:bg-black/20
-            transition-all duration-200 opacity-0 group-hover:opacity-100"
-          title="查看原图"
-          style={{ width: size, height: size }}
-        >
-          <div className="p-2 bg-white/90 rounded-full shadow-lg">
-            <Eye size={Math.max(16, size / 4)} className="text-slate-700" />
-          </div>
-        </button>
-      )}
-    </div>
-  );
-};
 
 export const FileItem: React.FC<FileItemProps> = ({
   node,
@@ -138,67 +68,16 @@ export const FileItem: React.FC<FileItemProps> = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [imageLoadError, setImageLoadError] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageSrc, setPreviewImageSrc] = useState('');
   const isRoot = node.isRoot;
-  const modalRef = useRef<{
-    checkMissingReferences: () => Promise<boolean>;
-  } | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
+  const blockItemClickRef = useRef(false);
 
-  // 监听菜单状态变化
-  useEffect(() => {
-    // 菜单状态变化时更新菜单位置
-  }, [showMenu, menuPosition, node.name]);
-
-  // 点击外部关闭菜单
-  useEffect(() => {
-    if (!showMenu) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const isClickInMenuButton = menuButtonRef.current?.contains(e.target as Node);
-      const isClickInMenuContainer = menuContainerRef.current?.contains(e.target as Node);
-
-      if (!isClickInMenuButton && !isClickInMenuContainer) {
-        setShowMenu(false);
-        setMenuPosition(null);
-      }
-    };
-
-    const handleScroll = () => {
-      if (showMenu && menuButtonRef.current) {
-        const rect = menuButtonRef.current.getBoundingClientRect();
-        setMenuPosition({
-          top: rect.bottom + 4,
-          left: rect.right - 120,
-        });
-      }
-    };
-
-    // 使用 setTimeout 延迟添加事件监听器，避免菜单按钮点击时立即触发
-    const timeoutId = setTimeout(() => {
-      console.log('[FileItem] 延迟 100ms 后添加外部点击监听器');
-      document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, true);
-    }, 100);
-
-    return () => {
-      console.log('[FileItem] 移除外部点击监听器');
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, true);
-    };
-  }, [showMenu]);
-
-  // 外部参照上传 Hook（任务008/009）
   const externalReferenceUpload = useExternalReferenceUpload({
-    nodeId: node.id, // 传递节点 ID 用于权限验证
+    nodeId: node.id,
     fileHash: node.fileHash || '',
     onSuccess: () => {
       logger.info('外部参照上传成功', 'FileItem');
@@ -213,23 +92,12 @@ export const FileItem: React.FC<FileItemProps> = ({
     },
   });
 
-  // 阻止文件项点击的标志
-  const blockItemClickRef = useRef(false);
-
-  /**
-   * 处理上传外部参照（任务009 - 随时上传）
-   * 只有在有缺失外部参照时才打开文件选择对话框
-   */
   const handleUploadExternalReference = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
       setShowMenu(false);
-
-      // 设置标志，阻止文件项点击
       blockItemClickRef.current = true;
-
-      // 延迟执行，确保菜单完全关闭
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       if (!node.fileHash) {
@@ -238,31 +106,22 @@ export const FileItem: React.FC<FileItemProps> = ({
         return;
       }
 
-      // 检查是否有缺失的外部参照
       const hasMissing = await externalReferenceUpload.checkMissingReferences();
 
       if (hasMissing) {
-        // 有缺失时，打开模态框让用户选择要上传的文件
         externalReferenceUpload.openModalForUpload();
       } else {
-        // 无缺失时，刷新文件列表以更新 hasMissingExternalReferences 字段
         onRefresh?.();
         alert('所有外部参照已存在，无需上传');
       }
 
-      // 模态框打开后，等待一段时间再重置标志
-      // 这样可以确保在模态框打开期间，文件项的点击事件被阻止
       setTimeout(() => {
-        console.log('[FileItem] 1秒后重置 blockItemClickRef = false');
         blockItemClickRef.current = false;
       }, 1000);
     },
-    [node.fileHash, externalReferenceUpload]
+    [node.fileHash, externalReferenceUpload, onRefresh]
   );
 
-  /**
-   * 检查是否为 CAD 文件（支持外部参照上传）
-   */
   const isCadFile = useCallback(() => {
     if (node.isFolder || node.isRoot) return false;
     const ext = node.extension?.toLowerCase();
@@ -271,19 +130,16 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      // 检查是否应该阻止点击（例如：刚从菜单操作返回）
       if (blockItemClickRef.current) {
         blockItemClickRef.current = false;
         return;
       }
 
       if (isMultiSelectMode) {
-        // 多选模式：处理选择
         const isCtrl = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
         onSelect(node.id, isCtrl || true, isShift);
       } else {
-        // 非多选模式：直接进入
         onEnter(node);
       }
     },
@@ -298,14 +154,30 @@ export const FileItem: React.FC<FileItemProps> = ({
     [node, onEnter, isPreviewOpen]
   );
 
-  const handleMenuAction = useCallback((action: () => void) => {
-    action();
+  const handleToggleMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const newShowMenu = !showMenu;
+      if (!showMenu && menuButtonRef.current) {
+        const rect = menuButtonRef.current.getBoundingClientRect();
+        setMenuPosition({
+          top: rect.bottom + 4,
+          left: rect.right - 120,
+        });
+      } else {
+        setMenuPosition(null);
+      }
+      setShowMenu(newShowMenu);
+    },
+    [showMenu]
+  );
+
+  const handleCloseMenu = useCallback(() => {
     setShowMenu(false);
+    setMenuPosition(null);
   }, []);
 
-  // 网格视图
   if (viewMode === 'grid') {
-    // 非多选模式下，不显示选中样式（点击直接进入）
     const showSelection = isMultiSelectMode && isSelected;
 
     return (
@@ -333,40 +205,13 @@ export const FileItem: React.FC<FileItemProps> = ({
         onDragOver={(e) => onDragOver?.(e, node)}
         onDrop={(e) => onDrop?.(e, node)}
       >
-        {/* 选择指示器 - 仅在多选模式下显示 */}
-        {isMultiSelectMode && (
-          <div
-            className={`absolute top-3 left-3 w-5 h-5 rounded-full border-2 transition-all duration-200 z-10 cursor-pointer
-              ${
-                isSelected
-                  ? 'bg-indigo-500 border-indigo-500'
-                  : 'bg-white/80 border-slate-300 group-hover:border-indigo-400'
-              }
-            `}
-            onClick={(e) => {
-              e.stopPropagation();
-              const isShift = e.shiftKey;
-              onSelect(node.id, true, isShift); // 点击选择框使用多选模式（toggle）
-            }}
-            title={isSelected ? '单击取消选择' : '单击选择'}
-          >
-            {isSelected && (
-              <svg
-                className="w-full h-full text-white p-0.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </div>
-        )}
+        <FileItemSelection
+          isSelected={isSelected}
+          isMultiSelectMode={isMultiSelectMode}
+          onSelect={(isShift) => onSelect(node.id, true, isShift)}
+          isGrid
+        />
 
-        {/* 图标区域 */}
         <div className="p-6 pb-4">
           <div
             className={`w-16 h-16 mx-auto mb-4 transition-transform duration-200 
@@ -384,330 +229,40 @@ export const FileItem: React.FC<FileItemProps> = ({
             />
           </div>
 
-          {/* 文件名 */}
-          <h3
-            className="font-medium text-slate-900 text-center truncate px-2"
-            title={node.name}
-          >
-            {node.name}
-          </h3>
-
-          {/* 缺失外部参照警告（任务008） */}
-          {node.hasMissingExternalReferences && (
-            <div className="flex items-center justify-center gap-1 mt-1 px-2">
-              <AlertTriangle
-                size={12}
-                className="text-amber-500 flex-shrink-0"
-              />
-              <span className="text-xs text-amber-600 whitespace-nowrap">
-                缺失 {node.missingExternalReferencesCount || 0} 个外部参照
-              </span>
-            </div>
-          )}
-
-          {/* 文件信息 */}
-          <p
-            className="text-xs text-slate-500 text-center mt-1 truncate px-2"
-            title={node.description || undefined}
-          >
-            {isRoot
-              ? node.description || '暂无描述'
-              : node.isFolder
-                ? `${node._count?.children || 0} 个项目`
-                : formatFileSize(node.size)}
-          </p>
+          <div className="flex flex-col items-center">
+            <FileItemInfo node={node} isGrid />
+            <FileItemExternalReferenceWarning node={node} isGrid />
+          </div>
         </div>
 
-        {/* 操作菜单 */}
         <div
           className={`absolute top-3 right-3 transition-opacity duration-200 z-20 pointer-events-auto ${
             isHovered || showMenu ? 'opacity-100' : 'opacity-100'
           }`}
         >
-          <div className="relative flex items-center gap-1">
-            <button
-              ref={menuButtonRef}
-              onClick={(e) => {
-                console.log('[FileItem] 菜单按钮被点击', {
-                  showMenu,
-                  event: e,
-                  menuButtonRefExists: !!menuButtonRef.current,
-                  menuButtonRefCurrent: menuButtonRef.current,
-                });
-                e.stopPropagation();
-
-                const newShowMenu = !showMenu;
-                console.log('[FileItem] 切换菜单状态:', { from: showMenu, to: newShowMenu });
-
-                if (!showMenu && menuButtonRef.current) {
-                  const rect = menuButtonRef.current.getBoundingClientRect();
-                  const newPosition = {
-                    top: rect.bottom + 4,
-                    left: rect.right - 120,
-                  };
-                  setMenuPosition(newPosition);
-                } else {
-                  setMenuPosition(null);
-                }
-
-                setShowMenu(newShowMenu);
-              }}
-              className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200
-                         flex items-center justify-center text-slate-500 hover:text-slate-700
-                         transition-colors"
-            >
-              <MoreIcon size={16} />
-            </button>
-          </div>
+          <FileItemMenu
+            node={node}
+            isTrash={isTrash}
+            showMenu={showMenu}
+            menuPosition={menuPosition}
+            menuButtonRef={menuButtonRef}
+            menuContainerRef={menuContainerRef}
+            onToggleMenu={handleToggleMenu}
+            onCloseMenu={handleCloseMenu}
+            onDownload={onDownload}
+            onDelete={onDelete}
+            onRename={onRename}
+            onEdit={onEdit}
+            onShowMembers={onShowMembers}
+            onRestore={onRestore}
+            onMove={onMove}
+            onCopy={onCopy}
+            onAddToGallery={onAddToGallery}
+            onUploadExternalReference={handleUploadExternalReference}
+            isCadFile={isCadFile}
+          />
         </div>
-        {/* 下拉菜单 - 使用 Portal 渲染到 body 层级 */}
-        {showMenu &&
-          menuPosition &&
-          (() => {
-            return createPortal(
-              <div
-                ref={menuContainerRef}
-                className="fixed bg-white rounded-lg shadow-xl border border-slate-200
-                           py-1 min-w-[120px] z-[99999] animate-scale-in origin-top-right pointer-events-auto"
-                style={{
-                  top: `${menuPosition.top}px`,
-                  left: `${menuPosition.left}px`,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-              {/* 回收站场景：只显示恢复和删除 */}
-              {isTrash ? (
-                <>
-                  {onRestore && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuAction(() => onRestore(node));
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
-                                 flex items-center gap-2 transition-colors"
-                    >
-                      <RestoreIcon size={16} />
-                      恢复
-                    </button>
-                  )}
-                  <hr className="my-1 border-slate-100" />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(() => onDelete(node));
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
-                               flex items-center gap-2 transition-colors"
-                  >
-                    <DeleteIcon size={16} />
-                    彻底删除
-                  </button>
-                </>
-              ) : (
-                <>
-                  {/* 上传外部参照按钮（任务009 - 仅在有缺失外部参照时显示） */}
-                  {isCadFile() && node.hasMissingExternalReferences && (
-                    <button
-                      onClick={handleUploadExternalReference}
-                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors text-amber-600 hover:bg-amber-50"
-                    >
-                      <Upload size={16} />
-                      上传外部参照
-                    </button>
-                  )}
 
-                  {/* 项目根节点显示编辑和成员 */}
-                  {isRoot ? (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('[FileItem] 编辑按钮被点击', { node, onEdit });
-                          handleMenuAction(() => {
-                            console.log('[FileItem] 执行 onEdit 回调');
-                            onEdit?.();
-                          });
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <EditIcon size={16} />
-                        编辑
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('[FileItem] 成员按钮被点击', { node, onShowMembers });
-                          handleMenuAction(() => {
-                            console.log('[FileItem] 执行 onShowMembers 回调');
-                            onShowMembers?.();
-                          });
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <UsersIcon size={16} />
-                        成员
-                      </button>
-                      <hr className="my-1 border-slate-100" />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('[FileItem] 删除按钮被点击', { node });
-                          handleMenuAction(() => {
-                            onDelete(node);
-                          });
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <DeleteIcon size={16} />
-                        删除
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {!node.isFolder && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuAction(() => {
-                                onDownload(node);
-                              });
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                       flex items-center gap-2 transition-colors"
-                          >
-                            <DownloadIcon size={16} />
-                            下载
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuAction(() => {
-                                onAddToGallery?.(node);
-                              });
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-indigo-600 hover:bg-indigo-50
-                                       flex items-center gap-2 transition-colors"
-                          >
-                            <GalleryIcon size={16} />
-                            添加到图库
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('[FileItem] 重命名按钮被点击', { node });
-                          handleMenuAction(() => {
-                            console.log('[FileItem] 执行 onRename 回调');
-                            onRename(node);
-                          });
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <EditIcon size={16} />
-                        重命名
-                      </button>
-                      {onMove && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('[FileItem] 移动到按钮被点击', { node });
-                            handleMenuAction(() => {
-                              console.log('[FileItem] 执行 onMove 回调');
-                              onMove(node);
-                            });
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                     flex items-center gap-2 transition-colors"
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M5 9l7-7 7 7M5 15l7 7 7-7" />
-                          </svg>
-                          移动到...
-                        </button>
-                      )}
-                      {onCopy && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMenuAction(() => {
-                              onCopy(node);
-                            });
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50
-                                     flex items-center gap-2 transition-colors"
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <rect
-                              x="9"
-                              y="9"
-                              width="13"
-                              height="13"
-                              rx="2"
-                              ry="2"
-                            />
-                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                          </svg>
-                          复制到...
-                        </button>
-                      )}
-                      {onRestore && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMenuAction(() => onRestore(node));
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50
-                                     flex items-center gap-2 transition-colors"
-                        >
-                          <RestoreIcon size={16} />
-                          恢复
-                        </button>
-                      )}
-                      <hr className="my-1 border-slate-100" />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMenuAction(() => onDelete(node));
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50
-                                   flex items-center gap-2 transition-colors"
-                      >
-                        <DeleteIcon size={16} />
-                        {onRestore ? '彻底删除' : '删除'}
-                      </button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>,
-              document.body
-            );
-          })()}
-
-        {/* 外部参照上传模态框（任务008） */}
         <ExternalReferenceModal
           isOpen={externalReferenceUpload.isOpen}
           files={externalReferenceUpload.files}
@@ -718,21 +273,16 @@ export const FileItem: React.FC<FileItemProps> = ({
           onClose={externalReferenceUpload.close}
         />
 
-        {/* 图片预览模态框 */}
         <ImagePreviewModal
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
           src={previewImageSrc}
           alt={node.name}
         />
-
-        
       </div>
     );
   }
 
-  // 列表视图
-  // 非多选模式下，不显示选中样式
   const showListSelection = isMultiSelectMode && isSelected;
 
   return (
@@ -757,38 +307,12 @@ export const FileItem: React.FC<FileItemProps> = ({
       onDragOver={(e) => onDragOver?.(e, node)}
       onDrop={(e) => onDrop?.(e, node)}
     >
-      {/* 选择框 - 仅在多选模式下显示 */}
-      {isMultiSelectMode && (
-        <div
-          className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all duration-200 cursor-pointer ${
-            isSelected
-              ? 'bg-indigo-500 border-indigo-500'
-              : 'border-slate-300 group-hover:border-indigo-400'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            const isShift = e.shiftKey;
-            onSelect(node.id, true, isShift); // 点击选择框使用多选模式（toggle）
-          }}
-          title={isSelected ? '单击取消选择' : '单击选择'}
-        >
-          {isSelected && (
-            <svg
-              className="w-full h-full text-white p-0.5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-          )}
-        </div>
-      )}
+      <FileItemSelection
+        isSelected={isSelected}
+        isMultiSelectMode={isMultiSelectMode}
+        onSelect={(isShift) => onSelect(node.id, true, isShift)}
+      />
 
-      {/* 图标 */}
       <div className="w-10 h-10 flex-shrink-0">
         <Thumbnail
           node={node}
@@ -800,63 +324,11 @@ export const FileItem: React.FC<FileItemProps> = ({
         />
       </div>
 
-      {/* 文件信息 */}
-      <div className="flex-1 min-w-0">
-        <h3
-          className="font-medium text-slate-900 truncate"
-          style={{
-            direction: 'rtl',
-            textAlign: 'left',
-          }}
-          title={node.name}
-        >
-          <span style={{ direction: 'ltr', unicodeBidi: 'embed' }}>
-            {node.name}
-          </span>
-        </h3>
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-slate-500">
-            {formatDate(node.updatedAt)}
-            {!node.isFolder && ` • ${formatFileSize(node.size)}`}
-          </p>
-          {/* 缺失外部参照警告（任务008） */}
-          {node.hasMissingExternalReferences && (
-            <span className="flex items-center gap-1 text-xs text-amber-600">
-              <AlertTriangle size={10} />
-              缺失 {node.missingExternalReferencesCount || 0} 个外部参照
-            </span>
-          )}
-        </div>
-      </div>
+      <FileItemInfo node={node} />
 
-      {/* 类型标签 - 固定宽度对齐 */}
-      <div className="hidden sm:flex w-16 justify-end">
-        <span
-          className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${
-            isRoot
-              ? 'bg-indigo-100 text-indigo-700'
-              : node.isFolder
-                ? 'bg-amber-100 text-amber-700'
-                : node.extension === '.dwg'
-                  ? 'bg-blue-100 text-blue-700'
-                  : node.extension === '.dxf'
-                    ? 'bg-green-100 text-green-700'
-                    : node.extension === '.pdf'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-slate-100 text-slate-700'
-          }`}
-        >
-          {isRoot
-            ? '项目'
-            : node.isFolder
-              ? '文件夹'
-              : node.extension?.toUpperCase().replace('.', '')}
-        </span>
-      </div>
+      <FileItemTypeTag node={node} />
 
-      {/* 操作菜单 - 列表模式下始终显示 */}
       <div className="flex items-center gap-1 opacity-100 transition-opacity duration-200">
-        {/* 回收站场景：只显示恢复和删除 */}
         {isTrash ? (
           <>
             {onRestore && (
@@ -868,7 +340,9 @@ export const FileItem: React.FC<FileItemProps> = ({
                 className="p-2 rounded-lg text-slate-500 hover:text-green-600 hover:bg-green-50"
                 title="恢复"
               >
-                <RestoreIcon size={18} />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
               </button>
             )}
             <button
@@ -879,12 +353,13 @@ export const FileItem: React.FC<FileItemProps> = ({
               className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
               title="彻底删除"
             >
-              <DeleteIcon size={18} />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
             </button>
           </>
         ) : (
           <>
-            {/* 上传外部参照按钮（任务009 - 仅在有缺失外部参照时显示） */}
             {isCadFile() && node.hasMissingExternalReferences && (
               <button
                 onClick={handleUploadExternalReference}
@@ -895,29 +370,40 @@ export const FileItem: React.FC<FileItemProps> = ({
               </button>
             )}
 
-            {/* 项目根节点显示编辑和成员 */}
             {isRoot ? (
               <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit?.();
-                  }}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  title="编辑"
-                >
-                  <EditIcon size={18} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onShowMembers?.();
-                  }}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  title="成员"
-                >
-                  <UsersIcon size={18} />
-                </button>
+                {onEdit && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(e);
+                    }}
+                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    title="编辑"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                )}
+                {onShowMembers && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShowMembers(e);
+                    }}
+                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    title="成员"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -926,33 +412,47 @@ export const FileItem: React.FC<FileItemProps> = ({
                   className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
                   title="删除"
                 >
-                  <DeleteIcon size={18} />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
                 </button>
               </>
             ) : (
               <>
                 {!node.isFolder && (
                   <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDownload(node);
-                      }}
-                      className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                      title="下载"
-                    >
-                      <DownloadIcon size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAddToGallery?.(node);
-                      }}
-                      className="p-2 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
-                      title="添加到图库"
-                    >
-                      <GalleryIcon size={18} />
-                    </button>
+                    {onDownload && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDownload(node);
+                        }}
+                        className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                        title="下载"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      </button>
+                    )}
+                    {onAddToGallery && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToGallery(node);
+                        }}
+                        className="p-2 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
+                        title="添加到图库"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                      </button>
+                    )}
                   </>
                 )}
                 <button
@@ -963,7 +463,10 @@ export const FileItem: React.FC<FileItemProps> = ({
                   className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   title="重命名"
                 >
-                  <EditIcon size={18} />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                 </button>
                 {onMove && (
                   <button
@@ -974,14 +477,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                     className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                     title="移动到"
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M5 9l7-7 7 7M5 15l7 7 7-7" />
                     </svg>
                   </button>
@@ -995,14 +491,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                     className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                     title="复制到"
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                       <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                     </svg>
@@ -1017,7 +506,9 @@ export const FileItem: React.FC<FileItemProps> = ({
                     className="p-2 rounded-lg text-slate-500 hover:text-green-600 hover:bg-green-50"
                     title="恢复"
                   >
-                    <RestoreIcon size={18} />
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
                   </button>
                 )}
                 <button
@@ -1032,7 +523,9 @@ export const FileItem: React.FC<FileItemProps> = ({
                   }`}
                   title={onRestore ? '彻底删除' : '删除'}
                 >
-                  <DeleteIcon size={18} />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
                 </button>
               </>
             )}
@@ -1040,7 +533,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         )}
       </div>
 
-      {/* 图片预览模态框 */}
       <ImagePreviewModal
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
