@@ -162,14 +162,6 @@ export const CADEditorDirect: React.FC = () => {
           projectId = file.id;
         }
 
-        console.log('========== 设置文件信息 ==========');
-        console.log('file.id:', file.id);
-        console.log('file.name:', file.name);
-        console.log('file.parentId:', file.parentId);
-        console.log('file.isRoot:', file.isRoot);
-        console.log('计算得到的 projectId:', projectId);
-        console.log('===================================');
-
         setCurrentFileInfo({
           fileId: file.id,
           parentId: file.parentId || null,
