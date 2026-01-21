@@ -46,7 +46,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         setTypes(response.data.result?.allblocks || []);
       }
     } catch (error) {
-      console.error('获取分类列表失败:', error);
+      // 错误已通过 alert 显示
     } finally {
       setLoading(false);
     }
@@ -98,8 +98,6 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         alert(errorMessage);
       }
     } catch (error: any) {
-      console.error('添加到图库失败:', error);
-
       // 处理网络错误或服务器错误
       if (error.response) {
         // 服务器返回了错误响应

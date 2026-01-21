@@ -85,7 +85,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
         return folders;
       } catch (err) {
-        console.error('[SelectFolderModal] 加载子文件夹失败:', err);
+        // 错误已通过 setError 显示
         return [];
       }
     },
@@ -95,10 +95,6 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   // 加载项目根文件夹
   const loadFolderTree = useCallback(async () => {
     if (!projectId || !isOpen) {
-      console.warn('[SelectFolderModal] projectId 或 isOpen 为空，跳过加载', {
-        projectId,
-        isOpen,
-      });
       return;
     }
 
@@ -106,12 +102,8 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     setError(null);
 
     try {
-      console.log('[SelectFolderModal] 开始加载项目:', projectId);
-
       // 获取项目根节点
       const projectResponse = await projectsApi.get(projectId);
-
-      console.log('[SelectFolderModal] 获取到的项目响应:', projectResponse);
 
       const project = projectResponse.data;
 
@@ -135,7 +127,6 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
       setFolderTree(tree);
     } catch (err) {
-      console.error('加载文件夹树失败:', err);
       setError('加载文件夹列表失败');
     } finally {
       setLoading(false);

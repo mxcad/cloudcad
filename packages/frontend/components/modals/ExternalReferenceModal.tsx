@@ -117,7 +117,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           <Button
             variant="ghost"
             onClick={() => {
-              console.log('[ExternalReferenceModal] 取消按钮被点击');
               onClose();
             }}
             disabled={loading}
@@ -127,7 +126,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           <Button
             variant="outline"
             onClick={() => {
-              console.log('[ExternalReferenceModal] 稍后上传按钮被点击');
               onSkip();
             }}
             disabled={loading}
@@ -136,7 +134,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           </Button>
           <Button
             onClick={() => {
-              console.log('[ExternalReferenceModal] 选择并上传按钮被点击');
               onSelectAndUpload();
             }}
             disabled={hasUploading || allSuccess}
@@ -156,7 +153,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           </Button>
           <Button
             onClick={() => {
-              console.log('[ExternalReferenceModal] 完成按钮被点击');
               onComplete();
             }}
             disabled={!allSuccess || loading}
