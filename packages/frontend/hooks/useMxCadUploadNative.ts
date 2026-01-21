@@ -194,13 +194,11 @@ export const useMxCadUploadNative = () => {
 
       if (chunkResponse.data.ret === 'chunkAlreadyExist') {
         // 分片已存在，跳过
-        console.log(`[分片 ${chunkIndex}] 已存在，跳过上传`);
         config.onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
         continue;
       }
 
       // 上传分片
-      console.log(`[分片 ${chunkIndex}] 开始上传`);
       const formData = new FormData();
       formData.append('file', chunk);
       formData.append('chunk', chunkIndex.toString());
@@ -214,7 +212,6 @@ export const useMxCadUploadNative = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      console.log(`[分片 ${chunkIndex}] 上传完成`);
       config.onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
     }
 
@@ -228,17 +225,9 @@ export const useMxCadUploadNative = () => {
 
     while (verifyAttempts < maxAttempts && !uploadSuccess) {
       const verifyRequest = buildRequest();
-      console.log(
-        `[验证 ${verifyAttempts + 1}/${maxAttempts}] 请求:`,
-        verifyRequest
-      );
       const verifyResponse = await apiService.post(
         '/mxcad/files/fileisExist',
         verifyRequest
-      );
-      console.log(
-        `[验证 ${verifyAttempts + 1}/${maxAttempts}] 响应:`,
-        verifyResponse.data
       );
 
       if (verifyResponse.data.ret === 'fileAlreadyExist') {
