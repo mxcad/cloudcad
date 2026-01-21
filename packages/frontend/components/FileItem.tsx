@@ -16,6 +16,8 @@ import { AlertTriangle, Upload, Eye } from 'lucide-react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
+import { logger } from '../utils/logger';
+import { handleError } from '../utils/errorHandler';
 
 interface FileItemProps {
   node: FileSystemNode;
@@ -152,37 +154,20 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   // 监听菜单状态变化
   useEffect(() => {
-    // console.log('[FileItem] showMenu 状态变化:', {
-    //   showMenu,
-    //   menuPosition,
-    //   node: node.name,
-    // });
+    // 菜单状态变化时更新菜单位置
   }, [showMenu, menuPosition, node.name]);
 
   // 点击外部关闭菜单
   useEffect(() => {
     if (!showMenu) return;
 
-    console.log('[FileItem] 添加外部点击监听器');
-
     const handleClickOutside = (e: MouseEvent) => {
-      console.log('[FileItem] 外部点击事件触发', {
-        target: e.target,
-        menuButtonRefCurrent: menuButtonRef.current,
-        menuContainerRefCurrent: menuContainerRef.current,
-        menuButtonContains: menuButtonRef.current?.contains(e.target as Node),
-        menuContainerContains: menuContainerRef.current?.contains(e.target as Node),
-      });
-
       const isClickInMenuButton = menuButtonRef.current?.contains(e.target as Node);
       const isClickInMenuContainer = menuContainerRef.current?.contains(e.target as Node);
 
       if (!isClickInMenuButton && !isClickInMenuContainer) {
-        console.log('[FileItem] 点击在菜单外部，关闭菜单');
         setShowMenu(false);
         setMenuPosition(null);
-      } else {
-        console.log('[FileItem] 点击在菜单内部，不关闭菜单');
       }
     };
 
@@ -216,14 +201,15 @@ export const FileItem: React.FC<FileItemProps> = ({
     nodeId: node.id, // 传递节点 ID 用于权限验证
     fileHash: node.fileHash || '',
     onSuccess: () => {
-      console.log('[FileItem] 外部参照上传成功');
+      logger.info('外部参照上传成功', 'FileItem');
       window.location.reload();
     },
     onError: (error) => {
-      console.error('[FileItem] 外部参照上传失败:', error);
+      const appError = handleError(error, 'FileItem');
+      logger.error(appError.message, 'FileItem', appError.details);
     },
     onSkip: () => {
-      console.log('[FileItem] 用户跳过外部参照上传');
+      logger.info('用户跳过外部参照上传', 'FileItem');
     },
   });
 
@@ -236,20 +222,18 @@ export const FileItem: React.FC<FileItemProps> = ({
    */
   const handleUploadExternalReference = useCallback(
     async (e: React.MouseEvent) => {
-      console.log('[FileItem] handleUploadExternalReference 被调用');
       e.stopPropagation();
       e.preventDefault();
       setShowMenu(false);
 
       // 设置标志，阻止文件项点击
       blockItemClickRef.current = true;
-      console.log('[FileItem] 设置 blockItemClickRef = true');
 
       // 延迟执行，确保菜单完全关闭
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       if (!node.fileHash) {
-        console.error('[FileItem] 文件哈希不存在');
+        logger.error('文件哈希不存在', 'FileItem');
         blockItemClickRef.current = false;
         return;
       }
@@ -258,11 +242,9 @@ export const FileItem: React.FC<FileItemProps> = ({
       const hasMissing = await externalReferenceUpload.checkMissingReferences();
 
       if (hasMissing) {
-        console.log('[FileItem] 有缺失外部参照，打开文件选择对话框');
         // 有缺失时，打开模态框让用户选择要上传的文件
         externalReferenceUpload.openModalForUpload();
       } else {
-        console.log('[FileItem] 无缺失外部参照，刷新文件列表');
         // 无缺失时，刷新文件列表以更新 hasMissingExternalReferences 字段
         onRefresh?.();
         alert('所有外部参照已存在，无需上传');
@@ -291,7 +273,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     (e: React.MouseEvent) => {
       // 检查是否应该阻止点击（例如：刚从菜单操作返回）
       if (blockItemClickRef.current) {
-        console.log('[FileItem] 阻止文件项点击');
         blockItemClickRef.current = false;
         return;
       }
@@ -303,7 +284,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         onSelect(node.id, isCtrl || true, isShift);
       } else {
         // 非多选模式：直接进入
-        console.log('[FileItem] 调用 onEnter:', node.name);
         onEnter(node);
       }
     },
@@ -319,7 +299,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   );
 
   const handleMenuAction = useCallback((action: () => void) => {
-    console.log('[FileItem] handleMenuAction 被调用');
     action();
     setShowMenu(false);
   }, []);
@@ -466,21 +445,12 @@ export const FileItem: React.FC<FileItemProps> = ({
                     top: rect.bottom + 4,
                     left: rect.right - 120,
                   };
-                  console.log('[FileItem] 设置菜单位置:', {
-                    rect,
-                    newPosition,
-                  });
                   setMenuPosition(newPosition);
                 } else {
-                  console.log('[FileItem] 清除菜单位置', {
-                    showMenu,
-                    menuButtonRefCurrent: menuButtonRef.current,
-                  });
                   setMenuPosition(null);
                 }
 
                 setShowMenu(newShowMenu);
-                console.log('[FileItem] 菜单状态切换完成');
               }}
               className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200
                          flex items-center justify-center text-slate-500 hover:text-slate-700
@@ -494,12 +464,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         {showMenu &&
           menuPosition &&
           (() => {
-            console.log('[FileItem] 下拉菜单即将渲染', {
-              node: node.name,
-              isTrash,
-              isRoot,
-              menuPosition,
-            });
             return createPortal(
               <div
                 ref={menuContainerRef}
@@ -510,7 +474,6 @@ export const FileItem: React.FC<FileItemProps> = ({
                   left: `${menuPosition.left}px`,
                 }}
                 onClick={(e) => {
-                  console.log('[FileItem] 下拉菜单容器被点击', { event: e });
                   e.stopPropagation();
                 }}
               >
@@ -595,7 +558,6 @@ export const FileItem: React.FC<FileItemProps> = ({
                           e.stopPropagation();
                           console.log('[FileItem] 删除按钮被点击', { node });
                           handleMenuAction(() => {
-                            console.log('[FileItem] 执行 onDelete 回调');
                             onDelete(node);
                           });
                         }}
@@ -613,9 +575,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log('[FileItem] 下载按钮被点击', { node });
                               handleMenuAction(() => {
-                                console.log('[FileItem] 执行 onDownload 回调');
                                 onDownload(node);
                               });
                             }}
@@ -628,9 +588,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log('[FileItem] 添加到图库按钮被点击', { node });
                               handleMenuAction(() => {
-                                console.log('[FileItem] 执行 onAddToGallery 回调');
                                 onAddToGallery?.(node);
                               });
                             }}
@@ -687,9 +645,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            console.log('[FileItem] 复制到按钮被点击', { node });
                             handleMenuAction(() => {
-                              console.log('[FileItem] 执行 onCopy 回调');
                               onCopy(node);
                             });
                           }}
