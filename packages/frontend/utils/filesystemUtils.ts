@@ -2,6 +2,8 @@
  * 文件系统状态相关的工具函数
  */
 
+import { formatDate, formatFileSize } from './fileUtils';
+
 /**
  * 获取状态显示文本
  */
@@ -34,27 +36,8 @@ export function getStatusStyle(status?: string): string {
   }
 }
 
-/**
- * 格式化日期显示
- */
-export function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
- * 格式化文件大小
- */
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+// 重新导出，保持向后兼容
+export { formatDate, formatFileSize };
 
 export default {
   getStatusText,

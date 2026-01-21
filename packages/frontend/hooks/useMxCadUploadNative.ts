@@ -1,29 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { apiService } from '../services/apiService';
-
-import SparkMD5 from 'spark-md5';
-
-/**
- * 计算文件哈希（使用标准 MD5 算法，与后端保持一致）
- */
-export const calculateFileHash = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const buffer = e.target?.result as ArrayBuffer;
-        const spark = new SparkMD5.ArrayBuffer();
-        spark.append(buffer);
-        const hash = spark.end();
-        resolve(hash);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-};
+import { calculateFileHash } from '../utils/hashUtils';
 
 export interface MxCadUploadConfig {
   nodeId?: string;

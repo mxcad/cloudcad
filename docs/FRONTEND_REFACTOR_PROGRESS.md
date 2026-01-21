@@ -40,7 +40,7 @@
 
 ### 1.1 清理调试代码（1 天）
 
-- [ ] 创建 `utils/logger.ts` 替代 console.log
+- [x] 创建 `utils/logger.ts` 替代 console.log
 - [ ] 全局搜索并替换所有 `console.log`（160+ 处）
   - [ ] `components/FileItem.tsx`（50+ 处）
   - [ ] `hooks/useFileSystem.ts`（30+ 处）
@@ -58,10 +58,10 @@
 
 ### 1.2 代码去重（1 天）
 
-- [ ] 创建 `utils/hashUtils.ts` - 统一文件哈希计算
+- [x] 创建 `utils/hashUtils.ts` - 统一文件哈希计算
 - [ ] 创建 `utils/fileUtils.ts` - 统一文件格式化函数
-- [ ] 创建 `utils/permissionUtils.ts` - 统一权限检查
-- [ ] 创建 `utils/errorHandler.ts` - 统一错误处理
+- [x] 创建 `utils/permissionUtils.ts` - 统一权限检查
+- [x] 创建 `utils/errorHandler.ts` - 统一错误处理
 - [ ] 删除重复实现
   - [ ] `services/apiService.ts`（删除 calculateFileHash）
   - [ ] `hooks/useMxCadUploadNative.ts`（删除 calculateFileHash）
@@ -297,6 +297,7 @@ packages/frontend/
 | any 类型数量 | 50+ | 0 | 50+ |
 | console.log 数量 | 160+ | 0 | 160+ |
 | 测试覆盖率 | 60% | 90% | 60% |
+| 新增工具函数 | 0 | - | 4 |
 
 ---
 
@@ -320,6 +321,11 @@ packages/frontend/
 - ✅ 安装 Zustand 依赖（版本 5.0.10）
 - ✅ 配置 ESLint 规则（禁止 console.log 和 any 类型）
 - ✅ 创建重构进度跟踪文档
+- ✅ 创建 utils/logger.ts - 统一日志工具
+- ✅ 创建 utils/hashUtils.ts - 统一文件哈希计算
+- ✅ 创建 utils/permissionUtils.ts - 统一权限检查
+- ✅ 创建 utils/errorHandler.ts - 统一错误处理
+- ✅ 提交阶段0和阶段1部分成果（commit: 19b6e86）
 
 ---
 

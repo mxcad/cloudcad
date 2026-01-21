@@ -1,4 +1,5 @@
 import { FileSystemNode } from '../types/filesystem';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const formatFileSize = (bytes: number | null | undefined): string => {
   if (!bytes) return '-';
@@ -77,9 +78,7 @@ export const getThumbnailUrl = (node: FileSystemNode): string => {
   }
 
   // 使用后端代理 URL（通过 Session 认证）
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-  return `${apiBaseUrl}/file-system/nodes/${node.id}/thumbnail`;
+  return `${API_BASE_URL}/file-system/nodes/${node.id}/thumbnail`;
 };
 
 /**
@@ -96,9 +95,7 @@ export const getCadThumbnailUrl = (node: FileSystemNode): string => {
     return '';
   }
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-  return `${apiBaseUrl}/mxcad/file/${node.fileHash}.jpg`;
+  return `${API_BASE_URL}/mxcad/file/${node.fileHash}.jpg`;
 };
 
 /**
@@ -109,16 +106,13 @@ export const getCadThumbnailUrl = (node: FileSystemNode): string => {
 export const getOriginalFileUrl = (node: FileSystemNode): string => {
   if (!node.id) return '';
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
   // CAD 文件使用缩略图路径预览
   const extension = node.extension?.toLowerCase() || '';
   const cadExtensions = ['.dwg', '.dxf'];
   if (cadExtensions.includes(extension) && node.fileHash) {
-    return `${apiBaseUrl}/mxcad/file/${node.fileHash}.jpg`;
+    return `${API_BASE_URL}/mxcad/file/${node.fileHash}.jpg`;
   }
 
   // 图片文件返回原图下载链接
-  return `${apiBaseUrl}/file-system/nodes/${node.id}/download`;
+  return `${API_BASE_URL}/file-system/nodes/${node.id}/download`;
 };

@@ -1,33 +1,7 @@
 ﻿import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Logger } from '../utils/mxcadUtils';
-
-import SparkMD5 from 'spark-md5';
-
-/**
- * 计算文件哈希（使用标准 MD5 算法，与后端保持一致）
- */
-const calculateFileHash = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const buffer = e.target?.result as ArrayBuffer;
-        const spark = new SparkMD5.ArrayBuffer();
-        spark.append(buffer);
-        const hash = spark.end();
-        resolve(hash);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-};
-
-// API 基础配置
-const API_BASE_URL =
-  (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
+import { calculateFileHash } from '../utils/hashUtils';
+import { API_BASE_URL, API_TIMEOUT } from '../config/apiConfig';
 
 class ApiService {
   private client: AxiosInstance;
@@ -35,7 +9,7 @@ class ApiService {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 10000,
+      timeout: API_TIMEOUT,
       headers: {
         'Content-Type': 'application/json',
       },
