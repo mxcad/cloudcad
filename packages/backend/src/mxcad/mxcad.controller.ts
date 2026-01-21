@@ -12,11 +12,11 @@
   Res,
   Req,
   Logger,
-  UseGuards,
-  UnauthorizedException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import type { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import * as fs from 'fs';
@@ -28,7 +28,6 @@ import {
   ApiConsumes,
   ApiResponse,
   ApiBody,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { MxCadService } from './mxcad.service';
 import { ConvertDto } from './dto/convert.dto';
@@ -36,14 +35,14 @@ import { DatabaseService } from '../database/database.service';
 import { TzDto } from './dto/tz.dto';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UploadFilesDto } from './dto/upload-files.dto';
+import { PdfConversionDto } from './dto/pdf-conversion.dto';
+import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { MinioSyncService } from './minio-sync.service';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
   private readonly mxCadFileExt: string;
@@ -78,7 +77,7 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
   async checkChunkExist(
     @Body() body: any,
-    @Req() request: any,
+    @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
@@ -103,7 +102,7 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
   async checkFileExist(
     @Body() body: any,
-    @Req() request: any,
+    @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
     const context = await this.buildContextFromRequest(request);
@@ -352,8 +351,8 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '上传文件' })
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: any,
-    @Req() request: any,
+    @Body() body: UploadFilesDto,
+    @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
     // 检查是否为合并请求（没有文件，只有 chunks 信息）
@@ -378,11 +377,16 @@ export class MxCadController {
     // 优先处理合并请求（没有文件，有 chunks 信息）
     if (isMergeRequest) {
       try {
+        // 验证 chunks 参数
+        if (body.chunks === undefined) {
+          return res.json({ ret: 'errorparam' });
+        }
+
         const result = await this.mxCadService.mergeChunksWithPermission(
           body.hash,
           body.name,
-          parseInt(body.size, 10),
-          parseInt(body.chunks, 10),
+          body.size,
+          body.chunks,
           context,
           body.src_dwgfile_hash // 外部参照上传时的源图纸哈希
         );
@@ -396,6 +400,11 @@ export class MxCadController {
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
       try {
+        // 验证 chunks 参数
+        if (body.chunks === undefined) {
+          return res.json({ ret: 'errorparam' });
+        }
+
         // 获取临时目录路径
         const tempPath =
           process.env.MXCAD_TEMP_PATH || path.join(process.cwd(), 'temp');
@@ -425,9 +434,9 @@ export class MxCadController {
         const result = await this.mxCadService.uploadChunkWithPermission(
           body.hash,
           body.name,
-          parseInt(body.size, 10),
-          parseInt(body.chunk, 10),
-          parseInt(body.chunks, 10),
+          body.size,
+          body.chunk,
+          body.chunks,
           context
         );
         return res.json(result);
@@ -441,7 +450,7 @@ export class MxCadController {
         file.path,
         body.hash,
         body.name,
-        parseInt(body.size, 10),
+        body.size,
         context
       );
       return res.json(result);
@@ -489,6 +498,7 @@ export class MxCadController {
    * 上传并转换文件（不支持断点续传）
    */
   @Post('upfile')
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '上传并转换文件' })
@@ -500,8 +510,13 @@ export class MxCadController {
       return res.json({ code: -1, message: '缺少文件' });
     }
 
+    // 计算文件 MD5 哈希值
+    const fileBuffer = fs.readFileSync(file.path);
+    const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+
     const param = {
       srcpath: file.path.replace(/\\/g, '/'),
+      src_file_md5: fileHash,
     };
 
     const result = await this.mxCadService.convertServerFile(param);
@@ -522,6 +537,7 @@ export class MxCadController {
    * 保存 MXWEB 到服务器
    */
   @Post('savemxweb')
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '保存 MXWEB 到服务器' })
@@ -544,6 +560,7 @@ export class MxCadController {
    * 保存 DWG 到服务器
    */
   @Post('savedwg')
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '保存 DWG 到服务器' })
@@ -558,8 +575,13 @@ export class MxCadController {
     const inputFile = file.path.replace(/\\/g, '/');
     const outputFile = `${file.filename}.dwg`;
 
+    // 计算文件 MD5 哈希值
+    const fileBuffer = fs.readFileSync(file.path);
+    const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+
     const param = {
       srcpath: inputFile,
+      src_file_md5: fileHash,
       outname: outputFile,
     };
 
@@ -582,12 +604,13 @@ export class MxCadController {
    * 保存 PDF 到服务器
    */
   @Post('savepdf')
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '保存 PDF 到服务器' })
   async savePdf(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: any,
+    @Body() body: PdfConversionDto,
     @Res() res: Response
   ) {
     if (!file) {
@@ -638,12 +661,13 @@ export class MxCadController {
    * 打印为 PDF
    */
   @Post('print_to_pdf')
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '打印为 PDF' })
   async printToPdf(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { param: string },
+    @Body() body: PdfConversionDto,
     @Res() res: Response
   ) {
     if (!file) {
@@ -694,7 +718,20 @@ export class MxCadController {
    * 裁剪 DWG
    */
   @Post('cut_dwg')
-  @UseInterceptors(FileInterceptor('file'))
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', { storage: diskStorage({
+    destination: (req, file, cb) => {
+      const uploadPath =
+        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      fs.mkdirSync(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uuid = crypto.randomUUID();
+      const ext = file.originalname.split('.').pop();
+      cb(null, `${uuid}.${ext}`);
+    },
+  }) }))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '裁剪 DWG' })
   async cutDwg(
@@ -724,6 +761,7 @@ export class MxCadController {
     const inputFile = file.path.replace(/\\/g, '/');
     const outputFile = `${file.filename}.dwg`;
 
+    param.cmd = 'cut_dwg';
     param.srcpath = inputFile;
     param.outname = outputFile;
 
@@ -746,7 +784,20 @@ export class MxCadController {
    * 裁剪 MXWEB
    */
   @Post('cut_mxweb')
-  @UseInterceptors(FileInterceptor('file'))
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', { storage: diskStorage({
+    destination: (req, file, cb) => {
+      const uploadPath =
+        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      fs.mkdirSync(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uuid = crypto.randomUUID();
+      const ext = file.originalname.split('.').pop();
+      cb(null, `${uuid}.${ext}`);
+    },
+  }) }))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '裁剪 MXWEB' })
   async cutMxweb(
@@ -775,6 +826,7 @@ export class MxCadController {
 
     const inputFile = file.path.replace(/\\/g, '/');
     const outputFile = `${file.filename}${this.mxCadFileExt}`;
+    param.cmd = 'cut_dwg';
     param.srcpath = inputFile;
     param.outname = outputFile;
 
@@ -828,7 +880,7 @@ export class MxCadController {
   async uploadExtReferenceDwg(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: UploadExtReferenceDto,
-    @Req() request: any,
+    @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
     this.logger.log(`[uploadExtReferenceDwg] 开始处理: ${body.ext_ref_file}`);
@@ -1029,7 +1081,7 @@ export class MxCadController {
   async uploadExtReferenceImage(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: UploadExtReferenceDto,
-    @Req() request: any,
+    @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
     this.logger.log(`[uploadExtReferenceImage] 开始处理: ${body.ext_ref_file}`);

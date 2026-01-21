@@ -6,6 +6,7 @@ import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { MinioSyncService } from './minio-sync.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
+import { ConversionOptions } from './interfaces/file-conversion.interface';
 import {
   ExternalReferenceStats,
   ExternalReferenceInfo,
@@ -115,17 +116,23 @@ export class MxCadService {
         return { code: 12, message: 'param error' };
       }
 
+      // 构建转换选项
+      const conversionOptions: ConversionOptions = {
+        srcPath: param.srcpath,
+        fileHash: param.src_file_md5,
+        createPreloadingData: true,
+        outname: param.outname,
+        cmd: param.cmd,
+        width: param.width,
+        height: param.height,
+        colorPolicy: param.colorPolicy,
+        outjpg: param.outjpg,
+      };
+
       if (param.async === 'true' && param.resultposturl) {
         // 异步转换
         this.fileConversionService
-          .convertFileAsync(
-            {
-              srcPath: param.srcpath,
-              fileHash: param.src_file_md5,
-              createPreloadingData: true,
-            },
-            param.resultposturl
-          )
+          .convertFileAsync(conversionOptions, param.resultposturl)
           .then((taskId) => {
             // 这里应该发送回调，暂时省略
             this.logger.log(
@@ -135,11 +142,9 @@ export class MxCadService {
         return { code: 0, message: 'async calling' };
       } else {
         // 同步转换
-        const { isOk, ret } = await this.fileConversionService.convertFile({
-          srcPath: param.srcpath,
-          fileHash: param.src_file_md5,
-          createPreloadingData: true,
-        });
+        const { isOk, ret } = await this.fileConversionService.convertFile(
+          conversionOptions
+        );
         return isOk ? ret : { code: 12, message: 'param error' };
       }
     } catch (error) {

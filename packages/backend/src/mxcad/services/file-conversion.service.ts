@@ -8,8 +8,8 @@ import type {
 import { FileTypeDetector } from '../utils/file-type-detector';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 const execAsync = promisify(exec);
 
@@ -17,26 +17,54 @@ const execAsync = promisify(exec);
 export class FileConversionService implements IFileConversionService {
   private readonly logger = new Logger(FileConversionService.name);
   private readonly mxCadAssemblyPath: string;
+  private readonly mxCadBinPath: string;
   private readonly mxCadFileExt: string;
   private readonly compression: boolean;
 
   constructor(private readonly configService: ConfigService) {
+    // 检测操作系统
+    const isLinux = os.platform() === 'linux';
+
+    // 根据平台配置转换程序路径
     this.mxCadAssemblyPath =
       this.configService.get('MXCAD_ASSEMBLY_PATH') ||
-      path.join(
-        process.cwd(),
-        'mxcadassembly',
-        'windows',
-        'release',
-        'mxcadassembly.exe'
-      );
+      (isLinux
+        ? path.join(
+            process.cwd(),
+            'mxcadassembly',
+            'linux',
+            'release',
+            'mxcadassembly'
+          )
+        : path.join(
+            process.cwd(),
+            'mxcadassembly',
+            'windows',
+            'release',
+            'mxcadassembly.exe'
+          ));
+
+    // Linux 下需要的工作目录（mxcadassembly/bin）
+    this.mxCadBinPath = isLinux
+      ? path.join(process.cwd(), 'mxcadassembly', 'linux', 'bin')
+      : '';
+
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
     this.compression = this.configService.get('MXCAD_COMPRESSION') !== 'false';
+  }
+
+  /**
+   * 检测是否为 Linux 平台
+   */
+  private isLinux(): boolean {
+    return os.platform() === 'linux';
   }
 
   async convertFile(options: ConversionOptions): Promise<ConversionResult> {
     let stdout = '';
     let stderr = '';
+    let originalDir = process.cwd();
+    let changedDir = false;
 
     try {
       const {
@@ -44,37 +72,85 @@ export class FileConversionService implements IFileConversionService {
         fileHash,
         createPreloadingData = true,
         compression = this.compression,
+        outname,
+        cmd,
+        width,
+        height,
+        colorPolicy,
+        outjpg,
       } = options;
 
+      // 构建完整的 param 对象
       const param: any = {
         srcpath: srcPath.replace(/\\/g, '/'),
         src_file_md5: fileHash,
         create_preloading_data: createPreloadingData,
       };
 
+      // 添加可选参数
       if (!compression) {
         param.compression = 0;
       }
 
-      const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
-      this.logger.log(`执行 MxCAD 转换命令: ${cmd}`);
+      if (outname) {
+        param.outname = outname;
+      }
 
-      const execResult = await execAsync(cmd, {
-        encoding: 'utf8',
-        timeout: options.timeout || 60000, // 增加超时到60秒
-        maxBuffer: 50 * 1024 * 1024, // 增加缓冲区到50MB
-      });
+      if (cmd) {
+        param.cmd = cmd;
+      }
 
-      stdout = execResult.stdout;
-      stderr = execResult.stderr;
+      if (width) {
+        param.width = width;
+      }
 
-      // 重命名原始文件
-      const randomNum = Math.floor(Math.random() * (94552 - 11291) + 11291);
-      const newPath = `${srcPath}_${randomNum}.dwg`;
+      if (height) {
+        param.height = height;
+      }
 
-      if (fs.existsSync(srcPath)) {
-        fs.renameSync(srcPath, newPath);
-        this.logger.log(`原始文件已重命名为: ${newPath}`);
+      if (colorPolicy) {
+        param.colorPolicy = colorPolicy;
+      }
+
+      if (outjpg) {
+        param.outjpg = outjpg;
+      }
+
+      // Linux 平台特殊处理
+      if (this.isLinux()) {
+        // 切换工作目录到 mxcadassembly/bin
+        if (this.mxCadBinPath) {
+          process.chdir(this.mxCadBinPath);
+          changedDir = true;
+          this.logger.log(`[Linux] 切换工作目录: ${this.mxCadBinPath}`);
+        }
+
+        // 将参数中的双引号替换为单引号
+        const paramStr = JSON.stringify(param).replace(/"/g, "'");
+        const cmd = `"${this.mxCadAssemblyPath}" "${paramStr}"`;
+        this.logger.log(`执行 MxCAD 转换命令 (Linux): ${cmd}`);
+
+        const execResult = await execAsync(cmd, {
+          encoding: 'utf8',
+          timeout: options.timeout || 60000,
+          maxBuffer: 50 * 1024 * 1024,
+        });
+
+        stdout = execResult.stdout;
+        stderr = execResult.stderr;
+      } else {
+        // Windows 平台
+        const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
+        this.logger.log(`执行 MxCAD 转换命令: ${cmd}`);
+
+        const execResult = await execAsync(cmd, {
+          encoding: 'utf8',
+          timeout: options.timeout || 60000,
+          maxBuffer: 50 * 1024 * 1024,
+        });
+
+        stdout = execResult.stdout;
+        stderr = execResult.stderr;
       }
 
       // 尝试从 stdout 或 stderr 解析结果
@@ -91,7 +167,6 @@ export class FileConversionService implements IFileConversionService {
           strOutput = strOutput.substring(iPos);
         }
         const ret = JSON.parse(strOutput);
-        ret.newpath = newPath;
 
         if (ret.code === 0) {
           this.logger.log(`文件转换成功: ${srcPath}`);
@@ -153,18 +228,6 @@ export class FileConversionService implements IFileConversionService {
             // 如果输出包含成功的结果，视为转换成功
             if (ret.code === 0) {
               this.logger.log(`检测到转换成功，返回成功状态`);
-              const randomNum = Math.floor(
-                Math.random() * (94552 - 11291) + 11291
-              );
-              const newPath = `${options.srcPath}_${randomNum}.dwg`;
-
-              // 重命名原始文件
-              if (fs.existsSync(options.srcPath)) {
-                fs.renameSync(options.srcPath, newPath);
-                this.logger.log(`原始文件已重命名为: ${newPath}`);
-              }
-
-              ret.newpath = newPath;
               this.logger.log(`文件转换成功 (从输出解析): ${options.srcPath}`);
               return { isOk: true, ret };
             }
@@ -181,6 +244,12 @@ export class FileConversionService implements IFileConversionService {
         ret: { code: -1, message: error.message },
         error: error.message,
       };
+    } finally {
+      // 恢复原始工作目录
+      if (changedDir) {
+        process.chdir(originalDir);
+        this.logger.log(`[Linux] 恢复工作目录: ${originalDir}`);
+      }
     }
   }
 
