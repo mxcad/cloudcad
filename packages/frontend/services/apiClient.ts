@@ -96,31 +96,31 @@ class ApiClient {
     );
   }
 
-  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.get(url, config);
   }
 
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.post(url, data, config);
   }
 
-  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.put(url, data, config);
   }
 
-  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.patch(url, data, config);
   }
 
-  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.delete(url, config);
   }
 
-  upload<T = any>(url: string, data: any): Promise<AxiosResponse<T>> {
+  upload<T = unknown>(url: string, data: unknown): Promise<AxiosResponse<T>> {
     return this.client.post(url, data);
   }
 
-  private getNodeIdFromMultipleSources(config: any): string | null {
+  private getNodeIdFromMultipleSources(config: AxiosRequestConfig): string | null {
     if (config.data?.nodeId) return config.data.nodeId;
 
     if (typeof window !== 'undefined') {
@@ -147,7 +147,7 @@ class ApiClient {
     return cuid2Pattern.test(nodeId);
   }
 
-  private supplementNodeIdToRequest(config: any, nodeId: string): void {
+  private supplementNodeIdToRequest(config: AxiosRequestConfig, nodeId: string): void {
     if (!config || !nodeId) return;
 
     const method = config.method?.toLowerCase();

@@ -29,7 +29,7 @@ export const filesApi = {
       responseType: 'blob',
     }),
 
-  update: (id: string, data: any) => apiClient.patch(`/files/${id}`, data),
+  update: (id: string, data: Record<string, unknown>) => apiClient.patch(`/files/${id}`, data),
 
   delete: (id: string) => apiClient.delete(`/files/${id}`),
 

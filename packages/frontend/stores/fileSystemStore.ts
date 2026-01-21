@@ -12,12 +12,12 @@ const getInitialViewMode = (): 'grid' | 'list' => {
 export interface FileSystemState {
   // Current path and selection
   currentPath: FileSystemNode[];
-  selectedItems: Set<string>;
+  selectedItems: string[]; // 改为数组，便于持久化
   currentParentId: string | null;
 
   // Navigation
   setCurrentPath: (path: FileSystemNode[]) => void;
-  setSelectedItems: (items: Set<string>) => void;
+  setSelectedItems: (items: string[]) => void;
   addSelectedItem: (id: string) => void;
   removeSelectedItem: (id: string) => void;
   clearSelection: () => void;
@@ -47,7 +47,7 @@ export const useFileSystemStore = create<FileSystemState>()(
   persist(
     (set, get) => ({
       currentPath: [],
-      selectedItems: new Set(),
+      selectedItems: [],
       currentParentId: null,
       viewMode: getInitialViewMode(),
       sortBy: 'name',
@@ -58,17 +58,16 @@ export const useFileSystemStore = create<FileSystemState>()(
       setSelectedItems: (items) => set({ selectedItems: items }),
       addSelectedItem: (id) =>
         set((state) => {
-          const newSelection = new Set(state.selectedItems);
-          newSelection.add(id);
-          return { selectedItems: newSelection };
+          if (state.selectedItems.includes(id)) {
+            return state;
+          }
+          return { selectedItems: [...state.selectedItems, id] };
         }),
       removeSelectedItem: (id) =>
-        set((state) => {
-          const newSelection = new Set(state.selectedItems);
-          newSelection.delete(id);
-          return { selectedItems: newSelection };
-        }),
-      clearSelection: () => set({ selectedItems: new Set() }),
+        set((state) => ({
+          selectedItems: state.selectedItems.filter((item) => item !== id),
+        })),
+      clearSelection: () => set({ selectedItems: [] }),
       setCurrentParentId: (id) => set({ currentParentId: id }),
 
       setViewMode: (mode) => {
@@ -107,11 +106,7 @@ export const useFileSystemStore = create<FileSystemState>()(
     }),
     {
       name: 'fileSystemStore',
-      partialize: (state) => ({
-        viewMode: state.viewMode,
-        sortBy: state.sortBy,
-        sortOrder: state.sortOrder,
-      }),
+      partialize: (state) => ({}),
     }
   )
 );

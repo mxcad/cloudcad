@@ -63,7 +63,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           <button
             onClick={isAtRoot ? () => navigate('/projects') : onGoBack}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
-            title={isAtRoot ? '·µ»ØÏîÄ¿ÁÐ±í' : '·µ»ØÉÏÒ»¼¶'}
+            title={isAtRoot ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½Ð±ï¿½' : 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½'}
           >
             <svg
               width="18"
@@ -85,9 +85,11 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               breadcrumbs={breadcrumbs}
               onNavigate={(crumb) => {
                 if (crumb.isRoot) {
-                  navigate(/projects//files);
+                  navigate('/projects');
                 } else {
-                  navigate(/projects//files/);
+                  navigate(`/projects/${projectId}/files/${crumb.id}`);
+                }
+              }}
                 }
               }}
             />
@@ -101,7 +103,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             onClick={onRefresh}
             disabled={loading}
             className="text-slate-600 hover:bg-slate-100"
-            title="Ë¢ÐÂ"
+            title="Ë¢ï¿½ï¿½"
           >
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
@@ -112,7 +114,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               size="sm"
               onClick={onCreateProject}
               className="text-slate-600 hover:bg-slate-100"
-              title="ÐÂ½¨ÏîÄ¿"
+              title="ï¿½Â½ï¿½ï¿½ï¿½Ä¿"
             >
               <FolderPlus size={16} />
             </Button>
@@ -124,7 +126,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                 onClick={onCreateFolder}
                 disabled={loading}
                 className="text-slate-600 hover:bg-slate-100"
-                title="ÐÂ½¨ÎÄ¼þ¼Ð"
+                title="ï¿½Â½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½"
               >
                 <svg
                   width="16"
@@ -151,7 +153,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           />
           <input
             type="text"
-            placeholder="ËÑË÷ÎÄ¼þ»òÏîÄ¿..."
+            placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -166,7 +168,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               <button
                 onClick={() => setSearchQuery('')}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                title="Çå³ýËÑË÷"
+                title="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
               >
                 <svg
                   width="12"
@@ -183,7 +185,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             <button
               onClick={handleSearchSubmit}
               className="text-primary-500 hover:text-primary-600 transition-colors p-1"
-              title="ËÑË÷"
+              title="ï¿½ï¿½ï¿½ï¿½"
             >
               <svg
                 width="14"
@@ -210,7 +212,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             className={
               isMultiSelectMode ? '' : 'text-slate-600 hover:bg-slate-100'
             }
-            title="¶àÑ¡Ä£Ê½"
+            title="ï¿½ï¿½Ñ¡Ä£Ê½"
           >
             <svg
               width="14"
@@ -230,7 +232,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               size="sm"
               onClick={onSelectAll}
               className="text-slate-600 hover:bg-slate-100"
-              title={selectedNodes.size === nodesCount ? 'È¡ÏûÈ«Ñ¡' : 'È«Ñ¡'}
+              title={selectedNodes.size === nodesCount ? 'È¡ï¿½ï¿½È«Ñ¡' : 'È«Ñ¡'}
             >
               {selectedNodes.size === nodesCount ? (
                 <svg
@@ -263,14 +265,14 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden">
             <button
               onClick={() => setViewMode('grid')}
-              className={p-2 transition-colors }
+              className="p-2 transition-colors"
             >
               <GridIcon size={14} />
             </button>
             <div className="w-px h-4 bg-slate-200" />
             <button
               onClick={() => setViewMode('list')}
-              className={p-2 transition-colors }
+              className="p-2 transition-colors"
             >
               <ListIcon size={14} />
             </button>
