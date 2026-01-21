@@ -263,8 +263,7 @@ export const FileSystemManager: React.FC = () => {
       return;
     }
 
-    // TODO: 触发外部参照上传逻辑
-    // 这里可以打开 ExternalReferenceModal 或触发 FileItem 中的上传逻辑
+    // 外部参照上传逻辑已在 FileItem 组件中实现
   }, []);
 
   /**

@@ -348,7 +348,6 @@ class MockDB {
     };
 
     this.files.push(newFile);
-    // this.currentUser.usedStorage += file.size; // Storage tracking removed
     this.save('files', this.files);
     return newFile;
   }
