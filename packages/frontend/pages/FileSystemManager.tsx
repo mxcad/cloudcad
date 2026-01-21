@@ -29,10 +29,7 @@ import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
-  const { projectId, nodeId } = useParams<{
-    projectId: string;
-    nodeId?: string;
-  }>();
+  const params = useParams<{ projectId: string; nodeId?: string }>();
   const location = useLocation();
 
   // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
@@ -437,7 +434,7 @@ export const FileSystemManager: React.FC = () => {
                 if (crumb.isRoot) {
                   navigate(`/projects/${crumb.id}/files`);
                 } else {
-                  navigate(`/projects/${projectId}/files/${crumb.id}`);
+                  navigate(`/projects/${params.projectId}/files/${crumb.id}`);
                 }
               }}
             />
@@ -493,7 +490,7 @@ export const FileSystemManager: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  if (!projectId) {
+                  if (!urlProjectId) {
                     alert('请先选择一个项目再上传文件');
                     return;
                   }
