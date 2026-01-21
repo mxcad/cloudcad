@@ -1,7 +1,7 @@
-// 向后兼容：重新导出所有 API 服务
-// 此文件已拆分为多个模块，但保留此文件以保持向后兼容性
+// API 客户端
+export { apiClient } from './apiClient';
 
-export { apiClient as apiService } from './apiClient';
+// API 服务
 export { authApi } from './authApi';
 export { usersApi } from './usersApi';
 export { projectsApi } from './projectsApi';
@@ -12,3 +12,6 @@ export { fontsApi } from './fontsApi';
 export { rolesApi } from './rolesApi';
 export { mxcadApi } from './mxcadApi';
 export { galleryApi } from './galleryApi';
+
+// 向后兼容：导出 apiService 别名
+export { apiClient as apiService } from './apiClient';
