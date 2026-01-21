@@ -209,7 +209,7 @@ export const FileSystemManager: React.FC = () => {
     if (currentNode?.id) {
       currentNodeIdRef.current = currentNode.id;
     }
-  }, [currentNode?.id]);
+  }, [currentNode]);
 
   // 直接使用后端返回的数据（已包含分页和搜索）
   // 不再进行前端过滤，避免破坏分页的正确性
