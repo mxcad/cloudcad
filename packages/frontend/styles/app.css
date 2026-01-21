@@ -95,9 +95,6 @@
   }
 
   body {
-    font-family: var(--font-family-base);
-    background-color: var(--color-slate-50);
-    color: var(--color-slate-700);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
