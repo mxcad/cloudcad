@@ -4,6 +4,8 @@ import { projectsApi, filesApi, trashApi } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
 import { PaginationMeta } from '../components/ui/Pagination';
+import { logger } from '../utils/logger';
+import { handleError } from '../utils/errorHandler';
 
 /**
  * 验证文件夹/文件名称
@@ -307,18 +309,8 @@ export const useFileSystem = () => {
 
   // 统一的数据加载函数
   const loadData = useCallback(async () => {
-    console.log('[useFileSystem] loadData 开始', {
-      urlProjectId,
-      urlNodeId,
-      isProjectRootMode,
-      searchQuery,
-      pagination: paginationRef.current,
-      timestamp: Date.now(),
-    });
-
     // 取消之前的请求
     if (abortControllerRef.current) {
-      console.log('[useFileSystem] 取消之前的请求');
       abortControllerRef.current.abort();
     }
 
@@ -420,23 +412,12 @@ export const useFileSystem = () => {
         return;
       }
 
-      console.error('[useFileSystem] 加载数据失败', {
-        error,
-        urlProjectId,
-        urlNodeId,
-        timestamp: Date.now(),
-      });
-
       const errorMessage =
         error instanceof Error ? error.message : '加载数据失败';
       setError(errorMessage);
+      handleError(error, '加载数据失败');
       showToast(errorMessage, 'error');
     } finally {
-      console.log('[useFileSystem] loadData 完成', {
-        urlProjectId,
-        urlNodeId,
-        timestamp: Date.now(),
-      });
       setLoading(false);
     }
   }, [
@@ -846,14 +827,11 @@ export const useFileSystem = () => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        console.log('[useFileSystem] 下载成功', { fileName: finalFileName });
         showToast(
           node.isFolder ? '目录压缩下载成功' : '文件下载成功',
           'success'
         );
       } catch (error) {
-        console.error('[useFileSystem] 下载失败', error);
-
         let errorMessage = '文件下载失败';
 
         if (error instanceof Error) {
@@ -869,6 +847,7 @@ export const useFileSystem = () => {
           }
         }
 
+        handleError(error, '文件下载失败');
         showToast(errorMessage, 'error');
       }
     },
@@ -1055,38 +1034,19 @@ export const useFileSystem = () => {
 
     // 使用防抖，避免短时间内多次调用
     const timeoutId = setTimeout(() => {
-      console.log('[useFileSystem] 执行 loadData', {
-        urlProjectId,
-        urlNodeId,
-        refreshCount,
-        timestamp: Date.now(),
-      });
       loadData();
     }, 150); // 增加防抖时间到 150ms
 
     return () => {
-      console.log('[useFileSystem] 清理 timeout', {
-        urlProjectId,
-        urlNodeId,
-        refreshCount,
-        timestamp: Date.now(),
-      });
       clearTimeout(timeoutId);
     };
   }, [urlProjectId, urlNodeId, refreshCount]); // 移除 location.pathname
 
   // 监听 pagination 变化，当标志为 true 时加载数据
   useEffect(() => {
-    console.log('[useFileSystem] pagination useEffect', {
-      pagination,
-      shouldLoadData: shouldLoadDataRef.current,
-      timestamp: Date.now(),
-    });
-
     if (shouldLoadDataRef.current) {
       // 清除标志
       shouldLoadDataRef.current = false;
-      console.log('[useFileSystem] pagination 变化，执行 loadData');
       // 加载数据（使用 ref 获取最新的函数）
       loadDataRef.current();
     }
@@ -1097,11 +1057,9 @@ export const useFileSystem = () => {
   useEffect(() => {
     if (searchQuery === '' && prevSearchQueryRef.current !== '') {
       // 搜索清空时，重置页码并加载数据
-      console.log('[useFileSystem] 搜索清空，重新加载数据');
       setPagination((prev) => ({ ...prev, page: 1 }));
       // 延迟加载数据，避免与主 useEffect 冲突
       setTimeout(() => {
-        console.log('[useFileSystem] 搜索清空后执行 loadData');
         loadDataRef.current();
       }, 200);
     }
