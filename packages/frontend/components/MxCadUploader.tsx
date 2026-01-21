@@ -65,17 +65,14 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const externalReferenceUpload = useExternalReferenceUpload({
       fileHash: currentFileHash,
       onSuccess: () => {
-        console.log('[MxCadUploader] 外部参照上传成功');
         onExternalReferenceSuccess?.();
       },
       onError: (error) => {
-        console.error('[MxCadUploader] 外部参照上传失败:', error);
         setMessage(`外部参照上传失败: ${error}`);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 5000);
       },
       onSkip: () => {
-        console.log('[MxCadUploader] 用户跳过外部参照上传');
         onExternalReferenceSkip?.();
       },
     });
@@ -92,14 +89,6 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const handleSelectFiles = () => {
       // 每次上传前都获取最新的 nodeId
       const currentNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
-      console.log(
-        '[MxCadUploader] 当前 nodeId:',
-        currentNodeId,
-        '类型:',
-        typeof currentNodeId,
-        '长度:',
-        currentNodeId?.length
-      );
 
       // 检查用户是否已登录
       if (!isAuthenticated) {
@@ -125,10 +114,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           setCurrentFileHash(param.hash);
 
           // 检查外部参照（传入 fileHash 确保不为空）
-          console.log('[MxCadUploader] 开始检查外部参照, hash:', param.hash);
-          const hasMissing =
-            await externalReferenceUpload.checkMissingReferences(param.hash);
-          console.log('[MxCadUploader] 外部参照检查结果:', hasMissing);
+          await externalReferenceUpload.checkMissingReferences(param.hash);
 
           // 3秒后隐藏提示
           setTimeout(() => setShowToast(false), 3000);
