@@ -15,18 +15,28 @@ module.exports = {
     'no-debugger': 'error',
   },
   overrides: [
+    // 前端 React 配置
     {
       files: ['packages/frontend/**/*.{js,jsx,ts,tsx}'],
       env: {
         browser: true,
       },
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       extends: [
         'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
         'plugin:react/recommended',
         'plugin:react-hooks/recommended',
         'prettier',
       ],
-      plugins: ['react', 'react-hooks'],
+      plugins: ['@typescript-eslint', 'react', 'react-hooks', 'unused-imports'],
       settings: {
         react: {
           version: 'detect',
@@ -35,17 +45,43 @@ module.exports = {
       rules: {
         'react/react-in-jsx-scope': 'off',
         'react/prop-types': 'off',
-        'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+        'react/display-name': 'off',
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-explicit-any': 'warn',
+        'no-unused-vars': 'off',
+        'no-console': 'warn',
+        'react-hooks/exhaustive-deps': 'warn',
+        'unused-imports/no-unused-imports': 'error',
+        'unused-imports/no-unused-vars': 'off',
       },
     },
+    // 后端 NestJS 配置
     {
       files: ['packages/backend/**/*.ts'],
       env: {
         node: true,
       },
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+      plugins: ['@typescript-eslint', 'unused-imports'],
+      extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+        'prettier',
+      ],
       rules: {
-        'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/interface-name-prefix': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/explicit-module-boundary-types': 'off',
+        'no-unused-vars': 'off',
         'no-console': 'off',
+        'unused-imports/no-unused-imports': 'error',
+        'unused-imports/no-unused-vars': 'off',
       },
     },
   ],
@@ -66,5 +102,23 @@ module.exports = {
     '*.log',
     'tmp',
     'temp',
+    '**/*.spec.ts',
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '**/test/**',
+    '**/e2e/**',
+    'jest.config.ts',
+    'vitest.setup.ts',
+    'vite.config.ts',
+    'prisma/**',
+    '*.d.ts',
+    'types.ts',
+    '**/types/**',
+    '**/*.config.ts',
+    '**/scripts/**',
+    'conversionProgram/**',
+    '代码参考/**',
+    'test-*.js',
+    'mxcadassembly/**',
   ],
 };

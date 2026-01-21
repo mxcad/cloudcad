@@ -7,7 +7,6 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../../common/enums/permissions.enum';
 
 export class UpdateUserDto {
   @ApiProperty({ description: '用户邮箱', required: false })
@@ -37,10 +36,10 @@ export class UpdateUserDto {
   @IsString()
   avatar?: string;
 
-  @ApiProperty({ description: '用户角色', enum: UserRole, required: false })
+  @ApiProperty({ description: '角色ID', required: false })
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsString({ message: '角色ID必须是字符串' })
+  roleId?: string;
 
   @ApiProperty({ description: '用户状态', enum: UserStatus, required: false })
   @IsOptional()

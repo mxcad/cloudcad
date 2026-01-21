@@ -1,11 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../../database/database.service';
 import {
-  FILE_ACCESS_PERMISSIONS,
-  FileAccessRole,
+  NodeAccessRole,
   Permission,
-  PROJECT_MEMBER_PERMISSIONS,
-  ProjectMemberRole,
   ROLE_PERMISSIONS,
   UserRole,
 } from '../enums/permissions.enum';
@@ -22,7 +19,7 @@ describe('PermissionService', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: UserRole.USER,
     status: 'ACTIVE',
   };
@@ -32,44 +29,31 @@ describe('PermissionService', () => {
     role: UserRole.ADMIN,
   };
 
-  const mockProjectMember = {
-    userId: 'user-id',
-    projectId: 'project-id',
-    role: ProjectMemberRole.MEMBER,
+  const mockNode = {
+    id: 'node-id',
+    ownerId: 'owner-id',
+    deletedAt: null,
   };
 
   const mockFileAccess = {
     userId: 'user-id',
-    fileId: 'file-id',
-    role: FileAccessRole.EDITOR,
-  };
-
-  const mockFile = {
-    id: 'file-id',
-    ownerId: 'user-id',
-    projectId: 'project-id',
+    nodeId: 'node-id',
+    role: NodeAccessRole.EDITOR,
   };
 
   beforeEach(async () => {
     const mockPrisma = {
-      projectMember: {
+      fileSystemNode: {
         findUnique: jest.fn(),
-        findFirst: jest.fn(),
       },
       fileAccess: {
-        findUnique: jest.fn(),
-        findFirst: jest.fn(),
-      },
-      file: {
         findUnique: jest.fn(),
       },
     } as any;
 
     const mockCacheService = {
-      getProjectPermissions: jest.fn(),
-      cacheProjectPermissions: jest.fn(),
-      getFilePermissions: jest.fn(),
-      cacheFilePermissions: jest.fn(),
+      getNodeAccessRole: jest.fn(),
+      cacheNodeAccessRole: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -85,14 +69,14 @@ describe('PermissionService', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<PermissionService>(PermissionService);
     prisma = module.get(DatabaseService);
@@ -131,18 +115,31 @@ describe('PermissionService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false when resourceId provided as project/file permissions are migrated', async () => {
+    it('should check node permission when nodeId is provided', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.EDITOR);
+
       const result = await service.hasPermission(
         mockUser,
-        Permission.PROJECT_DELETE,
-        { projectId: 'project-id' }
+        Permission.FILE_WRITE,
+        { nodeId: 'node-id' }
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when node permission check fails', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(null);
+
+      const result = await service.hasPermission(
+        mockUser,
+        Permission.PROJECT_DELETE, // 使用用户没有的权限
+        { nodeId: 'node-id' }
       );
 
       expect(result).toBe(false);
     });
 
     it('should handle errors gracefully', async () => {
-      // 创建一个无效的用户对象来触发错误
       const invalidUser = { ...mockUser, role: null as any };
 
       const result = await service.hasPermission(
@@ -151,6 +148,170 @@ describe('PermissionService', () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('checkNodePermission', () => {
+    it('should return true when user has node role with required permission', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.EDITOR);
+
+      const result = await service.checkNodePermission(
+        mockUser,
+        'node-id',
+        Permission.FILE_WRITE
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when user has no role on node', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(null);
+
+      const result = await service.checkNodePermission(
+        mockUser,
+        'node-id',
+        Permission.FILE_READ
+      );
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when node does not exist', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(null);
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      const result = await service.checkNodePermission(
+        mockUser,
+        'node-id',
+        Permission.FILE_READ
+      );
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when node is deleted', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(null);
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        ...mockNode,
+        deletedAt: new Date(),
+      });
+
+      const result = await service.checkNodePermission(
+        mockUser,
+        'node-id',
+        Permission.FILE_READ
+      );
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getNodeAccessRole', () => {
+    it('should return OWNER when user is node owner', async () => {
+      const ownerNode = { ...mockNode, ownerId: 'user-id' };
+      prisma.fileSystemNode.findUnique.mockResolvedValue(ownerNode);
+
+      const result = await service.getNodeAccessRole('user-id', 'node-id');
+
+      expect(result).toBe(NodeAccessRole.OWNER);
+      expect(cacheService.cacheNodeAccessRole).toHaveBeenCalledWith(
+        'user-id',
+        'node-id',
+        NodeAccessRole.OWNER
+      );
+    });
+
+    it('should return role from FileAccess when user is not owner', async () => {
+      prisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      prisma.fileAccess.findUnique.mockResolvedValue(mockFileAccess);
+
+      const result = await service.getNodeAccessRole('user-id', 'node-id');
+
+      expect(result).toBe(NodeAccessRole.EDITOR);
+      expect(cacheService.cacheNodeAccessRole).toHaveBeenCalledWith(
+        'user-id',
+        'node-id',
+        NodeAccessRole.EDITOR
+      );
+    });
+
+    it('should return null when node does not exist', async () => {
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      const result = await service.getNodeAccessRole('user-id', 'node-id');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return cached role when available', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.EDITOR);
+
+      const result = await service.getNodeAccessRole('user-id', 'node-id');
+
+      expect(result).toBe(NodeAccessRole.EDITOR);
+      expect(prisma.fileSystemNode.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should return null when user has no access', async () => {
+      prisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      prisma.fileAccess.findUnique.mockResolvedValue(null);
+
+      const result = await service.getNodeAccessRole('user-id', 'node-id');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('hasNodeAccessRole', () => {
+    it('should return true when user has one of required roles', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.EDITOR);
+
+      const result = await service.hasNodeAccessRole(mockUser, 'node-id', [
+        NodeAccessRole.EDITOR,
+        NodeAccessRole.OWNER,
+      ]);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when user has none of required roles', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.VIEWER);
+
+      const result = await service.hasNodeAccessRole(mockUser, 'node-id', [
+        NodeAccessRole.EDITOR,
+        NodeAccessRole.OWNER,
+      ]);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when user has no role', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(null);
+
+      const result = await service.hasNodeAccessRole(mockUser, 'node-id', [
+        NodeAccessRole.EDITOR,
+      ]);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getNodePermissions', () => {
+    it('should return permissions for node role', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(NodeAccessRole.EDITOR);
+
+      const result = await service.getNodePermissions('user-id', 'node-id');
+
+      expect(result).toContain(Permission.FILE_READ);
+      expect(result).toContain(Permission.FILE_WRITE);
+    });
+
+    it('should return empty array when user has no role', async () => {
+      cacheService.getNodeAccessRole.mockReturnValue(null);
+
+      const result = await service.getNodePermissions('user-id', 'node-id');
+
+      expect(result).toEqual([]);
     });
   });
 
@@ -174,58 +335,20 @@ describe('PermissionService', () => {
     });
   });
 
-  describe('hasProjectRole', () => {
-    it('should return false as method is deprecated', async () => {
-      const result = await service.hasProjectRole(mockUser, 'project-id', [
-        ProjectMemberRole.MEMBER,
-      ]);
+  describe('getUserPermissions', () => {
+    it('should return permissions for user role', async () => {
+      const result = await service.getUserPermissions(mockUser);
 
-      expect(result).toBe(false);
+      expect(result).toContain(Permission.PROJECT_CREATE);
+      expect(result).toContain(Permission.PROJECT_READ);
     });
-  });
 
+    it('should return empty array for invalid user role', async () => {
+      const invalidUser = { ...mockUser, role: 'INVALID' as UserRole };
 
-
-  describe('getProjectPermissions', () => {
-    it('should return empty array as method is deprecated', async () => {
-      const result = await service.getProjectPermissions(
-        mockUser,
-        'project-id'
-      );
+      const result = await service.getUserPermissions(invalidUser);
 
       expect(result).toEqual([]);
-    });
-  });
-
-  describe('getFilePermissions', () => {
-    it('should return empty array as method is deprecated', async () => {
-      const result = await service.getFilePermissions(mockUser, 'file-id');
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('checkProjectPermission', () => {
-    it('should return false as method is deprecated', async () => {
-      const result = await service.checkProjectPermission(
-        mockUser,
-        'project-id',
-        Permission.PROJECT_READ
-      );
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('checkFilePermission', () => {
-    it('should return false as method is deprecated', async () => {
-      const result = await service.checkFilePermission(
-        mockUser,
-        'file-id',
-        Permission.FILE_READ
-      );
-
-      expect(result).toBe(false);
     });
   });
 });

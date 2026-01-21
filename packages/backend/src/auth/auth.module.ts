@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -8,6 +8,7 @@ import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
 import { AuthController } from './auth.controller';
+import { SessionController } from './session.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TokenBlacklistService } from './services/token-blacklist.service';
@@ -58,7 +59,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, SessionController],
   providers: [
     AuthService,
     JwtStrategy,
@@ -68,6 +69,11 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     EmailService,
     EmailVerificationService,
   ],
-  exports: [AuthService, TokenBlacklistService, JwtAuthGuard, EmailVerificationService],
+  exports: [
+    AuthService,
+    TokenBlacklistService,
+    JwtAuthGuard,
+    EmailVerificationService,
+  ],
 })
 export class AuthModule {}

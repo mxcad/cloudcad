@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Post,
   Request,
-  UseGuards,
+  Req,
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/types/request.types';
 import {
@@ -40,14 +40,13 @@ import {
   ForgotPasswordApiResponseDto,
   ResetPasswordApiResponseDto,
 } from './dto/password-reset.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('认证')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly emailVerificationService: EmailVerificationService,
+    private readonly emailVerificationService: EmailVerificationService
   ) {}
 
   @Post('register')
@@ -59,13 +58,15 @@ export class AuthController {
     schema: {
       example: {
         message: '注册成功，请查看邮箱并点击验证链接完成注册',
-        email: 'user@example.com'
-      }
-    }
+        email: 'user@example.com',
+      },
+    },
   })
   @ApiResponse({ status: 409, description: '邮箱或用户名已存在' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
-  async register(@Body() registerDto: RegisterDto): Promise<{ message: string; email: string }> {
+  async register(
+    @Body() registerDto: RegisterDto
+  ): Promise<{ message: string; email: string }> {
     return this.authService.register(registerDto);
   }
 
@@ -79,8 +80,11 @@ export class AuthController {
     type: AuthApiResponseDto,
   })
   @ApiResponse({ status: 401, description: '账号或密码错误' })
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request
+  ): Promise<AuthResponseDto> {
+    return this.authService.login(loginDto, req);
   }
 
   @Post('refresh')
@@ -104,7 +108,9 @@ export class AuthController {
   @ApiOperation({ summary: '用户登出' })
   @ApiResponse({ status: 200, description: '登出成功' })
   @ApiBearerAuth()
-  async logout(@Request() req: AuthenticatedRequest): Promise<{ message: string }> {
+  async logout(
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ message: string }> {
     await this.authService.logout(req.user.id);
     return { message: '登出成功' };
   }
@@ -131,7 +137,9 @@ export class AuthController {
     type: SendVerificationApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误或发送过于频繁' })
-  async sendVerification(@Body() dto: { email: string }): Promise<SendVerificationResponseDto> {
+  async sendVerification(
+    @Body() dto: { email: string }
+  ): Promise<SendVerificationResponseDto> {
     await this.emailVerificationService.sendVerificationEmail(dto.email);
     return { message: '验证邮件已发送' };
   }
@@ -146,7 +154,9 @@ export class AuthController {
     type: VerifyEmailApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '验证码无效或已过期' })
-  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<VerifyEmailResponseDto> {
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto
+  ): Promise<VerifyEmailResponseDto> {
     return this.authService.verifyEmailAndActivate(dto.email, dto.code);
   }
 
@@ -160,7 +170,9 @@ export class AuthController {
     type: SendVerificationApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误或发送过于频繁' })
-  async resendVerification(@Body() dto: { email: string }): Promise<SendVerificationResponseDto> {
+  async resendVerification(
+    @Body() dto: { email: string }
+  ): Promise<SendVerificationResponseDto> {
     await this.emailVerificationService.resendVerificationEmail(dto.email);
     return { message: '验证邮件已重新发送' };
   }
@@ -176,7 +188,9 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '该邮箱未注册或账号已禁用' })
-  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<ForgotPasswordResponseDto> {
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto
+  ): Promise<ForgotPasswordResponseDto> {
     return this.authService.forgotPassword(dto.email);
   }
 
@@ -191,7 +205,9 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '验证码无效或已过期' })
-  async resetPassword(@Body() dto: ResetPasswordDto): Promise<ResetPasswordResponseDto> {
+  async resetPassword(
+    @Body() dto: ResetPasswordDto
+  ): Promise<ResetPasswordResponseDto> {
     return this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
   }
 }

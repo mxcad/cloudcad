@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PROJECT_PERMISSION_KEY } from '../decorators/project-permission.decorator';
-import { ProjectMemberRole } from '../enums/permissions.enum';
+import { NODE_PERMISSION_KEY } from '../decorators/project-permission.decorator';
+import { NodeAccessRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from '../services/permission-cache.service';
 import {
   PermissionService,
@@ -26,7 +26,7 @@ describe('ProjectPermissionGuard', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: 'USER',
     status: 'ACTIVE',
   };
@@ -37,11 +37,11 @@ describe('ProjectPermissionGuard', () => {
     } as any;
 
     const mockPermissionService = {
-      hasProjectRole: jest.fn(),
+      hasNodeAccessRole: jest.fn(),
     } as any;
 
     const mockCacheService = {
-      getProjectMemberRole: jest.fn(),
+      getNodeAccessRole: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -60,7 +60,15 @@ describe('ProjectPermissionGuard', () => {
           useValue: mockCacheService,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     guard = module.get<ProjectPermissionGuard>(ProjectPermissionGuard);
     reflector = module.get(Reflector);
@@ -94,14 +102,14 @@ describe('ProjectPermissionGuard', () => {
 
       expect(result).toBe(true);
       expect(reflector.getAllAndOverride).toHaveBeenCalledWith(
-        PROJECT_PERMISSION_KEY,
+        NODE_PERMISSION_KEY,
         [mockContext.getHandler(), mockContext.getClass()]
       );
     });
 
-    it('should return true when user has required project role', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should return true when user has required node role', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       // Add projectId to params
       const mockRequest = mockContext.switchToHttp().getRequest();
@@ -110,16 +118,16 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'project-id',
-        [ProjectMemberRole.MEMBER]
+        [NodeAccessRole.EDITOR]
       );
-      expect(mockRequest.projectId).toBe('project-id');
+      expect(mockRequest.nodeId).toBe('project-id');
     });
 
     it('should throw ForbiddenException when user is not authenticated', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
 
       // Remove user from request
       const mockRequest = mockContext.switchToHttp().getRequest();
@@ -129,24 +137,24 @@ describe('ProjectPermissionGuard', () => {
         ForbiddenException
       );
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
-        '用户未认�?
+        '用户未认证'
       );
     });
 
-    it('should throw BadRequestException when projectId is missing', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
+    it('should throw BadRequestException when nodeId is missing', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
         BadRequestException
       );
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
-        '缺少项目ID参数'
+        '缺少节点ID参数'
       );
     });
 
-    it('should throw ForbiddenException when user lacks required project role', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.ADMIN]);
-      permissionService.hasProjectRole.mockResolvedValue(false);
+    it('should throw ForbiddenException when user lacks required node role', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.OWNER]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(false);
 
       // Add projectId to params
       const mockRequest = mockContext.switchToHttp().getRequest();
@@ -156,13 +164,13 @@ describe('ProjectPermissionGuard', () => {
         ForbiddenException
       );
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
-        '用户没有足够的项目权�?
+        '用户没有足够的节点访问权限'
       );
     });
 
-    it('should extract projectId from route parameters', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should extract nodeId from route parameters', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'route-project-id';
@@ -170,16 +178,16 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'route-project-id',
-        [ProjectMemberRole.MEMBER]
+        [NodeAccessRole.EDITOR]
       );
     });
 
-    it('should extract projectId from query parameters', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should extract nodeId from query parameters', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.query.projectId = 'query-project-id';
@@ -187,16 +195,16 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'query-project-id',
-        [ProjectMemberRole.MEMBER]
+        [NodeAccessRole.EDITOR]
       );
     });
 
-    it('should extract projectId from request body', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should extract nodeId from request body', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.body.projectId = 'body-project-id';
@@ -204,16 +212,16 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'body-project-id',
-        [ProjectMemberRole.MEMBER]
+        [NodeAccessRole.EDITOR]
       );
     });
 
     it('should prioritize route params over query and body', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'route-project-id';
@@ -223,19 +231,19 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'route-project-id',
-        [ProjectMemberRole.MEMBER]
+        [NodeAccessRole.EDITOR]
       );
     });
 
     it('should handle multiple required roles', async () => {
       reflector.getAllAndOverride.mockReturnValue([
-        ProjectMemberRole.ADMIN,
-        ProjectMemberRole.OWNER,
+        NodeAccessRole.OWNER,
+        NodeAccessRole.EDITOR,
       ]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -243,16 +251,16 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'project-id',
-        [ProjectMemberRole.ADMIN, ProjectMemberRole.OWNER]
+        [NodeAccessRole.OWNER, NodeAccessRole.EDITOR]
       );
     });
 
     it('should work with owner role', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.OWNER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.OWNER]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -260,16 +268,16 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'project-id',
-        [ProjectMemberRole.OWNER]
+        [NodeAccessRole.OWNER]
       );
     });
 
     it('should work with viewer role', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.VIEWER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.VIEWER]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -277,18 +285,18 @@ describe('ProjectPermissionGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(permissionService.hasProjectRole).toHaveBeenCalledWith(
+      expect(permissionService.hasNodeAccessRole).toHaveBeenCalledWith(
         mockUser,
         'project-id',
-        [ProjectMemberRole.VIEWER]
+        [NodeAccessRole.VIEWER]
       );
     });
   });
 
-  describe('extractProjectId', () => {
-    it('should extract projectId from params when available', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+  describe('extractNodeId', () => {
+    it('should extract nodeId from params when available', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'route-project-id';
@@ -297,12 +305,12 @@ describe('ProjectPermissionGuard', () => {
 
       await guard.canActivate(mockContext);
 
-      expect(guard['extractProjectId'](mockRequest)).toBe('route-project-id');
+      expect(guard['extractNodeId'](mockRequest)).toBe('route-project-id');
     });
 
-    it('should extract projectId from query when params not available', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should extract nodeId from query when params not available', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.query.projectId = 'query-project-id';
@@ -310,27 +318,27 @@ describe('ProjectPermissionGuard', () => {
 
       await guard.canActivate(mockContext);
 
-      expect(guard['extractProjectId'](mockRequest)).toBe('query-project-id');
+      expect(guard['extractNodeId'](mockRequest)).toBe('query-project-id');
     });
 
-    it('should extract projectId from body when params and query not available', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should extract nodeId from body when params and query not available', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.body.projectId = 'body-project-id';
 
       await guard.canActivate(mockContext);
 
-      expect(guard['extractProjectId'](mockRequest)).toBe('body-project-id');
+      expect(guard['extractNodeId'](mockRequest)).toBe('body-project-id');
     });
 
-    it('should return null when projectId not found anywhere', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
+    it('should return null when nodeId not found anywhere', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
 
-      expect(guard['extractProjectId'](mockRequest)).toBeNull();
+      expect(guard['extractNodeId'](mockRequest)).toBeNull();
     });
 
     it('should handle empty strings', async () => {
@@ -339,7 +347,7 @@ describe('ProjectPermissionGuard', () => {
       mockRequest.query.projectId = '';
       mockRequest.body.projectId = '';
 
-      expect(guard['extractProjectId'](mockRequest)).toBe('');
+      expect(guard['extractNodeId'](mockRequest)).toBe('');
     });
 
     it('should handle null/undefined values', async () => {
@@ -348,7 +356,7 @@ describe('ProjectPermissionGuard', () => {
       mockRequest.query.projectId = undefined;
       mockRequest.body.projectId = null;
 
-      expect(guard['extractProjectId'](mockRequest)).toBeNull();
+      expect(guard['extractNodeId'](mockRequest)).toBeNull();
     });
   });
 
@@ -364,8 +372,8 @@ describe('ProjectPermissionGuard', () => {
     });
 
     it('should handle errors in permission service gracefully', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockRejectedValue(
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockRejectedValue(
         new Error('Permission service error')
       );
 
@@ -378,8 +386,8 @@ describe('ProjectPermissionGuard', () => {
     });
 
     it('should handle permission service returning rejection', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockRejectedValue(
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockRejectedValue(
         new ForbiddenException('Access denied')
       );
 
@@ -393,9 +401,9 @@ describe('ProjectPermissionGuard', () => {
   });
 
   describe('integration scenarios', () => {
-    it('should allow project owner access to owner-only endpoints', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.OWNER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should allow node owner access to owner-only endpoints', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.OWNER]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -405,9 +413,9 @@ describe('ProjectPermissionGuard', () => {
       expect(result).toBe(true);
     });
 
-    it('should deny project member access to owner-only endpoints', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.OWNER]);
-      permissionService.hasProjectRole.mockResolvedValue(false);
+    it('should deny node editor access to owner-only endpoints', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.OWNER]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(false);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -417,9 +425,9 @@ describe('ProjectPermissionGuard', () => {
       );
     });
 
-    it('should allow project admin access to admin endpoints', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.ADMIN]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should allow node editor access to editor endpoints', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -431,10 +439,10 @@ describe('ProjectPermissionGuard', () => {
 
     it('should allow access when user has one of multiple required roles', async () => {
       reflector.getAllAndOverride.mockReturnValue([
-        ProjectMemberRole.ADMIN,
-        ProjectMemberRole.OWNER,
+        NodeAccessRole.OWNER,
+        NodeAccessRole.EDITOR,
       ]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
@@ -444,17 +452,16 @@ describe('ProjectPermissionGuard', () => {
       expect(result).toBe(true);
     });
 
-    it('should set projectId in request object when access is granted', async () => {
-      reflector.getAllAndOverride.mockReturnValue([ProjectMemberRole.MEMBER]);
-      permissionService.hasProjectRole.mockResolvedValue(true);
+    it('should set nodeId in request object when access is granted', async () => {
+      reflector.getAllAndOverride.mockReturnValue([NodeAccessRole.EDITOR]);
+      permissionService.hasNodeAccessRole.mockResolvedValue(true);
 
       const mockRequest = mockContext.switchToHttp().getRequest();
       mockRequest.params.projectId = 'project-id';
 
       await guard.canActivate(mockContext);
 
-      expect(mockRequest.projectId).toBe('project-id');
+      expect(mockRequest.nodeId).toBe('project-id');
     });
   });
 });
-

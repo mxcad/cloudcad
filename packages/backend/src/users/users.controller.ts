@@ -12,10 +12,9 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums/permissions.enum';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
@@ -34,39 +33,56 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Get()
-  @Roles(UserRole.ADMIN)
+  @Roles('ADMIN')
   findAll(@Query() query: QueryUsersDto) {
     return this.usersService.findAll(query);
   }
 
+  @Get('search/by-email')
+  @ApiOperation({ summary: '根据邮箱搜索用户' })
+  @ApiResponse({ status: 200, description: '搜索成功' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  @HttpCode(HttpStatus.OK)
+  searchByEmail(@Query('email') email: string) {
+    return this.usersService.findByEmail(email);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: '搜索用户（用于添加项目成员）' })
+  @ApiResponse({ status: 200, description: '搜索成功' })
+  @HttpCode(HttpStatus.OK)
+  searchUsers(@Query() query: QueryUsersDto) {
+    return this.usersService.findAll(query);
+  }
+
   @Get(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles('ADMIN')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles('ADMIN')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
 
   @Patch(':id/status')
-  @Roles(UserRole.ADMIN)
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   updateStatus(
     @Param('id') id: string,
@@ -86,8 +102,8 @@ export class UsersController {
   @Patch('profile/me')
   @HttpCode(HttpStatus.OK)
   updateProfile(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    // 用户只能更新自己的信息，排除角色和状态字段
-    const { role, status, ...profileData } = updateUserDto;
+    // 用户只能更新自己的信息，排除角色ID和状态字段
+    const { roleId, status, ...profileData } = updateUserDto;
     return this.usersService.update(id, profileData);
   }
 
@@ -106,6 +122,10 @@ export class UsersController {
     @Request() req: AuthenticatedRequest,
     @Body() dto: ChangePasswordDto
   ): Promise<ChangePasswordResponseDto> {
-    return this.usersService.changePassword(req.user.id, dto.oldPassword, dto.newPassword);
+    return this.usersService.changePassword(
+      req.user.id,
+      dto.oldPassword,
+      dto.newPassword
+    );
   }
 }

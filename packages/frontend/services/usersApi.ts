@@ -1,0 +1,38 @@
+import { apiClient } from './apiClient';
+
+export const usersApi = {
+  list: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    roleId?: string;
+  }) => apiClient.get('/users', { params }),
+
+  search: (params?: { page?: number; limit?: number; search?: string }) =>
+    apiClient.get('/users/search', { params }),
+
+  searchByEmail: (email: string) =>
+    apiClient.get('/users/search/by-email', { params: { email } }),
+
+  create: (data: {
+    email: string;
+    password: string;
+    username: string;
+    nickname?: string;
+    roleId?: string;
+  }) => apiClient.post('/users', data),
+
+  update: (
+    id: string,
+    data: {
+      email?: string;
+      username?: string;
+      nickname?: string;
+      roleId?: string;
+      status?: string;
+      password?: string;
+    }
+  ) => apiClient.patch(`/users/${id}`, data),
+
+  delete: (id: string) => apiClient.delete(`/users/${id}`),
+};

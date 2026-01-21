@@ -44,4 +44,5 @@ export interface AppConfig {
     maxSize: number;
     allowedTypes: string[];
   };
+  // debug 配置已删除，使用 NestJS 原生日志
 }

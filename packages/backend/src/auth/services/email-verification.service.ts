@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
@@ -12,7 +12,7 @@ export class EmailVerificationService {
   constructor(
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
   private getCodeKey(email: string): string {
@@ -26,12 +26,10 @@ export class EmailVerificationService {
   async generateVerificationToken(email: string): Promise<string> {
     // 生成6位数字验证码
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // 存储到 Redis，15分钟过期
     const key = this.getCodeKey(email);
     await this.redis.setex(key, this.CODE_TTL, code);
-
-    console.log(`[EmailVerification] 生成验证码: ${code} for ${email}`);
     return code;
   }
 
@@ -39,7 +37,7 @@ export class EmailVerificationService {
     // 检查发送频率限制
     const rateLimitKey = this.getRateLimitKey(email);
     const exists = await this.redis.exists(rateLimitKey);
-    
+
     if (exists) {
       throw new BadRequestException('发送过于频繁，请稍后再试');
     }
@@ -53,8 +51,6 @@ export class EmailVerificationService {
   }
 
   async verifyEmail(email: string, code: string): Promise<boolean> {
-    console.log(`[EmailVerification] 尝试验证: ${email} - ${code}`);
-    
     const key = this.getCodeKey(email);
     const storedCode = await this.redis.get(key);
 
@@ -68,7 +64,7 @@ export class EmailVerificationService {
 
     // 验证成功后删除验证码
     await this.redis.del(key);
-    
+
     return true;
   }
 

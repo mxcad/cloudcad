@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   createContext,
   useContext,
   useEffect,
@@ -48,22 +48,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const storedToken = localStorage.getItem('accessToken');
       const storedUser = localStorage.getItem('user');
-      
+
       if (storedToken && storedUser) {
         return {
           token: storedToken,
           user: JSON.parse(storedUser),
-          loading: false
+          loading: false,
         };
       }
     } catch (error) {
-      console.error('[AuthContext] 初始化认证状态失败:', error);
+      // 静默：初始化认证状态失败
     }
-    
+
     return {
       token: null,
       user: null,
-      loading: false
+      loading: false,
     };
   };
 
@@ -75,19 +75,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 异步验证 token
   useEffect(() => {
     if (token && user) {
-      console.log('[AuthContext] 验证 token 有效性');
-      authApi.getProfile().then((response) => {
-        setUser(response.data);
-        console.log('[AuthContext] Token验证成功');
-      }).catch((error) => {
-        console.error('[AuthContext] Token验证失败:', error);
-        // Token 无效，清除本地存储
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setToken(null);
-        setUser(null);
-      });
+      // 静默：验证 token 有效性
+      authApi
+        .getProfile()
+        .then((response) => {
+          setUser(response.data);
+        })
+        .catch((error) => {
+          // Token 无效，清除本地存储
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        });
     }
   }, []); // 只在组件挂载时执行一次
 
@@ -100,43 +101,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
 
+    // 创建 Session（用于 mxcad 上传权限验证）
+    try {
+      const sessionResponse = await fetch('/api/session/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // 包含 cookies
+        body: JSON.stringify({ user: userData }),
+      });
+
+      if (sessionResponse.ok) {
+        // Session 创建成功，继续
+      } else {
+        // Session 创建失败，但仍然使用 JWT 认证
+        console.error('Session creation failed');
+      }
+    } catch (error) {
+      // Session 创建失败，但仍然使用 JWT 认证
+      console.error('Session creation error:', error);
+    }
+
     // 更新状态
     setToken(accessToken);
     setUser(userData);
   }, []);
 
-  const register = useCallback(async (data: {
-    email: string;
-    password: string;
-    username: string;
-    nickname?: string;
-  }) => {
-    try {
+  const register = useCallback(
+    async (data: {
+      email: string;
+      password: string;
+      username: string;
+      nickname?: string;
+    }) => {
       const response = await authApi.register(data);
       // 注册成功但不自动登录，返回注册成功信息
-      console.log('[AuthContext] 注册成功，等待邮箱验证:', response.data);
       return response.data; // { message: string; email: string }
-    } catch (error) {
-      console.error('[AuthContext] 注册失败:', error);
-      throw error;
-    }
-  }, []);
-
-  const verifyEmailAndLogin = useCallback(async (email: string, code: string) => {
-    try {
+    },
+    []
+  );
+  const verifyEmailAndLogin = useCallback(
+    async (email: string, code: string) => {
       const response = await authApi.verifyEmail({ email, code });
-      console.log('[AuthContext] 邮箱验证成功:', response.data);
       // 注意：现在验证邮箱不再返回 tokens，只是验证成功
       // 用户需要重新登录
-    } catch (error) {
-      console.error('[AuthContext] 邮箱验证失败:', error);
-      throw error;
-    }
-  }, []);
-
+      return response.data;
+    },
+    []
+  );
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
+
+      // 清除 Session
+      try {
+        await fetch('/api/session/destroy', {
+          method: 'POST',
+          credentials: 'include', // 包含 cookies
+        });
+      } catch (error) {
+        // Session 清除失败，但仍然清除本地状态
+        console.error('Session destroy error:', error);
+      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -151,16 +178,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const value = useMemo<AuthContextType>(() => ({
-    user,
-    token,
-    login,
-    register,
-    verifyEmailAndLogin,
-    logout,
-    loading,
-    isAuthenticated: !!token && !!user,
-  }), [user, token, login, register, verifyEmailAndLogin, logout, loading]);
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      token,
+      login,
+      register,
+      verifyEmailAndLogin,
+      logout,
+      loading,
+      isAuthenticated: !!token && !!user,
+    }),
+    [user, token, login, register, verifyEmailAndLogin, logout, loading]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

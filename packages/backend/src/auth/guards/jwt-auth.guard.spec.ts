@@ -48,10 +48,20 @@ describe('JwtAuthGuard', () => {
           useValue: mockTokenBlacklistService,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     guard = module.get<JwtAuthGuard>(JwtAuthGuard);
-    tokenBlacklistService = module.get<TokenBlacklistService>(TokenBlacklistService);
+    tokenBlacklistService = module.get<TokenBlacklistService>(
+      TokenBlacklistService
+    );
   });
 
   afterEach(() => {
@@ -64,8 +74,10 @@ describe('JwtAuthGuard', () => {
 
   describe('canActivate', () => {
     it('should allow access when no token is provided', async () => {
-      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(() => null);
-      
+      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(
+        () => null
+      );
+
       const context = mockExecutionContext();
       const result = await guard.canActivate(context);
 
@@ -74,50 +86,87 @@ describe('JwtAuthGuard', () => {
 
     it('should allow access when token is valid and not blacklisted', async () => {
       const token = 'valid.jwt.token';
-      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(() => token);
+      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(
+        () => token
+      );
       mockTokenBlacklistService.isBlacklisted.mockResolvedValue(false);
-      
-      const context = mockExecutionContext({ authorization: `Bearer ${token}` });
+
+      const context = mockExecutionContext({
+        authorization: `Bearer ${token}`,
+      });
       const result = await guard.canActivate(context);
 
-      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(token);
+      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(
+        token
+      );
       expect(result).toBe(true);
     });
 
     it('should throw UnauthorizedException when token is blacklisted', async () => {
       const token = 'blacklisted.jwt.token';
-      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(() => token);
+      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(
+        () => token
+      );
       mockTokenBlacklistService.isBlacklisted.mockResolvedValue(true);
-      
-      const context = mockExecutionContext({ authorization: `Bearer ${token}` });
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
-      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(token);
+      const context = mockExecutionContext({
+        authorization: `Bearer ${token}`,
+      });
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(
+        token
+      );
     });
 
     it('should throw UnauthorizedException when token validation fails', async () => {
       const token = 'invalid.jwt.token';
-      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(() => token);
+      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(
+        () => token
+      );
       mockTokenBlacklistService.isBlacklisted.mockResolvedValue(false);
-      
-      // Mock super.canActivate to throw an error
-      jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate').mockRejectedValue(new Error('Invalid token'));
-      
-      const context = mockExecutionContext({ authorization: `Bearer ${token}` });
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
-      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(token);
+      // Mock super.canActivate to throw an error
+      jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(guard)),
+          'canActivate'
+        )
+        .mockRejectedValue(new Error('Invalid token'));
+
+      const context = mockExecutionContext({
+        authorization: `Bearer ${token}`,
+      });
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(
+        token
+      );
     });
 
     it('should handle TokenBlacklistService errors gracefully', async () => {
       const token = 'valid.jwt.token';
-      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(() => token);
-      mockTokenBlacklistService.isBlacklisted.mockRejectedValue(new Error('Redis error'));
-      
-      const context = mockExecutionContext({ authorization: `Bearer ${token}` });
+      (ExtractJwt.fromAuthHeaderAsBearerToken as jest.Mock).mockReturnValue(
+        () => token
+      );
+      mockTokenBlacklistService.isBlacklisted.mockRejectedValue(
+        new Error('Redis error')
+      );
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
-      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(token);
+      const context = mockExecutionContext({
+        authorization: `Bearer ${token}`,
+      });
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(mockTokenBlacklistService.isBlacklisted).toHaveBeenCalledWith(
+        token
+      );
     });
   });
 });

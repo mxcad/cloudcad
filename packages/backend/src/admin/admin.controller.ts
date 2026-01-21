@@ -1,25 +1,22 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
-  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums/permissions.enum';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionService } from '../common/services/permission.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles('ADMIN')
 export class AdminController {
   constructor(
     private readonly permissionService: PermissionService,
@@ -89,14 +86,20 @@ export class AdminController {
       id: userId,
       email: 'test@example.com',
       username: 'test',
-      role: UserRole.USER,
+      role: {
+        id: 'user-role-id',
+        name: 'USER',
+        description: '普通用户',
+        isSystem: true,
+        permissions: [],
+      },
       status: 'ACTIVE',
     };
 
     return {
       message: '用户权限信息',
       data: {
-        userRole: mockUser.role,
+        userRole: mockUser.role.name,
         permissions: await this.permissionService.getUserPermissions(mockUser),
       },
     };

@@ -1,6 +1,14 @@
 // 导出新的 API 服务
 export { apiService } from './apiService';
-export { authApi, usersApi, projectsApi, filesApi } from './apiService';
+export {
+  authApi,
+  usersApi,
+  projectsApi,
+  filesApi,
+  fontsApi,
+  rolesApi,
+  galleryApi,
+} from './apiService';
 
 // 保留原有的 Mock API 以备后用
 import {

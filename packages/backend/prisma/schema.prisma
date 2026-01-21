@@ -14,7 +14,8 @@ model User {
   password  String
   nickname  String?
   avatar    String?
-  role      UserRole @default(USER)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   status    UserStatus @default(INACTIVE)
   emailVerified    Boolean  @default(false)
   emailVerifiedAt  DateTime?
@@ -22,11 +23,38 @@ model User {
   updatedAt DateTime @updatedAt
 
   // 关联关系
-  projectMemberships ProjectMember[]
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   nodeAccesses       FileAccess[]
 
   @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)  // 是否为系统角色（不可删除）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联关系
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  roleId      String
+  permission  Permission
+  createdAt   DateTime @default(now())
+
+  // 关联关系
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
 }
 
 // ============ 文件系统统一模型 ============
@@ -43,7 +71,7 @@ model FileSystemNode {
   
   // 文件专属字段（文件夹时为null）
   originalName String?   // 原始文件名
-  path         String?   // MinIO存储路径
+  path         String?   // 文件访问路径（如：/mxcad/file/xxx.dwg.mxweb）
   size         Int?      // 文件大小（字节）
   mimeType     String?   // MIME类型
   extension    String?   // 文件扩展名（.dwg, .dxf）
@@ -53,38 +81,38 @@ model FileSystemNode {
   // 项目专属字段（仅根节点使用）
   description    String?          // 项目描述
   projectStatus  ProjectStatus?   // 项目状态
-  
+
+  // 外部参照相关字段（仅文件使用）
+  hasMissingExternalReferences  Boolean @default(false)  // 是否有缺失的外部参照
+  missingExternalReferencesCount Int    @default(0)      // 缺失的外部参照数量
+  externalReferencesJson        String?                // 完整的外部参照信息（JSON格式）
+
+  // 图库相关字段（仅文件使用）
+  isInGallery      Boolean  @default(false)  // 是否在图库中
+  galleryType      String?                   // 图库类型：'drawings' 或 'blocks'
+  galleryFirstType Int?                      // 一级分类 ID
+  gallerySecondType Int?                      // 二级分类 ID
+  galleryThirdType  Int?                      // 三级分类 ID（可选）
+  galleryLookNum   Int      @default(0)      // 浏览次数
+
   // 权限与审计
   ownerId     String
   owner       User     @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+  deletedAt   DateTime? // 软删除时间（回收站功能）
+  deletedByCascade Boolean @default(false) // 是否因父节点删除而被自动删除
+
   // 关联关系
-  members      ProjectMember[] @relation("ProjectNodes")
   nodeAccesses FileAccess[]    @relation("NodeAccesses")
-  
+
   // 索引优化
   @@index([parentId])
   @@index([ownerId])
   @@index([isRoot])
   @@index([isFolder])
+  @@index([deletedAt])
   @@map("file_system_nodes")
-}
-
-model ProjectMember {
-  id        String            @id @default(cuid())
-  userId    String
-  nodeId    String            // 关联到FileSystemNode（根节点）
-  role      ProjectMemberRole @default(MEMBER)
-  joinedAt  DateTime          @default(now())
-
-  // 关联关系
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  node    FileSystemNode   @relation("ProjectNodes", fields: [nodeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, nodeId])
-  @@map("project_members")
 }
 
 model FileAccess {
@@ -160,29 +188,64 @@ model UploadSession {
   @@map("upload_sessions")
 }
 
-// 枚举类型
-enum UserRole {
-  ADMIN
-  USER
+// ============ 图库模块 ============
+
+// 图库分类
+model GalleryType {
+  id          Int      @id @default(autoincrement())
+  pid         Int      @default(0)  // 父分类 ID，0 表示一级分类
+  name        String
+  status      Int      @default(1)  // 状态：1=启用，0=禁用
+  galleryType String  // 图库类型：'drawings' 或 'blocks'
+  ownerId     String   // 分类所有者 ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([pid])
+  @@index([galleryType])
+  @@index([ownerId])
+  @@map("gallery_types")
 }
 
+// 枚举类型
 enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
 }
 
+enum Permission {
+  // 用户权限
+  USER_READ
+  USER_WRITE
+  USER_DELETE
+  USER_ADMIN
+
+  // 项目权限
+  PROJECT_CREATE
+  PROJECT_READ
+  PROJECT_WRITE
+  PROJECT_DELETE
+  PROJECT_ADMIN
+  PROJECT_MEMBER_MANAGE
+
+  // 文件权限
+  FILE_CREATE
+  FILE_READ
+  FILE_WRITE
+  FILE_DELETE
+  FILE_SHARE
+  FILE_DOWNLOAD
+
+  // 系统权限
+  SYSTEM_ADMIN
+  SYSTEM_MONITOR
+}
+
 enum ProjectStatus {
   ACTIVE
   ARCHIVED
   DELETED
-}
-
-enum ProjectMemberRole {
-  OWNER
-  ADMIN
-  MEMBER
-  VIEWER
 }
 
 enum FileStatus {
@@ -194,9 +257,11 @@ enum FileStatus {
 }
 
 enum FileAccessRole {
-  OWNER
-  EDITOR
-  VIEWER
+  OWNER      // 所有者：完全控制
+  ADMIN      // 管理员：管理权限
+  MEMBER     // 成员：可编辑
+  EDITOR     // 编辑者：可编辑文件
+  VIEWER     // 查看者：只读
 }
 
 enum AssetStatus {

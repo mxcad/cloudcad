@@ -29,3 +29,7 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Generated files
+uploads/
+temp/

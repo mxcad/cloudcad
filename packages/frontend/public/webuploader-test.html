@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebUploader 测试页面</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        margin: 20px 0;
+        background-color: #f9f9f9;
+      }
+      .upload-area:hover {
+        border-color: #007bff;
+        background-color: #f0f8ff;
+      }
+      #upload-button {
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      #upload-button:hover {
+        background-color: #0056b3;
+      }
+      .file-list {
+        margin-top: 20px;
+      }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #ddd;
+        margin-bottom: 5px;
+        border-radius: 5px;
+      }
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background-color: #f0f0f0;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 5px 0;
+      }
+      .progress-fill {
+        height: 100%;
+        background-color: #007bff;
+        transition: width 0.3s ease;
+      }
+      .debug-info {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 20px 0;
+        font-family: monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+      .controls {
+        margin: 20px 0;
+      }
+      .controls button {
+        margin-right: 10px;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .debug-btn {
+        background-color: #28a745;
+        color: white;
+      }
+      .reset-btn {
+        background-color: #dc3545;
+        color: white;
+      }
+      .upload-btn {
+        background-color: #007bff;
+        color: white;
+      }
+      .pause-btn {
+        background-color: #ffc107;
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebUploader 测试页面</h1>
+    <p>这个页面用于测试 WebUploader 的分片上传、断点续传和秒传功能。</p>
+
+    <div class="controls">
+      <button class="debug-btn" onclick="debugUploader()">调试上传器</button>
+      <button class="reset-btn" onclick="resetUploader()">重置上传器</button>
+      <button class="upload-btn" onclick="startUpload()">开始上传</button>
+      <button class="pause-btn" onclick="pauseUpload()">暂停上传</button>
+    </div>
+
+    <div class="upload-area" id="upload-area">
+      <div id="upload-button">选择文件或拖拽到此处</div>
+      <p>支持格式: .dwg, .dxf, .pdf, .png, .jpg, .jpeg</p>
+      <p>最大文件大小: 100MB</p>
+    </div>
+
+    <div class="file-list" id="file-list">
+      <h3>文件列表</h3>
+      <div id="files"></div>
+    </div>
+
+    <div class="debug-info" id="debug-info">调试信息将显示在这里...</div>
+
+    <!-- 引入 WebUploader -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/webuploader/0.1.5/webuploader.min.js"></script>
+    <script>
+      let uploader = null;
+      let debugInfo = '';
+
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        debugInfo += `[${timestamp}] ${message}\n`;
+        document.getElementById('debug-info').textContent = debugInfo;
+        console.log(message);
+      }
+
+      function initUploader() {
+        log('开始初始化 WebUploader...');
+
+        // 🔥 关键：必须在创建实例之前注册钩子
+        WebUploader.Uploader.register(
+          {
+            'before-send-file': 'beforeSendFile',
+            'before-send': 'beforeSend',
+            'after-send-file': 'afterSendFile',
+          },
+          {
+            // 文件发送前 - 计算MD5和检查文件是否存在
+            beforeSendFile: function (file) {
+              log(`beforeSendFile: ${file.name}`);
+              const deferred = WebUploader.Deferred();
+
+              // 计算文件MD5
+              uploader
+                .md5File(file)
+                .progress(function (percentage) {
+                  log(`MD5计算进度: ${(percentage * 100).toFixed(2)}%`);
+                  updateFileProgress(file.id, percentage * 100, '计算MD5...');
+                })
+                .then(function (md5) {
+                  log(`MD5计算完成: ${md5}`);
+                  file.md5 = md5;
+
+                  // 模拟文件存在性检查（实际项目中应该调用后端API）
+                  setTimeout(() => {
+                    // 模拟文件不存在，需要上传
+                    log('文件不存在，准备上传');
+                    deferred.resolve();
+                  }, 500);
+                })
+                .catch(function (error) {
+                  log(`MD5计算失败: ${error}`);
+                  deferred.reject();
+                });
+
+              return deferred.promise();
+            },
+
+            // 分片发送前 - 检查分片是否存在
+            beforeSend: function (block) {
+              log(`beforeSend: 分片${block.chunk}/${block.chunks}`);
+              const deferred = WebUploader.Deferred();
+
+              // 模拟分片检查（实际项目中应该调用后端API）
+              setTimeout(() => {
+                // 模拟50%的概率分片已存在
+                if (Math.random() > 0.5) {
+                  log(`分片${block.chunk}已存在，跳过上传`);
+                  deferred.reject(); // 跳过此分片
+                } else {
+                  log(`分片${block.chunk}不存在，开始上传`);
+                  deferred.resolve(); // 上传此分片
+                }
+              }, 100);
+
+              return deferred.promise();
+            },
+
+            // 所有分片上传完成后
+            afterSendFile: function (file) {
+              log(`afterSendFile: ${file.name} 所有分片上传完成`);
+              const deferred = WebUploader.Deferred();
+
+              // 模拟文件合并（实际项目中应该调用后端API）
+              setTimeout(() => {
+                log('文件合并完成');
+                updateFileProgress(file.id, 100, '上传完成');
+                deferred.resolve();
+              }, 1000);
+
+              return deferred.promise();
+            },
+          }
+        );
+
+        // 创建 WebUploader 实例
+        uploader = WebUploader.create({
+          swf: 'https://cdn.bootcdn.net/ajax/libs/webuploader/0.1.5/Uploader.swf',
+          pick: {
+            id: '#upload-button',
+            multiple: true,
+          },
+          dnd: '#upload-area',
+          paste: document.body,
+          server: '/api/upload', // 模拟服务器地址
+          auto: false, // 手动上传
+          chunked: true, // 开启分片
+          chunkSize: 5 * 1024 * 1024, // 5MB
+          chunkRetry: 3, // 重试次数
+          threads: 3, // 上传线程数
+          fileNumLimit: 10, // 文件数量限制
+          fileSingleSizeLimit: 100 * 1024 * 1024, // 100MB
+          duplicate: true, // 允许重复文件
+          accept: {
+            extensions: 'dwg,dxf,pdf,png,jpg,jpeg',
+            mimeTypes: '.dwg,.dxf,.pdf,.png,.jpg,.jpeg',
+          },
+        });
+
+        log('WebUploader 初始化完成');
+
+        // 注册事件监听器
+        registerEvents();
+      }
+
+      function registerEvents() {
+        // 文件加入队列
+        uploader.on('fileQueued', function (file) {
+          log(`文件加入队列: ${file.name}`);
+          addFileToList(file);
+        });
+
+        // 上传进度
+        uploader.on('uploadProgress', function (file, percentage) {
+          log(`上传进度: ${file.name} ${(percentage * 100).toFixed(2)}%`);
+          updateFileProgress(file.id, percentage * 100, '上传中...');
+        });
+
+        // 上传成功
+        uploader.on('uploadSuccess', function (file, response) {
+          log(`上传成功: ${file.name}`);
+          updateFileProgress(file.id, 100, '上传完成');
+        });
+
+        // 上传错误
+        uploader.on('uploadError', function (file, reason) {
+          log(`上传错误: ${file.name} - ${reason}`);
+          updateFileProgress(file.id, 0, `错误: ${reason}`);
+        });
+
+        // 上传完成
+        uploader.on('uploadFinished', function () {
+          log('所有文件上传完成');
+        });
+
+        // 错误处理
+        uploader.on('error', function (type) {
+          log(`错误: ${type}`);
+          let errorMsg = '';
+          switch (type) {
+            case 'Q_EXCEED_NUM_LIMIT':
+              errorMsg = '文件数量超出限制';
+              break;
+            case 'Q_EXCEED_SIZE_LIMIT':
+              errorMsg = '文件大小超出限制';
+              break;
+            case 'Q_TYPE_DENIED':
+              errorMsg = '文件类型不支持';
+              break;
+            default:
+              errorMsg = `未知错误: ${type}`;
+          }
+          alert(errorMsg);
+        });
+      }
+
+      function addFileToList(file) {
+        const filesDiv = document.getElementById('files');
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.id = `file-${file.id}`;
+        fileItem.innerHTML = `
+                <div>
+                    <div><strong>${file.name}</strong></div>
+                    <div>大小: ${formatFileSize(file.size)}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-${file.id}" style="width: 0%"></div>
+                    </div>
+                    <div id="status-${file.id}">等待上传</div>
+                </div>
+                <button onclick="removeFile('${file.id}')" style="background: red; color: white; border: none; padding: 5px 10px; border-radius: 3px;">删除</button>
+            `;
+        filesDiv.appendChild(fileItem);
+      }
+
+      function updateFileProgress(fileId, percentage, status) {
+        const progressElement = document.getElementById(`progress-${fileId}`);
+        const statusElement = document.getElementById(`status-${fileId}`);
+
+        if (progressElement) {
+          progressElement.style.width = `${percentage}%`;
+        }
+
+        if (statusElement) {
+          statusElement.textContent = status;
+        }
+      }
+
+      function removeFile(fileId) {
+        if (uploader) {
+          const file = uploader.getFile(fileId);
+          if (file) {
+            uploader.removeFile(file);
+            document.getElementById(`file-${fileId}`).remove();
+            log(`移除文件: ${file.name}`);
+          }
+        }
+      }
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function debugUploader() {
+        if (!uploader) {
+          log('上传器未初始化');
+          return;
+        }
+
+        log('===== 调试信息 =====');
+        log(`上传器状态: ${uploader.state}`);
+        log(`文件队列: ${uploader.getFiles().length} 个文件`);
+
+        const files = uploader.getFiles();
+        files.forEach((file) => {
+          log(
+            `- ${file.name}: ${file.getStatus()} (${(file.percentage || 0).toFixed(2)}%)`
+          );
+        });
+
+        const stats = uploader.getStats();
+        log(`统计信息: ${JSON.stringify(stats)}`);
+        log('===== 调试信息结束 =====');
+      }
+
+      function resetUploader() {
+        if (uploader) {
+          uploader.reset();
+          log('上传器已重置');
+          document.getElementById('files').innerHTML = '';
+        }
+      }
+
+      function startUpload() {
+        if (uploader) {
+          uploader.upload();
+          log('开始上传');
+        } else {
+          log('上传器未初始化');
+        }
+      }
+
+      function pauseUpload() {
+        if (uploader) {
+          uploader.stop();
+          log('暂停上传');
+        } else {
+          log('上传器未初始化');
+        }
+      }
+
+      // 页面加载完成后初始化
+      document.addEventListener('DOMContentLoaded', function () {
+        log('页面加载完成');
+        initUploader();
+      });
+    </script>
+  </body>
+</html>

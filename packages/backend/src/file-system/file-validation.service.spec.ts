@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { FileValidationService, FILE_UPLOAD_CONFIG } from './file-validation.service';
+import {
+  FileValidationService,
+  FILE_UPLOAD_CONFIG,
+} from './file-validation.service';
 
 describe('FileValidationService', () => {
   let service: FileValidationService;
@@ -8,7 +11,15 @@ describe('FileValidationService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [FileValidationService],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<FileValidationService>(FileValidationService);
   });
@@ -52,7 +63,9 @@ describe('FileValidationService', () => {
       } as Express.Multer.File;
 
       expect(() => service.validateFileType(file)).toThrow(BadRequestException);
-      expect(() => service.validateFileType(file)).toThrow('禁止上传 .exe 类型文件');
+      expect(() => service.validateFileType(file)).toThrow(
+        '禁止上传 .exe 类型文件'
+      );
     });
 
     it('应该拒绝黑名单中的 .bat 文件', () => {
@@ -63,7 +76,9 @@ describe('FileValidationService', () => {
       } as Express.Multer.File;
 
       expect(() => service.validateFileType(file)).toThrow(BadRequestException);
-      expect(() => service.validateFileType(file)).toThrow('禁止上传 .bat 类型文件');
+      expect(() => service.validateFileType(file)).toThrow(
+        '禁止上传 .bat 类型文件'
+      );
     });
 
     it('应该拒绝不在白名单中的 .pdf 文件', () => {
@@ -74,7 +89,9 @@ describe('FileValidationService', () => {
       } as Express.Multer.File;
 
       expect(() => service.validateFileType(file)).toThrow(BadRequestException);
-      expect(() => service.validateFileType(file)).toThrow('仅允许上传以下类型文件');
+      expect(() => service.validateFileType(file)).toThrow(
+        '仅允许上传以下类型文件'
+      );
     });
 
     it('应该拒绝不在白名单中的 .jpg 文件', () => {
@@ -286,4 +303,3 @@ describe('FileValidationService', () => {
     });
   });
 });
-

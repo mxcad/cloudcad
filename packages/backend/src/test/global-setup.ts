@@ -1,34 +1,23 @@
-import { ConfigService } from '@nestjs/config';
+﻿import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 // Global test setup for integration tests
 const prisma = new PrismaClient();
 
 export default async function globalSetup() {
-  console.log('🔧 Global test setup started');
-
   try {
     // Connect to test database
     await prisma.$connect();
-    console.log('✅ Database connected');
-
     // Clean up database before tests
     await cleanupDatabase();
-    console.log('✅ Database cleaned');
-
     // Run database migrations if needed
     // await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-    console.log('✅ Database schema ready');
-
     // Create test data seeds if needed
     await seedTestData();
-    console.log('✅ Test data seeded');
   } catch (error) {
-    console.error('❌ Global setup failed:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
-    console.log('🔧 Global test setup completed');
   }
 }
 
@@ -44,9 +33,7 @@ async function cleanupDatabase() {
         await prisma.$executeRawUnsafe(
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
-      } catch (error) {
-        console.log(`⚠️  Note: ${tablename} doesn't exist, skipping`);
-      }
+      } catch (error) {}
     }
   }
 }
@@ -56,6 +43,17 @@ async function seedTestData() {
   const hashedPassword = '$2a$10$example.hashed.password'; // Mock hashed password
 
   try {
+    // 获取或创建 ADMIN 角色
+    const adminRole = await prisma.role.upsert({
+      where: { name: 'ADMIN' },
+      update: {},
+      create: {
+        name: 'ADMIN',
+        description: '系统管理员，拥有所有权限',
+        isSystem: true,
+      },
+    });
+
     await prisma.user.create({
       data: {
         id: '00000000-0000-0000-0000-000000000001',
@@ -63,17 +61,27 @@ async function seedTestData() {
         username: 'admin',
         password: hashedPassword,
         nickname: 'Test Admin',
-        role: 'ADMIN',
+        roleId: adminRole.id,
         status: 'ACTIVE',
       },
     });
   } catch (error) {
     // Admin user might already exist
-    console.log('ℹ️  Admin user already exists or creation failed');
   }
 
   // Create default regular user if it doesn't exist
   try {
+    // 获取或创建 USER 角色
+    const userRole = await prisma.role.upsert({
+      where: { name: 'USER' },
+      update: {},
+      create: {
+        name: 'USER',
+        description: '普通用户，基础权限',
+        isSystem: true,
+      },
+    });
+
     await prisma.user.create({
       data: {
         id: '00000000-0000-0000-0000-000000000002',
@@ -81,12 +89,11 @@ async function seedTestData() {
         username: 'user',
         password: hashedPassword,
         nickname: 'Test User',
-        role: 'USER',
+        roleId: userRole.id,
         status: 'ACTIVE',
       },
     });
   } catch (error) {
     // Regular user might already exist
-    console.log('ℹ️  Regular user already exists or creation failed');
   }
 }

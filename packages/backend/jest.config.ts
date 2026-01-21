@@ -59,6 +59,8 @@ const config: Config = {
     '^@test/(.*)$': '<rootDir>/src/test/$1',
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
+  snapshotResolver: '<rootDir>/jest-snapshot-resolver.js',
+  snapshotSerializers: [],
 };
 
 export default config;

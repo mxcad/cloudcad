@@ -27,7 +27,7 @@ describe('AuthService', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: 'USER',
     status: 'ACTIVE',
     emailVerified: true,
@@ -41,7 +41,7 @@ describe('AuthService', () => {
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: null,
+    avatar: undefined,
     role: 'USER',
     status: 'ACTIVE',
     emailVerified: true,
@@ -145,14 +145,14 @@ describe('AuthService', () => {
         },
       ],
     })
-    .setLogger({
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-    })
-    .compile();
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
     service = module.get<AuthService>(AuthService);
     prisma = module.get(DatabaseService);
@@ -161,8 +161,14 @@ describe('AuthService', () => {
     tokenBlacklistService = module.get(TokenBlacklistService);
 
     // 重置 jwtService mocks
-    jwtService.verifyAsync.mockResolvedValue({ sub: 'user-id', exp: Date.now() / 1000 + 60 });
-    jwtService.verify.mockResolvedValue({ sub: 'user-id', exp: Date.now() / 1000 + 60 });
+    jwtService.verifyAsync.mockResolvedValue({
+      sub: 'user-id',
+      exp: Date.now() / 1000 + 60,
+    });
+    jwtService.verify.mockResolvedValue({
+      sub: 'user-id',
+      exp: Date.now() / 1000 + 60,
+    });
   });
 
   afterEach(() => {
@@ -210,7 +216,9 @@ describe('AuthService', () => {
     it('should handle database errors', async () => {
       prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.register(registerDto)).rejects.toThrow('Database error');
+      await expect(service.register(registerDto)).rejects.toThrow(
+        'Database error'
+      );
     });
   });
 
@@ -223,7 +231,10 @@ describe('AuthService', () => {
     it('should successfully login with email', async () => {
       prisma.user.findFirst.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      jwtService.verifyAsync.mockResolvedValue({ sub: 'user-id', exp: Date.now() / 1000 + 60 });
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: 'user-id',
+        exp: Date.now() / 1000 + 60,
+      });
       jwtService.signAsync
         .mockResolvedValueOnce('access-token')
         .mockResolvedValueOnce('refresh-token');
@@ -246,7 +257,10 @@ describe('AuthService', () => {
       const loginWithUsername = { ...loginDto, account: 'testuser' };
       prisma.user.findFirst.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      jwtService.verifyAsync.mockResolvedValue({ sub: 'user-id', exp: Date.now() / 1000 + 60 });
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: 'user-id',
+        exp: Date.now() / 1000 + 60,
+      });
       jwtService.signAsync
         .mockResolvedValueOnce('access-token')
         .mockResolvedValueOnce('refresh-token');
@@ -268,14 +282,18 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       prisma.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException
+      );
     });
 
     it('should throw UnauthorizedException if password is incorrect', async () => {
       prisma.user.findFirst.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException
+      );
     });
 
     it('should handle database errors', async () => {
@@ -294,7 +312,7 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       };
 
-      jwtService.verify.mockResolvedValue({ sub: 'user-id', type: 'refresh' });
+      jwtService.verify.mockReturnValue({ sub: 'user-id', type: 'refresh' });
       prisma.refreshToken.findFirst.mockResolvedValue(mockRefreshToken);
       tokenBlacklistService.isTokenBlacklisted.mockResolvedValue(false);
       prisma.user.findUnique.mockResolvedValue(mockUser);
@@ -309,19 +327,17 @@ describe('AuthService', () => {
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
         user: {
-          id: 'user-id',
-          email: 'test@example.com',
-          username: 'testuser',
-          nickname: 'Test User',
-          avatar: null,
-          role: 'USER',
-          status: 'ACTIVE',
+          ...mockUser,
+          nickname: mockUser.nickname || undefined,
+          avatar: mockUser.avatar || undefined,
         },
       });
     });
 
     it('should throw UnauthorizedException if token is invalid', async () => {
-      jwtService.verifyAsync.mockRejectedValue(new Error('Invalid token'));
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
 
       await expect(service.refreshToken('invalid-token')).rejects.toThrow(
         UnauthorizedException
@@ -329,7 +345,10 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if token is blacklisted', async () => {
-      jwtService.verifyAsync.mockResolvedValue({ sub: 'user-id', type: 'refresh' });
+      jwtService.verify.mockReturnValue({
+        sub: 'user-id',
+        type: 'refresh',
+      });
       tokenBlacklistService.isTokenBlacklisted.mockResolvedValue(true);
 
       await expect(service.refreshToken('blacklisted-token')).rejects.toThrow(
@@ -338,7 +357,10 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
-      jwtService.verifyAsync.mockResolvedValue({ sub: 'user-id', type: 'refresh' });
+      jwtService.verify.mockReturnValue({
+        sub: 'user-id',
+        type: 'refresh',
+      });
       prisma.refreshToken.findMany.mockResolvedValue([]);
       tokenBlacklistService.isTokenBlacklisted.mockResolvedValue(false);
 
@@ -372,7 +394,10 @@ describe('AuthService', () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.validateUser('test@example.com', 'password123');
+      const result = await service.validateUser(
+        'test@example.com',
+        'password123'
+      );
 
       expect(result).toEqual(mockUserWithoutPassword);
     });
@@ -380,7 +405,10 @@ describe('AuthService', () => {
     it('should return null if user not found', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      const result = await service.validateUser('test@example.com', 'password123');
+      const result = await service.validateUser(
+        'test@example.com',
+        'password123'
+      );
 
       expect(result).toBeNull();
     });
@@ -389,7 +417,10 @@ describe('AuthService', () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await service.validateUser('test@example.com', 'wrongpassword');
+      const result = await service.validateUser(
+        'test@example.com',
+        'wrongpassword'
+      );
 
       expect(result).toBeNull();
     });

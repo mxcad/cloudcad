@@ -35,16 +35,16 @@ export class CompleteMultipartUploadDto {
   @IsString()
   uploadId: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: '分片信息',
     type: 'array',
     items: {
       type: 'object',
       properties: {
         partNumber: { type: 'number' },
-        etag: { type: 'string' }
-      }
-    }
+        etag: { type: 'string' },
+      },
+    },
   })
   parts: Array<{
     partNumber: number;

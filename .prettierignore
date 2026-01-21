@@ -14,3 +14,15 @@ Thumbs.db
 *.log
 tmp
 temp
+**/*.spec.ts
+**/*.test.ts
+**/*.test.tsx
+**/test/**
+**/e2e/**
+test-*.js
+prisma/**
+*.d.ts
+types.ts
+**/types/**
+conversionProgram/**
+代码参考/**

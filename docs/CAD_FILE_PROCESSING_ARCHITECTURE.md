@@ -52,12 +52,12 @@ model FileSystemNode {
   name        String
   isFolder    Boolean  @default(false)  // true=文件夹, false=文件
   isRoot      Boolean  @default(false)  // true=项目根目录
-  
+
   // 树形结构（自引用）
   parentId    String?
   parent      FileSystemNode?  @relation("NodeHierarchy", fields: [parentId])
   children    FileSystemNode[] @relation("NodeHierarchy")
-  
+
   // 文件专属字段
   originalName String?   // 原始文件名
   path         String?   // MinIO存储路径
@@ -65,7 +65,7 @@ model FileSystemNode {
   mimeType     String?   // MIME类型
   extension    String?   // 文件扩展名
   fileStatus   FileStatus? // 文件状态
-  
+
   // 权限与审计
   ownerId     String
   owner       User     @relation("NodeOwner", fields: [ownerId])
@@ -102,7 +102,7 @@ GET    /file-system/storage           // 存储空间信息
 ### 1.3 三层权限系统
 
 1. **用户角色**：ADMIN, USER
-2. **项目成员**：OWNER, ADMIN, MEMBER, VIEWER  
+2. **项目成员**：OWNER, ADMIN, MEMBER, VIEWER
 3. **文件访问**：OWNER, EDITOR, VIEWER
 
 ### 1.4 当前限制
@@ -120,9 +120,11 @@ GET    /file-system/storage           // 存储空间信息
 ### 2.1 格式转换系统 📋
 
 #### 目标
+
 支持 DWG/DXF 文件转换为 MXWeb 格式，实现 Web 端 CAD 图纸渲染。
 
 #### 技术方案
+
 ```typescript
 // 转换服务架构
 @Injectable()
@@ -137,6 +139,7 @@ export class CADConverterService {
 ```
 
 #### 实施要点
+
 - 独立的转换服务容器
 - 支持批量转换
 - 转换进度跟踪
@@ -145,6 +148,7 @@ export class CADConverterService {
 ### 2.2 高级存储功能 📋
 
 #### 文件去重机制
+
 ```typescript
 // 基于 SHA-256 的文件去重
 async checkDuplicate(fileHash: string): Promise<FileMetadata | null> {
@@ -155,6 +159,7 @@ async checkDuplicate(fileHash: string): Promise<FileMetadata | null> {
 ```
 
 #### 分片上传和断点续传
+
 ```typescript
 // 分片上传流程
 1. 初始化分片上传 → 返回 uploadId
@@ -163,6 +168,7 @@ async checkDuplicate(fileHash: string): Promise<FileMetadata | null> {
 ```
 
 #### 多存储后端支持
+
 - MinIO（默认）
 - AWS S3
 - 阿里云 OSS
@@ -171,6 +177,7 @@ async checkDuplicate(fileHash: string): Promise<FileMetadata | null> {
 ### 2.3 预览生成系统 📋
 
 #### 缩略图生成
+
 ```typescript
 async generateThumbnail(fileBuffer: Buffer): Promise<Buffer> {
   // 1. 转换为 MXWeb 格式
@@ -181,6 +188,7 @@ async generateThumbnail(fileBuffer: Buffer): Promise<Buffer> {
 ```
 
 #### Web 预览
+
 - 支持 MXWeb 格式的在线预览
 - 缩放、平移、图层控制
 - 标注和测量工具
@@ -188,11 +196,13 @@ async generateThumbnail(fileBuffer: Buffer): Promise<Buffer> {
 ### 2.4 智能缓存系统 📋
 
 #### 多级缓存策略
+
 ```
 浏览器缓存 → CDN 缓存 → Redis 缓存 → 文件系统
 ```
 
 #### 缓存失效机制
+
 - 文件更新时自动清理相关缓存
 - 基于 TTL 的自动过期
 - 手动缓存清理接口
@@ -204,16 +214,19 @@ async generateThumbnail(fileBuffer: Buffer): Promise<Buffer> {
 ### 3.1 优先级排序
 
 #### P0 - 核心功能（立即实施）
+
 1. **文件去重机制** - 减少存储空间，提升上传速度
 2. **基础格式转换** - 支持 DWG/DXF 到 MXWeb 转换
 3. **缩略图生成** - 提升用户体验
 
 #### P1 - 重要功能（3个月内）
+
 1. **分片上传** - 支持大文件上传
 2. **预览系统** - Web 端 CAD 图纸预览
 3. **缓存优化** - 提升系统性能
 
 #### P2 - 扩展功能（6个月内）
+
 1. **多存储后端** - 支持云存储服务
 2. **高级预览** - 标注、测量等交互功能
 3. **批量处理** - 批量转换和预览生成
@@ -221,18 +234,21 @@ async generateThumbnail(fileBuffer: Buffer): Promise<Buffer> {
 ### 3.2 分阶段实施计划
 
 #### 第一阶段（1个月）：基础转换
+
 - 搭建转换服务
 - 实现 DWG/DXF 到 MXWeb 基础转换
 - 添加文件去重机制
 - 生成基础缩略图
 
 #### 第二阶段（2个月）：性能优化
+
 - 实现分片上传
 - 添加缓存系统
 - 优化转换性能
 - 完善错误处理
 
 #### 第三阶段（3个月）：功能完善
+
 - 实现 Web 预览
 - 支持多存储后端
 - 添加批量处理
@@ -247,6 +263,7 @@ async generateThumbnail(fileBuffer: Buffer): Promise<Buffer> {
 ### 4.1 存储抽象层设计
 
 #### 统一存储接口
+
 ```typescript
 interface StorageProvider {
   // 基础操作
@@ -254,18 +271,28 @@ interface StorageProvider {
   downloadFile(key: string): Promise<Buffer>;
   deleteFile(key: string): Promise<void>;
   fileExists(key: string): Promise<boolean>;
-  
+
   // 分片上传
   initiateMultipartUpload(key: string): Promise<string>;
-  uploadPart(uploadId: string, key: string, partNumber: number, data: Buffer): Promise<string>;
-  completeMultipartUpload(uploadId: string, key: string, parts: Part[]): Promise<void>;
-  
+  uploadPart(
+    uploadId: string,
+    key: string,
+    partNumber: number,
+    data: Buffer
+  ): Promise<string>;
+  completeMultipartUpload(
+    uploadId: string,
+    key: string,
+    parts: Part[]
+  ): Promise<void>;
+
   // 预签名 URL
   getPresignedUrl(key: string, expiry?: number): Promise<string>;
 }
 ```
 
 #### 多存储后端实现
+
 ```typescript
 // MinIO 提供商
 @Injectable()
@@ -285,52 +312,54 @@ export class S3StorageProvider implements StorageProvider {
 ### 4.2 文件处理管道
 
 #### 上传处理流程
+
 ```typescript
 async processFileUpload(file: File, options: UploadOptions): Promise<ProcessResult> {
   // 1. 文件验证
   await this.validateFile(file);
-  
+
   // 2. 计算文件哈希
   const fileHash = await this.calculateHash(file);
-  
+
   // 3. 检查重复文件
   const existingFile = await this.checkDuplicate(fileHash);
   if (existingFile) {
     return this.createReference(existingFile);
   }
-  
+
   // 4. 上传到存储
   const storageKey = await this.uploadToStorage(file);
-  
+
   // 5. 创建数据库记录
   const fileRecord = await this.createFileRecord(storageKey, fileHash);
-  
+
   // 6. 异步处理（转换、预览等）
   await this.queueAsyncProcessing(fileRecord.id);
-  
+
   return fileRecord;
 }
 ```
 
 #### 转换处理流程
+
 ```typescript
 async processFileConversion(fileId: string): Promise<void> {
   try {
     // 1. 获取原始文件
     const originalFile = await this.getOriginalFile(fileId);
-    
+
     // 2. 转换为 MXWeb
     const mxwebBuffer = await this.converter.convertToMXWeb(originalFile.buffer);
-    
+
     // 3. 生成缩略图
     const thumbnailBuffer = await this.generateThumbnail(mxwebBuffer);
-    
+
     // 4. 上传转换结果
     await this.uploadProcessedFiles(fileId, {
       mxweb: mxwebBuffer,
       thumbnail: thumbnailBuffer
     });
-    
+
     // 5. 更新文件状态
     await this.updateFileStatus(fileId, 'COMPLETED');
   } catch (error) {
@@ -342,24 +371,26 @@ async processFileConversion(fileId: string): Promise<void> {
 ### 4.3 性能优化策略
 
 #### 缓存策略
+
 ```typescript
 // Redis 缓存配置
 const cacheConfig = {
   // 文件元数据缓存（5分钟）
   fileMetadata: { ttl: 300 },
-  
+
   // 权限信息缓存（10分钟）
   permissions: { ttl: 600 },
-  
+
   // 转换结果缓存（1小时）
   conversionResults: { ttl: 3600 },
-  
+
   // 预签名URL缓存（1分钟）
-  presignedUrls: { ttl: 60 }
+  presignedUrls: { ttl: 60 },
 };
 ```
 
 #### 队列系统
+
 ```typescript
 // 使用 Bull Queue 处理异步任务
 @Injectable()
@@ -369,7 +400,7 @@ export class FileProcessingQueue {
     const { fileId } = job.data;
     return this.fileService.processFileConversion(fileId);
   }
-  
+
   @Process('generate-thumbnail')
   async handleThumbnailGeneration(job: Job) {
     const { fileId } = job.data;
@@ -385,6 +416,7 @@ export class FileProcessingQueue {
 ### 5.1 Docker Compose 配置
 
 #### 开发环境
+
 ```yaml
 # docker-compose.dev.yml
 version: '3.8'
@@ -427,8 +459,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
 
   # 转换服务（新增）
   converter:
@@ -451,6 +483,7 @@ volumes:
 ```
 
 #### 生产环境
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -462,7 +495,7 @@ services:
     environment:
       - NODE_ENV=production
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -471,8 +504,8 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./ssl:/etc/nginx/ssl
@@ -483,6 +516,7 @@ services:
 ### 5.2 环境配置
 
 #### 存储配置
+
 ```yaml
 # config/storage.yml
 storage:
@@ -497,7 +531,7 @@ storage:
         accessKey: minioadmin
         secretKey: ${MINIO_PASSWORD}
         bucket: cloucad
-    
+
     - type: s3
       name: s3
       config:
@@ -509,11 +543,12 @@ storage:
 ```
 
 #### 转换服务配置
+
 ```yaml
 # config/converter.yml
 converter:
   enabled: true
-  timeout: 300000  # 5分钟
+  timeout: 300000 # 5分钟
   retryAttempts: 3
   supportedFormats:
     - .dwg
@@ -529,6 +564,7 @@ converter:
 ### 6.1 扩展现有功能
 
 #### 添加新的存储后端
+
 ```typescript
 // 1. 实现 StorageProvider 接口
 @Injectable()
@@ -544,7 +580,7 @@ export class AliyunOSSProvider implements StorageProvider {
       useFactory: () => [
         new MinioStorageProvider(minioConfig),
         new S3StorageProvider(s3Config),
-        new AliyunOSSProvider(ossConfig),  // 新增
+        new AliyunOSSProvider(ossConfig), // 新增
       ],
     },
   ],
@@ -553,6 +589,7 @@ export class StorageModule {}
 ```
 
 #### 添加新的文件格式支持
+
 ```typescript
 // 1. 扩展转换器
 @Injectable()
@@ -575,22 +612,23 @@ export class UniversalConverterService {
 ### 6.2 测试策略
 
 #### 单元测试
+
 ```typescript
 describe('FileSystemService', () => {
   let service: FileSystemService;
-  
+
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [FileSystemService, MockStorageProvider],
     }).compile();
-    
+
     service = module.get<FileSystemService>(FileSystemService);
   });
-  
+
   it('should upload file successfully', async () => {
     const mockFile = createMockFile();
     const result = await service.uploadFile(mockFile, { userId: 'user1' });
-    
+
     expect(result.id).toBeDefined();
     expect(result.status).toBe('COMPLETED');
   });
@@ -598,26 +636,27 @@ describe('FileSystemService', () => {
 ```
 
 #### 集成测试
+
 ```typescript
 describe('FileSystemController (e2e)', () => {
   let app: INestApplication;
-  
+
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    
+
     app = moduleFixture.createNestApplication();
     await app.init();
   });
-  
+
   it('/file-system/files/upload (POST)', () => {
     return request(app.getHttpServer())
       .post('/file-system/files/upload')
       .send({
         fileName: 'test.dwg',
         fileContent: 'base64-encoded-content',
-        projectId: 'project1'
+        projectId: 'project1',
       })
       .expect(201);
   });
@@ -627,13 +666,14 @@ describe('FileSystemController (e2e)', () => {
 ### 6.3 监控和日志
 
 #### 性能监控
+
 ```typescript
 // 添加性能指标收集
 @Injectable()
 export class MetricsService {
   @InjectMetric('file_upload_duration')
   private uploadDuration: Histogram<string>;
-  
+
   async recordUploadDuration(duration: number, fileType: string) {
     this.uploadDuration.observe({ fileType }, duration);
   }
@@ -641,6 +681,7 @@ export class MetricsService {
 ```
 
 #### 结构化日志
+
 ```typescript
 // 使用 Winston 进行结构化日志
 @Injectable()
@@ -652,7 +693,7 @@ export class FileLogger {
       winston.format.json()
     ),
   });
-  
+
   logFileUpload(fileId: string, userId: string, size: number) {
     this.logger.info('File uploaded', {
       fileId,
@@ -670,12 +711,12 @@ export class FileLogger {
 
 ### 7.1 文档版本策略
 
-| 文档版本 | 对应系统版本 | 主要变更 | 维护状态 |
-|---------|-------------|---------|---------|
-| v1.0 | v0.1.0 | 初始规划文档 | 📋 规划中 |
-| v1.1 | v0.2.0 | 基础转换功能 | 🚧 开发中 |
-| v1.2 | v0.3.0 | 分片上传 | 📋 规划中 |
-| v2.0 | v1.0.0 | 完整 CAD 处理 | 📋 规划中 |
+| 文档版本 | 对应系统版本 | 主要变更      | 维护状态  |
+| -------- | ------------ | ------------- | --------- |
+| v1.0     | v0.1.0       | 初始规划文档  | 📋 规划中 |
+| v1.1     | v0.2.0       | 基础转换功能  | 🚧 开发中 |
+| v1.2     | v0.3.0       | 分片上传      | 📋 规划中 |
+| v2.0     | v1.0.0       | 完整 CAD 处理 | 📋 规划中 |
 
 ### 7.2 更新触发条件
 
@@ -696,21 +737,23 @@ export class FileLogger {
 
 ### 8.1 技术选型对比
 
-| 技术领域 | 当前方案 | 规划方案 | 优势 | 劣势 |
-|---------|---------|---------|------|------|
-| 文件存储 | MinIO | MinIO + 多云支持 | 开源、高性能 | 运维复杂度 |
-| 格式转换 | 无 | 专用转换服务 | 专业、准确 | 成本较高 |
-| 缓存系统 | Redis | Redis + CDN | 高性能、分布式 | 架构复杂 |
-| 队列系统 | 无 | Bull Queue | 可靠、监控 | 学习成本 |
+| 技术领域 | 当前方案 | 规划方案         | 优势           | 劣势       |
+| -------- | -------- | ---------------- | -------------- | ---------- |
+| 文件存储 | MinIO    | MinIO + 多云支持 | 开源、高性能   | 运维复杂度 |
+| 格式转换 | 无       | 专用转换服务     | 专业、准确     | 成本较高   |
+| 缓存系统 | Redis    | Redis + CDN      | 高性能、分布式 | 架构复杂   |
+| 队列系统 | 无       | Bull Queue       | 可靠、监控     | 学习成本   |
 
 ### 8.2 风险评估
 
 #### 技术风险
+
 - **转换服务稳定性**：依赖外部转换程序，可能存在稳定性问题
 - **大文件处理**：内存和存储压力较大，需要优化
 - **并发性能**：高并发场景下的性能瓶颈
 
 #### 业务风险
+
 - **用户接受度**：新功能的学习成本
 - **迁移成本**：从现有系统迁移的复杂性
 - **维护成本**：功能增加带来的维护负担
@@ -724,13 +767,13 @@ export class FileLogger {
 
 ---
 
-*本文档最后更新：2025-12-16*  
-*维护团队：CloudCAD 开发团队*  
-*联系方式：dev@cloucad.com*
-    const storage = this.getStorage(options.provider);
-    
+_本文档最后更新：2025-12-16_  
+_维护团队：CloudCAD 开发团队_  
+_联系方式：dev@cloucad.com_
+const storage = this.getStorage(options.provider);
+
     const uploadId = await storage.initiateMultipartUpload(storageKey);
-    
+
     // 创建上传会话记录
     const session = await this.prisma.uploadSession.create({
       data: {
@@ -743,7 +786,7 @@ export class FileLogger {
         status: 'INITIATED',
       },
     });
-    
+
     return {
       uploadId,
       storageKey,
@@ -751,9 +794,11 @@ export class FileLogger {
       chunkSize: this.config.get('upload.chunkSize'),
       totalChunks: Math.ceil(fileSize / this.config.get('upload.chunkSize')),
     };
-  }
+
 }
-```
+}
+
+````
 
 ### 4. Docker Compose 部署配置
 
@@ -821,7 +866,7 @@ volumes:
   redis_data:
   minio_data:
   temp_files:
-```
+````
 
 ### 5. 环境配置
 
@@ -840,7 +885,7 @@ storage:
         secretKey: ${MINIO_PASSWORD}
         bucket: cloucad
         region: us-east-1
-    
+
     # 可选：AWS S3 配置
     - type: s3
       name: s3
@@ -852,21 +897,21 @@ storage:
         bucket: cloucad-files
 
 upload:
-  maxFileSize: 2147483648  # 2GB
-  allowedTypes: 
+  maxFileSize: 2147483648 # 2GB
+  allowedTypes:
     - .dwg
     - .dxf
     - .pdf
     - .png
     - .jpg
     - .jpeg
-  chunkSize: 5242880  # 5MB
+  chunkSize: 5242880 # 5MB
 
 features:
   fileDeduplication: true
   multipartUpload: true
   previewGeneration: true
-  virusScan: false  # 可选功能
+  virusScan: false # 可选功能
 ```
 
 ## 前端技术选型
@@ -880,21 +925,21 @@ features:
   "dependencies": {
     // 基础 HTTP 请求
     "axios": "^1.6.0",
-    
+
     // 文件上传相关
-    "react-dropzone": "^14.2.0",        // 拖拽上传
-    "file-saver": "^2.0.5",            // 文件下载
-    
+    "react-dropzone": "^14.2.0", // 拖拽上传
+    "file-saver": "^2.0.5", // 文件下载
+
     // 文件处理
-    "crypto-js": "^4.2.0",             // 文件哈希计算
-    "file-type": "^18.0.0",            // 文件类型检测
-    
+    "crypto-js": "^4.2.0", // 文件哈希计算
+    "file-type": "^18.0.0", // 文件类型检测
+
     // UI 组件（已有）
-    "lucide-react": "^0.300.0",        // 图标
-    
+    "lucide-react": "^0.300.0", // 图标
+
     // 状态管理
     "@tanstack/react-query": "^5.0.0", // 数据获取和缓存
-    "zustand": "^4.4.0"               // 轻量级状态管理
+    "zustand": "^4.4.0" // 轻量级状态管理
   }
 }
 ```
@@ -914,7 +959,7 @@ export class FileUploadService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('projectId', projectId);
-    
+
     const response = await this.api.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (progressEvent) => {
@@ -924,7 +969,7 @@ export class FileUploadService {
         this.onProgress?.(progress);
       },
     });
-    
+
     return response.data;
   }
 
@@ -1045,7 +1090,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       for (const file of acceptedFiles) {
         // 检查文件去重
         const existingHash = await uploadService.checkFileHash(file);
-        
+
         if (existingHash) {
           // 秒传
           const result = await uploadService.instantUpload(
@@ -1060,7 +1105,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             file.size < 10 * 1024 * 1024
               ? await uploadService.uploadSmallFile(file, projectId)
               : await uploadService.uploadLargeFile(file, projectId);
-          
+
           onUploadComplete?.(result);
         }
       }
@@ -1243,7 +1288,9 @@ export const CADViewer: React.FC<CADViewerProps> = ({ fileId, fileName }) => {
 import { useState, useEffect } from 'react';
 
 export const useConversionStatus = (fileId: string) => {
-  const [status, setStatus] = useState<'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('UPLOADING');
+  const [status, setStatus] = useState<
+    'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  >('UPLOADING');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -1277,13 +1324,13 @@ export const useConversionStatus = (fileId: string) => {
 
 ### 5. 为什么不使用重型库？
 
-| 功能需求 | 推荐方案 | 避免的重型库 |
-|---------|---------|-------------|
-| 文件上传 | axios + FormData |uppy, react-uploady |
-| 拖拽上传 | react-dropzone | 自实现或重型组件 |
-| 文件处理 | crypto-js, file-type | 大型文件处理库 |
-| 进度显示 | 原生实现 | 复杂进度条库 |
-| CAD 查看 | 专用查看器 | 通用查看器 |
+| 功能需求 | 推荐方案             | 避免的重型库        |
+| -------- | -------------------- | ------------------- |
+| 文件上传 | axios + FormData     | uppy, react-uploady |
+| 拖拽上传 | react-dropzone       | 自实现或重型组件    |
+| 文件处理 | crypto-js, file-type | 大型文件处理库      |
+| 进度显示 | 原生实现             | 复杂进度条库        |
+| CAD 查看 | 专用查看器           | 通用查看器          |
 
 ### 优势
 
@@ -1296,6 +1343,7 @@ export const useConversionStatus = (fileId: string) => {
 ### 总结
 
 对于企业级 CAD 应用，**推荐直接调用 API + 轻量级工具库**的方案：
+
 - 核心功能自己实现，确保业务逻辑可控
 - 只在必要处使用成熟的轻量级库
 - 避免过度依赖重型框架，保持系统简洁高效
@@ -1307,27 +1355,31 @@ export const useConversionStatus = (fileId: string) => {
 ```typescript
 @Injectable()
 export class StorageService {
-  
   // === MinIO 原生分片上传支持 ===
-  
+
   // 初始化分片上传
   async initiateMultipartUpload(key: string): Promise<string> {
     return this.client.initiateNewMultipartUpload(this.bucket, key);
   }
-  
+
   // 上传分片
-  async uploadPart(uploadId: string, key: string, partNumber: number, data: Buffer): Promise<string> {
-    return this.client.uploadPart(
-      this.bucket,
-      key,
-      uploadId,
-      partNumber,
-      data
-    ).then(result => result.etag);
+  async uploadPart(
+    uploadId: string,
+    key: string,
+    partNumber: number,
+    data: Buffer
+  ): Promise<string> {
+    return this.client
+      .uploadPart(this.bucket, key, uploadId, partNumber, data)
+      .then((result) => result.etag);
   }
-  
+
   // 完成分片上传
-  async completeMultipartUpload(uploadId: string, key: string, parts: Array<{partNumber: number, etag: string}>) {
+  async completeMultipartUpload(
+    uploadId: string,
+    key: string,
+    parts: Array<{ partNumber: number; etag: string }>
+  ) {
     return this.client.completeMultipartUpload(
       this.bucket,
       key,
@@ -1335,63 +1387,54 @@ export class StorageService {
       parts
     );
   }
-  
+
   // 中止分片上传
   async abortMultipartUpload(uploadId: string, key: string) {
-    return this.client.abortMultipartUpload(
-      this.bucket,
-      key,
-      uploadId
-    );
+    return this.client.abortMultipartUpload(this.bucket, key, uploadId);
   }
-  
+
   // 列出已上传的分片
   async listParts(uploadId: string, key: string) {
-    return this.client.listParts(
-      this.bucket,
-      key,
-      uploadId
-    );
+    return this.client.listParts(this.bucket, key, uploadId);
   }
-  
+
   // === MinIO 原生预签名 URL 支持 ===
-  
+
   // 获取预签名下载 URL
   async getPresignedUrl(key: string, expiry = 3600): Promise<string> {
     return this.client.presignedGetObject(this.bucket, key, expiry);
   }
-  
+
   // 获取预签名上传 URL（用于直传）
   async getPresignedPutUrl(key: string, expiry = 3600): Promise<string> {
     return this.client.presignedPutObject(this.bucket, key, expiry);
   }
-  
+
   // === MinIO 对象锁定和版本控制（企业级功能） ===
-  
+
   // 设置对象锁定（WORM - Write Once Read Many）
-  async setObjectLock(key: string, mode: 'GOVERNANCE' | 'COMPLIANCE', retainUntilDate: Date) {
-    return this.client.putObjectLock(
-      this.bucket,
-      key,
-      mode,
-      retainUntilDate
-    );
+  async setObjectLock(
+    key: string,
+    mode: 'GOVERNANCE' | 'COMPLIANCE',
+    retainUntilDate: Date
+  ) {
+    return this.client.putObjectLock(this.bucket, key, mode, retainUntilDate);
   }
-  
+
   // 启用版本控制
   async enableVersioning() {
     return this.client.setBucketVersioning(this.bucket, {
-      Status: 'Enabled'
+      Status: 'Enabled',
     });
   }
-  
+
   // 获取对象版本列表
   async listObjectVersions(key: string) {
     return this.client.listObjectVersions(this.bucket, key);
   }
-  
+
   // === MinIO 生命周期管理 ===
-  
+
   // 设置生命周期规则（自动转换存储类别）
   async setLifecycleRules() {
     const rules = [
@@ -1400,47 +1443,47 @@ export class StorageService {
         Status: 'Enabled',
         Filter: { Prefix: 'original/' },
         Transitions: [
-          { Days: 30, StorageClass: 'STANDARD_IA' },  // 30天后转为低频访问
-          { Days: 90, StorageClass: 'GLACIER' },       // 90天后转为归档存储
-          { Days: 365, StorageClass: 'DEEP_ARCHIVE' }  // 1年后转为深度归档
-        ]
+          { Days: 30, StorageClass: 'STANDARD_IA' }, // 30天后转为低频访问
+          { Days: 90, StorageClass: 'GLACIER' }, // 90天后转为归档存储
+          { Days: 365, StorageClass: 'DEEP_ARCHIVE' }, // 1年后转为深度归档
+        ],
       },
       {
         ID: 'MXWeb-Files',
         Status: 'Enabled',
         Filter: { Prefix: 'mxweb/' },
         Transitions: [
-          { Days: 60, StorageClass: 'STANDARD_IA' }   // MXWeb文件60天后转低频访问
-        ]
+          { Days: 60, StorageClass: 'STANDARD_IA' }, // MXWeb文件60天后转低频访问
+        ],
       },
       {
         ID: 'Temp-Files',
         Status: 'Enabled',
         Filter: { Prefix: 'temp/' },
-        Expiration: { Days: 1 }  // 临时文件1天后自动删除
-      }
+        Expiration: { Days: 1 }, // 临时文件1天后自动删除
+      },
     ];
-    
+
     return this.client.setBucketLifecycle(this.bucket, rules);
   }
-  
+
   // === MinIO 服务器端加密 ===
-  
+
   // 启用服务器端加密
   async enableServerSideEncryption() {
     return this.client.setBucketEncryption(this.bucket, {
       Rules: [
         {
           ApplyServerSideEncryptionByDefault: {
-            SSEAlgorithm: 'AES256'
-          }
-        }
-      ]
+            SSEAlgorithm: 'AES256',
+          },
+        },
+      ],
     });
   }
-  
+
   // === MinIO 复制和同步 ===
-  
+
   // 跨区域复制
   async enableCrossRegionReplication(destinationBucket: string) {
     return this.client.setBucketReplication(this.bucket, {
@@ -1452,61 +1495,62 @@ export class StorageService {
           Prefix: 'original/',
           Destination: {
             Bucket: destinationBucket,
-            StorageClass: 'STANDARD'
-          }
-        }
-      ]
+            StorageClass: 'STANDARD',
+          },
+        },
+      ],
     });
   }
-  
+
   // === 基础功能扩展 ===
-  
+
   // 批量删除文件
   async deleteCADFiles(fileId: string) {
     const keysToDelete = [
       `original/.../${fileId}.dwg`,
       `mxweb/${fileId}.mxweb`,
-      `thumbnails/${fileId}.png`
+      `thumbnails/${fileId}.png`,
     ];
-    
+
     await this.deleteFiles(keysToDelete);
   }
-  
+
   // 获取文件统计信息
   async getStorageStats(userId: string) {
     const userFiles = await this.listFiles(`user-${userId}/`);
-    
+
     let totalSize = 0;
     let originalSize = 0;
     let mxwebSize = 0;
-    
+
     for (const file of userFiles) {
       totalSize += file.size || 0;
-      
+
       if (file.name?.includes('/original/')) {
         originalSize += file.size || 0;
       } else if (file.name?.includes('/mxweb/')) {
         mxwebSize += file.size || 0;
       }
     }
-    
+
     return {
       totalSize,
       originalSize,
       mxwebSize,
-      compressionRatio: originalSize > 0 ? (1 - mxwebSize / originalSize) * 100 : 0
+      compressionRatio:
+        originalSize > 0 ? (1 - mxwebSize / originalSize) * 100 : 0,
     };
   }
-  
+
   // 对象标签管理（用于分类和搜索）
   async setObjectTags(key: string, tags: Record<string, string>) {
     const tagging = Object.entries(tags)
       .map(([key, value]) => `${key}=${value}`)
       .join('&');
-    
+
     return this.client.setObjectTagging(this.bucket, key, tagging);
   }
-  
+
   async getObjectTags(key: string) {
     return this.client.getObjectTagging(this.bucket, key);
   }
@@ -1516,16 +1560,19 @@ export class StorageService {
 ## 安全考虑
 
 ### 1. 文件验证
+
 - 文件类型白名单验证
 - 文件大小限制
 - 病毒扫描（可选）
 
 ### 2. 访问控制
+
 - JWT 认证
 - 文件级权限控制
 - 预签名 URL 时效性
 
 ### 3. 转换安全
+
 - 转换程序隔离
 - 资源限制
 - 错误处理和日志
@@ -1533,16 +1580,19 @@ export class StorageService {
 ## 性能优化
 
 ### 1. 存储策略
+
 - 原始文件：冷存储，低成本
 - MXWeb 文件：热存储，高性能
 - 缩略图：CDN 缓存
 
 ### 2. 转换优化
+
 - 异步处理队列
 - 并发限制
 - 缓存转换结果
 
 ### 3. 访问优化
+
 - 预签名 URL 缓存
 - CDN 分发
 - 压缩传输
@@ -1550,11 +1600,13 @@ export class StorageService {
 ## 监控和日志
 
 ### 1. 转换监控
+
 - 转换成功率
 - 转换时间统计
 - 错误率监控
 
 ### 2. 存储监控
+
 - 存储使用量
 - 访问频率
 - 性能指标
@@ -1591,6 +1643,7 @@ cad-converter:
 ## 开源项目实施计划
 
 ### 阶段一：核心文件管理（2-3周）
+
 - [ ] 存储抽象层设计和实现
 - [ ] MinIO 存储提供商实现
 - [ ] 基础文件上传（单文件和分片）
@@ -1598,6 +1651,7 @@ cad-converter:
 - [ ] 数据库模型实现
 
 ### 阶段二：高级功能（2-3周）
+
 - [ ] 多存储后端支持（S3、OSS、本地）
 - [ ] 文件夹层级管理
 - [ ] 权限控制系统
@@ -1605,12 +1659,14 @@ cad-converter:
 - [ ] 搜索和过滤功能
 
 ### 阶段三：前端界面（2周）
+
 - [ ] 文件上传组件（拖拽、进度、断点续传）
 - [ ] 文件管理界面（列表、网格、文件夹）
 - [ ] 权限管理界面
 - [ ] 项目设置和配置
 
 ### 阶段四：开源准备（1-2周）
+
 - [ ] Docker Compose 部署配置
 - [ ] 环境变量和配置文档
 - [ ] API 文档生成
@@ -1618,6 +1674,7 @@ cad-converter:
 - [ ] 开发者文档和扩展指南
 
 ### 阶段五：企业级功能（可选）
+
 - [ ] 监控和日志系统
 - [ ] 性能指标收集
 - [ ] 病毒扫描集成
@@ -1627,6 +1684,7 @@ cad-converter:
 ## 开源项目特点
 
 ### 1. 部署简单
+
 ```bash
 # 一键启动
 git clone https://github.com/your-org/cloucad-file-manager
@@ -1636,16 +1694,19 @@ docker-compose up -d
 ```
 
 ### 2. 配置灵活
+
 - 支持 MinIO、AWS S3、阿里云 OSS、腾讯云 COS 等
 - 可配置文件大小限制、类型限制
 - 可选功能模块（病毒扫描、预览生成等）
 
 ### 3. 扩展性强
+
 - 插件化存储提供商
 - 可自定义文件处理流程
 - 支持二次开发和定制
 
 ### 4. 文档完善
+
 - 详细的部署文档
 - API 接口文档
 - 开发者指南
@@ -1654,6 +1715,7 @@ docker-compose up -d
 ## 技术栈总结
 
 ### 后端
+
 - **框架**: NestJS + TypeScript
 - **数据库**: PostgreSQL + Prisma ORM
 - **缓存**: Redis
@@ -1661,12 +1723,14 @@ docker-compose up -d
 - **队列**: Bull Queue（Redis）
 
 ### 前端
+
 - **框架**: React + TypeScript
 - **状态管理**: Zustand + React Query
 - **UI组件**: 自定义组件 + Lucide Icons
 - **文件处理**: react-dropzone + crypto-js
 
 ### 部署
+
 - **容器化**: Docker + Docker Compose
 - **反向代理**: Nginx（可选）
 - **监控**: Prometheus + Grafana（可选）
@@ -1674,21 +1738,25 @@ docker-compose up -d
 ## 面向场景
 
 ### 1. CAD 文件管理
+
 - 支持 DWG、DXF 等格式
 - 大文件上传和断点续传
 - 文件版本管理和历史记录
 
 ### 2. 企业文档管理
+
 - 项目级权限控制
 - 文件夹层级管理
 - 审计日志和合规性
 
 ### 3. 云盘系统
+
 - 多租户支持
 - 存储配额管理
 - 文件分享和协作
 
 ### 4. 开发基础组件
+
 - 可作为其他项目的文件管理模块
 - 提供标准的文件管理 API
 - 支持自定义扩展和集成
@@ -1764,7 +1832,7 @@ docker-compose up -d
 export class FileController {
   constructor(
     private fileService: FileManagementService,
-    private permissionService: FilePermissionService,
+    private permissionService: FilePermissionService
   ) {}
 
   // 单文件上传
@@ -1774,7 +1842,7 @@ export class FileController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadDto,
-    @Request() req,
+    @Request() req
   ) {
     return this.fileService.uploadFile(file, {
       userId: req.user.id,
@@ -1788,7 +1856,7 @@ export class FileController {
   @ApiOperation({ summary: '初始化分片上传' })
   async initiateMultipartUpload(
     @Body() dto: InitiateMultipartDto,
-    @Request() req,
+    @Request() req
   ) {
     return this.fileService.initiateMultipartUpload({
       fileName: dto.fileName,
@@ -1803,7 +1871,11 @@ export class FileController {
   @Post('multipart/chunk')
   @ApiOperation({ summary: '上传分片' })
   async uploadChunk(@Body() dto: UploadChunkDto) {
-    return this.fileService.uploadChunk(dto.uploadId, dto.chunkIndex, dto.chunkData);
+    return this.fileService.uploadChunk(
+      dto.uploadId,
+      dto.chunkIndex,
+      dto.chunkData
+    );
   }
 
   // 完成分片上传
@@ -1823,10 +1895,7 @@ export class FileController {
   // 文件下载
   @Get(':id/download')
   @ApiOperation({ summary: '下载文件' })
-  async downloadFile(
-    @Param('id') id: string,
-    @Request() req,
-  ) {
+  async downloadFile(@Param('id') id: string, @Request() req) {
     return this.fileService.downloadFile(id, req.user.id);
   }
 
@@ -1932,38 +2001,41 @@ export const useFileUpload = (projectId: string) => {
     error: null,
   });
 
-  const uploadFile = useCallback(async (file: File) => {
-    setUploadState({ uploading: true, progress: 0, error: null });
+  const uploadFile = useCallback(
+    async (file: File) => {
+      setUploadState({ uploading: true, progress: 0, error: null });
 
-    try {
-      const fileHash = await calculateFileHash(file);
-      
-      // 检查重复文件
-      const existingFile = await checkFileExists(fileHash);
-      if (existingFile) {
-        await instantUpload(fileHash, file.name, projectId);
-        return;
-      }
+      try {
+        const fileHash = await calculateFileHash(file);
 
-      // 根据文件大小选择上传方式
-      if (file.size < 50 * 1024 * 1024) {
-        await uploadSmallFile(file, projectId, (progress) => {
-          setUploadState(prev => ({ ...prev, progress }));
-        });
-      } else {
-        await uploadLargeFile(file, projectId, (progress) => {
-          setUploadState(prev => ({ ...prev, progress }));
-        });
+        // 检查重复文件
+        const existingFile = await checkFileExists(fileHash);
+        if (existingFile) {
+          await instantUpload(fileHash, file.name, projectId);
+          return;
+        }
+
+        // 根据文件大小选择上传方式
+        if (file.size < 50 * 1024 * 1024) {
+          await uploadSmallFile(file, projectId, (progress) => {
+            setUploadState((prev) => ({ ...prev, progress }));
+          });
+        } else {
+          await uploadLargeFile(file, projectId, (progress) => {
+            setUploadState((prev) => ({ ...prev, progress }));
+          });
+        }
+      } catch (error) {
+        setUploadState((prev) => ({
+          ...prev,
+          error: error instanceof Error ? error.message : '上传失败',
+        }));
+      } finally {
+        setUploadState((prev) => ({ ...prev, uploading: false }));
       }
-    } catch (error) {
-      setUploadState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : '上传失败',
-      }));
-    } finally {
-      setUploadState(prev => ({ ...prev, uploading: false }));
-    }
-  }, [projectId]);
+    },
+    [projectId]
+  );
 
   return { uploadFile, ...uploadState };
 };
@@ -2083,9 +2155,9 @@ services:
       - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:-minioadmin}
       - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:-minioadmin}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
-      - ./uploads:/app/uploads  # 本地存储备用
+      - ./uploads:/app/uploads # 本地存储备用
     depends_on:
       - postgres
       - redis
@@ -2114,8 +2186,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
 
 volumes:
   postgres_data:
@@ -2132,10 +2204,15 @@ volumes:
 export class FileAuditService {
   constructor(
     private prisma: DatabaseService,
-    private logger: Logger,
+    private logger: Logger
   ) {}
 
-  async logAccess(fileId: string, userId: string, action: string, metadata?: any) {
+  async logAccess(
+    fileId: string,
+    userId: string,
+    action: string,
+    metadata?: any
+  ) {
     await this.prisma.auditLog.create({
       data: {
         fileId,
@@ -2200,6 +2277,6 @@ export class FileMetricsService {
 
 ---
 
-*文档版本: v1.0*  
-*创建时间: 2025-12-16*  
-*最后更新: 2025-12-16*
+_文档版本: v1.0_  
+_创建时间: 2025-12-16_  
+_最后更新: 2025-12-16_

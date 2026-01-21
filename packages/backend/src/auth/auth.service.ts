@@ -1,10 +1,13 @@
-import { Injectable, Logger, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
-import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailVerificationService } from './services/email-verification.service';
@@ -21,13 +24,14 @@ export class AuthService {
     private configService: ConfigService,
     private tokenBlacklistService: TokenBlacklistService,
     private emailVerificationService: EmailVerificationService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<{ message: string; email: string }> {
+  async register(
+    registerDto: RegisterDto
+  ): Promise<{ message: string; email: string }> {
     const { email, username, password, nickname } = registerDto;
 
-    // 检查邮箱是否已存在
     const existingUserByEmail = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -35,7 +39,6 @@ export class AuthService {
       throw new ConflictException('邮箱已被注册');
     }
 
-    // 检查用户名是否已存在
     const existingUserByUsername = await this.prisma.user.findUnique({
       where: { username },
     });
@@ -43,11 +46,10 @@ export class AuthService {
       throw new ConflictException('用户名已被使用');
     }
 
-    // 将注册信息临时存储到 Redis（15分钟过期）
     const registerKey = `register:pending:${email}`;
     await this.redis.setex(
       registerKey,
-      15 * 60, // 15分钟
+      15 * 60,
       JSON.stringify({
         email,
         username,
@@ -56,13 +58,11 @@ export class AuthService {
       })
     );
 
-    // 发送验证码
     try {
       await this.emailVerificationService.sendVerificationEmail(email);
       this.logger.log(`验证码已发送: ${email}`);
     } catch (error) {
       this.logger.error(`发送验证码失败: ${error.message}`);
-      // 删除临时注册信息
       await this.redis.del(registerKey);
       throw new Error('发送验证码失败，请稍后重试');
     }
@@ -73,12 +73,17 @@ export class AuthService {
     };
   }
 
-  async verifyEmailAndActivate(email: string, code: string): Promise<{ message: string }> {
+  async verifyEmailAndActivate(
+    email: string,
+    code: string
+  ): Promise<{ message: string }> {
     this.logger.log(`开始验证邮箱: ${email}`);
-    
-    // 验证验证码
-    const isValid = await this.emailVerificationService.verifyEmail(email, code);
-    
+
+    const isValid = await this.emailVerificationService.verifyEmail(
+      email,
+      code
+    );
+
     if (!isValid) {
       this.logger.error(`验证码验证失败: ${email}`);
       throw new Error('验证码验证失败');
@@ -86,7 +91,6 @@ export class AuthService {
 
     this.logger.log(`验证码验证成功: ${email}`);
 
-    // 从 Redis 获取注册信息
     const registerKey = `register:pending:${email}`;
     const registerDataStr = await this.redis.get(registerKey);
 
@@ -100,17 +104,25 @@ export class AuthService {
     const registerData = JSON.parse(registerDataStr);
     this.logger.log(`解析注册信息成功: ${registerData.username}`);
 
-    // 加密密码
     const hashedPassword = await bcrypt.hash(registerData.password, 12);
     this.logger.log(`密码加密完成`);
 
-    // 创建用户（直接激活）
+    // 获取默认角色（USER）
+    const defaultRole = await this.prisma.role.findFirst({
+      where: { name: 'USER' },
+    });
+
+    if (!defaultRole) {
+      throw new Error('默认角色不存在');
+    }
+
     await this.prisma.user.create({
       data: {
         email: registerData.email,
         username: registerData.username,
         password: hashedPassword,
         nickname: registerData.nickname,
+        roleId: defaultRole.id,
         status: 'ACTIVE',
         emailVerified: true,
         emailVerifiedAt: new Date(),
@@ -119,7 +131,6 @@ export class AuthService {
 
     this.logger.log(`用户创建成功: ${email}`);
 
-    // 删除临时注册信息
     await this.redis.del(registerKey);
 
     return {
@@ -127,12 +138,11 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+  async login(loginDto: LoginDto, req?: any): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
-    
+
     this.logger.log(`用户登录尝试: ${account}`);
 
-    // 查找用户（支持邮箱或用户名登录）
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [{ email: account }, { username: account }],
@@ -143,7 +153,12 @@ export class AuthService {
         username: true,
         nickname: true,
         avatar: true,
-        role: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         status: true,
         emailVerified: true,
         password: true,
@@ -160,30 +175,39 @@ export class AuthService {
         this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
         throw new UnauthorizedException('请先验证邮箱后再登录');
       }
-      this.logger.warn(`登录失败 - 账号已禁用: ${account} (状态: ${user.status})`);
+      this.logger.warn(
+        `登录失败 - 账号已禁用: ${account} (状态: ${user.status})`
+      );
       throw new UnauthorizedException('账号已被禁用');
     }
 
-    // 检查邮箱验证状态
     if (!user.emailVerified) {
       this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
       throw new UnauthorizedException('请先验证邮箱后再登录');
     }
 
-    // 验证密码
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       this.logger.warn(`登录失败 - 密码错误: ${account}`);
       throw new UnauthorizedException('账号或密码错误');
     }
 
-    // 移除密码字段
     const { password: _, ...userWithoutPassword } = user;
 
-    // 生成Token
     const tokens = await this.generateTokens(userWithoutPassword);
 
-    this.logger.log(`用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role})`);
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role.name;
+      req.session.userEmail = user.email;
+      this.logger.log(
+        `Session 已设置: userId=${user.id}, role=${user.role.name}`
+      );
+    }
+
+    this.logger.log(
+      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role.name})`
+    );
 
     return {
       ...tokens,
@@ -191,7 +215,7 @@ export class AuthService {
         ...userWithoutPassword,
         nickname: userWithoutPassword.nickname || undefined,
         avatar: userWithoutPassword.avatar || undefined,
-        role: userWithoutPassword.role,
+        role: userWithoutPassword.role.name,
         status: userWithoutPassword.status,
       },
     };
@@ -199,7 +223,6 @@ export class AuthService {
 
   async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
     try {
-      // 验证刷新Token
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get<string>('jwt.secret'),
       }) as any;
@@ -208,7 +231,6 @@ export class AuthService {
         throw new UnauthorizedException('无效的刷新Token');
       }
 
-      // 验证刷新Token是否存在于数据库中且未过期
       const isValidRefreshToken = await this.validateRefreshToken(
         refreshToken,
         payload.sub
@@ -217,7 +239,6 @@ export class AuthService {
         throw new UnauthorizedException('刷新Token无效或已过期');
       }
 
-      // 查找用户
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         select: {
@@ -226,7 +247,12 @@ export class AuthService {
           username: true,
           nickname: true,
           avatar: true,
-          role: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           status: true,
         },
       });
@@ -235,7 +261,6 @@ export class AuthService {
         throw new UnauthorizedException('用户不存在或已被禁用');
       }
 
-      // 生成新的Token
       const tokens = await this.generateTokens(user);
 
       return {
@@ -244,7 +269,7 @@ export class AuthService {
           ...user,
           nickname: user.nickname || undefined,
           avatar: user.avatar || undefined,
-          role: user.role,
+          role: user.role.name,
           status: user.status,
         },
       };
@@ -255,7 +280,6 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     try {
-      // 删除用户的所有刷新Token
       await this.deleteAllRefreshTokens(userId);
       this.logger.log(`用户退出登录，已删除刷新令牌: ${userId}`);
     } catch (error) {
@@ -270,17 +294,14 @@ export class AuthService {
    */
   async revokeToken(token: string): Promise<void> {
     try {
-      // 验证Token并获取过期时间
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('jwt.secret'),
       }) as any;
 
-      // 计算Token剩余有效时间
       const now = Math.floor(Date.now() / 1000);
       const expiresIn = payload.exp - now;
 
       if (expiresIn > 0) {
-        // 将Token添加到黑名单
         await this.tokenBlacklistService.addToBlacklist(token, expiresIn);
       }
     } catch (error) {
@@ -298,19 +319,16 @@ export class AuthService {
     token: string
   ): Promise<void> {
     try {
-      // 计算Token过期时间
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('jwt.secret'),
       }) as any;
 
       const expiresAt = new Date(payload.exp * 1000);
 
-      // 先删除该用户的旧刷新Token
       await this.prisma.refreshToken.deleteMany({
         where: { userId },
       });
 
-      // 存储新的刷新Token
       await this.prisma.refreshToken.create({
         data: {
           token,
@@ -399,7 +417,6 @@ export class AuthService {
       }),
     ]);
 
-    // 持久化刷新Token到数据库
     await this.storeRefreshToken(user.id, refreshToken);
 
     return {
@@ -456,10 +473,17 @@ export class AuthService {
     };
   }
 
-  async resetPassword(email: string, code: string, newPassword: string): Promise<{ message: string }> {
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
     this.logger.log(`重置密码请求: ${email}`);
 
-    const isValid = await this.emailVerificationService.verifyEmail(email, code);
+    const isValid = await this.emailVerificationService.verifyEmail(
+      email,
+      code
+    );
     if (!isValid) {
       this.logger.error(`验证码验证失败: ${email}`);
       throw new UnauthorizedException('验证码无效或已过期');

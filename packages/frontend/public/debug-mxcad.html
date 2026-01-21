@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+  <head>
+    <title>MxCAD 调试页面</title>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <h1>MxCAD 调试页面</h1>
+    <div id="results"></div>
+
+    <script>
+      const results = document.getElementById('results');
+
+      function log(message) {
+        console.log(message);
+        results.innerHTML += '<p>' + message + '</p>';
+      }
+
+      // 测试 MxCAD 文件访问
+      async function testMxCadFile() {
+        try {
+          log('测试 MxCAD 文件访问...');
+
+          // 测试一个存在的文件
+          const response = await fetch(
+            '/mxcad/file/41433130333200000000000003c00100.dwg.mxweb'
+          );
+          log('响应状态: ' + response.status);
+          log('响应头: ' + JSON.stringify([...response.headers.entries()]));
+
+          if (response.ok) {
+            const blob = await response.blob();
+            log('文件大小: ' + blob.size + ' 字节');
+            log('✅ MxCAD 文件访问正常');
+          } else {
+            const text = await response.text();
+            log('❌ MxCAD 文件访问失败: ' + text);
+          }
+        } catch (error) {
+          log('❌ MxCAD 文件访问错误: ' + error.message);
+        }
+      }
+
+      // 测试文件系统 API
+      async function testFileSystemAPI() {
+        try {
+          log('测试文件系统 API...');
+
+          const response = await fetch('/api/file-system/projects');
+          log('响应状态: ' + response.status);
+
+          if (response.ok) {
+            const data = await response.json();
+            log('✅ 文件系统 API 正常: ' + JSON.stringify(data));
+          } else {
+            const text = await response.text();
+            log('❌ 文件系统 API 失败: ' + text);
+          }
+        } catch (error) {
+          log('❌ 文件系统 API 错误: ' + error.message);
+        }
+      }
+
+      // 页面加载后执行测试
+      window.onload = function () {
+        log('开始调试测试...');
+        testFileSystemAPI();
+        testMxCadFile();
+      };
+    </script>
+  </body>
+</html>

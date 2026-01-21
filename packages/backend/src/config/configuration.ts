@@ -1,4 +1,5 @@
 import { AppConfig } from './app.config';
+// debugConfig 已删除，使用 NestJS 原生日志
 
 export default (): AppConfig => ({
   port: parseInt(process.env.PORT || '3001', 10) || 3001,
@@ -48,4 +49,5 @@ export default (): AppConfig => ({
       process.env.UPLOAD_ALLOWED_TYPES || '.dwg,.dxf,.pdf,.png,.jpg,.jpeg'
     ).split(','),
   },
+  // debug 配置已删除，使用 NestJS 原生日志
 });

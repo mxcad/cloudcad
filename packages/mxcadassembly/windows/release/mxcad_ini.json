@@ -1,0 +1,23 @@
+{
+  "dwg": {
+    "read_exdata": false,
+    "read_xrecord": false,
+    "read_objects_dictionary": false,
+    "read_group_dictionary": false,
+    "ole_base64": true,
+    "ole_image_size": -1,
+    "create_preloading_data": true,
+    "ex_drawing": true,
+    "partial_load": false,
+    "cpp_server_port": 3090,
+    "linux_replace_arial_font": true,
+    "webcadfile_ext_name": "mxweb",
+    "file_new_zip": true,
+    "default_dwg_save_version": 33,
+    "use_utf8": false,
+    "default_shx_file": "",
+    "default_bigshx_file": "",
+    "default_truetype_file": "",
+    "extract_ole_image": false
+  }
+}

@@ -6,14 +6,14 @@
 
 ### 分支类型
 
-| 分支类型 | 用途 | 命名规范 | 生命周期 |
-|---------|------|----------|----------|
-| `main` | 生产环境分支 | `main` | 长期存在 |
-| `develop` | 开发主分支 | `develop` | 长期存在 |
-| `feature/*` | 功能开发分支 | `feature/功能名称` | 临时 |
-| `fix/*` | Bug修复分支 | `fix/问题描述` | 临时 |
-| `hotfix/*` | 紧急修复分支 | `hotfix/紧急修复` | 临时 |
-| `release/*` | 发布准备分支 | `release/v版本号` | 临时 |
+| 分支类型    | 用途         | 命名规范           | 生命周期 |
+| ----------- | ------------ | ------------------ | -------- |
+| `main`      | 生产环境分支 | `main`             | 长期存在 |
+| `develop`   | 开发主分支   | `develop`          | 长期存在 |
+| `feature/*` | 功能开发分支 | `feature/功能名称` | 临时     |
+| `fix/*`     | Bug修复分支  | `fix/问题描述`     | 临时     |
+| `hotfix/*`  | 紧急修复分支 | `hotfix/紧急修复`  | 临时     |
+| `release/*` | 发布准备分支 | `release/v版本号`  | 临时     |
 
 ### 分支关系图
 
@@ -136,6 +136,7 @@ git branch -d release/v1.0.0
 使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
 
 ### 格式
+
 ```
 <类型>[可选的作用域]: <描述>
 
@@ -146,17 +147,18 @@ git branch -d release/v1.0.0
 
 ### 类型说明
 
-| 类型 | 说明 | 示例 |
-|------|------|------|
-| `feat` | 新功能 | `feat(auth): 添加用户登录功能` |
-| `fix` | Bug修复 | `fix(auth): 修复登录状态持久化问题` |
-| `docs` | 文档更新 | `docs(api): 更新认证API文档` |
-| `style` | 代码格式 | `style(auth): 调整登录表单样式` |
-| `refactor` | 重构 | `refactor(auth): 重构认证状态管理` |
-| `test` | 测试相关 | `test(auth): 添加登录功能测试` |
-| `chore` | 构建工具 | `chore: 更新依赖包版本` |
+| 类型       | 说明     | 示例                                |
+| ---------- | -------- | ----------------------------------- |
+| `feat`     | 新功能   | `feat(auth): 添加用户登录功能`      |
+| `fix`      | Bug修复  | `fix(auth): 修复登录状态持久化问题` |
+| `docs`     | 文档更新 | `docs(api): 更新认证API文档`        |
+| `style`    | 代码格式 | `style(auth): 调整登录表单样式`     |
+| `refactor` | 重构     | `refactor(auth): 重构认证状态管理`  |
+| `test`     | 测试相关 | `test(auth): 添加登录功能测试`      |
+| `chore`    | 构建工具 | `chore: 更新依赖包版本`             |
 
 ### 示例
+
 ```bash
 feat(auth): 添加用户登录功能
 
@@ -211,14 +213,17 @@ git commit -m "resolve: 解决合并冲突"
 ## 🚀 当前项目分支状态
 
 ### 已创建的分支
+
 - `main` - 生产环境分支
 - `develop` - 开发主分支（当前所在）
 
 ### 最近完成的功能
+
 - `@cloudcad/shared-types` - 共享类型包
 - 前端认证集成准备
 
 ### 下一步计划
+
 - `feature/frontend-auth` - 前端登录功能实现
 - `feature/api-integration` - 后端API对接
 - `feature/auth-testing` - 认证功能测试
@@ -244,4 +249,4 @@ git commit -m "resolve: 解决合并冲突"
 
 ---
 
-*最后更新：2025年12月11日*
+_最后更新：2025年12月11日_

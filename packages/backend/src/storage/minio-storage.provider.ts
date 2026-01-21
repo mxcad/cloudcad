@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
-import { StorageProvider, UploadResult, Part } from './storage.interface';
+import { StorageProvider, UploadResult } from './storage.interface';
 
 @Injectable()
 export class MinioStorageProvider implements StorageProvider {
@@ -54,7 +54,7 @@ export class MinioStorageProvider implements StorageProvider {
     try {
       const stream = await this.client.getObject(this.bucket, key);
       const chunks: Buffer[] = [];
-      
+
       return new Promise((resolve, reject) => {
         stream.on('data', (chunk) => chunks.push(chunk));
         stream.on('end', () => resolve(Buffer.concat(chunks)));
@@ -88,14 +88,31 @@ export class MinioStorageProvider implements StorageProvider {
     }
   }
 
-  
-
-  // 预签名 URL
-  async getPresignedUrl(key: string, expiry = 3600): Promise<string> {
+  /**
+   * 列出指定路径下的文件
+   * @param prefix 文件路径前缀
+   * @param startsWith 可选，文件名起始字符串
+   * @returns 文件路径列表
+   */
+  async listFiles(prefix: string, startsWith?: string): Promise<string[]> {
     try {
-      return await this.client.presignedGetObject(this.bucket, key, expiry);
+      const stream = this.client.listObjects(this.bucket, prefix, true);
+      const files: string[] = [];
+
+      return new Promise((resolve, reject) => {
+        stream.on('data', (obj) => {
+          if (obj.name) {
+            // 如果指定了 startsWith，只返回匹配的文件
+            if (!startsWith || obj.name.startsWith(prefix + startsWith)) {
+              files.push(obj.name);
+            }
+          }
+        });
+        stream.on('end', () => resolve(files));
+        stream.on('error', reject);
+      });
     } catch (error) {
-      this.logger.error(`生成预签名下载URL失败: ${error.message}`, error.stack);
+      this.logger.error(`列出文件失败: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -106,6 +123,43 @@ export class MinioStorageProvider implements StorageProvider {
     } catch (error) {
       this.logger.error(`生成预签名上传URL失败: ${error.message}`, error.stack);
       throw error;
+    }
+  }
+
+  /**
+   * 获取文件流（用于图片代理）
+   * @param key 文件键名
+   * @returns 文件流
+   */
+  async getFileStream(key: string): Promise<NodeJS.ReadableStream> {
+    try {
+      const stream = await this.client.getObject(this.bucket, key);
+      return stream;
+    } catch (error) {
+      this.logger.error(`获取文件流失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 在 MinIO 内部拷贝文件
+   * @param sourceKey 源文件键名
+   * @param destKey 目标文件键名
+   * @returns 是否拷贝成功
+   */
+  async copyFile(sourceKey: string, destKey: string): Promise<boolean> {
+    try {
+      // MinIO 不支持直接拷贝，需要先下载再上传
+      const data = await this.downloadFile(sourceKey);
+      await this.uploadFile(destKey, data);
+      this.logger.log(`文件拷贝成功: ${sourceKey} -> ${destKey}`);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `文件拷贝失败: ${sourceKey} -> ${destKey}`,
+        error.stack
+      );
+      return false;
     }
   }
 }

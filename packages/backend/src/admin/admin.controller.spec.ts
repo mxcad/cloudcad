@@ -34,17 +34,17 @@ describe('AdminController', () => {
         },
       ],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue({
-      canActivate: () => true,
-      constructor: jest.fn(),
-    })
-    .overrideGuard(RolesGuard)
-    .useValue({
-      canActivate: () => true,
-      constructor: jest.fn(),
-    })
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: () => true,
+        constructor: jest.fn(),
+      })
+      .overrideGuard(RolesGuard)
+      .useValue({
+        canActivate: () => true,
+        constructor: jest.fn(),
+      })
+      .compile();
 
     controller = module.get<AdminController>(AdminController);
   });

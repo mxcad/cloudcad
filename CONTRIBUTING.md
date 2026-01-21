@@ -7,17 +7,20 @@
 ### 环境准备
 
 1. **克隆项目**
+
 ```bash
 git clone <repository-url>
 cd cloudcad
 ```
 
 2. **安装依赖**
+
 ```bash
 pnpm install
 ```
 
 3. **启动开发环境**
+
 ```bash
 # 启动后端服务
 cd packages/backend
@@ -91,6 +94,7 @@ pnpm dev
 #### 开发流程
 
 1. **创建功能分支**
+
 ```bash
 git checkout develop
 git pull origin develop
@@ -104,6 +108,7 @@ git checkout -b feature/your-feature-name
    - 运行代码检查
 
 3. **提交代码**
+
 ```bash
 pnpm check     # 运行代码检查
 pnpm test      # 运行测试
@@ -112,6 +117,7 @@ git commit -m "feat: 添加新功能描述"
 ```
 
 4. **推送分支**
+
 ```bash
 git push origin feature/your-feature-name
 ```
@@ -235,6 +241,7 @@ cloudcad/
    - 更新文档
 
 2. **创建发布分支**
+
 ```bash
 git checkout develop
 git checkout -b release/v1.0.0
@@ -246,6 +253,7 @@ git checkout -b release/v1.0.0
    - 安全测试
 
 4. **正式发布**
+
 ```bash
 git checkout main
 git merge release/v1.0.0
@@ -286,4 +294,4 @@ git push origin main --tags
 
 感谢您的贡献！🎉
 
-*最后更新：2025年12月11日*
+_最后更新：2025年12月11日_

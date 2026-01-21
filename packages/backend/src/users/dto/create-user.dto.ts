@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -9,7 +8,6 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../../common/enums/permissions.enum';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -61,12 +59,11 @@ export class CreateUserDto {
   avatar?: string;
 
   @ApiProperty({
-    description: '用户角色',
-    enum: UserRole,
+    description: '角色ID',
+    example: 'clh8x9y0z1a2b3c4d5e6f7g8h9',
     required: false,
-    default: UserRole.USER,
   })
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole = UserRole.USER;
+  @IsString({ message: '角色ID必须是字符串' })
+  roleId?: string;
 }

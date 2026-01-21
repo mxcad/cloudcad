@@ -1,8 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { UserRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from '../services/permission-cache.service';
+import { RolesCacheService } from '../services/roles-cache.service';
 import {
   PermissionService,
   UserWithPermissions,
@@ -13,11 +13,12 @@ export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private permissionService: PermissionService,
-    private cacheService: PermissionCacheService
+    private cacheService: PermissionCacheService,
+    private rolesCacheService: RolesCacheService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()]
     );
@@ -36,7 +37,7 @@ export class RolesGuard implements CanActivate {
     // 先检查缓存中的用户角色
     const cachedRole = this.cacheService.getUserRole(user.id);
     if (cachedRole) {
-      return requiredRoles.includes(cachedRole);
+      return requiredRoles.includes(cachedRole.name || '');
     }
 
     // 缓存未命中，检查实际角色并缓存

@@ -1,0 +1,1550 @@
+{
+  "title": "CAD梦想在线画图",
+  "headerTitle": "CAD梦想在线画图",
+  "isShowNameOCurrentlyOpenDrawing": true,
+  "isShowHeader": true,
+  "logoImg": true,
+  "isShowHeaderTopBar": true,
+  "isShowHeaderTopBarRightBtns": true,
+  "isSketchesAndNotesUiMode": true,
+  "isShowSketchesAndNotesUiMode": true,
+  "headerTopBarRightBtns": ["language", "theme"],
+  "defaultActiveLanguage": "zh-CN",
+  "isShowUseAiFunctionButton": false,
+  "headerTopBarCustomRightBtns": [
+    {
+      "icon": "houtui",
+      "cmd": "return-to-cloud-map-management",
+      "prompt": "返回项目"
+    },
+    {
+      "icon": "qiehuan",
+      "cmd": "Mx_switchSketchesAndNotesUiMode",
+      "prompt": "切换UI模式",
+      "openPromptDelay": 700
+    },
+    {
+      "icon": "class:iconfont AI",
+      "cmd": "Mx_showAiFunctionButton",
+      "prompt": "Ai",
+      "openPromptDelay": 700
+    }
+  ],
+  "isShowTitleButtonBar": true,
+  "mTitleButtonBarData": [
+    {
+      "icon": "dakaidwg",
+      "cmd": "OpenDwg",
+      "prompt": "打开文件"
+    },
+    {
+      "prompt": "另存为mxweb文件",
+      "icon": "baocun",
+      "cmd": "Mx_SaveAs"
+    }
+  ],
+  "isShowTopButtonBar": true,
+  "mTopButtonBarData": [
+    {
+      "icon": "zhonghua",
+      "prompt": "重画",
+      "cmd": "Mx_Regen"
+    },
+    {
+      "icon": "chuangkousuofang",
+      "prompt": "窗口缩放",
+      "cmd": "Mx_WindowZoom"
+    },
+    {
+      "icon": "fanweisuofang",
+      "prompt": "显示全部",
+      "cmd": "Mx_ZoomE"
+    },
+    {
+      "icon": "a-5pingyi",
+      "prompt": "视区平移",
+      "cmd": "Mx_Pan"
+    },
+    {
+      "icon": "shunshizhenxuanzhuan90du",
+      "prompt": "视区旋转90度",
+      "cmd": "Mx_Plan90CW"
+    },
+    {
+      "icon": "houtui",
+      "prompt": "回退",
+      "cmd": "Mx_Undo"
+    },
+    {
+      "icon": "qianjin",
+      "prompt": "重做",
+      "cmd": "Mx_Redo"
+    },
+    {
+      "icon": "quanping",
+      "prompt": "全屏模式",
+      "cmd": "MxFullScreen"
+    },
+    {
+      "icon": "a-4-8duixiangtexing",
+      "prompt": "对象特性",
+      "cmd": "Mx_Properties"
+    },
+    {
+      "icon": "a-4-9tukuaiku",
+      "prompt": "图块库",
+      "cmd": "Mx_BlockLibrary"
+    },
+    {
+      "icon": "tuzhiku",
+      "prompt": "图纸库",
+      "cmd": "Mx_DrawingsLibrary"
+    },
+    {
+      "icon": "class: iconfont  icon_shujuzhongtai",
+      "prompt": "数据库展示",
+      "cmd": "Mx_DatabaseDisplay"
+    },
+    {
+      "icon": "class: iconfont daimabianji",
+      "prompt": "代码编辑",
+      "cmd": "Mx_CodeEditor"
+    }
+  ],
+  "mLeftButtonBarData": {
+    "isShow": true,
+    "buttonBarData": [
+      {
+        "icon": "zhixian",
+        "prompt": "绘线",
+        "cmd": "Mx_Line"
+      },
+      {
+        "icon": "duoxianduan",
+        "prompt": "绘多线段",
+        "cmd": "Mx_Pline"
+      },
+      {
+        "icon": "zhengduobianxing",
+        "cmd": "Mx_Polygon",
+        "prompt": "绘正多边形"
+      },
+      {
+        "icon": "juxing",
+        "cmd": "Mx_Rectang",
+        "prompt": "绘矩形框"
+      },
+      {
+        "icon": "yuanhu",
+        "cmd": "Mx_Arc",
+        "prompt": "绘圆弧"
+      },
+      {
+        "icon": "yuan",
+        "prompt": "圆",
+        "cmd": "Mx_Circle"
+      },
+      {
+        "icon": "yangtiaoxian",
+        "cmd": "Mx_Spline",
+        "prompt": "绘样条线"
+      },
+      {
+        "icon": "tuoyuan",
+        "cmd": "Mx_Ellipse",
+        "prompt": "绘椭圆"
+      },
+      {
+        "icon": "tuoyuanhu",
+        "cmd": "Mx_EllipseArc",
+        "prompt": "绘椭圆弧"
+      },
+      {
+        "prompt": "插入图块",
+        "icon": "charukuai1",
+        "cmd": "Mx_Insert"
+      },
+      {
+        "prompt": "创建块",
+        "icon": "chuangjiankuai1",
+        "cmd": "Mx_Block"
+      },
+      {
+        "icon": "dian",
+        "cmd": "Mx_Point",
+        "prompt": "绘点"
+      },
+      {
+        "icon": "danhangwenzi",
+        "cmd": "_DrawText",
+        "prompt": "写文字"
+      },
+      {
+        "icon": "tupian",
+        "cmd": "_InsertImage",
+        "prompt": "插入图片"
+      },
+      {
+        "icon": "duohangwenben",
+        "cmd": "MxPE_DrawMText",
+        "prompt": "绘多行文本"
+      },
+      {
+        "icon": "tianchong",
+        "cmd": "Mx_Hatch",
+        "prompt": "绘填充"
+      },
+      {
+        "icon": "yunxianpizhu",
+        "cmd": "_Revcloud",
+        "prompt": "云线"
+      },
+      {
+        "icon": "a-17biaogefuben",
+        "cmd": "Mx_InsertTable",
+        "prompt": "表格"
+      },
+      {
+        "icon": "dashujukeshihuaico-",
+        "cmd": "_donut",
+        "prompt": "圆环"
+      }
+    ]
+  },
+  "mRightButtonBarData": {
+    "isShow": true,
+    "buttonBarData": [
+      {
+        "icon": "shanchu",
+        "cmd": "Mx_Erase",
+        "prompt": "删除"
+      },
+      {
+        "icon": "fuzhi",
+        "cmd": "Mx_Copy",
+        "prompt": "复制"
+      },
+      {
+        "icon": "yidong",
+        "cmd": "Mx_Move",
+        "prompt": "移动"
+      },
+      {
+        "icon": "xuanzhuan",
+        "cmd": "Mx_Rotate",
+        "prompt": "旋转"
+      },
+      {
+        "icon": "suofang",
+        "cmd": "Mx_Scale",
+        "prompt": "缩放"
+      },
+      {
+        "icon": "pianyi",
+        "cmd": "Mx_Offset",
+        "prompt": "偏移"
+      },
+      {
+        "icon": "zhenlie",
+        "cmd": "Mx_Array",
+        "prompt": "阵列"
+      },
+      {
+        "icon": "jingxiang",
+        "cmd": "Mx_Mirror",
+        "prompt": "镜像"
+      },
+      {
+        "icon": "lisanquxian",
+        "cmd": "_SampleCurve",
+        "prompt": "离散曲线"
+      },
+      {
+        "icon": "daojiao",
+        "cmd": "Mx_Chamfer",
+        "prompt": "导角"
+      },
+      {
+        "icon": "yuanjiao",
+        "cmd": "Mx_Fillet",
+        "prompt": "导圆角"
+      },
+      {
+        "icon": "jianqie",
+        "cmd": "Mx_Trim",
+        "prompt": "剪切"
+      },
+      {
+        "icon": "yanshen",
+        "cmd": "Mx_Extend",
+        "prompt": "延伸"
+      },
+      {
+        "icon": "lashenshezhi",
+        "cmd": "_stretch",
+        "prompt": "拉伸"
+      },
+      {
+        "icon": "fenjie",
+        "cmd": "Mx_Explode",
+        "prompt": "分解"
+      },
+      {
+        "icon": "daduan",
+        "cmd": "Mx_Break",
+        "prompt": "打断"
+      },
+      {
+        "icon": "hebing",
+        "cmd": "Mx_Join",
+        "prompt": "合并"
+      },
+      {
+        "icon": "a-17xianxingfuben",
+        "cmd": "_DrawRotatedDimension",
+        "prompt": "线性标注"
+      },
+      {
+        "icon": "duiqibiaozhu",
+        "cmd": "_DrawAlignedDimension",
+        "prompt": "对齐标注"
+      },
+      {
+        "icon": "jiaodubiaozhu",
+        "cmd": "_dimangular",
+        "prompt": "角度标注"
+      },
+      {
+        "icon": "banjingbiaozhu",
+        "cmd": "_DrawRadialDimension",
+        "prompt": "半径标注"
+      },
+      {
+        "icon": "zhijingbiaozhu",
+        "cmd": "_DrawDiametricDimension",
+        "prompt": "直径标注"
+      },
+      {
+        "icon": "qianzhi",
+        "cmd": "Mx_DrawOrderTopmost",
+        "prompt": "前置"
+      },
+      {
+        "icon": "houzhi",
+        "cmd": "Mx_DrawOrderButtomost",
+        "prompt": "后置"
+      },
+      {
+        "icon": "zhiyuduixiangzhishang",
+        "cmd": "Mx_DrawOrderTop",
+        "prompt": "置于对象之上"
+      },
+      {
+        "icon": "zhiyuduixiangzhixia",
+        "cmd": "Mx_DrawOrderButtom",
+        "prompt": "置于对象之下"
+      }
+    ]
+  },
+  "isShowMenuBar": true,
+  "mMenuBarData": [
+    {
+      "tab": "文件(F)",
+      "isResponsive": false,
+      "cmd": "",
+      "icon": "",
+      "list": [
+        {
+          "tab": "新建(N)",
+          "icon": "xinjian",
+          "cmd": "Mx_NewFile"
+        },
+        {
+          "tab": "打开文件(M)",
+          "icon": "dakaidwg",
+          "cmd": "OpenDwg"
+        },
+        {
+          "tab": "打开文件(不使用缓存)(C)",
+          "icon": "dakaidwg",
+          "cmd": "OpenDwg_DoNotUseCache"
+        },
+        {
+          "tab": "另存为dwg文件",
+          "icon": "lingcunweiDWG",
+          "cmd": "Mx_Export_DWG"
+        },
+        {
+          "tab": "另存为mxweb文件",
+          "icon": "baocun",
+          "cmd": "Mx_SaveAs"
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "tab": "打印",
+          "icon": "dayin1",
+          "cmd": "Mx_PrintDialog"
+        },
+        {
+          "type": "divider"
+        }
+      ]
+    },
+    {
+      "tab": "编辑(E)",
+      "list": [
+        {
+          "tab": "回退(U)",
+          "cmd": "Mx_Undo",
+          "icon": "houtui"
+        },
+        {
+          "tab": "重做(Y)",
+          "icon": "qianjin",
+          "cmd": "Mx_Redo"
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "tab": "复制(C)",
+          "icon": "fuzhi",
+          "cmd": "Mx_Copy"
+        },
+        {
+          "tab": "粘贴(V)",
+          "icon": "niantie",
+          "cmd": "Mx_PasteClip"
+        },
+        {
+          "tab": "粘贴为块(L)",
+          "icon": "niantie",
+          "cmd": "Mx_PasteBlock"
+        },
+        {
+          "tab": "剪切(X)",
+          "icon": "jianqie",
+          "cmd": "Mx_CutClip"
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "tab": "删除(D)",
+          "icon": "shanchu",
+          "cmd": "Mx_Erase"
+        },
+        {
+          "tab": "全部选择(A)",
+          "icon": "quanbuxuanze",
+          "cmd": "Mx_select_all"
+        },
+        {
+          "tab": "查找文字(S)",
+          "icon": "a-4-6chazhaotihuanwenzi",
+          "cmd": "Mx_FindText"
+        }
+      ]
+    },
+    {
+      "tab": "插入(I)",
+      "list": [
+        {
+          "tab": "插入图片",
+          "icon": "tupian",
+          "cmd": "_InsertImage"
+        },
+        {
+          "tab": "插入图块",
+          "icon": "charukuai1",
+          "cmd": "Mx_Insert"
+        },
+        {
+          "tab": "插入表格",
+          "icon": "a-17biaogefuben",
+          "cmd": "Mx_InsertTable"
+        }
+      ]
+    },
+    {
+      "tab": "视图(V)",
+      "list": [
+        {
+          "tab": "重画(R)",
+          "icon": "zhonghua",
+          "cmd": "Mx_Regen"
+        },
+        {
+          "tab": "窗口缩放(W)",
+          "icon": "chuangkousuofang",
+          "cmd": "Mx_WindowZoom",
+          "list": [
+            {
+              "tab": "全部(A)",
+              "cmd": "Mx_ZoomE",
+              "icon": "a-tubiao_quanbufuben2",
+              "commandOptions": ["A"]
+            },
+            {
+              "tab": "范围(E)",
+              "icon": "fanweisuofang",
+              "cmd": "Mx_WindowZoom",
+              "commandOptions": ["E"]
+            }
+          ]
+        },
+        {
+          "tab": "视区平移(P)",
+          "icon": "a-5pingyi",
+          "cmd": "Mx_Pan"
+        },
+        {
+          "tab": "视区旋转(L)",
+          "icon": "a-2-5shiquxuanzhuan",
+          "list": [
+            {
+              "tab": "顺时针旋转90度",
+              "icon": "a-2-5-1shunshizhen",
+              "cmd": "Mx_Plan90CW"
+            },
+            {
+              "tab": "逆时针旋转90度",
+              "icon": "a-2-5-2nishizhen",
+              "cmd": "Mx_Plan90CCW"
+            },
+            {
+              "tab": "自定义旋转角度(L)",
+              "icon": "a-2-5-3zidingyi",
+              "cmd": "Mx_Plan"
+            }
+          ]
+        },
+        {
+          "tab": "视区背景色",
+          "icon": "shiqubeijingse",
+          "cmd": "_ViewColor"
+        },
+        {
+          "tab": "全屏显示(F11)",
+          "cmd": "MxFullScreen",
+          "icon": "quanpingxianshi"
+        }
+      ]
+    },
+    {
+      "tab": "格式(O)",
+      "list": [
+        {
+          "tab": "图层(L)",
+          "icon": "tuceng",
+          "cmd": "MxLayerManager"
+        },
+        {
+          "tab": "图层工具",
+          "icon": "a-8-2kuozhangongju",
+          "list": [
+            {
+              "tab": "将对象的图层置为当前(U)",
+              "icon": "qianzhi",
+              "cmd": "_layer_putCurrent"
+            },
+            {
+              "tab": "恢复上一个图层状态(Z)",
+              "icon": "houtui",
+              "cmd": "_layer_recovery"
+            },
+            {
+              "tab": "图层漫游(W)",
+              "icon": "tuceng",
+              "cmd": "showWalkThroughLayers"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "对象修改图层匹配(M)",
+              "icon": "tucengpipei",
+              "cmd": "_layer_matching"
+            },
+            {
+              "tab": "对象修改设置为当前层",
+              "icon": "dangqiantucengpipei",
+              "cmd": "_layer_setEntToCurrentLayer"
+            },
+            {
+              "tab": "对象复制到新图层",
+              "icon": "fuzhi",
+              "cmd": "_layer_CopyObjectsToNewLayer"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "选择关闭图层(X)",
+              "icon": "xuanzeguanbituceng",
+              "cmd": "_SelOffLayer"
+            },
+            {
+              "tab": "打开所有图层(A)",
+              "icon": "dakaiquanbutuceng",
+              "cmd": "_OpenAllLayer"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "图层锁定(K)",
+              "icon": "suo",
+              "cmd": "_layer_lock"
+            },
+            {
+              "tab": "图层解锁(P)",
+              "icon": "jiesuo1",
+              "cmd": "_layer_unlock"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "图层合并(E)",
+              "icon": "hebing",
+              "cmd": "_layer_combined"
+            },
+            {
+              "tab": "图层删除(D)",
+              "icon": "shanchu",
+              "cmd": "_layer_remove"
+            }
+          ]
+        },
+        {
+          "tab": "颜色(C)",
+          "icon": "yanse",
+          "cmd": "Mx_Color",
+          "isNoDataTransfer": true
+        },
+        {
+          "tab": "线型(N)",
+          "icon": "a-3-5xianxing",
+          "cmd": "Mx_Linetype"
+        },
+        {
+          "tab": "文字样式(S)",
+          "icon": "wenziyangshi",
+          "cmd": "Mx_Style"
+        },
+        {
+          "tab": "点样式(P)",
+          "icon": "dianyangshi",
+          "cmd": "Mx_ddptype"
+        },
+        {
+          "tab": "标注样式(P)",
+          "icon": "shentubiaozhu",
+          "cmd": "Mx_Dimstyle"
+        },
+        {
+          "tab": "表格样式",
+          "icon": "a-2duoxianyangshi",
+          "cmd": "Mx_EditTableStyle"
+        },
+        {
+          "tab": "多线样式",
+          "icon": "a-1biaogeyangshi",
+          "cmd": "MxMLStyleManager"
+        },
+        {
+          "tab": "多重引线格式",
+          "cmd": "MxLeaderStyleManager"
+        }
+      ]
+    },
+    {
+      "tab": "工具(A)",
+      "list": [
+        {
+          "tab": "编辑文字",
+          "icon": "bianjiwenzi",
+          "cmd": "Mx_EditText"
+        },
+        {
+          "tab": "查找替换文字",
+          "icon": "a-4-6chazhaotihuanwenzi",
+          "cmd": "Mx_FindText"
+        },
+        {
+          "tab": "快速选择",
+          "icon": "a-4-7kuaisuxuanze",
+          "cmd": "Mx_QuickSelect"
+        },
+        {
+          "tab": "对象特性",
+          "icon": "a-4-8duixiangtexing",
+          "cmd": "Mx_Properties"
+        },
+        {
+          "tab": "图块库",
+          "icon": "a-4-9tukuaiku",
+          "cmd": "Mx_BlockLibrary"
+        },
+        {
+          "tab": "图纸库",
+          "icon": "tuzhiku",
+          "cmd": "Mx_DrawingsLibrary"
+        },
+        {
+          "tab": "图纸比对",
+          "icon": "bidui",
+          "cmd": "Mx_CompareDWG"
+        },
+        {
+          "tab": "查询",
+          "icon": "a-tubiao_chaxunfuben2",
+          "list": [
+            {
+              "tab": "距离(D)",
+              "icon": "class: iconfont juli",
+              "cmd": "_MEASUREGEOM",
+              "commandOptions": ["D"]
+            },
+            {
+              "tab": "半径(R)",
+              "icon": "banjingbiaozhu",
+              "cmd": "_MEASUREGEOM",
+              "commandOptions": ["R"]
+            },
+            {
+              "tab": "角度(G)",
+              "icon": "celiangjiaodu",
+              "cmd": "_MEASUREGEOM",
+              "commandOptions": ["A"]
+            },
+            {
+              "tab": "面积(A)",
+              "icon": "celiangmianji",
+              "cmd": "_MEASUREGEOM",
+              "commandOptions": ["AR"]
+            },
+            {
+              "tab": "点坐标(I)",
+              "icon": "zuobiaoceliang",
+              "cmd": "ID"
+            }
+          ]
+        },
+        {
+          "tab": "图形识别",
+          "icon": "a-tubiao_tuxingshibiefuben2",
+          "list": [
+            {
+              "tab": "图形识别",
+              "icon": "class: iconfont tuxingshibie",
+              "cmd": "Mx_PatternRec"
+            },
+            {
+              "tab": "查看已识别图形列表",
+              "icon": "class: iconfont tuxingliebiao",
+              "cmd": "Mx_PatternList"
+            }
+          ]
+        },
+        {
+          "tab": "符号标注",
+          "icon": "a-tubiao_fuhaobiaozhufuben2",
+          "list": [
+            {
+              "tab": "箭头引注",
+              "icon": "jiantouyinzhu",
+              "cmd": "JTYZ"
+            },
+            {
+              "tab": "引出标注",
+              "icon": "yinchu",
+              "cmd": "YCBZ"
+            },
+            {
+              "tab": "做法标注",
+              "icon": "zuofabiaozhu",
+              "cmd": "ZFBZ"
+            },
+            {
+              "tab": "索引符号",
+              "icon": "suoyin",
+              "cmd": "SYFH"
+            },
+            {
+              "tab": "加折断线",
+              "icon": "zheduanxian",
+              "cmd": "JZDX"
+            },
+            {
+              "tab": "画对称轴",
+              "icon": "duicheng",
+              "cmd": "HDCZ"
+            },
+            {
+              "tab": "画指北针",
+              "icon": "zhibeizhen",
+              "cmd": "HZBZ"
+            },
+            {
+              "tab": "索引图名",
+              "icon": "suoyintuming",
+              "cmd": "SYTM"
+            },
+            {
+              "tab": "剖切符号",
+              "icon": "pouqie",
+              "cmd": "PQFH"
+            },
+            {
+              "tab": "标高标注",
+              "icon": "biaogao",
+              "cmd": "BGBZ"
+            },
+            {
+              "tab": "图名标注",
+              "icon": "tumingbiaozhu",
+              "cmd": "TMBZ"
+            }
+          ]
+        },
+        {
+          "tab": "家装设计",
+          "icon": "a-tubiao_jiazhuangshejifuben2",
+          "list": [
+            {
+              "tab": "示例户型图",
+              "icon": "huxingtu",
+              "cmd": "Mx_PlanView"
+            },
+            {
+              "tab": "绘制房间",
+              "icon": "fangjian",
+              "cmd": "HZFJ"
+            },
+            {
+              "tab": "绘制轴线",
+              "icon": "zhouxian",
+              "cmd": "HZZX"
+            },
+            {
+              "tab": "绘制墙体",
+              "icon": "qiangti",
+              "cmd": "HZQ"
+            },
+            {
+              "tab": "挖墙洞",
+              "icon": "wadong",
+              "cmd": "WQD"
+            },
+            {
+              "tab": "打断墙体",
+              "icon": "daduanqiang",
+              "cmd": "DDQT"
+            },
+            {
+              "tab": "单开门",
+              "icon": "dankai",
+              "cmd": "DKM"
+            },
+            {
+              "tab": "标准窗",
+              "icon": "chuang",
+              "cmd": "BZC"
+            }
+          ]
+        },
+        {
+          "tab": "剪切DWG图纸",
+          "icon": "a-3jianqieDWG",
+          "cmd": "showDWGCutDialog"
+        },
+        {
+          "tab": "自定义",
+          "icon": "a-tubiao_zidingyifuben2",
+          "list": [
+            {
+              "tab": "键盘快捷键设置",
+              "icon": "a-tubiao_jianpankuaijiejianshezhifuben2",
+              "cmd": "MxCAD_Shortcut"
+            },
+            {
+              "tab": "CAD快捷键设置",
+              "icon": "a-tubiao_cadkuaijiejianshezhifuben2",
+              "cmd": "MxCAD_CommandAlias"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "绘图(D)",
+      "list": [
+        {
+          "tab": "直线(L)",
+          "icon": "zhixian",
+          "cmd": "Mx_Line"
+        },
+        {
+          "tab": "多线段(P)",
+          "icon": "duoxianduan",
+          "cmd": "Mx_Pline"
+        },
+        {
+          "tab": "正多边形(Y)",
+          "icon": "zhengduobianxing",
+          "cmd": "Mx_Polygon"
+        },
+        {
+          "tab": "矩形(G)",
+          "icon": "juxing",
+          "cmd": "Mx_Rectang"
+        },
+        {
+          "tab": "圆弧(A)",
+          "icon": "yuanhu",
+          "list": [
+            {
+              "tab": "三点(P)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_sandianfuben3"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "起点、圆心、端点(S)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_qidianyuanxinduandianfuben2",
+              "commandOptions": ["", "C"]
+            },
+            {
+              "tab": "起点、 圆心、角度(T)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_qidianyuanxinjiaodufuben2",
+              "commandOptions": ["", "C", "A"]
+            },
+            {
+              "tab": "起点、 圆心、长度(A)",
+              "cmd": "Mx_Arc",
+              "commandOptions": ["", "C", "L"],
+              "icon": "a-tubiao_yuandianqidianchangdufuben2"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "起点、 端点、角度(N)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_qidianduandianjiaodufuben2",
+              "commandOptions": ["", "E", "A"]
+            },
+            {
+              "tab": "起点、 端点、方向(D)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_qidianduandianfangxiangfuben2",
+              "commandOptions": ["", "E", "A"]
+            },
+            {
+              "tab": "起点、 端点、半径(R)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_qidianduandianbanjingfuben2",
+              "commandOptions": ["", "E", "A"]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "圆心、起点、端点(C)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_yuandianqidianduandianfuben2",
+              "commandOptions": ["C"]
+            },
+            {
+              "tab": "圆心、起点、角度(E)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_yuandianqidianjiaodufuben2",
+              "commandOptions": ["C", "", "A"]
+            },
+            {
+              "tab": "圆心、起点、长度(L)",
+              "cmd": "Mx_Arc",
+              "icon": "a-tubiao_yuandianqidianchangdufuben2",
+              "commandOptions": ["C", "", "L"]
+            }
+          ]
+        },
+        {
+          "tab": "圆(C)",
+          "icon": "yuan",
+          "list": [
+            {
+              "tab": "圆心、半径(R)",
+              "icon": "a-tubiao_yuanxinbanjingfuben2",
+              "cmd": "Mx_Circle"
+            },
+            {
+              "tab": "圆心、直径(D)",
+              "cmd": "Mx_Circle",
+              "icon": "a-tubiao_yuanxinzhijingfuben2",
+              "commandOptions": ["", "D"]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "两点(2)",
+              "cmd": "Mx_Circle",
+              "commandOptions": ["2P"],
+              "icon": "a-tubiao_liangdianfuben2"
+            },
+            {
+              "tab": "三点(3)",
+              "icon": "a-tubiao_sandianfuben4",
+              "cmd": "Mx_Circle",
+              "commandOptions": ["3P"]
+            }
+          ]
+        },
+        {
+          "tab": "样条线(S)",
+          "cmd": "Mx_Spline",
+          "icon": "yangtiaoxian"
+        },
+        {
+          "tab": "椭圆(E)",
+          "icon": "tuoyuan",
+          "list": [
+            {
+              "tab": "圆心",
+              "cmd": "Mx_Ellipse",
+              "icon": "a-tubiao_yuanxinfuben2",
+              "commandOptions": ["C"]
+            },
+            {
+              "tab": "轴、端点",
+              "cmd": "Mx_Ellipse",
+              "icon": "a-tubiao_zhouduandianfuben2"
+            }
+          ]
+        },
+        {
+          "tab": "椭圆弧(O)",
+          "icon": "tuoyuanhu",
+          "cmd": "Mx_EllipseArc"
+        },
+        {
+          "tab": "点(N)",
+          "icon": "dian",
+          "cmd": "Mx_Point"
+        },
+        {
+          "tab": "插入图块",
+          "icon": "charukuai1",
+          "cmd": "Mx_Insert"
+        },
+        {
+          "tab": "文字(T)",
+          "icon": "danhangwenzi",
+          "cmd": "_DrawText"
+        },
+        {
+          "tab": "填充(H)",
+          "icon": "tianchong",
+          "cmd": "Mx_Hatch"
+        },
+        {
+          "tab": "图片(E)",
+          "icon": "tupian",
+          "cmd": "_InsertImage"
+        },
+        {
+          "tab": "铅笔",
+          "icon": "a-5-15qianbi",
+          "cmd": "MxET_Pencil"
+        },
+        {
+          "tab": "多线",
+          "icon": "duoxian",
+          "cmd": "MLine"
+        }
+      ]
+    },
+    {
+      "tab": "标注(U)",
+      "list": [
+        {
+          "icon": "a-17xianxingfuben",
+          "cmd": "_DrawRotatedDimension",
+          "tab": "线性标注"
+        },
+        {
+          "icon": "duiqibiaozhu",
+          "cmd": "_DrawAlignedDimension",
+          "tab": "对齐标注"
+        },
+        {
+          "icon": "jiaodubiaozhu",
+          "cmd": "_dimangular",
+          "tab": "角度标注"
+        },
+        {
+          "icon": "banjingbiaozhu",
+          "cmd": "_DrawRadialDimension",
+          "tab": "半径标注"
+        },
+        {
+          "icon": "zhijingbiaozhu",
+          "cmd": "_DrawDiametricDimension",
+          "tab": "直径标注"
+        },
+        {
+          "cmd": "MxDrawMultiLeader",
+          "tab": "多重引线",
+          "list": [
+            {
+              "tab": "添加引线",
+              "cmd": "addMultiLeader"
+            },
+            {
+              "tab": "删除引线",
+              "cmd": "removeMultiLeader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "修改(M)",
+      "list": [
+        {
+          "type": "divider"
+        },
+        {
+          "tab": "复制(C)",
+          "cmd": "Mx_Copy",
+          "icon": "fuzhi"
+        },
+        {
+          "tab": "删除(A)",
+          "icon": "shanchu",
+          "cmd": "Mx_Erase"
+        },
+        {
+          "icon": "yidong",
+          "cmd": "Mx_Move",
+          "tab": "移动"
+        },
+        {
+          "icon": "xuanzhuan",
+          "cmd": "Mx_Rotate",
+          "tab": "旋转"
+        },
+        {
+          "icon": "suofang",
+          "cmd": "Mx_Scale",
+          "tab": "缩放"
+        },
+        {
+          "icon": "pianyi",
+          "cmd": "Mx_Offset",
+          "tab": "偏移"
+        },
+        {
+          "icon": "zhenlie",
+          "cmd": "Mx_Array",
+          "tab": "阵列"
+        },
+        {
+          "icon": "jingxiang",
+          "cmd": "Mx_Mirror",
+          "tab": "镜像"
+        },
+        {
+          "icon": "daojiao",
+          "cmd": "Mx_Chamfer",
+          "tab": "导角"
+        },
+        {
+          "icon": "yuanjiao",
+          "cmd": "Mx_Fillet",
+          "tab": "导圆角"
+        },
+        {
+          "icon": "jianqie",
+          "cmd": "Mx_Trim",
+          "tab": "剪切"
+        },
+        {
+          "icon": "yanshen",
+          "cmd": "Mx_Extend",
+          "tab": "延伸"
+        },
+        {
+          "icon": "lashenshezhi",
+          "cmd": "_stretch",
+          "tab": "拉伸"
+        },
+        {
+          "icon": "fenjie",
+          "cmd": "Mx_Explode",
+          "tab": "分解"
+        },
+        {
+          "icon": "daduan",
+          "cmd": "Mx_Break",
+          "tab": "打断"
+        },
+        {
+          "icon": "hebing",
+          "cmd": "Mx_Join",
+          "tab": "合并"
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "tab": "前置(F)",
+          "icon": "qianzhi",
+          "cmd": "Mx_DrawOrderTopmost"
+        },
+        {
+          "tab": "后置",
+          "icon": "houzhi",
+          "cmd": "Mx_DrawOrderButtomost"
+        },
+        {
+          "tab": "置于对象之上",
+          "icon": "zhiyuduixiangzhishang",
+          "cmd": "Mx_DrawOrderTop"
+        },
+        {
+          "tab": "置于对象之下",
+          "icon": "zhiyuduixiangzhixia",
+          "cmd": "Mx_DrawOrderButtom"
+        }
+      ]
+    },
+    {
+      "tab": "批注(T)",
+      "list": [
+        {
+          "tab": "面积标注",
+          "icon": "celiangmianji",
+          "cmd": "BR_Area"
+        },
+        {
+          "tab": "角度标注",
+          "icon": "celiangjiaodu",
+          "cmd": "BR_AngleMeasure"
+        },
+        {
+          "tab": "坐标标注",
+          "icon": "zuobiaoceliang",
+          "cmd": "BR_CoordMeasure"
+        },
+        {
+          "tab": "引线标注",
+          "icon": "yinxianbiaozhu",
+          "cmd": "BR_Comment"
+        },
+        {
+          "tab": "审图标注",
+          "icon": "shentubiaozhu",
+          "cmd": "BR_CheckDraw"
+        },
+        {
+          "tab": "箭头标注",
+          "icon": "jiantoubiaozhu",
+          "cmd": "BR_Arrow"
+        },
+        {
+          "tab": "云线批注",
+          "icon": "yunxianpizhu",
+          "cmd": "BR_CloudLine"
+        },
+        {
+          "tab": "保存批注",
+          "icon": "baocunpizhu",
+          "cmd": "BR_SaveAllMxEntity"
+        },
+        {
+          "tab": "恢复批注",
+          "icon": "huifupizhu",
+          "cmd": "BR_LoadAllMxEntity"
+        }
+      ]
+    },
+    {
+      "tab": "地图(T)",
+      "list": [
+        {
+          "tab": "谷歌地图",
+          "icon": "a-9-1gugeditu",
+          "cmd": "Mx_Open_Map_googlecn"
+        },
+        {
+          "tab": "高德矢量",
+          "icon": "a-9-2gaodeshiliang",
+          "cmd": "Mx_Open_Map_gdslwzj"
+        },
+        {
+          "tab": "高德影像",
+          "icon": "a-9-3gaodeyingxiang",
+          "cmd": "Mx_Open_Map_gdyx"
+        },
+        {
+          "tab": "天地图地图",
+          "icon": "a-9-4tiandituditu",
+          "cmd": "Mx_Open_Map_tdtsl"
+        },
+        {
+          "tab": "百度地图",
+          "icon": "a-9-5baiduditu",
+          "cmd": "Mx_Open_Map_bdsl"
+        },
+        {
+          "tab": "OSM地图",
+          "icon": "a-9-6OSMditu",
+          "cmd": "Mx_Open_Map_geoq"
+        },
+        {
+          "tab": "地图下载",
+          "icon": "a-9-7dituxiazai",
+          "cmd": "MxTest_Map_Download"
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "tab": "绘GIS Point",
+          "icon": "a-9-8huiGISPoint",
+          "cmd": "MxGis_DrawPoint"
+        },
+        {
+          "tab": "绘GIS MultPoint",
+          "icon": "a-9-9huiGISMultPoint",
+          "cmd": "MxGis_DrawMultiPoint"
+        },
+        {
+          "tab": "绘GIS LineString",
+          "icon": "a-9-10huiGISLineString",
+          "cmd": "MxGis_DrawLineString"
+        },
+        {
+          "tab": "绘GIS MultiLineString",
+          "icon": "a-9-11huiGISMultLineString",
+          "cmd": "MxGis_DrawMultiLineString"
+        },
+        {
+          "tab": "绘GIS DrawPolygon",
+          "icon": "a-9-12huiGISDrawPolygon  ",
+          "cmd": "MxGis_DrawPolygon"
+        },
+        {
+          "tab": "输出geojson",
+          "icon": "a-9-13shuchugeojson",
+          "cmd": "MxGis_Get_geojson"
+        }
+      ]
+    },
+    {
+      "tab": "帮助(H)",
+      "list": [
+        {
+          "tab": "设置",
+          "icon": "shezhi",
+          "cmd": "Mx_SetAppDialog"
+        },
+        {
+          "tab": "关于(A)",
+          "icon": "guanyu",
+          "cmd": "MxCAD_About"
+        }
+      ]
+    }
+  ],
+  "mRightMenuData": [
+    {
+      "label": "新建",
+      "tips": "New",
+      "cmd": "Mx_NewFile"
+    },
+    {
+      "label": "打开",
+      "tips": "Open",
+      "cmd": "OpenDwg",
+      "children": [
+        {
+          "label": "使用缓存",
+          "tips": "快速打开",
+          "cmd": "OpenDwg"
+        },
+        {
+          "label": "忽略缓存",
+          "tips": "重新转换",
+          "cmd": "OpenDwg_DoNotUseCache"
+        }
+      ]
+    },
+    {
+      "label": "另存为",
+      "tips": "CAD",
+      "cmd": "Mx_SaveAs",
+      "children": [
+        {
+          "label": "MxWeb格式",
+          "tips": "梦想在线CAD文件",
+          "cmd": "Mx_SaveAs"
+        },
+        {
+          "label": "Dwg格式",
+          "tips": "AutoCad图纸",
+          "cmd": "Mx_Export_DWG"
+        }
+      ]
+    },
+    {
+      "label": "打印",
+      "tips": "Print",
+      "cmd": "Mx_PrintDialog"
+    }
+  ],
+  "mRightMenuDataCommandRuning": [
+    {
+      "label": "确认(E)",
+      "tips": "ok",
+      "execute_operations": 1
+    },
+    {
+      "label": "取消(C)",
+      "tips": "cancle",
+      "execute_operations": 2
+    }
+  ],
+  "mRightMenuDataCommandRuningOsnapSet": [
+    {
+      "label": "端点(E)",
+      "tips": "End",
+      "set_osnap_type": 1
+    },
+    {
+      "label": "中点(M)",
+      "tips": "Mid",
+      "set_osnap_type": 2
+    },
+    {
+      "label": "圆心(C)",
+      "tips": "Cen",
+      "set_osnap_type": 4
+    },
+    {
+      "label": "节点(D)",
+      "tips": "Node",
+      "set_osnap_type": 8
+    },
+    {
+      "label": "象限点(Q)",
+      "tips": "Quad",
+      "set_osnap_type": 16
+    },
+    {
+      "label": "交点(I)",
+      "tips": "Int",
+      "set_osnap_type": 32
+    },
+    {
+      "label": "插入点(S)",
+      "tips": "Insert",
+      "set_osnap_type": 64
+    },
+    {
+      "label": "垂足(P)",
+      "tips": "Perp",
+      "set_osnap_type": 128
+    },
+    {
+      "label": "切点(T)",
+      "tips": "Tan",
+      "set_osnap_type": 256
+    },
+    {
+      "label": "最近点(R)",
+      "tips": "Near",
+      "set_osnap_type": 512
+    }
+  ],
+  "mRightMenuDataSelectEntity": [
+    {
+      "label": "删除",
+      "tips": "Delete",
+      "cmd": "Mx_Erase"
+    },
+    {
+      "label": "复制",
+      "tips": "Copy",
+      "cmd": "Mx_CopyClipboard"
+    },
+    {
+      "label": "剪切",
+      "tips": "Cut",
+      "cmd": "Mx_CutClipboard"
+    },
+    {
+      "label": "粘贴",
+      "tips": "Paste",
+      "cmd": "Mx_PasteClipboard"
+    },
+    {
+      "label": "移动",
+      "tips": "Move",
+      "cmd": "Mx_Move"
+    },
+    {
+      "label": "缩放",
+      "tips": "Scale",
+      "cmd": "Mx_Scale"
+    },
+    {
+      "label": "旋转",
+      "tips": "Rotate",
+      "cmd": "Mx_Rotate"
+    },
+    {
+      "label": "取消选择",
+      "tips": "Esc",
+      "cmd": "deselect"
+    }
+  ],
+  "isShowFooter": true,
+  "isMobileCommandLineMode": true,
+  "footerRightBtnSwitchData": [
+    "栅格",
+    "正交",
+    "极轴",
+    "对象捕捉",
+    "对象追踪",
+    "DYN",
+    "线宽"
+  ],
+  "isShowModelNav": true,
+  "isShowCommandLinePanel": true,
+  "isShowCommandInput": true,
+  "isShowFooterStatusBar": true,
+  "isShowLeftDrawer": true,
+  "leftDrawerComponents": [
+    "DrawingComparison",
+    "TextSearch",
+    "BlockLibrary",
+    "CodeEditor",
+    "DatabaseDisplay",
+    "PatternRec"
+  ],
+  "isShowRightDrawer": true,
+  "rightDrawerComponents": ["EntityAttribute"],
+  "isShowSkeletonLoader": false,
+  "isPriorityLoadingUi": false
+}

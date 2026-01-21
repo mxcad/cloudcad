@@ -132,7 +132,7 @@ function generateValidationCode(rules) {
   const fieldRulesCode = Object.entries(registerRules)
     .map(([field, fieldRules]) => {
       const parts = [];
-      
+
       if (fieldRules.required) {
         parts.push('    required: true');
       }
@@ -149,7 +149,7 @@ function generateValidationCode(rules) {
       if (fieldRules.isEmail) {
         parts.push('    isEmail: true');
       }
-      
+
       return `  ${field}: {\n${parts.join(',\n')}\n  }`;
     })
     .join(',\n');

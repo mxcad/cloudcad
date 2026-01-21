@@ -21,9 +21,6 @@ describe('FileSystemPermissionService', () => {
     fileAccess: {
       findUnique: jest.fn(),
     },
-    projectMember: {
-      findUnique: jest.fn(),
-    },
   };
 
   const mockCache = {
@@ -44,9 +41,19 @@ describe('FileSystemPermissionService', () => {
           useValue: mockCache,
         },
       ],
-    }).setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() }).compile();
+    })
+      .setLogger({
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      })
+      .compile();
 
-    service = module.get<FileSystemPermissionService>(FileSystemPermissionService);
+    service = module.get<FileSystemPermissionService>(
+      FileSystemPermissionService
+    );
     prisma = module.get<DatabaseService>(DatabaseService);
     cache = module.get<PermissionCacheService>(PermissionCacheService);
   });
@@ -60,10 +67,14 @@ describe('FileSystemPermissionService', () => {
     const nodeId = 'node-123';
     const permission = Permission.FILE_READ;
 
-    it('应该从缓存返回权限结�?, async () => {
+    it('应该从缓存返回权限结果', async () => {
       mockCache.get.mockReturnValue(true);
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.get).toHaveBeenCalledWith(
@@ -72,14 +83,18 @@ describe('FileSystemPermissionService', () => {
       expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
     });
 
-    it('应该允许管理员访问所有节�?, async () => {
+    it('应该允许管理员访问所有节点', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
         role: UserRole.ADMIN,
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -89,7 +104,7 @@ describe('FileSystemPermissionService', () => {
       );
     });
 
-    it('应该允许节点所有者访�?, async () => {
+    it('应该允许节点所有者访问', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
@@ -101,7 +116,11 @@ describe('FileSystemPermissionService', () => {
         parentId: 'parent-123',
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -111,7 +130,7 @@ describe('FileSystemPermissionService', () => {
       );
     });
 
-    it('应该在节点不存在时抛出异�?, async () => {
+    it('应该在节点不存在时抛出异常', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
@@ -124,7 +143,7 @@ describe('FileSystemPermissionService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('应该通过节点级权限（FileAccess）授�?, async () => {
+    it('应该通过节点级权限（FileAccess）授权', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
@@ -141,7 +160,11 @@ describe('FileSystemPermissionService', () => {
         role: 'EDITOR',
       });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -182,7 +205,7 @@ describe('FileSystemPermissionService', () => {
       );
     });
 
-    it('应该通过项目级权限（ProjectMember）授�?, async () => {
+    it('应该通过项目级权限（FileAccess）授权', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
@@ -204,14 +227,21 @@ describe('FileSystemPermissionService', () => {
           isRoot: true,
           parentId: null,
         });
-      mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
-      mockPrisma.projectMember.findUnique.mockResolvedValue({
-        userId,
-        nodeId: 'root-123',
-        role: 'MEMBER',
-      });
+      // First call: direct node access - no permission
+      // Second call: root node access - has MEMBER permission
+      mockPrisma.fileAccess.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          userId,
+          nodeId: 'root-123',
+          role: 'MEMBER',
+        });
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(true);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -239,9 +269,12 @@ describe('FileSystemPermissionService', () => {
           parentId: null,
         });
       mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
-      mockPrisma.projectMember.findUnique.mockResolvedValue(null);
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(false);
       expect(mockCache.set).toHaveBeenCalledWith(
@@ -268,12 +301,15 @@ describe('FileSystemPermissionService', () => {
           isRoot: true,
           parentId: null,
         });
-      mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
-      mockPrisma.projectMember.findUnique.mockResolvedValue({
-        userId,
-        nodeId: 'root-123',
-        role: 'OWNER',
-      });
+      // First call: direct node access - no permission
+      // Second call: root node access - has OWNER permission
+      mockPrisma.fileAccess.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          userId,
+          nodeId: 'root-123',
+          role: 'OWNER',
+        });
 
       const result = await service.checkNodePermission(
         userId,
@@ -302,11 +338,6 @@ describe('FileSystemPermissionService', () => {
           parentId: null,
         });
       mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
-      mockPrisma.projectMember.findUnique.mockResolvedValue({
-        userId,
-        nodeId: 'root-123',
-        role: 'VIEWER',
-      });
 
       const result = await service.checkNodePermission(
         userId,
@@ -319,7 +350,7 @@ describe('FileSystemPermissionService', () => {
   });
 
   describe('findRootNode', () => {
-    it('应该找到根节�?, async () => {
+    it('应该找到根节点', async () => {
       const nodeId = 'node-123';
       mockPrisma.fileSystemNode.findUnique
         .mockResolvedValueOnce({
@@ -415,7 +446,7 @@ describe('FileSystemPermissionService', () => {
     });
   });
 
-  describe('权限优先级测�?, () => {
+  describe('权限优先级测试', () => {
     const userId = 'user-123';
     const nodeId = 'node-123';
     const permission = Permission.FILE_READ;
@@ -444,7 +475,8 @@ describe('FileSystemPermissionService', () => {
       );
 
       expect(result).toBe(false);
-      expect(mockPrisma.projectMember.findUnique).not.toHaveBeenCalled();
+      // Should have been called once for direct node access check
+      expect(mockPrisma.fileAccess.findUnique).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -453,7 +485,7 @@ describe('FileSystemPermissionService', () => {
     const nodeId = 'node-123';
     const permission = Permission.FILE_READ;
 
-    it('应该处理找不到根节点的情�?, async () => {
+    it('应该处理找不到根节点的情况', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         id: userId,
@@ -472,12 +504,16 @@ describe('FileSystemPermissionService', () => {
         });
       mockPrisma.fileAccess.findUnique.mockResolvedValue(null);
 
-      const result = await service.checkNodePermission(userId, nodeId, permission);
+      const result = await service.checkNodePermission(
+        userId,
+        nodeId,
+        permission
+      );
 
       expect(result).toBe(false);
     });
 
-    it('应该处理数据库查询错�?, async () => {
+    it('应该处理数据库查询错误', async () => {
       mockCache.get.mockReturnValue(null);
       mockPrisma.user.findUnique.mockRejectedValue(new Error('Database error'));
 
@@ -487,4 +523,3 @@ describe('FileSystemPermissionService', () => {
     });
   });
 });
-

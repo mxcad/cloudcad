@@ -30,9 +30,8 @@ export function IsStrongPassword() {
     MinLength(8, { message: '密码至少8个字符' }),
     MaxLength(50, { message: '密码最多50个字符' }),
     Matches(new RegExp(passwordPattern), {
-      message:
-        '密码必须包含至少1个大写字母、1个小写字母、1个数字和1个特殊字符',
-    }),
+      message: '密码必须包含至少1个大写字母、1个小写字母、1个数字和1个特殊字符',
+    })
   );
 }
 
@@ -54,7 +53,7 @@ export function IsUsername() {
     MaxLength(20, { message: '用户名最多20个字符' }),
     Matches(/^[a-zA-Z0-9_]+$/, {
       message: '用户名只能包含字母、数字和下划线',
-    }),
+    })
   );
 }
 
@@ -69,7 +68,7 @@ export function IsEmailField() {
       format: 'email',
     }),
     IsEmail({}, { message: '请输入有效的邮箱地址' }),
-    IsNotEmpty({ message: '邮箱不能为空' }),
+    IsNotEmpty({ message: '邮箱不能为空' })
   );
 }
 
@@ -85,6 +84,6 @@ export function IsNickname() {
       maxLength: 50,
     }),
     IsString({ message: '昵称必须是字符串' }),
-    MaxLength(50, { message: '昵称最多50个字符' }),
+    MaxLength(50, { message: '昵称最多50个字符' })
   );
 }
