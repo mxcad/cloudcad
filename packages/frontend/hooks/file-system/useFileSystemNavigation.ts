@@ -1,0 +1,116 @@
+import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FileSystemNode } from '../../types/filesystem';
+import { filesApi } from '../../services/apiService';
+import { logger } from '../../utils/logger';
+import { handleError } from '../../utils/errorHandler';
+
+interface UseFileSystemNavigationProps {
+  urlProjectId: string;
+  currentNode: FileSystemNode | null;
+  showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+}
+
+const sanitizeFileName = (fileName: string): string => {
+  let sanitized = fileName.replace(/[/\\]/g, '_');
+  sanitized = sanitized.replace(/[\x00-\x1F\x7F]/gu, '');
+  sanitized = sanitized.replace(/[<>:"|?*]/g, '');
+  if (sanitized.length > 250) {
+    const ext = sanitized.split('.').pop() || '';
+    const nameWithoutExt = sanitized.substring(0, sanitized.lastIndexOf('.'));
+    sanitized = nameWithoutExt.substring(0, 250 - ext.length - 1) + '.' + ext;
+  }
+  return sanitized || 'unnamed';
+};
+
+export const useFileSystemNavigation = ({ urlProjectId, currentNode, showToast }: UseFileSystemNavigationProps) => {
+  const navigate = useNavigate();
+
+  const handleGoBack = useCallback(() => {
+    if (currentNode?.parentId) {
+      navigate(`/projects/${urlProjectId}/files/${currentNode.parentId}`);
+    } else {
+      navigate('/projects');
+    }
+  }, [currentNode, navigate, urlProjectId]);
+
+  const handleEnterFolder = useCallback(
+    (node: FileSystemNode) => {
+      if (node.isFolder) {
+        navigate(`/projects/${urlProjectId}/files/${node.id}`);
+      }
+    },
+    [navigate, urlProjectId]
+  );
+
+  const handleEnterProject = useCallback(
+    (projectId: string) => {
+      navigate(`/projects/${projectId}/files`);
+    },
+    [navigate]
+  );
+
+  const handleFileOpen = useCallback(
+    (node: FileSystemNode) => {
+      if (node.isFolder) {
+        const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
+        navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
+      } else {
+        const cadExtensions = ['.dwg', '.dxf'];
+        if (node.extension && cadExtensions.includes(node.extension.toLowerCase())) {
+          const queryParams = new URLSearchParams();
+          queryParams.set('nodeId', node.parentId || '');
+          navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
+        } else {
+          handleDownload(node);
+        }
+      }
+    },
+    [navigate, urlProjectId, currentNode]
+  );
+
+  const handleDownload = useCallback(
+    async (node: FileSystemNode) => {
+      try {
+        logger.info('开始下载文件', 'useFileSystemNavigation', { nodeId: node.id, fileName: node.name });
+
+        const response = await filesApi.download(node.id);
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const fileName = node.originalName || node.name;
+        const finalFileName = node.isFolder ? `${sanitizeFileName(fileName)}.zip` : sanitizeFileName(fileName);
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast(node.isFolder ? '目录压缩下载成功' : '文件下载成功', 'success');
+      } catch (error) {
+        let errorMessage = '文件下载失败';
+
+        if (error instanceof Error) {
+          if (error.message.includes('CORS') || error.message.includes('Network Error')) {
+            errorMessage = '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
+        handleError(error, '文件下载失败');
+        showToast(errorMessage, 'error');
+      }
+    },
+    [showToast]
+  );
+
+  return {
+    handleGoBack,
+    handleEnterFolder,
+    handleEnterProject,
+    handleFileOpen,
+    handleDownload,
+  };
+};
