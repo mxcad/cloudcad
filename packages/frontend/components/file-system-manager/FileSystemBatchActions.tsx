@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 
 interface FileSystemBatchActionsProps {
   selectedCount: number;
@@ -8,7 +8,7 @@ interface FileSystemBatchActionsProps {
   onCancel: () => void;
 }
 
-export const FileSystemBatchActions: React.FC<FileSystemBatchActionsProps> = ({
+export const FileSystemBatchActions: React.FC<FileSystemBatchActionsProps> = memo(({
   selectedCount,
   onMove,
   onCopy,
@@ -17,36 +17,52 @@ export const FileSystemBatchActions: React.FC<FileSystemBatchActionsProps> = ({
 }) => {
   if (selectedCount === 0) return null;
 
+  const handleMove = useCallback(() => {
+    onMove();
+  }, [onMove]);
+
+  const handleCopy = useCallback(() => {
+    onCopy();
+  }, [onCopy]);
+
+  const handleDelete = useCallback(() => {
+    onDelete();
+  }, [onDelete]);
+
+  const handleCancel = useCallback(() => {
+    onCancel();
+  }, [onCancel]);
+
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up">
       <span className="text-sm font-semibold">
-        “——°÷– {selectedCount} œÓ
+        Â∑≤ÈÄâ‰∏≠ {selectedCount} È°π
       </span>
       <div className="w-px h-4 bg-slate-700" />
       <button
-        onClick={onMove}
+        onClick={handleMove}
         className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
       >
-        “∆∂Ø
+        ÁßªÂä®
       </button>
       <button
-        onClick={onCopy}
+        onClick={handleCopy}
         className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
       >
-        ∏¥÷∆
+        Â§çÂà∂
       </button>
       <button
-        onClick={onDelete}
+        onClick={handleDelete}
         className="text-error-400 hover:text-white text-sm font-medium transition-colors"
       >
-        …æ≥˝
+        Âà†Èô§
       </button>
       <button
-        onClick={onCancel}
+        onClick={handleCancel}
         className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
       >
-        »°œ˚
+        ÂèñÊ∂à
       </button>
     </div>
   );
-};
+});

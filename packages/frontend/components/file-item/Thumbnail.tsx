@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { getFileIconComponent } from '../FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
 import { Eye } from 'lucide-react';
@@ -14,10 +14,18 @@ interface ThumbnailProps {
   onPreview?: (src: string) => void;
 }
 
-export const Thumbnail: React.FC<ThumbnailProps> = ({ node, size, onPreview }) => {
+export const Thumbnail: React.FC<ThumbnailProps> = memo(({ node, size, onPreview }) => {
   const [imageLoadError, setImageLoadError] = useState(false);
-  const isImage = !node.isFolder && ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(node.extension?.toLowerCase() || '');
-  const isCad = !node.isFolder && ['.dwg', '.dxf'].includes(node.extension?.toLowerCase() || '');
+  
+  const isImage = useMemo(
+    () => !node.isFolder && ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(node.extension?.toLowerCase() || ''),
+    [node.isFolder, node.extension]
+  );
+  
+  const isCad = useMemo(
+    () => !node.isFolder && ['.dwg', '.dxf'].includes(node.extension?.toLowerCase() || ''),
+    [node.isFolder, node.extension]
+  );
 
   if (node.isFolder || (!isImage && !isCad)) {
     return getFileIconComponent(node, size);
@@ -27,8 +35,14 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({ node, size, onPreview }) =
     return getFileIconComponent(node, size);
   }
 
-  const thumbnailSrc = isImage ? getThumbnailUrl(node) : getCadThumbnailUrl(node);
-  const previewSrc = isImage ? getOriginalFileUrl(node) : thumbnailSrc;
+  const thumbnailSrc = useMemo(
+    () => (isImage ? getThumbnailUrl(node) : getCadThumbnailUrl(node)),
+    [isImage, node]
+  );
+  const previewSrc = useMemo(
+    () => (isImage ? getOriginalFileUrl(node) : thumbnailSrc),
+    [isImage, node, thumbnailSrc]
+  );
 
   return (
     <div className="relative w-full h-full group">
@@ -60,4 +74,4 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({ node, size, onPreview }) =
       )}
     </div>
   );
-};
+});

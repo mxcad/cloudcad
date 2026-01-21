@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { FileSystemNode } from '../../types/filesystem';
 
@@ -7,10 +7,10 @@ interface FileItemExternalReferenceWarningProps {
   isGrid?: boolean;
 }
 
-export const FileItemExternalReferenceWarning: React.FC<FileItemExternalReferenceWarningProps> = ({ node, isGrid = false }) => {
+export const FileItemExternalReferenceWarning: React.FC<FileItemExternalReferenceWarningProps> = memo(({ node, isGrid = false }) => {
   if (!node.hasMissingExternalReferences) return null;
 
-  const missingCount = node.missingExternalReferencesCount || 0;
+  const missingCount = useMemo(() => node.missingExternalReferencesCount || 0, [node.missingExternalReferencesCount]);
 
   if (isGrid) {
     return (
@@ -27,4 +27,4 @@ export const FileItemExternalReferenceWarning: React.FC<FileItemExternalReferenc
       缺失 {missingCount} 个外部参照
     </span>
   );
-};
+});

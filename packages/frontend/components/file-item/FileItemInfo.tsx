@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
 import { formatDate, formatFileSize } from '../../utils/fileUtils';
 
@@ -7,8 +7,18 @@ interface FileItemInfoProps {
   isGrid?: boolean;
 }
 
-export const FileItemInfo: React.FC<FileItemInfoProps> = ({ node, isGrid = false }) => {
+export const FileItemInfo: React.FC<FileItemInfoProps> = memo(({ node, isGrid = false }) => {
   const isRoot = node.isRoot;
+
+  const descriptionText = useMemo(
+    () =>
+      isRoot
+        ? node.description || '暂无描述'
+        : node.isFolder
+          ? `${node._count?.children || 0} 个项目`
+          : formatFileSize(node.size),
+    [isRoot, node.description, node.isFolder, node._count?.children, node.size]
+  );
 
   if (isGrid) {
     return (
@@ -17,11 +27,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = ({ node, isGrid = false
           {node.name}
         </h3>
         <p className="text-xs text-slate-500 text-center mt-1 truncate px-2" title={node.description || undefined}>
-          {isRoot
-            ? node.description || '暂无描述'
-            : node.isFolder
-              ? `${node._count?.children || 0} 个项目`
-              : formatFileSize(node.size)}
+          {descriptionText}
         </p>
       </>
     );
@@ -47,4 +53,4 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = ({ node, isGrid = false
       </div>
     </div>
   );
-};
+});

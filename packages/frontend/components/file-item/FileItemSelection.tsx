@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 
 interface FileItemSelectionProps {
   isSelected: boolean;
@@ -7,7 +7,7 @@ interface FileItemSelectionProps {
   isGrid?: boolean;
 }
 
-export const FileItemSelection: React.FC<FileItemSelectionProps> = ({
+export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(({
   isSelected,
   isMultiSelectMode,
   onSelect,
@@ -15,11 +15,11 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = ({
 }) => {
   if (!isMultiSelectMode) return null;
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const isShift = e.shiftKey;
     onSelect(isShift);
-  };
+  }, [onSelect]);
 
   return (
     <div
@@ -42,4 +42,4 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = ({
       )}
     </div>
   );
-};
+});
