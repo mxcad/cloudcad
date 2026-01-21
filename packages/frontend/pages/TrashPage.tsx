@@ -77,9 +77,11 @@ export const TrashPage: React.FC = () => {
       const response = await trashApi.getList();
       setTrashItems(response.data || []);
       setSelectedIds(new Set()); // 清空选择
-    } catch (err: any) {
+    } catch (err) {
       const errorMessage =
-        err.response?.data?.message || err.message || '加载回收站失败';
+        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error).message ||
+        '加载回收站失败';
       showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
@@ -134,9 +136,11 @@ export const TrashPage: React.FC = () => {
           await trashApi.restoreItems(Array.from(selectedIds));
           showToast(`已恢复 ${selectedIds.size} 个项目`, 'success');
           loadTrashItems();
-        } catch (err: any) {
+        } catch (err) {
           const errorMessage =
-            err.response?.data?.message || err.message || '恢复失败';
+            (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+            (err as Error).message ||
+            '恢复失败';
           showToast(errorMessage, 'error');
         }
       },

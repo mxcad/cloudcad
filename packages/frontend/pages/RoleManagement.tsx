@@ -161,8 +161,12 @@ export const RoleManagement = () => {
 
       setIsModalOpen(false);
       loadRoles();
-    } catch (error: any) {
-      alert(error.response?.data?.message || '保存失败');
+    } catch (error) {
+      alert(
+        (error as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (error as Error).message ||
+        '保存失败'
+      );
     }
   };
 
@@ -175,7 +179,7 @@ export const RoleManagement = () => {
       try {
         await rolesApi.delete(id);
         loadRoles();
-      } catch (error: any) {
+      } catch (error) {
         console.error('删除角色失败:', error);
         // 如果是 404 错误，可能是角色已被删除，尝试刷新列表
         if (error.response?.status === 404) {

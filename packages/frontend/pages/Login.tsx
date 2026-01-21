@@ -47,10 +47,14 @@ export const Login: React.FC = () => {
       // 静默：登录成功，准备跳转到首页
       // 跳转到首页
       navigate('/');
-    } catch (err: any) {
+    } catch (err) {
       // 静默：登录失败
       // 静默：错误详情
-      setError(err.response?.data?.message || '登录失败，请检查账号和密码');
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error).message ||
+        '登录失败，请检查账号和密码'
+      );
     } finally {
       setLoading(false);
     }

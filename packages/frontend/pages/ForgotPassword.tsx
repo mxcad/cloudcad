@@ -17,8 +17,12 @@ export const ForgotPassword: React.FC = () => {
     try {
       await apiService.post('/auth/forgot-password', { email });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message || '发送验证码失败，请稍后重试');
+    } catch (err) {
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error).message ||
+        '发送验证码失败，请稍后重试'
+      );
     } finally {
       setLoading(false);
     }

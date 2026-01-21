@@ -59,8 +59,12 @@ export const Profile: React.FC = () => {
       navigate('/login', {
         state: { message: '密码已修改，请使用新密码登录' },
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || '密码修改失败');
+    } catch (err) {
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error).message ||
+        '密码修改失败'
+      );
       setLoading(false);
     }
   };

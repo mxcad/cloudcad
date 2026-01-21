@@ -319,12 +319,13 @@ export default function GalleryTypeManagement({
         const errorMessage = response.data?.message || '更新分类失败';
         alert(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('更新分类失败:', error);
 
-      if (error.response) {
-        const status = error.response.status;
-        const errorMessage = error.response.data?.message || '更新分类失败';
+      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
+        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
+        const errorMessage =
+          (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '更新分类失败';
 
         if (status === 400) {
           alert(errorMessage);
@@ -366,10 +367,10 @@ export default function GalleryTypeManagement({
         const errorMessage = response.data?.message || '删除分类失败';
         alert(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('删除分类失败:', error);
 
-      if (error.response) {
+      if ((error as Error & { response?: { status?: number } }).response) {
         const status = error.response.status;
         const errorMessage = error.response.data?.message || '删除分类失败';
 
@@ -432,7 +433,7 @@ export default function GalleryTypeManagement({
         const errorMessage = response.data?.message || '创建分类失败';
         alert(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('创建分类失败:', error);
 
       if (error.response) {

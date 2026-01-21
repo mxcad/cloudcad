@@ -72,7 +72,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       const response = await projectsApi.getMembers(projectId);
       setMembers((response.data as Member[]) || []);
-    } catch (error: any) {
+    } catch (error) {
       setErrorMessage('加载成员列表失败');
     } finally {
       setLoading(false);
@@ -154,8 +154,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setShowAddForm(false);
       setSearchResults([]);
       setSelectedUser(null);
-    } catch (error: any) {
-      if (error.response?.status === 403) {
+    } catch (error) {
+      if ((error as Error & { response?: { status?: number } }).response?.status === 403) {
         setErrorMessage('没有权限添加成员');
       } else {
         setErrorMessage('添加成员失败，请重试');
@@ -170,8 +170,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       await projectsApi.removeMember(projectId, userId);
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
-    } catch (error: any) {
-      if (error.response?.status === 403) {
+    } catch (error) {
+      if ((error as Error & { response?: { status?: number } }).response?.status === 403) {
         setErrorMessage('没有权限移除成员');
       } else {
         setErrorMessage('移除成员失败，请重试');
@@ -188,10 +188,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           m.id === userId || m.userId === userId ? { ...m, role } : m
         )
       );
-    } catch (error: any) {
-      if (error.response?.status === 403) {
+    } catch (error) {
+      if ((error as Error & { response?: { status?: number } }).response?.status === 403) {
         setErrorMessage('没有权限更新成员角色');
-      } else if (error.response?.status === 400) {
+      } else if ((error as Error & { response?: { status?: number } }).response?.status === 400) {
         setErrorMessage('不能修改项目所有者的角色');
       } else {
         setErrorMessage('更新角色失败，请重试');

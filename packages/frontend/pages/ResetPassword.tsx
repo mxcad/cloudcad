@@ -51,8 +51,12 @@ export const ResetPassword: React.FC = () => {
       navigate('/login', {
         state: { message: '密码重置成功，请使用新密码登录' },
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || '重置密码失败，请检查验证码');
+    } catch (err) {
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error).message ||
+        '重置密码失败，请检查验证码'
+      );
     } finally {
       setLoading(false);
     }

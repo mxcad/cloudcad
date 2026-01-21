@@ -156,8 +156,12 @@ export const Register: React.FC = () => {
         state: { email: formData.email },
         replace: true,
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || '注册失败，请稍后重试');
+    } catch (err) {
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error).message ||
+        '注册失败，请稍后重试'
+      );
     } finally {
       setLoading(false);
     }

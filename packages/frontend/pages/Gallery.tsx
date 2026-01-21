@@ -225,12 +225,13 @@ export default function Gallery() {
         const errorMessage = response.data?.message || '移除失败，请稍后重试';
         alert(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('移除文件失败:', error);
 
-      if (error.response) {
-        const status = error.response.status;
-        const errorMessage = error.response.data?.message || '移除失败';
+      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
+        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
+        const errorMessage =
+          (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '移除失败';
 
         if (status === 400) {
           alert(errorMessage);
@@ -295,11 +296,11 @@ export default function Gallery() {
         const errorMessage = response.data?.message || '更新失败，请稍后重试';
         alert(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('更新分类失败:', error);
 
-      if (error.response) {
-        const status = error.response.status;
+      if ((error as Error & { response?: { status?: number } }).response) {
+        const status = (error as Error & { response?: { status?: number } }).response.status;
         const errorMessage = error.response.data?.message || '更新失败';
 
         if (status === 400) {

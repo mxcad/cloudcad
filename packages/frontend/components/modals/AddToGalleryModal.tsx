@@ -97,12 +97,13 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         const errorMessage = response.data?.message || '添加失败，请稍后重试';
         alert(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       // 处理网络错误或服务器错误
-      if (error.response) {
+      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
         // 服务器返回了错误响应
-        const status = error.response.status;
-        const errorMessage = error.response.data?.message || '添加失败';
+        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
+        const errorMessage =
+          (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '添加失败';
 
         if (status === 400) {
           alert(errorMessage);
