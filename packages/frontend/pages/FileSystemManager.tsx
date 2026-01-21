@@ -701,7 +701,7 @@ export const FileSystemManager: React.FC = () => {
         {isProjectsEmpty ? '暂无项目' : '这个文件夹是空的'}
       </h3>
       <p className="text-slate-500 text-sm mb-6">
-        {searchQuery
+        {searchTerm
           ? '没有找到匹配的内容'
           : isProjectsEmpty
             ? '开始创建您的第一个项目'
