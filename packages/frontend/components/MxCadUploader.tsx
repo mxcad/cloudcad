@@ -132,7 +132,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         onProgress: (percentage: number) => {
           setProgress(percentage);
         },
-        onFileQueued: (file: any) => {
+        onFileQueued: (file: File) => {
           setUploading(true);
           setMessage(`文件 ${file.name} 已加入队列`);
           setShowToast(true);

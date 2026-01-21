@@ -19,7 +19,7 @@ interface Tag {
   isSystem: boolean;
   createdAt: string;
   updatedAt: string;
-  nodeTags?: any[];
+  nodeTags?: Array<{ nodeId: string; tagName: string }>;
 }
 
 interface FormData {

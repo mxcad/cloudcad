@@ -325,7 +325,11 @@ export const useFileSystem = () => {
 
     try {
       // 构建请求参数
-      const params: any = {
+      const params: {
+        page: number;
+        limit: number;
+        search?: string;
+      } = {
         page: paginationRef.current.page,
         limit: paginationRef.current.limit,
       };

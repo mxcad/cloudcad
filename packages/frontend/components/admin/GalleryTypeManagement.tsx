@@ -38,7 +38,7 @@ interface GalleryTypeManagementProps {
 // 分类树节点组件
 interface TypeTreeNodeProps {
   type: GalleryTypeData;
-  children: Array<{ type: GalleryTypeData; children: any[] }>;
+  children: TypeTreeNodeProps[];
   level: number;
   onEdit: (type: GalleryTypeData) => void;
   onDelete: (type: GalleryTypeData) => void;

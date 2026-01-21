@@ -252,7 +252,7 @@ export const UserManagement = () => {
     }
   };
 
-  const getRoleName = (role: any) => {
+  const getRoleName = (role: string | { name: string }) => {
     if (typeof role === 'string') {
       // 兼容旧格式：role 是字符串
       return roles.find((r) => r.id === role)?.name || '未知角色';

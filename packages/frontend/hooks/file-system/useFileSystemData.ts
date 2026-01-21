@@ -96,7 +96,11 @@ export const useFileSystemData = ({
     setError(null);
 
     try {
-      const params: any = {
+      const params: {
+        page: number;
+        limit: number;
+        search?: string;
+      } = {
         page: paginationRef.current.page,
         limit: paginationRef.current.limit,
       };

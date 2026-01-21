@@ -47,7 +47,7 @@ export const useFileInfo = () => {
  * MxCAD 服务器配置设置 Hook
  */
 export const useMxCadServerConfig = (
-  user: any,
+  user: { id: string; name: string; email: string },
   projectContext: { projectId?: string; parentId?: string }
 ) => {
   const setupServerConfig = async () => {

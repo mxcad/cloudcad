@@ -29,7 +29,7 @@ type User = components['schemas']['UserDto'];
 
 interface NavItemProps {
   to: string;
-  icon: any;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   active: boolean;
 }

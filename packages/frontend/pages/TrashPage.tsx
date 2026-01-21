@@ -163,9 +163,11 @@ export const TrashPage: React.FC = () => {
           await trashApi.permanentlyDeleteItems(Array.from(selectedIds));
           showToast(`已彻底删除 ${selectedIds.size} 个项目`, 'success');
           loadTrashItems();
-        } catch (err: any) {
+        } catch (err) {
           const errorMessage =
-            err.response?.data?.message || err.message || '删除失败';
+            (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+            (err as Error).message ||
+            '删除失败';
           showToast(errorMessage, 'error');
         }
       },
@@ -188,9 +190,11 @@ export const TrashPage: React.FC = () => {
           await trashApi.clear();
           showToast('回收站已清空', 'success');
           loadTrashItems();
-        } catch (err: any) {
+        } catch (err) {
           const errorMessage =
-            err.response?.data?.message || err.message || '清空失败';
+            (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+            (err as Error).message ||
+            '清空失败';
           showToast(errorMessage, 'error');
         }
       },
@@ -259,7 +263,7 @@ export const TrashPage: React.FC = () => {
             await trashApi.restoreItems([node.id]);
             showToast(`已恢复 "${node.name}"`, 'success');
             loadTrashItems();
-          } catch (err: any) {
+          } catch (err) {
             const errorMessage =
               err.response?.data?.message || err.message || '恢复失败';
             showToast(errorMessage, 'error');

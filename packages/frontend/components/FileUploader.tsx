@@ -11,13 +11,13 @@ interface FileUploadItem {
   progress: number;
   status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
   error?: string;
-  result?: any;
+  result?: { id: string; name: string; path: string };
 }
 
 interface FileUploaderProps {
   projectId?: string;
   parentId?: string;
-  onUploadComplete?: (file: File, result: any) => void;
+  onUploadComplete?: (file: File, result: { id: string; name: string; path: string }) => void;
   onUploadError?: (file: File, error: Error) => void;
   maxFiles?: number;
   accept?: string;
