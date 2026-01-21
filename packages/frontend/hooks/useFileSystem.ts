@@ -6,6 +6,7 @@ import { ToastType, Toast } from '../components/ui/Toast';
 import { PaginationMeta } from '../components/ui/Pagination';
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
+import { useFileSystemStore } from '../stores/fileSystemStore';
 
 /**
  * 验证文件夹/文件名称
@@ -101,7 +102,6 @@ export const useFileSystem = () => {
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20 });
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
     null
@@ -118,19 +118,9 @@ export const useFileSystem = () => {
   // 使用 ref 标志来控制是否应该加载数据，避免循环调用
   const shouldLoadDataRef = useRef(false);
 
-  // 从 localStorage 读取保存的视图模式
-  const getInitialViewMode = (): 'grid' | 'list' => {
-    if (typeof window === 'undefined') return 'list';
-    const saved = localStorage.getItem('fileViewMode');
-    return saved === 'grid' || saved === 'list' ? saved : 'list';
-  };
+  // 从 Zustand store 获取视图模式和搜索词
+  const { viewMode, setViewMode, searchTerm, setSearchTerm } = useFileSystemStore();
 
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(getInitialViewMode);
-
-  // 视图模式变化时保存到 localStorage
-  useEffect(() => {
-    localStorage.setItem('fileViewMode', viewMode);
-  }, [viewMode]);
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
 
@@ -335,8 +325,8 @@ export const useFileSystem = () => {
       };
 
       // 如果有搜索查询，添加到参数中
-      if (searchQuery) {
-        params.search = searchQuery;
+      if (searchTerm) {
+        params.search = searchTerm;
       }
 
       if (isProjectRootMode) {
@@ -428,7 +418,7 @@ export const useFileSystem = () => {
     urlProjectId,
     urlNodeId,
     isProjectRootMode,
-    searchQuery,
+    searchTerm,
     showToast,
     buildBreadcrumbsFromNode,
   ]);
@@ -957,10 +947,10 @@ export const useFileSystem = () => {
 
   // 搜索输入处理
   const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
+    setSearchTerm(query);
     // 搜索时重置页码到第一页
     setPagination({ ...paginationRef.current, page: 1 });
-  }, []);
+  }, [setSearchTerm]);
 
   // 搜索提交
   const handleSearchSubmit = useCallback(() => {
@@ -1056,10 +1046,10 @@ export const useFileSystem = () => {
     }
   }, [pagination]);
 
-  // 监听 searchQuery 变化，当搜索清空时自动加载数据
-  const prevSearchQueryRef = useRef('');
+  // 监听 searchTerm 变化，当搜索清空时自动加载数据
+  const prevSearchTermRef = useRef('');
   useEffect(() => {
-    if (searchQuery === '' && prevSearchQueryRef.current !== '') {
+    if (searchTerm === '' && prevSearchTermRef.current !== '') {
       // 搜索清空时，重置页码并加载数据
       setPagination((prev) => ({ ...prev, page: 1 }));
       // 延迟加载数据，避免与主 useEffect 冲突
@@ -1067,8 +1057,8 @@ export const useFileSystem = () => {
         loadDataRef.current();
       }, 200);
     }
-    prevSearchQueryRef.current = searchQuery;
-  }, [searchQuery]);
+    prevSearchTermRef.current = searchTerm;
+  }, [searchTerm]);
 
   return {
     // 模式状态
@@ -1081,8 +1071,8 @@ export const useFileSystem = () => {
     breadcrumbs,
     loading,
     error,
-    searchQuery,
-    setSearchQuery: handleSearchChange,
+    searchTerm,
+    setSearchTerm: handleSearchChange,
     handleSearchSubmit,
     pagination,
     setPagination,

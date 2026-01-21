@@ -59,8 +59,8 @@ export const FileSystemManager: React.FC = () => {
     breadcrumbs,
     loading,
     error,
-    searchQuery,
-    setSearchQuery,
+    searchTerm,
+    setSearchTerm,
     handleSearchSubmit,
     viewMode,
     setViewMode,
@@ -559,8 +559,8 @@ export const FileSystemManager: React.FC = () => {
           <input
             type="text"
             placeholder="搜索文件或项目..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleSearchSubmit();
@@ -569,9 +569,9 @@ export const FileSystemManager: React.FC = () => {
             className="w-full pl-9 pr-20 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searchQuery && (
+            {searchTerm && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchTerm('')}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1"
                 title="清除搜索"
               >
