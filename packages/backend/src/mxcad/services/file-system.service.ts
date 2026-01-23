@@ -92,6 +92,13 @@ export class FileSystemService implements IFileSystemService {
           return;
         }
 
+        // 确保目标目录存在
+        const targetDir = path.dirname(targetPath);
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+          this.logger.log(`创建目标目录: ${targetDir}`);
+        }
+
         const list = fs.readdirSync(chunkDir);
         const aryList: any[] = [];
 

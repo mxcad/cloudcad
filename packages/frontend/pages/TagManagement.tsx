@@ -182,20 +182,22 @@ export default function TagManagement() {
     }
   };
 
-  if (!hasPermission) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <TagIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">权限不足</h2>
-          <p className="text-gray-500">只有管理员可以管理标签</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {/* 权限不足状态 */}
+      {!hasPermission && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <TagIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">权限不足</h2>
+            <p className="text-gray-500">只有管理员可以管理标签</p>
+          </div>
+        </div>
+      )}
+
+      {/* 正常内容 */}
+      {hasPermission && (
+        <>
       <div className="max-w-5xl mx-auto">
         {/* 页面标题 */}
         <div className="mb-6">
@@ -435,6 +437,8 @@ export default function TagManagement() {
           </form>
         </div>
       </Modal>
+        </>
+      )}
     </div>
   );
 }

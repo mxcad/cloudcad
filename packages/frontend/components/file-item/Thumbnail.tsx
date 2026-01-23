@@ -16,25 +16,18 @@ interface ThumbnailProps {
 
 export const Thumbnail: React.FC<ThumbnailProps> = memo(({ node, size, onPreview }) => {
   const [imageLoadError, setImageLoadError] = useState(false);
-  
+
   const isImage = useMemo(
     () => !node.isFolder && ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(node.extension?.toLowerCase() || ''),
     [node.isFolder, node.extension]
   );
-  
+
   const isCad = useMemo(
     () => !node.isFolder && ['.dwg', '.dxf'].includes(node.extension?.toLowerCase() || ''),
     [node.isFolder, node.extension]
   );
 
-  if (node.isFolder || (!isImage && !isCad)) {
-    return getFileIconComponent(node, size);
-  }
-
-  if (imageLoadError) {
-    return getFileIconComponent(node, size);
-  }
-
+  const shouldShowImage = !imageLoadError && (isImage || isCad);
   const thumbnailSrc = useMemo(
     () => (isImage ? getThumbnailUrl(node) : getCadThumbnailUrl(node)),
     [isImage, node]
@@ -43,6 +36,11 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(({ node, size, onPreview
     () => (isImage ? getOriginalFileUrl(node) : thumbnailSrc),
     [isImage, node, thumbnailSrc]
   );
+
+  // 如果不应该显示图片，返回图标组件
+  if (!shouldShowImage) {
+    return getFileIconComponent(node, size);
+  }
 
   return (
     <div className="relative w-full h-full group">

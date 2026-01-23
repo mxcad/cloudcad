@@ -199,18 +199,20 @@ export const RoleManagement = () => {
     }
   };
 
-  if (!hasPermission) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-        <AlertCircle size={48} className="text-red-400 mb-4" />
-        <h2 className="text-xl font-bold text-slate-800">访问被拒绝</h2>
-        <p>您没有权限访问此页面。</p>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto">
+      {/* 权限不足状态 */}
+      {!hasPermission && (
+        <div className="flex flex-col items-center justify-center h-full text-slate-500">
+          <AlertCircle size={48} className="text-red-400 mb-4" />
+          <h2 className="text-xl font-bold text-slate-800">访问被拒绝</h2>
+          <p>您没有权限访问此页面。</p>
+        </div>
+      )}
+
+      {/* 正常内容 */}
+      {hasPermission && (
+        <>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">角色与权限</h1>
@@ -361,6 +363,8 @@ export const RoleManagement = () => {
           </div>
         </div>
       </Modal>
+        </>
+      )}
     </div>
   );
 };

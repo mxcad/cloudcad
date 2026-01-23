@@ -263,6 +263,7 @@ export const UserManagement = () => {
     return '未知角色';
   };
 
+  // 权限不足状态
   if (!hasPermission) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-500">
@@ -273,41 +274,42 @@ export const UserManagement = () => {
     );
   }
 
-  if (loading && users.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        <p className="mt-4">加载中...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-        <AlertCircle size={48} className="text-red-400 mb-4" />
-        <h2 className="text-xl font-bold text-slate-800">加载失败</h2>
-        <p>{error}</p>
-        <Button onClick={loadData} className="mt-4">
-          重试
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">用户管理</h1>
-          <p className="text-slate-500 mt-1">
-            管理团队成员、分配角色及存储配额
-          </p>
+      {/* 加载状态 */}
+      {loading && users.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-full text-slate-500">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <p className="mt-4">加载中...</p>
         </div>
-        <Button onClick={handleOpenCreate} disabled={loading}>
-          添加用户
-        </Button>
-      </div>
+      )}
+
+      {/* 错误状态 */}
+      {error && (
+        <div className="flex flex-col items-center justify-center h-full text-slate-500">
+          <AlertCircle size={48} className="text-red-400 mb-4" />
+          <h2 className="text-xl font-bold text-slate-800">加载失败</h2>
+          <p>{error}</p>
+          <Button onClick={loadData} className="mt-4">
+            重试
+          </Button>
+        </div>
+      )}
+
+      {/* 正常内容 */}
+      {!loading && !error && (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">用户管理</h1>
+              <p className="text-slate-500 mt-1">
+                管理团队成员、分配角色及存储配额
+              </p>
+            </div>
+            <Button onClick={handleOpenCreate} disabled={loading}>
+              添加用户
+            </Button>
+          </div>
 
       {/* 搜索、筛选、排序控件 */}
       <div className="bg-white shadow-sm border border-slate-200 rounded-xl p-4 space-y-4">
@@ -627,6 +629,8 @@ export const UserManagement = () => {
           </div>
         </form>
       </Modal>
+        </>
+      )}
     </div>
   );
 };

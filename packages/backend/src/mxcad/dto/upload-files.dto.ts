@@ -48,4 +48,28 @@ export class UploadFilesDto {
   @IsOptional()
   @IsString()
   src_dwgfile_hash?: string;
+
+  @ApiProperty({
+    description: '文件ID（前端传递的标识符）',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiProperty({
+    description: '文件类型（如 dwg、dxf）',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiProperty({
+    description: '文件最后修改日期',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  lastModifiedDate?: string;
 }

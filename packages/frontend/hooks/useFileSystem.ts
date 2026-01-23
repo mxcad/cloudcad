@@ -396,13 +396,14 @@ export const useFileSystem = () => {
         await buildBreadcrumbsFromNode(nodeData, abortController.signal);
       }
     } catch (error) {
-      // 如果是取消请求导致的错误，不处理
+      // 如果是取消请求导致的错误，不显示错误，但仍需重置 loading 状态
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('[useFileSystem] 请求被取消 (AbortError)', {
           urlProjectId,
           urlNodeId,
           timestamp: Date.now(),
         });
+        // 不 return，让 finally 块执行以重置 loading 状态
         return;
       }
 
@@ -1014,14 +1015,14 @@ export const useFileSystem = () => {
       prevParamsRef.current.urlNodeId !== currentParams.urlNodeId ||
       prevParamsRef.current.refreshCount !== currentParams.refreshCount;
 
+    // 更新 ref
+    prevParamsRef.current = currentParams;
+
     // 如果参数未变化，跳过
     if (!hasChanged) {
       console.log('[useFileSystem] 参数未变化，跳过 loadData');
       return;
     }
-
-    // 更新 ref
-    prevParamsRef.current = currentParams;
 
     // 当 urlProjectId 或 urlNodeId 变化时，重置页码到第一页
     setPagination((prev) => ({ ...prev, page: 1 }));
@@ -1029,7 +1030,7 @@ export const useFileSystem = () => {
     // 使用防抖，避免短时间内多次调用
     const timeoutId = setTimeout(() => {
       loadData();
-    }, 150); // 增加防抖时间到 150ms
+    }, 100); // 减少防抖时间到 100ms，提高响应速度
 
     return () => {
       clearTimeout(timeoutId);
