@@ -1,6 +1,6 @@
 ﻿import { MxCADView } from 'mxcad-app';
 import { Logger } from '../utils/mxcadUtils';
-import { apiService } from './apiService';
+import { apiService, mxcadApi } from './apiService';
 import { MxFun } from 'mxdraw';
 import { McGePoint3d, MxCpp } from 'mxcad';
 
@@ -490,7 +490,7 @@ class MxCADInstanceManager {
       const formData = new FormData();
       formData.append('file', blob, 'thumbnail.png');
 
-      await apiService.uploadThumbnail(nodeId, formData);
+      await mxcadApi.uploadThumbnail(nodeId, formData);
       Logger.success('缩略图上传成功');
       return true;
     } catch (error) {
@@ -519,11 +519,11 @@ class MxCADInstanceManager {
         if(currentFileInfo) {
           globalThis.MxPluginContext.useFileName().fileName.value =
             ' - ' + currentFileInfo.name;
-          
+
           // 查询缩略图
           try {
             const fileId = currentFileInfo.fileId;
-            const thumbnailResult = await apiService.checkThumbnail(fileId);
+            const thumbnailResult = await mxcadApi.checkThumbnail(fileId);
             // 如果缩略图不存在，生成并上传
             if (!thumbnailResult.data.exists) {
               Logger.info('缩略图不存在，开始生成...');
@@ -539,7 +539,7 @@ class MxCADInstanceManager {
         }
         // 注意：不要在这里清除 currentFileInfo，返回命令需要用到它
         // currentFileInfo 只在组件卸载时通过 clearCurrentFileInfo() 清除
-        
+
         this.mxcadView.mxcad.off('openFileComplete', onOpen);
       };
       this.mxcadView.mxcad.on('openFileComplete', onOpen);

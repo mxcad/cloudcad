@@ -1776,12 +1776,9 @@ export class MxCadController {
       if (ext === this.mxCadFileExt) {
         possiblePaths.push(`mxcad/file/${normalizedFilename}`);
       }
-      // 对于图片文件，可能在 mxcad_res 目录下或根据哈希值查找
-      else if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
-        possiblePaths.push(`mxcad/res/${normalizedFilename}`);
-        possiblePaths.push(`mxcad/images/${normalizedFilename}`);
-        // 也支持直接文件名
-        possiblePaths.push(normalizedFilename);
+      // 对于 .jpg 缩略图文件，只尝试 mxcad/file/ 路径
+      else if (ext === '.jpg') {
+        possiblePaths.push(`mxcad/file/${normalizedFilename}`);
       }
       // 对于 JSON 文件
       else if (ext === '.json') {

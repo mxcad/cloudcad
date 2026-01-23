@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { FileNameText } from '../ui/TruncateText';
 import { ExternalReferenceFile } from '../../types/filesystem';
 import {
   CheckCircle,
@@ -209,8 +210,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm text-slate-900 truncate">
-                        {file.name}
+                      <span className="text-sm text-slate-900">
+                        <FileNameText>{file.name}</FileNameText>
                       </span>
                       <span className={`text-xs ${getStatusColor(file)}`}>
                         {getStatusText(file)}

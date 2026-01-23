@@ -7,6 +7,20 @@ export const mxcadApi = {
       `/mxcad/file/${fileHash}/preloading`
     ),
 
+  checkThumbnail: (nodeId: string) =>
+    apiClient.get<{ code: number; message: string; exists: boolean }>(
+      `/mxcad/thumbnail/${nodeId}`
+    ),
+
+  uploadThumbnail: (nodeId: string, formData: FormData) =>
+    apiClient.post<{ code: number; message: string; data?: { fileName: string } }>(
+      `/mxcad/thumbnail/${nodeId}`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    ),
+
   checkExternalReferenceExists: (fileHash: string, fileName: string) =>
     apiClient.post<import('../types/api').CheckReferenceExistsResult>(
       `/mxcad/file/${fileHash}/check-reference`,

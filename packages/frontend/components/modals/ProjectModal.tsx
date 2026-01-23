@@ -58,7 +58,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             onChange={(e) =>
               onFormDataChange({ ...formData, name: e.target.value })
             }
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap"
             placeholder="请输入名称"
             autoFocus
             maxLength={100}
@@ -77,7 +77,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               onFormDataChange({ ...formData, description: e.target.value })
             }
             rows={3}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none overflow-hidden"
             placeholder="请输入描述（可选）"
             maxLength={500}
           />

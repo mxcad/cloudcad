@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X, File, AlertCircle } from 'lucide-react';
+import { FileNameText } from './ui/TruncateText';
 import {
   FileUploadService,
   FileUploadOptions,
@@ -267,8 +268,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
               {/* 文件信息 */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {item.file.name}
+                <p className="text-sm font-medium text-gray-900">
+                  <FileNameText>{item.file.name}</FileNameText>
                 </p>
                 <p className="text-xs text-gray-500">
                   {formatFileSize(item.file.size)} ·{' '}

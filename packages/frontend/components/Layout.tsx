@@ -24,6 +24,7 @@ import { projectsApi, mockApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { TruncateText } from './ui/TruncateText';
 
 type User = components['schemas']['UserDto'];
 
@@ -221,10 +222,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-900 truncate">
-                  {user?.nickname || user?.username || user?.email}
+                <p className="text-sm font-semibold text-slate-900">
+                  <TruncateText>{user?.nickname || user?.username || user?.email}</TruncateText>
                 </p>
-                <p className="text-xs text-slate-500 truncate">{role?.name}</p>
+                <p className="text-xs text-slate-500">
+                  <TruncateText>{role?.name}</TruncateText>
+                </p>
 
                 {/* 存储空间信息 */}
                 {storageInfo && storageInfo.formatted ? (

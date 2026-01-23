@@ -4,6 +4,7 @@ import {
   LoadFileParam,
 } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
+import { FileNameText } from './ui/TruncateText';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 
@@ -134,7 +135,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         },
         onFileQueued: (file: File) => {
           setUploading(true);
-          setMessage(`文件 ${file.name} 已加入队列`);
+          setMessage(`文件 <FileNameText>${file.name}</FileNameText> 已加入队列`);
           setShowToast(true);
           setTimeout(() => setShowToast(false), 2000);
         },

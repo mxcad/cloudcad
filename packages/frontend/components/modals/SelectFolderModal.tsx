@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { FileNameText } from '../ui/TruncateText';
 import {
   Folder,
   ChevronRight,
@@ -250,13 +251,13 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
           />
 
           {/* 文件夹名称 */}
-          <span
-            className={`flex-1 text-sm truncate transition-colors ${
+          <FileNameText
+            className={`flex-1 text-sm transition-colors ${
               selectedFolderId === node.id ? 'font-medium' : 'text-slate-700'
             }`}
           >
             {node.name}
-          </span>
+          </FileNameText>
 
           {/* 选中标记 */}
           {selectedFolderId === node.id && (

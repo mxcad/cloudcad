@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { RefreshCw, X, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { TruncateText } from '../ui/TruncateText';
 import { projectsApi, usersApi } from '../../services/apiService';
 
 interface Member {
@@ -294,17 +295,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       className="w-full px-3 py-2 hover:bg-slate-100 text-left border-b border-slate-100 last:border-b-0"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
                           {(user.nickname ||
                             user.username ||
                             user.email)[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {user.nickname || user.username}
+                          <p className="text-sm font-medium text-slate-900">
+                            <TruncateText>{user.nickname || user.username}</TruncateText>
                           </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {user.email}
+                          <p className="text-xs text-slate-500">
+                            <TruncateText>{user.email}</TruncateText>
                           </p>
                         </div>
                       </div>
@@ -316,17 +317,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               {/* 已选用户显示 */}
               {selectedUser && (
                 <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
                     {(selectedUser.nickname ||
                       selectedUser.username ||
                       selectedUser.email)[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">
-                      {selectedUser.nickname || selectedUser.username}
+                    <p className="text-sm font-medium text-slate-900">
+                      <TruncateText>{selectedUser.nickname || selectedUser.username}</TruncateText>
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {selectedUser.email}
+                    <p className="text-xs text-slate-500">
+                      <TruncateText>{selectedUser.email}</TruncateText>
                     </p>
                   </div>
                   <button
@@ -335,7 +336,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       setSelectedUser(null);
                       setNewEmail('');
                     }}
-                    className="p-1 hover:bg-indigo-200 rounded"
+                    className="p-1 hover:bg-indigo-200 rounded flex-shrink-0"
                   >
                     <X size={14} className="text-slate-500" />
                   </button>
@@ -414,15 +415,15 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   key={member.id}
                   className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
                 >
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
                     {avatarLetter}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">
-                      {displayName}
+                    <p className="text-sm font-medium text-slate-900">
+                      <TruncateText>{displayName}</TruncateText>
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {member.user.email || '无邮箱'}
+                    <p className="text-xs text-slate-500">
+                      <TruncateText>{member.user.email || '无邮箱'}</TruncateText>
                     </p>
                   </div>
                   <select
@@ -431,7 +432,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       handleUpdateRole(member.userId, e.target.value)
                     }
                     disabled={isOwner}
-                    className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white ${
+                    className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
                       isOwner ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -444,7 +445,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   {!isOwner && (
                     <button
                       onClick={() => handleRemoveMember(member.userId)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex-shrink-0"
                       title="移除成员"
                     >
                       <X size={16} />

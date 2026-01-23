@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi, authApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
 
@@ -433,7 +434,7 @@ export const UserManagement = () => {
               <tr key={user.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
                       {user.avatar ? (
                         <img
                           className="h-10 w-10 rounded-full"
@@ -444,11 +445,13 @@ export const UserManagement = () => {
                         <UserIcon size={20} className="text-slate-400" />
                       )}
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4 min-w-0 flex-1">
                       <div className="text-sm font-medium text-slate-900">
-                        {user.nickname || user.username}
+                        <TruncateText>{user.nickname || user.username}</TruncateText>
                       </div>
-                      <div className="text-sm text-slate-500">{user.email}</div>
+                      <div className="text-sm text-slate-500">
+                        <TruncateText>{user.email}</TruncateText>
+                      </div>
                     </div>
                   </div>
                 </td>

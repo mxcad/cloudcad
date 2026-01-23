@@ -2,6 +2,7 @@ import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { DescriptionText } from '../components/ui/TruncateText';
 import { rolesApi, authApi } from '../services/apiService';
 
 // 权限定义（与后端保持一致）
@@ -240,7 +241,7 @@ export const RoleManagement = () => {
                   )}
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">
-                  {role.description}
+                  <DescriptionText>{role.description}</DescriptionText>
                 </p>
               </div>
               {!role.isSystem && (

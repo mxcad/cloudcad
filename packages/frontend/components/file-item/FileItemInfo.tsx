@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
 import { formatDate, formatFileSize } from '../../utils/fileUtils';
+import { FileNameText, DescriptionText } from '../ui/TruncateText';
 
 interface FileItemInfoProps {
   node: FileSystemNode;
@@ -23,11 +24,11 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(({ node, isGrid = 
   if (isGrid) {
     return (
       <>
-        <h3 className="font-medium text-slate-900 text-center truncate px-2" title={node.name}>
-          {node.name}
+        <h3 className="font-medium text-slate-900 text-center px-2 overflow-hidden max-w-full">
+          <FileNameText maxWidth="100%">{node.name}</FileNameText>
         </h3>
-        <p className="text-xs text-slate-500 text-center mt-1 truncate px-2" title={node.description || undefined}>
-          {descriptionText}
+        <p className="text-xs text-slate-500 text-center mt-1 px-2 overflow-hidden max-w-full">
+          <DescriptionText maxWidth="100%">{descriptionText}</DescriptionText>
         </p>
       </>
     );

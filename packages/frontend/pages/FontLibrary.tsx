@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fontsApi } from '../services/api';
 import { Trash2, Download, Upload } from 'lucide-react';
+import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/api';
 
 interface FontLibraryProps {}
@@ -617,7 +618,7 @@ function UploadFontModal({
           />
           {file && (
             <p className="mt-2 text-sm text-gray-600">
-              已选择: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              已选择: <FileNameText>{file.name}</FileNameText> ({(file.size / 1024 / 1024).toFixed(2)} MB)
             </p>
           )}
         </div>

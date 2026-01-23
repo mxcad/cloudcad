@@ -10,6 +10,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
+import { DescriptionText } from '../components/ui/TruncateText';
 
 interface Tag {
   id: string;
@@ -278,8 +279,8 @@ export default function TagManagement() {
                         )}
                       </div>
                       {tag.description && (
-                        <p className="text-sm text-gray-500 truncate">
-                          {tag.description}
+                        <p className="text-sm text-gray-500">
+                          <DescriptionText>{tag.description}</DescriptionText>
                         </p>
                       )}
                     </div>

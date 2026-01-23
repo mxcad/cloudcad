@@ -75,6 +75,10 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   mode = 'end',
   maxChars = 100,
   maxWidth,
+  smMaxWidth,
+  mdMaxWidth,
+  lgMaxWidth,
+  xlMaxWidth,
   showTooltip = true,
   tooltipText,
   className = '',
@@ -229,11 +233,33 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
 
   // CSS 截断模式（start、end、clip）
   if (!useCharLimit && mode !== 'middle') {
+    // 生成响应式宽度类名
+    const responsiveClasses: string[] = [];
+    if (maxWidth !== undefined) {
+      const widthValue = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
+      responsiveClasses.push(`max-w-[${widthValue}]`);
+    }
+    if (smMaxWidth !== undefined) {
+      const widthValue = typeof smMaxWidth === 'number' ? `${smMaxWidth}px` : smMaxWidth;
+      responsiveClasses.push(`sm:max-w-[${widthValue}]`);
+    }
+    if (mdMaxWidth !== undefined) {
+      const widthValue = typeof mdMaxWidth === 'number' ? `${mdMaxWidth}px` : mdMaxWidth;
+      responsiveClasses.push(`md:max-w-[${widthValue}]`);
+    }
+    if (lgMaxWidth !== undefined) {
+      const widthValue = typeof lgMaxWidth === 'number' ? `${lgMaxWidth}px` : lgMaxWidth;
+      responsiveClasses.push(`lg:max-w-[${widthValue}]`);
+    }
+    if (xlMaxWidth !== undefined) {
+      const widthValue = typeof xlMaxWidth === 'number' ? `${xlMaxWidth}px` : xlMaxWidth;
+      responsiveClasses.push(`xl:max-w-[${widthValue}]`);
+    }
+
     const cssStyle: React.CSSProperties = {
       ...style,
       overflow: 'hidden',
       whiteSpace: 'nowrap',
-      maxWidth: maxWidth ? (typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth) : undefined,
     };
 
     if (mode === 'start') {
@@ -248,7 +274,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
 
     return (
       <span
-        className={className}
+        className={`${className} ${responsiveClasses.join(' ')}`}
         style={cssStyle}
         title={getTooltipText}
       >
@@ -258,13 +284,35 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   }
 
   // 字符数限制模式或中间截断模式
+  // 生成响应式宽度类名
+  const responsiveClasses: string[] = [];
+  if (maxWidth !== undefined) {
+    const widthValue = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
+    responsiveClasses.push(`max-w-[${widthValue}]`);
+  }
+  if (smMaxWidth !== undefined) {
+    const widthValue = typeof smMaxWidth === 'number' ? `${smMaxWidth}px` : smMaxWidth;
+    responsiveClasses.push(`sm:max-w-[${widthValue}]`);
+  }
+  if (mdMaxWidth !== undefined) {
+    const widthValue = typeof mdMaxWidth === 'number' ? `${mdMaxWidth}px` : mdMaxWidth;
+    responsiveClasses.push(`md:max-w-[${widthValue}]`);
+  }
+  if (lgMaxWidth !== undefined) {
+    const widthValue = typeof lgMaxWidth === 'number' ? `${lgMaxWidth}px` : lgMaxWidth;
+    responsiveClasses.push(`lg:max-w-[${widthValue}]`);
+  }
+  if (xlMaxWidth !== undefined) {
+    const widthValue = typeof xlMaxWidth === 'number' ? `${xlMaxWidth}px` : xlMaxWidth;
+    responsiveClasses.push(`xl:max-w-[${widthValue}]`);
+  }
+
   return (
     <span
       ref={textRef}
-      className={className}
+      className={`${className} ${responsiveClasses.join(' ')}`}
       style={{
         ...style,
-        maxWidth: maxWidth ? (typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth) : undefined,
         overflow: 'hidden',
         whiteSpace: 'nowrap',
         display: 'inline-block',

@@ -15,6 +15,7 @@ import { useLocation } from 'react-router-dom';
 import { galleryApi } from '../services/api';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { FileNameText } from '../components/ui/TruncateText';
 import GalleryTypeManagement from '../components/admin/GalleryTypeManagement';
 
 // 图库类型
@@ -566,8 +567,8 @@ export default function Gallery() {
 
                     {/* 文件信息 */}
                     <div className="p-3">
-                      <h3 className="text-sm font-medium text-gray-900 truncate mb-2" title={file.filename}>
-                        {file.filename}
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">
+                        <FileNameText>{file.filename}</FileNameText>
                       </h3>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -658,7 +659,9 @@ export default function Gallery() {
               {/* 文件信息 */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">文件名</p>
-                <p className="text-sm font-medium text-gray-900">{editingFile.filename}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  <FileNameText>{editingFile.filename}</FileNameText>
+                </p>
               </div>
 
               {/* 分类选择 */}

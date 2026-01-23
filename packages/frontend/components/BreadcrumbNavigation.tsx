@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { ChevronRightIcon, FolderIcon } from './FileIcons';
 import { BreadcrumbItem } from '../types/filesystem';
+import { TruncateText } from './ui/TruncateText';
 
 interface BreadcrumbNavigationProps {
   breadcrumbs: BreadcrumbItem[];
@@ -112,9 +113,15 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
                 />
               )}
               {/* 名称 */}
-              <span className="truncate max-w-[100px] sm:max-w-[150px]">
+              <TruncateText
+                maxWidth={80}
+                smMaxWidth={120}
+                mdMaxWidth={150}
+                lgMaxWidth={200}
+                className="text-slate-900"
+              >
                 {crumb.name}
-              </span>
+              </TruncateText>
             </button>
           </React.Fragment>
         );
