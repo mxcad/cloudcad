@@ -33,7 +33,8 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3001',
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path.replace(/^\/drawings/, '/api/gallery/drawings'),
+          rewrite: (path) =>
+            path.replace(/^\/drawings/, '/api/gallery/drawings'),
         },
         '/blocks': {
           target: 'http://localhost:3001',

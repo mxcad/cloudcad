@@ -81,7 +81,7 @@ export const useFileSystemStore = create<FileSystemState>()(
       setSortOrder: (order) => set({ sortOrder: order }),
       setSearchTerm: (term) => set({ searchTerm: term }),
 
-  navigateToFolder: (folderId) => {
+      navigateToFolder: (folderId) => {
         const { currentPath } = get();
         const folder = currentPath.find((node) => node.id === folderId);
         if (folder) {
@@ -94,7 +94,8 @@ export const useFileSystemStore = create<FileSystemState>()(
         if (currentPath.length > 0) {
           const newPath = [...currentPath];
           newPath.pop();
-          const newParentId = newPath.length > 0 ? newPath[newPath.length - 1].id : null;
+          const newParentId =
+            newPath.length > 0 ? newPath[newPath.length - 1].id : null;
           set({ currentPath: newPath, currentParentId: newParentId });
         }
       },

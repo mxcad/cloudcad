@@ -43,9 +43,10 @@ export const EmailVerification: React.FC = () => {
       }, 2000);
     } catch (err) {
       setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
-        (err as Error).message ||
-        '验证失败，请检查验证码是否正确或已过期'
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '验证失败，请检查验证码是否正确或已过期'
       );
     } finally {
       setLoading(false);

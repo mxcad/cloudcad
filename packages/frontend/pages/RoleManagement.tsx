@@ -164,9 +164,10 @@ export const RoleManagement = () => {
       loadRoles();
     } catch (error) {
       alert(
-        (error as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
-        (error as Error).message ||
-        '保存失败'
+        (error as Error & { response?: { data?: { message?: string } } })
+          .response?.data?.message ||
+          (error as Error).message ||
+          '保存失败'
       );
     }
   };
@@ -214,156 +215,156 @@ export const RoleManagement = () => {
       {/* 正常内容 */}
       {hasPermission && (
         <>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">角色与权限</h1>
-          <p className="text-slate-500 mt-1">定义系统角色及其操作权限</p>
-        </div>
-        <Button icon={Plus} onClick={handleCreate}>
-          新建角色
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {roles.map((role) => (
-          <div
-            key={role.id}
-            className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col"
-          >
-            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  {role.name}
-                  {role.isSystem && (
-                    <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                      系统
-                    </span>
-                  )}
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  <DescriptionText>{role.description}</DescriptionText>
-                </p>
-              </div>
-              {!role.isSystem && (
-                <button
-                  onClick={() => handleDelete(role.id)}
-                  className="text-slate-400 hover:text-red-500"
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">角色与权限</h1>
+              <p className="text-slate-500 mt-1">定义系统角色及其操作权限</p>
             </div>
-            <div className="p-6 flex-1 bg-slate-50/50">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                拥有权限
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {role.permissions.slice(0, 6).map((p) => (
-                  <span
-                    key={p}
-                    className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
-                  >
-                    {p.split('_')[1] || p}
-                  </span>
-                ))}
-                {role.permissions.length > 6 && (
-                  <span className="text-xs px-2 py-1 text-slate-400">
-                    +{role.permissions.length - 6}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="p-4 border-t border-slate-100">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => handleEdit(role)}
-              >
-                配置权限
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingRole ? '配置角色权限' : '新建角色'}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
-              取消
+            <Button icon={Plus} onClick={handleCreate}>
+              新建角色
             </Button>
-            <Button onClick={handleSave}>保存配置</Button>
-          </>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
-              基本信息
-            </label>
-            <input
-              type="text"
-              placeholder="角色名称 (如: 设计主管)"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-              value={roleName}
-              onChange={(e) => setRoleName(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="描述"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-              value={roleDesc}
-              onChange={(e) => setRoleDesc(e.target.value)}
-            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              权限分配
-            </label>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              {PERMISSION_GROUPS.map((group) => (
-                <div
-                  key={group.label}
-                  className="border border-slate-200 rounded-lg overflow-hidden"
-                >
-                  <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
-                    {group.label}
-                  </div>
-                  <div className="p-3 grid grid-cols-1 gap-2">
-                    {group.items.map((perm) => (
-                      <label
-                        key={perm.key}
-                        className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer"
-                      >
-                        <div
-                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedPerms.includes(perm.key) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}
-                        >
-                          {selectedPerms.includes(perm.key) && (
-                            <Check size={12} className="text-white" />
-                          )}
-                        </div>
-                        <input
-                          type="checkbox"
-                          className="hidden"
-                          checked={selectedPerms.includes(perm.key)}
-                          onChange={() => togglePermission(perm.key)}
-                        />
-                        <span className="text-sm text-slate-700">
-                          {perm.label}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {roles.map((role) => (
+              <div
+                key={role.id}
+                className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              >
+                <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      {role.name}
+                      {role.isSystem && (
+                        <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                          系统
                         </span>
-                      </label>
+                      )}
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      <DescriptionText>{role.description}</DescriptionText>
+                    </p>
+                  </div>
+                  {!role.isSystem && (
+                    <button
+                      onClick={() => handleDelete(role.id)}
+                      className="text-slate-400 hover:text-red-500"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+                <div className="p-6 flex-1 bg-slate-50/50">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    拥有权限
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {role.permissions.slice(0, 6).map((p) => (
+                      <span
+                        key={p}
+                        className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                      >
+                        {p.split('_')[1] || p}
+                      </span>
                     ))}
+                    {role.permissions.length > 6 && (
+                      <span className="text-xs px-2 py-1 text-slate-400">
+                        +{role.permissions.length - 6}
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="p-4 border-t border-slate-100">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleEdit(role)}
+                  >
+                    配置权限
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      </Modal>
+
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title={editingRole ? '配置角色权限' : '新建角色'}
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
+                  取消
+                </Button>
+                <Button onClick={handleSave}>保存配置</Button>
+              </>
+            }
+          >
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-slate-700">
+                  基本信息
+                </label>
+                <input
+                  type="text"
+                  placeholder="角色名称 (如: 设计主管)"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  value={roleName}
+                  onChange={(e) => setRoleName(e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder="描述"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  value={roleDesc}
+                  onChange={(e) => setRoleDesc(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-3">
+                  权限分配
+                </label>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                  {PERMISSION_GROUPS.map((group) => (
+                    <div
+                      key={group.label}
+                      className="border border-slate-200 rounded-lg overflow-hidden"
+                    >
+                      <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                        {group.label}
+                      </div>
+                      <div className="p-3 grid grid-cols-1 gap-2">
+                        {group.items.map((perm) => (
+                          <label
+                            key={perm.key}
+                            className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer"
+                          >
+                            <div
+                              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedPerms.includes(perm.key) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}
+                            >
+                              {selectedPerms.includes(perm.key) && (
+                                <Check size={12} className="text-white" />
+                              )}
+                            </div>
+                            <input
+                              type="checkbox"
+                              className="hidden"
+                              checked={selectedPerms.includes(perm.key)}
+                              onChange={() => togglePermission(perm.key)}
+                            />
+                            <span className="text-sm text-slate-700">
+                              {perm.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Modal>
         </>
       )}
     </div>

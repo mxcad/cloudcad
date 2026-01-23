@@ -53,9 +53,10 @@ export const ResetPassword: React.FC = () => {
       });
     } catch (err) {
       setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
-        (err as Error).message ||
-        '重置密码失败，请检查验证码'
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '重置密码失败，请检查验证码'
       );
     } finally {
       setLoading(false);

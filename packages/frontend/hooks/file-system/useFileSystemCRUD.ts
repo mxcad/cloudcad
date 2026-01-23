@@ -8,14 +8,24 @@ interface UseFileSystemCRUDProps {
   urlProjectId: string;
   currentNode: FileSystemNode | null;
   loadData: () => void;
-  showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
-  showConfirm: (title: string, message: string, onConfirm: () => void, type?: 'danger' | 'warning' | 'info') => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
+  showConfirm: (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    type?: 'danger' | 'warning' | 'info'
+  ) => void;
   selectedNodes: Set<string>;
   nodes: FileSystemNode[];
   clearSelection: () => void;
 }
 
-const validateFolderName = (name: string): { valid: boolean; error?: string } => {
+const validateFolderName = (
+  name: string
+): { valid: boolean; error?: string } => {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
@@ -90,7 +100,11 @@ export const useFileSystemCRUD = ({
       let errorMessage = '创建文件夹失败';
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error
+      ) {
         const err = error as { response?: { data?: { message?: string } } };
         errorMessage = err.response?.data?.message || errorMessage;
       }
@@ -132,7 +146,11 @@ export const useFileSystemCRUD = ({
       let errorMessage = '重命名失败';
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error
+      ) {
         const err = error as { response?: { data?: { message?: string } } };
         errorMessage = err.response?.data?.message || errorMessage;
       }
@@ -181,8 +199,14 @@ export const useFileSystemCRUD = ({
             let errorMessage = '删除失败';
             if (error instanceof Error) {
               errorMessage = error.message;
-            } else if (typeof error === 'object' && error !== null && 'response' in error) {
-              const err = error as { response?: { data?: { message?: string } } };
+            } else if (
+              typeof error === 'object' &&
+              error !== null &&
+              'response' in error
+            ) {
+              const err = error as {
+                response?: { data?: { message?: string } };
+              };
               errorMessage = err.response?.data?.message || errorMessage;
             }
             showToast(errorMessage, 'error');
@@ -226,8 +250,14 @@ export const useFileSystemCRUD = ({
             let errorMessage = '批量删除失败';
             if (error instanceof Error) {
               errorMessage = error.message;
-            } else if (typeof error === 'object' && error !== null && 'response' in error) {
-              const err = error as { response?: { data?: { message?: string } } };
+            } else if (
+              typeof error === 'object' &&
+              error !== null &&
+              'response' in error
+            ) {
+              const err = error as {
+                response?: { data?: { message?: string } };
+              };
               errorMessage = err.response?.data?.message || errorMessage;
             }
             showToast(errorMessage, 'error');
@@ -244,7 +274,8 @@ export const useFileSystemCRUD = ({
 
     if (!node.isFolder && node.name) {
       const lastDotIndex = node.name.lastIndexOf('.');
-      const nameWithoutExtension = lastDotIndex !== -1 ? node.name.substring(0, lastDotIndex) : node.name;
+      const nameWithoutExtension =
+        lastDotIndex !== -1 ? node.name.substring(0, lastDotIndex) : node.name;
       setFolderName(nameWithoutExtension);
     } else {
       setFolderName(node.name);

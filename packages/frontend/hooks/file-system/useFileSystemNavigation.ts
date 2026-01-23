@@ -8,7 +8,10 @@ import { handleError } from '../../utils/errorHandler';
 interface UseFileSystemNavigationProps {
   urlProjectId: string;
   currentNode: FileSystemNode | null;
-  showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
 }
 
 const sanitizeFileName = (fileName: string): string => {
@@ -23,7 +26,11 @@ const sanitizeFileName = (fileName: string): string => {
   return sanitized || 'unnamed';
 };
 
-export const useFileSystemNavigation = ({ urlProjectId, currentNode, showToast }: UseFileSystemNavigationProps) => {
+export const useFileSystemNavigation = ({
+  urlProjectId,
+  currentNode,
+  showToast,
+}: UseFileSystemNavigationProps) => {
   const navigate = useNavigate();
 
   const handleGoBack = useCallback(() => {
@@ -57,7 +64,10 @@ export const useFileSystemNavigation = ({ urlProjectId, currentNode, showToast }
         navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
       } else {
         const cadExtensions = ['.dwg', '.dxf'];
-        if (node.extension && cadExtensions.includes(node.extension.toLowerCase())) {
+        if (
+          node.extension &&
+          cadExtensions.includes(node.extension.toLowerCase())
+        ) {
           const queryParams = new URLSearchParams();
           queryParams.set('nodeId', node.parentId || '');
           navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
@@ -72,7 +82,10 @@ export const useFileSystemNavigation = ({ urlProjectId, currentNode, showToast }
   const handleDownload = useCallback(
     async (node: FileSystemNode) => {
       try {
-        logger.info('开始下载文件', 'useFileSystemNavigation', { nodeId: node.id, fileName: node.name });
+        logger.info('开始下载文件', 'useFileSystemNavigation', {
+          nodeId: node.id,
+          fileName: node.name,
+        });
 
         const response = await filesApi.download(node.id);
         const blob = new Blob([response.data]);
@@ -80,20 +93,29 @@ export const useFileSystemNavigation = ({ urlProjectId, currentNode, showToast }
         const a = document.createElement('a');
         a.href = url;
         const fileName = node.originalName || node.name;
-        const finalFileName = node.isFolder ? `${sanitizeFileName(fileName)}.zip` : sanitizeFileName(fileName);
+        const finalFileName = node.isFolder
+          ? `${sanitizeFileName(fileName)}.zip`
+          : sanitizeFileName(fileName);
         a.download = finalFileName;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        showToast(node.isFolder ? '目录压缩下载成功' : '文件下载成功', 'success');
+        showToast(
+          node.isFolder ? '目录压缩下载成功' : '文件下载成功',
+          'success'
+        );
       } catch (error) {
         let errorMessage = '文件下载失败';
 
         if (error instanceof Error) {
-          if (error.message.includes('CORS') || error.message.includes('Network Error')) {
-            errorMessage = '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
+          if (
+            error.message.includes('CORS') ||
+            error.message.includes('Network Error')
+          ) {
+            errorMessage =
+              '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
           } else {
             errorMessage = error.message;
           }

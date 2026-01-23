@@ -59,7 +59,9 @@ export default function Gallery() {
   const isBlocksRoute = location.pathname === '/blocks';
 
   // 状态管理
-  const [galleryType, setGalleryType] = useState<GalleryType>(isBlocksRoute ? 'blocks' : 'drawings');
+  const [galleryType, setGalleryType] = useState<GalleryType>(
+    isBlocksRoute ? 'blocks' : 'drawings'
+  );
   const [types, setTypes] = useState<GalleryTypeData[]>([]);
   const [files, setFiles] = useState<GalleryFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -155,7 +157,9 @@ export default function Gallery() {
 
   // 获取一级分类列表
   const firstLevelTypes = types.filter((t) => t.pid === 0);
-  const selectedFirstTypeData = firstLevelTypes.find((t) => t.id === selectedFirstType);
+  const selectedFirstTypeData = firstLevelTypes.find(
+    (t) => t.id === selectedFirstType
+  );
 
   // 获取二级分类列表
   const secondLevelTypes = types.filter((t) => t.pid === selectedFirstType);
@@ -208,12 +212,19 @@ export default function Gallery() {
 
   // 处理从图库中移除文件
   const handleRemoveFromGallery = async (file: GalleryFile) => {
-    if (!confirm(`确定要将 "${file.filename}" 从图库中移除吗？\n\n注意：文件本身不会被删除，只是从图库中移除。`)) {
+    if (
+      !confirm(
+        `确定要将 "${file.filename}" 从图库中移除吗？\n\n注意：文件本身不会被删除，只是从图库中移除。`
+      )
+    ) {
       return;
     }
 
     try {
-      const response = await galleryApi.removeFromGallery(galleryType, file.uuid);
+      const response = await galleryApi.removeFromGallery(
+        galleryType,
+        file.uuid
+      );
 
       if (response.status === 200 && response.data?.code === 'success') {
         alert('已从图库中移除');
@@ -229,10 +240,21 @@ export default function Gallery() {
     } catch (error) {
       console.error('移除文件失败:', error);
 
-      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
-        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
+      if (
+        (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response
+      ) {
+        const status = (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response.status;
         const errorMessage =
-          (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '移除失败';
+          (error as Error & { response?: { data?: { message?: string } } })
+            .response.data?.message || '移除失败';
 
         if (status === 400) {
           alert(errorMessage);
@@ -279,11 +301,15 @@ export default function Gallery() {
     }
 
     try {
-      const response = await galleryApi.updateGalleryItem(galleryType, editingFile.uuid, {
-        firstType: editFirstType,
-        secondType: editSecondType,
-        thirdType: editThirdType === -1 ? undefined : editThirdType,
-      });
+      const response = await galleryApi.updateGalleryItem(
+        galleryType,
+        editingFile.uuid,
+        {
+          firstType: editFirstType,
+          secondType: editSecondType,
+          thirdType: editThirdType === -1 ? undefined : editThirdType,
+        }
+      );
 
       if (response.status === 200 && response.data?.code === 'success') {
         alert('分类已更新');
@@ -301,7 +327,8 @@ export default function Gallery() {
       console.error('更新分类失败:', error);
 
       if ((error as Error & { response?: { status?: number } }).response) {
-        const status = (error as Error & { response?: { status?: number } }).response.status;
+        const status = (error as Error & { response?: { status?: number } })
+          .response.status;
         const errorMessage = error.response.data?.message || '更新失败';
 
         if (status === 400) {
@@ -382,7 +409,9 @@ export default function Gallery() {
             {/* 分类筛选 */}
             <div className="flex flex-col lg:flex-row gap-2 w-full lg:w-auto">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 whitespace-nowrap">分类:</span>
+                <span className="text-sm text-gray-500 whitespace-nowrap">
+                  分类:
+                </span>
                 {/* 一级分类 */}
                 <select
                   value={selectedFirstType}
@@ -588,7 +617,8 @@ export default function Gallery() {
               {pagination && pagination.count > 0 && (
                 <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    共 {pagination.count} 个文件，第 {pagination.index + 1} / {pagination.max} 页
+                    共 {pagination.count} 个文件，第 {pagination.index + 1} /{' '}
+                    {pagination.max} 页
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -639,10 +669,7 @@ export default function Gallery() {
       </Modal>
 
       {/* 编辑分类模态框 */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-      >
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">修改分类</h2>
@@ -704,7 +731,7 @@ export default function Gallery() {
                   >
                     <option value={-1}>
                       {editFirstType !== -1
-                        ? `请选择${types.find(t => t.id === editFirstType)?.name}的子分类`
+                        ? `请选择${types.find((t) => t.id === editFirstType)?.name}的子分类`
                         : '请先选择一级分类'}
                     </option>
                     {types

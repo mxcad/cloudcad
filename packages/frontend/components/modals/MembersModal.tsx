@@ -156,7 +156,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setSearchResults([]);
       setSelectedUser(null);
     } catch (error) {
-      if ((error as Error & { response?: { status?: number } }).response?.status === 403) {
+      if (
+        (error as Error & { response?: { status?: number } }).response
+          ?.status === 403
+      ) {
         setErrorMessage('没有权限添加成员');
       } else {
         setErrorMessage('添加成员失败，请重试');
@@ -172,7 +175,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       await projectsApi.removeMember(projectId, userId);
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
     } catch (error) {
-      if ((error as Error & { response?: { status?: number } }).response?.status === 403) {
+      if (
+        (error as Error & { response?: { status?: number } }).response
+          ?.status === 403
+      ) {
         setErrorMessage('没有权限移除成员');
       } else {
         setErrorMessage('移除成员失败，请重试');
@@ -190,9 +196,15 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         )
       );
     } catch (error) {
-      if ((error as Error & { response?: { status?: number } }).response?.status === 403) {
+      if (
+        (error as Error & { response?: { status?: number } }).response
+          ?.status === 403
+      ) {
         setErrorMessage('没有权限更新成员角色');
-      } else if ((error as Error & { response?: { status?: number } }).response?.status === 400) {
+      } else if (
+        (error as Error & { response?: { status?: number } }).response
+          ?.status === 400
+      ) {
         setErrorMessage('不能修改项目所有者的角色');
       } else {
         setErrorMessage('更新角色失败，请重试');
@@ -302,7 +314,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-slate-900">
-                            <TruncateText>{user.nickname || user.username}</TruncateText>
+                            <TruncateText>
+                              {user.nickname || user.username}
+                            </TruncateText>
                           </p>
                           <p className="text-xs text-slate-500">
                             <TruncateText>{user.email}</TruncateText>
@@ -324,7 +338,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-900">
-                      <TruncateText>{selectedUser.nickname || selectedUser.username}</TruncateText>
+                      <TruncateText>
+                        {selectedUser.nickname || selectedUser.username}
+                      </TruncateText>
                     </p>
                     <p className="text-xs text-slate-500">
                       <TruncateText>{selectedUser.email}</TruncateText>
@@ -423,7 +439,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       <TruncateText>{displayName}</TruncateText>
                     </p>
                     <p className="text-xs text-slate-500">
-                      <TruncateText>{member.user.email || '无邮箱'}</TruncateText>
+                      <TruncateText>
+                        {member.user.email || '无邮箱'}
+                      </TruncateText>
                     </p>
                   </div>
                   <select

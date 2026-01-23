@@ -79,7 +79,8 @@ export const TrashPage: React.FC = () => {
       setSelectedIds(new Set()); // 清空选择
     } catch (err) {
       const errorMessage =
-        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
         (err as Error).message ||
         '加载回收站失败';
       showToast(errorMessage, 'error');
@@ -138,7 +139,8 @@ export const TrashPage: React.FC = () => {
           loadTrashItems();
         } catch (err) {
           const errorMessage =
-            (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+            (err as Error & { response?: { data?: { message?: string } } })
+              .response?.data?.message ||
             (err as Error).message ||
             '恢复失败';
           showToast(errorMessage, 'error');
@@ -165,7 +167,8 @@ export const TrashPage: React.FC = () => {
           loadTrashItems();
         } catch (err) {
           const errorMessage =
-            (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+            (err as Error & { response?: { data?: { message?: string } } })
+              .response?.data?.message ||
             (err as Error).message ||
             '删除失败';
           showToast(errorMessage, 'error');
@@ -192,7 +195,8 @@ export const TrashPage: React.FC = () => {
           loadTrashItems();
         } catch (err) {
           const errorMessage =
-            (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+            (err as Error & { response?: { data?: { message?: string } } })
+              .response?.data?.message ||
             (err as Error).message ||
             '清空失败';
           showToast(errorMessage, 'error');

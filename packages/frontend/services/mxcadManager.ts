@@ -61,7 +61,9 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
   }
 
   const { fileId, parentId, projectId } = currentFileInfo;
-  Logger.info(`解析结果: fileId=${fileId}, parentId=${parentId}, projectId=${projectId}`);
+  Logger.info(
+    `解析结果: fileId=${fileId}, parentId=${parentId}, projectId=${projectId}`
+  );
 
   // 优先返回到文件所在的父文件夹
   if (parentId) {
@@ -449,13 +451,13 @@ class MxCADInstanceManager {
       const centerY = (minPt.y + maxPt.y) / 2;
 
       const newMinPt = new McGePoint3d({
-        x: centerX - (targetSize / 2) / scale,
-        y: centerY - (targetSize / 2) / scale,
+        x: centerX - targetSize / 2 / scale,
+        y: centerY - targetSize / 2 / scale,
       });
 
       const newMaxPt = new McGePoint3d({
-        x: centerX + (targetSize / 2) / scale,
-        y: centerY + (targetSize / 2) / scale,
+        x: centerX + targetSize / 2 / scale,
+        y: centerY + targetSize / 2 / scale,
       });
 
       return new Promise<string | undefined>((resolve, reject) => {
@@ -515,34 +517,34 @@ class MxCADInstanceManager {
   }
 
   private _openFile() {
-      const onOpen = async () => {
-        if(currentFileInfo) {
-          globalThis.MxPluginContext.useFileName().fileName.value =
-            ' - ' + currentFileInfo.name;
+    const onOpen = async () => {
+      if (currentFileInfo) {
+        globalThis.MxPluginContext.useFileName().fileName.value =
+          ' - ' + currentFileInfo.name;
 
-          // 查询缩略图
-          try {
-            const fileId = currentFileInfo.fileId;
-            const thumbnailResult = await mxcadApi.checkThumbnail(fileId);
-            // 如果缩略图不存在，生成并上传
-            if (!thumbnailResult.data.exists) {
-              Logger.info('缩略图不存在，开始生成...');
-              const imageData = await this.generateThumbnail();
-              if (imageData) {
-                Logger.info('缩略图生成成功，开始上传...');
-                await this.uploadThumbnail(fileId, imageData);
-              }
+        // 查询缩略图
+        try {
+          const fileId = currentFileInfo.fileId;
+          const thumbnailResult = await mxcadApi.checkThumbnail(fileId);
+          // 如果缩略图不存在，生成并上传
+          if (!thumbnailResult.data.exists) {
+            Logger.info('缩略图不存在，开始生成...');
+            const imageData = await this.generateThumbnail();
+            if (imageData) {
+              Logger.info('缩略图生成成功，开始上传...');
+              await this.uploadThumbnail(fileId, imageData);
             }
-          } catch (error) {
-            Logger.error('缩略图处理失败', error);
           }
+        } catch (error) {
+          Logger.error('缩略图处理失败', error);
         }
-        // 注意：不要在这里清除 currentFileInfo，返回命令需要用到它
-        // currentFileInfo 只在组件卸载时通过 clearCurrentFileInfo() 清除
+      }
+      // 注意：不要在这里清除 currentFileInfo，返回命令需要用到它
+      // currentFileInfo 只在组件卸载时通过 clearCurrentFileInfo() 清除
 
-        this.mxcadView.mxcad.off('openFileComplete', onOpen);
-      };
-      this.mxcadView.mxcad.on('openFileComplete', onOpen);
+      this.mxcadView.mxcad.off('openFileComplete', onOpen);
+    };
+    this.mxcadView.mxcad.on('openFileComplete', onOpen);
   }
   private async createInstance(openFile?: string): Promise<void> {
     try {
@@ -558,7 +560,7 @@ class MxCADInstanceManager {
       const viewOptions: any = {
         rootContainer: containerManager.getContainer(),
       };
-  
+
       // 第一次初始化时传入 mxweb 文件 URL
       // 注意：只有第一次创建实例时才设置 openFile 参数
       // 后续文件切换应该使用 openWebFile 方法
@@ -574,7 +576,7 @@ class MxCADInstanceManager {
       // 使用 viewOptions 创建实例
       // 如果设置了 openFile 参数，MxCADView 会自动打开该文件
       this.mxcadView.create();
-      this._openFile()
+      this._openFile();
       // 监听 MxCAD 应用创建完成事件
       MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
         this.isInitialized = true;
@@ -619,7 +621,7 @@ class MxCADInstanceManager {
         Logger.error('mxcad 对象不可用，无法打开文件');
         throw new Error('mxcad 对象不可用');
       }
-      this._openFile()
+      this._openFile();
       // 使用 openWebFile 方法打开文件
       // 这是 MxCADView 实例创建后打开文件的正确方式
       this.mxcadView.mxcad.openWebFile(fileUrl);

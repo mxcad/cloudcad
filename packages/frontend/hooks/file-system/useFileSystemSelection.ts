@@ -3,10 +3,16 @@ import { FileSystemNode } from '../../types/filesystem';
 
 interface UseFileSystemSelectionProps {
   nodes: FileSystemNode[];
-  showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
 }
 
-export const useFileSystemSelection = ({ nodes, showToast }: UseFileSystemSelectionProps) => {
+export const useFileSystemSelection = ({
+  nodes,
+  showToast,
+}: UseFileSystemSelectionProps) => {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
@@ -14,12 +20,20 @@ export const useFileSystemSelection = ({ nodes, showToast }: UseFileSystemSelect
   const lastSelectedIndexRef = useRef<number>(-1);
 
   const handleNodeSelect = useCallback(
-    (nodeId: string, isMultiSelect: boolean = false, isShift: boolean = false) => {
+    (
+      nodeId: string,
+      isMultiSelect: boolean = false,
+      isShift: boolean = false
+    ) => {
       setSelectedNodes((prev) => {
         const newSet = new Set(prev);
         const currentIndex = nodes.findIndex((node) => node.id === nodeId);
 
-        if (isShift && lastSelectedNodeIdRef.current && lastSelectedIndexRef.current !== -1) {
+        if (
+          isShift &&
+          lastSelectedNodeIdRef.current &&
+          lastSelectedIndexRef.current !== -1
+        ) {
           const lastIndex = lastSelectedIndexRef.current;
           const startIndex = Math.min(lastIndex, currentIndex);
           const endIndex = Math.max(lastIndex, currentIndex);

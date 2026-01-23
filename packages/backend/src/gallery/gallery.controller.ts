@@ -1462,9 +1462,7 @@ export class GalleryController {
           }
         }
       } else {
-        this.logger.warn(
-          `[handleThumbnailRequest] 缩略图不存在: ${fileHash}`
-        );
+        this.logger.warn(`[handleThumbnailRequest] 缩略图不存在: ${fileHash}`);
         return res.status(404).json({ code: -1, message: '缩略图不存在' });
       }
     } catch (error) {

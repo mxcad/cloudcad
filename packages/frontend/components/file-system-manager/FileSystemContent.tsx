@@ -17,7 +17,11 @@ interface FileSystemContentProps {
   searchQuery: string;
   isAtRoot: boolean;
   paginationMeta: PaginationMeta | null;
-  onNodeSelect: (nodeId: string, isMultiSelect?: boolean, isShift?: boolean) => void;
+  onNodeSelect: (
+    nodeId: string,
+    isMultiSelect?: boolean,
+    isShift?: boolean
+  ) => void;
   onFileOpen: (node: FileSystemNode) => void;
   onDownload: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;

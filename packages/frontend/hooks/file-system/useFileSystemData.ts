@@ -11,7 +11,10 @@ interface UseFileSystemDataProps {
   isProjectRootMode: boolean;
   searchQuery: string;
   paginationRef: React.MutableRefObject<{ page: number; limit: number }>;
-  showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
 }
 
 export const useFileSystemData = ({
@@ -27,7 +30,9 @@ export const useFileSystemData = ({
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(null);
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -59,7 +64,10 @@ export const useFileSystemData = ({
           });
 
           if (currentNode.parentId) {
-            const parentResponse = await projectsApi.getNode(currentNode.parentId, { signal });
+            const parentResponse = await projectsApi.getNode(
+              currentNode.parentId,
+              { signal }
+            );
             currentNode = parentResponse.data;
           } else {
             break;
@@ -125,7 +133,9 @@ export const useFileSystemData = ({
             total: allProjects.length,
             page: paginationRef.current.page,
             limit: paginationRef.current.limit,
-            totalPages: Math.ceil(allProjects.length / paginationRef.current.limit),
+            totalPages: Math.ceil(
+              allProjects.length / paginationRef.current.limit
+            ),
           });
         }
 
@@ -134,8 +144,13 @@ export const useFileSystemData = ({
       } else {
         const currentNodeId = urlNodeId || urlProjectId;
         const [nodeResponse, childrenResponse] = await Promise.all([
-          projectsApi.getNode(currentNodeId, { signal: abortController.signal }),
-          projectsApi.getChildren(currentNodeId, { params, signal: abortController.signal }),
+          projectsApi.getNode(currentNodeId, {
+            signal: abortController.signal,
+          }),
+          projectsApi.getChildren(currentNodeId, {
+            params,
+            signal: abortController.signal,
+          }),
         ]);
 
         const nodeData = nodeResponse.data;
@@ -150,7 +165,9 @@ export const useFileSystemData = ({
             total: childrenData.length,
             page: paginationRef.current.page,
             limit: paginationRef.current.limit,
-            totalPages: Math.ceil(childrenData.length / paginationRef.current.limit),
+            totalPages: Math.ceil(
+              childrenData.length / paginationRef.current.limit
+            ),
           });
         }
 
@@ -163,14 +180,22 @@ export const useFileSystemData = ({
         return;
       }
 
-      const errorMessage = error instanceof Error ? error.message : '加载数据失败';
+      const errorMessage =
+        error instanceof Error ? error.message : '加载数据失败';
       setError(errorMessage);
       handleError(error, '加载数据失败');
       showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  }, [urlProjectId, urlNodeId, isProjectRootMode, searchQuery, showToast, buildBreadcrumbsFromNode]);
+  }, [
+    urlProjectId,
+    urlNodeId,
+    isProjectRootMode,
+    searchQuery,
+    showToast,
+    buildBreadcrumbsFromNode,
+  ]);
 
   return {
     nodes,

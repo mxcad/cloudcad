@@ -119,7 +119,8 @@ export const useFileSystem = () => {
   const shouldLoadDataRef = useRef(false);
 
   // 从 Zustand store 获取视图模式和搜索词
-  const { viewMode, setViewMode, searchTerm, setSearchTerm } = useFileSystemStore();
+  const { viewMode, setViewMode, searchTerm, setSearchTerm } =
+    useFileSystemStore();
 
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false); // 多选模式开关
@@ -947,11 +948,14 @@ export const useFileSystem = () => {
   );
 
   // 搜索输入处理
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchTerm(query);
-    // 搜索时重置页码到第一页
-    setPagination({ ...paginationRef.current, page: 1 });
-  }, [setSearchTerm]);
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchTerm(query);
+      // 搜索时重置页码到第一页
+      setPagination({ ...paginationRef.current, page: 1 });
+    },
+    [setSearchTerm]
+  );
 
   // 搜索提交
   const handleSearchSubmit = useCallback(() => {

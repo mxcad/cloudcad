@@ -18,7 +18,10 @@ interface FileUploadItem {
 interface FileUploaderProps {
   projectId?: string;
   parentId?: string;
-  onUploadComplete?: (file: File, result: { id: string; name: string; path: string }) => void;
+  onUploadComplete?: (
+    file: File,
+    result: { id: string; name: string; path: string }
+  ) => void;
   onUploadError?: (file: File, error: Error) => void;
   maxFiles?: number;
   accept?: string;

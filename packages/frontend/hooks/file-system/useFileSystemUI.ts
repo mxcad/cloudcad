@@ -26,16 +26,19 @@ export const useFileSystemUI = () => {
     };
   }, []);
 
-  const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, type, message }]);
+  const showToast = useCallback(
+    (message: string, type: Toast['type'] = 'info') => {
+      const id = Date.now().toString();
+      setToasts((prev) => [...prev, { id, type, message }]);
 
-    const timerId = setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      timerRefs.current.delete(timerId);
-    }, 5000);
-    timerRefs.current.add(timerId);
-  }, []);
+      const timerId = setTimeout(() => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+        timerRefs.current.delete(timerId);
+      }, 5000);
+      timerRefs.current.add(timerId);
+    },
+    []
+  );
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));

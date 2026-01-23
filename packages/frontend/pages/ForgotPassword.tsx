@@ -19,9 +19,10 @@ export const ForgotPassword: React.FC = () => {
       setSuccess(true);
     } catch (err) {
       setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
-        (err as Error).message ||
-        '发送验证码失败，请稍后重试'
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '发送验证码失败，请稍后重试'
       );
     } finally {
       setLoading(false);

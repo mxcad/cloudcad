@@ -61,7 +61,9 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
   // 获取一级分类列表
   const firstLevelTypes = types.filter((t) => t.pid === 0);
-  const selectedFirstTypeData = firstLevelTypes.find((t) => t.id === selectedFirstType);
+  const selectedFirstTypeData = firstLevelTypes.find(
+    (t) => t.id === selectedFirstType
+  );
 
   // 获取二级分类列表
   const secondLevelTypes = types.filter((t) => t.pid === selectedFirstType);
@@ -84,7 +86,10 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
       });
 
       // 检查响应状态码和响应体（201 表示创建成功）
-      if ((response.status === 200 || response.status === 201) && response.data?.code === 'success') {
+      if (
+        (response.status === 200 || response.status === 201) &&
+        response.data?.code === 'success'
+      ) {
         alert('添加成功！');
         onSuccess();
         onClose();
@@ -99,11 +104,22 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
       }
     } catch (error) {
       // 处理网络错误或服务器错误
-      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
+      if (
+        (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response
+      ) {
         // 服务器返回了错误响应
-        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
+        const status = (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response.status;
         const errorMessage =
-          (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '添加失败';
+          (error as Error & { response?: { data?: { message?: string } } })
+            .response.data?.message || '添加失败';
 
         if (status === 400) {
           alert(errorMessage);

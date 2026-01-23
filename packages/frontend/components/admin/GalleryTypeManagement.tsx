@@ -84,8 +84,8 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
     <div className="select-none">
       <div
         className={`flex items-center gap-3 py-2.5 px-3 rounded-lg transition-all group ${
-          isEditing 
-            ? 'bg-indigo-50 border border-indigo-200' 
+          isEditing
+            ? 'bg-indigo-50 border border-indigo-200'
             : 'hover:bg-gray-50 border border-transparent'
         }`}
         style={{ paddingLeft: `${level * 20 + 12}px` }}
@@ -109,11 +109,11 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
         )}
 
         {/* 分类图标 */}
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-          hasChildren 
-            ? 'bg-indigo-100' 
-            : 'bg-gray-100'
-        }`}>
+        <div
+          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            hasChildren ? 'bg-indigo-100' : 'bg-gray-100'
+          }`}
+        >
           {hasChildren ? (
             isExpanded ? (
               <FolderOpen size={16} className="text-indigo-600" />
@@ -131,7 +131,9 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
             type="text"
             value={editingName}
             onChange={(e) => setEditingName(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !isSubmitting && onSaveEdit()}
+            onKeyPress={(e) =>
+              e.key === 'Enter' && !isSubmitting && onSaveEdit()
+            }
             className="flex-1 px-3 py-1.5 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             autoFocus
             disabled={isSubmitting}
@@ -153,7 +155,10 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
               title="保存"
               disabled={isSubmitting}
             >
-              <Save size={14} className={isSubmitting ? 'text-gray-400' : 'text-green-600'} />
+              <Save
+                size={14}
+                className={isSubmitting ? 'text-gray-400' : 'text-green-600'}
+              />
             </Button>
             <Button
               size="sm"
@@ -163,7 +168,10 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
               title="取消"
               disabled={isSubmitting}
             >
-              <X size={14} className={isSubmitting ? 'text-gray-400' : 'text-gray-600'} />
+              <X
+                size={14}
+                className={isSubmitting ? 'text-gray-400' : 'text-gray-600'}
+              />
             </Button>
           </div>
         ) : (
@@ -322,10 +330,21 @@ export default function GalleryTypeManagement({
     } catch (error) {
       console.error('更新分类失败:', error);
 
-      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
-        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
+      if (
+        (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response
+      ) {
+        const status = (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response.status;
         const errorMessage =
-          (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '更新分类失败';
+          (error as Error & { response?: { data?: { message?: string } } })
+            .response.data?.message || '更新分类失败';
 
         if (status === 400) {
           alert(errorMessage);
@@ -475,9 +494,7 @@ export default function GalleryTypeManagement({
           <h2 className="text-xl font-bold text-gray-900">
             {galleryType === 'drawings' ? '图纸库' : '图块库'}分类管理
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            管理和组织您的分类结构
-          </p>
+          <p className="text-sm text-gray-500 mt-1">管理和组织您的分类结构</p>
         </div>
         <button
           onClick={onClose}
@@ -491,8 +508,8 @@ export default function GalleryTypeManagement({
       {/* 操作栏 */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-4 border border-indigo-100">
         <div className="flex items-center justify-between">
-          <Button 
-            onClick={handleAddFirstLevel} 
+          <Button
+            onClick={handleAddFirstLevel}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-sm"
           >
             <Plus size={16} />
@@ -500,12 +517,14 @@ export default function GalleryTypeManagement({
           </Button>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-gray-600">
-              共 <span className="font-semibold text-indigo-600">{types.length}</span> 个分类
+              共{' '}
+              <span className="font-semibold text-indigo-600">
+                {types.length}
+              </span>{' '}
+              个分类
             </span>
             <span className="text-gray-400">|</span>
-            <span className="text-gray-500">
-              支持最多三级分类
-            </span>
+            <span className="text-gray-500">支持最多三级分类</span>
           </div>
         </div>
       </div>
@@ -522,7 +541,9 @@ export default function GalleryTypeManagement({
                 type="text"
                 value={newTypeName}
                 onChange={(e) => setNewTypeName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !isSubmitting && handleSaveNewType()}
+                onKeyPress={(e) =>
+                  e.key === 'Enter' && !isSubmitting && handleSaveNewType()
+                }
                 placeholder="输入分类名称"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 autoFocus
@@ -530,8 +551,8 @@ export default function GalleryTypeManagement({
               />
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={handleSaveNewType} 
+              <Button
+                onClick={handleSaveNewType}
                 size="sm"
                 disabled={isSubmitting}
                 className="bg-indigo-600 hover:bg-indigo-700 shadow-sm"
@@ -545,9 +566,9 @@ export default function GalleryTypeManagement({
                   '保存'
                 )}
               </Button>
-              <Button 
-                onClick={handleCancelAdd} 
-                variant="ghost" 
+              <Button
+                onClick={handleCancelAdd}
+                variant="ghost"
                 size="sm"
                 disabled={isSubmitting}
               >

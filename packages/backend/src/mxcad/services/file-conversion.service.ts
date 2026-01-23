@@ -63,7 +63,7 @@ export class FileConversionService implements IFileConversionService {
   async convertFile(options: ConversionOptions): Promise<ConversionResult> {
     let stdout = '';
     let stderr = '';
-    let originalDir = process.cwd();
+    const originalDir = process.cwd();
     let changedDir = false;
 
     try {

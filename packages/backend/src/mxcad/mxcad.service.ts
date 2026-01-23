@@ -142,9 +142,8 @@ export class MxCadService {
         return { code: 0, message: 'async calling' };
       } else {
         // 同步转换
-        const { isOk, ret } = await this.fileConversionService.convertFile(
-          conversionOptions
-        );
+        const { isOk, ret } =
+          await this.fileConversionService.convertFile(conversionOptions);
         return isOk ? ret : { code: 12, message: 'param error' };
       }
     } catch (error) {
@@ -658,7 +657,9 @@ export class MxCadService {
       const existsInMinio = await this.minioSyncService.fileExists(minioPath);
 
       if (existsInMinio) {
-        this.logger.log(`[checkThumbnailExists] 缩略图存在于 MinIO: ${minioPath}`);
+        this.logger.log(
+          `[checkThumbnailExists] 缩略图存在于 MinIO: ${minioPath}`
+        );
         return {
           exists: true,
           location: 'minio',
@@ -675,7 +676,9 @@ export class MxCadService {
 
       try {
         await fsPromises.access(localPath);
-        this.logger.log(`[checkThumbnailExists] 缩略图存在于本地: ${localPath}`);
+        this.logger.log(
+          `[checkThumbnailExists] 缩略图存在于本地: ${localPath}`
+        );
         return {
           exists: true,
           location: 'local',

@@ -96,23 +96,41 @@ class ApiClient {
     );
   }
 
-  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  get<T = unknown>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<AxiosResponse<T>> {
     return this.client.get(url, config);
   }
 
-  post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  post<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<AxiosResponse<T>> {
     return this.client.post(url, data, config);
   }
 
-  put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  put<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<AxiosResponse<T>> {
     return this.client.put(url, data, config);
   }
 
-  patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  patch<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<AxiosResponse<T>> {
     return this.client.patch(url, data, config);
   }
 
-  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  delete<T = unknown>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<AxiosResponse<T>> {
     return this.client.delete(url, config);
   }
 
@@ -120,7 +138,9 @@ class ApiClient {
     return this.client.post(url, data);
   }
 
-  private getNodeIdFromMultipleSources(config: AxiosRequestConfig): string | null {
+  private getNodeIdFromMultipleSources(
+    config: AxiosRequestConfig
+  ): string | null {
     if (config.data?.nodeId) return config.data.nodeId;
 
     if (typeof window !== 'undefined') {
@@ -147,7 +167,10 @@ class ApiClient {
     return cuid2Pattern.test(nodeId);
   }
 
-  private supplementNodeIdToRequest(config: AxiosRequestConfig, nodeId: string): void {
+  private supplementNodeIdToRequest(
+    config: AxiosRequestConfig,
+    nodeId: string
+  ): void {
     if (!config || !nodeId) return;
 
     const method = config.method?.toLowerCase();
@@ -161,7 +184,10 @@ class ApiClient {
         }
       } else {
         if (config.data.nodeId) {
-          Logger.info('[apiClient] 请求中已包含 nodeId，使用已有值:', config.data.nodeId);
+          Logger.info(
+            '[apiClient] 请求中已包含 nodeId，使用已有值:',
+            config.data.nodeId
+          );
           return;
         }
 
@@ -170,7 +196,10 @@ class ApiClient {
       }
     } else if (config.params) {
       if (config.params.nodeId) {
-        Logger.info('[apiClient] params 中已包含 nodeId，使用已有值:', config.params.nodeId);
+        Logger.info(
+          '[apiClient] params 中已包含 nodeId，使用已有值:',
+          config.params.nodeId
+        );
         return;
       }
 

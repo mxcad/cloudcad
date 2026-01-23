@@ -135,7 +135,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         },
         onFileQueued: (file: File) => {
           setUploading(true);
-          setMessage(`文件 <FileNameText>${file.name}</FileNameText> 已加入队列`);
+          setMessage(
+            `文件 <FileNameText>${file.name}</FileNameText> 已加入队列`
+          );
           setShowToast(true);
           setTimeout(() => setShowToast(false), 2000);
         },

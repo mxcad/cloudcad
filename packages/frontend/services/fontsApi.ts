@@ -19,8 +19,7 @@ export const fontsApi = {
   deleteFont: (
     fileName: string,
     target: 'backend' | 'frontend' | 'both' = 'both'
-  ) =>
-    apiClient.delete(`/font-management/${fileName}`, { params: { target } }),
+  ) => apiClient.delete(`/font-management/${fileName}`, { params: { target } }),
 
   downloadFont: (fileName: string, location: 'backend' | 'frontend') => {
     return apiClient.get(`/font-management/download/${fileName}`, {

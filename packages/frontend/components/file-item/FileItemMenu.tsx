@@ -67,8 +67,12 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     if (!showMenu) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      const isClickInMenuButton = menuButtonRef.current?.contains(e.target as Node);
-      const isClickInMenuContainer = menuContainerRef.current?.contains(e.target as Node);
+      const isClickInMenuButton = menuButtonRef.current?.contains(
+        e.target as Node
+      );
+      const isClickInMenuContainer = menuContainerRef.current?.contains(
+        e.target as Node
+      );
 
       if (!isClickInMenuButton && !isClickInMenuContainer) {
         onCloseMenu();
@@ -130,15 +134,17 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
     return (
       <>
-        {isCadFile() && node.hasMissingExternalReferences && onUploadExternalReference && (
-          <button
-            onClick={onUploadExternalReference}
-            className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors text-amber-600 hover:bg-amber-50"
-          >
-            <Upload size={16} />
-            上传外部参照
-          </button>
-        )}
+        {isCadFile() &&
+          node.hasMissingExternalReferences &&
+          onUploadExternalReference && (
+            <button
+              onClick={onUploadExternalReference}
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors text-amber-600 hover:bg-amber-50"
+            >
+              <Upload size={16} />
+              上传外部参照
+            </button>
+          )}
 
         {isRoot ? (
           <>
@@ -226,7 +232,14 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                 }}
                 className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M5 9l7-7 7 7M5 15l7 7 7-7" />
                 </svg>
                 移动到...
@@ -240,7 +253,14 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                 }}
                 className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                   <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                 </svg>

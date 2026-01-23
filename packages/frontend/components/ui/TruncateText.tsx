@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 
 /**
  * 截断模式
@@ -221,7 +227,16 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
       setTruncatedText(children);
       setIsTruncated(false);
     }
-  }, [children, mode, useCharLimit, maxChars, ellipsis, showEllipsis, getTruncatedTextByChars, calculateMiddleTruncate]);
+  }, [
+    children,
+    mode,
+    useCharLimit,
+    maxChars,
+    ellipsis,
+    showEllipsis,
+    getTruncatedTextByChars,
+    calculateMiddleTruncate,
+  ]);
 
   // 确定 tooltip 文本
   const getTooltipText = useMemo((): string | undefined => {
@@ -236,23 +251,28 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     // 生成响应式宽度类名
     const responsiveClasses: string[] = [];
     if (maxWidth !== undefined) {
-      const widthValue = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
+      const widthValue =
+        typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
       responsiveClasses.push(`max-w-[${widthValue}]`);
     }
     if (smMaxWidth !== undefined) {
-      const widthValue = typeof smMaxWidth === 'number' ? `${smMaxWidth}px` : smMaxWidth;
+      const widthValue =
+        typeof smMaxWidth === 'number' ? `${smMaxWidth}px` : smMaxWidth;
       responsiveClasses.push(`sm:max-w-[${widthValue}]`);
     }
     if (mdMaxWidth !== undefined) {
-      const widthValue = typeof mdMaxWidth === 'number' ? `${mdMaxWidth}px` : mdMaxWidth;
+      const widthValue =
+        typeof mdMaxWidth === 'number' ? `${mdMaxWidth}px` : mdMaxWidth;
       responsiveClasses.push(`md:max-w-[${widthValue}]`);
     }
     if (lgMaxWidth !== undefined) {
-      const widthValue = typeof lgMaxWidth === 'number' ? `${lgMaxWidth}px` : lgMaxWidth;
+      const widthValue =
+        typeof lgMaxWidth === 'number' ? `${lgMaxWidth}px` : lgMaxWidth;
       responsiveClasses.push(`lg:max-w-[${widthValue}]`);
     }
     if (xlMaxWidth !== undefined) {
-      const widthValue = typeof xlMaxWidth === 'number' ? `${xlMaxWidth}px` : xlMaxWidth;
+      const widthValue =
+        typeof xlMaxWidth === 'number' ? `${xlMaxWidth}px` : xlMaxWidth;
       responsiveClasses.push(`xl:max-w-[${widthValue}]`);
     }
 
@@ -287,23 +307,28 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   // 生成响应式宽度类名
   const responsiveClasses: string[] = [];
   if (maxWidth !== undefined) {
-    const widthValue = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
+    const widthValue =
+      typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
     responsiveClasses.push(`max-w-[${widthValue}]`);
   }
   if (smMaxWidth !== undefined) {
-    const widthValue = typeof smMaxWidth === 'number' ? `${smMaxWidth}px` : smMaxWidth;
+    const widthValue =
+      typeof smMaxWidth === 'number' ? `${smMaxWidth}px` : smMaxWidth;
     responsiveClasses.push(`sm:max-w-[${widthValue}]`);
   }
   if (mdMaxWidth !== undefined) {
-    const widthValue = typeof mdMaxWidth === 'number' ? `${mdMaxWidth}px` : mdMaxWidth;
+    const widthValue =
+      typeof mdMaxWidth === 'number' ? `${mdMaxWidth}px` : mdMaxWidth;
     responsiveClasses.push(`md:max-w-[${widthValue}]`);
   }
   if (lgMaxWidth !== undefined) {
-    const widthValue = typeof lgMaxWidth === 'number' ? `${lgMaxWidth}px` : lgMaxWidth;
+    const widthValue =
+      typeof lgMaxWidth === 'number' ? `${lgMaxWidth}px` : lgMaxWidth;
     responsiveClasses.push(`lg:max-w-[${widthValue}]`);
   }
   if (xlMaxWidth !== undefined) {
-    const widthValue = typeof xlMaxWidth === 'number' ? `${xlMaxWidth}px` : xlMaxWidth;
+    const widthValue =
+      typeof xlMaxWidth === 'number' ? `${xlMaxWidth}px` : xlMaxWidth;
     responsiveClasses.push(`xl:max-w-[${widthValue}]`);
   }
 
@@ -327,7 +352,9 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
 /**
  * 文件名专用截断组件（中间截断）
  */
-export const FileNameText: React.FC<Omit<TruncateTextProps, 'mode'>> = (props) => {
+export const FileNameText: React.FC<Omit<TruncateTextProps, 'mode'>> = (
+  props
+) => {
   return <TruncateText {...props} mode="middle" />;
 };
 
@@ -341,7 +368,9 @@ export const PathText: React.FC<Omit<TruncateTextProps, 'mode'>> = (props) => {
 /**
  * 描述文本专用截断组件（尾部截断）
  */
-export const DescriptionText: React.FC<Omit<TruncateTextProps, 'mode'>> = (props) => {
+export const DescriptionText: React.FC<Omit<TruncateTextProps, 'mode'>> = (
+  props
+) => {
   return <TruncateText {...props} mode="end" />;
 };
 

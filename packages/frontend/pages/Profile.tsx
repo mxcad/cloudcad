@@ -61,9 +61,10 @@ export const Profile: React.FC = () => {
       });
     } catch (err) {
       setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
-        (err as Error).message ||
-        '密码修改失败'
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '密码修改失败'
       );
       setLoading(false);
     }

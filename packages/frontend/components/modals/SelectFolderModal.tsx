@@ -51,7 +51,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
       try {
         const childrenResponse = await projectsApi.getChildren(nodeId);
-        
+
         // 响应拦截器解包后，childrenResponse.data 是 {data: [...], meta: {...}}
         // 需要访问 childrenResponse.data.data 来获取数组
         let children: FileSystemNode[] = [];
@@ -60,10 +60,16 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
           if (Array.isArray(childrenResponse.data)) {
             // 直接是数组
             children = childrenResponse.data;
-          } else if (childrenResponse.data.data && Array.isArray(childrenResponse.data.data)) {
+          } else if (
+            childrenResponse.data.data &&
+            Array.isArray(childrenResponse.data.data)
+          ) {
             // 是 {data: [...], meta: {...}} 格式
             children = childrenResponse.data.data;
-          } else if (childrenResponse.data.data && Array.isArray(childrenResponse.data.data.data)) {
+          } else if (
+            childrenResponse.data.data &&
+            Array.isArray(childrenResponse.data.data.data)
+          ) {
             // 双层嵌套 {data: {data: [...]}}
             children = childrenResponse.data.data.data;
           }

@@ -130,7 +130,8 @@ export const FileSystemManager: React.FC = () => {
 
   // 图库相关状态
   const [showAddToGalleryModal, setShowAddToGalleryModal] = useState(false);
-  const [selectedNodeForGallery, setSelectedNodeForGallery] = useState<FileSystemNode | null>(null);
+  const [selectedNodeForGallery, setSelectedNodeForGallery] =
+    useState<FileSystemNode | null>(null);
 
   // 是否在根级别（无 projectId）
   const isAtRoot = !urlProjectId;
@@ -213,13 +214,10 @@ export const FileSystemManager: React.FC = () => {
   const displayNodes = nodes;
 
   // 打开成员管理模态框
-  const handleShowMembers = useCallback(
-    (project: FileSystemNode) => {
-      setEditingProject(project);
-      setIsMembersModalOpen(true);
-    },
-    []
-  );
+  const handleShowMembers = useCallback((project: FileSystemNode) => {
+    setEditingProject(project);
+    setIsMembersModalOpen(true);
+  }, []);
 
   // 提交项目表单
   const handleSubmitProject = useCallback(
@@ -284,10 +282,13 @@ export const FileSystemManager: React.FC = () => {
   /**
    * 添加到图库
    */
-  const handleAddToGallery = useCallback((node: FileSystemNode) => {
-    setSelectedNodeForGallery(node);
-    setShowAddToGalleryModal(true);
-  }, [setSelectedNodeForGallery, setShowAddToGalleryModal]);
+  const handleAddToGallery = useCallback(
+    (node: FileSystemNode) => {
+      setSelectedNodeForGallery(node);
+      setShowAddToGalleryModal(true);
+    },
+    [setSelectedNodeForGallery, setShowAddToGalleryModal]
+  );
 
   /**
    * 确认移动/拷贝

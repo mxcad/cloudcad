@@ -108,7 +108,9 @@ export const useExternalReferenceUpload = (
       }
 
       if (!preloadingData) {
-        logger.info('重试次数耗尽，仍未找到预加载数据，可能是转换失败或文件无外部参照');
+        logger.info(
+          '重试次数耗尽，仍未找到预加载数据，可能是转换失败或文件无外部参照'
+        );
         return false;
       }
 
@@ -155,8 +157,14 @@ export const useExternalReferenceUpload = (
       // 过滤掉已存在的文件
       const trulyMissingFiles = missingFiles.filter((f) => !f.exists);
 
-      console.log('[useExternalReferenceUpload] 所有外部参照文件:', missingFiles);
-      console.log('[useExternalReferenceUpload] 缺失的外部参照文件:', trulyMissingFiles);
+      console.log(
+        '[useExternalReferenceUpload] 所有外部参照文件:',
+        missingFiles
+      );
+      console.log(
+        '[useExternalReferenceUpload] 缺失的外部参照文件:',
+        trulyMissingFiles
+      );
 
       if (trulyMissingFiles.length === 0) {
         return false;

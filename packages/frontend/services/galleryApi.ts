@@ -99,7 +99,11 @@ export const galleryApi = {
       };
     }>(`/gallery/${galleryType}/types/create`, { name, pid }),
 
-  updateType: (galleryType: 'drawings' | 'blocks', typeId: number, name: string) =>
+  updateType: (
+    galleryType: 'drawings' | 'blocks',
+    typeId: number,
+    name: string
+  ) =>
     apiClient.put<{
       code: string;
       data: {
@@ -117,22 +121,37 @@ export const galleryApi = {
       message: string;
     }>(`/gallery/${galleryType}/types/${typeId}`),
 
-  getFileUrl: (galleryType: 'drawings' | 'blocks', secondType: number, firstType: number, filehash: string) => {
-    const baseUrl = (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
+  getFileUrl: (
+    galleryType: 'drawings' | 'blocks',
+    secondType: number,
+    firstType: number,
+    filehash: string
+  ) => {
+    const baseUrl =
+      (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
     return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.mxweb`;
   },
 
-  getPreviewImageUrl: (galleryType: 'drawings' | 'blocks', secondType: number, firstType: number, filehash: string) => {
-    const baseUrl = (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
+  getPreviewImageUrl: (
+    galleryType: 'drawings' | 'blocks',
+    secondType: number,
+    firstType: number,
+    filehash: string
+  ) => {
+    const baseUrl =
+      (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
     return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.jpg`;
   },
 
-  addToGallery: (galleryType: 'drawings' | 'blocks', params: {
-    nodeId: string;
-    firstType: number;
-    secondType: number;
-    thirdType?: number;
-  }) =>
+  addToGallery: (
+    galleryType: 'drawings' | 'blocks',
+    params: {
+      nodeId: string;
+      firstType: number;
+      secondType: number;
+      thirdType?: number;
+    }
+  ) =>
     apiClient.post<{
       code: string;
       data: {
@@ -151,11 +170,15 @@ export const galleryApi = {
       message: string;
     }>(`/gallery/${galleryType}/items/${nodeId}`),
 
-  updateGalleryItem: (galleryType: 'drawings' | 'blocks', nodeId: string, params: {
-    firstType: number;
-    secondType: number;
-    thirdType?: number;
-  }) =>
+  updateGalleryItem: (
+    galleryType: 'drawings' | 'blocks',
+    nodeId: string,
+    params: {
+      firstType: number;
+      secondType: number;
+      thirdType?: number;
+    }
+  ) =>
     apiClient.put<{
       code: string;
       data: {

@@ -66,7 +66,7 @@ export const useFileSystemDragDrop = ({
         }
         onRefresh();
       } catch (error) {
-        alert('²Ù×÷Ê§°Ü£¬ÇëÖØÊÔ');
+        alert('ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½');
       } finally {
         setDraggedNodes([]);
       }

@@ -27,7 +27,10 @@ interface FileSystemModalsProps {
   onFolderNameChange: (name: string) => void;
   onCreateFolder: () => void;
   onRename: () => void;
-  onProjectFormDataChange: (data: { name: string; description: string }) => void;
+  onProjectFormDataChange: (data: {
+    name: string;
+    description: string;
+  }) => void;
   onSubmitProject: (e: React.FormEvent) => void;
   onConfirmMoveOrCopy: (targetParentId: string) => void;
   onCloseCreateFolderModal: () => void;
@@ -120,7 +123,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
       <AddToGalleryModal
         isOpen={showAddToGalleryModal}
         onClose={onCloseAddToGalleryModal}
-        onSuccess={() => {}} // ÓÉ¸¸×é¼þ´¦Àí
+        onSuccess={() => {}} // ï¿½É¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         nodeId={selectedNodeForGallery?.id || ''}
         fileName={selectedNodeForGallery?.name || ''}
       />

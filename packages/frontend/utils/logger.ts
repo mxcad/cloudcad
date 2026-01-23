@@ -20,21 +20,37 @@ interface LogEntry {
 
 class Logger {
   private isDevelopment = import.meta.env.MODE === 'development';
-  private logLevel: LogLevel = this.isDevelopment ? LogLevel.DEBUG : LogLevel.INFO;
+  private logLevel: LogLevel = this.isDevelopment
+    ? LogLevel.DEBUG
+    : LogLevel.INFO;
   private logs: LogEntry[] = [];
 
   private shouldLog(level: LogLevel): boolean {
-    const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+    const levels = [
+      LogLevel.DEBUG,
+      LogLevel.INFO,
+      LogLevel.WARN,
+      LogLevel.ERROR,
+    ];
     return levels.indexOf(level) >= levels.indexOf(this.logLevel);
   }
 
-  private formatMessage(level: LogLevel, message: string, context?: string): string {
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    context?: string
+  ): string {
     const timestamp = new Date().toISOString();
     const contextStr = context ? `[${context}] ` : '';
     return `${timestamp} [${level}] ${contextStr}${message}`;
   }
 
-  private log(level: LogLevel, message: string, context?: string, data?: unknown): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: string,
+    data?: unknown
+  ): void {
     if (!this.shouldLog(level)) {
       return;
     }

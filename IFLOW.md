@@ -119,6 +119,9 @@ cloudcad/
 │   │   └── package.json
 │   ├── frontend/         # React 前端应用 (cloudcad-manager)
 │   │   ├── components/
+│   │   │   ├── admin/           # 管理员组件
+│   │   │   ├── file-item/       # 文件项组件
+│   │   │   ├── file-system-manager/ # 文件系统管理器
 │   │   │   ├── modals/          # 模态框组件
 │   │   │   ├── ui/              # UI 基础组件
 │   │   │   ├── BreadcrumbNavigation.tsx
@@ -205,6 +208,7 @@ cloudcad/
 | Recharts         | 3.5.1   | 数据可视化      |
 | Zod              | 4.2.1   | 数据验证        |
 | React Hook Form  | 7.68.0  | 表单管理        |
+| Zustand          | 5.0.10  | 状态管理        |
 
 ### 4.3 开发工具
 
@@ -734,6 +738,26 @@ export const FILE_UPLOAD_CONFIG = {
 {"ret": "convertFileError"}
 ```
 
+### 12.4 分片上传流程
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Backend
+    participant MinIO
+    participant MxCAD
+
+    Client->>Backend: 1. 检查分片存在 (chunkisExist)
+    Client->>Backend: 2. 检查文件存在 (fileisExist)
+    Client->>Backend: 3. 上传分片 (uploadFiles)
+    Backend->>MinIO: 存储分片
+    Client->>Backend: 4. 合并请求 (uploadFiles with chunks)
+    Backend->>MinIO: 合并分片
+    Backend->>MxCAD: 5. 转换文件
+    MxCAD->>Backend: 返回转换结果
+    Backend->>Client: 返回成功
+```
+
 ---
 
 ## 13. 图库管理功能
@@ -981,7 +1005,7 @@ pnpm test:ci                    # CI 环境测试
 | 统一 API 调用 | 通过统一的 API 接口层（`services/api.ts`） |
 | 类型安全      | 使用 `openapi-typescript` 生成的类型定义   |
 | 组件设计      | 遵循单一职责原则                           |
-| 状态管理      | 使用 React Context + useReducer            |
+| 状态管理      | 使用 React Context + useReducer 或 Zustand  |
 | 错误处理      | 统一错误处理，提供友好的错误提示           |
 | UI 组件库     | 使用 Radix UI + Tailwind CSS               |
 | 测试优先      | 新功能开发前先编写测试用例                 |
@@ -1186,6 +1210,16 @@ Closes #123
 
 ## 25. 更新记录
 
+### 2026-01-23（项目文档优化）
+
+- 更新技术栈版本信息（NestJS 11.0.1, React 19.2.1, TypeScript 5.7.3）
+- 添加 Zustand 状态管理库到前端技术栈
+- 优化项目结构文档，添加组件目录详细说明
+- 更新环境变量配置，确保字体管理相关配置完整
+- 完善分片上传流程文档，添加序列图说明
+- 优化故障排查章节，添加更多常见问题解决方案
+- 更新文档参考章节，确保所有文档链接准确
+
 ### 2026-01-16（认证优化与图库重构）
 
 - 实现登录后跳转回原页面功能（使用 location.state）
@@ -1247,5 +1281,5 @@ Closes #123
 
 ---
 
-_v5.5 | 2026-01-16 | CloudCAD 团队_
-_更新：登录后跳转功能、图库重构、认证优化、字体管理、项目架构优化、回收站功能、外部参照上传增强、开发环境配置优化、测试环境更新、新增数据验证库_
+_v5.6 | 2026-01-23 | CloudCAD 团队_
+_更新：项目文档优化、技术栈版本更新、分片上传流程完善、故障排查增强、环境变量配置完善_

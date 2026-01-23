@@ -32,7 +32,10 @@ export const CADEditorDirect: React.FC = () => {
     return { mxcadManager };
   };
 
-  const initMxCADConfig = async (currentFile?: { parentId?: string | null; id?: string }) => {
+  const initMxCADConfig = async (currentFile?: {
+    parentId?: string | null;
+    id?: string;
+  }) => {
     const { mxcadApp } = await import('mxcad-app');
     const configUrl = window.location.origin;
     mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
@@ -46,7 +49,11 @@ export const CADEditorDirect: React.FC = () => {
 
     // 设置MxCAD服务器配置
     const serverConfig = await (
-      window as unknown as { MxPluginContext: { getServerConfig: () => { uploadFileConfig?: { create?: string } } } }
+      window as unknown as {
+        MxPluginContext: {
+          getServerConfig: () => { uploadFileConfig?: { create?: string } };
+        };
+      }
     ).MxPluginContext.getServerConfig();
     if (serverConfig?.uploadFileConfig?.create) {
       // 优先使用当前打开文件的父节点作为上传目标

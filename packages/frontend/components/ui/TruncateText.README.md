@@ -17,7 +17,12 @@
 组件已集成到项目中，可直接导入使用：
 
 ```tsx
-import { TruncateText, FileNameText, PathText, DescriptionText } from '@/components/ui/TruncateText';
+import {
+  TruncateText,
+  FileNameText,
+  PathText,
+  DescriptionText,
+} from '@/components/ui/TruncateText';
 
 // 或从索引文件导入
 import { TruncateText } from '@/components/ui';
@@ -83,11 +88,11 @@ import { TruncateText } from '@/components/ui';
 
 ```tsx
 <TruncateText
-  maxWidth={100}      // 默认宽度
-  smMaxWidth={150}    // 小屏幕
-  mdMaxWidth={200}    // 中等屏幕
-  lgMaxWidth={300}    // 大屏幕
-  xlMaxWidth={400}    // 超大屏幕
+  maxWidth={100} // 默认宽度
+  smMaxWidth={150} // 小屏幕
+  mdMaxWidth={200} // 中等屏幕
+  lgMaxWidth={300} // 大屏幕
+  xlMaxWidth={400} // 超大屏幕
 >
   这是一段很长的文本，会根据屏幕大小自适应截断...
 </TruncateText>
@@ -148,32 +153,32 @@ import { TruncateText } from '@/components/ui';
 
 ### TruncateTextProps
 
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `children` | `string` | - | 要显示的文本（必填） |
-| `mode` | `'start' \| 'middle' \| 'end' \| 'clip'` | `'end'` | 截断模式 |
-| `maxChars` | `number` | `100` | 最大显示字符数 |
-| `maxWidth` | `string \| number` | - | 最大宽度 |
-| `smMaxWidth` | `string \| number` | - | 小屏幕最大宽度 |
-| `mdMaxWidth` | `string \| number` | - | 中等屏幕最大宽度 |
-| `lgMaxWidth` | `string \| number` | - | 大屏幕最大宽度 |
-| `xlMaxWidth` | `string \| number` | - | 超大屏幕最大宽度 |
-| `showTooltip` | `boolean` | `true` | 是否在鼠标悬停时显示完整文本 |
-| `tooltipText` | `string` | - | 自定义提示文本 |
-| `className` | `string` | `''` | 自定义类名 |
-| `ellipsis` | `string` | `'...'` | 截断后显示的省略号 |
-| `useCharLimit` | `boolean` | `false` | 是否启用字符数限制 |
-| `showEllipsis` | `boolean` | `true` | 是否显示截断指示器 |
-| `style` | `React.CSSProperties` | `{}` | 自定义样式 |
+| 属性           | 类型                                     | 默认值  | 说明                         |
+| -------------- | ---------------------------------------- | ------- | ---------------------------- |
+| `children`     | `string`                                 | -       | 要显示的文本（必填）         |
+| `mode`         | `'start' \| 'middle' \| 'end' \| 'clip'` | `'end'` | 截断模式                     |
+| `maxChars`     | `number`                                 | `100`   | 最大显示字符数               |
+| `maxWidth`     | `string \| number`                       | -       | 最大宽度                     |
+| `smMaxWidth`   | `string \| number`                       | -       | 小屏幕最大宽度               |
+| `mdMaxWidth`   | `string \| number`                       | -       | 中等屏幕最大宽度             |
+| `lgMaxWidth`   | `string \| number`                       | -       | 大屏幕最大宽度               |
+| `xlMaxWidth`   | `string \| number`                       | -       | 超大屏幕最大宽度             |
+| `showTooltip`  | `boolean`                                | `true`  | 是否在鼠标悬停时显示完整文本 |
+| `tooltipText`  | `string`                                 | -       | 自定义提示文本               |
+| `className`    | `string`                                 | `''`    | 自定义类名                   |
+| `ellipsis`     | `string`                                 | `'...'` | 截断后显示的省略号           |
+| `useCharLimit` | `boolean`                                | `false` | 是否启用字符数限制           |
+| `showEllipsis` | `boolean`                                | `true`  | 是否显示截断指示器           |
+| `style`        | `React.CSSProperties`                    | `{}`    | 自定义样式                   |
 
 ### 截断模式说明
 
-| 模式 | 说明 | 适用场景 |
-|------|------|----------|
-| `'end'` | 尾部截断 | 大多数文本、描述、备注 |
-| `'start'` | 头部截断 | 路径、需要保留后缀的场景 |
+| 模式       | 说明     | 适用场景                   |
+| ---------- | -------- | -------------------------- |
+| `'end'`    | 尾部截断 | 大多数文本、描述、备注     |
+| `'start'`  | 头部截断 | 路径、需要保留后缀的场景   |
 | `'middle'` | 中间截断 | 文件名、需要保留两端的场景 |
-| `'clip'` | 直接裁剪 | 不需要省略号的场景 |
+| `'clip'`   | 直接裁剪 | 不需要省略号的场景         |
 
 ## 专用组件
 
@@ -192,9 +197,7 @@ import { TruncateText } from '@/components/ui';
 路径专用组件，使用头部截断模式。
 
 ```tsx
-<PathText maxWidth="200px">
-  /very/long/path/to/some/folder/file.txt
-</PathText>
+<PathText maxWidth="200px">/very/long/path/to/some/folder/file.txt</PathText>
 ```
 
 ### DescriptionText
@@ -232,9 +235,7 @@ import { TruncateText } from '@/components/ui';
 
 ```tsx
 <div className="border rounded-lg p-4">
-  <FileNameText className="font-medium mb-2">
-    {file.name}
-  </FileNameText>
+  <FileNameText className="font-medium mb-2">{file.name}</FileNameText>
   <DescriptionText className="text-sm text-slate-500">
     {file.description}
   </DescriptionText>

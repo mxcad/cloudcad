@@ -51,9 +51,10 @@ export const Login: React.FC = () => {
       // 静默：登录失败
       // 静默：错误详情
       setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
-        (err as Error).message ||
-        '登录失败，请检查账号和密码'
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '登录失败，请检查账号和密码'
       );
     } finally {
       setLoading(false);
