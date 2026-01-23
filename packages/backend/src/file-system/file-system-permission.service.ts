@@ -166,6 +166,14 @@ export class FileSystemPermissionService {
     this.cache.clearNodeCache(nodeId);
   }
 
+  /**
+   * 清除节点权限缓存
+   * @param nodeId 节点 ID
+   */
+  clearNodeCache(nodeId: string): void {
+    this.cache.clearNodeCache(nodeId);
+  }
+
   private async findRootNode(nodeId: string) {
     let currentNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },

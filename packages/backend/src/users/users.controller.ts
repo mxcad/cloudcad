@@ -62,6 +62,23 @@ export class UsersController {
     return this.usersService.findAll(query);
   }
 
+  @Get('profile/me')
+  @HttpCode(HttpStatus.OK)
+  getProfile(@Request() req: AuthenticatedRequest) {
+    return this.usersService.findOne(req.user.id);
+  }
+
+  @Patch('profile/me')
+  @HttpCode(HttpStatus.OK)
+  updateProfile(
+    @Request() req: AuthenticatedRequest,
+    @Body() updateUserDto: UpdateUserDto
+  ) {
+    // 用户只能更新自己的信息，排除角色ID和状态字段
+    const { roleId, status, ...profileData } = updateUserDto;
+    return this.usersService.update(req.user.id, profileData);
+  }
+
   @Get(':id')
   @Roles('ADMIN')
   findOne(@Param('id') id: string) {
@@ -89,22 +106,6 @@ export class UsersController {
     @Body('status') status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   ) {
     return this.usersService.updateStatus(id, status);
-  }
-
-  @Get('profile/me')
-  @HttpCode(HttpStatus.OK)
-  getProfile(@Param('id') id: string) {
-    // 这里应该从JWT token中获取用户ID
-    // 暂时使用参数，实际实现中需要从request.user获取
-    return this.usersService.findOne(id);
-  }
-
-  @Patch('profile/me')
-  @HttpCode(HttpStatus.OK)
-  updateProfile(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    // 用户只能更新自己的信息，排除角色ID和状态字段
-    const { roleId, status, ...profileData } = updateUserDto;
-    return this.usersService.update(id, profileData);
   }
 
   @Post('change-password')

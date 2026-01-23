@@ -13,6 +13,7 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
 import { FileHashService } from './file-hash.service';
+import { FileSystemPermissionService } from './file-system-permission.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
@@ -39,7 +40,8 @@ export class FileSystemService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storage: MinioStorageProvider,
-    private readonly fileHashService: FileHashService
+    private readonly fileHashService: FileHashService,
+    private readonly permissionService: FileSystemPermissionService
   ) {}
 
   /**
@@ -1062,17 +1064,11 @@ export class FileSystemService {
     roles: string[]
   ): Promise<boolean> {
     try {
-      const access = await this.prisma.fileAccess.findUnique({
-        where: {
-          userId_nodeId: { userId, nodeId: projectId },
-        },
-      });
-
-      if (!access) {
-        return false;
-      }
-
-      return roles.includes(access.role);
+      return await this.permissionService.hasNodeAccessRole(
+        userId,
+        projectId,
+        roles as any
+      );
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
       return false;
@@ -1087,57 +1083,8 @@ export class FileSystemService {
    */
   async checkFileAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
-      // 获取文件节点信息
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-      });
-
-      if (!node) {
-        return false;
-      }
-
-      // 文件所有者可以访问
-      if (node.ownerId === userId) {
-        return true;
-      }
-
-      // 如果是项目根节点，检查 FileAccess
-      if (node.isRoot) {
-        const access = await this.prisma.fileAccess.findFirst({
-          where: {
-            nodeId,
-            userId,
-          },
-        });
-
-        return !!access;
-      }
-
-      // 如果不是根节点，需要向上查找项目根节点
-      let currentNode: PrismaFileSystemNode | null = node;
-      while (currentNode?.parentId) {
-        currentNode = await this.prisma.fileSystemNode.findUnique({
-          where: { id: currentNode.parentId },
-        });
-
-        if (!currentNode) {
-          return false;
-        }
-
-        // 找到项目根节点，检查权限
-        if (currentNode.isRoot) {
-          const access = await this.prisma.fileAccess.findFirst({
-            where: {
-              nodeId: currentNode.id,
-              userId,
-            },
-          });
-
-          return !!access;
-        }
-      }
-
-      return false;
+      const role = await this.permissionService.getNodeAccessRole(userId, nodeId);
+      return role !== null;
     } catch (error) {
       this.logger.error(`检查文件访问权限失败: ${error.message}`, error.stack);
       return false;
@@ -1501,39 +1448,8 @@ export class FileSystemService {
 
   async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { ownerId: true, isRoot: true, parentId: true },
-      });
-
-      if (!node) {
-        return false;
-      }
-
-      if (node.ownerId === userId) {
-        return true;
-      }
-
-      if (node.isRoot) {
-        const rootAccess = await this.prisma.fileAccess.findUnique({
-          where: {
-            userId_nodeId: { userId, nodeId },
-          },
-        });
-        return !!rootAccess;
-      }
-
-      const rootNode = await this.getRootNode(nodeId);
-      if (rootNode) {
-        const rootAccess = await this.prisma.fileAccess.findUnique({
-          where: {
-            userId_nodeId: { userId, nodeId: rootNode.id },
-          },
-        });
-        return !!rootAccess;
-      }
-
-      return false;
+      const role = await this.permissionService.getNodeAccessRole(userId, nodeId);
+      return role !== null;
     } catch (error) {
       this.logger.error(`检查节点访问权限失败: ${error.message}`, error.stack);
       return false;
@@ -1873,6 +1789,9 @@ export class FileSystemService {
         },
       });
 
+      // 清除权限缓存
+      this.permissionService.clearNodeCache(projectId);
+
       this.logger.log(
         `项目成员添加成功: ${projectId} - ${userId} (${role}) by ${operatorId}`
       );
@@ -1947,6 +1866,9 @@ export class FileSystemService {
         },
       });
 
+      // 清除权限缓存
+      this.permissionService.clearNodeCache(projectId);
+
       this.logger.log(
         `项目成员角色更新成功: ${projectId} - ${userId} -> ${role} by ${operatorId}`
       );
@@ -2001,6 +1923,9 @@ export class FileSystemService {
           },
         },
       });
+
+      // 清除权限缓存
+      this.permissionService.clearNodeCache(projectId);
 
       this.logger.log(
         `项目成员移除成功: ${projectId} - ${userId} by ${operatorId}`

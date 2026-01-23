@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import { DatabaseModule } from '../database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { FileSystemModule } from '../file-system/file-system.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         fieldSize: 1024 * 1024, // 每个字段最大1MB
       },
     }),
+    FileSystemModule,
   ],
   controllers: [MxCadController],
   providers: [

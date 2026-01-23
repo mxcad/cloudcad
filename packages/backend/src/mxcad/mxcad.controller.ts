@@ -23,12 +23,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import {
-  ApiTags,
-  ApiConsumes,
-  ApiResponse,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { MxCadService } from './mxcad.service';
 import { ConvertDto } from './dto/convert.dto';
 import { DatabaseService } from '../database/database.service';
@@ -40,6 +35,7 @@ import { PdfConversionDto } from './dto/pdf-conversion.dto';
 import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { MinioSyncService } from './minio-sync.service';
+import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -52,7 +48,8 @@ export class MxCadController {
     private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly minioSyncService: MinioSyncService
+    private readonly minioSyncService: MinioSyncService,
+    private readonly permissionService: FileSystemPermissionService
   ) {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
   }
@@ -719,19 +716,24 @@ export class MxCadController {
    */
   @Post('cut_dwg')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file', { storage: diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath =
-        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
-      fs.mkdirSync(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-      const uuid = crypto.randomUUID();
-      const ext = file.originalname.split('.').pop();
-      cb(null, `${uuid}.${ext}`);
-    },
-  }) }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath =
+            process.env.MXCAD_UPLOAD_PATH ||
+            path.join(process.cwd(), 'uploads');
+          fs.mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uuid = crypto.randomUUID();
+          const ext = file.originalname.split('.').pop();
+          cb(null, `${uuid}.${ext}`);
+        },
+      }),
+    })
+  )
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '裁剪 DWG' })
   async cutDwg(
@@ -785,19 +787,24 @@ export class MxCadController {
    */
   @Post('cut_mxweb')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file', { storage: diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath =
-        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
-      fs.mkdirSync(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-      const uuid = crypto.randomUUID();
-      const ext = file.originalname.split('.').pop();
-      cb(null, `${uuid}.${ext}`);
-    },
-  }) }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath =
+            process.env.MXCAD_UPLOAD_PATH ||
+            path.join(process.cwd(), 'uploads');
+          fs.mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uuid = crypto.randomUUID();
+          const ext = file.originalname.split('.').pop();
+          cb(null, `${uuid}.${ext}`);
+        },
+      }),
+    })
+  )
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: '裁剪 MXWEB' })
   async cutMxweb(
@@ -1268,8 +1275,7 @@ export class MxCadController {
 
     try {
       // 通过 nodeId 查询 fileHash
-      const node =
-        await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
+      const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
 
       if (!node || !node.fileHash) {
         return res.status(404).json({
@@ -1279,9 +1285,7 @@ export class MxCadController {
       }
 
       const fileHash = node.fileHash;
-      this.logger.log(
-        `[checkThumbnail] 获取到 fileHash: ${fileHash}`
-      );
+      this.logger.log(`[checkThumbnail] 获取到 fileHash: ${fileHash}`);
 
       const result = await this.mxCadService.checkThumbnailExists(fileHash);
 
@@ -1356,8 +1360,7 @@ export class MxCadController {
 
     try {
       // 通过 nodeId 查询 fileHash
-      const node =
-        await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
+      const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
 
       if (!node || !node.fileHash) {
         return res.status(404).json({
@@ -2282,79 +2285,17 @@ export class MxCadController {
         `[checkFileAccessPermission] 开始检查权限: nodeId=${nodeId}, checkUserId=${checkUserId}`
       );
 
-      // 获取节点信息
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { ownerId: true, parentId: true, isRoot: true },
-      });
+      const role = await this.permissionService.getNodeAccessRole(
+        checkUserId,
+        nodeId
+      );
 
-      if (!node) {
-        this.logger.warn(`[checkFileAccessPermission] 节点不存在: ${nodeId}`);
-        return false;
-      }
-
+      const hasPermission = role !== null;
       this.logger.log(
-        `[checkFileAccessPermission] 节点信息: ownerId=${node.ownerId}, parentId=${node.parentId}, isRoot=${node.isRoot}`
+        `[checkFileAccessPermission] 权限检查结果: ${hasPermission}, role=${role}`
       );
 
-      // 文件所有者有权限
-      if (node.ownerId === checkUserId) {
-        this.logger.log(`[checkFileAccessPermission] 用户是文件所有者，有权限`);
-        return true;
-      }
-
-      this.logger.log(
-        `[checkFileAccessPermission] 用户不是文件所有者，检查直接访问权限`
-      );
-
-      // 检查是否有文件访问权限
-      const access = await this.prisma.fileAccess.findFirst({
-        where: {
-          nodeId: nodeId,
-          userId: checkUserId,
-        },
-      });
-
-      if (access) {
-        this.logger.log(`[checkFileAccessPermission] 用户有直接访问权限`);
-        return true;
-      }
-
-      this.logger.log(
-        `[checkFileAccessPermission] 用户没有直接访问权限，检查项目根目录权限`
-      );
-
-      // 检查是否有项目根目录的访问权限
-      const projectRoot = await this.getProjectRootByNodeId(nodeId);
-      if (projectRoot) {
-        this.logger.log(
-          `[checkFileAccessPermission] 找到项目根目录: ${projectRoot.id}`
-        );
-        const projectAccess = await this.prisma.fileAccess.findFirst({
-          where: {
-            nodeId: projectRoot.id,
-            userId: checkUserId,
-          },
-        });
-
-        if (projectAccess) {
-          this.logger.log(
-            `[checkFileAccessPermission] 用户有项目根目录访问权限`
-          );
-          return true;
-        } else {
-          this.logger.log(
-            `[checkFileAccessPermission] 用户没有项目根目录访问权限`
-          );
-        }
-      } else {
-        this.logger.log(`[checkFileAccessPermission] 未找到项目根目录`);
-      }
-
-      this.logger.warn(
-        `[checkFileAccessPermission] 用户 ${checkUserId} 没有任何访问权限`
-      );
-      return false;
+      return hasPermission;
     } catch (error) {
       this.logger.error(`检查文件访问权限失败: ${error.message}`, error);
       return false;

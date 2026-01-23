@@ -27,6 +27,9 @@ import {
   ApiOperation,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { NodePermissionGuard } from '../common/guards/project-permission.guard';
+import { NodePermission } from '../common/decorators/project-permission.decorator';
+import { NodeAccessRole } from '../common/enums/permissions.enum';
 import { FileSystemService } from './file-system.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
@@ -37,7 +40,7 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
 
 @Controller('file-system')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, NodePermissionGuard)
 @ApiTags('文件系统')
 @ApiBearerAuth()
 export class FileSystemController {
@@ -57,12 +60,14 @@ export class FileSystemController {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
   @Get('projects/:projectId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
   @ApiResponse({ status: 200, description: '获取项目详情成功' })
   async getProject(@Param('projectId') projectId: string) {
     return this.fileSystemService.getProject(projectId);
   }
 
   @Patch('projects/:projectId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @ApiResponse({ status: 200, description: '更新项目成功' })
   async updateProject(
     @Param('projectId') projectId: string,
@@ -72,6 +77,7 @@ export class FileSystemController {
   }
 
   @Delete('projects/:projectId')
+  @NodePermission(NodeAccessRole.OWNER)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '删除项目成功' })
   async deleteProject(
@@ -109,6 +115,7 @@ export class FileSystemController {
   }
 
   @Post('nodes/:parentId/folders')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER)
   @ApiResponse({ status: 201, description: '创建文件夹成功' })
   async createFolder(
     @Request() req,
@@ -119,18 +126,21 @@ export class FileSystemController {
   }
 
   @Get('nodes/:nodeId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
   @ApiResponse({ status: 200, description: '获取节点详情成功' })
   async getNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
   @Get('nodes/:nodeId/root')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
   @ApiResponse({ status: 200, description: '获取根节点成功' })
   async getRootNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getRootNode(nodeId);
   }
 
   @Get('nodes/:nodeId/children')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
   @ApiResponse({ status: 200, description: '获取子节点列表成功' })
   async getChildren(
     @Param('nodeId') nodeId: string,
@@ -140,6 +150,7 @@ export class FileSystemController {
     return this.fileSystemService.getChildren(nodeId, req.user.id, query);
   }
   @Patch('nodes/:nodeId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @ApiResponse({ status: 200, description: '更新节点成功' })
   async updateNode(
     @Param('nodeId') nodeId: string,
@@ -149,6 +160,7 @@ export class FileSystemController {
   }
 
   @Delete('nodes/:nodeId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '删除节点成功' })
   async deleteNode(
@@ -159,12 +171,14 @@ export class FileSystemController {
   }
 
   @Post('nodes/:nodeId/move')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @ApiResponse({ status: 200, description: '移动节点成功' })
   async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
     return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
   }
 
   @Post('nodes/:nodeId/copy')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER)
   @ApiResponse({ status: 201, description: '拷贝节点成功' })
   async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
@@ -244,6 +258,7 @@ export class FileSystemController {
   }
 
   @Get('projects/:projectId/members')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
   @ApiOperation({ summary: '获取项目成员列表' })
   @ApiResponse({ status: 200, description: '获取成员列表成功' })
   @ApiResponse({ status: 401, description: '未登录' })
@@ -254,6 +269,7 @@ export class FileSystemController {
   }
 
   @Post('projects/:projectId/members')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @ApiOperation({ summary: '添加项目成员' })
   @ApiResponse({ status: 201, description: '添加成员成功' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
@@ -275,6 +291,7 @@ export class FileSystemController {
   }
 
   @Patch('projects/:projectId/members/:userId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @ApiOperation({ summary: '更新项目成员角色' })
   @ApiResponse({ status: 200, description: '更新成员角色成功' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
@@ -296,6 +313,7 @@ export class FileSystemController {
   }
 
   @Delete('projects/:projectId/members/:userId')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
   @ApiOperation({ summary: '移除项目成员' })
   @ApiResponse({ status: 200, description: '移除成员成功' })
   @ApiResponse({ status: 401, description: '未登录' })
