@@ -5,6 +5,7 @@ import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
+import { mxcadApi } from '../services/mxcadApi';
 import {
   Thumbnail,
   FileItemSelection,
@@ -108,12 +109,18 @@ export const FileItem: React.FC<FileItemProps> = ({
 
       const hasMissing = await externalReferenceUpload.checkMissingReferences();
 
-      if (hasMissing) {
-        externalReferenceUpload.openModalForUpload();
-      } else {
+      if (!hasMissing) {
+        // 没有缺失的外部参照，刷新数据库中的外部参照信息
+        try {
+          await mxcadApi.refreshExternalReferences(node.fileHash);
+          logger.info('外部参照信息已刷新', 'FileItem');
+        } catch (error) {
+          handleError(error, '刷新外部参照信息失败');
+        }
         onRefresh?.();
         alert('所有外部参照已存在，无需上传');
       }
+      // 注意：checkMissingReferences 已经设置了 files 和 isOpen，所以不需要再调用 openModalForUpload
 
       setTimeout(() => {
         blockItemClickRef.current = false;

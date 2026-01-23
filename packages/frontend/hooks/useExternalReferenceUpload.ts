@@ -68,6 +68,7 @@ export const useExternalReferenceUpload = (
           fileHash,
           fileName
         );
+        console.log('[checkReferenceExists] 响应:', fileName, response.data);
         // checkExternalReference 接口使用 res.json({ exists }) 直接返回，绕过了全局响应包装
         // 所以 response.data 就是 {exists: boolean}
         return response.data?.exists ?? false;
@@ -153,6 +154,9 @@ export const useExternalReferenceUpload = (
 
       // 过滤掉已存在的文件
       const trulyMissingFiles = missingFiles.filter((f) => !f.exists);
+
+      console.log('[useExternalReferenceUpload] 所有外部参照文件:', missingFiles);
+      console.log('[useExternalReferenceUpload] 缺失的外部参照文件:', trulyMissingFiles);
 
       if (trulyMissingFiles.length === 0) {
         return false;

@@ -13,6 +13,11 @@ export const mxcadApi = {
       { fileName }
     ),
 
+  refreshExternalReferences: (fileHash: string) =>
+    apiClient.post<{ code: number; message: string; stats?: any }>(
+      `/mxcad/file/${fileHash}/refresh-external-references`
+    ),
+
   uploadExtReferenceDwg: (
     file: File,
     srcDwgFileHash: string,
