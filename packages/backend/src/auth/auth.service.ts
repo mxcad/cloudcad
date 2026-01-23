@@ -157,6 +157,13 @@ export class AuthService {
           select: {
             id: true,
             name: true,
+            description: true,
+            isSystem: true,
+            permissions: {
+              select: {
+                permission: true,
+              },
+            },
           },
         },
         status: true,
@@ -215,7 +222,7 @@ export class AuthService {
         ...userWithoutPassword,
         nickname: userWithoutPassword.nickname || undefined,
         avatar: userWithoutPassword.avatar || undefined,
-        role: userWithoutPassword.role.name,
+        role: userWithoutPassword.role,
         status: userWithoutPassword.status,
       },
     };
@@ -251,6 +258,13 @@ export class AuthService {
             select: {
               id: true,
               name: true,
+              description: true,
+              isSystem: true,
+              permissions: {
+                select: {
+                  permission: true,
+                },
+              },
             },
           },
           status: true,
@@ -269,7 +283,7 @@ export class AuthService {
           ...user,
           nickname: user.nickname || undefined,
           avatar: user.avatar || undefined,
-          role: user.role.name,
+          role: user.role,
           status: user.status,
         },
       };

@@ -19,8 +19,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
-import { type Role } from '../types';
-import { projectsApi, mockApi } from '../services/api';
+import { projectsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
@@ -55,7 +54,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
-  const [role, setRole] = useState<Role | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Interactions State
@@ -80,17 +78,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     };
   } | null>(null);
 
+  // 角色名称映射
+  const getRoleDisplayName = (roleName: string): string => {
+    const roleMap: Record<string, string> = {
+      ADMIN: '管理员',
+      USER: '用户',
+    };
+    return roleMap[roleName] || roleName;
+  };
+
   useEffect(() => {
     // 只有在用户已认证且加载完成时才获取角色信息
     if (user && !loading) {
-      mockApi.auth
-        .getRole()
-        .then(setRole)
-        .catch(() => {
-          // 如果获取角色失败，设置默认角色
-          setRole({ name: '用户', permissions: [] });
-        });
-
       // 获取存储空间信息
       projectsApi
         .getStorageInfo()
@@ -223,10 +222,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900">
-                  <TruncateText>{user?.nickname || user?.username || user?.email}</TruncateText>
+                  <TruncateText>
+                    {user?.nickname || user?.username || user?.email}
+                  </TruncateText>
                 </p>
                 <p className="text-xs text-slate-500">
-                  <TruncateText>{role?.name}</TruncateText>
+                  <TruncateText>
+                    {user?.role?.name
+                      ? getRoleDisplayName(user.role.name)
+                      : '加载中...'}
+                  </TruncateText>
                 </p>
 
                 {/* 存储空间信息 */}

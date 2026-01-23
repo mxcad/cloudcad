@@ -125,10 +125,32 @@ export class UserDto {
 
   @ApiProperty({
     description: '用户角色',
-    enum: ['ADMIN', 'USER'],
-    example: 'USER',
+    type: 'object',
+    properties: {
+      id: { type: 'string', example: 'clxxxxxxx' },
+      name: { type: 'string', enum: ['ADMIN', 'USER'], example: 'USER' },
+      description: {
+        type: 'string',
+        example: '普通用户，基础权限',
+        nullable: true,
+      },
+      isSystem: { type: 'boolean', example: true },
+      permissions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { permission: { type: 'string' } },
+        },
+      },
+    },
   })
-  role: string;
+  role: {
+    id: string;
+    name: string;
+    description: string | null;
+    isSystem: boolean;
+    permissions: Array<{ permission: string }>;
+  };
 
   @ApiProperty({
     description: '用户状态',
