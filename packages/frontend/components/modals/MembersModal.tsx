@@ -1,13 +1,22 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { RefreshCw, X, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  RefreshCw,
+  X,
+  UserPlus,
+  AlertCircle,
+  Loader2,
+  Shield,
+} from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { TruncateText } from '../ui/TruncateText';
-import { projectsApi, usersApi } from '../../services/apiService';
+import { projectsApi, usersApi, rolesApi } from '../../services/apiService';
 
 interface Member {
   id: string;
+  projectId: string;
   userId: string;
+  roleId: string;
   user: {
     id: string;
     email: string;
@@ -17,7 +26,12 @@ interface Member {
     role: string;
     status: string;
   };
-  role: string;
+  role: {
+    id: string;
+    name: string;
+    description: string | null;
+    isSystem: boolean;
+  };
   createdAt: string;
 }
 
@@ -37,12 +51,18 @@ interface MembersModalProps {
   onClose: () => void;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: '所有者',
-  ADMIN: '管理员',
-  MEMBER: '成员',
-  EDITOR: '编辑者',
-  VIEWER: '查看者',
+// 角色名称中文映射
+const ROLE_NAME_MAP: Record<string, string> = {
+  PROJECT_OWNER: '项目所有者',
+  PROJECT_ADMIN: '项目管理员',
+  PROJECT_MEMBER: '项目成员',
+  PROJECT_EDITOR: '项目编辑者',
+  PROJECT_VIEWER: '项目查看者',
+};
+
+// 获取角色中文名称
+const getRoleDisplayName = (roleName: string): string => {
+  return ROLE_NAME_MAP[roleName] || roleName;
 };
 
 export const MembersModal: React.FC<MembersModalProps> = ({
@@ -51,13 +71,14 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   onClose,
 }) => {
   const [members, setMembers] = useState<Member[]>([]);
+  const [projectRoles, setProjectRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [newRole, setNewRole] = useState('MEMBER');
+  const [newRoleId, setNewRoleId] = useState('');
   const [adding, setAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('');
+  const [filterRoleId, setFilterRoleId] = useState<string>('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
@@ -66,23 +87,42 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const isInitializedRef = useRef(false);
 
   const loadMembers = useCallback(async () => {
-    setLoading(true);
     setErrorMessage('');
     try {
       const response = await projectsApi.getMembers(projectId);
       setMembers((response.data as Member[]) || []);
     } catch (error) {
       setErrorMessage('加载成员列表失败');
-    } finally {
-      setLoading(false);
     }
   }, [projectId]);
 
+  const loadProjectRoles = useCallback(async () => {
+    try {
+      const response = await rolesApi.list();
+      const allRoles = (response.data as any[]) || [];
+      
+      // 只显示项目专属角色
+      const projectRoleNames = ['PROJECT_OWNER', 'PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
+      const projectRoles = allRoles.filter(role => projectRoleNames.includes(role.name));
+      
+      setProjectRoles(projectRoles);
+      
+      // 设置默认角色为 PROJECT_MEMBER
+      const defaultRole = projectRoles.find(r => r.name === 'PROJECT_MEMBER');
+      if (defaultRole) {
+        setNewRoleId((prev) => prev || defaultRole.id);
+      }
+    } catch (error) {
+      console.error('加载系统角色失败:', error);
+    }
+  }, []);
+
   // 根据角色筛选成员
-  const filteredMembers = filterRole
-    ? members.filter((member) => member.role === filterRole)
+  const filteredMembers = filterRoleId
+    ? members.filter((member) => member.roleId === filterRoleId)
     : members;
 
   // 搜索用户
@@ -126,32 +166,50 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   }, [newEmail, showAddForm, selectedUser, searchUsers]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadMembers();
+    if (isOpen && !isInitializedRef.current) {
+      isInitializedRef.current = true;
+
+      // 重置状态
       setNewEmail('');
-      setNewRole('MEMBER');
+      setNewRoleId('');
       setShowAddForm(false);
       setErrorMessage('');
       setSearchResults([]);
       setSelectedUser(null);
+
+      // 开始加载
+      setLoading(true);
+
+      // 并行加载数据
+      Promise.all([loadMembers(), loadProjectRoles()]).finally(() => {
+        setLoading(false);
+      });
     }
-  }, [isOpen, loadMembers]);
+    if (!isOpen) {
+      isInitializedRef.current = false;
+    }
+  }, [isOpen, projectId]);
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
+    if (!selectedUser || !newRoleId) return;
 
     setAdding(true);
     setErrorMessage('');
     try {
       // 添加成员
-      await projectsApi.addMember(projectId, {
+      const response = await projectsApi.addMember(projectId, {
         userId: selectedUser.id,
-        role: newRole,
+        roleId: newRoleId,
       });
-      await loadMembers();
+
+      // 直接添加到列表，避免重新加载
+      const newMember = response.data as Member;
+      setMembers((prev) => [...prev, newMember]);
+
+      // 重置表单
       setNewEmail('');
-      setNewRole('MEMBER');
+      setNewRoleId('');
       setShowAddForm(false);
       setSearchResults([]);
       setSelectedUser(null);
@@ -186,14 +244,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     }
   };
 
-  const handleUpdateRole = async (userId: string, role: string) => {
+  const handleUpdateRole = async (userId: string, roleId: string) => {
     setErrorMessage('');
     try {
-      await projectsApi.updateMember(projectId, userId, { role });
+      await projectsApi.updateMember(projectId, userId, { roleId });
       setMembers((prev) =>
-        prev.map((m) =>
-          m.id === userId || m.userId === userId ? { ...m, role } : m
-        )
+        prev.map((m) => (m.userId === userId ? { ...m, roleId } : m))
       );
     } catch (error) {
       if (
@@ -362,20 +418,22 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               {/* 角色选择和添加按钮 */}
               <div className="flex gap-2">
                 <select
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
+                  value={newRoleId}
+                  onChange={(e) => setNewRoleId(e.target.value)}
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  disabled={loading}
                 >
-                  <option value="OWNER">所有者</option>
-                  <option value="ADMIN">管理员</option>
-                  <option value="MEMBER">成员</option>
-                  <option value="EDITOR">编辑者</option>
-                  <option value="VIEWER">查看者</option>
+                  <option value="">请选择角色</option>
+                  {projectRoles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {getRoleDisplayName(role.name)}
+                    </option>
+                  ))}
                 </select>
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={adding || !selectedUser}
+                  disabled={adding || !selectedUser || !newRoleId}
                 >
                   {adding ? '添加中...' : '添加'}
                 </Button>
@@ -391,16 +449,16 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               共 {filteredMembers.length} 人
             </span>
             <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
+              value={filterRoleId}
+              onChange={(e) => setFilterRoleId(e.target.value)}
               className="px-3 py-1.5 border border-slate-300 rounded bg-white text-sm text-slate-700"
             >
               <option value="">所有角色</option>
-              <option value="OWNER">所有者</option>
-              <option value="ADMIN">管理员</option>
-              <option value="MEMBER">成员</option>
-              <option value="EDITOR">编辑者</option>
-              <option value="VIEWER">查看者</option>
+              {projectRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {getRoleDisplayName(role.name)}
+                </option>
+              ))}
             </select>
           </div>
         )}
@@ -414,11 +472,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             </div>
           ) : filteredMembers.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
-              {filterRole ? '没有符合条件的成员' : '暂无成员'}
+              {filterRoleId ? '没有符合条件的成员' : '暂无成员'}
             </div>
           ) : (
             filteredMembers.map((member) => {
-              const isOwner = member.role === 'OWNER';
+              const isOwner =
+                member.role.isSystem && member.role.name === 'OWNER';
               const displayName =
                 member.user.nickname ||
                 member.user.username ||
@@ -445,7 +504,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     </p>
                   </div>
                   <select
-                    value={member.role}
+                    value={member.roleId}
                     onChange={(e) =>
                       handleUpdateRole(member.userId, e.target.value)
                     }
@@ -454,11 +513,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       isOwner ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
-                    <option value="OWNER">所有者</option>
-                    <option value="ADMIN">管理员</option>
-                    <option value="MEMBER">成员</option>
-                    <option value="EDITOR">编辑者</option>
-                    <option value="VIEWER">查看者</option>
+                    {projectRoles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {getRoleDisplayName(role.name)}
+                      </option>
+                    ))}
                   </select>
                   {!isOwner && (
                     <button

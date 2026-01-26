@@ -339,10 +339,12 @@ export class AuthService {
 
       const expiresAt = new Date(payload.exp * 1000);
 
+      // 先删除该用户的所有旧 tokens，确保只有一个活跃的 refresh token
       await this.prisma.refreshToken.deleteMany({
         where: { userId },
       });
 
+      // 创建新的 refresh token
       await this.prisma.refreshToken.create({
         data: {
           token,
@@ -351,6 +353,12 @@ export class AuthService {
         },
       });
     } catch (error) {
+      // 如果是唯一约束冲突，说明并发请求导致的重复创建
+      // 这种情况下，忽略错误，因为至少有一个请求成功创建了 token
+      if (error instanceof Error && error.message.includes('Unique constraint')) {
+        this.logger.warn(`并发刷新 token 冲突，已忽略: ${error.message}`);
+        return;
+      }
       throw new UnauthorizedException('Token存储失败');
     }
   }

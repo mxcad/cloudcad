@@ -28,6 +28,24 @@ enum Permission {
   FILE_DELETE = 'file:delete',
   FILE_SHARE = 'file:share',
   FILE_DOWNLOAD = 'file:download',
+  FILE_COMMENT = 'file:comment', // 批注权限
+  FILE_PRINT = 'file:print', // 打印权限
+  FILE_COMPARE = 'file:compare', // 图纸比对权限
+
+  // 版本管理权限
+  VERSION_READ = 'version:read',
+  VERSION_CREATE = 'version:create',
+  VERSION_DELETE = 'version:delete',
+  VERSION_RESTORE = 'version:restore',
+
+  // 字体管理权限
+  FONT_MANAGE = 'font:manage',
+
+  // 审图配置权限
+  REVIEW_CONFIG = 'review:config',
+
+  // 回收站权限
+  TRASH_MANAGE = 'trash:manage',
 
   // 系统权限
   SYSTEM_ADMIN = 'system:admin',
@@ -64,7 +82,31 @@ const PERMISSION_GROUPS = [
       { key: Permission.FILE_DELETE, label: '删除文件' },
       { key: Permission.FILE_SHARE, label: '分享文件' },
       { key: Permission.FILE_DOWNLOAD, label: '下载文件' },
+      { key: Permission.FILE_COMMENT, label: '批注文件' },
+      { key: Permission.FILE_PRINT, label: '打印文件' },
+      { key: Permission.FILE_COMPARE, label: '图纸比对' },
     ],
+  },
+  {
+    label: '版本管理',
+    items: [
+      { key: Permission.VERSION_READ, label: '查看版本' },
+      { key: Permission.VERSION_CREATE, label: '创建版本' },
+      { key: Permission.VERSION_DELETE, label: '删除版本' },
+      { key: Permission.VERSION_RESTORE, label: '恢复版本' },
+    ],
+  },
+  {
+    label: '字体管理',
+    items: [{ key: Permission.FONT_MANAGE, label: '字体管理' }],
+  },
+  {
+    label: '审图配置',
+    items: [{ key: Permission.REVIEW_CONFIG, label: '审图配置' }],
+  },
+  {
+    label: '回收站',
+    items: [{ key: Permission.TRASH_MANAGE, label: '回收站管理' }],
   },
   {
     label: '系统权限',
@@ -74,6 +116,18 @@ const PERMISSION_GROUPS = [
     ],
   },
 ];
+
+// 项目成员角色名称映射
+const PROJECT_ROLE_NAMES: Record<string, string> = {
+  PROJECT_OWNER: '项目所有者',
+  PROJECT_ADMIN: '项目管理员',
+  PROJECT_MEMBER: '项目成员',
+  PROJECT_EDITOR: '项目编辑者',
+  PROJECT_VIEWER: '项目查看者',
+};
+
+// 项目成员角色列表
+const PROJECT_ROLES = ['PROJECT_OWNER', 'PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
 
 type Role = {
   id: string;
@@ -88,6 +142,16 @@ type Role = {
 export const RoleManagement = () => {
   const [hasPermission, setHasPermission] = useState(true);
   const [roles, setRoles] = useState<Role[]>([]);
+
+  // 获取角色显示名称
+  const getRoleDisplayName = (roleName: string): string => {
+    return PROJECT_ROLE_NAMES[roleName] || roleName;
+  };
+
+  // 判断是否为项目成员角色
+  const isProjectRole = (roleName: string): boolean => {
+    return PROJECT_ROLES.includes(roleName);
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Edit State
@@ -225,66 +289,142 @@ export const RoleManagement = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roles.map((role) => (
-              <div
-                key={role.id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col"
-              >
-                <div className="p-6 border-b border-slate-100 flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      {role.name}
-                      {role.isSystem && (
-                        <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                          系统
+          {/* 项目成员角色分组 */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-bold text-slate-900">项目成员角色</h2>
+              <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+                5 个角色
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              用于管理项目内部的成员权限，可在项目成员管理中分配给项目成员
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {roles.filter(role => isProjectRole(role.name)).map((role) => (
+                <div
+                  key={role.id}
+                  className="bg-white rounded-xl border-2 border-emerald-200 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                >
+                  <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-emerald-50/30">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        {getRoleDisplayName(role.name)}
+                        <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200">
+                          项目
+                        </span>
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">
+                        <DescriptionText>{role.description}</DescriptionText>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-6 flex-1 bg-slate-50/50">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                      拥有权限
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {role.permissions.slice(0, 6).map((p) => (
+                        <span
+                          key={p}
+                          className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                        >
+                          {p.split('_')[1] || p}
+                        </span>
+                      ))}
+                      {role.permissions.length > 6 && (
+                        <span className="text-xs px-2 py-1 text-slate-400">
+                          +{role.permissions.length - 6}
                         </span>
                       )}
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      <DescriptionText>{role.description}</DescriptionText>
-                    </p>
+                    </div>
                   </div>
-                  {!role.isSystem && (
-                    <button
-                      onClick={() => handleDelete(role.id)}
-                      className="text-slate-400 hover:text-red-500"
+                  <div className="p-4 border-t border-slate-100">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleEdit(role)}
                     >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
+                      配置权限
+                    </Button>
+                  </div>
                 </div>
-                <div className="p-6 flex-1 bg-slate-50/50">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                    拥有权限
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p) => (
-                      <span
-                        key={p}
-                        className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+              ))}
+            </div>
+          </div>
+
+          {/* 系统角色分组 */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-bold text-slate-900">系统用户角色</h2>
+              <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                {roles.filter(role => !isProjectRole(role.name)).length} 个角色
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              用于管理系统用户的全局权限，分配给系统用户
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {roles.filter(role => !isProjectRole(role.name)).map((role) => (
+                <div
+                  key={role.id}
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                >
+                  <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        {role.name}
+                        {role.isSystem && (
+                          <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                            系统
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">
+                        <DescriptionText>{role.description}</DescriptionText>
+                      </p>
+                    </div>
+                    {!role.isSystem && (
+                      <button
+                        onClick={() => handleDelete(role.id)}
+                        className="text-slate-400 hover:text-red-500"
                       >
-                        {p.split('_')[1] || p}
-                      </span>
-                    ))}
-                    {role.permissions.length > 6 && (
-                      <span className="text-xs px-2 py-1 text-slate-400">
-                        +{role.permissions.length - 6}
-                      </span>
+                        <Trash2 size={18} />
+                      </button>
                     )}
                   </div>
+                  <div className="p-6 flex-1 bg-slate-50/50">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                      拥有权限
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {role.permissions.slice(0, 6).map((p) => (
+                        <span
+                          key={p}
+                          className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                        >
+                          {p.split('_')[1] || p}
+                        </span>
+                      ))}
+                      {role.permissions.length > 6 && (
+                        <span className="text-xs px-2 py-1 text-slate-400">
+                          +{role.permissions.length - 6}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-4 border-t border-slate-100">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleEdit(role)}
+                    >
+                      配置权限
+                    </Button>
+                  </div>
                 </div>
-                <div className="p-4 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleEdit(role)}
-                  >
-                    配置权限
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <Modal

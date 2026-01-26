@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { PrismaClient, UserStatus, Permission } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
 
@@ -49,7 +49,177 @@ async function main() {
     },
   });
 
-  console.log('角色已准备:', adminRole.name, userRole.name);
+  // 创建项目专属的系统角色
+  const projectOwnerRole = await prisma.role.upsert({
+    where: { name: 'PROJECT_OWNER' },
+    update: {},
+    create: {
+      name: 'PROJECT_OWNER',
+      description: '项目所有者，拥有项目所有权限',
+      isSystem: true,
+    },
+  });
+
+  const projectAdminRole = await prisma.role.upsert({
+    where: { name: 'PROJECT_ADMIN' },
+    update: {},
+    create: {
+      name: 'PROJECT_ADMIN',
+      description: '项目管理员，可管理成员和文件',
+      isSystem: true,
+    },
+  });
+
+  const projectMemberRole = await prisma.role.upsert({
+    where: { name: 'PROJECT_MEMBER' },
+    update: {},
+    create: {
+      name: 'PROJECT_MEMBER',
+      description: '项目成员，可编辑文件',
+      isSystem: true,
+    },
+  });
+
+  const projectEditorRole = await prisma.role.upsert({
+    where: { name: 'PROJECT_EDITOR' },
+    update: {},
+    create: {
+      name: 'PROJECT_EDITOR',
+      description: '项目编辑者，可编辑文件',
+      isSystem: true,
+    },
+  });
+
+  const projectViewerRole = await prisma.role.upsert({
+    where: { name: 'PROJECT_VIEWER' },
+    update: {},
+    create: {
+      name: 'PROJECT_VIEWER',
+      description: '项目查看者，只读权限',
+      isSystem: true,
+    },
+  });
+
+  console.log('角色已准备:', adminRole.name, userRole.name, projectOwnerRole.name, projectAdminRole.name, projectMemberRole.name, projectEditorRole.name, projectViewerRole.name);
+
+  // 为项目角色分配权限
+  console.log('开始为项目角色分配权限...');
+
+  // PROJECT_OWNER 权限
+  const ownerPermissions: Permission[] = [
+    'PROJECT_READ', 'PROJECT_WRITE', 'PROJECT_DELETE', 'PROJECT_ADMIN', 'PROJECT_MEMBER_MANAGE',
+    'FILE_CREATE', 'FILE_READ', 'FILE_WRITE', 'FILE_DELETE', 'FILE_SHARE', 'FILE_DOWNLOAD',
+    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
+    'VERSION_READ', 'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
+    'FONT_MANAGE', 'REVIEW_CONFIG', 'TRASH_MANAGE',
+  ];
+  for (const perm of ownerPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permission: {
+          roleId: projectOwnerRole.id,
+          permission: perm,
+        },
+      },
+      update: {},
+      create: {
+        roleId: projectOwnerRole.id,
+        permission: perm,
+      },
+    });
+  }
+  console.log(`✓ PROJECT_OWNER 权限配置完成 (${ownerPermissions.length} 个权限)`);
+
+  // PROJECT_ADMIN 权限
+  const adminPermissions: Permission[] = [
+    'PROJECT_READ', 'PROJECT_WRITE', 'PROJECT_MEMBER_MANAGE',
+    'FILE_CREATE', 'FILE_READ', 'FILE_WRITE', 'FILE_DELETE', 'FILE_SHARE', 'FILE_DOWNLOAD',
+    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
+    'VERSION_READ', 'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
+    'FONT_MANAGE', 'REVIEW_CONFIG', 'TRASH_MANAGE',
+  ];
+  for (const perm of adminPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permission: {
+          roleId: projectAdminRole.id,
+          permission: perm,
+        },
+      },
+      update: {},
+      create: {
+        roleId: projectAdminRole.id,
+        permission: perm,
+      },
+    });
+  }
+  console.log(`✓ PROJECT_ADMIN 权限配置完成 (${adminPermissions.length} 个权限)`);
+
+  // PROJECT_MEMBER 权限
+  const memberPermissions: Permission[] = [
+    'PROJECT_READ',
+    'FILE_CREATE', 'FILE_READ', 'FILE_WRITE', 'FILE_SHARE', 'FILE_DOWNLOAD',
+    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
+    'VERSION_READ', 'VERSION_CREATE',
+  ];
+  for (const perm of memberPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permission: {
+          roleId: projectMemberRole.id,
+          permission: perm,
+        },
+      },
+      update: {},
+      create: {
+        roleId: projectMemberRole.id,
+        permission: perm,
+      },
+    });
+  }
+  console.log(`✓ PROJECT_MEMBER 权限配置完成 (${memberPermissions.length} 个权限)`);
+
+  // PROJECT_EDITOR 权限
+  const editorPermissions: Permission[] = [
+    'FILE_READ', 'FILE_WRITE', 'FILE_SHARE', 'FILE_DOWNLOAD',
+    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
+    'VERSION_READ',
+  ];
+  for (const perm of editorPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permission: {
+          roleId: projectEditorRole.id,
+          permission: perm,
+        },
+      },
+      update: {},
+      create: {
+        roleId: projectEditorRole.id,
+        permission: perm,
+      },
+    });
+  }
+  console.log(`✓ PROJECT_EDITOR 权限配置完成 (${editorPermissions.length} 个权限)`);
+
+  // PROJECT_VIEWER 权限
+  const viewerPermissions: Permission[] = ['FILE_READ', 'FILE_DOWNLOAD', 'FILE_COMMENT'];
+  for (const perm of viewerPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permission: {
+          roleId: projectViewerRole.id,
+          permission: perm,
+        },
+      },
+      update: {},
+      create: {
+        roleId: projectViewerRole.id,
+        permission: perm,
+      },
+    });
+  }
+  console.log(`✓ PROJECT_VIEWER 权限配置完成 (${viewerPermissions.length} 个权限)`);
 
   // 创建管理员用户（管理员账号不需要邮箱验证）
   const adminPassword = await bcrypt.hash('Admin123!', 12);

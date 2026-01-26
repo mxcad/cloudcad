@@ -10,6 +10,8 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useProjectManagement } from '../hooks/useProjectManagement';
+import { usePermission } from '../hooks/usePermission';
+import { useAuth } from '../contexts/AuthContext';
 import { projectsApi } from '../services/apiService';
 import {
   EmptyFolderIcon,
@@ -31,6 +33,7 @@ export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; nodeId?: string }>();
   const location = useLocation();
+  const { user } = useAuth();
 
   // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
   const urlProjectId = React.useMemo(() => {
@@ -116,8 +119,19 @@ export const FileSystemManager: React.FC = () => {
     onProjectDeleted: handleRefresh,
   });
 
+  // 权限管理 hook
+  const { isAdmin } = usePermission();
+
   // 成员管理状态
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+
+  // 权限状态
+  const [nodePermissions, setNodePermissions] = useState<
+    Map<string, { canEdit: boolean; canDelete: boolean; canManageMembers: boolean }>
+  >(new Map());
+
+  // 权限加载状态
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
 
   // 移动/拷贝状态
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
@@ -170,6 +184,35 @@ export const FileSystemManager: React.FC = () => {
       });
     }
   }, [breadcrumbs]);
+
+  // 加载节点权限信息
+  useEffect(() => {
+    if (!user || !urlProjectId) return;
+
+    const loadPermissions = async () => {
+      setPermissionsLoading(true);
+      try {
+        const { canEditNode, canDeleteNode, canManageNodeMembers } =
+          await import('../utils/permissionUtils');
+
+        const canEdit = await canEditNode(user, urlProjectId);
+        const canDelete = await canDeleteNode(user, urlProjectId);
+        const canManage = await canManageNodeMembers(user, urlProjectId);
+
+        setNodePermissions((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(urlProjectId, { canEdit, canDelete, canManageMembers: canManage });
+          return newMap;
+        });
+      } catch (error) {
+        console.error('加载权限信息失败:', error);
+      } finally {
+        setPermissionsLoading(false);
+      }
+    };
+
+    loadPermissions();
+  }, [user, urlProjectId]);
 
   // 获取当前正确的父节点 ID（上传目标目录）
   // 使用 ref 缓存最新值，避免闭包问题
@@ -733,36 +776,51 @@ export const FileSystemManager: React.FC = () => {
               : 'divide-y divide-slate-100'
           }
         >
-          {displayNodes.map((node) => (
-            <FileItem
-              key={node.id}
-              node={node}
-              isSelected={selectedNodes.has(node.id)}
-              viewMode={viewMode}
-              isMultiSelectMode={isMultiSelectMode}
-              onSelect={handleNodeSelect}
-              onEnter={handleFileOpen}
-              onDownload={handleDownload}
-              onDelete={handleDelete}
-              onRename={handleOpenRename}
-              onRefresh={handleRefresh}
-              onEdit={node.isRoot ? () => openEditProject(node) : undefined}
-              onDeleteNode={
-                node.isRoot ? () => handleRemoveProject(node) : undefined
-              }
-              onShowMembers={
-                node.isRoot ? () => handleShowMembers(node) : undefined
-              }
-              onMove={!node.isRoot ? handleMove : undefined}
-              onCopy={!node.isRoot ? handleCopy : undefined}
-              onAddToGallery={!node.isFolder ? handleAddToGallery : undefined}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              isDropTarget={dropTargetId === node.id}
-            />
-          ))}
+          {displayNodes.map((node) => {
+            // 获取节点权限信息
+            // 在项目列表页面（isAtRoot），默认给管理员显示操作按钮
+            // 在项目内部页面，使用加载的权限信息
+            const cachedPermissions = nodePermissions.get(node.id);
+            const isAdminUser = user?.role?.name === 'ADMIN';
+            const defaultPermissions = isAdminUser
+              ? { canEdit: true, canDelete: true, canManageMembers: true }
+              : { canEdit: false, canDelete: false, canManageMembers: false };
+
+            const permissions = node.isRoot
+              ? cachedPermissions || defaultPermissions
+              : { canEdit: true, canDelete: true, canManageMembers: false };
+
+            return (
+              <FileItem
+                key={node.id}
+                node={node}
+                isSelected={selectedNodes.has(node.id)}
+                viewMode={viewMode}
+                isMultiSelectMode={isMultiSelectMode}
+                onSelect={handleNodeSelect}
+                onEnter={handleFileOpen}
+                onDownload={handleDownload}
+                onDelete={handleDelete}
+                onRename={handleOpenRename}
+                onRefresh={handleRefresh}
+                onEdit={node.isRoot && permissions.canEdit ? () => openEditProject(node) : undefined}
+                onDeleteNode={
+                  node.isRoot && permissions.canDelete ? () => handleRemoveProject(node) : undefined
+                }
+                onShowMembers={
+                  node.isRoot && permissions.canManageMembers ? () => handleShowMembers(node) : undefined
+                }
+                onMove={!node.isRoot ? handleMove : undefined}
+                onCopy={!node.isRoot ? handleCopy : undefined}
+                onAddToGallery={!node.isFolder ? handleAddToGallery : undefined}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                isDropTarget={dropTargetId === node.id}
+              />
+            );
+          })}
         </div>
 
         {/* 分页组件 */}
