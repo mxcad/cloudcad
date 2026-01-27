@@ -68,7 +68,7 @@ export class NodePermissionGuard implements CanActivate {
   }
 
   private extractNodeId(request: any): string | null {
-    // 从路由参数中获取（优先使用 nodeId，其次 projectId）
+    // 从路由参数中获取（优先使用 nodeId，其次 projectId，再次 parentId）
     if (
       request.params?.nodeId !== undefined &&
       request.params?.nodeId !== null
@@ -81,6 +81,12 @@ export class NodePermissionGuard implements CanActivate {
     ) {
       return request.params.projectId;
     }
+    if (
+      request.params?.parentId !== undefined &&
+      request.params?.parentId !== null
+    ) {
+      return request.params.parentId;
+    }
 
     // 从查询参数中获取
     if (request.query?.nodeId !== undefined && request.query?.nodeId !== null) {
@@ -92,6 +98,12 @@ export class NodePermissionGuard implements CanActivate {
     ) {
       return request.query.projectId;
     }
+    if (
+      request.query?.parentId !== undefined &&
+      request.query?.parentId !== null
+    ) {
+      return request.query.parentId;
+    }
 
     // 从请求体中获取
     if (request.body?.nodeId !== undefined && request.body?.nodeId !== null) {
@@ -102,6 +114,12 @@ export class NodePermissionGuard implements CanActivate {
       request.body?.projectId !== null
     ) {
       return request.body.projectId;
+    }
+    if (
+      request.body?.parentId !== undefined &&
+      request.body?.parentId !== null
+    ) {
+      return request.body.parentId;
     }
 
     return null;

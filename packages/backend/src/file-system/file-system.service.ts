@@ -628,6 +628,25 @@ export class FileSystemService {
     }
 
     try {
+      // 检查父节点是否存在以及是否已被删除
+      const parentNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { id: true, deletedAt: true },
+      });
+
+      // 如果父节点不存在或已被删除，返回空列表
+      if (!parentNode || parentNode.deletedAt) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+          },
+        };
+      }
+
       // 如果提供了userId，检查权限
       if (userId) {
         const hasPermission = await this.checkNodeAccess(nodeId, userId);
