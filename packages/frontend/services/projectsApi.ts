@@ -35,8 +35,10 @@ export const projectsApi = {
   renameNode: (nodeId: string, data: { name: string }) =>
     apiClient.patch(`/file-system/nodes/${nodeId}`, data),
 
-  deleteNode: (nodeId: string) =>
-    apiClient.delete(`/file-system/nodes/${nodeId}`),
+  deleteNode: (nodeId: string, permanently: boolean = false) =>
+    apiClient.delete(`/file-system/nodes/${nodeId}`, {
+      params: { permanently }
+    }),
 
   moveNode: (nodeId: string, targetParentId: string) =>
     apiClient.post(`/file-system/nodes/${nodeId}/move`, { targetParentId }),

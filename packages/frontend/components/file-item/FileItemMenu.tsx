@@ -23,6 +23,7 @@ interface FileItemMenuProps {
   onCloseMenu: () => void;
   onDownload?: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;
+  onPermanentlyDelete?: (node: FileSystemNode) => void;
   onRename: (node: FileSystemNode) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onShowMembers?: (e: React.MouseEvent) => void;
@@ -45,6 +46,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onCloseMenu,
   onDownload,
   onDelete,
+  onPermanentlyDelete,
   onRename,
   onEdit,
   onShowMembers,
@@ -288,8 +290,20 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
               className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
             >
               <DeleteIcon size={16} />
-              {onRestore ? '彻底删除' : '删除'}
+              删除
             </button>
+            {onPermanentlyDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMenuAction(() => onPermanentlyDelete(node));
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-100 flex items-center gap-2 transition-colors"
+              >
+                <DeleteIcon size={16} />
+                彻底删除
+              </button>
+            )}
           </>
         )}
       </>

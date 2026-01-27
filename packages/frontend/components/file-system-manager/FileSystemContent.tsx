@@ -25,6 +25,7 @@ interface FileSystemContentProps {
   onFileOpen: (node: FileSystemNode) => void;
   onDownload: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;
+  onPermanentlyDelete?: (node: FileSystemNode) => void;
   onRename: (node: FileSystemNode) => void;
   onRefresh: () => void;
   onEdit?: (e: React.MouseEvent) => void;
@@ -57,6 +58,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onFileOpen,
   onDownload,
   onDelete,
+  onPermanentlyDelete,
   onRename,
   onRefresh,
   onEdit,
@@ -158,6 +160,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
             onEnter={onFileOpen}
             onDownload={onDownload}
             onDelete={onDelete}
+            onPermanentlyDelete={onPermanentlyDelete}
             onRename={onRename}
             onRefresh={onRefresh}
             onEdit={node.isRoot ? onEdit : undefined}

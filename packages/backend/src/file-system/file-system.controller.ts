@@ -193,9 +193,11 @@ export class FileSystemController {
   @ApiResponse({ status: 200, description: '删除节点成功' })
   async deleteNode(
     @Param('nodeId') nodeId: string,
-    @Body() body: { permanently?: boolean }
+    @Body() body?: { permanently?: boolean },
+    @Query('permanently') permanentlyQuery?: boolean
   ) {
-    return this.fileSystemService.deleteNode(nodeId, body?.permanently);
+    const permanently = body?.permanently ?? permanentlyQuery ?? false;
+    return this.fileSystemService.deleteNode(nodeId, permanently);
   }
 
   @Post('nodes/:nodeId/move')

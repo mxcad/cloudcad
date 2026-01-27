@@ -175,6 +175,7 @@ export const useFileSystem = () => {
     isOpen: boolean;
     title: string;
     message: string;
+    confirmText?: string;
     onConfirm: () => void;
     type?: 'danger' | 'warning' | 'info';
   }>({
@@ -205,12 +206,14 @@ export const useFileSystem = () => {
       title: string,
       message: string,
       onConfirm: () => void,
-      type: 'danger' | 'warning' | 'info' = 'warning'
+      type: 'danger' | 'warning' | 'info' = 'warning',
+      confirmText: string = '确定'
     ) => {
       setConfirmDialog({
         isOpen: true,
         title,
         message,
+        confirmText,
         onConfirm: () => {
           onConfirm();
           closeConfirm();
@@ -655,10 +658,10 @@ export const useFileSystem = () => {
           deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要彻底删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容，且不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, true);
         } else {
           deleteMessage = `确定要彻底删除文件"${node.name}"吗？此操作不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, true);
         }
       } else {
         // 移到回收站
@@ -667,10 +670,10 @@ export const useFileSystem = () => {
           deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要将文件夹"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, false);
         } else {
           deleteMessage = `确定要将文件"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, false);
         }
       }
 
@@ -699,7 +702,8 @@ export const useFileSystem = () => {
             showToast(errorMessage, 'error');
           }
         },
-        permanently ? 'danger' : 'warning'
+        permanently ? 'danger' : 'warning',
+        permanently ? '彻底删除' : '删除'
       );
     },
     [showConfirm, loadData, showToast]
@@ -728,7 +732,7 @@ export const useFileSystem = () => {
                 if (node?.isRoot) {
                   return projectsApi.delete(node.id);
                 }
-                return projectsApi.deleteNode(node.id);
+                return projectsApi.deleteNode(node.id, permanently);
               })
             );
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
@@ -751,7 +755,8 @@ export const useFileSystem = () => {
             showToast(errorMessage, 'error');
           }
         },
-        permanently ? 'danger' : 'warning'
+        permanently ? 'danger' : 'warning',
+        permanently ? '彻底删除' : '删除'
       );
     },
     [selectedNodes, nodes, showConfirm, loadData, showToast]
@@ -924,27 +929,29 @@ export const useFileSystem = () => {
 
   const handleDeleteProject = useCallback(
     async (id: string, name: string) => {
-      try {
-        await projectsApi.delete(id);
-        showToast('项目删除成功', 'success');
-        loadData();
-      } catch (error) {
-        let errorMessage = '删除项目失败';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (
-          typeof error === 'object' &&
-          error !== null &&
-          'response' in error
-        ) {
-          const err = error as { response?: { data?: { message?: string } } };
-          errorMessage = err.response?.data?.message || errorMessage;
-        }
-        showToast(errorMessage, 'error');
-        throw error;
-      }
+      // 注意：handleDeleteProject 默认为彻底删除（permanently=true）
+      // 如果需要移到回收站，请使用 handleDelete(node, false)
+      const node: FileSystemNode = {
+        id,
+        name,
+        isRoot: true,
+        isFolder: true,
+        parentId: null,
+        ownerId: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      handleDelete(node, true);
     },
-    [loadData, showToast]
+    [handleDelete]
+  );
+
+  // 彻底删除节点
+  const handlePermanentlyDelete = useCallback(
+    (node: FileSystemNode) => {
+      handleDelete(node, true);
+    },
+    [handleDelete]
   );
 
   // 搜索输入处理
@@ -1121,6 +1128,7 @@ export const useFileSystem = () => {
     handleCreateFolder,
     handleRename,
     handleDelete,
+    handlePermanentlyDelete,
     handleBatchDelete,
     handleEnterFolder,
     handleFileOpen,

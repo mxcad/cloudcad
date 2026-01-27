@@ -86,6 +86,7 @@ export const FileSystemManager: React.FC = () => {
     handleCreateFolder,
     handleRename,
     handleDelete,
+    handlePermanentlyDelete,
     handleBatchDelete,
     handleFileOpen,
     handleDownload,
@@ -793,6 +794,7 @@ export const FileSystemManager: React.FC = () => {
                 onEnter={handleFileOpen}
                 onDownload={handleDownload}
                 onDelete={handleDelete}
+                onPermanentlyDelete={handlePermanentlyDelete}
                 onRename={handleOpenRename}
                 onRefresh={handleRefresh}
                 onEdit={node.isRoot && permissions.canEdit ? () => openEditProject(node) : undefined}
@@ -838,6 +840,7 @@ export const FileSystemManager: React.FC = () => {
         isOpen={confirmDialog.isOpen}
         title={confirmDialog.title}
         message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText || '确定'}
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
         type={confirmDialog.type}

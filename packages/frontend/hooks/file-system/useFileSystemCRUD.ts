@@ -16,7 +16,8 @@ interface UseFileSystemCRUDProps {
     title: string,
     message: string,
     onConfirm: () => void,
-    type?: 'danger' | 'warning' | 'info'
+    type?: 'danger' | 'warning' | 'info',
+    confirmText?: string
   ) => void;
   selectedNodes: Set<string>;
   nodes: FileSystemNode[];
@@ -169,10 +170,10 @@ export const useFileSystemCRUD = ({
           deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要彻底删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容，且不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, true);
         } else {
           deleteMessage = `确定要彻底删除文件"${node.name}"吗？此操作不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, true);
         }
       } else {
         if (node.isRoot) {
@@ -180,10 +181,10 @@ export const useFileSystemCRUD = ({
           deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要将文件夹"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, false);
         } else {
           deleteMessage = `确定要将文件"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id);
+          deleteApi = projectsApi.deleteNode(node.id, false);
         }
       }
 
@@ -212,7 +213,8 @@ export const useFileSystemCRUD = ({
             showToast(errorMessage, 'error');
           }
         },
-        permanently ? 'danger' : 'warning'
+        permanently ? 'danger' : 'warning',
+        permanently ? '彻底删除' : '删除'
       );
     },
     [showConfirm, loadData, showToast]
@@ -240,7 +242,7 @@ export const useFileSystemCRUD = ({
                 if (node?.isRoot) {
                   return projectsApi.delete(node.id);
                 }
-                return projectsApi.deleteNode(node.id);
+                return projectsApi.deleteNode(node.id, permanently);
               })
             );
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
@@ -263,7 +265,8 @@ export const useFileSystemCRUD = ({
             showToast(errorMessage, 'error');
           }
         },
-        permanently ? 'danger' : 'warning'
+        permanently ? 'danger' : 'warning',
+        permanently ? '彻底删除' : '删除'
       );
     },
     [selectedNodes, nodes, showConfirm, loadData, showToast, clearSelection]
