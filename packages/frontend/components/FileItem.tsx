@@ -6,7 +6,7 @@ import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
 import { mxcadApi } from '../services/mxcadApi';
-import { filesApi } from '../services/filesApi';
+import { getOriginalFileUrl } from '../utils/fileUtils';
 import {
   Thumbnail,
   FileItemSelection,
@@ -146,18 +146,11 @@ export const FileItem: React.FC<FileItemProps> = ({
     return imageExtensions.includes(ext || '');
   }, [node.extension, node.isFolder, node.isRoot]);
 
-  const handleImagePreview = useCallback(async () => {
-    try {
-      const response = await filesApi.download(node.id);
-      const blob = new Blob([response.data]);
-      const url = window.URL.createObjectURL(blob);
-      setPreviewImageSrc(url);
-      setIsPreviewOpen(true);
-    } catch (error) {
-      console.error('加载图片失败:', error);
-      onEnter(node);
-    }
-  }, [node.id, onEnter]);
+  const handleImagePreview = useCallback(() => {
+    const imageUrl = getOriginalFileUrl(node);
+    setPreviewImageSrc(imageUrl);
+    setIsPreviewOpen(true);
+  }, [node]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
