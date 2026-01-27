@@ -1,11 +1,13 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermission } from '../hooks/usePermission';
 import { apiService } from '../services/apiService';
 
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { isAdmin } = usePermission();
   const [activeTab, setActiveTab] = useState<'info' | 'password'>('info');
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: '',
@@ -139,16 +141,15 @@ export const Profile: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    角色
-                  </label>
-                  <div className="mt-1">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      {user?.role?.name === 'ADMIN' ? '管理员' : '普通用户'}
-                    </span>
-                  </div>
-                </div>
-
+                                    <label className="block text-sm font-medium text-gray-700">
+                                      角色
+                                    </label>
+                                    <div className="mt-1">
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                        {isAdmin() ? '管理员' : '普通用户'}
+                                      </span>
+                                    </div>
+                                  </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     账户状态

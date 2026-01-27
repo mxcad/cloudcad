@@ -20,7 +20,7 @@ export class FileSystemPermissionService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly permissionService: PermissionService,
-    private readonly cacheService: PermissionCacheService,
+    private readonly cacheService: PermissionCacheService
   ) {}
 
   /**
@@ -34,7 +34,7 @@ export class FileSystemPermissionService {
   async checkNodePermission(
     userId: string,
     nodeId: string,
-    requiredPermission: Permission,
+    requiredPermission: Permission
   ): Promise<boolean> {
     // 验证节点存在
     const node = await this.prisma.fileSystemNode.findUnique({
@@ -50,7 +50,7 @@ export class FileSystemPermissionService {
     return await this.permissionService.checkPermission(
       userId,
       nodeId,
-      requiredPermission,
+      requiredPermission
     );
   }
 
@@ -63,7 +63,7 @@ export class FileSystemPermissionService {
    */
   async getNodeAccessRole(
     userId: string,
-    nodeId: string,
+    nodeId: string
   ): Promise<NodeAccessRole | null> {
     return await this.permissionService.getNodeAccessRole(userId, nodeId);
   }
@@ -79,7 +79,7 @@ export class FileSystemPermissionService {
   async hasNodeAccessRole(
     userId: string,
     nodeId: string,
-    roles: NodeAccessRole[],
+    roles: NodeAccessRole[]
   ): Promise<boolean> {
     const role = await this.getNodeAccessRole(userId, nodeId);
     return role ? roles.includes(role) : false;
@@ -95,7 +95,7 @@ export class FileSystemPermissionService {
   async setProjectMemberRole(
     projectId: string,
     userId: string,
-    roleId: string,
+    roleId: string
   ): Promise<void> {
     await this.prisma.projectMember.upsert({
       where: {
@@ -182,7 +182,7 @@ export class FileSystemPermissionService {
    */
   async batchAddProjectMembers(
     projectId: string,
-    members: Array<{ userId: string; roleId: string }>,
+    members: Array<{ userId: string; roleId: string }>
   ): Promise<void> {
     await this.prisma.$transaction(
       members.map((member) =>
@@ -201,8 +201,8 @@ export class FileSystemPermissionService {
             userId: member.userId,
             roleId: member.roleId,
           },
-        }),
-      ),
+        })
+      )
     );
 
     // 清除缓存
@@ -220,7 +220,7 @@ export class FileSystemPermissionService {
    */
   async batchUpdateProjectMembers(
     projectId: string,
-    updates: Array<{ userId: string; roleId: string }>,
+    updates: Array<{ userId: string; roleId: string }>
   ): Promise<void> {
     await this.prisma.$transaction(
       updates.map((update) =>
@@ -234,8 +234,8 @@ export class FileSystemPermissionService {
           data: {
             roleId: update.roleId,
           },
-        }),
-      ),
+        })
+      )
     );
 
     // 清除缓存

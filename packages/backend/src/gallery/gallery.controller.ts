@@ -970,33 +970,6 @@ export class GalleryController {
           authorizedNodeId = node.id;
           break;
         }
-
-        // 检查项目成员权限
-        // 如果文件在项目中，检查用户是否是项目成员
-        if (node.parentId) {
-          // 查找项目根节点
-          const projectRoot = await this.findProjectRoot(node.id);
-
-          if (projectRoot) {
-            // 检查用户是否是项目成员（已废弃，使用新的权限系统）
-            // @ts-ignore - FileAccess 表已删除，使用新的权限系统
-            const projectAccess = await this.database.fileAccess.findUnique({
-              where: {
-                userId_nodeId: {
-                  userId: userId,
-                  nodeId: projectRoot.id,
-                },
-              },
-            });
-
-            if (projectAccess) {
-              // 是项目成员，有权限
-              hasPermission = true;
-              authorizedNodeId = node.id;
-              break;
-            }
-          }
-        }
       }
 
       this.logger.log(
@@ -1273,28 +1246,6 @@ export class GalleryController {
         if (node.ownerId === userId) {
           hasPermission = true;
           break;
-        }
-
-        // 检查项目成员权限（已废弃，使用新的权限系统）
-        if (node.parentId) {
-          const projectRoot = await this.findProjectRoot(node.id);
-
-          if (projectRoot) {
-            // @ts-ignore - FileAccess 表已删除，使用新的权限系统
-            const projectAccess = await this.database.fileAccess.findUnique({
-              where: {
-                userId_nodeId: {
-                  userId: userId,
-                  nodeId: projectRoot.id,
-                },
-              },
-            });
-
-            if (projectAccess) {
-              hasPermission = true;
-              break;
-            }
-          }
         }
       }
 

@@ -3,10 +3,17 @@ import {
   type FileNode,
   type FileType,
   type Library,
-  Permission,
   type Role,
   type User,
 } from '../types';
+
+// Mock 权限枚举（仅用于 Mock 数据库）
+enum MockPermission {
+  VIEW_DASHBOARD = 'VIEW_DASHBOARD',
+  ASSET_UPLOAD = 'ASSET_UPLOAD',
+  PROJECT_VIEW_ALL = 'PROJECT_VIEW_ALL',
+  LIBRARY_MANAGE = 'LIBRARY_MANAGE',
+}
 
 // --- Seed Data ---
 
@@ -16,13 +23,13 @@ const MOCK_ROLES: Role[] = [
     name: '超级管理员',
     description: '拥有系统所有权限',
     isSystem: true,
-    permissions: Object.values(Permission) as Permission[],
+    permissions: Object.values(MockPermission) as any[],
   },
   {
     id: 'USER',
     name: '普通用户',
     description: '可以参与项目设计，上传资源',
-    permissions: [Permission.VIEW_DASHBOARD, Permission.ASSET_UPLOAD],
+    permissions: [MockPermission.VIEW_DASHBOARD, MockPermission.ASSET_UPLOAD] as any[],
   },
 ];
 
@@ -232,7 +239,7 @@ class MockDB {
   async createRole(
     name: string,
     description: string,
-    permissions: Permission[]
+    permissions: string[]
   ) {
     await delay(300);
     const newRole: Role = {
@@ -264,10 +271,9 @@ class MockDB {
   async getFiles(parentId: string | null) {
     await delay(300);
     const userRole = this.roles.find((r) => r.id === this.currentUser.role);
-    const hasViewAll = userRole?.permissions.includes(
-      Permission.PROJECT_VIEW_ALL
-    );
-
+      const hasViewAll = userRole?.permissions.includes(
+        MockPermission.PROJECT_VIEW_ALL as any
+      );
     return this.files.filter((f) => {
       // Exclude deleted files
       if (f.deletedAt) return false;
@@ -437,8 +443,9 @@ class MockDB {
   async getLibraries(type: 'block' | 'font') {
     await delay(300);
     const userRole = this.roles.find((r) => r.id === this.currentUser.role);
-    const canManage = userRole?.permissions.includes(Permission.LIBRARY_MANAGE);
-
+      const canManage = userRole?.permissions.includes(
+        MockPermission.LIBRARY_MANAGE as any
+      );
     const updatedLibraries = this.libraries.map((lib) => ({
       ...lib,
       itemCount: this.assets.filter((a) => a.libraryId === lib.id).length,

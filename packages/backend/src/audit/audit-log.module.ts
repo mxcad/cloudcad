@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
 import { AuditLogController } from './audit-log.controller';
 import { DatabaseModule } from '../database/database.module';
@@ -13,7 +13,7 @@ import { CommonModule } from '../common/common.module';
  * 3. 集成到应用中
  */
 @Module({
-  imports: [DatabaseModule, CommonModule],
+  imports: [DatabaseModule, forwardRef(() => CommonModule)],
   controllers: [AuditLogController],
   providers: [AuditLogService],
   exports: [AuditLogService],

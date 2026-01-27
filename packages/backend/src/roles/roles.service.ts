@@ -13,7 +13,6 @@ import { RoleCategory } from '../common/enums/permissions.enum';
 import {
   toPrismaPermission,
   isValidPermission,
-  getAllPermissions,
 } from '../common/utils/permission.util';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 

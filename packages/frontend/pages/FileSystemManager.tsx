@@ -10,7 +10,7 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useProjectManagement } from '../hooks/useProjectManagement';
-import { usePermission } from '../hooks/usePermission';
+import { usePermission, Permission } from '../hooks/usePermission';
 import { useAuth } from '../contexts/AuthContext';
 import { projectsApi } from '../services/apiService';
 import {
@@ -121,10 +121,11 @@ export const FileSystemManager: React.FC = () => {
   });
 
   // 权限管理 hook
-  const { isAdmin } = usePermission();
-
-  // 成员管理状态
+  const { isAdmin, hasPermission } = usePermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+
+  // 检查是否可以创建项目
+  const canCreateProject = hasPermission(Permission.PROJECT_CREATE);
 
   // 权限状态
   const [nodePermissions, setNodePermissions] = useState<
@@ -491,15 +492,19 @@ export const FileSystemManager: React.FC = () => {
           </Button>
 
           {isAtRoot ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openCreateProject}
-              className="text-slate-600 hover:bg-slate-100"
-              title="新建项目"
-            >
-              <FolderPlus size={16} />
-            </Button>
+            <>
+              {canCreateProject && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={openCreateProject}
+                  className="text-slate-600 hover:bg-slate-100"
+                  title="新建项目"
+                >
+                  <FolderPlus size={16} />
+                </Button>
+              )}
+            </>
           ) : (
             <>
               <Button
@@ -741,7 +746,7 @@ export const FileSystemManager: React.FC = () => {
             ? '开始创建您的第一个项目'
             : '上传文件或创建文件夹来开始使用'}
       </p>
-      {isProjectsEmpty && (
+      {isProjectsEmpty && canCreateProject && (
         <Button
           onClick={openCreateProject}
           variant="outline"
@@ -774,7 +779,7 @@ export const FileSystemManager: React.FC = () => {
             // 在项目列表页面（isAtRoot），默认给管理员显示操作按钮
             // 在项目内部页面，使用加载的权限信息
             const cachedPermissions = nodePermissions.get(node.id);
-            const isAdminUser = user?.role?.name === 'ADMIN';
+            const isAdminUser = isAdmin();
             const defaultPermissions = isAdminUser
               ? { canEdit: true, canDelete: true, canManageMembers: true }
               : { canEdit: false, canDelete: false, canManageMembers: false };

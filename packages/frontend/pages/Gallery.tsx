@@ -528,7 +528,7 @@ export default function Gallery() {
               </p>
               {!searchKeyword && (
                 <p className="text-sm text-gray-400">
-                  在文件管理页面右键点击文件，选择"添加到图库"
+                  在文件管理页面右键点击文件，选择&ldquo;添加到图库&rdquo;
                 </p>
               )}
             </div>

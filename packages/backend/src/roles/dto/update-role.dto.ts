@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString } from 'class-validator';
-import { Permission } from '../../common/enums/permissions.enum';
 import { PartialType } from '@nestjs/swagger';
 import { CreateRoleDto } from './create-role.dto';
 

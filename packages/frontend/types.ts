@@ -14,30 +14,12 @@ export type User = components['schemas']['UserDto'];
 
 // ==================== 前端特定类型 ====================
 
-/** 权限枚举 - 请使用 hooks/usePermission.ts 中的 Permission 枚举 */
-// @deprecated 使用 hooks/usePermission.ts 中的 Permission 枚举
-export enum Permission {
-  // System
-  VIEW_DASHBOARD = 'VIEW_DASHBOARD',
-  MANAGE_USERS = 'MANAGE_USERS',
-  MANAGE_ROLES = 'MANAGE_ROLES',
-
-  // Projects
-  PROJECT_CREATE = 'PROJECT_CREATE',
-  PROJECT_DELETE = 'PROJECT_DELETE',
-  PROJECT_VIEW_ALL = 'PROJECT_VIEW_ALL', // Admin can view all projects regardless of membership
-
-  // Assets
-  LIBRARY_MANAGE = 'LIBRARY_MANAGE', // Create/Delete libraries
-  ASSET_UPLOAD = 'ASSET_UPLOAD',
-}
-
 /** 角色接口 */
 export interface Role {
   id: string;
   name: string;
   description: string;
-  permissions: Permission[];
+  permissions: string[]; // 权限列表，使用字符串表示
   isSystem?: boolean; // Cannot be deleted if true
 }
 

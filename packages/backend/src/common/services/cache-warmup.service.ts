@@ -21,7 +21,7 @@ export class CacheWarmupService implements OnModuleInit {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly redisCacheService: RedisCacheService,
+    private readonly redisCacheService: RedisCacheService
   ) {}
 
   /**
@@ -82,7 +82,10 @@ export class CacheWarmupService implements OnModuleInit {
 
           // 缓存用户权限（基于角色）
           const permissions = this.getPermissionsByRole(user.role.name);
-          await this.redisCacheService.cacheUserPermissions(user.id, permissions);
+          await this.redisCacheService.cacheUserPermissions(
+            user.id,
+            permissions
+          );
 
           this.logger.debug(`预热用户 ${user.id} 的权限成功`);
         } catch (error) {
@@ -142,7 +145,7 @@ export class CacheWarmupService implements OnModuleInit {
             await this.redisCacheService.cacheNodeAccessRole(
               member.user.id,
               project.id,
-              accessRole,
+              accessRole
             );
           }
 
@@ -150,12 +153,16 @@ export class CacheWarmupService implements OnModuleInit {
           await this.redisCacheService.cacheNodeAccessRole(
             project.ownerId,
             project.id,
-            NodeAccessRole.OWNER,
+            NodeAccessRole.OWNER
           );
 
-          this.logger.debug(`预热项目 ${project.id} 的成员权限成功，共 ${members.length} 个成员`);
+          this.logger.debug(
+            `预热项目 ${project.id} 的成员权限成功，共 ${members.length} 个成员`
+          );
         } catch (error) {
-          this.logger.error(`预热项目 ${project.id} 的成员权限失败: ${error.message}`);
+          this.logger.error(
+            `预热项目 ${project.id} 的成员权限失败: ${error.message}`
+          );
         }
       }
 
@@ -275,7 +282,10 @@ export class CacheWarmupService implements OnModuleInit {
 
       this.logger.log(`预热用户 ${userId} 的缓存成功`);
     } catch (error) {
-      this.logger.error(`预热用户 ${userId} 的缓存失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `预热用户 ${userId} 的缓存失败: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
@@ -318,7 +328,7 @@ export class CacheWarmupService implements OnModuleInit {
         await this.redisCacheService.cacheNodeAccessRole(
           member.user.id,
           project.id,
-          accessRole,
+          accessRole
         );
       }
 
@@ -326,12 +336,17 @@ export class CacheWarmupService implements OnModuleInit {
       await this.redisCacheService.cacheNodeAccessRole(
         project.ownerId,
         project.id,
-        NodeAccessRole.OWNER,
+        NodeAccessRole.OWNER
       );
 
-      this.logger.log(`预热项目 ${projectId} 的缓存成功，共 ${members.length} 个成员`);
+      this.logger.log(
+        `预热项目 ${projectId} 的缓存成功，共 ${members.length} 个成员`
+      );
     } catch (error) {
-      this.logger.error(`预热项目 ${projectId} 的缓存失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `预热项目 ${projectId} 的缓存失败: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }

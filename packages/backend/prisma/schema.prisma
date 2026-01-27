@@ -277,6 +277,14 @@ enum Permission {
   FILE_PRINT
   FILE_COMPARE
 
+  // CAD 图纸权限
+  CAD_SAVE
+  CAD_EXPORT
+  CAD_EXTERNAL_REFERENCE
+
+  // 图库权限
+  GALLERY_USE
+
   // 版本管理权限
   VERSION_READ
   VERSION_CREATE
@@ -343,10 +351,13 @@ enum AuditAction {
   REMOVE_MEMBER
   TRANSFER_OWNERSHIP
   ACCESS_DENIED
+  PERMISSION_CHECK // 权限检查（通过）
+  PERMISSION_DENIED // 权限检查（拒绝）
 }
 
 // 资源类型
 enum ResourceType {
+  SYSTEM
   USER
   ROLE
   PERMISSION

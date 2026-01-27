@@ -420,16 +420,6 @@ export class FileSystemNodeService {
       },
     });
 
-    // 添加用户为项目所有者（已废弃，使用新的权限系统）
-    // @ts-ignore - FileAccess 表已删除，使用新的权限系统
-    await this.prisma.fileAccess.create({
-      data: {
-        userId: user.id,
-        nodeId: defaultProject.id,
-        role: 'OWNER',
-      },
-    });
-
     this.logger.log(
       `🆕 创建默认项目成功: projectId=${defaultProject.id} (${defaultProject.name})`
     );

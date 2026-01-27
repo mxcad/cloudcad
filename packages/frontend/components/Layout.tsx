@@ -21,6 +21,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
 import { projectsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermission, Permission } from '../hooks/usePermission';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TruncateText } from './ui/TruncateText';
@@ -54,6 +55,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
+  const { hasPermission } = usePermission();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Interactions State
@@ -132,18 +134,26 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
     { to: '/trash', icon: Trash2, label: '回收站', visible: true },
     { to: '/library-blocks', icon: Box, label: '图库', visible: true },
-    { to: '/font-library', icon: Type, label: '字体库', visible: true },
+    {
+      to: '/font-library',
+      icon: Type,
+      label: '字体库',
+      visible: hasPermission(Permission.FONT_MANAGE),
+    },
     {
       to: '/users',
       icon: Users,
       label: '用户管理',
-      visible: user?.role?.name === 'ADMIN',
+      visible: hasPermission(Permission.USER_READ) ||
+        hasPermission(Permission.USER_WRITE) ||
+        hasPermission(Permission.USER_DELETE) ||
+        hasPermission(Permission.USER_ADMIN),
     },
     {
       to: '/roles',
       icon: ShieldCheck,
       label: '角色权限',
-      visible: user?.role?.name === 'ADMIN',
+      visible: hasPermission(Permission.USER_ADMIN),
     },
   ];
 

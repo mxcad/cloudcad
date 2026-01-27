@@ -8,7 +8,7 @@ import {
   IsEnum,
   MaxLength,
 } from 'class-validator';
-import { Permission, RoleCategory } from '../../common/enums/permissions.enum';
+import { RoleCategory } from '../../common/enums/permissions.enum';
 
 export class CreateRoleDto {
   @ApiProperty({ description: '角色名称', example: '设计主管' })

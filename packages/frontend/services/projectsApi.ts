@@ -1,6 +1,5 @@
 import { apiClient } from './apiClient';
 import type { AxiosRequestConfig } from 'axios';
-import { NodeAccessRole } from '../hooks/usePermission';
 
 export const projectsApi = {
   list: (config?: AxiosRequestConfig) =>

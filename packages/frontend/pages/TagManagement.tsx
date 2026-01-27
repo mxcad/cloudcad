@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { tagsApi, authApi } from '../services/api';
+import { tagsApi } from '../services/api';
 import {
   Plus,
   Search,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { DescriptionText } from '../components/ui/TruncateText';
+import { usePermission, Permission } from '../hooks/usePermission';
 
 interface Tag {
   id: string;
@@ -41,7 +42,8 @@ const PREDEFINED_COLORS = [
 ];
 
 export default function TagManagement() {
-  const [hasPermission, setHasPermission] = useState(false);
+  const { hasPermission } = usePermission();
+  const [canAccess, setCanAccess] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -56,33 +58,24 @@ export default function TagManagement() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    checkAccess();
-  }, []);
-
-  useEffect(() => {
-    if (hasPermission) {
-      fetchTags();
-    }
+    // 检查是否有权限访问标签管理页面
+    // 使用 SYSTEM_ADMIN 权限，因为标签管理是系统级别的功能
+    const hasAccess = hasPermission(Permission.SYSTEM_ADMIN) ||
+                      hasPermission(Permission.USER_ADMIN);
+    setCanAccess(hasAccess);
   }, [hasPermission]);
 
   useEffect(() => {
-    if (hasPermission) {
+    if (canAccess) {
+      fetchTags();
+    }
+  }, [canAccess]);
+
+  useEffect(() => {
+    if (canAccess) {
       handleSearch();
     }
-  }, [searchKeyword, hasPermission]);
-
-  const checkAccess = async () => {
-    try {
-      const response = await authApi.getProfile();
-      const currentUser = response.data;
-      // 兼容两种 role 格式: 字符串 'ADMIN' 或对象 { name: 'ADMIN' }
-      const isAdmin =
-        currentUser.role === 'ADMIN' || currentUser.role?.name === 'ADMIN';
-      setHasPermission(isAdmin);
-    } catch (error) {
-      setHasPermission(false);
-    }
-  };
+  }, [searchKeyword, canAccess]);
 
   const fetchTags = async () => {
     setLoading(true);
@@ -186,7 +179,7 @@ export default function TagManagement() {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* 权限不足状态 */}
-      {!hasPermission && (
+      {!canAccess && (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <TagIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -199,7 +192,7 @@ export default function TagManagement() {
       )}
 
       {/* 正常内容 */}
-      {hasPermission && (
+      {canAccess && (
         <>
           <div className="max-w-5xl mx-auto">
             {/* 页面标题 */}

@@ -1,13 +1,111 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 import { NodeAccessRole, Permission } from '../enums/permissions.enum';
 import { Role } from './permission.service';
 
+/**
+ * 缓存失效事件类型
+ */
+interface CacheInvalidationEvent {
+  type: 'user' | 'node';
+  id: string;
+  timestamp: number;
+}
+
 @Injectable()
-export class PermissionCacheService {
+export class PermissionCacheService implements OnModuleDestroy {
   private readonly logger = new Logger(PermissionCacheService.name);
   private readonly cache = new Map<string, any>();
   private readonly cacheExpiry = new Map<string, number>();
   private readonly defaultTTL = 5 * 60 * 1000; // 5分钟
+  private readonly CHANNEL_PREFIX = 'permission:cache:invalidation';
+
+  constructor(@InjectRedis() private readonly redis: Redis) {
+    this.subscribeToInvalidationEvents();
+  }
+
+  async onModuleDestroy() {
+    // 清理订阅
+    await this.redis.unsubscribe(`${this.CHANNEL_PREFIX}:user`);
+    await this.redis.unsubscribe(`${this.CHANNEL_PREFIX}:node`);
+  }
+
+  /**
+   * 订阅缓存失效事件
+   */
+  private async subscribeToInvalidationEvents() {
+    try {
+      const subscriber = this.redis.duplicate();
+
+      // 订阅用户缓存失效事件
+      subscriber.subscribe(`${this.CHANNEL_PREFIX}:user`, (err) => {
+        if (err) {
+          this.logger.error(`订阅用户缓存失效事件失败: ${err.message}`);
+        }
+      });
+
+      // 订阅节点缓存失效事件
+      subscriber.subscribe(`${this.CHANNEL_PREFIX}:node`, (err) => {
+        if (err) {
+          this.logger.error(`订阅节点缓存失效事件失败: ${err.message}`);
+        }
+      });
+
+      // 处理消息
+      subscriber.on('message', (channel, message) => {
+        try {
+          const event: CacheInvalidationEvent = JSON.parse(message);
+          this.handleInvalidationEvent(event);
+        } catch (error) {
+          this.logger.error(`处理缓存失效事件失败: ${error.message}`);
+        }
+      });
+
+      this.logger.log('缓存失效事件订阅已启动');
+    } catch (error) {
+      this.logger.error(`订阅缓存失效事件失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 处理缓存失效事件
+   */
+  private handleInvalidationEvent(event: CacheInvalidationEvent) {
+    try {
+      if (event.type === 'user') {
+        this.clearUserCache(event.id);
+      } else if (event.type === 'node') {
+        this.clearNodeCache(event.id);
+      }
+      this.logger.debug(`处理缓存失效事件: ${event.type}:${event.id}`);
+    } catch (error) {
+      this.logger.error(`处理缓存失效事件失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 发布缓存失效事件
+   */
+  private async publishInvalidationEvent(
+    type: 'user' | 'node',
+    id: string
+  ): Promise<void> {
+    try {
+      const event: CacheInvalidationEvent = {
+        type,
+        id,
+        timestamp: Date.now(),
+      };
+
+      await this.redis.publish(
+        `${this.CHANNEL_PREFIX}:${type}`,
+        JSON.stringify(event)
+      );
+    } catch (error) {
+      this.logger.error(`发布缓存失效事件失败: ${error.message}`);
+    }
+  }
 
   /**
    * 生成缓存键
@@ -51,7 +149,7 @@ export class PermissionCacheService {
   /**
    * 清除用户相关缓存
    */
-  clearUserCache(userId: string): void {
+  async clearUserCache(userId: string): Promise<void> {
     const keysToDelete: string[] = [];
 
     for (const key of this.cache.keys()) {
@@ -62,12 +160,15 @@ export class PermissionCacheService {
 
     keysToDelete.forEach((key) => this.delete(key));
     this.logger.log(`清除用户 ${userId} 的权限缓存`);
+
+    // 发布 Redis 事件，通知其他实例
+    await this.publishInvalidationEvent('user', userId);
   }
 
   /**
    * 清除节点相关缓存（项目/文件夹/文件）
    */
-  clearNodeCache(nodeId: string): void {
+  async clearNodeCache(nodeId: string): Promise<void> {
     const keysToDelete: string[] = [];
 
     for (const key of this.cache.keys()) {
@@ -78,6 +179,9 @@ export class PermissionCacheService {
 
     keysToDelete.forEach((key) => this.delete(key));
     this.logger.log(`清除节点 ${nodeId} 的权限缓存`);
+
+    // 发布 Redis 事件，通知其他实例
+    await this.publishInvalidationEvent('node', nodeId);
   }
 
   /**

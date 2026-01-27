@@ -5,7 +5,6 @@ import {
   UserPlus,
   AlertCircle,
   Loader2,
-  Shield,
   ArrowUpRight,
 } from 'lucide-react';
 import { Button } from '../ui/Button';

@@ -25,6 +25,146 @@ const prisma = new PrismaClient({
   adapter,
 });
 
+/**
+ * 动态获取所有权限（从 Prisma 枚举）
+ * 避免硬编码权限列表
+ */
+const getAllPermissions = (): Permission[] => {
+  return Object.values(Permission);
+};
+
+/**
+ * 角色权限配置规则
+ * 使用函数而非硬编码数组，便于维护和扩展
+ */
+const rolePermissionRules = {
+  // 系统管理员：所有权限
+  admin: () => getAllPermissions(),
+
+  // 普通用户：基础权限
+  user: () => [
+    Permission.PROJECT_CREATE,
+    Permission.PROJECT_READ,
+    Permission.PROJECT_WRITE,
+    Permission.FILE_CREATE,
+    Permission.FILE_READ,
+    Permission.FILE_WRITE,
+    Permission.FILE_SHARE,
+    Permission.FILE_DOWNLOAD,
+  ],
+
+  // 项目所有者：项目权限 + 文件权限
+  projectOwner: () => [
+    // 项目权限
+    Permission.PROJECT_READ,
+    Permission.PROJECT_WRITE,
+    Permission.PROJECT_DELETE,
+    Permission.PROJECT_ADMIN,
+    Permission.PROJECT_MEMBER_MANAGE,
+    // 文件权限
+    Permission.FILE_CREATE,
+    Permission.FILE_READ,
+    Permission.FILE_WRITE,
+    Permission.FILE_DELETE,
+    Permission.FILE_SHARE,
+    Permission.FILE_DOWNLOAD,
+    Permission.FILE_COMMENT,
+    Permission.FILE_PRINT,
+    Permission.FILE_COMPARE,
+    // 版本管理
+    Permission.VERSION_READ,
+    Permission.VERSION_CREATE,
+    Permission.VERSION_DELETE,
+    Permission.VERSION_RESTORE,
+    // 其他
+    Permission.FONT_MANAGE,
+    Permission.REVIEW_CONFIG,
+    Permission.TRASH_MANAGE,
+  ],
+
+  // 项目管理员：项目成员管理 + 文件管理
+  projectAdmin: () => [
+    Permission.PROJECT_READ,
+    Permission.PROJECT_WRITE,
+    Permission.PROJECT_MEMBER_MANAGE,
+    Permission.FILE_CREATE,
+    Permission.FILE_READ,
+    Permission.FILE_WRITE,
+    Permission.FILE_DELETE,
+    Permission.FILE_SHARE,
+    Permission.FILE_DOWNLOAD,
+    Permission.FILE_COMMENT,
+    Permission.FILE_PRINT,
+    Permission.FILE_COMPARE,
+    Permission.VERSION_READ,
+    Permission.VERSION_CREATE,
+    Permission.VERSION_DELETE,
+    Permission.VERSION_RESTORE,
+    Permission.FONT_MANAGE,
+    Permission.REVIEW_CONFIG,
+    Permission.TRASH_MANAGE,
+  ],
+
+  // 项目成员：项目读取 + 文件编辑
+  projectMember: () => [
+    Permission.PROJECT_READ,
+    Permission.FILE_CREATE,
+    Permission.FILE_READ,
+    Permission.FILE_WRITE,
+    Permission.FILE_SHARE,
+    Permission.FILE_DOWNLOAD,
+    Permission.FILE_COMMENT,
+    Permission.FILE_PRINT,
+    Permission.FILE_COMPARE,
+    Permission.VERSION_READ,
+    Permission.VERSION_CREATE,
+  ],
+
+  // 项目编辑者：仅文件编辑
+  projectEditor: () => [
+    Permission.FILE_READ,
+    Permission.FILE_WRITE,
+    Permission.FILE_SHARE,
+    Permission.FILE_DOWNLOAD,
+    Permission.FILE_COMMENT,
+    Permission.FILE_PRINT,
+    Permission.FILE_COMPARE,
+    Permission.VERSION_READ,
+  ],
+
+  // 项目查看者：仅文件查看
+  projectViewer: () => [
+    Permission.FILE_READ,
+    Permission.FILE_DOWNLOAD,
+    Permission.FILE_COMMENT,
+  ],
+};
+
+/**
+ * 为角色分配权限
+ */
+async function assignPermissionsToRole(
+  roleId: string,
+  permissions: Permission[]
+): Promise<void> {
+  for (const perm of permissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permission: {
+          roleId,
+          permission: perm,
+        },
+      },
+      update: {},
+      create: {
+        roleId,
+        permission: perm,
+      },
+    });
+  }
+  console.log(`✓ 角色权限配置完成 (${permissions.length} 个权限)`);
+}
+
 async function main() {
   console.log('开始种子数据初始化...');
 
@@ -100,126 +240,62 @@ async function main() {
     },
   });
 
-  console.log('角色已准备:', adminRole.name, userRole.name, '项目所有者', '项目管理员', '项目成员', '项目编辑者', '项目查看者');
+  console.log(
+    '角色已准备:',
+    adminRole.name,
+    userRole.name,
+    '项目所有者',
+    '项目管理员',
+    '项目成员',
+    '项目编辑者',
+    '项目查看者'
+  );
 
-  // 为项目角色分配权限
-  console.log('开始为项目角色分配权限...');
+  // 为角色分配权限
+  console.log('开始为角色分配权限...');
 
   // PROJECT_OWNER 权限
-  const ownerPermissions: Permission[] = [
-    'PROJECT_READ', 'PROJECT_WRITE', 'PROJECT_DELETE', 'PROJECT_ADMIN', 'PROJECT_MEMBER_MANAGE',
-    'FILE_CREATE', 'FILE_READ', 'FILE_WRITE', 'FILE_DELETE', 'FILE_SHARE', 'FILE_DOWNLOAD',
-    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
-    'VERSION_READ', 'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
-    'FONT_MANAGE', 'REVIEW_CONFIG', 'TRASH_MANAGE',
-  ];
-  for (const perm of ownerPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permission: {
-          roleId: projectOwnerRole.id,
-          permission: perm,
-        },
-      },
-      update: {},
-      create: {
-        roleId: projectOwnerRole.id,
-        permission: perm,
-      },
-    });
-  }
-  console.log(`✓ PROJECT_OWNER 权限配置完成 (${ownerPermissions.length} 个权限)`);
+  console.log('配置 PROJECT_OWNER 权限...');
+  await assignPermissionsToRole(
+    projectOwnerRole.id,
+    rolePermissionRules.projectOwner()
+  );
 
   // PROJECT_ADMIN 权限
-  const adminPermissions: Permission[] = [
-    'PROJECT_READ', 'PROJECT_WRITE', 'PROJECT_MEMBER_MANAGE',
-    'FILE_CREATE', 'FILE_READ', 'FILE_WRITE', 'FILE_DELETE', 'FILE_SHARE', 'FILE_DOWNLOAD',
-    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
-    'VERSION_READ', 'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
-    'FONT_MANAGE', 'REVIEW_CONFIG', 'TRASH_MANAGE',
-  ];
-  for (const perm of adminPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permission: {
-          roleId: projectAdminRole.id,
-          permission: perm,
-        },
-      },
-      update: {},
-      create: {
-        roleId: projectAdminRole.id,
-        permission: perm,
-      },
-    });
-  }
-  console.log(`✓ PROJECT_ADMIN 权限配置完成 (${adminPermissions.length} 个权限)`);
+  console.log('配置 PROJECT_ADMIN 权限...');
+  await assignPermissionsToRole(
+    projectAdminRole.id,
+    rolePermissionRules.projectAdmin()
+  );
 
   // PROJECT_MEMBER 权限
-  const memberPermissions: Permission[] = [
-    'PROJECT_READ',
-    'FILE_CREATE', 'FILE_READ', 'FILE_WRITE', 'FILE_SHARE', 'FILE_DOWNLOAD',
-    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
-    'VERSION_READ', 'VERSION_CREATE',
-  ];
-  for (const perm of memberPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permission: {
-          roleId: projectMemberRole.id,
-          permission: perm,
-        },
-      },
-      update: {},
-      create: {
-        roleId: projectMemberRole.id,
-        permission: perm,
-      },
-    });
-  }
-  console.log(`✓ PROJECT_MEMBER 权限配置完成 (${memberPermissions.length} 个权限)`);
+  console.log('配置 PROJECT_MEMBER 权限...');
+  await assignPermissionsToRole(
+    projectMemberRole.id,
+    rolePermissionRules.projectMember()
+  );
 
   // PROJECT_EDITOR 权限
-  const editorPermissions: Permission[] = [
-    'FILE_READ', 'FILE_WRITE', 'FILE_SHARE', 'FILE_DOWNLOAD',
-    'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE',
-    'VERSION_READ',
-  ];
-  for (const perm of editorPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permission: {
-          roleId: projectEditorRole.id,
-          permission: perm,
-        },
-      },
-      update: {},
-      create: {
-        roleId: projectEditorRole.id,
-        permission: perm,
-      },
-    });
-  }
-  console.log(`✓ PROJECT_EDITOR 权限配置完成 (${editorPermissions.length} 个权限)`);
+  console.log('配置 PROJECT_EDITOR 权限...');
+  await assignPermissionsToRole(
+    projectEditorRole.id,
+    rolePermissionRules.projectEditor()
+  );
 
   // PROJECT_VIEWER 权限
-  const viewerPermissions: Permission[] = ['FILE_READ', 'FILE_DOWNLOAD', 'FILE_COMMENT'];
-  for (const perm of viewerPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permission: {
-          roleId: projectViewerRole.id,
-          permission: perm,
-        },
-      },
-      update: {},
-      create: {
-        roleId: projectViewerRole.id,
-        permission: perm,
-      },
-    });
-  }
-  console.log(`✓ PROJECT_VIEWER 权限配置完成 (${viewerPermissions.length} 个权限)`);
+  console.log('配置 PROJECT_VIEWER 权限...');
+  await assignPermissionsToRole(
+    projectViewerRole.id,
+    rolePermissionRules.projectViewer()
+  );
+
+  // ADMIN 权限（系统管理员）
+  console.log('配置 ADMIN 权限...');
+  await assignPermissionsToRole(adminRole.id, rolePermissionRules.admin());
+
+  // USER 权限（普通用户）
+  console.log('配置 USER 权限...');
+  await assignPermissionsToRole(userRole.id, rolePermissionRules.user());
 
   // 创建管理员用户（管理员账号不需要邮箱验证）
   const adminPassword = await bcrypt.hash('Admin123!', 12);

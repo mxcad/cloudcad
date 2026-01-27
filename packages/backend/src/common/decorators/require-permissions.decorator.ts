@@ -37,9 +37,22 @@ export const PERMISSIONS_MODE_KEY = 'permissions_mode';
  */
 export const RequirePermissions = (
   permissions: Permission[],
-  mode: PermissionCheckMode = PermissionCheckMode.ALL,
+  mode: PermissionCheckMode = PermissionCheckMode.ALL
 ) => {
-  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+  return (
+    target: any,
+    propertyKey?: string,
+    descriptor?: PropertyDescriptor
+  ) => {
+    // 支持类装饰器（propertyKey 和 descriptor 为 undefined）
+    if (propertyKey === undefined || descriptor === undefined) {
+      // 使用 Reflect.defineMetadata 将元数据附加到类构造函数
+      Reflect.defineMetadata(PERMISSIONS_KEY, permissions, target);
+      Reflect.defineMetadata(PERMISSIONS_MODE_KEY, mode, target);
+      return target;
+    }
+
+    // 支持方法装饰器
     SetMetadata(PERMISSIONS_KEY, permissions);
     SetMetadata(PERMISSIONS_MODE_KEY, mode);
     return descriptor;

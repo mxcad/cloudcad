@@ -137,6 +137,13 @@ export class UsersService {
               select: {
                 id: true,
                 name: true,
+                description: true,
+                isSystem: true,
+                permissions: {
+                  select: {
+                    permission: true,
+                  },
+                },
               },
             },
             status: true,
@@ -179,6 +186,13 @@ export class UsersService {
             select: {
               id: true,
               name: true,
+              description: true,
+              isSystem: true,
+              permissions: {
+                select: {
+                  permission: true,
+                },
+              },
             },
           },
           status: true,
@@ -215,6 +229,13 @@ export class UsersService {
             select: {
               id: true,
               name: true,
+              description: true,
+              isSystem: true,
+              permissions: {
+                select: {
+                  permission: true,
+                },
+              },
             },
           },
           status: true,
@@ -251,6 +272,13 @@ export class UsersService {
             select: {
               id: true,
               name: true,
+              description: true,
+              isSystem: true,
+              permissions: {
+                select: {
+                  permission: true,
+                },
+              },
             },
           },
           status: true,

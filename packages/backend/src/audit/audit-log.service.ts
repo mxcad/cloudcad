@@ -1,5 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { PermissionService } from '../common/services/permission.service';
+import { Permission } from '../common/enums/permissions.enum';
 import { AuditAction, ResourceType } from '@prisma/client';
 
 /**
@@ -15,7 +23,25 @@ import { AuditAction, ResourceType } from '@prisma/client';
 export class AuditLogService {
   private readonly logger = new Logger(AuditLogService.name);
 
-  constructor(private readonly prisma: DatabaseService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    @Inject(forwardRef(() => PermissionService))
+    private readonly permissionService: PermissionService
+  ) {}
+
+  /**
+   * 检查系统管理员权限
+   */
+  private async checkSystemAdmin(userId: string): Promise<void> {
+    const hasPermission = await this.permissionService.checkPermission(
+      userId,
+      undefined,
+      Permission.SYSTEM_ADMIN
+    );
+    if (!hasPermission) {
+      throw new ForbiddenException('需要系统管理员权限');
+    }
+  }
 
   /**
    * 记录审计日志
@@ -39,7 +65,7 @@ export class AuditLogService {
     errorMessage?: string,
     details?: string,
     ipAddress?: string,
-    userAgent?: string,
+    userAgent?: string
   ): Promise<void> {
     try {
       await this.prisma.auditLog.create({
@@ -57,7 +83,7 @@ export class AuditLogService {
       });
 
       this.logger.debug(
-        `审计日志记录: ${action} - ${resourceType} - ${resourceId} - ${userId} - ${success ? '成功' : '失败'}`,
+        `审计日志记录: ${action} - ${resourceType} - ${resourceId} - ${userId} - ${success ? '成功' : '失败'}`
       );
     } catch (error) {
       this.logger.error(`记录审计日志失败: ${error.message}`, error.stack);
@@ -66,25 +92,50 @@ export class AuditLogService {
   }
 
   /**
-   * 查询审计日志
-   *
-   * @param filters 过滤条件
-   * @param pagination 分页参数
-   * @returns 审计日志列表和总数
-   */
-  async findAll(filters: {
-    userId?: string;
-    action?: AuditAction;
-    resourceType?: ResourceType;
-    resourceId?: string;
-    startDate?: Date;
-    endDate?: Date;
-    success?: boolean;
-  }, pagination: {
-    page: number;
-    limit: number;
-  }) {
+
+     * 查询审计日志
+
+     *
+
+     * @param filters 过滤条件
+
+     * @param pagination 分页参数
+
+     * @returns 审计日志列表和总数
+
+     */
+
+  async findAll(
+    filters: {
+      userId?: string;
+
+      action?: AuditAction;
+
+      resourceType?: ResourceType;
+
+      resourceId?: string;
+
+      startDate?: Date;
+
+      endDate?: Date;
+
+      success?: boolean;
+    },
+
+    pagination: {
+      page: number;
+
+      limit: number;
+    },
+
+    userId: string
+  ) {
+    // 检查权限
+
+    await this.checkSystemAdmin(userId);
+
     const { page = 1, limit = 20 } = pagination;
+
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -107,9 +158,11 @@ export class AuditLogService {
 
     if (filters.startDate || filters.endDate) {
       where.createdAt = {};
+
       if (filters.startDate) {
         where.createdAt.gte = filters.startDate;
       }
+
       if (filters.endDate) {
         where.createdAt.lte = filters.endDate;
       }
@@ -122,48 +175,73 @@ export class AuditLogService {
     const [logs, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where,
+
         include: {
           user: {
             select: {
               id: true,
+
               email: true,
+
               username: true,
             },
           },
         },
+
         orderBy: {
           createdAt: 'desc',
         },
+
         skip,
+
         take: limit,
       }),
+
       this.prisma.auditLog.count({ where }),
     ]);
 
     return {
       logs,
+
       total,
+
       page,
+
       limit,
+
       totalPages: Math.ceil(total / limit),
     };
   }
 
   /**
-   * 获取审计日志详情
-   *
-   * @param id 日志 ID
-   * @returns 审计日志详情
-   */
-  async findOne(id: string) {
+
+     * 获取审计日志详情
+
+     *
+
+     * @param id 日志 ID
+
+     * @returns 审计日志详情
+
+     */
+
+  async findOne(id: string, userId: string) {
+    // 检查权限
+
+    await this.checkSystemAdmin(userId);
+
     const log = await this.prisma.auditLog.findUnique({
       where: { id },
+
       include: {
         user: {
           select: {
             id: true,
+
             email: true,
+
             username: true,
+
             nickname: true,
           },
         },
@@ -178,16 +256,32 @@ export class AuditLogService {
   }
 
   /**
-   * 获取审计统计信息
-   *
-   * @param filters 过滤条件
-   * @returns 统计信息
-   */
-  async getStatistics(filters: {
-    startDate?: Date;
-    endDate?: Date;
-    userId?: string;
-  }) {
+
+     * 获取审计统计信息
+
+     *
+
+     * @param filters 过滤条件
+
+     * @returns 统计信息
+
+     */
+
+  async getStatistics(
+    filters: {
+      startDate?: Date;
+
+      endDate?: Date;
+
+      userId?: string;
+    },
+
+    userId: string
+  ) {
+    // 检查权限
+
+    await this.checkSystemAdmin(userId);
+
     const where: any = {};
 
     if (filters.userId) {
@@ -196,47 +290,72 @@ export class AuditLogService {
 
     if (filters.startDate || filters.endDate) {
       where.createdAt = {};
+
       if (filters.startDate) {
         where.createdAt.gte = filters.startDate;
       }
+
       if (filters.endDate) {
         where.createdAt.lte = filters.endDate;
       }
     }
 
-    const [total, successCount, failureCount, actionCounts] = await Promise.all([
-      this.prisma.auditLog.count({ where }),
-      this.prisma.auditLog.count({ where: { ...where, success: true } }),
-      this.prisma.auditLog.count({ where: { ...where, success: false } }),
-      this.prisma.auditLog.groupBy({
-        by: ['action'],
-        where,
-        _count: true,
-      }),
-    ]);
+    const [total, successCount, failureCount, actionCounts] = await Promise.all(
+      [
+        this.prisma.auditLog.count({ where }),
+
+        this.prisma.auditLog.count({ where: { ...where, success: true } }),
+
+        this.prisma.auditLog.count({ where: { ...where, success: false } }),
+
+        this.prisma.auditLog.groupBy({
+          by: ['action'],
+
+          where,
+
+          _count: true,
+        }),
+      ]
+    );
 
     const actionStats: Record<string, number> = {};
+
     actionCounts.forEach((item) => {
       actionStats[item.action] = item._count;
     });
 
     return {
       total,
+
       successCount,
+
       failureCount,
+
       successRate: total > 0 ? (successCount / total) * 100 : 0,
+
       actionStats,
     };
   }
 
   /**
-   * 清理旧审计日志
-   *
-   * @param daysToKeep 保留天数
-   * @returns 删除的记录数
-   */
-  async cleanupOldLogs(daysToKeep: number): Promise<number> {
+
+     * 清理旧审计日志
+
+     *
+
+     * @param daysToKeep 保留天数
+
+     * @returns 删除的记录数
+
+     */
+
+  async cleanupOldLogs(daysToKeep: number, userId: string): Promise<number> {
+    // 检查权限
+
+    await this.checkSystemAdmin(userId);
+
     const cutoffDate = new Date();
+
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
     const result = await this.prisma.auditLog.deleteMany({

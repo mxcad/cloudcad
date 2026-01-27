@@ -28,7 +28,7 @@ import { UserRole } from '../enums/permissions.enum';
 export class CacheMonitorController {
   constructor(
     private readonly redisCacheService: RedisCacheService,
-    private readonly cacheWarmupService: CacheWarmupService,
+    private readonly cacheWarmupService: CacheWarmupService
   ) {}
 
   @Get('stats')

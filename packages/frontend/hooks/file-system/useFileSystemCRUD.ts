@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react';
 import { projectsApi } from '../../services/apiService';
 import { FileSystemNode } from '../../types/filesystem';
-import { logger } from '../../utils/logger';
-import { handleError } from '../../utils/errorHandler';
 
 interface UseFileSystemCRUDProps {
   urlProjectId: string;
@@ -37,11 +35,12 @@ const validateFolderName = (
     return { valid: false, error: '名称长度不能超过 255 个字符' };
   }
 
-  const illegalChars = /[<>:"|?*\/\\]/;
+  const illegalChars = /[<>:"|?*/\\]/;
   if (illegalChars.test(trimmedName)) {
     return { valid: false, error: '名称包含非法字符：< > : " | ? * / \\' };
   }
 
+  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
     return { valid: false, error: '名称包含非法字符' };
   }

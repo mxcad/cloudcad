@@ -355,7 +355,10 @@ export class AuthService {
     } catch (error) {
       // 如果是唯一约束冲突，说明并发请求导致的重复创建
       // 这种情况下，忽略错误，因为至少有一个请求成功创建了 token
-      if (error instanceof Error && error.message.includes('Unique constraint')) {
+      if (
+        error instanceof Error &&
+        error.message.includes('Unique constraint')
+      ) {
         this.logger.warn(`并发刷新 token 冲突，已忽略: ${error.message}`);
         return;
       }
@@ -456,7 +459,11 @@ export class AuthService {
         username: true,
         nickname: true,
         avatar: true,
-        role: true,
+        role: {
+          include: {
+            permissions: true,
+          },
+        },
         status: true,
         password: true,
       },

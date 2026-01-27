@@ -4,7 +4,6 @@ import { projectsApi, filesApi, trashApi } from '../services/apiService';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
 import { PaginationMeta } from '../components/ui/Pagination';
-import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
 import { useFileSystemStore } from '../stores/fileSystemStore';
 

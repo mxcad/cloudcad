@@ -9,8 +9,6 @@ interface FileItemSelectionProps {
 
 export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
   ({ isSelected, isMultiSelectMode, onSelect, isGrid = false }) => {
-    if (!isMultiSelectMode) return null;
-
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -19,6 +17,8 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
       },
       [onSelect]
     );
+
+    if (!isMultiSelectMode) return null;
 
     return (
       <div

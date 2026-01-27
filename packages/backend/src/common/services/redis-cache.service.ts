@@ -1,6 +1,5 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { NodeAccessRole, Permission } from '../enums/permissions.enum';
-import { Role } from './permission.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 
@@ -42,7 +41,11 @@ export class RedisCacheService {
   /**
    * 设置缓存
    */
-  async set<T>(key: string, value: T, ttl: number = this.DEFAULT_TTL): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    ttl: number = this.DEFAULT_TTL
+  ): Promise<void> {
     try {
       await this.redis.setex(key, ttl, JSON.stringify(value));
     } catch (error) {
@@ -130,7 +133,10 @@ export class RedisCacheService {
   /**
    * 缓存用户权限
    */
-  async cacheUserPermissions(userId: string, permissions: Permission[]): Promise<void> {
+  async cacheUserPermissions(
+    userId: string,
+    permissions: Permission[]
+  ): Promise<void> {
     const key = this.generateCacheKey('user', userId);
     await this.set(key, permissions, 10 * 60); // 用户权限缓存10分钟
   }
@@ -158,7 +164,10 @@ export class RedisCacheService {
   /**
    * 获取节点访问角色缓存
    */
-  async getNodeAccessRole(userId: string, nodeId: string): Promise<NodeAccessRole | null> {
+  async getNodeAccessRole(
+    userId: string,
+    nodeId: string
+  ): Promise<NodeAccessRole | null> {
     const key = this.generateCacheKey('node', userId, nodeId);
     return await this.get<NodeAccessRole>(key);
   }
@@ -167,7 +176,10 @@ export class RedisCacheService {
    * 获取文件访问角色缓存（向后兼容）
    * @deprecated 使用 getNodeAccessRole 代替
    */
-  async getFileAccessRole(userId: string, nodeId: string): Promise<NodeAccessRole | null> {
+  async getFileAccessRole(
+    userId: string,
+    nodeId: string
+  ): Promise<NodeAccessRole | null> {
     return this.getNodeAccessRole(userId, nodeId);
   }
 

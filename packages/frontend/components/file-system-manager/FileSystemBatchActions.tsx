@@ -10,8 +10,6 @@ interface FileSystemBatchActionsProps {
 
 export const FileSystemBatchActions: React.FC<FileSystemBatchActionsProps> =
   memo(({ selectedCount, onMove, onCopy, onDelete, onCancel }) => {
-    if (selectedCount === 0) return null;
-
     const handleMove = useCallback(() => {
       onMove();
     }, [onMove]);
@@ -27,6 +25,8 @@ export const FileSystemBatchActions: React.FC<FileSystemBatchActionsProps> =
     const handleCancel = useCallback(() => {
       onCancel();
     }, [onCancel]);
+
+    if (selectedCount === 0) return null;
 
     return (
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up">

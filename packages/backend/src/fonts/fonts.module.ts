@@ -3,12 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { FontsController } from './fonts.controller';
 import { FontsService } from './fonts.service';
+import { CommonModule } from '../common/common.module';
 
 /**
  * 字体管理模块
  */
 @Module({
   imports: [
+    CommonModule,
     ConfigModule,
     MulterModule.register({
       limits: {

@@ -15,14 +15,22 @@ export enum Permission {
 
   // 文件权限
   FILE_CREATE = 'file:create',
-  FILE_READ = 'file:read',
-  FILE_WRITE = 'file:write',
+  FILE_READ = 'file:read', // 查看文件列表和预览
+  FILE_WRITE = 'file:write', // 打开 CAD 编辑器（不包含保存）
   FILE_DELETE = 'file:delete',
   FILE_SHARE = 'file:share',
   FILE_DOWNLOAD = 'file:download',
   FILE_COMMENT = 'file:comment', // 批注权限
   FILE_PRINT = 'file:print', // 打印权限
   FILE_COMPARE = 'file:compare', // 图纸比对权限
+
+  // CAD 图纸权限
+  CAD_SAVE = 'cad:save', // 保存图纸（DWG/MXWEB）
+  CAD_EXPORT = 'cad:export', // 导出图纸（PDF/DXF）
+  CAD_EXTERNAL_REFERENCE = 'cad:external_reference', // 管理外部参照
+
+  // 图库权限
+  GALLERY_USE = 'gallery:use', // 使用图库（图纸库+图块库）
 
   // 版本管理权限
   VERSION_READ = 'version:read',
@@ -53,9 +61,9 @@ export enum UserRole {
  * 角色类别
  */
 export enum RoleCategory {
-  SYSTEM = 'SYSTEM',   // 系统角色（ADMIN, USER）
-  PROJECT = 'PROJECT',  // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
-  CUSTOM = 'CUSTOM',   // 自定义角色
+  SYSTEM = 'SYSTEM', // 系统角色（ADMIN, USER）
+  PROJECT = 'PROJECT', // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
+  CUSTOM = 'CUSTOM', // 自定义角色
 }
 
 /**
@@ -122,11 +130,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 // 节点访问权限映射
 export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
   [NodeAccessRole.OWNER]: [
+    // 项目权限
     Permission.PROJECT_READ,
     Permission.PROJECT_WRITE,
     Permission.PROJECT_DELETE,
     Permission.PROJECT_ADMIN,
     Permission.PROJECT_MEMBER_MANAGE,
+
+    // 文件权限
     Permission.FILE_CREATE,
     Permission.FILE_READ,
     Permission.FILE_WRITE,
@@ -136,10 +147,20 @@ export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
     Permission.FILE_COMMENT,
     Permission.FILE_PRINT,
     Permission.FILE_COMPARE,
+
+    // CAD 权限
+    Permission.CAD_SAVE,
+    Permission.CAD_EXPORT,
+    Permission.CAD_EXTERNAL_REFERENCE,
+    Permission.GALLERY_USE,
+
+    // 版本管理
     Permission.VERSION_READ,
     Permission.VERSION_CREATE,
     Permission.VERSION_DELETE,
     Permission.VERSION_RESTORE,
+
+    // 系统权限
     Permission.FONT_MANAGE,
     Permission.REVIEW_CONFIG,
     Permission.TRASH_MANAGE,
@@ -157,6 +178,10 @@ export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
     Permission.FILE_COMMENT,
     Permission.FILE_PRINT,
     Permission.FILE_COMPARE,
+    Permission.CAD_SAVE,
+    Permission.CAD_EXPORT,
+    Permission.CAD_EXTERNAL_REFERENCE,
+    Permission.GALLERY_USE,
     Permission.VERSION_READ,
     Permission.VERSION_CREATE,
     Permission.VERSION_DELETE,
@@ -175,6 +200,10 @@ export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
     Permission.FILE_COMMENT,
     Permission.FILE_PRINT,
     Permission.FILE_COMPARE,
+    Permission.CAD_SAVE,
+    Permission.CAD_EXPORT,
+    Permission.CAD_EXTERNAL_REFERENCE,
+    Permission.GALLERY_USE,
     Permission.VERSION_READ,
     Permission.VERSION_CREATE,
   ],
@@ -186,11 +215,15 @@ export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
     Permission.FILE_COMMENT,
     Permission.FILE_PRINT,
     Permission.FILE_COMPARE,
+    Permission.CAD_SAVE,
+    Permission.CAD_EXPORT,
+    Permission.CAD_EXTERNAL_REFERENCE,
+    Permission.GALLERY_USE,
     Permission.VERSION_READ,
   ],
   [NodeAccessRole.VIEWER]: [
     Permission.FILE_READ,
     Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT, // 查看者可以批注文件
+    Permission.FILE_COMMENT,
   ],
 };

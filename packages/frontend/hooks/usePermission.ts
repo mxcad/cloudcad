@@ -3,51 +3,60 @@ import { useAuth } from '../contexts/AuthContext';
 
 /**
  * 权限枚举类型
+ * 注意：权限值必须与后端 Prisma 枚举保持一致（大写格式）
  */
 export enum Permission {
   // 用户权限
-  USER_READ = 'user:read',
-  USER_WRITE = 'user:write',
-  USER_DELETE = 'user:delete',
-  USER_ADMIN = 'user:admin',
+  USER_READ = 'USER_READ',
+  USER_WRITE = 'USER_WRITE',
+  USER_DELETE = 'USER_DELETE',
+  USER_ADMIN = 'USER_ADMIN',
 
   // 项目权限
-  PROJECT_CREATE = 'project:create',
-  PROJECT_READ = 'project:read',
-  PROJECT_WRITE = 'project:write',
-  PROJECT_DELETE = 'project:delete',
-  PROJECT_ADMIN = 'project:admin',
-  PROJECT_MEMBER_MANAGE = 'project:member:manage',
+  PROJECT_CREATE = 'PROJECT_CREATE',
+  PROJECT_READ = 'PROJECT_READ',
+  PROJECT_WRITE = 'PROJECT_WRITE',
+  PROJECT_DELETE = 'PROJECT_DELETE',
+  PROJECT_ADMIN = 'PROJECT_ADMIN',
+  PROJECT_MEMBER_MANAGE = 'PROJECT_MEMBER_MANAGE',
 
   // 文件权限
-  FILE_CREATE = 'file:create',
-  FILE_READ = 'file:read',
-  FILE_WRITE = 'file:write',
-  FILE_DELETE = 'file:delete',
-  FILE_SHARE = 'file:share',
-  FILE_DOWNLOAD = 'file:download',
-  FILE_COMMENT = 'file:comment', // 批注权限
-  FILE_PRINT = 'file:print', // 打印权限
-  FILE_COMPARE = 'file:compare', // 图纸比对权限
+  FILE_CREATE = 'FILE_CREATE',
+  FILE_READ = 'FILE_READ',
+  FILE_WRITE = 'FILE_WRITE',
+  FILE_DELETE = 'FILE_DELETE',
+  FILE_SHARE = 'FILE_SHARE',
+  FILE_DOWNLOAD = 'FILE_DOWNLOAD',
+  FILE_COMMENT = 'FILE_COMMENT', // 批注权限
+  FILE_PRINT = 'FILE_PRINT', // 打印权限
+  FILE_COMPARE = 'FILE_COMPARE', // 图纸比对权限
+
+  // CAD 图纸权限
+  CAD_SAVE = 'CAD_SAVE',
+  CAD_EXPORT = 'CAD_EXPORT',
+  CAD_EXTERNAL_REFERENCE = 'CAD_EXTERNAL_REFERENCE',
+
+  // 图库权限
+  GALLERY_USE = 'GALLERY_USE',
 
   // 版本管理权限
-  VERSION_READ = 'version:read',
-  VERSION_CREATE = 'version:create',
-  VERSION_DELETE = 'version:delete',
-  VERSION_RESTORE = 'version:restore',
+  VERSION_READ = 'VERSION_READ',
+  VERSION_CREATE = 'VERSION_CREATE',
+  VERSION_DELETE = 'VERSION_DELETE',
+  VERSION_RESTORE = 'VERSION_RESTORE',
 
   // 字体管理权限
-  FONT_MANAGE = 'font:manage',
+  FONT_MANAGE = 'FONT_MANAGE',
 
   // 审图配置权限
-  REVIEW_CONFIG = 'review:config',
+  REVIEW_CONFIG = 'REVIEW_CONFIG',
 
   // 回收站权限
-  TRASH_MANAGE = 'trash:manage',
+  TRASH_MANAGE = 'TRASH_MANAGE',
 
   // 系统权限
-  SYSTEM_ADMIN = 'system:admin',
-  SYSTEM_MONITOR = 'system:monitor',
+  SYSTEM_ADMIN = 'SYSTEM_ADMIN',
+  SYSTEM_MONITOR = 'SYSTEM_MONITOR',
 }
 
 /**
@@ -70,117 +79,13 @@ export enum NodeAccessRole {
 }
 
 /**
- * 角色权限映射
+ * 角色权限映射（已废弃）
+ * 注意：所有权限检查现在完全依赖 API 返回的实际权限列表
+ * 硬编码映射已被移除以避免权限不一致问题
+ *
+ * 如果需要检查项目成员的节点权限，请使用：
+ * @see ../utils/permissionUtils.ts - 中的 hasNodePermission 方法（动态调用 API）
  */
-const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.ADMIN]: [
-    Permission.USER_READ,
-    Permission.USER_WRITE,
-    Permission.USER_DELETE,
-    Permission.USER_ADMIN,
-    Permission.PROJECT_CREATE,
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_DELETE,
-    Permission.PROJECT_ADMIN,
-    Permission.PROJECT_MEMBER_MANAGE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.SYSTEM_ADMIN,
-    Permission.SYSTEM_MONITOR,
-  ],
-  [UserRole.USER]: [
-    Permission.PROJECT_CREATE,
-    Permission.PROJECT_READ,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-  ],
-};
-
-/**
- * 节点访问权限映射
- */
-const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
-  [NodeAccessRole.OWNER]: [
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_DELETE,
-    Permission.PROJECT_ADMIN,
-    Permission.PROJECT_MEMBER_MANAGE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-    Permission.VERSION_DELETE,
-    Permission.VERSION_RESTORE,
-    Permission.FONT_MANAGE,
-    Permission.REVIEW_CONFIG,
-    Permission.TRASH_MANAGE,
-  ],
-  [NodeAccessRole.ADMIN]: [
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_MEMBER_MANAGE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-    Permission.VERSION_DELETE,
-    Permission.VERSION_RESTORE,
-    Permission.FONT_MANAGE,
-    Permission.REVIEW_CONFIG,
-    Permission.TRASH_MANAGE,
-  ],
-  [NodeAccessRole.MEMBER]: [
-    Permission.PROJECT_READ,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-  ],
-  [NodeAccessRole.EDITOR]: [
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-  ],
-  [NodeAccessRole.VIEWER]: [
-    Permission.FILE_READ,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT, // 查看者可以批注文件
-  ],
-};
 
 /**
  * 权限管理 Hook
@@ -215,17 +120,25 @@ export const usePermission = () => {
   /**
    * 检查用户是否具有指定权限
    */
-  const hasPermission = (permission: Permission): boolean => {
-    const userRole = getUserRole();
-    if (!userRole) {
-      return false;
-    }
-
-    const permissions = ROLE_PERMISSIONS[userRole] || [];
-    return permissions.includes(permission);
-  };
-
-  /**
+      const hasPermission = (permission: Permission): boolean => {
+        if (!user?.role) {
+          return false;
+        }
+  
+        // 必须使用从 API 返回的实际权限列表
+        // 自定义角色的权限完全由数据库控制，不依赖硬编码
+        if (user.role.permissions && Array.isArray(user.role.permissions)) {
+          const userPermissions = user.role.permissions.map((p) => p.permission as Permission);
+          return userPermissions.includes(permission);
+        }
+  
+        // 如果角色没有权限列表，说明：
+        // 1. 后端没有正确返回权限数据
+        // 2. 这是系统默认角色且需要兼容旧版本
+        // 此时返回 false，要求后端修复
+        console.warn(`[Permission Warning] User role "${user.role.name}" has no permissions data. Please check backend API.`);
+        return false;
+      };  /**
    * 检查用户是否具有任意一个指定权限
    */
   const hasAnyPermission = (permissions: Permission[]): boolean => {
@@ -267,34 +180,90 @@ export const usePermission = () => {
   };
 
   /**
-   * 检查用户在节点上是否具有指定权限
-   */
-  const hasNodePermission = (
-    nodeAccessRole: NodeAccessRole,
-    permission: Permission
-  ): boolean => {
-    const permissions = NODE_ACCESS_PERMISSIONS[nodeAccessRole] || [];
-    return permissions.includes(permission);
-  };
 
-  /**
-   * 获取用户的所有权限
+   * 检查用户在节点上是否具有指定权限（已废弃）
+
+   * 
+
+   * @deprecated 此方法已被废弃，因为它使用硬编码的权限映射
+
+   * 请使用 @see ../utils/permissionUtils.ts 中的 hasNodePermission 方法
+
+   * 该方法会动态调用 API 获取实际的成员角色和权限
+
    */
-  const getUserPermissions = (): Permission[] => {
-    const userRole = getUserRole();
-    if (!userRole) {
+
+    const hasNodePermission = (
+
+      nodeAccessRole: NodeAccessRole,
+
+      permission: Permission
+
+    ): boolean => {
+
+      console.warn('[usePermission] hasNodePermission is deprecated. Use permissionUtils.hasNodePermission instead.');
+
+      return false;
+
+    };
+
+  
+
+    /**
+
+     * 获取用户的所有权限
+
+   */
+
+    const getUserPermissions = (): Permission[] => {
+
+      if (!user?.role) {
+
+        return [];
+
+      }
+
+  
+
+      // 只返回从 API 返回的实际权限列表
+
+      if (user.role.permissions && Array.isArray(user.role.permissions)) {
+
+        return user.role.permissions.map((p) => p.permission as Permission);
+
+      }
+
+  
+
+      // 如果角色没有权限列表，返回空数组
+
+      console.warn(`[Permission Warning] User role "${user.role.name}" has no permissions data.`);
+
       return [];
-    }
 
-    return ROLE_PERMISSIONS[userRole] || [];
-  };
+    };
 
-  /**
-   * 获取节点访问角色的所有权限
-   */
-  const getNodePermissions = (nodeAccessRole: NodeAccessRole): Permission[] => {
-    return NODE_ACCESS_PERMISSIONS[nodeAccessRole] || [];
-  };
+  
+
+    /**
+
+     * 获取节点访问角色的所有权限（已废弃）
+
+     *
+
+     * @deprecated 此方法已被废弃，因为它使用硬编码的权限映射
+
+     * 节点权限应该从 API 动态获取，而不是硬编码
+
+     */
+
+    const getNodePermissions = (nodeAccessRole: NodeAccessRole): Permission[] => {
+
+      console.warn('[usePermission] getNodePermissions is deprecated. Node permissions should be fetched from API.');
+
+      return [];
+
+    };
 
   /**
    * 检查是否为管理员

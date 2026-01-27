@@ -1,6 +1,6 @@
 ﻿import { MxCADView } from 'mxcad-app';
 import { Logger } from '../utils/mxcadUtils';
-import { apiService, mxcadApi } from './apiService';
+import { mxcadApi } from './apiService';
 import { MxFun } from 'mxdraw';
 import { McGePoint3d, MxCpp } from 'mxcad';
 

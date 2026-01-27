@@ -13,7 +13,6 @@ export {
 // 保留原有的 Mock API 以备后用
 import {
   MAX_UPLOAD_SIZE,
-  type Permission,
   type Role,
   type User,
 } from '../types';
@@ -73,7 +72,7 @@ export const mockApi = {
   },
   roles: {
     list: () => mockDb.getRoles(),
-    create: (name: string, description: string, permissions: Permission[]) =>
+    create: (name: string, description: string, permissions: string[]) =>
       mockDb.createRole(name, description, permissions),
     update: (id: string, data: Partial<Role>) => mockDb.updateRole(id, data),
     delete: (id: string) => mockDb.deleteRole(id),

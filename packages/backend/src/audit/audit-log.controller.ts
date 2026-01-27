@@ -5,9 +5,10 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,17 +18,18 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuditLogService } from './audit-log.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { UserRole } from '../common/enums/permissions.enum';
 import { AuditAction, ResourceType } from '@prisma/client';
+import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { Permission } from '../common/enums/permissions.enum';
 
 @ApiTags('audit')
 @Controller('audit')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions([Permission.SYSTEM_ADMIN])
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
 
@@ -45,7 +47,12 @@ export class AuditLogController {
   @ApiQuery({ name: 'endDate', required: false, description: '结束日期' })
   @ApiQuery({ name: 'success', required: false, description: '是否成功' })
   @ApiQuery({ name: 'page', required: false, description: '页码', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: '每页数量', example: 20 })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '每页数量',
+    example: 20,
+  })
   async findAll(
     @Query('userId') userId?: string,
     @Query('action') action?: AuditAction,
@@ -56,7 +63,10 @@ export class AuditLogController {
     @Query('success') success?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Req() req?: Request
   ) {
+    const currentUserId = (req as any).user?.id;
+
     const filters: any = {};
     if (userId) filters.userId = userId;
     if (action) filters.action = action;
@@ -71,7 +81,11 @@ export class AuditLogController {
       limit: limit ? parseInt(limit, 10) : 20,
     };
 
-    return await this.auditLogService.findAll(filters, pagination);
+    return await this.auditLogService.findAll(
+      filters,
+      pagination,
+      currentUserId
+    );
   }
 
   @Get('logs/:id')
@@ -80,8 +94,9 @@ export class AuditLogController {
     status: HttpStatus.OK,
     description: '成功获取审计日志详情',
   })
-  async findOne(@Param('id') id: string) {
-    return await this.auditLogService.findOne(id);
+  async findOne(@Param('id') id: string, @Req() req?: Request) {
+    const currentUserId = (req as any).user?.id;
+    return await this.auditLogService.findOne(id, currentUserId);
   }
 
   @Get('statistics')
@@ -97,13 +112,16 @@ export class AuditLogController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('userId') userId?: string,
+    @Req() req?: Request
   ) {
+    const currentUserId = (req as any).user?.id;
+
     const filters: any = {};
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
     if (userId) filters.userId = userId;
 
-    return await this.auditLogService.getStatistics(filters);
+    return await this.auditLogService.getStatistics(filters, currentUserId);
   }
 
   @Post('cleanup')
@@ -113,8 +131,15 @@ export class AuditLogController {
     status: HttpStatus.OK,
     description: '成功清理旧审计日志',
   })
-  async cleanupOldLogs(@Body() body: { daysToKeep: number }) {
-    const deletedCount = await this.auditLogService.cleanupOldLogs(body.daysToKeep);
+  async cleanupOldLogs(
+    @Body() body: { daysToKeep: number },
+    @Req() req?: Request
+  ) {
+    const currentUserId = (req as any).user?.id;
+    const deletedCount = await this.auditLogService.cleanupOldLogs(
+      body.daysToKeep,
+      currentUserId
+    );
     return {
       message: `成功清理了 ${deletedCount} 条审计日志`,
       deletedCount,

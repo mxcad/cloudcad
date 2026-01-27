@@ -28,8 +28,10 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NodePermissionGuard } from '../common/guards/project-permission.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { NodePermission } from '../common/decorators/project-permission.decorator';
-import { NodeAccessRole } from '../common/enums/permissions.enum';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { NodeAccessRole, Permission } from '../common/enums/permissions.enum';
 import { FileSystemService } from './file-system.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
@@ -40,7 +42,7 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
 
 @Controller('file-system')
-@UseGuards(JwtAuthGuard, NodePermissionGuard)
+@UseGuards(JwtAuthGuard, NodePermissionGuard, PermissionsGuard)
 @ApiTags('文件系统')
 @ApiBearerAuth()
 export class FileSystemController {
@@ -49,12 +51,14 @@ export class FileSystemController {
   constructor(private readonly fileSystemService: FileSystemService) {}
 
   @Post('projects')
+  @RequirePermissions([Permission.PROJECT_CREATE])
   @ApiResponse({ status: 201, description: '项目创建成功' })
   async createProject(@Request() req, @Body() dto: CreateProjectDto) {
     return this.fileSystemService.createProject(req.user.id, dto);
   }
 
   @Get('projects')
+  @RequirePermissions([Permission.PROJECT_READ])
   @ApiResponse({ status: 200, description: '获取项目列表成功' })
   async getProjects(@Request() req, @Query() query?: QueryProjectsDto) {
     return this.fileSystemService.getUserProjects(req.user.id, query);
@@ -94,12 +98,14 @@ export class FileSystemController {
   }
 
   @Get('trash')
+  @RequirePermissions([Permission.TRASH_MANAGE])
   @ApiResponse({ status: 200, description: '获取回收站列表成功' })
   async getTrash(@Request() req) {
     return this.fileSystemService.getTrashItems(req.user.id);
   }
 
   @Post('trash/restore')
+  @RequirePermissions([Permission.TRASH_MANAGE])
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '批量恢复成功' })
   async restoreTrashItems(@Body() body: { itemIds: string[] }) {
@@ -107,6 +113,7 @@ export class FileSystemController {
   }
 
   @Delete('trash/items')
+  @RequirePermissions([Permission.TRASH_MANAGE])
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '批量彻底删除成功' })
   async permanentlyDeleteTrashItems(@Body() body: { itemIds: string[] }) {
@@ -114,6 +121,7 @@ export class FileSystemController {
   }
 
   @Delete('trash')
+  @RequirePermissions([Permission.TRASH_MANAGE])
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '清空回收站成功' })
   async clearTrash(@Request() req) {
@@ -390,7 +398,7 @@ export class FileSystemController {
   ) {
     return this.fileSystemService.batchAddProjectMembers(
       projectId,
-      body.members,
+      body.members
     );
   }
 
@@ -409,7 +417,7 @@ export class FileSystemController {
   ) {
     return this.fileSystemService.batchUpdateProjectMembers(
       projectId,
-      body.updates,
+      body.updates
     );
   }
 

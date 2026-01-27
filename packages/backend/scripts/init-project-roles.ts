@@ -171,18 +171,39 @@ async function main() {
     where: { name: 'PROJECT_VIEWER' },
   });
 
-  if (!projectOwnerRole || !projectAdminRole || !projectMemberRole || !projectEditorRole || !projectViewerRole) {
+  if (
+    !projectOwnerRole ||
+    !projectAdminRole ||
+    !projectMemberRole ||
+    !projectEditorRole ||
+    !projectViewerRole
+  ) {
     console.error('项目角色不存在，请先运行 seed.ts 创建角色');
     process.exit(1);
   }
 
   // 为每个项目角色分配权限
   const roles = [
-    { role: projectOwnerRole, permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_OWNER },
-    { role: projectAdminRole, permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_ADMIN },
-    { role: projectMemberRole, permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_MEMBER },
-    { role: projectEditorRole, permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_EDITOR },
-    { role: projectViewerRole, permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_VIEWER },
+    {
+      role: projectOwnerRole,
+      permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_OWNER,
+    },
+    {
+      role: projectAdminRole,
+      permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_ADMIN,
+    },
+    {
+      role: projectMemberRole,
+      permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_MEMBER,
+    },
+    {
+      role: projectEditorRole,
+      permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_EDITOR,
+    },
+    {
+      role: projectViewerRole,
+      permissions: PROJECT_ROLE_PERMISSIONS.PROJECT_VIEWER,
+    },
   ];
 
   for (const { role, permissions } of roles) {
@@ -204,7 +225,9 @@ async function main() {
       console.log(`  ✓ 添加权限: ${permission}`);
     }
 
-    console.log(`✓ 角色 ${role.name} 权限配置完成 (${permissions.length} 个权限)`);
+    console.log(
+      `✓ 角色 ${role.name} 权限配置完成 (${permissions.length} 个权限)`
+    );
   }
 
   console.log('\n项目角色权限初始化完成!');

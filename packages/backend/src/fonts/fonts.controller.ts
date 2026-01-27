@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -25,17 +24,20 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { Permission } from '../common/enums/permissions.enum';
 import { FontsService } from './fonts.service';
 import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
 
 /**
  * 字体管理控制器
- * 仅管理员可访问
  */
 @ApiTags('字体管理')
 @ApiBearerAuth()
 @Controller('font-management')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions([Permission.FONT_MANAGE])
 export class FontsController {
   private readonly logger = new Logger(FontsController.name);
 
@@ -96,9 +98,6 @@ export class FontsController {
         `[uploadFont] req.file: ${(req as any).file ? '存在' : '不存在'}`
       );
 
-      // 验证管理员权限
-      this.validateAdminAccess(req);
-
       const target = uploadFontDto.target || FontUploadTarget.BOTH;
 
       const result = await this.fontsService.uploadFont(file, target);
@@ -135,9 +134,6 @@ export class FontsController {
     @Query() deleteFontDto: DeleteFontDto
   ) {
     try {
-      // 验证管理员权限
-      this.validateAdminAccess(req);
-
       const target = deleteFontDto.target || FontUploadTarget.BOTH;
 
       const result = await this.fontsService.deleteFont(fileName, target);
@@ -173,9 +169,6 @@ export class FontsController {
     @Param('fileName') fileName: string,
     @Query('location') location: 'backend' | 'frontend'
   ) {
-    // 验证管理员权限
-    this.validateAdminAccess(req);
-
     const result = await this.fontsService.downloadFont(fileName, location);
 
     // 设置 Content-Disposition 响应头
@@ -183,15 +176,5 @@ export class FontsController {
       type: 'application/octet-stream',
       disposition: `attachment; filename="${encodeURIComponent(result.fileName)}"`,
     });
-  }
-
-  /**
-   * 验证管理员权限
-   */
-  private validateAdminAccess(req: Request): void {
-    const user = (req as any).user;
-    if (!user || !user.role || user.role.name !== 'ADMIN') {
-      throw new BadRequestException('仅管理员可访问此功能');
-    }
   }
 }

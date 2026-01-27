@@ -14,6 +14,7 @@ import { Modal } from '../components/ui/Modal';
 import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi, authApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
+import { usePermission, Permission } from '../hooks/usePermission';
 
 // 使用API类型
 type UserDto = components['schemas']['UserDto'];
@@ -28,6 +29,7 @@ type RoleDto = {
 };
 
 export const UserManagement = () => {
+  const { hasPermission: checkUserPermission } = usePermission();
   const [hasPermission, setHasPermission] = useState(false);
   const [users, setUsers] = useState<UserDto[]>([]);
   const [roles, setRoles] = useState<RoleDto[]>([]);
@@ -85,8 +87,11 @@ export const UserManagement = () => {
     try {
       const response = await authApi.getProfile();
       const currentUser = response.data;
-      // 只有ADMIN角色可以管理用户
-      const hasAccess = currentUser.role?.name === 'ADMIN';
+      // 拥有任意用户管理权限即可访问
+      const hasAccess = checkUserPermission(Permission.USER_READ) ||
+        checkUserPermission(Permission.USER_WRITE) ||
+        checkUserPermission(Permission.USER_DELETE) ||
+        checkUserPermission(Permission.USER_ADMIN);
       setHasPermission(hasAccess);
       return hasAccess;
     } catch (error) {
@@ -307,9 +312,11 @@ export const UserManagement = () => {
                 管理团队成员、分配角色及存储配额
               </p>
             </div>
-            <Button onClick={handleOpenCreate} disabled={loading}>
-              添加用户
-            </Button>
+            {checkUserPermission(Permission.USER_WRITE) && (
+              <Button onClick={handleOpenCreate} disabled={loading}>
+                添加用户
+              </Button>
+            )}
           </div>
 
           {/* 搜索、筛选、排序控件 */}
@@ -484,20 +491,24 @@ export const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(user)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="编辑"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="删除"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {checkUserPermission(Permission.USER_WRITE) && (
+                          <button
+                            onClick={() => handleOpenEdit(user)}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="编辑"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        {checkUserPermission(Permission.USER_DELETE) && (
+                          <button
+                            onClick={() => handleDelete(user.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="删除"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -598,7 +598,6 @@ export default function GalleryTypeManagement({
               <div key={type.id} className="group">
                 <TypeTreeNode
                   type={type}
-                  children={children}
                   level={0}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
@@ -611,7 +610,9 @@ export default function GalleryTypeManagement({
                   onCancelEdit={handleCancelEdit}
                   maxLevel={MAX_LEVEL}
                   isSubmitting={isSubmitting}
-                />
+                >
+                  {children}
+                </TypeTreeNode>
               </div>
             ))}
           </div>

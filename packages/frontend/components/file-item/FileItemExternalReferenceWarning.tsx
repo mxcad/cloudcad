@@ -9,12 +9,12 @@ interface FileItemExternalReferenceWarningProps {
 
 export const FileItemExternalReferenceWarning: React.FC<FileItemExternalReferenceWarningProps> =
   memo(({ node, isGrid = false }) => {
-    if (!node.hasMissingExternalReferences) return null;
-
     const missingCount = useMemo(
       () => node.missingExternalReferencesCount || 0,
       [node.missingExternalReferencesCount]
     );
+
+    if (!node.hasMissingExternalReferences) return null;
 
     if (isGrid) {
       return (

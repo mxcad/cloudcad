@@ -113,9 +113,10 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     switch (mode) {
       case 'start':
         return `${ellipsisText}${children.slice(-availableChars)}`;
-      case 'middle':
+      case 'middle': {
         const halfChars = Math.floor(availableChars / 2);
         return `${children.slice(0, halfChars)}${ellipsisText}${children.slice(-halfChars)}`;
+      }
       case 'end':
         return `${children.slice(0, availableChars)}${ellipsisText}`;
       case 'clip':

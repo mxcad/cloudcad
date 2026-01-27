@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsArray, IsString, IsNotEmpty } from 'class-validator';
 
 /**
  * 添加项目成员 DTO

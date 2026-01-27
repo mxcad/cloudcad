@@ -16,6 +16,7 @@ interface UseFileSystemNavigationProps {
 
 const sanitizeFileName = (fileName: string): string => {
   let sanitized = fileName.replace(/[/\\]/g, '_');
+  // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F\x7F]/gu, '');
   sanitized = sanitized.replace(/[<>:"|?*]/g, '');
   if (sanitized.length > 250) {
