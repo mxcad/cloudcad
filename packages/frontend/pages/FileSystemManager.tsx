@@ -806,7 +806,7 @@ export const FileSystemManager: React.FC = () => {
                 }
                 onMove={!node.isRoot ? handleMove : undefined}
                 onCopy={!node.isRoot ? handleCopy : undefined}
-                onAddToGallery={!node.isFolder ? handleAddToGallery : undefined}
+                onAddToGallery={!node.isFolder && (node.extension === '.dwg' || node.extension === '.dxf') ? handleAddToGallery : undefined}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
