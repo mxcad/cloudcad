@@ -188,7 +188,6 @@ export const CADEditorDirect: React.FC = () => {
 
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);
-        mxcadManager.setBrowse(true);
         mxcadManager.showMxCAD(true);
         setLoading(false);
       } catch (err) {

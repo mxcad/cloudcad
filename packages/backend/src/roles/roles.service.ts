@@ -12,6 +12,7 @@ import { RoleDto } from './dto/role.dto';
 import { Permission, RoleCategory } from '../common/enums/permissions.enum';
 import {
   toPrismaPermission,
+  fromPrismaPermission,
   isValidPermission,
   getAllPermissions,
 } from '../common/utils/permission.util';
@@ -402,7 +403,7 @@ export class RolesService {
       category: role.category,
       level: role.level,
       isSystem: role.isSystem,
-      permissions: role.permissions.map((p: any) => String(p.permission) as Permission),
+      permissions: role.permissions.map((p: any) => fromPrismaPermission(p.permission)),
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     };
