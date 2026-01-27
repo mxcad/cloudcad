@@ -6,6 +6,7 @@ import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
 import { mxcadApi } from '../services/mxcadApi';
+import { filesApi } from '../services/filesApi';
 import {
   Thumbnail,
   FileItemSelection,
@@ -138,6 +139,26 @@ export const FileItem: React.FC<FileItemProps> = ({
     return ext === '.dwg' || ext === '.dxf';
   }, [node.extension, node.isFolder, node.isRoot]);
 
+  const isImageFile = useCallback(() => {
+    if (node.isFolder || node.isRoot) return false;
+    const ext = node.extension?.toLowerCase();
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'];
+    return imageExtensions.includes(ext || '');
+  }, [node.extension, node.isFolder, node.isRoot]);
+
+  const handleImagePreview = useCallback(async () => {
+    try {
+      const response = await filesApi.download(node.id);
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      setPreviewImageSrc(url);
+      setIsPreviewOpen(true);
+    } catch (error) {
+      console.error('加载图片失败:', error);
+      onEnter(node);
+    }
+  }, [node.id, onEnter]);
+
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (blockItemClickRef.current) {
@@ -150,10 +171,14 @@ export const FileItem: React.FC<FileItemProps> = ({
         const isShift = e.shiftKey;
         onSelect(node.id, isCtrl || true, isShift);
       } else {
-        onEnter(node);
+        if (isImageFile()) {
+          handleImagePreview();
+        } else {
+          onEnter(node);
+        }
       }
     },
-    [node, isMultiSelectMode, onSelect, onEnter]
+    [node, isMultiSelectMode, onSelect, onEnter, isImageFile, handleImagePreview]
   );
 
   const handleDoubleClick = useCallback(
