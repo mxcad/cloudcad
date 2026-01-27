@@ -9,8 +9,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import type React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { galleryApi } from '../../services/api';
 import { Button } from '../ui/Button';
 
@@ -38,7 +37,7 @@ interface GalleryTypeManagementProps {
 // 分类树节点组件
 interface TypeTreeNodeProps {
   type: GalleryTypeData;
-  children: TypeTreeNodeProps[];
+  children?: React.ReactNode;
   level: number;
   onEdit: (type: GalleryTypeData) => void;
   onDelete: (type: GalleryTypeData) => void;
@@ -71,7 +70,8 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const isEditing = editingType?.id === type.id;
-  const hasChildren = children.length > 0;
+  const childrenArray = React.Children.toArray(children);
+  const hasChildren = childrenArray.length > 0;
 
   // 双击编辑
   const handleDoubleClick = () => {
@@ -212,23 +212,10 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
       {/* 子分类 */}
       {isExpanded && hasChildren && (
         <div className="ml-2 border-l border-gray-200 pl-2 mt-1 space-y-1">
-          {children.map((child) => (
-            <TypeTreeNode
-              key={child.type.id}
-              type={child.type}
-              level={level + 1}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onAddChild={onAddChild}
-              editingType={editingType}
-              editingName={editingName}
-              setEditingType={setEditingType}
-              setEditingName={setEditingName}
-              onSaveEdit={onSaveEdit}
-              onCancelEdit={onCancelEdit}
-              maxLevel={MAX_LEVEL}
-              isSubmitting={isSubmitting}
-            />
+          {childrenArray.map((child) => (
+            <React.Fragment key={React.isValidElement(child) ? (child.props as any)?.type?.id || child.key : Math.random()}>
+              {child}
+            </React.Fragment>
           ))}
         </div>
       )}
@@ -274,11 +261,11 @@ export default function GalleryTypeManagement({
     fetchTypes();
   }, [galleryType]);
 
-  // 构建分类树
-  const buildTypeTree = () => {
+  // 构建分类树数据
+  const buildTypeTreeData = () => {
     const firstLevelTypes = types.filter((t) => t.pid === 0);
 
-    const buildChildren = (parentId: number): GalleryTypeData[] => {
+    const buildChildren = (parentId: number) => {
       const children = types.filter((t) => t.pid === parentId);
       return children.map((child) => ({
         type: child,
@@ -483,7 +470,37 @@ export default function GalleryTypeManagement({
     setNewTypeName('');
   };
 
-  const typeTree = buildTypeTree();
+  // 递归渲染分类树节点
+  const renderTypeTreeNode = (
+    node: { type: GalleryTypeData; children: any[] },
+    level: number
+  ): React.ReactNode => {
+    return (
+      <div key={node.type.id} className="group">
+        <TypeTreeNode
+          type={node.type}
+          level={level}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAddChild={handleAddChild}
+          editingType={editingType}
+          editingName={editingName}
+          setEditingType={setEditingType}
+          setEditingName={setEditingName}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
+          maxLevel={MAX_LEVEL}
+          isSubmitting={isSubmitting}
+        >
+          {node.children.map((child) =>
+            renderTypeTreeNode(child, level + 1)
+          )}
+        </TypeTreeNode>
+      </div>
+    );
+  };
+
+  const typeTree = buildTypeTreeData();
 
   return (
     <div className="p-6">
@@ -594,27 +611,7 @@ export default function GalleryTypeManagement({
           </div>
         ) : (
           <div className="p-2">
-            {typeTree.map(({ type, children }) => (
-              <div key={type.id} className="group">
-                <TypeTreeNode
-                  type={type}
-                  level={0}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onAddChild={handleAddChild}
-                  editingType={editingType}
-                  editingName={editingName}
-                  setEditingType={setEditingType}
-                  setEditingName={setEditingName}
-                  onSaveEdit={handleSaveEdit}
-                  onCancelEdit={handleCancelEdit}
-                  maxLevel={MAX_LEVEL}
-                  isSubmitting={isSubmitting}
-                >
-                  {children}
-                </TypeTreeNode>
-              </div>
-            ))}
+            {typeTree.map((node) => renderTypeTreeNode(node, 0))}
           </div>
         )}
       </div>
