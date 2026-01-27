@@ -24,23 +24,28 @@ model User {
 
   // 关联关系
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
-  nodeAccesses       FileAccess[]
+  projectMembers     ProjectMember[]
+  auditLogs          AuditLog[]
 
   @@map("users")
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String       @id @default(cuid())
+  name        String       @unique
   description String?
-  isSystem    Boolean  @default(false)  // 是否为系统角色（不可删除）
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category    RoleCategory @default(SYSTEM) // 角色类别
+  level       Int          @default(0)      // 角色级别（用于权限继承）
+  isSystem    Boolean      @default(false)  // 是否为系统角色（不可删除）
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // 关联关系
   users       User[]
   permissions RolePermission[]
+  projectMembers ProjectMember[]
 
+  @@index([category])
   @@map("roles")
 }
 
@@ -104,7 +109,7 @@ model FileSystemNode {
   deletedByCascade Boolean @default(false) // 是否因父节点删除而被自动删除
 
   // 关联关系
-  nodeAccesses FileAccess[]    @relation("NodeAccesses")
+  projectMembers ProjectMember[]
 
   // 索引优化
   @@index([parentId])
@@ -115,19 +120,25 @@ model FileSystemNode {
   @@map("file_system_nodes")
 }
 
-model FileAccess {
-  id        String         @id @default(cuid())
-  userId    String
-  nodeId    String         // 关联到FileSystemNode
-  role      FileAccessRole @default(VIEWER)
-  createdAt DateTime       @default(now())
+// ============ 项目成员模块 ============
+
+// 项目成员（用户与项目的关联，使用系统角色）
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String      // 项目ID
+  userId    String      // 用户ID
+  roleId    String      // 系统角色ID（关联到Role表）
+  createdAt DateTime    @default(now())
 
   // 关联关系
-  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  node FileSystemNode   @relation("NodeAccesses", fields: [nodeId], references: [id], onDelete: Cascade)
+  project   FileSystemNode @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role            @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  @@unique([userId, nodeId])
-  @@map("file_accesses")
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("project_members")
 }
 
 model Asset {
@@ -167,6 +178,32 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+// ============ 审计日志模块 ============
+
+// 审计日志表
+model AuditLog {
+  id          String      @id @default(cuid())
+  action      AuditAction // 操作类型
+  resourceType ResourceType // 资源类型
+  resourceId  String?     // 资源 ID
+  userId      String      // 操作用户 ID
+  details     String?     // 详细信息（JSON 格式）
+  ipAddress   String?     // IP 地址
+  userAgent   String?     // 用户代理
+  success     Boolean     // 操作是否成功
+  errorMessage String?    // 错误信息
+  createdAt   DateTime    @default(now())
+
+  // 关联关系
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
 }
 
 model UploadSession {
@@ -236,6 +273,24 @@ enum Permission {
   FILE_DELETE
   FILE_SHARE
   FILE_DOWNLOAD
+  FILE_COMMENT
+  FILE_PRINT
+  FILE_COMPARE
+
+  // 版本管理权限
+  VERSION_READ
+  VERSION_CREATE
+  VERSION_DELETE
+  VERSION_RESTORE
+
+  // 字体管理权限
+  FONT_MANAGE
+
+  // 审图配置权限
+  REVIEW_CONFIG
+
+  // 回收站权限
+  TRASH_MANAGE
 
   // 系统权限
   SYSTEM_ADMIN
@@ -256,14 +311,6 @@ enum FileStatus {
   DELETED
 }
 
-enum FileAccessRole {
-  OWNER      // 所有者：完全控制
-  ADMIN      // 管理员：管理权限
-  MEMBER     // 成员：可编辑
-  EDITOR     // 编辑者：可编辑文件
-  VIEWER     // 查看者：只读
-}
-
 enum AssetStatus {
   ACTIVE
   INACTIVE
@@ -274,4 +321,43 @@ enum FontStatus {
   ACTIVE
   INACTIVE
   DELETED
+}
+
+// 审计操作类型
+enum AuditAction {
+  PERMISSION_GRANT
+  PERMISSION_REVOKE
+  ROLE_CREATE
+  ROLE_UPDATE
+  ROLE_DELETE
+  USER_LOGIN
+  USER_LOGOUT
+  PROJECT_CREATE
+  PROJECT_DELETE
+  FILE_UPLOAD
+  FILE_DOWNLOAD
+  FILE_DELETE
+  FILE_SHARE
+  ADD_MEMBER
+  UPDATE_MEMBER
+  REMOVE_MEMBER
+  TRANSFER_OWNERSHIP
+  ACCESS_DENIED
+}
+
+// 资源类型
+enum ResourceType {
+  USER
+  ROLE
+  PERMISSION
+  PROJECT
+  FILE
+  FOLDER
+}
+
+// 角色类别
+enum RoleCategory {
+  SYSTEM   // 系统角色（ADMIN, USER）
+  PROJECT  // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
+  CUSTOM   // 自定义角色
 }

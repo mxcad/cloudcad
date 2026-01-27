@@ -97,6 +97,7 @@ export const FileSystemManager: React.FC = () => {
     paginationMeta,
     handlePageChange,
     handlePageSizeChange,
+    handleDeleteProject,
   } = useFileSystem();
 
   // 项目管理 hooks
@@ -112,7 +113,6 @@ export const FileSystemManager: React.FC = () => {
     setFormData: setProjectFormData,
     handleCreate: handleCreateProjectSubmit,
     handleUpdate: handleUpdateProjectSubmit,
-    handleDelete: handleDeleteProject,
   } = useProjectManagement({
     onProjectCreated: handleRefresh,
     onProjectUpdated: handleRefresh,
@@ -280,14 +280,6 @@ export const FileSystemManager: React.FC = () => {
       }
     },
     [editingProject, handleCreateProjectSubmit, handleUpdateProjectSubmit]
-  );
-
-  // 删除项目
-  const handleRemoveProject = useCallback(
-    (project: FileSystemNode) => {
-      handleDeleteProject(project, handleRefresh);
-    },
-    [handleDeleteProject, handleRefresh]
   );
 
   /**
@@ -805,7 +797,7 @@ export const FileSystemManager: React.FC = () => {
                 onRefresh={handleRefresh}
                 onEdit={node.isRoot && permissions.canEdit ? () => openEditProject(node) : undefined}
                 onDeleteNode={
-                  node.isRoot && permissions.canDelete ? () => handleRemoveProject(node) : undefined
+                  node.isRoot && permissions.canDelete ? () => handleDeleteProject(node.id, node.name) : undefined
                 }
                 onShowMembers={
                   node.isRoot && permissions.canManageMembers ? () => handleShowMembers(node) : undefined
