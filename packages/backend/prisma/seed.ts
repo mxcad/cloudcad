@@ -54,7 +54,7 @@ async function main() {
     where: { name: 'PROJECT_OWNER' },
     update: {},
     create: {
-      name: 'PROJECT_OWNER',
+      name: '项目所有者',
       description: '项目所有者，拥有项目所有权限',
       isSystem: true,
     },
@@ -64,7 +64,7 @@ async function main() {
     where: { name: 'PROJECT_ADMIN' },
     update: {},
     create: {
-      name: 'PROJECT_ADMIN',
+      name: '项目管理员',
       description: '项目管理员，可管理成员和文件',
       isSystem: true,
     },
@@ -74,7 +74,7 @@ async function main() {
     where: { name: 'PROJECT_MEMBER' },
     update: {},
     create: {
-      name: 'PROJECT_MEMBER',
+      name: '项目成员',
       description: '项目成员，可编辑文件',
       isSystem: true,
     },
@@ -84,7 +84,7 @@ async function main() {
     where: { name: 'PROJECT_EDITOR' },
     update: {},
     create: {
-      name: 'PROJECT_EDITOR',
+      name: '项目编辑者',
       description: '项目编辑者，可编辑文件',
       isSystem: true,
     },
@@ -94,13 +94,13 @@ async function main() {
     where: { name: 'PROJECT_VIEWER' },
     update: {},
     create: {
-      name: 'PROJECT_VIEWER',
+      name: '项目查看者',
       description: '项目查看者，只读权限',
       isSystem: true,
     },
   });
 
-  console.log('角色已准备:', adminRole.name, userRole.name, projectOwnerRole.name, projectAdminRole.name, projectMemberRole.name, projectEditorRole.name, projectViewerRole.name);
+  console.log('角色已准备:', adminRole.name, userRole.name, '项目所有者', '项目管理员', '项目成员', '项目编辑者', '项目查看者');
 
   // 为项目角色分配权限
   console.log('开始为项目角色分配权限...');

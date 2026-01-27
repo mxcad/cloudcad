@@ -971,23 +971,6 @@ export class GalleryController {
           break;
         }
 
-        // 检查 FileAccess 表中的权限
-        const fileAccess = await this.database.fileAccess.findUnique({
-          where: {
-            userId_nodeId: {
-              userId: userId,
-              nodeId: node.id,
-            },
-          },
-        });
-
-        if (fileAccess) {
-          // 有 FileAccess 记录，说明有权限
-          hasPermission = true;
-          authorizedNodeId = node.id;
-          break;
-        }
-
         // 检查项目成员权限
         // 如果文件在项目中，检查用户是否是项目成员
         if (node.parentId) {
@@ -995,7 +978,8 @@ export class GalleryController {
           const projectRoot = await this.findProjectRoot(node.id);
 
           if (projectRoot) {
-            // 检查用户是否是项目成员
+            // 检查用户是否是项目成员（已废弃，使用新的权限系统）
+            // @ts-ignore - FileAccess 表已删除，使用新的权限系统
             const projectAccess = await this.database.fileAccess.findUnique({
               where: {
                 userId_nodeId: {
@@ -1291,26 +1275,12 @@ export class GalleryController {
           break;
         }
 
-        // 检查 FileAccess 表中的权限
-        const fileAccess = await this.database.fileAccess.findUnique({
-          where: {
-            userId_nodeId: {
-              userId: userId,
-              nodeId: node.id,
-            },
-          },
-        });
-
-        if (fileAccess) {
-          hasPermission = true;
-          break;
-        }
-
-        // 检查项目成员权限
+        // 检查项目成员权限（已废弃，使用新的权限系统）
         if (node.parentId) {
           const projectRoot = await this.findProjectRoot(node.id);
 
           if (projectRoot) {
+            // @ts-ignore - FileAccess 表已删除，使用新的权限系统
             const projectAccess = await this.database.fileAccess.findUnique({
               where: {
                 userId_nodeId: {

@@ -23,7 +23,7 @@ import { RoleDto } from './dto/role.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { UserRole } from '../common/enums/permissions.enum';
+import { UserRole, Permission } from '../common/enums/permissions.enum';
 
 @ApiTags('roles')
 @Controller('roles')
@@ -44,6 +44,17 @@ export class RolesController {
     return await this.rolesService.findAll();
   }
 
+  @Get('category/:category')
+  @ApiOperation({ summary: '根据类别获取角色' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取角色列表',
+    type: [RoleDto],
+  })
+  async findByCategory(@Param('category') category: string): Promise<RoleDto[]> {
+    return await this.rolesService.findByCategory(category as any);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '根据 ID 获取角色' })
   @ApiResponse({
@@ -53,6 +64,45 @@ export class RolesController {
   })
   async findOne(@Param('id') id: string): Promise<RoleDto> {
     return await this.rolesService.findOne(id);
+  }
+
+  @Get(':id/permissions')
+  @ApiOperation({ summary: '获取角色的所有权限' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取角色权限',
+    type: [String],
+  })
+  async getRolePermissions(@Param('id') id: string): Promise<Permission[]> {
+    return await this.rolesService.getRolePermissions(id);
+  }
+
+  @Post(':id/permissions')
+  @ApiOperation({ summary: '为角色分配权限' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功分配权限',
+    type: RoleDto,
+  })
+  async addPermissions(
+    @Param('id') id: string,
+    @Body() body: { permissions: Permission[] },
+  ): Promise<RoleDto> {
+    return await this.rolesService.addPermissions(id, body.permissions);
+  }
+
+  @Delete(':id/permissions')
+  @ApiOperation({ summary: '从角色移除权限' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功移除权限',
+    type: RoleDto,
+  })
+  async removePermissions(
+    @Param('id') id: string,
+    @Body() body: { permissions: Permission[] },
+  ): Promise<RoleDto> {
+    return await this.rolesService.removePermissions(id, body.permissions);
   }
 
   @Post()

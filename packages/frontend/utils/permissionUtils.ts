@@ -123,10 +123,51 @@ export const hasNodePermission = async (
     return role ? requiredRoles.includes(role) : false;
   }
 
-  // TODO: 调用 API 获取用户在节点上的角色
-  // 目前先返回 false，等待后端提供获取节点权限的 API
-  logger.warn('节点权限检查功能尚未完全实现，需要后端 API 支持');
-  return false;
+  try {
+    // 动态导入 API 服务以避免循环依赖
+    const { projectsApi } = await import('../services/apiService');
+
+    // 获取项目成员列表
+    const response = await projectsApi.getMembers(nodeId);
+    const members = response.data as Array<{
+      userId: string;
+      role: {
+        name: string;
+      };
+    }>;
+
+    // 查找当前用户的角色
+    const currentMember = members.find((m) => m.userId === user.id);
+    const roleName = currentMember?.role.name;
+
+    // 将系统角色名称映射到 NodeAccessRole
+    const roleMap: Record<string, NodeAccessRole> = {
+      PROJECT_OWNER: 'OWNER',
+      PROJECT_ADMIN: 'ADMIN',
+      PROJECT_MEMBER: 'MEMBER',
+      PROJECT_EDITOR: 'EDITOR',
+      PROJECT_VIEWER: 'VIEWER',
+      // 向后兼容：旧系统的角色名称
+      OWNER: 'OWNER',
+      ADMIN: 'ADMIN',
+      MEMBER: 'MEMBER',
+      EDITOR: 'EDITOR',
+      VIEWER: 'VIEWER',
+    };
+
+    const userRole = roleName ? (roleMap[roleName] || roleName) as NodeAccessRole : undefined;
+
+    // 缓存用户的角色
+    if (userRole) {
+      nodePermissionCache.set(nodeId, userRole);
+    }
+
+    // 检查用户角色是否在所需角色列表中
+    return userRole ? requiredRoles.includes(userRole) : false;
+  } catch (error) {
+    logger.error('获取节点权限失败:', error);
+    return false;
+  }
 };
 
 /**
@@ -139,7 +180,12 @@ export const canEditNode = async (
   user: User | null,
   nodeId: string
 ): Promise<boolean> => {
-  return hasNodePermission(user, nodeId, ['OWNER', 'ADMIN', 'MEMBER', 'EDITOR']);
+  return hasNodePermission(user, nodeId, [
+    'OWNER',
+    'ADMIN',
+    'MEMBER',
+    'EDITOR',
+  ]);
 };
 
 /**

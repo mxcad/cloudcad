@@ -14,17 +14,16 @@ import { CustomValidationPipe } from './common/pipes/validation.pipe';
 import { SchedulerModule } from './common/schedulers/scheduler.module';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
-// import { FilesModule } from './files/files.module'; // 已废弃
 import { FileSystemModule } from './file-system/file-system.module';
 import { FontsModule } from './fonts/fonts.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { HealthModule } from './health/health.module';
 import { MxCadModule } from './mxcad/mxcad.module';
-// import { ProjectsModule } from './projects/projects.module'; // 已废弃
 import { RedisModule } from './redis/redis.module';
 import { RolesModule } from './roles/roles.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
+import { AuditLogModule } from './audit/audit-log.module';
 
 @Module({
   imports: [
@@ -39,8 +38,6 @@ import { UsersModule } from './users/users.module';
     CommonModule,
     UsersModule,
     RolesModule,
-    // ProjectsModule, // 已废弃，功能迁移到 FileSystemModule
-    // FilesModule, // 已废弃，功能迁移到 FileSystemModule
     FileSystemModule,
     FontsModule,
     GalleryModule,
@@ -49,6 +46,7 @@ import { UsersModule } from './users/users.module';
     SchedulerModule,
     StorageModule,
     HealthModule,
+    AuditLogModule,
   ],
   controllers: [AppController],
   providers: [

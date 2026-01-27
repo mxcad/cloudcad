@@ -4,7 +4,6 @@ import {
   LoadFileParam,
 } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
-import { FileNameText } from './ui/TruncateText';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 

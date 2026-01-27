@@ -734,6 +734,10 @@ export class MxCADManager {
     this.instanceManager.reset();
   }
 
+  setBrowse(is: boolean) {
+    this.getCurrentView()?.mxcad.setBrowse(is);
+  }
+
   setupAuthInterceptor(): void {
     MxCADAuthManager.getInstance().setupAuthInterceptor();
   }

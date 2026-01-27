@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Permission } from '../../common/enums/permissions.enum';
+import { Permission, RoleCategory } from '../../common/enums/permissions.enum';
 
 export class RoleDto {
   @ApiProperty({ description: '角色 ID' })
@@ -10,6 +10,12 @@ export class RoleDto {
 
   @ApiProperty({ description: '角色描述', required: false })
   description?: string;
+
+  @ApiProperty({ description: '角色类别', enum: RoleCategory })
+  category: RoleCategory;
+
+  @ApiProperty({ description: '角色级别（用于权限继承）' })
+  level: number;
 
   @ApiProperty({ description: '是否为系统角色（不可删除）' })
   isSystem: boolean;

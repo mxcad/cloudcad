@@ -1,12 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../ui/Button';
-import {
-  RefreshIcon,
-  SearchIcon,
-  GridIcon,
-  ListIcon,
-} from '../FileIcons';
+import { RefreshIcon, SearchIcon, GridIcon, ListIcon } from '../FileIcons';
 import { FolderPlus } from 'lucide-react';
 import { BreadcrumbNavigation } from '../BreadcrumbNavigation';
 import { BreadcrumbItem } from '../../types/filesystem';
@@ -88,8 +83,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                   navigate('/projects');
                 } else {
                   navigate(`/projects/${projectId}/files/${crumb.id}`);
-                }
-              }}
                 }
               }}
             />

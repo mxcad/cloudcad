@@ -7,9 +7,10 @@ import { FileSystemPermissionService } from './file-system-permission.service';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
+import { AuditLogModule } from '../audit/audit-log.module';
 
 @Module({
-  imports: [DatabaseModule, CommonModule, StorageModule],
+  imports: [DatabaseModule, CommonModule, StorageModule, AuditLogModule],
   controllers: [FileSystemController],
   providers: [
     FileSystemService,

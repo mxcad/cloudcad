@@ -125,7 +125,9 @@ async function main() {
   console.log('\n' + '='.repeat(80));
   console.log(`\nADMIN 角色用户列表（共 ${adminUsers.length} 人）：`);
   adminUsers.forEach((user) => {
-    console.log(`  - ${user.username} (${user.email}) - ${user.nickname || '无昵称'}`);
+    console.log(
+      `  - ${user.username} (${user.email}) - ${user.nickname || '无昵称'}`
+    );
   });
 }
 

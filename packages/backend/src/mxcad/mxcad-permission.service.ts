@@ -78,23 +78,7 @@ export class MxCadPermissionService {
       return true;
     }
 
-    // 2. 检查用户是否有目标节点的显式访问权限
-    const access = await this.prisma.fileAccess.findUnique({
-      where: {
-        userId_nodeId: { userId: context.userId, nodeId: targetNodeId },
-      },
-    });
-
-    console.log(`[validateUploadPermission] 目标节点显式访问权限:`, access);
-
-    if (access) {
-      console.log(
-        `[validateUploadPermission] 用户有目标节点显式访问权限，允许上传`
-      );
-      return true;
-    }
-
-    // 3. 检查用户是否有项目根目录的访问权限
+    // 2. 检查用户是否有项目根目录的访问权限
     if (targetNode && !targetNode.isRoot && targetNode.parentId) {
       console.log(
         `[validateUploadPermission] 目标节点不是根目录，检查父节点权限: parentId=${targetNode.parentId}`
@@ -138,22 +122,6 @@ export class MxCadPermissionService {
           return true;
         }
 
-        // 检查用户是否有该节点的访问权限
-        const parentAccess = await this.prisma.fileAccess.findUnique({
-          where: {
-            userId_nodeId: { userId: context.userId, nodeId: parentNode.id },
-          },
-        });
-
-        console.log(`[validateUploadPermission] 父节点访问权限:`, parentAccess);
-
-        if (parentAccess) {
-          console.log(
-            `[validateUploadPermission] 用户有父节点访问权限，允许上传`
-          );
-          return true;
-        }
-
         currentNode = parentNode;
       }
 
@@ -192,31 +160,6 @@ export class MxCadPermissionService {
     // 如果是文件所有者，允许访问
     if (fileNode.ownerId === context.userId) {
       return true;
-    }
-
-    // 检查文件访问权限
-    const fileAccess = await this.prisma.fileAccess.findFirst({
-      where: {
-        userId: context.userId,
-        nodeId: fileNodeId,
-      },
-    });
-
-    if (fileAccess) {
-      return true;
-    }
-
-    // 检查项目访问权限
-    if (fileNode.parentId) {
-      const projectAccess = await this.prisma.fileAccess.findUnique({
-        where: {
-          userId_nodeId: { userId: context.userId, nodeId: fileNode.parentId },
-        },
-      });
-
-      if (projectAccess) {
-        return true;
-      }
     }
 
     throw new ForbiddenException('您无权限访问该文件');

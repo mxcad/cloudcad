@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import type { AxiosRequestConfig } from 'axios';
+import { NodeAccessRole } from '../hooks/usePermission';
 
 export const projectsApi = {
   list: (config?: AxiosRequestConfig) =>
@@ -48,15 +49,18 @@ export const projectsApi = {
   getMembers: (projectId: string) =>
     apiClient.get(`/file-system/projects/${projectId}/members`),
 
-  addMember: (projectId: string, data: { userId: string; role: string }) =>
+  addMember: (projectId: string, data: { userId: string; roleId: string }) =>
     apiClient.post(`/file-system/projects/${projectId}/members`, data),
 
   removeMember: (projectId: string, userId: string) =>
     apiClient.delete(`/file-system/projects/${projectId}/members/${userId}`),
 
-  updateMember: (projectId: string, userId: string, data: { role: string }) =>
+  updateMember: (projectId: string, userId: string, data: { roleId: string }) =>
     apiClient.patch(
       `/file-system/projects/${projectId}/members/${userId}`,
       data
     ),
+
+  transferOwnership: (projectId: string, newOwnerId: string) =>
+    apiClient.post(`/file-system/projects/${projectId}/transfer`, { newOwnerId }),
 };

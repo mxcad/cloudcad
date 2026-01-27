@@ -4,9 +4,11 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsNumber,
+  IsEnum,
   MaxLength,
 } from 'class-validator';
-import { Permission } from '../../common/enums/permissions.enum';
+import { Permission, RoleCategory } from '../../common/enums/permissions.enum';
 
 export class CreateRoleDto {
   @ApiProperty({ description: '角色名称', example: '设计主管' })
@@ -24,6 +26,25 @@ export class CreateRoleDto {
   @IsOptional()
   @MaxLength(200)
   description?: string;
+
+  @ApiProperty({
+    description: '角色类别',
+    enum: RoleCategory,
+    example: RoleCategory.CUSTOM,
+    required: false,
+  })
+  @IsEnum(RoleCategory)
+  @IsOptional()
+  category?: RoleCategory;
+
+  @ApiProperty({
+    description: '角色级别（用于权限继承）',
+    example: 50,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  level?: number;
 
   @ApiProperty({
     description: '权限列表',

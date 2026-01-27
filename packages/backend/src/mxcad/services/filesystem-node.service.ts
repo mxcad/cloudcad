@@ -217,14 +217,7 @@ export class FileSystemNodeService {
         return true;
       }
 
-      // 检查节点访问权限
-      const access = await this.prisma.fileAccess.findUnique({
-        where: {
-          userId_nodeId: { userId, nodeId: projectId },
-        },
-      });
-
-      return !!access;
+      return false;
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error);
       return false;
@@ -356,32 +349,8 @@ export class FileSystemNodeService {
       projectId = foundProjectId;
       parentId = fileParentId;
     } else {
-      // 如果是新文件，尝试从用户的项目中查找默认项目
-      this.logger.log(`🆕 新文件，查找用户的默认项目`);
-      const userAccess = await this.prisma.fileAccess.findFirst({
-        where: {
-          userId: user.id,
-          node: { isRoot: true },
-        },
-        include: {
-          node: { select: { id: true, name: true, isRoot: true } },
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      if (userAccess && userAccess.node.isRoot) {
-        projectId = userAccess.nodeId;
-        parentId = projectId; // 上传到项目根目录
-        this.logger.log(
-          '✅ 使用用户默认项目: projectId=' +
-            projectId +
-            ' (' +
-            userAccess.node.name +
-            ')'
-        );
-      } else {
-        this.logger.log(`⚠️ 用户没有有效的项目，将创建默认项目`);
-      }
+      // 如果是新文件，将创建默认项目
+      this.logger.log(`⚠️ 用户没有有效的项目，将创建默认项目`);
     }
 
     return { projectId, parentId };
@@ -451,7 +420,8 @@ export class FileSystemNodeService {
       },
     });
 
-    // 添加用户为项目所有者
+    // 添加用户为项目所有者（已废弃，使用新的权限系统）
+    // @ts-ignore - FileAccess 表已删除，使用新的权限系统
     await this.prisma.fileAccess.create({
       data: {
         userId: user.id,

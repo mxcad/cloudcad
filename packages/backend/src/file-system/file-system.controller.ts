@@ -60,7 +60,13 @@ export class FileSystemController {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
   @Get('projects/:projectId')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
+  )
   @ApiResponse({ status: 200, description: '获取项目详情成功' })
   async getProject(@Param('projectId') projectId: string) {
     return this.fileSystemService.getProject(projectId);
@@ -115,7 +121,11 @@ export class FileSystemController {
   }
 
   @Post('nodes/:parentId/folders')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER
+  )
   @ApiResponse({ status: 201, description: '创建文件夹成功' })
   async createFolder(
     @Request() req,
@@ -126,21 +136,39 @@ export class FileSystemController {
   }
 
   @Get('nodes/:nodeId')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
+  )
   @ApiResponse({ status: 200, description: '获取节点详情成功' })
   async getNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
   @Get('nodes/:nodeId/root')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
+  )
   @ApiResponse({ status: 200, description: '获取根节点成功' })
   async getRootNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getRootNode(nodeId);
   }
 
   @Get('nodes/:nodeId/children')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
+  )
   @ApiResponse({ status: 200, description: '获取子节点列表成功' })
   async getChildren(
     @Param('nodeId') nodeId: string,
@@ -178,13 +206,22 @@ export class FileSystemController {
   }
 
   @Post('nodes/:nodeId/copy')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER
+  )
   @ApiResponse({ status: 201, description: '拷贝节点成功' })
   async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
   }
 
   @Post('files/upload')
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER
+  )
   @ApiResponse({ status: 201, description: '文件上传成功' })
   async uploadFile(
     @Request() req,
@@ -207,30 +244,6 @@ export class FileSystemController {
 
     if (!parentNode.isFolder) {
       throw new BadRequestException('只能上传文件到文件夹');
-    }
-
-    let projectId = parentId;
-    if (!parentNode.isRoot) {
-      let currentNode = parentNode;
-      while (currentNode.parentId) {
-        currentNode = await this.fileSystemService.getNode(
-          currentNode.parentId
-        );
-        if (currentNode.isRoot) {
-          projectId = currentNode.id;
-          break;
-        }
-      }
-    }
-
-    const hasPermission = await this.fileSystemService.checkProjectPermission(
-      projectId,
-      req.user.id,
-      ['OWNER', 'ADMIN', 'MEMBER']
-    );
-
-    if (!hasPermission) {
-      throw new ForbiddenException('没有权限上传文件到此项目');
     }
 
     let buffer: Buffer;
@@ -258,7 +271,13 @@ export class FileSystemController {
   }
 
   @Get('projects/:projectId/members')
-  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN, NodeAccessRole.MEMBER, NodeAccessRole.EDITOR, NodeAccessRole.VIEWER)
+  @NodePermission(
+    NodeAccessRole.OWNER,
+    NodeAccessRole.ADMIN,
+    NodeAccessRole.MEMBER,
+    NodeAccessRole.EDITOR,
+    NodeAccessRole.VIEWER
+  )
   @ApiOperation({ summary: '获取项目成员列表' })
   @ApiResponse({ status: 200, description: '获取成员列表成功' })
   @ApiResponse({ status: 401, description: '未登录' })
@@ -278,14 +297,14 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '项目或用户不存在' })
   async addProjectMember(
     @Param('projectId') projectId: string,
-    @Body() body: { userId: string; role: string },
+    @Body() body: { userId: string; roleId: string },
     @Request() req
   ) {
-    const { userId, role } = body;
+    const { userId, roleId } = body;
     return this.fileSystemService.addProjectMember(
       projectId,
       userId,
-      role,
+      roleId,
       req.user.id
     );
   }
@@ -301,13 +320,14 @@ export class FileSystemController {
   async updateProjectMember(
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
-    @Body('role') role: string,
+    @Body() body: { roleId: string },
     @Request() req
   ) {
+    const { roleId } = body;
     return this.fileSystemService.updateProjectMember(
       projectId,
       userId,
-      role,
+      roleId,
       req.user.id
     );
   }
@@ -329,6 +349,65 @@ export class FileSystemController {
       projectId,
       userId,
       req.user.id
+    );
+  }
+
+  @Post('projects/:projectId/transfer')
+  @NodePermission(NodeAccessRole.OWNER)
+  @ApiOperation({ summary: '转让项目所有权' })
+  @ApiResponse({ status: 200, description: '转让成功' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限转让' })
+  @ApiResponse({ status: 400, description: '转让目标无效' })
+  @ApiResponse({ status: 404, description: '项目或成员不存在' })
+  @HttpCode(HttpStatus.OK)
+  async transferProjectOwnership(
+    @Param('projectId') projectId: string,
+    @Body('newOwnerId') newOwnerId: string,
+    @Request() req
+  ) {
+    return this.fileSystemService.transferProjectOwnership(
+      projectId,
+      newOwnerId,
+      req.user.id
+    );
+  }
+
+  @Post('projects/:projectId/members/batch')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
+  @ApiOperation({ summary: '批量添加项目成员' })
+  @ApiResponse({ status: 201, description: '批量添加成员成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限添加成员' })
+  @ApiResponse({ status: 404, description: '项目或用户不存在' })
+  async batchAddProjectMembers(
+    @Param('projectId') projectId: string,
+    @Body() body: { members: Array<{ userId: string; roleId: string }> },
+    @Request() req
+  ) {
+    return this.fileSystemService.batchAddProjectMembers(
+      projectId,
+      body.members,
+    );
+  }
+
+  @Patch('projects/:projectId/members/batch')
+  @NodePermission(NodeAccessRole.OWNER, NodeAccessRole.ADMIN)
+  @ApiOperation({ summary: '批量更新项目成员角色' })
+  @ApiResponse({ status: 200, description: '批量更新成员角色成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限更新成员角色' })
+  @ApiResponse({ status: 404, description: '项目或成员不存在' })
+  async batchUpdateProjectMembers(
+    @Param('projectId') projectId: string,
+    @Body() body: { updates: Array<{ userId: string; roleId: string }> },
+    @Request() req
+  ) {
+    return this.fileSystemService.batchUpdateProjectMembers(
+      projectId,
+      body.updates,
     );
   }
 

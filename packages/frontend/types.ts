@@ -14,7 +14,8 @@ export type User = components['schemas']['UserDto'];
 
 // ==================== 前端特定类型 ====================
 
-/** 权限枚举 */
+/** 权限枚举 - 请使用 hooks/usePermission.ts 中的 Permission 枚举 */
+// @deprecated 使用 hooks/usePermission.ts 中的 Permission 枚举
 export enum Permission {
   // System
   VIEW_DASHBOARD = 'VIEW_DASHBOARD',

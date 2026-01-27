@@ -6,6 +6,7 @@ import {
   AlertCircle,
   Loader2,
   Shield,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -79,6 +80,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const [adding, setAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [filterRoleId, setFilterRoleId] = useState<string>('');
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<Member | null>(null);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
@@ -103,15 +107,23 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       const response = await rolesApi.list();
       const allRoles = (response.data as any[]) || [];
-      
-      // 只显示项目专属角色
-      const projectRoleNames = ['PROJECT_OWNER', 'PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
-      const projectRoles = allRoles.filter(role => projectRoleNames.includes(role.name));
-      
-      setProjectRoles(projectRoles);
-      
+
+      // 所有项目专属角色
+      const allProjectRoleNames = ['PROJECT_OWNER', 'PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
+
+      // 添加成员时可用的角色（排除 PROJECT_OWNER）
+      const addMemberRoleNames = ['PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
+
+      // 所有项目角色（用于筛选和显示）
+      const allProjectRoles = allRoles.filter(role => allProjectRoleNames.includes(role.name));
+
+      // 添加成员时可用的角色
+      const addMemberRoles = allRoles.filter(role => addMemberRoleNames.includes(role.name));
+
+      setProjectRoles(allProjectRoles);
+
       // 设置默认角色为 PROJECT_MEMBER
-      const defaultRole = projectRoles.find(r => r.name === 'PROJECT_MEMBER');
+      const defaultRole = addMemberRoles.find(r => r.name === 'PROJECT_MEMBER');
       if (defaultRole) {
         setNewRoleId((prev) => prev || defaultRole.id);
       }
@@ -268,17 +280,45 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     }
   };
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="项目成员"
-      footer={
-        <Button variant="ghost" onClick={onClose}>
-          关闭
-        </Button>
+  const handleTransferOwnership = async () => {
+    if (!transferTarget) return;
+
+    setTransferring(true);
+    setErrorMessage('');
+    try {
+      await projectsApi.transferOwnership(projectId, transferTarget.userId);
+
+      // 刷新成员列表
+      await loadMembers();
+
+      setShowTransferModal(false);
+      setTransferTarget(null);
+    } catch (error) {
+      if (
+        (error as Error & { response?: { status?: number } }).response
+          ?.status === 403
+      ) {
+        setErrorMessage('没有权限转让项目');
+      } else {
+        setErrorMessage('转让项目失败，请重试');
       }
-    >
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="项目成员"
+        footer={
+          <Button variant="ghost" onClick={onClose}>
+            关闭
+          </Button>
+        }
+      >
       <div className="space-y-4" ref={contentRef}>
         {/* 错误提示 */}
         {errorMessage && (
@@ -424,7 +464,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   disabled={loading}
                 >
                   <option value="">请选择角色</option>
-                  {projectRoles.map((role) => (
+                  {projectRoles
+                    .filter(role => role.name !== 'PROJECT_OWNER')
+                    .map((role) => (
                     <option key={role.id} value={role.id}>
                       {getRoleDisplayName(role.name)}
                     </option>
@@ -476,8 +518,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             </div>
           ) : (
             filteredMembers.map((member) => {
-              const isOwner =
-                member.role.isSystem && member.role.name === 'OWNER';
+              const isOwner = member.role.name === 'PROJECT_OWNER';
               const displayName =
                 member.user.nickname ||
                 member.user.username ||
@@ -513,12 +554,26 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       isOwner ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
-                    {projectRoles.map((role) => (
+                    {projectRoles
+                      .filter(role => role.name !== 'PROJECT_OWNER')
+                      .map((role) => (
                       <option key={role.id} value={role.id}>
                         {getRoleDisplayName(role.name)}
                       </option>
                     ))}
                   </select>
+                  {!isOwner && (
+                    <button
+                      onClick={() => {
+                        setTransferTarget(member);
+                        setShowTransferModal(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded flex-shrink-0"
+                      title="转让项目所有权"
+                    >
+                      <ArrowUpRight size={16} />
+                    </button>
+                  )}
                   {!isOwner && (
                     <button
                       onClick={() => handleRemoveMember(member.userId)}
@@ -535,6 +590,77 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         </div>
       </div>
     </Modal>
+
+      {/* 转让确认弹窗 */}
+      {showTransferModal && transferTarget && (
+        <Modal
+          isOpen={showTransferModal}
+          onClose={() => {
+            setShowTransferModal(false);
+            setTransferTarget(null);
+          }}
+          title="转让项目所有权"
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setTransferTarget(null);
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleTransferOwnership}
+                disabled={transferring}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                {transferring ? '转让中...' : '确认转让'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-900">
+                <p className="font-semibold mb-1">重要提示</p>
+                <p className="text-amber-800">
+                  转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-700">转让给：</p>
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
+                  {(transferTarget.user.nickname ||
+                    transferTarget.user.username ||
+                    transferTarget.user.email)[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900">
+                    {transferTarget.user.nickname ||
+                      transferTarget.user.username}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {transferTarget.user.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-500">
+              <p>• 新所有者将获得项目的完全控制权</p>
+              <p>• 您将成为该项目的管理员</p>
+              <p>• 确认转让后，新所有者可以管理项目成员和权限</p>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 };
 

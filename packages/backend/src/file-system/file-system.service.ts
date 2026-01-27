@@ -14,6 +14,8 @@ import { DatabaseService } from '../database/database.service';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
 import { FileHashService } from './file-hash.service';
 import { FileSystemPermissionService } from './file-system-permission.service';
+import { AuditLogService } from '../audit/audit-log.service';
+import { AuditAction, ResourceType } from '@prisma/client';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
@@ -41,7 +43,8 @@ export class FileSystemService {
     private readonly prisma: DatabaseService,
     private readonly storage: MinioStorageProvider,
     private readonly fileHashService: FileHashService,
-    private readonly permissionService: FileSystemPermissionService
+    private readonly permissionService: FileSystemPermissionService,
+    private readonly auditLogService: AuditLogService
   ) {}
 
   /**
@@ -92,6 +95,15 @@ export class FileSystemService {
 
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
+      // 获取 PROJECT_OWNER 角色
+      const projectOwnerRole = await this.prisma.role.findUnique({
+        where: { name: 'PROJECT_OWNER' },
+      });
+
+      if (!projectOwnerRole) {
+        throw new BadRequestException('PROJECT_OWNER 角色不存在，请先初始化系统角色');
+      }
+
       const rootNode = await this.prisma.fileSystemNode.create({
         data: {
           name: dto.name,
@@ -100,15 +112,16 @@ export class FileSystemService {
           isRoot: true,
           projectStatus: ProjectStatus.ACTIVE,
           ownerId: userId,
-          nodeAccesses: {
+          // 使用 ProjectMember 表添加项目创建者
+          projectMembers: {
             create: {
               userId,
-              role: 'OWNER',
+              roleId: projectOwnerRole.id,
             },
           },
         },
         include: {
-          nodeAccesses: {
+          projectMembers: {
             include: {
               user: {
                 select: {
@@ -117,6 +130,14 @@ export class FileSystemService {
                   username: true,
                   nickname: true,
                   avatar: true,
+                },
+              },
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isSystem: true,
                 },
               },
             },
@@ -146,7 +167,7 @@ export class FileSystemService {
     const where: any = {
       isRoot: true,
       deletedAt: null,
-      nodeAccesses: {
+      projectMembers: {
         some: { userId },
       },
     };
@@ -170,7 +191,7 @@ export class FileSystemService {
           take: limit,
           orderBy: sortBy ? { [sortBy]: sortOrder } : { updatedAt: 'desc' },
           include: {
-            nodeAccesses: {
+            projectMembers: {
               include: {
                 user: {
                   select: {
@@ -181,12 +202,20 @@ export class FileSystemService {
                     avatar: true,
                   },
                 },
+                role: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    isSystem: true,
+                  },
+                },
               },
             },
             _count: {
               select: {
                 children: true,
-                nodeAccesses: true,
+                projectMembers: true,
               },
             },
           },
@@ -218,7 +247,7 @@ export class FileSystemService {
           deletedAt: null,
         },
         include: {
-          nodeAccesses: {
+          projectMembers: {
             include: {
               user: {
                 select: {
@@ -228,6 +257,14 @@ export class FileSystemService {
                   nickname: true,
                   avatar: true,
                   role: true,
+                },
+              },
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isSystem: true,
                 },
               },
             },
@@ -280,7 +317,7 @@ export class FileSystemService {
           projectStatus: dto.status as ProjectStatus,
         },
         include: {
-          nodeAccesses: {
+          projectMembers: {
             include: {
               user: {
                 select: {
@@ -289,6 +326,14 @@ export class FileSystemService {
                   username: true,
                   nickname: true,
                   avatar: true,
+                },
+              },
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isSystem: true,
                 },
               },
             },
@@ -1083,7 +1128,10 @@ export class FileSystemService {
    */
   async checkFileAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
-      const role = await this.permissionService.getNodeAccessRole(userId, nodeId);
+      const role = await this.permissionService.getNodeAccessRole(
+        userId,
+        nodeId
+      );
       return role !== null;
     } catch (error) {
       this.logger.error(`检查文件访问权限失败: ${error.message}`, error.stack);
@@ -1120,7 +1168,7 @@ export class FileSystemService {
           OR: [
             { ownerId: userId },
             {
-              nodeAccesses: {
+              projectMembers: {
                 some: { userId },
               },
             },
@@ -1135,7 +1183,7 @@ export class FileSystemService {
               nickname: true,
             },
           },
-          nodeAccesses: {
+          projectMembers: {
             include: {
               user: {
                 select: {
@@ -1395,7 +1443,7 @@ export class FileSystemService {
         where: {
           isRoot: true,
           deletedAt: { not: null },
-          nodeAccesses: { some: { userId } },
+          projectMembers: { some: { userId } },
         },
         select: { id: true },
       });
@@ -1448,7 +1496,10 @@ export class FileSystemService {
 
   async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
-      const role = await this.permissionService.getNodeAccessRole(userId, nodeId);
+      const role = await this.permissionService.getNodeAccessRole(
+        userId,
+        nodeId
+      );
       return role !== null;
     } catch (error) {
       this.logger.error(`检查节点访问权限失败: ${error.message}`, error.stack);
@@ -1689,8 +1740,9 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      const members = await this.prisma.fileAccess.findMany({
-        where: { nodeId: projectId },
+      // 从 ProjectMember 表获取（新系统）
+      const projectMembers = await this.prisma.projectMember.findMany({
+        where: { projectId },
         include: {
           user: {
             select: {
@@ -1703,13 +1755,23 @@ export class FileSystemService {
               status: true,
             },
           },
+          role: {
+            include: {
+              permissions: {
+                select: {
+                  permission: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'asc',
         },
       });
 
-      return members;
+      // 如果 ProjectMember 表不为空，返回新系统的数据
+      return projectMembers;
     } catch (error) {
       this.logger.error(`获取项目成员失败: ${error.message}`, error.stack);
       throw error;
@@ -1717,104 +1779,370 @@ export class FileSystemService {
   }
 
   /**
-   * 添加项目成员
-   * @param projectId 项目 ID
-   * @param userId 用户 ID
-   * @param role 成员角色
-   * @param operatorId 操作者 ID
-   * @returns 新添加的成员信息
-   */
-  async addProjectMember(
-    projectId: string,
-    userId: string,
-    role: string,
-    operatorId: string
-  ) {
-    try {
-      const project = await this.prisma.fileSystemNode.findUnique({
-        where: { id: projectId, isRoot: true },
-      });
 
-      if (!project) {
-        throw new NotFoundException('项目不存在');
-      }
+     * 添加项目成员
 
-      const hasPermission = await this.checkProjectPermission(
-        projectId,
-        operatorId,
-        ['OWNER', 'ADMIN']
-      );
+     * @param projectId 项目 ID
 
-      if (!hasPermission) {
-        throw new ForbiddenException('没有权限添加项目成员');
-      }
+     * @param userId 用户 ID
 
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-      });
+     * @param roleId 系统角色 ID
 
-      if (!user) {
-        throw new NotFoundException('用户不存在');
-      }
+     * @param operatorId 操作者 ID
 
-      const existingMember = await this.prisma.fileAccess.findUnique({
-        where: {
-          userId_nodeId: {
-            userId,
-            nodeId: projectId,
-          },
-        },
-      });
+     * @returns 新添加的成员信息
 
-      if (existingMember) {
-        throw new ForbiddenException('用户已经是项目成员');
-      }
+     */
 
-      const member = await this.prisma.fileAccess.create({
-        data: {
-          nodeId: projectId,
-          userId,
-          role: role as any,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              username: true,
-              nickname: true,
-              avatar: true,
+    async addProjectMember(
+
+      projectId: string,
+
+      userId: string,
+
+      roleId: string,
+
+      operatorId: string
+
+    ) {
+
+      try {
+
+        const project = await this.prisma.fileSystemNode.findUnique({
+
+          where: { id: projectId, isRoot: true },
+
+        });
+
+  
+
+        if (!project) {
+
+          throw new NotFoundException('项目不存在');
+
+        }
+
+  
+
+        const hasPermission = await this.checkProjectPermission(
+
+          projectId,
+
+          operatorId,
+
+          ['OWNER', 'ADMIN']
+
+        );
+
+  
+
+        if (!hasPermission) {
+
+          throw new ForbiddenException('没有权限添加项目成员');
+
+        }
+
+  
+
+        const user = await this.prisma.user.findUnique({
+
+          where: { id: userId },
+
+        });
+
+  
+
+        if (!user) {
+
+          throw new NotFoundException('用户不存在');
+
+        }
+
+  
+
+        // 检查角色是否存在（系统角色）
+
+        const role = await this.prisma.role.findUnique({
+
+          where: { id: roleId },
+
+        });
+
+  
+
+        if (!role) {
+
+          throw new NotFoundException('角色不存在');
+
+        }
+
+  
+
+        // 检查用户是否已经是成员（在 ProjectMember 表中）
+
+        const existingProjectMember = await this.prisma.projectMember.findUnique({
+
+          where: {
+
+            projectId_userId: {
+
+              projectId,
+
+              userId,
+
             },
+
           },
-        },
-      });
 
-      // 清除权限缓存
-      this.permissionService.clearNodeCache(projectId);
+        });
 
-      this.logger.log(
-        `项目成员添加成功: ${projectId} - ${userId} (${role}) by ${operatorId}`
-      );
+  
 
-      return member;
-    } catch (error) {
-      this.logger.error(`添加项目成员失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
+        if (existingProjectMember) {
 
-  /**
-   * 更新项目成员角色
+          throw new ForbiddenException('用户已经是项目成员');
+
+        }
+
+        
+
+                const member = await this.prisma.projectMember.create({
+
+          data: {
+
+            projectId,
+
+            userId,
+
+            roleId,
+
+          },
+
+          include: {
+
+            user: {
+
+              select: {
+
+                id: true,
+
+                email: true,
+
+                username: true,
+
+                nickname: true,
+
+                avatar: true,
+
+              },
+
+            },
+
+            role: {
+
+              include: {
+
+                permissions: {
+
+                  select: {
+
+                    permission: true,
+
+                  },
+
+                },
+
+              },
+
+            },
+
+          },
+
+        });
+
+  
+
+        // 清除权限缓存
+
+  
+
+                this.permissionService.clearNodeCache(projectId);
+
+  
+
+        
+
+  
+
+                // 记录审计日志
+
+  
+
+                await this.auditLogService.log(
+
+  
+
+                  AuditAction.ADD_MEMBER,
+
+  
+
+                  ResourceType.PROJECT,
+
+  
+
+                  projectId,
+
+  
+
+                  operatorId,
+
+  
+
+                  true,
+
+  
+
+                  undefined,
+
+  
+
+                  JSON.stringify({
+
+  
+
+                    userId,
+
+  
+
+                    roleId,
+
+  
+
+                    role: role.name,
+
+  
+
+                  }),
+
+  
+
+                );
+
+  
+
+        
+
+  
+
+                this.logger.log(
+
+  
+
+                  `项目成员添加成功: ${projectId} - ${userId} (${role.name}) by ${operatorId}`
+
+  
+
+                );
+
+  
+
+        
+
+  
+
+                return member;
+
+  
+
+              } catch (error) {
+
+  
+
+                // 记录失败的审计日志
+
+  
+
+                await this.auditLogService.log(
+
+  
+
+                  AuditAction.ADD_MEMBER,
+
+  
+
+                  ResourceType.PROJECT,
+
+  
+
+                  projectId,
+
+  
+
+                  operatorId,
+
+  
+
+                  false,
+
+  
+
+                  error instanceof Error ? error.message : String(error),
+
+  
+
+                  JSON.stringify({
+
+  
+
+                    userId,
+
+  
+
+                    roleId,
+
+  
+
+                  }),
+
+  
+
+                );
+
+  
+
+        
+
+  
+
+                this.logger.error(`添加项目成员失败: ${error.message}`, error.stack);
+
+  
+
+                throw error;
+
+  
+
+              }
+
+  
+
+            }
+
+    
+
+      /**
+
+       * 更新项目成员角色
    * @param projectId 项目 ID
    * @param userId 用户 ID
-   * @param role 新角色
+   * @param roleId 新角色 ID（系统角色）
    * @param operatorId 操作者 ID
    * @returns 更新后的成员信息
    */
   async updateProjectMember(
     projectId: string,
     userId: string,
-    role: string,
+    roleId: string,
     operatorId: string
   ) {
     try {
@@ -1840,41 +2168,103 @@ export class FileSystemService {
         throw new ForbiddenException('没有权限更新项目成员角色');
       }
 
-      const validRoles = ['OWNER', 'ADMIN', 'MEMBER', 'EDITOR', 'VIEWER'];
-      if (!validRoles.includes(role)) {
-        throw new BadRequestException('无效的角色');
+      // 检查角色是否存在（系统角色）
+      const role = await this.prisma.role.findUnique({
+        where: { id: roleId },
+      });
+
+      if (!role) {
+        throw new NotFoundException('角色不存在');
       }
 
-      const member = await this.prisma.fileAccess.update({
+      // 不能将成员设置为项目所有者，必须通过转让
+      if (role.name === 'PROJECT_OWNER') {
+        throw new ForbiddenException('不能直接设置为项目所有者，请使用转让功能');
+      }
+
+      // 检查成员是否在 ProjectMember 表中
+      const existingProjectMember = await this.prisma.projectMember.findUnique({
         where: {
-          userId_nodeId: {
+          projectId_userId: {
+            projectId,
             userId,
-            nodeId: projectId,
-          },
-        },
-        data: { role: role as any },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              username: true,
-              nickname: true,
-              avatar: true,
-            },
           },
         },
       });
 
-      // 清除权限缓存
-      this.permissionService.clearNodeCache(projectId);
+      if (existingProjectMember) {
+        // 更新新系统的成员
+        const member = await this.prisma.projectMember.update({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId,
+            },
+          },
+          data: { roleId },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                username: true,
+                nickname: true,
+                avatar: true,
+              },
+            },
+            role: {
+              include: {
+                permissions: {
+                  select: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        });
 
-      this.logger.log(
-        `项目成员角色更新成功: ${projectId} - ${userId} -> ${role} by ${operatorId}`
+        // 清除权限缓存
+        this.permissionService.clearNodeCache(projectId);
+
+        // 记录审计日志
+        await this.auditLogService.log(
+          AuditAction.UPDATE_MEMBER,
+          ResourceType.PROJECT,
+          projectId,
+          operatorId,
+          true,
+          undefined,
+          JSON.stringify({
+            userId,
+            roleId,
+            role: role.name,
+          }),
+        );
+
+        this.logger.log(
+          `项目成员角色更新成功: ${projectId} - ${userId} -> ${role.name} by ${operatorId}`
+        );
+
+        return member;
+      } else {
+        throw new NotFoundException('成员不存在');
+      }
+    } catch (error) {
+      // 记录失败的审计日志
+      await this.auditLogService.log(
+        AuditAction.UPDATE_MEMBER,
+        ResourceType.PROJECT,
+        projectId,
+        operatorId,
+        false,
+        error instanceof Error ? error.message : String(error),
+        JSON.stringify({
+          userId,
+          roleId,
+        }),
       );
 
-      return member;
-    } catch (error) {
       this.logger.error(`更新项目成员角色失败: ${error.message}`, error.stack);
       throw error;
     }
@@ -1915,25 +2305,295 @@ export class FileSystemService {
         throw new ForbiddenException('不能移除项目所有者');
       }
 
-      await this.prisma.fileAccess.delete({
+      // 尝试从 ProjectMember 表删除
+      try {
+        await this.prisma.projectMember.delete({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId,
+            },
+          },
+        });
+      } catch {
+        throw new NotFoundException('成员不存在');
+      }
+
+      // 清除权限缓存
+              this.permissionService.clearNodeCache(projectId);
+      
+              // 记录审计日志
+              await this.auditLogService.log(
+                AuditAction.REMOVE_MEMBER,
+                ResourceType.PROJECT,
+                projectId,
+                operatorId,
+                true,
+                undefined,
+                JSON.stringify({
+                  userId,
+                }),
+              );
+      
+              this.logger.log(
+                `项目成员移除成功: ${projectId} - ${userId} by ${operatorId}`
+              );
+      
+              return { message: '成员移除成功' };
+          } catch (error) {
+            // 记录失败的审计日志
+            await this.auditLogService.log(
+              AuditAction.REMOVE_MEMBER,
+              ResourceType.PROJECT,
+              projectId,
+              operatorId,
+              false,
+              error instanceof Error ? error.message : String(error),
+              JSON.stringify({
+                userId,
+              }),
+            );
+      
+            this.logger.error(`移除项目成员失败: ${error.message}`, error.stack);
+            throw error;
+          }
+        }
+  /**
+   * 转让项目所有权
+   * @param projectId 项目 ID
+   * @param newOwnerId 新所有者用户 ID
+   * @param currentOwnerId 当前所有者用户 ID
+   * @returns 操作结果
+   */
+  async transferProjectOwnership(
+    projectId: string,
+    newOwnerId: string,
+    currentOwnerId: string
+  ) {
+    try {
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      // 只有项目所有者可以转让项目
+      if (project.ownerId !== currentOwnerId) {
+        throw new ForbiddenException('只有项目所有者可以转让项目');
+      }
+
+      // 不能转让给自己
+      if (newOwnerId === currentOwnerId) {
+        throw new BadRequestException('不能转让给自己');
+      }
+
+      // 检查新所有者是否是项目成员
+      const newOwnerMember = await this.prisma.projectMember.findUnique({
         where: {
-          userId_nodeId: {
-            userId,
-            nodeId: projectId,
+          projectId_userId: {
+            projectId,
+            userId: newOwnerId,
           },
         },
       });
 
+      if (!newOwnerMember) {
+        throw new BadRequestException('转让目标必须是项目成员');
+      }
+
+      // 查找项目所有者角色
+      const ownerRole = await this.prisma.role.findFirst({
+        where: { name: 'PROJECT_OWNER' },
+      });
+
+      if (!ownerRole) {
+        throw new NotFoundException('项目所有者角色不存在');
+      }
+
+      // 使用事务执行转让
+      await this.prisma.$transaction(async (tx) => {
+        // 1. 将新所有者的角色改为 PROJECT_OWNER
+        await tx.projectMember.update({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId: newOwnerId,
+            },
+          },
+          data: { roleId: ownerRole.id },
+        });
+
+        // 2. 将原所有者的角色改为 PROJECT_ADMIN（或保留为 PROJECT_ADMIN）
+        const adminRole = await tx.role.findFirst({
+          where: { name: 'PROJECT_ADMIN' },
+        });
+
+        if (adminRole) {
+          await tx.projectMember.update({
+            where: {
+              projectId_userId: {
+                projectId,
+                userId: currentOwnerId,
+              },
+            },
+            data: { roleId: adminRole.id },
+          });
+        }
+
+        // 3. 更新项目的 ownerId
+        await tx.fileSystemNode.update({
+          where: { id: projectId },
+          data: { ownerId: newOwnerId },
+        });
+      });
+
       // 清除权限缓存
-      this.permissionService.clearNodeCache(projectId);
+              this.permissionService.clearNodeCache(projectId);
+      
+              // 记录审计日志
+              await this.auditLogService.log(
+                AuditAction.TRANSFER_OWNERSHIP,
+                ResourceType.PROJECT,
+                projectId,
+                currentOwnerId,
+                true,
+                undefined,
+                JSON.stringify({
+                  fromOwnerId: currentOwnerId,
+                  toOwnerId: newOwnerId,
+                }),
+              );
+      
+              this.logger.log(
+                `项目所有权转让成功: ${projectId} from ${currentOwnerId} to ${newOwnerId}`
+              );
+      
+              return { message: '项目所有权转让成功' };
+          } catch (error) {
+            // 记录失败的审计日志
+            await this.auditLogService.log(
+              AuditAction.TRANSFER_OWNERSHIP,
+              ResourceType.PROJECT,
+              projectId,
+              currentOwnerId,
+              false,
+              error instanceof Error ? error.message : String(error),
+              JSON.stringify({
+                fromOwnerId: currentOwnerId,
+                toOwnerId: newOwnerId,
+              }),
+            );
+      
+            this.logger.error(`转让项目所有权失败: ${error.message}`, error.stack);
+            throw error;
+          }
+        }
+  /**
+   * 批量添加项目成员
+   * @param projectId 项目 ID
+   * @param members 成员列表
+   * @returns 操作结果
+   */
+  async batchAddProjectMembers(
+    projectId: string,
+    members: Array<{ userId: string; roleId: string }>,
+  ): Promise<{ message: string; addedCount: number; failedCount: number; errors: Array<{ userId: string; error: string }> }> {
+    try {
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
 
-      this.logger.log(
-        `项目成员移除成功: ${projectId} - ${userId} by ${operatorId}`
-      );
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
 
-      return { message: '成员移除成功' };
+      let addedCount = 0;
+      let failedCount = 0;
+      const errors: Array<{ userId: string; error: string }> = [];
+
+      for (const member of members) {
+        try {
+          await this.addProjectMember(projectId, member.userId, member.roleId, 'system');
+          addedCount++;
+        } catch (error) {
+          failedCount++;
+          errors.push({
+            userId: member.userId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      if (failedCount > 0) {
+        this.logger.warn(
+          `批量添加项目成员部分失败: ${addedCount} 成功, ${failedCount} 失败`
+        );
+      }
+
+      return {
+        message: `批量添加完成: ${addedCount} 成功, ${failedCount} 失败`,
+        addedCount,
+        failedCount,
+        errors,
+      };
     } catch (error) {
-      this.logger.error(`移除项目成员失败: ${error.message}`, error.stack);
+      this.logger.error(`批量添加项目成员失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量更新项目成员角色
+   * @param projectId 项目 ID
+   * @param updates 更新列表
+   * @returns 操作结果
+   */
+  async batchUpdateProjectMembers(
+    projectId: string,
+    updates: Array<{ userId: string; roleId: string }>,
+  ): Promise<{ message: string; updatedCount: number; failedCount: number; errors: Array<{ userId: string; error: string }> }> {
+    try {
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      let updatedCount = 0;
+      let failedCount = 0;
+      const errors: Array<{ userId: string; error: string }> = [];
+
+      for (const update of updates) {
+        try {
+          await this.updateProjectMember(projectId, update.userId, update.roleId, 'system');
+          updatedCount++;
+        } catch (error) {
+          failedCount++;
+          errors.push({
+            userId: update.userId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      if (failedCount > 0) {
+        this.logger.warn(
+          `批量更新项目成员部分失败: ${updatedCount} 成功, ${failedCount} 失败`
+        );
+      }
+
+      return {
+        message: `批量更新完成: ${updatedCount} 成功, ${failedCount} 失败`,
+        updatedCount,
+        failedCount,
+        errors,
+      };
+    } catch (error) {
+      this.logger.error(`批量更新项目成员失败: ${error.message}`, error.stack);
       throw error;
     }
   }

@@ -216,7 +216,6 @@ const TypeTreeNode: React.FC<TypeTreeNodeProps> = ({
             <TypeTreeNode
               key={child.type.id}
               type={child.type}
-              children={child.children}
               level={level + 1}
               onEdit={onEdit}
               onDelete={onDelete}

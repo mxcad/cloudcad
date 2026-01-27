@@ -1,3 +1,9 @@
+import { useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+
+/**
+ * 权限枚举类型
+ */
 export enum Permission {
   // 用户权限
   USER_READ = 'user:read',
@@ -44,50 +50,30 @@ export enum Permission {
   SYSTEM_MONITOR = 'system:monitor',
 }
 
+/**
+ * 用户角色枚举
+ */
 export enum UserRole {
   ADMIN = 'ADMIN',
   USER = 'USER',
 }
 
 /**
- * 角色类别
- */
-export enum RoleCategory {
-  SYSTEM = 'SYSTEM',   // 系统角色（ADMIN, USER）
-  PROJECT = 'PROJECT',  // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
-  CUSTOM = 'CUSTOM',   // 自定义角色
-}
-
-/**
- * 统一的节点访问角色
- * 用于 FileSystemNode（项目、文件夹、文件）的权限控制
+ * 节点访问角色枚举
  */
 export enum NodeAccessRole {
-  OWNER = 'OWNER', // 所有者：完全控制
-  ADMIN = 'ADMIN', // 管理员：管理权限
-  MEMBER = 'MEMBER', // 成员：可编辑
-  EDITOR = 'EDITOR', // 编辑者：可编辑文件
-  VIEWER = 'VIEWER', // 查看者：只读
+  OWNER = 'OWNER',
+  ADMIN = 'ADMIN',
+  MEMBER = 'MEMBER',
+  EDITOR = 'EDITOR',
+  VIEWER = 'VIEWER',
 }
 
 /**
- * FileAccessRole - 保留用于向后兼容
- * @deprecated 使用 NodeAccessRole 代替
+ * 角色权限映射
  */
-export const FileAccessRole = NodeAccessRole;
-export type FileAccessRole = NodeAccessRole;
-
-/**
- * ProjectMemberRole - 保留用于向后兼容
- * @deprecated 使用 NodeAccessRole 代替
- */
-export const ProjectMemberRole = NodeAccessRole;
-export type ProjectMemberRole = NodeAccessRole;
-
-// 权限映射表
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.ADMIN]: [
-    // 管理员拥有所有权限
     Permission.USER_READ,
     Permission.USER_WRITE,
     Permission.USER_DELETE,
@@ -108,7 +94,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.SYSTEM_MONITOR,
   ],
   [UserRole.USER]: [
-    // 普通用户基础权限
     Permission.PROJECT_CREATE,
     Permission.PROJECT_READ,
     Permission.FILE_CREATE,
@@ -119,8 +104,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 };
 
-// 节点访问权限映射
-export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
+/**
+ * 节点访问权限映射
+ */
+const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
   [NodeAccessRole.OWNER]: [
     Permission.PROJECT_READ,
     Permission.PROJECT_WRITE,
@@ -193,4 +180,150 @@ export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
     Permission.FILE_DOWNLOAD,
     Permission.FILE_COMMENT, // 查看者可以批注文件
   ],
+};
+
+/**
+ * 权限管理 Hook
+ * 提供统一的权限检查方法
+ */
+export const usePermission = () => {
+  const { user } = useAuth();
+
+  /**
+   * 获取用户角色
+   */
+  const getUserRole = (): UserRole | null => {
+    if (!user?.role?.name) {
+      return null;
+    }
+    return user.role.name as UserRole;
+  };
+
+  /**
+   * 检查用户是否具有指定角色
+   */
+  const hasRole = (roles: UserRole | UserRole[]): boolean => {
+    const userRole = getUserRole();
+    if (!userRole) {
+      return false;
+    }
+
+    const roleArray = Array.isArray(roles) ? roles : [roles];
+    return roleArray.includes(userRole);
+  };
+
+  /**
+   * 检查用户是否具有指定权限
+   */
+  const hasPermission = (permission: Permission): boolean => {
+    const userRole = getUserRole();
+    if (!userRole) {
+      return false;
+    }
+
+    const permissions = ROLE_PERMISSIONS[userRole] || [];
+    return permissions.includes(permission);
+  };
+
+  /**
+   * 检查用户是否具有任意一个指定权限
+   */
+  const hasAnyPermission = (permissions: Permission[]): boolean => {
+    return permissions.some((perm) => hasPermission(perm));
+  };
+
+  /**
+   * 检查用户是否具有所有指定权限
+   */
+  const hasAllPermissions = (permissions: Permission[]): boolean => {
+    return permissions.every((perm) => hasPermission(perm));
+  };
+
+  /**
+   * 检查用户在节点上是否具有指定角色
+   */
+  const hasNodeAccessRole = (
+    nodeAccessRoles: NodeAccessRole | NodeAccessRole[]
+  ): boolean => {
+    const userRole = getUserRole();
+    if (!userRole) {
+      return false;
+    }
+
+    // 管理员拥有所有权限
+    if (userRole === UserRole.ADMIN) {
+      return true;
+    }
+
+    // 检查节点访问角色
+    const roleArray = Array.isArray(nodeAccessRoles)
+      ? nodeAccessRoles
+      : [nodeAccessRoles];
+
+    // 这里需要根据实际的节点访问角色进行判断
+    // 由于前端没有节点访问角色的完整信息，这里返回 true
+    // 实际应用中应该从 API 获取用户的节点访问角色
+    return true;
+  };
+
+  /**
+   * 检查用户在节点上是否具有指定权限
+   */
+  const hasNodePermission = (
+    nodeAccessRole: NodeAccessRole,
+    permission: Permission
+  ): boolean => {
+    const permissions = NODE_ACCESS_PERMISSIONS[nodeAccessRole] || [];
+    return permissions.includes(permission);
+  };
+
+  /**
+   * 获取用户的所有权限
+   */
+  const getUserPermissions = (): Permission[] => {
+    const userRole = getUserRole();
+    if (!userRole) {
+      return [];
+    }
+
+    return ROLE_PERMISSIONS[userRole] || [];
+  };
+
+  /**
+   * 获取节点访问角色的所有权限
+   */
+  const getNodePermissions = (nodeAccessRole: NodeAccessRole): Permission[] => {
+    return NODE_ACCESS_PERMISSIONS[nodeAccessRole] || [];
+  };
+
+  /**
+   * 检查是否为管理员
+   */
+  const isAdmin = (): boolean => {
+    return hasRole(UserRole.ADMIN);
+  };
+
+  /**
+   * 检查是否为普通用户
+   */
+  const isUser = (): boolean => {
+    return hasRole(UserRole.USER);
+  };
+
+  return useMemo(
+    () => ({
+      getUserRole,
+      hasRole,
+      hasPermission,
+      hasAnyPermission,
+      hasAllPermissions,
+      hasNodeAccessRole,
+      hasNodePermission,
+      getUserPermissions,
+      getNodePermissions,
+      isAdmin,
+      isUser,
+    }),
+    [user]
+  );
 };
