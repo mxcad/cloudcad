@@ -47,12 +47,12 @@ export class CreateRoleDto {
   level?: number;
 
   @ApiProperty({
-    description: '权限列表',
-    example: [Permission.PROJECT_CREATE, Permission.FILE_READ],
+    description: '权限列表（数据库存储格式：大写）',
+    example: ['USER_READ', 'PROJECT_CREATE', 'FILE_WRITE'],
     type: [String],
   })
   @IsArray()
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
-  permissions: Permission[];
+  permissions: string[];
 }

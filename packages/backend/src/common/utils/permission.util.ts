@@ -7,6 +7,37 @@ import { Permission as PrismaPermission } from '@prisma/client';
  */
 
 /**
+ * 权限检查上下文
+ * 支持基于时间、位置、设备等上下文因素的权限控制
+ */
+export interface PermissionContext {
+  /** 用户 IP 地址 */
+  ipAddress?: string;
+  /** 用户设备信息 */
+  userAgent?: string;
+  /** 检查时间（默认为当前时间） */
+  time?: Date;
+  /** 地理位置信息 */
+  location?: string;
+  /** 自定义上下文数据 */
+  custom?: Record<string, any>;
+}
+
+/**
+ * 上下文规则配置
+ */
+export interface ContextRule {
+  /** 规则名称 */
+  name: string;
+  /** 适用的权限列表（空数组表示适用于所有权限） */
+  permissions: string[];
+  /** 规则是否启用 */
+  enabled: boolean;
+  /** 规则描述 */
+  description: string;
+}
+
+/**
  * Permission 字符串值到 Prisma 枚举标识符的映射表
  */
 const PERMISSION_MAP: Record<Permission, PrismaPermission> = {
@@ -32,6 +63,12 @@ const PERMISSION_MAP: Record<Permission, PrismaPermission> = {
   [Permission.FILE_PRINT]: PrismaPermission.FILE_PRINT,
   [Permission.FILE_COMPARE]: PrismaPermission.FILE_COMPARE,
 
+  [Permission.CAD_SAVE]: PrismaPermission.CAD_SAVE,
+  [Permission.CAD_EXPORT]: PrismaPermission.CAD_EXPORT,
+  [Permission.CAD_EXTERNAL_REFERENCE]: PrismaPermission.CAD_EXTERNAL_REFERENCE,
+
+  [Permission.GALLERY_USE]: PrismaPermission.GALLERY_USE,
+
   [Permission.VERSION_READ]: PrismaPermission.VERSION_READ,
   [Permission.VERSION_CREATE]: PrismaPermission.VERSION_CREATE,
   [Permission.VERSION_DELETE]: PrismaPermission.VERSION_DELETE,
@@ -47,22 +84,54 @@ const PERMISSION_MAP: Record<Permission, PrismaPermission> = {
 /**
  * Prisma 枚举标识符到 Permission 字符串值的反向映射表
  */
-const REVERSE_PERMISSION_MAP: Record<PrismaPermission, Permission> = Object.fromEntries(
-  Object.entries(PERMISSION_MAP).map(([key, value]) => [value, key])
-) as Record<PrismaPermission, Permission>;
+const REVERSE_PERMISSION_MAP: Record<PrismaPermission, Permission> =
+  Object.fromEntries(
+    Object.entries(PERMISSION_MAP).map(([key, value]) => [value, key])
+  ) as Record<PrismaPermission, Permission>;
 
 /**
- * 将业务层 Permission 转换为 Prisma Permission
+ * 将业务层 Permission 或字符串转换为 Prisma Permission
+ * 支持两种格式：
+ * 1. 小写格式（后端内部使用）：'user:read'
+ * 2. 大写格式（前端发送）：'USER_READ'
  */
-export function toPrismaPermission(permission: Permission): PrismaPermission {
-  return PERMISSION_MAP[permission];
+export function toPrismaPermission(permission: Permission | string): PrismaPermission {
+  // 如果已经是有效的 Prisma 枚举（大写），直接返回
+  if (isValidPrismaPermission(permission)) {
+    return permission as PrismaPermission;
+  }
+
+  // 尝试从小写格式映射
+  if (PERMISSION_MAP[permission as Permission]) {
+    return PERMISSION_MAP[permission as Permission];
+  }
+
+  // 尝试从大写格式映射（前端发送的格式）
+  // 将 'USER_READ' 直接作为 Prisma 枚举值
+  const upperCaseKey = permission as string;
+  const prismaPerm = upperCaseKey as PrismaPermission;
+  if (isValidPrismaPermission(prismaPerm)) {
+    return prismaPerm;
+  }
+
+  throw new Error(`无效的权限值: ${permission}`);
+}
+
+/**
+ * 验证是否为有效的 Prisma Permission
+ */
+function isValidPrismaPermission(value: string): boolean {
+  return Object.values(PrismaPermission).includes(value as PrismaPermission);
 }
 
 /**
  * 将 Prisma Permission 转换为业务层 Permission
+ * 注意：直接返回 Prisma 枚举值（大写格式），以保持与前端一致
  */
 export function fromPrismaPermission(permission: PrismaPermission): Permission {
-  return REVERSE_PERMISSION_MAP[permission];
+  // 直接返回 Prisma 枚举值（字符串），转换为 Permission 类型
+  // 这样可以保持与前端 Permission 枚举（大写格式）一致
+  return permission as unknown as Permission;
 }
 
 /**
@@ -84,17 +153,29 @@ export function fromPrismaPermissions(
 }
 
 /**
- * 验证权限是否有效
+ * 验证权限是否有效（支持大写和小写格式）
+ * 大写格式：USER_READ（前端使用）
+ * 小写格式：user:read（后端业务层使用）
  */
-export function isValidPermission(
-  permission: string
-): permission is Permission {
-  return Object.values(Permission).includes(permission as Permission);
+export function isValidPermission(permission: string): boolean {
+  // 检查是否为有效的 Prisma 枚举（大写格式）
+  const prismaPermissions = Object.values(PrismaPermission);
+  if (prismaPermissions.includes(permission as PrismaPermission)) {
+    return true;
+  }
+
+  // 检查是否为有效的业务层枚举（小写格式）
+  const businessPermissions = Object.values(Permission);
+  if (businessPermissions.includes(permission as Permission)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
- * 获取所有有效的权限
+ * 获取所有有效的权限（返回数据库格式：大写）
  */
-export function getAllPermissions(): Permission[] {
-  return Object.values(Permission);
+export function getAllPermissions(): string[] {
+  return Object.values(PrismaPermission);
 }

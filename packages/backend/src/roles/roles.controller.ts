@@ -21,14 +21,14 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleDto } from './dto/role.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { UserRole, Permission } from '../common/enums/permissions.enum';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { Permission } from '../common/enums/permissions.enum';
 
 @ApiTags('roles')
 @Controller('roles')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
@@ -40,6 +40,7 @@ export class RolesController {
     description: '成功获取角色列表',
     type: [RoleDto],
   })
+  @RequirePermissions([Permission.USER_READ])
   async findAll(): Promise<RoleDto[]> {
     return await this.rolesService.findAll();
   }
@@ -51,7 +52,10 @@ export class RolesController {
     description: '成功获取角色列表',
     type: [RoleDto],
   })
-  async findByCategory(@Param('category') category: string): Promise<RoleDto[]> {
+  @RequirePermissions([Permission.USER_READ])
+  async findByCategory(
+    @Param('category') category: string
+  ): Promise<RoleDto[]> {
     return await this.rolesService.findByCategory(category as any);
   }
 
@@ -62,6 +66,7 @@ export class RolesController {
     description: '成功获取角色',
     type: RoleDto,
   })
+  @RequirePermissions([Permission.USER_READ])
   async findOne(@Param('id') id: string): Promise<RoleDto> {
     return await this.rolesService.findOne(id);
   }
@@ -73,7 +78,8 @@ export class RolesController {
     description: '成功获取角色权限',
     type: [String],
   })
-  async getRolePermissions(@Param('id') id: string): Promise<Permission[]> {
+  @RequirePermissions([Permission.USER_READ])
+  async getRolePermissions(@Param('id') id: string): Promise<string[]> {
     return await this.rolesService.getRolePermissions(id);
   }
 
@@ -84,9 +90,10 @@ export class RolesController {
     description: '成功分配权限',
     type: RoleDto,
   })
+  @RequirePermissions([Permission.USER_ADMIN])
   async addPermissions(
     @Param('id') id: string,
-    @Body() body: { permissions: Permission[] },
+    @Body() body: { permissions: string[] }
   ): Promise<RoleDto> {
     return await this.rolesService.addPermissions(id, body.permissions);
   }
@@ -98,9 +105,10 @@ export class RolesController {
     description: '成功移除权限',
     type: RoleDto,
   })
+  @RequirePermissions([Permission.USER_ADMIN])
   async removePermissions(
     @Param('id') id: string,
-    @Body() body: { permissions: Permission[] },
+    @Body() body: { permissions: string[] }
   ): Promise<RoleDto> {
     return await this.rolesService.removePermissions(id, body.permissions);
   }
@@ -112,6 +120,7 @@ export class RolesController {
     description: '成功创建角色',
     type: RoleDto,
   })
+  @RequirePermissions([Permission.USER_ADMIN])
   async create(@Body() createRoleDto: CreateRoleDto): Promise<RoleDto> {
     return await this.rolesService.create(createRoleDto);
   }
@@ -123,6 +132,7 @@ export class RolesController {
     description: '成功更新角色',
     type: RoleDto,
   })
+  @RequirePermissions([Permission.USER_ADMIN])
   async update(
     @Param('id') id: string,
     @Body() updateRoleDto: UpdateRoleDto
@@ -137,6 +147,7 @@ export class RolesController {
     status: HttpStatus.OK,
     description: '成功删除角色',
   })
+  @RequirePermissions([Permission.USER_ADMIN])
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     await this.rolesService.remove(id);
     return { message: '角色已删除' };

@@ -9,10 +9,9 @@ import { DatabaseService } from '../database/database.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleDto } from './dto/role.dto';
-import { Permission, RoleCategory } from '../common/enums/permissions.enum';
+import { RoleCategory } from '../common/enums/permissions.enum';
 import {
   toPrismaPermission,
-  fromPrismaPermission,
   isValidPermission,
   getAllPermissions,
 } from '../common/utils/permission.util';
@@ -33,7 +32,7 @@ export class RolesService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly cacheService: PermissionCacheService,
+    private readonly cacheService: PermissionCacheService
   ) {}
 
   /**
@@ -48,11 +47,7 @@ export class RolesService {
           },
         },
       },
-      orderBy: [
-        { category: 'asc' },
-        { level: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ category: 'asc' }, { level: 'desc' }, { createdAt: 'asc' }],
     });
 
     return roles.map((role) => this.mapToRoleDto(role));
@@ -71,10 +66,7 @@ export class RolesService {
           },
         },
       },
-      orderBy: [
-        { level: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ level: 'desc' }, { createdAt: 'asc' }],
     });
 
     return roles.map((role) => this.mapToRoleDto(role));
@@ -164,8 +156,15 @@ export class RolesService {
 
     // 系统角色不允许修改名称、描述、类别和级别
     if (role.isSystem) {
-      if (updateRoleDto.name || updateRoleDto.description || updateRoleDto.category || updateRoleDto.level !== undefined) {
-        throw new BadRequestException('系统角色不允许修改名称、描述、类别和级别');
+      if (
+        updateRoleDto.name ||
+        updateRoleDto.description ||
+        updateRoleDto.category ||
+        updateRoleDto.level !== undefined
+      ) {
+        throw new BadRequestException(
+          '系统角色不允许修改名称、描述、类别和级别'
+        );
       }
     }
 
@@ -194,7 +193,9 @@ export class RolesService {
           description: updateRoleDto.description,
         }),
         ...(updateRoleDto.category && { category: updateRoleDto.category }),
-        ...(updateRoleDto.level !== undefined && { level: updateRoleDto.level }),
+        ...(updateRoleDto.level !== undefined && {
+          level: updateRoleDto.level,
+        }),
         ...(updateRoleDto.permissions && {
           permissions: {
             deleteMany: {}, // 删除所有旧权限
@@ -273,7 +274,10 @@ export class RolesService {
   /**
    * 为角色分配权限
    */
-  async addPermissions(roleId: string, permissions: Permission[]): Promise<RoleDto> {
+  async addPermissions(
+    roleId: string,
+    permissions: string[]
+  ): Promise<RoleDto> {
     // 检查角色是否存在
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
@@ -306,7 +310,9 @@ export class RolesService {
       },
     });
 
-    this.logger.log(`为角色添加权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`);
+    this.logger.log(
+      `为角色添加权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
+    );
 
     // 清理所有用户的角色缓存
     this.cacheService.cleanup();
@@ -317,7 +323,10 @@ export class RolesService {
   /**
    * 从角色移除权限
    */
-  async removePermissions(roleId: string, permissions: Permission[]): Promise<RoleDto> {
+  async removePermissions(
+    roleId: string,
+    permissions: string[]
+  ): Promise<RoleDto> {
     // 检查角色是否存在
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
@@ -346,7 +355,9 @@ export class RolesService {
       },
     });
 
-    this.logger.log(`从角色移除权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`);
+    this.logger.log(
+      `从角色移除权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
+    );
 
     // 清理所有用户的角色缓存
     this.cacheService.cleanup();
@@ -355,9 +366,9 @@ export class RolesService {
   }
 
   /**
-   * 获取角色的所有权限
+   * 获取角色的所有权限（返回数据库存储的原始值：大写格式）
    */
-  async getRolePermissions(roleId: string): Promise<Permission[]> {
+  async getRolePermissions(roleId: string): Promise<string[]> {
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
       include: {
@@ -373,27 +384,27 @@ export class RolesService {
       throw new NotFoundException(`角色 ID ${roleId} 不存在`);
     }
 
-    return role.permissions.map((p) => String(p.permission) as Permission);
+    return role.permissions.map((p) => p.permission);
   }
 
   /**
-   * 验证权限是否有效
+   * 验证权限是否有效（支持大写和小写格式）
    */
-  private validatePermissions(permissions: Permission[]): void {
-    const allPermissions = getAllPermissions();
+  private validatePermissions(permissions: string[]): void {
     const invalidPermissions = permissions.filter(
-      (perm) => !isValidPermission(perm),
+      (perm) => !isValidPermission(perm)
     );
 
     if (invalidPermissions.length > 0) {
       throw new BadRequestException(
-        `无效的权限: ${invalidPermissions.join(', ')}`,
+        `无效的权限: ${invalidPermissions.join(', ')}`
       );
     }
   }
 
   /**
    * 将 Prisma Role 对象映射到 RoleDto
+   * 返回数据库存储的原始权限值（大写格式）
    */
   private mapToRoleDto(role: any): RoleDto {
     return {
@@ -403,7 +414,7 @@ export class RolesService {
       category: role.category,
       level: role.level,
       isSystem: role.isSystem,
-      permissions: role.permissions.map((p: any) => fromPrismaPermission(p.permission)),
+      permissions: role.permissions.map((p: any) => p.permission), // 直接返回数据库存储的原始值（大写）
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     };

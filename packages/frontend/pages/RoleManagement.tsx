@@ -4,53 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { rolesApi, authApi } from '../services/apiService';
-
-// 权限定义（与后端保持一致）
-const Permission = {
-  // 用户权限
-  USER_READ: 'user:read',
-  USER_WRITE: 'user:write',
-  USER_DELETE: 'user:delete',
-  USER_ADMIN: 'user:admin',
-
-  // 项目权限
-  PROJECT_CREATE: 'project:create',
-  PROJECT_READ: 'project:read',
-  PROJECT_WRITE: 'project:write',
-  PROJECT_DELETE: 'project:delete',
-  PROJECT_ADMIN: 'project:admin',
-  PROJECT_MEMBER_MANAGE: 'project:member:manage',
-
-  // 文件权限
-  FILE_CREATE: 'file:create',
-  FILE_READ: 'file:read',
-  FILE_WRITE: 'file:write',
-  FILE_DELETE: 'file:delete',
-  FILE_SHARE: 'file:share',
-  FILE_DOWNLOAD: 'file:download',
-  FILE_COMMENT: 'file:comment', // 批注权限
-  FILE_PRINT: 'file:print', // 打印权限
-  FILE_COMPARE: 'file:compare', // 图纸比对权限
-
-  // 版本管理权限
-  VERSION_READ: 'version:read',
-  VERSION_CREATE: 'version:create',
-  VERSION_DELETE: 'version:delete',
-  VERSION_RESTORE: 'version:restore',
-
-  // 字体管理权限
-  FONT_MANAGE: 'font:manage',
-
-  // 审图配置权限
-  REVIEW_CONFIG: 'review:config',
-
-  // 回收站权限
-  TRASH_MANAGE: 'trash:manage',
-
-  // 系统权限
-  SYSTEM_ADMIN: 'system:admin',
-  SYSTEM_MONITOR: 'system:monitor',
-};
+import { usePermission, Permission } from '../hooks/usePermission';
 
 const PERMISSION_GROUPS = [
   {
@@ -78,13 +32,27 @@ const PERMISSION_GROUPS = [
     items: [
       { key: Permission.FILE_CREATE, label: '创建文件' },
       { key: Permission.FILE_READ, label: '查看文件' },
-      { key: Permission.FILE_WRITE, label: '编辑文件' },
+      { key: Permission.FILE_WRITE, label: '打开编辑器' },
       { key: Permission.FILE_DELETE, label: '删除文件' },
       { key: Permission.FILE_SHARE, label: '分享文件' },
       { key: Permission.FILE_DOWNLOAD, label: '下载文件' },
       { key: Permission.FILE_COMMENT, label: '批注文件' },
       { key: Permission.FILE_PRINT, label: '打印文件' },
       { key: Permission.FILE_COMPARE, label: '图纸比对' },
+    ],
+  },
+  {
+    label: 'CAD 图纸权限',
+    items: [
+      { key: Permission.CAD_SAVE, label: '保存图纸' },
+      { key: Permission.CAD_EXPORT, label: '导出图纸' },
+      { key: Permission.CAD_EXTERNAL_REFERENCE, label: '管理外部参照' },
+    ],
+  },
+  {
+    label: '图库权限',
+    items: [
+      { key: Permission.GALLERY_USE, label: '使用图库' },
     ],
   },
   {
@@ -122,12 +90,13 @@ type Role = {
   name: string;
   description?: string;
   isSystem: boolean;
-  permissions: string[];
+  permissions: string[]; // 后端返回的是字符串数组（大写格式）
   createdAt: string;
   updatedAt: string;
 };
 
 export const RoleManagement = () => {
+  const { hasPermission: checkUserPermission } = usePermission();
   const [hasPermission, setHasPermission] = useState(true);
   const [roles, setRoles] = useState<Role[]>([]);
 
@@ -146,8 +115,8 @@ export const RoleManagement = () => {
   const checkAccess = async () => {
     try {
       const response = await authApi.getProfile();
-      // 只有 ADMIN 角色可以管理角色
-      const hasAccess = response.data.role?.name === 'ADMIN';
+      // 只有具有 USER_ADMIN 权限的用户可以管理角色
+      const hasAccess = checkUserPermission(Permission.USER_ADMIN);
       setHasPermission(hasAccess);
       if (hasAccess) {
         loadRoles();
@@ -178,7 +147,8 @@ export const RoleManagement = () => {
     setEditingRole(role);
     setRoleName(role.name);
     setRoleDesc(role.description || '');
-    setSelectedPerms(role.permissions);
+    // 后端返回的是字符串数组，直接使用
+    setSelectedPerms(Array.isArray(role.permissions) ? role.permissions : []);
     setIsModalOpen(true);
   };
 
