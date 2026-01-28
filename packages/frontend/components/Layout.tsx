@@ -21,7 +21,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
 import { projectsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { usePermission, Permission } from '../hooks/usePermission';
+import { usePermission } from '../hooks/usePermission';
+import { SystemPermission } from '../constants/permissions';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TruncateText } from './ui/TruncateText';
@@ -55,7 +56,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
-  const { hasPermission } = usePermission();
+  const { hasPermission, hasRole } = usePermission();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Interactions State
@@ -135,25 +136,27 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     { to: '/trash', icon: Trash2, label: '回收站', visible: true },
     { to: '/library-blocks', icon: Box, label: '图库', visible: true },
     {
-      to: '/font-library',
-      icon: Type,
-      label: '字体库',
-      visible: hasPermission(Permission.FONT_MANAGE),
-    },
+          to: '/font-library',
+          icon: Type,
+          label: '字体库',
+          visible: hasPermission(SystemPermission.FONT_UPLOAD) ||
+            hasPermission(SystemPermission.FONT_DELETE) ||
+            hasPermission(SystemPermission.FONT_DOWNLOAD),
+        },
     {
-      to: '/users',
-      icon: Users,
-      label: '用户管理',
-      visible: hasPermission(Permission.USER_READ) ||
-        hasPermission(Permission.USER_WRITE) ||
-        hasPermission(Permission.USER_DELETE) ||
-        hasPermission(Permission.USER_ADMIN),
-    },
+          to: '/users',
+          icon: Users,
+          label: '用户管理',
+          visible: hasPermission(SystemPermission.USER_READ) ||
+            hasPermission(SystemPermission.USER_CREATE) ||
+            hasPermission(SystemPermission.USER_UPDATE) ||
+            hasPermission(SystemPermission.USER_DELETE),
+        },
     {
       to: '/roles',
       icon: ShieldCheck,
       label: '角色权限',
-      visible: hasPermission(Permission.USER_ADMIN),
+      visible: hasRole('ADMIN') || hasRole('USER_MANAGER'),
     },
   ];
 

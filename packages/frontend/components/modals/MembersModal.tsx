@@ -108,21 +108,38 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const allRoles = (response.data as any[]) || [];
 
       // 所有项目专属角色
-      const allProjectRoleNames = ['PROJECT_OWNER', 'PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
+      const allProjectRoleNames = [
+        'PROJECT_OWNER',
+        'PROJECT_ADMIN',
+        'PROJECT_MEMBER',
+        'PROJECT_EDITOR',
+        'PROJECT_VIEWER',
+      ];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
-      const addMemberRoleNames = ['PROJECT_ADMIN', 'PROJECT_MEMBER', 'PROJECT_EDITOR', 'PROJECT_VIEWER'];
+      const addMemberRoleNames = [
+        'PROJECT_ADMIN',
+        'PROJECT_MEMBER',
+        'PROJECT_EDITOR',
+        'PROJECT_VIEWER',
+      ];
 
       // 所有项目角色（用于筛选和显示）
-      const allProjectRoles = allRoles.filter(role => allProjectRoleNames.includes(role.name));
+      const allProjectRoles = allRoles.filter((role) =>
+        allProjectRoleNames.includes(role.name)
+      );
 
       // 添加成员时可用的角色
-      const addMemberRoles = allRoles.filter(role => addMemberRoleNames.includes(role.name));
+      const addMemberRoles = allRoles.filter((role) =>
+        addMemberRoleNames.includes(role.name)
+      );
 
       setProjectRoles(allProjectRoles);
 
       // 设置默认角色为 PROJECT_MEMBER
-      const defaultRole = addMemberRoles.find(r => r.name === 'PROJECT_MEMBER');
+      const defaultRole = addMemberRoles.find(
+        (r) => r.name === 'PROJECT_MEMBER'
+      );
       if (defaultRole) {
         setNewRoleId((prev) => prev || defaultRole.id);
       }
@@ -318,277 +335,277 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           </Button>
         }
       >
-      <div className="space-y-4" ref={contentRef}>
-        {/* 错误提示 */}
-        {errorMessage && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-            <AlertCircle size={16} />
-            {errorMessage}
-          </div>
-        )}
+        <div className="space-y-4" ref={contentRef}>
+          {/* 错误提示 */}
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+              <AlertCircle size={16} />
+              {errorMessage}
+            </div>
+          )}
 
-        {/* 添加成员按钮/表单 */}
-        {!showAddForm ? (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full py-2 px-4 border-2 border-dashed border-slate-300 rounded-lg
+          {/* 添加成员按钮/表单 */}
+          {!showAddForm ? (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-2 px-4 border-2 border-dashed border-slate-300 rounded-lg
                        text-slate-500 hover:border-indigo-400 hover:text-indigo-600
                        flex items-center justify-center gap-2 transition-colors"
-          >
-            <UserPlus size={18} />
-            添加成员
-          </button>
-        ) : (
-          <form
-            onSubmit={handleAddMember}
-            className="p-4 bg-slate-50 rounded-lg border border-slate-200 relative"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <UserPlus size={18} className="text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">
-                添加新成员
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewEmail('');
-                  setErrorMessage('');
-                  setSearchResults([]);
-                  setSelectedUser(null);
-                }}
-                className="ml-auto p-1 hover:bg-slate-200 rounded"
-              >
-                <X size={16} className="text-slate-500" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              {/* 用户搜索输入框 */}
-              <div className="relative">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={newEmail}
-                  onChange={(e) => {
-                    setNewEmail(e.target.value);
+            >
+              <UserPlus size={18} />
+              添加成员
+            </button>
+          ) : (
+            <form
+              onSubmit={handleAddMember}
+              className="p-4 bg-slate-50 rounded-lg border border-slate-200 relative"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <UserPlus size={18} className="text-slate-500" />
+                <span className="text-sm font-medium text-slate-700">
+                  添加新成员
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewEmail('');
+                    setErrorMessage('');
+                    setSearchResults([]);
                     setSelectedUser(null);
                   }}
-                  placeholder="搜索用户（邮箱或用户名）"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  autoComplete="off"
-                />
-                {searching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2
-                      size={16}
-                      className="animate-spin text-slate-400"
-                    />
+                  className="ml-auto p-1 hover:bg-slate-200 rounded"
+                >
+                  <X size={16} className="text-slate-500" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                {/* 用户搜索输入框 */}
+                <div className="relative">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={newEmail}
+                    onChange={(e) => {
+                      setNewEmail(e.target.value);
+                      setSelectedUser(null);
+                    }}
+                    placeholder="搜索用户（邮箱或用户名）"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    autoComplete="off"
+                  />
+                  {searching && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2
+                        size={16}
+                        className="animate-spin text-slate-400"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 搜索结果下拉列表 */}
+                {searchResults.length > 0 && !selectedUser && (
+                  <div className="absolute z-10 w-full bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {searchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setNewEmail(user.email);
+                          setSearchResults([]);
+                        }}
+                        className="w-full px-3 py-2 hover:bg-slate-100 text-left border-b border-slate-100 last:border-b-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
+                            {(user.nickname ||
+                              user.username ||
+                              user.email)[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900">
+                              <TruncateText>
+                                {user.nickname || user.username}
+                              </TruncateText>
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              <TruncateText>{user.email}</TruncateText>
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 )}
-              </div>
 
-              {/* 搜索结果下拉列表 */}
-              {searchResults.length > 0 && !selectedUser && (
-                <div className="absolute z-10 w-full bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {searchResults.map((user) => (
+                {/* 已选用户显示 */}
+                {selectedUser && (
+                  <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
+                      {(selectedUser.nickname ||
+                        selectedUser.username ||
+                        selectedUser.email)[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900">
+                        <TruncateText>
+                          {selectedUser.nickname || selectedUser.username}
+                        </TruncateText>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        <TruncateText>{selectedUser.email}</TruncateText>
+                      </p>
+                    </div>
                     <button
-                      key={user.id}
                       type="button"
                       onClick={() => {
-                        setSelectedUser(user);
-                        setNewEmail(user.email);
-                        setSearchResults([]);
+                        setSelectedUser(null);
+                        setNewEmail('');
                       }}
-                      className="w-full px-3 py-2 hover:bg-slate-100 text-left border-b border-slate-100 last:border-b-0"
+                      className="p-1 hover:bg-indigo-200 rounded flex-shrink-0"
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
-                          {(user.nickname ||
-                            user.username ||
-                            user.email)[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900">
-                            <TruncateText>
-                              {user.nickname || user.username}
-                            </TruncateText>
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            <TruncateText>{user.email}</TruncateText>
-                          </p>
-                        </div>
-                      </div>
+                      <X size={14} className="text-slate-500" />
                     </button>
-                  ))}
-                </div>
-              )}
-
-              {/* 已选用户显示 */}
-              {selectedUser && (
-                <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
-                    {(selectedUser.nickname ||
-                      selectedUser.username ||
-                      selectedUser.email)[0].toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900">
-                      <TruncateText>
-                        {selectedUser.nickname || selectedUser.username}
-                      </TruncateText>
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      <TruncateText>{selectedUser.email}</TruncateText>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedUser(null);
-                      setNewEmail('');
-                    }}
-                    className="p-1 hover:bg-indigo-200 rounded flex-shrink-0"
-                  >
-                    <X size={14} className="text-slate-500" />
-                  </button>
-                </div>
-              )}
+                )}
 
-              {/* 角色选择和添加按钮 */}
-              <div className="flex gap-2">
-                <select
-                  value={newRoleId}
-                  onChange={(e) => setNewRoleId(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  disabled={loading}
-                >
-                  <option value="">请选择角色</option>
-                  {projectRoles
-                    .filter(role => role.name !== 'PROJECT_OWNER')
-                    .map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {getRoleDisplayName(role.name)}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={adding || !selectedUser || !newRoleId}
-                >
-                  {adding ? '添加中...' : '添加'}
-                </Button>
-              </div>
-            </div>
-          </form>
-        )}
-
-        {/* 筛选条 */}
-        {members.length > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500">
-              共 {filteredMembers.length} 人
-            </span>
-            <select
-              value={filterRoleId}
-              onChange={(e) => setFilterRoleId(e.target.value)}
-              className="px-3 py-1.5 border border-slate-300 rounded bg-white text-sm text-slate-700"
-            >
-              <option value="">所有角色</option>
-              {projectRoles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {getRoleDisplayName(role.name)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* 成员列表 */}
-        <div className="space-y-2">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <RefreshCw size={20} className="animate-spin text-slate-400" />
-              <span className="ml-2 text-slate-500">加载中...</span>
-            </div>
-          ) : filteredMembers.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              {filterRoleId ? '没有符合条件的成员' : '暂无成员'}
-            </div>
-          ) : (
-            filteredMembers.map((member) => {
-              const isOwner = member.role.name === 'PROJECT_OWNER';
-              const displayName =
-                member.user.nickname ||
-                member.user.username ||
-                member.user.email ||
-                '未知用户';
-              const avatarLetter = displayName[0]?.toUpperCase() || '?';
-
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
-                >
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
-                    {avatarLetter}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900">
-                      <TruncateText>{displayName}</TruncateText>
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      <TruncateText>
-                        {member.user.email || '无邮箱'}
-                      </TruncateText>
-                    </p>
-                  </div>
+                {/* 角色选择和添加按钮 */}
+                <div className="flex gap-2">
                   <select
-                    value={member.roleId}
-                    onChange={(e) =>
-                      handleUpdateRole(member.userId, e.target.value)
-                    }
-                    disabled={isOwner}
-                    className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
-                      isOwner ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                    value={newRoleId}
+                    onChange={(e) => setNewRoleId(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    disabled={loading}
                   >
+                    <option value="">请选择角色</option>
                     {projectRoles
-                      .filter(role => role.name !== 'PROJECT_OWNER')
+                      .filter((role) => role.name !== 'PROJECT_OWNER')
                       .map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {getRoleDisplayName(role.name)}
-                      </option>
-                    ))}
+                        <option key={role.id} value={role.id}>
+                          {getRoleDisplayName(role.name)}
+                        </option>
+                      ))}
                   </select>
-                  {!isOwner && (
-                    <button
-                      onClick={() => {
-                        setTransferTarget(member);
-                        setShowTransferModal(true);
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded flex-shrink-0"
-                      title="转让项目所有权"
-                    >
-                      <ArrowUpRight size={16} />
-                    </button>
-                  )}
-                  {!isOwner && (
-                    <button
-                      onClick={() => handleRemoveMember(member.userId)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex-shrink-0"
-                      title="移除成员"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={adding || !selectedUser || !newRoleId}
+                  >
+                    {adding ? '添加中...' : '添加'}
+                  </Button>
                 </div>
-              );
-            })
+              </div>
+            </form>
           )}
+
+          {/* 筛选条 */}
+          {members.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-500">
+                共 {filteredMembers.length} 人
+              </span>
+              <select
+                value={filterRoleId}
+                onChange={(e) => setFilterRoleId(e.target.value)}
+                className="px-3 py-1.5 border border-slate-300 rounded bg-white text-sm text-slate-700"
+              >
+                <option value="">所有角色</option>
+                {projectRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {getRoleDisplayName(role.name)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 成员列表 */}
+          <div className="space-y-2">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw size={20} className="animate-spin text-slate-400" />
+                <span className="ml-2 text-slate-500">加载中...</span>
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                {filterRoleId ? '没有符合条件的成员' : '暂无成员'}
+              </div>
+            ) : (
+              filteredMembers.map((member) => {
+                const isOwner = member.role.name === 'PROJECT_OWNER';
+                const displayName =
+                  member.user.nickname ||
+                  member.user.username ||
+                  member.user.email ||
+                  '未知用户';
+                const avatarLetter = displayName[0]?.toUpperCase() || '?';
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
+                      {avatarLetter}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900">
+                        <TruncateText>{displayName}</TruncateText>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        <TruncateText>
+                          {member.user.email || '无邮箱'}
+                        </TruncateText>
+                      </p>
+                    </div>
+                    <select
+                      value={member.roleId}
+                      onChange={(e) =>
+                        handleUpdateRole(member.userId, e.target.value)
+                      }
+                      disabled={isOwner}
+                      className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
+                        isOwner ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {projectRoles
+                        .filter((role) => role.name !== 'PROJECT_OWNER')
+                        .map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {getRoleDisplayName(role.name)}
+                          </option>
+                        ))}
+                    </select>
+                    {!isOwner && (
+                      <button
+                        onClick={() => {
+                          setTransferTarget(member);
+                          setShowTransferModal(true);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded flex-shrink-0"
+                        title="转让项目所有权"
+                      >
+                        <ArrowUpRight size={16} />
+                      </button>
+                    )}
+                    {!isOwner && (
+                      <button
+                        onClick={() => handleRemoveMember(member.userId)}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex-shrink-0"
+                        title="移除成员"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
 
       {/* 转让确认弹窗 */}
       {showTransferModal && transferTarget && (
@@ -622,7 +639,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         >
           <div className="space-y-4">
             <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle
+                size={20}
+                className="text-amber-600 flex-shrink-0 mt-0.5"
+              />
               <div className="text-sm text-amber-900">
                 <p className="font-semibold mb-1">重要提示</p>
                 <p className="text-amber-800">

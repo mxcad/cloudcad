@@ -24,6 +24,7 @@ import { RolesModule } from './roles/roles.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 import { AuditLogModule } from './audit/audit-log.module';
+import { SystemPermission, ProjectPermission } from './common/dto/permission.dto';
 
 @Module({
   imports: [
@@ -79,6 +80,36 @@ export class AppModule {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
+
+    // 添加权限枚举到 OpenAPI 规范中
+    if (!document.components) {
+      document.components = { schemas: {} };
+    }
+    if (!document.components.schemas) {
+      document.components.schemas = {};
+    }
+
+    // 添加系统权限枚举
+    document.components.schemas.SystemPermission = {
+      type: 'string',
+      enum: Object.values(SystemPermission),
+      description: '系统权限枚举',
+    };
+
+    // 添加项目权限枚举
+    document.components.schemas.ProjectPermission = {
+      type: 'string',
+      enum: Object.values(ProjectPermission),
+      description: '项目权限枚举',
+    };
+
+    // 添加统一权限枚举
+    document.components.schemas.Permission = {
+      type: 'string',
+      enum: [...Object.values(SystemPermission), ...Object.values(ProjectPermission)],
+      description: '统一权限枚举',
+    };
+
     SwaggerModule.setup('api/docs', app, document);
   }
 }

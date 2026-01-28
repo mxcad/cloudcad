@@ -23,13 +23,13 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
-import { Permission } from '../common/enums/permissions.enum';
+import { SystemPermission } from '../common/enums/permissions.enum';
 
 @ApiTags('audit')
 @Controller('audit')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions([Permission.SYSTEM_ADMIN])
+@RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
 

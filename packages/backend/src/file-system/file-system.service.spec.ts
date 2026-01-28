@@ -4,6 +4,8 @@ import { FileSystemService } from './file-system.service';
 import { DatabaseService } from '../database/database.service';
 import { FileHashService } from './file-hash.service';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
+import { FileSystemPermissionService } from './file-system-permission.service';
+import { AuditLogService } from '../audit/audit-log.service';
 import { FileStatus, ProjectStatus } from '@prisma/client';
 
 describe('FileSystemService', () => {
@@ -37,6 +39,14 @@ describe('FileSystemService', () => {
       calculateHash: jest.fn(),
     };
 
+    const mockPermissionService = {
+      checkNodePermission: jest.fn().mockResolvedValue(true),
+    };
+
+    const mockAuditLogService = {
+      log: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileSystemService,
@@ -51,6 +61,14 @@ describe('FileSystemService', () => {
         {
           provide: FileHashService,
           useValue: mockFileHashService,
+        },
+        {
+          provide: FileSystemPermissionService,
+          useValue: mockPermissionService,
+        },
+        {
+          provide: AuditLogService,
+          useValue: mockAuditLogService,
         },
       ],
     })

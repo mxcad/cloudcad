@@ -1,14 +1,13 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
-import { NodeAccessRole, Permission } from '../enums/permissions.enum';
-import { Role } from './permission.service';
+import { SystemPermission } from '../enums/permissions.enum';
 
 /**
  * 缓存失效事件类型
  */
 interface CacheInvalidationEvent {
-  type: 'user' | 'node';
+  type: 'user';
   id: string;
   timestamp: number;
 }
@@ -28,7 +27,6 @@ export class PermissionCacheService implements OnModuleDestroy {
   async onModuleDestroy() {
     // 清理订阅
     await this.redis.unsubscribe(`${this.CHANNEL_PREFIX}:user`);
-    await this.redis.unsubscribe(`${this.CHANNEL_PREFIX}:node`);
   }
 
   /**
@@ -42,13 +40,6 @@ export class PermissionCacheService implements OnModuleDestroy {
       subscriber.subscribe(`${this.CHANNEL_PREFIX}:user`, (err) => {
         if (err) {
           this.logger.error(`订阅用户缓存失效事件失败: ${err.message}`);
-        }
-      });
-
-      // 订阅节点缓存失效事件
-      subscriber.subscribe(`${this.CHANNEL_PREFIX}:node`, (err) => {
-        if (err) {
-          this.logger.error(`订阅节点缓存失效事件失败: ${err.message}`);
         }
       });
 
@@ -70,13 +61,21 @@ export class PermissionCacheService implements OnModuleDestroy {
 
   /**
    * 处理缓存失效事件
+   * 忽略超过 5 秒的事件，防止处理过期的本地发布事件
    */
   private handleInvalidationEvent(event: CacheInvalidationEvent) {
     try {
+      // 忽略超过 5 秒的事件，防止无限循环
+      const eventAge = Date.now() - event.timestamp;
+      if (eventAge > 5000) {
+        this.logger.debug(
+          `忽略过期缓存失效事件: ${event.type}:${event.id} (age: ${eventAge}ms)`
+        );
+        return;
+      }
+
       if (event.type === 'user') {
-        this.clearUserCache(event.id);
-      } else if (event.type === 'node') {
-        this.clearNodeCache(event.id);
+        this.clearUserCacheInternal(event.id);
       }
       this.logger.debug(`处理缓存失效事件: ${event.type}:${event.id}`);
     } catch (error) {
@@ -88,7 +87,7 @@ export class PermissionCacheService implements OnModuleDestroy {
    * 发布缓存失效事件
    */
   private async publishInvalidationEvent(
-    type: 'user' | 'node',
+    type: 'user',
     id: string
   ): Promise<void> {
     try {
@@ -111,11 +110,11 @@ export class PermissionCacheService implements OnModuleDestroy {
    * 生成缓存键
    */
   private generateCacheKey(
-    type: 'user' | 'node',
+    type: 'user',
     userId: string,
-    resourceId?: string
+    permission?: SystemPermission
   ): string {
-    return `${type}:${userId}${resourceId ? `:${resourceId}` : ''}`;
+    return `${type}:${userId}${permission ? `:${permission}` : ''}`;
   }
 
   /**
@@ -147,9 +146,19 @@ export class PermissionCacheService implements OnModuleDestroy {
   }
 
   /**
-   * 清除用户相关缓存
+   * 清除用户相关缓存（对外接口）
    */
   async clearUserCache(userId: string): Promise<void> {
+    // 先发布事件（不触发本地处理）
+    await this.publishInvalidationEvent('user', userId);
+    // 然后执行本地清理
+    this.clearUserCacheInternal(userId);
+  }
+
+  /**
+   * 清除用户相关缓存（内部实现，不发布事件）
+   */
+  private clearUserCacheInternal(userId: string): void {
     const keysToDelete: string[] = [];
 
     for (const key of this.cache.keys()) {
@@ -160,94 +169,28 @@ export class PermissionCacheService implements OnModuleDestroy {
 
     keysToDelete.forEach((key) => this.delete(key));
     this.logger.log(`清除用户 ${userId} 的权限缓存`);
-
-    // 发布 Redis 事件，通知其他实例
-    await this.publishInvalidationEvent('user', userId);
   }
 
   /**
-   * 清除节点相关缓存（项目/文件夹/文件）
+   * 缓存用户系统权限
    */
-  async clearNodeCache(nodeId: string): Promise<void> {
-    const keysToDelete: string[] = [];
-
-    for (const key of this.cache.keys()) {
-      if (key.endsWith(`:${nodeId}`)) {
-        keysToDelete.push(key);
-      }
-    }
-
-    keysToDelete.forEach((key) => this.delete(key));
-    this.logger.log(`清除节点 ${nodeId} 的权限缓存`);
-
-    // 发布 Redis 事件，通知其他实例
-    await this.publishInvalidationEvent('node', nodeId);
-  }
-
-  /**
-   * 清除项目缓存（向后兼容）
-   * @deprecated 使用 clearNodeCache 代替
-   */
-  clearProjectCache(projectId: string): void {
-    this.clearNodeCache(projectId);
-  }
-
-  /**
-   * 清除文件缓存（向后兼容）
-   * @deprecated 使用 clearNodeCache 代替
-   */
-  clearFileCache(fileId: string): void {
-    this.clearNodeCache(fileId);
-  }
-
-  /**
-   * 缓存用户权限
-   */
-  cacheUserPermissions(userId: string, permissions: Permission[]): void {
+  cacheUserPermissions(userId: string, permissions: SystemPermission[]): void {
     const key = this.generateCacheKey('user', userId);
     this.set(key, permissions);
   }
 
   /**
-   * 获取用户权限缓存
+   * 获取用户系统权限缓存
    */
-  getUserPermissions(userId: string): Permission[] | null {
+  getUserPermissions(userId: string): SystemPermission[] | null {
     const key = this.generateCacheKey('user', userId);
-    return this.get<Permission[]>(key);
-  }
-
-  /**
-   * 缓存节点访问权限（统一管理项目/文件夹/文件的访问权限）
-   */
-  cacheNodeAccessRole(
-    userId: string,
-    nodeId: string,
-    role: NodeAccessRole
-  ): void {
-    const key = `role:node:${userId}:${nodeId}`;
-    this.set(key, role, 5 * 60 * 1000); // 节点角色缓存5分钟
-  }
-
-  /**
-   * 获取节点访问角色缓存
-   */
-  getNodeAccessRole(userId: string, nodeId: string): NodeAccessRole | null {
-    const key = `role:node:${userId}:${nodeId}`;
-    return this.get<NodeAccessRole>(key);
-  }
-
-  /**
-   * 获取文件访问角色缓存（向后兼容）
-   * @deprecated 使用 getNodeAccessRole 代替
-   */
-  getFileAccessRole(userId: string, nodeId: string): NodeAccessRole | null {
-    return this.getNodeAccessRole(userId, nodeId);
+    return this.get<SystemPermission[]>(key);
   }
 
   /**
    * 缓存用户角色
    */
-  cacheUserRole(userId: string, role: Role): void {
+  cacheUserRole(userId: string, role: string): void {
     const key = `role:user:${userId}`;
     this.set(key, role, 10 * 60 * 1000); // 用户角色缓存10分钟
   }
@@ -255,9 +198,9 @@ export class PermissionCacheService implements OnModuleDestroy {
   /**
    * 获取用户角色缓存
    */
-  getUserRole(userId: string): any | null {
+  getUserRole(userId: string): string | null {
     const key = `role:user:${userId}`;
-    return this.get<any>(key);
+    return this.get<string>(key);
   }
 
   /**

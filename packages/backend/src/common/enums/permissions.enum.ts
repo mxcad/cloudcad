@@ -1,229 +1,326 @@
-export enum Permission {
-  // 用户权限
-  USER_READ = 'user:read',
-  USER_WRITE = 'user:write',
-  USER_DELETE = 'user:delete',
-  USER_ADMIN = 'user:admin',
+/**
+ * 系统权限枚举
+ * 用于后台管理功能的权限控制
+ */
+export enum SystemPermission {
+  // ========== 用户管理 ==========
+  /** 查看用户列表和用户详情 */
+  USER_READ = 'system:user:read',
+  /** 创建用户 */
+  USER_CREATE = 'system:user:create',
+  /** 编辑用户信息 */
+  USER_UPDATE = 'system:user:update',
+  /** 删除用户 */
+  USER_DELETE = 'system:user:delete',
 
-  // 项目权限
-  PROJECT_CREATE = 'project:create',
-  PROJECT_READ = 'project:read',
-  PROJECT_WRITE = 'project:write',
-  PROJECT_DELETE = 'project:delete',
-  PROJECT_ADMIN = 'project:admin',
-  PROJECT_MEMBER_MANAGE = 'project:member:manage',
+  // ========== 角色权限管理 ==========
+  /** 查看角色列表和角色详情 */
+  ROLE_READ = 'system:role:read',
+  /** 创建角色 */
+  ROLE_CREATE = 'system:role:create',
+  /** 编辑角色信息 */
+  ROLE_UPDATE = 'system:role:update',
+  /** 删除角色 */
+  ROLE_DELETE = 'system:role:delete',
+  /** 为角色分配系统权限 */
+  ROLE_PERMISSION_MANAGE = 'system:role:permission:manage',
 
-  // 文件权限
-  FILE_CREATE = 'file:create',
-  FILE_READ = 'file:read', // 查看文件列表和预览
-  FILE_WRITE = 'file:write', // 打开 CAD 编辑器（不包含保存）
-  FILE_DELETE = 'file:delete',
-  FILE_SHARE = 'file:share',
-  FILE_DOWNLOAD = 'file:download',
-  FILE_COMMENT = 'file:comment', // 批注权限
-  FILE_PRINT = 'file:print', // 打印权限
-  FILE_COMPARE = 'file:compare', // 图纸比对权限
+  // ========== 字体库管理 ==========
+  /** 查看字体库列表和字体详情 */
+  FONT_READ = 'system:font:read',
+  /** 上传字体 */
+  FONT_UPLOAD = 'system:font:upload',
+  /** 删除字体 */
+  FONT_DELETE = 'system:font:delete',
+  /** 下载字体 */
+  FONT_DOWNLOAD = 'system:font:download',
 
-  // CAD 图纸权限
-  CAD_SAVE = 'cad:save', // 保存图纸（DWG/MXWEB）
-  CAD_EXPORT = 'cad:export', // 导出图纸（PDF/DXF）
-  CAD_EXTERNAL_REFERENCE = 'cad:external_reference', // 管理外部参照
-
-  // 图库权限
-  GALLERY_USE = 'gallery:use', // 使用图库（图纸库+图块库）
-
-  // 版本管理权限
-  VERSION_READ = 'version:read',
-  VERSION_CREATE = 'version:create',
-  VERSION_DELETE = 'version:delete',
-  VERSION_RESTORE = 'version:restore',
-
-  // 字体管理权限
-  FONT_MANAGE = 'font:manage',
-
-  // 审图配置权限
-  REVIEW_CONFIG = 'review:config',
-
-  // 回收站权限
-  TRASH_MANAGE = 'trash:manage',
-
-  // 系统权限
+  // ========== 系统管理 ==========
+  /** 系统管理员：拥有所有系统权限 */
   SYSTEM_ADMIN = 'system:admin',
+  /** 系统监控：查看系统状态和日志 */
   SYSTEM_MONITOR = 'system:monitor',
 }
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
+/**
+ * 项目权限枚举
+ * 用于项目和文件系统的权限控制，与系统权限完全解耦
+ */
+export enum ProjectPermission {
+  // ========== 项目管理权限 ==========
+  /** 创建项目 */
+  PROJECT_CREATE = 'project:project:create',
+  /** 访问项目（查看项目信息） */
+  PROJECT_READ = 'project:project:read',
+  /** 编辑项目信息 */
+  PROJECT_UPDATE = 'project:project:update',
+  /** 删除项目 */
+  PROJECT_DELETE = 'project:project:delete',
+  /** 项目成员管理（添加、移除成员） */
+  PROJECT_MEMBER_MANAGE = 'project:member:manage',
+  /** 项目成员角色分配 */
+  PROJECT_MEMBER_ASSIGN = 'project:member:assign',
+  /** 项目角色增删改查 */
+  PROJECT_ROLE_MANAGE = 'project:role:manage',
+  /** 项目角色权限分配 */
+  PROJECT_ROLE_PERMISSION_MANAGE = 'project:role:permission:manage',
+  /** 转让项目所有权 */
+  PROJECT_TRANSFER = 'project:project:transfer',
+
+  // ========== 文件操作权限 ==========
+  /** 创建文件/文件夹 */
+  FILE_CREATE = 'project:file:create',
+  /** 上传文件 */
+  FILE_UPLOAD = 'project:file:upload',
+  /** 打开/预览CAD图纸 */
+  FILE_OPEN = 'project:file:open',
+  /** 编辑CAD图纸 */
+  FILE_EDIT = 'project:file:edit',
+  /** 删除文件 */
+  FILE_DELETE = 'project:file:delete',
+  /** 回收站管理（恢复、彻底删除） */
+  FILE_TRASH_MANAGE = 'project:file:trash:manage',
+  /** 下载文件 */
+  FILE_DOWNLOAD = 'project:file:download',
+  /** 分享文件 */
+  FILE_SHARE = 'project:file:share',
+  /** 文件批注 */
+  FILE_COMMENT = 'project:file:comment',
+  /** 打印文件 */
+  FILE_PRINT = 'project:file:print',
+  /** 图纸比对 */
+  FILE_COMPARE = 'project:file:compare',
+
+  // ========== CAD 图纸权限 ==========
+  /** 保存图纸（DWG/MXWEB） */
+  CAD_SAVE = 'project:cad:save',
+  /** 导出图纸（PDF/DXF） */
+  CAD_EXPORT = 'project:cad:export',
+  /** 管理外部参照 */
+  CAD_EXTERNAL_REFERENCE = 'project:cad:external_reference',
+
+  // ========== 图库权限 ==========
+  /** 使用图库（图纸库+图块库） */
+  GALLERY_USE = 'project:gallery:use',
+  /** 添加到图库 */
+  GALLERY_ADD = 'project:gallery:add',
+
+  // ========== 版本管理权限 ==========
+  /** 查看版本历史 */
+  VERSION_READ = 'project:version:read',
+  /** 创建版本 */
+  VERSION_CREATE = 'project:version:create',
+  /** 删除版本 */
+  VERSION_DELETE = 'project:version:delete',
+  /** 恢复版本 */
+  VERSION_RESTORE = 'project:version:restore',
+
+  // ========== 项目设置权限 ==========
+  /** 项目设置管理 */
+  PROJECT_SETTINGS_MANAGE = 'project:settings:manage',
 }
+
+/**
+ * 统一的权限类型
+ * @deprecated 请使用 SystemPermission 或 ProjectPermission
+ */
+export type Permission = SystemPermission | ProjectPermission;
 
 /**
  * 角色类别
  */
 export enum RoleCategory {
-  SYSTEM = 'SYSTEM', // 系统角色（ADMIN, USER）
-  PROJECT = 'PROJECT', // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
+  SYSTEM = 'SYSTEM', // 系统角色（用于后台管理）
+  PROJECT = 'PROJECT', // 项目角色（用于项目和文件管理，暂不实现）
   CUSTOM = 'CUSTOM', // 自定义角色
 }
 
 /**
- * 统一的节点访问角色
- * 用于 FileSystemNode（项目、文件夹、文件）的权限控制
+ * 系统角色（用于后台管理）
  */
-export enum NodeAccessRole {
-  OWNER = 'OWNER', // 所有者：完全控制
-  ADMIN = 'ADMIN', // 管理员：管理权限
-  MEMBER = 'MEMBER', // 成员：可编辑
-  EDITOR = 'EDITOR', // 编辑者：可编辑文件
-  VIEWER = 'VIEWER', // 查看者：只读
+export enum SystemRole {
+  ADMIN = 'ADMIN', // 系统管理员：拥有所有系统权限
+  USER_MANAGER = 'USER_MANAGER', // 用户管理员：管理用户和角色
+  FONT_MANAGER = 'FONT_MANAGER', // 字体管理员：管理字体库
+  USER = 'USER', // 普通用户：基础系统权限
 }
 
 /**
- * FileAccessRole - 保留用于向后兼容
- * @deprecated 使用 NodeAccessRole 代替
+ * 项目角色枚举
+ * 用于项目和文件系统的角色管理，与系统角色完全解耦
  */
-export const FileAccessRole = NodeAccessRole;
-export type FileAccessRole = NodeAccessRole;
+export enum ProjectRole {
+  /** 项目所有者：拥有所有项目权限 */
+  OWNER = 'PROJECT_OWNER',
+  /** 项目管理员：管理项目和成员 */
+  ADMIN = 'PROJECT_ADMIN',
+  /** 项目编辑者：编辑文件 */
+  EDITOR = 'PROJECT_EDITOR',
+  /** 项目成员：基本项目操作 */
+  MEMBER = 'PROJECT_MEMBER',
+  /** 项目查看者：只读权限 */
+  VIEWER = 'PROJECT_VIEWER',
+}
 
 /**
- * ProjectMemberRole - 保留用于向后兼容
- * @deprecated 使用 NodeAccessRole 代替
+ * 系统角色权限映射
+ * 定义系统角色拥有的系统权限
  */
-export const ProjectMemberRole = NodeAccessRole;
-export type ProjectMemberRole = NodeAccessRole;
-
-// 权限映射表
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.ADMIN]: [
-    // 管理员拥有所有权限
-    Permission.USER_READ,
-    Permission.USER_WRITE,
-    Permission.USER_DELETE,
-    Permission.USER_ADMIN,
-    Permission.PROJECT_CREATE,
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_DELETE,
-    Permission.PROJECT_ADMIN,
-    Permission.PROJECT_MEMBER_MANAGE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.SYSTEM_ADMIN,
-    Permission.SYSTEM_MONITOR,
+export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
+  [SystemRole.ADMIN]: [
+    // 系统管理员拥有所有系统权限
+    SystemPermission.USER_READ,
+    SystemPermission.USER_CREATE,
+    SystemPermission.USER_UPDATE,
+    SystemPermission.USER_DELETE,
+    SystemPermission.ROLE_READ,
+    SystemPermission.ROLE_CREATE,
+    SystemPermission.ROLE_UPDATE,
+    SystemPermission.ROLE_DELETE,
+    SystemPermission.ROLE_PERMISSION_MANAGE,
+    SystemPermission.FONT_READ,
+    SystemPermission.FONT_UPLOAD,
+    SystemPermission.FONT_DELETE,
+    SystemPermission.FONT_DOWNLOAD,
+    SystemPermission.SYSTEM_ADMIN,
+    SystemPermission.SYSTEM_MONITOR,
   ],
-  [UserRole.USER]: [
-    // 普通用户基础权限
-    Permission.PROJECT_CREATE,
-    Permission.PROJECT_READ,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
+  [SystemRole.USER_MANAGER]: [
+    // 用户管理员权限
+    SystemPermission.USER_READ,
+    SystemPermission.USER_CREATE,
+    SystemPermission.USER_UPDATE,
+    SystemPermission.USER_DELETE,
+    SystemPermission.ROLE_READ,
+    SystemPermission.ROLE_CREATE,
+    SystemPermission.ROLE_UPDATE,
+    SystemPermission.ROLE_DELETE,
+    SystemPermission.ROLE_PERMISSION_MANAGE,
+  ],
+  [SystemRole.FONT_MANAGER]: [
+    // 字体管理员权限
+    SystemPermission.FONT_READ,
+    SystemPermission.FONT_UPLOAD,
+    SystemPermission.FONT_DELETE,
+    SystemPermission.FONT_DOWNLOAD,
+  ],
+  [SystemRole.USER]: [
+    // 普通用户：暂无系统权限（仅用于登录）
   ],
 };
 
-// 节点访问权限映射
-export const NODE_ACCESS_PERMISSIONS: Record<NodeAccessRole, Permission[]> = {
-  [NodeAccessRole.OWNER]: [
-    // 项目权限
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_DELETE,
-    Permission.PROJECT_ADMIN,
-    Permission.PROJECT_MEMBER_MANAGE,
-
-    // 文件权限
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-
-    // CAD 权限
-    Permission.CAD_SAVE,
-    Permission.CAD_EXPORT,
-    Permission.CAD_EXTERNAL_REFERENCE,
-    Permission.GALLERY_USE,
-
-    // 版本管理
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-    Permission.VERSION_DELETE,
-    Permission.VERSION_RESTORE,
-
-    // 系统权限
-    Permission.FONT_MANAGE,
-    Permission.REVIEW_CONFIG,
-    Permission.TRASH_MANAGE,
+/**
+ * 默认项目角色权限映射
+ * 定义默认项目角色拥有的项目权限
+ */
+export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
+  ProjectRole,
+  ProjectPermission[]
+> = {
+  [ProjectRole.OWNER]: [
+    // 项目所有者拥有所有项目权限
+    ProjectPermission.PROJECT_CREATE,
+    ProjectPermission.PROJECT_READ,
+    ProjectPermission.PROJECT_UPDATE,
+    ProjectPermission.PROJECT_DELETE,
+    ProjectPermission.PROJECT_MEMBER_MANAGE,
+    ProjectPermission.PROJECT_MEMBER_ASSIGN,
+    ProjectPermission.PROJECT_ROLE_MANAGE,
+    ProjectPermission.PROJECT_ROLE_PERMISSION_MANAGE,
+    ProjectPermission.PROJECT_TRANSFER,
+    ProjectPermission.PROJECT_SETTINGS_MANAGE,
+    ProjectPermission.FILE_CREATE,
+    ProjectPermission.FILE_UPLOAD,
+    ProjectPermission.FILE_OPEN,
+    ProjectPermission.FILE_EDIT,
+    ProjectPermission.FILE_DELETE,
+    ProjectPermission.FILE_TRASH_MANAGE,
+    ProjectPermission.FILE_DOWNLOAD,
+    ProjectPermission.FILE_SHARE,
+    ProjectPermission.FILE_COMMENT,
+    ProjectPermission.FILE_PRINT,
+    ProjectPermission.FILE_COMPARE,
+    ProjectPermission.CAD_SAVE,
+    ProjectPermission.CAD_EXPORT,
+    ProjectPermission.CAD_EXTERNAL_REFERENCE,
+    ProjectPermission.GALLERY_USE,
+    ProjectPermission.GALLERY_ADD,
+    ProjectPermission.VERSION_READ,
+    ProjectPermission.VERSION_CREATE,
+    ProjectPermission.VERSION_DELETE,
+    ProjectPermission.VERSION_RESTORE,
   ],
-  [NodeAccessRole.ADMIN]: [
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_MEMBER_MANAGE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.CAD_SAVE,
-    Permission.CAD_EXPORT,
-    Permission.CAD_EXTERNAL_REFERENCE,
-    Permission.GALLERY_USE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-    Permission.VERSION_DELETE,
-    Permission.VERSION_RESTORE,
-    Permission.FONT_MANAGE,
-    Permission.REVIEW_CONFIG,
-    Permission.TRASH_MANAGE,
+  [ProjectRole.ADMIN]: [
+    // 项目管理员权限
+    ProjectPermission.PROJECT_READ,
+    ProjectPermission.PROJECT_UPDATE,
+    ProjectPermission.PROJECT_MEMBER_MANAGE,
+    ProjectPermission.PROJECT_MEMBER_ASSIGN,
+    ProjectPermission.PROJECT_SETTINGS_MANAGE,
+    ProjectPermission.FILE_CREATE,
+    ProjectPermission.FILE_UPLOAD,
+    ProjectPermission.FILE_OPEN,
+    ProjectPermission.FILE_EDIT,
+    ProjectPermission.FILE_DELETE,
+    ProjectPermission.FILE_TRASH_MANAGE,
+    ProjectPermission.FILE_DOWNLOAD,
+    ProjectPermission.FILE_SHARE,
+    ProjectPermission.FILE_COMMENT,
+    ProjectPermission.FILE_PRINT,
+    ProjectPermission.FILE_COMPARE,
+    ProjectPermission.CAD_SAVE,
+    ProjectPermission.CAD_EXPORT,
+    ProjectPermission.CAD_EXTERNAL_REFERENCE,
+    ProjectPermission.GALLERY_USE,
+    ProjectPermission.GALLERY_ADD,
+    ProjectPermission.VERSION_READ,
+    ProjectPermission.VERSION_CREATE,
+    ProjectPermission.VERSION_DELETE,
+    ProjectPermission.VERSION_RESTORE,
   ],
-  [NodeAccessRole.MEMBER]: [
-    Permission.PROJECT_READ,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.CAD_SAVE,
-    Permission.CAD_EXPORT,
-    Permission.CAD_EXTERNAL_REFERENCE,
-    Permission.GALLERY_USE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
+  [ProjectRole.MEMBER]: [
+    // 项目成员权限
+    ProjectPermission.PROJECT_READ,
+    ProjectPermission.FILE_CREATE,
+    ProjectPermission.FILE_UPLOAD,
+    ProjectPermission.FILE_OPEN,
+    ProjectPermission.FILE_EDIT,
+    ProjectPermission.FILE_DELETE,
+    ProjectPermission.FILE_DOWNLOAD,
+    ProjectPermission.FILE_SHARE,
+    ProjectPermission.FILE_COMMENT,
+    ProjectPermission.FILE_PRINT,
+    ProjectPermission.CAD_SAVE,
+    ProjectPermission.CAD_EXPORT,
+    ProjectPermission.GALLERY_USE,
+    ProjectPermission.GALLERY_ADD,
+    ProjectPermission.VERSION_READ,
   ],
-  [NodeAccessRole.EDITOR]: [
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.CAD_SAVE,
-    Permission.CAD_EXPORT,
-    Permission.CAD_EXTERNAL_REFERENCE,
-    Permission.GALLERY_USE,
-    Permission.VERSION_READ,
+  [ProjectRole.EDITOR]: [
+    // 项目编辑者权限
+    ProjectPermission.PROJECT_READ,
+    ProjectPermission.FILE_UPLOAD,
+    ProjectPermission.FILE_OPEN,
+    ProjectPermission.FILE_EDIT,
+    ProjectPermission.FILE_DELETE,
+    ProjectPermission.FILE_DOWNLOAD,
+    ProjectPermission.FILE_COMMENT,
+    ProjectPermission.FILE_PRINT,
+    ProjectPermission.FILE_COMPARE,
+    ProjectPermission.CAD_SAVE,
+    ProjectPermission.CAD_EXPORT,
+    ProjectPermission.GALLERY_USE,
+    ProjectPermission.VERSION_READ,
+    ProjectPermission.VERSION_CREATE,
   ],
-  [NodeAccessRole.VIEWER]: [
-    Permission.FILE_READ,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
+  [ProjectRole.VIEWER]: [
+    // 项目查看者权限
+    ProjectPermission.PROJECT_READ,
+    ProjectPermission.FILE_OPEN,
+    ProjectPermission.FILE_DOWNLOAD,
+    ProjectPermission.FILE_PRINT,
+    ProjectPermission.CAD_EXPORT,
+    ProjectPermission.GALLERY_USE,
+    ProjectPermission.VERSION_READ,
   ],
 };

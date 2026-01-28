@@ -658,6 +658,8 @@ export default function Gallery() {
       <Modal
         isOpen={isTypeManagementOpen}
         onClose={() => setIsTypeManagementOpen(false)}
+        title={`${galleryType === 'drawings' ? '图纸库' : '图块库'}分类管理`}
+        maxWidth="max-w-2xl"
       >
         <GalleryTypeManagement
           galleryType={galleryType}

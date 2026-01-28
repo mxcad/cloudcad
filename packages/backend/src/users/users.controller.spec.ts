@@ -2,14 +2,17 @@
   BadRequestException,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserRole } from '../common/enums/permissions.enum';
+import { SystemRole } from '../common/enums/permissions.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -21,7 +24,7 @@ describe('UsersController', () => {
     username: 'testuser',
     nickname: 'Test User',
     avatar: undefined,
-    role: UserRole.USER,
+    role: SystemRole.USER,
     status: 'ACTIVE',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -87,7 +90,7 @@ describe('UsersController', () => {
       username: 'testuser',
       password: 'password123',
       nickname: 'Test User',
-      role: UserRole.USER,
+      role: SystemRole.USER,
     };
 
     it('should create user successfully', async () => {
@@ -147,7 +150,7 @@ describe('UsersController', () => {
     });
 
     it('should handle role filter', async () => {
-      const roleQuery = { ...query, role: UserRole.ADMIN };
+      const roleQuery = { ...query, role: SystemRole.ADMIN };
       usersService.findAll.mockResolvedValue(mockPaginatedResponse);
 
       await controller.findAll(roleQuery);
@@ -536,7 +539,7 @@ describe('UsersController', () => {
     it('should exclude role and status when updating profile', async () => {
       const updateData = {
         nickname: 'New Nickname',
-        role: UserRole.ADMIN, // Should be excluded
+        role: SystemRole.ADMIN, // Should be excluded
         status: 'INACTIVE', // Should be excluded
       };
       const expectedData = {

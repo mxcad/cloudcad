@@ -2,19 +2,29 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { UserRole } from '../enums/permissions.enum';
+import { SystemRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from '../services/permission-cache.service';
+import { RolesCacheService } from '../services/roles-cache.service';
 import {
   PermissionService,
   UserWithPermissions,
 } from '../services/permission.service';
 import { RolesGuard } from './roles.guard';
 
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  isSystem: boolean;
+}
+
 describe('RolesGuard', () => {
   let guard: RolesGuard;
   let reflector: jest.Mocked<Reflector>;
   let permissionService: jest.Mocked<PermissionService>;
   let cacheService: jest.Mocked<PermissionCacheService>;
+  let rolesCacheService: jest.Mocked<RolesCacheService>;
   let mockContext: ExecutionContext;
 
   const mockUser: UserWithPermissions = {
@@ -23,13 +33,25 @@ describe('RolesGuard', () => {
     username: 'testuser',
     nickname: 'Test User',
     avatar: undefined,
-    role: UserRole.USER,
+    role: {
+      id: 'user-role-id',
+      name: SystemRole.USER,
+      description: '普通用户',
+      category: 'SYSTEM',
+      isSystem: true,
+    },
     status: 'ACTIVE',
   };
 
   const mockAdminUser: UserWithPermissions = {
     ...mockUser,
-    role: UserRole.ADMIN,
+    role: {
+      id: 'admin-role-id',
+      name: SystemRole.ADMIN,
+      description: '系统管理员',
+      category: 'SYSTEM',
+      isSystem: true,
+    },
   };
 
   beforeEach(async () => {
@@ -44,6 +66,13 @@ describe('RolesGuard', () => {
     const mockCacheService = {
       getUserRole: jest.fn(),
       cacheUserRole: jest.fn(),
+    } as any;
+
+    const mockRolesCacheService = {
+      getRoleId: jest.fn(),
+      getSystemRoleNames: jest.fn(),
+      isSystemRole: jest.fn(),
+      refresh: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +90,10 @@ describe('RolesGuard', () => {
           provide: PermissionCacheService,
           useValue: mockCacheService,
         },
+        {
+          provide: RolesCacheService,
+          useValue: mockRolesCacheService,
+        },
       ],
     })
       .setLogger({
@@ -76,6 +109,7 @@ describe('RolesGuard', () => {
     reflector = module.get(Reflector);
     permissionService = module.get(PermissionService);
     cacheService = module.get(PermissionCacheService);
+    rolesCacheService = module.get(RolesCacheService);
 
     // Create mock execution context
     mockContext = {
@@ -107,14 +141,14 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has required role', async () => {
-      reflector.getAllAndOverride.mockReturnValue([UserRole.USER]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
       permissionService.hasRole.mockReturnValue(true);
 
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
       expect(permissionService.hasRole).toHaveBeenCalledWith(mockUser, [
-        UserRole.USER,
+        SystemRole.USER,
       ]);
     });
 
@@ -122,33 +156,33 @@ describe('RolesGuard', () => {
       // Update context to have admin user
       mockContext.switchToHttp().getRequest().user = mockAdminUser;
 
-      reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
       permissionService.hasRole.mockReturnValue(true);
 
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
       expect(permissionService.hasRole).toHaveBeenCalledWith(mockAdminUser, [
-        UserRole.ADMIN,
+        SystemRole.ADMIN,
       ]);
     });
 
     it('should return false when user does not have required role', async () => {
-      reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
       permissionService.hasRole.mockReturnValue(false);
 
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(false);
       expect(permissionService.hasRole).toHaveBeenCalledWith(mockUser, [
-        UserRole.ADMIN,
+        SystemRole.ADMIN,
       ]);
     });
 
     it('should return true when user has one of multiple required roles', async () => {
       reflector.getAllAndOverride.mockReturnValue([
-        UserRole.ADMIN,
-        UserRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.USER,
       ]);
       permissionService.hasRole.mockReturnValue(true);
 
@@ -156,15 +190,15 @@ describe('RolesGuard', () => {
 
       expect(result).toBe(true);
       expect(permissionService.hasRole).toHaveBeenCalledWith(mockUser, [
-        UserRole.ADMIN,
-        UserRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.USER,
       ]);
     });
 
     it('should return false when user has none of multiple required roles', async () => {
       reflector.getAllAndOverride.mockReturnValue([
-        UserRole.ADMIN,
-        UserRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.USER,
       ]);
       permissionService.hasRole.mockReturnValue(false);
 
@@ -177,7 +211,7 @@ describe('RolesGuard', () => {
       // Update context to have no user
       mockContext.switchToHttp().getRequest().user = null;
 
-      reflector.getAllAndOverride.mockReturnValue([UserRole.USER]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
 
       const result = await guard.canActivate(mockContext);
 
@@ -189,7 +223,7 @@ describe('RolesGuard', () => {
       // Update context to have undefined user
       mockContext.switchToHttp().getRequest().user = undefined;
 
-      reflector.getAllAndOverride.mockReturnValue([UserRole.USER]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
 
       const result = await guard.canActivate(mockContext);
 
@@ -210,7 +244,7 @@ describe('RolesGuard', () => {
       reflector.getAllAndOverride.mockImplementation((key) => {
         if (key === ROLES_KEY) {
           // Simulate getting roles from class when handler returns undefined
-          return [UserRole.USER];
+          return [SystemRole.USER];
         }
         return null;
       });
@@ -230,7 +264,7 @@ describe('RolesGuard', () => {
       reflector.getAllAndOverride.mockImplementation((key) => {
         if (key === ROLES_KEY) {
           // Simulate getting roles from handler when class returns undefined
-          return [UserRole.ADMIN];
+          return [SystemRole.ADMIN];
         }
         return null;
       });
@@ -248,7 +282,7 @@ describe('RolesGuard', () => {
       reflector.getAllAndOverride.mockImplementation((key) => {
         if (key === ROLES_KEY) {
           // Simulate method roles taking precedence
-          return [UserRole.USER]; // Method level
+          return [SystemRole.USER]; // Method level
         }
         return null;
       });
@@ -259,7 +293,7 @@ describe('RolesGuard', () => {
 
       expect(result).toBe(true);
       expect(permissionService.hasRole).toHaveBeenCalledWith(mockUser, [
-        UserRole.USER,
+        SystemRole.USER,
       ]);
     });
   });
@@ -276,7 +310,7 @@ describe('RolesGuard', () => {
     });
 
     it('should handle errors in permission service gracefully', async () => {
-      reflector.getAllAndOverride.mockReturnValue([UserRole.USER]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
       permissionService.hasRole.mockImplementation(() => {
         throw new Error('Permission service error');
       });
@@ -290,7 +324,7 @@ describe('RolesGuard', () => {
   describe('integration scenarios', () => {
     it('should allow admin access to admin-only endpoints', async () => {
       mockContext.switchToHttp().getRequest().user = mockAdminUser;
-      reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
       permissionService.hasRole.mockReturnValue(true);
 
       const result = await guard.canActivate(mockContext);
@@ -299,7 +333,7 @@ describe('RolesGuard', () => {
     });
 
     it('should deny user access to admin-only endpoints', async () => {
-      reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
       permissionService.hasRole.mockReturnValue(false);
 
       const result = await guard.canActivate(mockContext);
@@ -308,7 +342,7 @@ describe('RolesGuard', () => {
     });
 
     it('should allow user access to user-only endpoints', async () => {
-      reflector.getAllAndOverride.mockReturnValue([UserRole.USER]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
       permissionService.hasRole.mockReturnValue(true);
 
       const result = await guard.canActivate(mockContext);
@@ -318,7 +352,7 @@ describe('RolesGuard', () => {
 
     it('should deny admin access to user-only endpoints if not configured', async () => {
       mockContext.switchToHttp().getRequest().user = mockAdminUser;
-      reflector.getAllAndOverride.mockReturnValue([UserRole.USER]);
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
       permissionService.hasRole.mockReturnValue(false);
 
       const result = await guard.canActivate(mockContext);
@@ -328,8 +362,8 @@ describe('RolesGuard', () => {
 
     it('should allow access to endpoints requiring multiple roles if user has any', async () => {
       reflector.getAllAndOverride.mockReturnValue([
-        UserRole.USER,
-        UserRole.ADMIN,
+        SystemRole.USER,
+        SystemRole.ADMIN,
       ]);
       permissionService.hasRole.mockReturnValue(true);
 

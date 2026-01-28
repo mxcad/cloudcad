@@ -48,7 +48,7 @@ export class CreateRoleDto {
 
   @ApiProperty({
     description: '权限列表（数据库存储格式：大写）',
-    example: ['USER_READ', 'PROJECT_CREATE', 'FILE_WRITE'],
+    example: ['SYSTEM_USER_READ', 'SYSTEM_ROLE_READ', 'SYSTEM_FONT_READ'],
     type: [String],
   })
   @IsArray()

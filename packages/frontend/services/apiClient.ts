@@ -93,9 +93,10 @@ class ApiClient {
 
         // 处理 403 权限错误
         if (error.response?.status === 403) {
-          const errorMessage = error.response?.data?.message || '权限不足，您没有执行此操作的权限';
+          const errorMessage =
+            error.response?.data?.message || '权限不足，您没有执行此操作的权限';
           Logger.error('[apiClient] 权限错误:', errorMessage);
-          
+
           // 创建增强的错误对象，包含更详细的错误信息
           const enhancedError = {
             ...error,
@@ -103,7 +104,7 @@ class ApiClient {
             isPermissionError: true,
             statusCode: 403,
           };
-          
+
           return Promise.reject(enhancedError);
         }
 

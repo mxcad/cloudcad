@@ -23,7 +23,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:unit": "jest --testPathIgnorePatterns=integration",
-    "test:integration": "jest --testPathPattern=integration --forceExit",
+    "test:integration": "jest --testPathPatterns=integration --forceExit",
     "test:all": "jest --verbose --forceExit",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",

@@ -41,103 +41,23 @@ const rolePermissionRules = {
   // 系统管理员：所有权限
   admin: () => getAllPermissions(),
 
-  // 普通用户：基础权限
-  user: () => [
-    Permission.PROJECT_CREATE,
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-  ],
+  // 普通用户：基础权限（暂时为空）
+  user: () => [],
 
-  // 项目所有者：项目权限 + 文件权限
-  projectOwner: () => [
-    // 项目权限
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_DELETE,
-    Permission.PROJECT_ADMIN,
-    Permission.PROJECT_MEMBER_MANAGE,
-    // 文件权限
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    // 版本管理
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-    Permission.VERSION_DELETE,
-    Permission.VERSION_RESTORE,
-    // 其他
-    Permission.FONT_MANAGE,
-    Permission.REVIEW_CONFIG,
-    Permission.TRASH_MANAGE,
-  ],
+  // 项目所有者：项目权限 + 文件权限（暂时未实现）
+  projectOwner: () => [],
 
-  // 项目管理员：项目成员管理 + 文件管理
-  projectAdmin: () => [
-    Permission.PROJECT_READ,
-    Permission.PROJECT_WRITE,
-    Permission.PROJECT_MEMBER_MANAGE,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_DELETE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-    Permission.VERSION_DELETE,
-    Permission.VERSION_RESTORE,
-    Permission.FONT_MANAGE,
-    Permission.REVIEW_CONFIG,
-    Permission.TRASH_MANAGE,
-  ],
+  // 项目管理员：项目成员管理 + 文件管理（暂时未实现）
+  projectAdmin: () => [],
 
-  // 项目成员：项目读取 + 文件编辑
-  projectMember: () => [
-    Permission.PROJECT_READ,
-    Permission.FILE_CREATE,
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-    Permission.VERSION_CREATE,
-  ],
+  // 项目成员：项目读取 + 文件编辑（暂时未实现）
+  projectMember: () => [],
 
-  // 项目编辑者：仅文件编辑
-  projectEditor: () => [
-    Permission.FILE_READ,
-    Permission.FILE_WRITE,
-    Permission.FILE_SHARE,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-    Permission.FILE_PRINT,
-    Permission.FILE_COMPARE,
-    Permission.VERSION_READ,
-  ],
+  // 项目编辑者：仅文件编辑（暂时未实现）
+  projectEditor: () => [],
 
-  // 项目查看者：仅文件查看
-  projectViewer: () => [
-    Permission.FILE_READ,
-    Permission.FILE_DOWNLOAD,
-    Permission.FILE_COMMENT,
-  ],
+  // 项目查看者：仅文件查看（暂时未实现）
+  projectViewer: () => [],
 };
 
 /**
@@ -189,13 +109,13 @@ async function main() {
     },
   });
 
-  // 创建项目专属的系统角色
+  // 创建项目专属的系统角色（暂时未实现）
   const projectOwnerRole = await prisma.role.upsert({
     where: { name: 'PROJECT_OWNER' },
     update: {},
     create: {
-      name: '项目所有者',
-      description: '项目所有者，拥有项目所有权限',
+      name: 'PROJECT_OWNER',
+      description: '项目所有者（权限暂时未实现）',
       isSystem: true,
     },
   });
@@ -204,8 +124,8 @@ async function main() {
     where: { name: 'PROJECT_ADMIN' },
     update: {},
     create: {
-      name: '项目管理员',
-      description: '项目管理员，可管理成员和文件',
+      name: 'PROJECT_ADMIN',
+      description: '项目管理员（权限暂时未实现）',
       isSystem: true,
     },
   });
@@ -214,8 +134,8 @@ async function main() {
     where: { name: 'PROJECT_MEMBER' },
     update: {},
     create: {
-      name: '项目成员',
-      description: '项目成员，可编辑文件',
+      name: 'PROJECT_MEMBER',
+      description: '项目成员（权限暂时未实现）',
       isSystem: true,
     },
   });
@@ -224,8 +144,8 @@ async function main() {
     where: { name: 'PROJECT_EDITOR' },
     update: {},
     create: {
-      name: '项目编辑者',
-      description: '项目编辑者，可编辑文件',
+      name: 'PROJECT_EDITOR',
+      description: '项目编辑者（权限暂时未实现）',
       isSystem: true,
     },
   });
@@ -234,8 +154,8 @@ async function main() {
     where: { name: 'PROJECT_VIEWER' },
     update: {},
     create: {
-      name: '项目查看者',
-      description: '项目查看者，只读权限',
+      name: 'PROJECT_VIEWER',
+      description: '项目查看者（权限暂时未实现）',
       isSystem: true,
     },
   });

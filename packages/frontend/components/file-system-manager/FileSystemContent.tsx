@@ -168,7 +168,12 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
             onShowMembers={node.isRoot ? onShowMembers : undefined}
             onMove={!node.isRoot ? onMove : undefined}
             onCopy={!node.isRoot ? onCopy : undefined}
-            onAddToGallery={!node.isFolder && (node.extension === '.dwg' || node.extension === '.dxf') ? onAddToGallery : undefined}
+            onAddToGallery={
+              !node.isFolder &&
+              (node.extension === '.dwg' || node.extension === '.dxf')
+                ? onAddToGallery
+                : undefined
+            }
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}

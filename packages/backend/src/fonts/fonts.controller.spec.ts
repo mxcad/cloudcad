@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { SystemRole } from '../common/enums/permissions.enum';
 import { FontsController } from './fonts.controller';
 import { FontsService } from './fonts.service';
 import { FontUploadTarget } from './dto/font.dto';
@@ -10,7 +11,7 @@ describe('FontsController', () => {
   let service: FontsService;
 
   // 模拟请求对象
-  const mockRequest = (role: string = 'ADMIN') => {
+  const mockRequest = (role: string = SystemRole.ADMIN) => {
     return {
       user: {
         id: 'test-user-id',
@@ -103,7 +104,7 @@ describe('FontsController', () => {
 
   describe('uploadFont', () => {
     it('应该成功上传字体（管理员）', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const uploadFontDto = { target: FontUploadTarget.BOTH };
 
       const mockResult = {
@@ -132,7 +133,7 @@ describe('FontsController', () => {
     });
 
     it('应该拒绝非管理员上传字体', async () => {
-      const req = mockRequest('USER');
+      const req = mockRequest(SystemRole.USER);
       const uploadFontDto = { target: FontUploadTarget.BOTH };
 
       await expect(controller.uploadFont(req, uploadFontDto)).rejects.toThrow(
@@ -144,7 +145,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理上传到后端目录', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const uploadFontDto = { target: FontUploadTarget.BACKEND };
 
       const mockResult = {
@@ -173,7 +174,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理上传到前端目录', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const uploadFontDto = { target: FontUploadTarget.FRONTEND };
 
       const mockResult = {
@@ -202,7 +203,7 @@ describe('FontsController', () => {
     });
 
     it('应该默认上传到两个目录', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const uploadFontDto = {};
 
       const mockResult = {
@@ -233,7 +234,7 @@ describe('FontsController', () => {
 
   describe('deleteFont', () => {
     it('应该成功删除字体（管理员）', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const deleteFontDto = { target: FontUploadTarget.BOTH };
 
       const mockResult = {
@@ -257,7 +258,7 @@ describe('FontsController', () => {
     });
 
     it('应该拒绝非管理员删除字体', async () => {
-      const req = mockRequest('USER');
+      const req = mockRequest(SystemRole.USER);
       const deleteFontDto = { target: FontUploadTarget.BOTH };
 
       await expect(
@@ -269,7 +270,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理从后端目录删除', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const deleteFontDto = { target: FontUploadTarget.BACKEND };
 
       const mockResult = {
@@ -292,7 +293,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理从前端目录删除', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const deleteFontDto = { target: FontUploadTarget.FRONTEND };
 
       const mockResult = {
@@ -315,7 +316,7 @@ describe('FontsController', () => {
     });
 
     it('应该默认从两个目录删除', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const deleteFontDto = {};
 
       const mockResult = {
@@ -340,7 +341,7 @@ describe('FontsController', () => {
 
   describe('downloadFont', () => {
     it('应该成功从后端目录下载字体（管理员）', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const res = mockResponse();
 
       const mockResult = {
@@ -364,7 +365,7 @@ describe('FontsController', () => {
     });
 
     it('应该成功从前端目录下载字体（管理员）', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const res = mockResponse();
 
       const mockResult = {
@@ -388,7 +389,7 @@ describe('FontsController', () => {
     });
 
     it('应该拒绝非管理员下载字体', async () => {
-      const req = mockRequest('USER');
+      const req = mockRequest(SystemRole.USER);
       const res = mockResponse();
 
       await expect(
@@ -400,7 +401,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理下载错误', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const res = mockResponse();
 
       const mockResult = {
@@ -431,7 +432,7 @@ describe('FontsController', () => {
     });
 
     it('应该处理服务错误', async () => {
-      const req = mockRequest('ADMIN');
+      const req = mockRequest(SystemRole.ADMIN);
       const res = mockResponse();
 
       jest

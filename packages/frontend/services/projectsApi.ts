@@ -36,7 +36,7 @@ export const projectsApi = {
 
   deleteNode: (nodeId: string, permanently: boolean = false) =>
     apiClient.delete(`/file-system/nodes/${nodeId}`, {
-      params: { permanently }
+      params: { permanently },
     }),
 
   moveNode: (nodeId: string, targetParentId: string) =>
@@ -63,5 +63,29 @@ export const projectsApi = {
     ),
 
   transferOwnership: (projectId: string, newOwnerId: string) =>
-    apiClient.post(`/file-system/projects/${projectId}/transfer`, { newOwnerId }),
+    apiClient.post(`/file-system/projects/${projectId}/transfer`, {
+      newOwnerId,
+    }),
+
+  // ========== 项目权限检查 ==========
+
+  /**
+   * 获取用户在项目中的所有权限
+   */
+  getPermissions: (projectId: string) =>
+    apiClient.get(`/file-system/projects/${projectId}/permissions`),
+
+  /**
+   * 检查用户是否具有特定权限
+   */
+  checkPermission: (projectId: string, permission: string) =>
+    apiClient.get(`/file-system/projects/${projectId}/permissions/check`, {
+      params: { permission },
+    }),
+
+  /**
+   * 获取用户在项目中的角色
+   */
+  getRole: (projectId: string) =>
+    apiClient.get(`/file-system/projects/${projectId}/role`),
 };

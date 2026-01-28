@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RoleCategory } from '../../common/enums/permissions.enum';
+import { SystemPermission, ProjectPermission } from '../../common/dto/permission.dto';
+
+// 合并所有权限值
+const ALL_PERMISSIONS = [
+  ...Object.values(SystemPermission),
+  ...Object.values(ProjectPermission),
+];
 
 export class RoleDto {
   @ApiProperty({ description: '角色 ID' })
@@ -21,9 +28,10 @@ export class RoleDto {
   isSystem: boolean;
 
   @ApiProperty({
-    description: '权限列表（数据库存储格式：大写）',
+    description: '权限列表',
     type: [String],
-    example: ['USER_READ', 'PROJECT_CREATE', 'FILE_WRITE']
+    enum: ALL_PERMISSIONS,
+    example: ['system:user:read', 'system:role:read', 'system:font:read'],
   })
   permissions: string[];
 

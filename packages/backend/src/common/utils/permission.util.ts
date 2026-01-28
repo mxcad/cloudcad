@@ -1,9 +1,9 @@
-import { Permission } from '../enums/permissions.enum';
+import { SystemPermission } from '../enums/permissions.enum';
 import { Permission as PrismaPermission } from '@prisma/client';
 
 /**
  * 权限类型转换工具
- * 用于在业务层 Permission 枚举和 Prisma Permission 枚举之间进行转换
+ * 用于在业务层 SystemPermission 枚举和 Prisma Permission 枚举之间进行转换
  */
 
 /**
@@ -38,80 +38,52 @@ export interface ContextRule {
 }
 
 /**
- * Permission 字符串值到 Prisma 枚举标识符的映射表
+ * SystemPermission 字符串值到 Prisma 枚举标识符的映射表
  */
-const PERMISSION_MAP: Record<Permission, PrismaPermission> = {
-  [Permission.USER_READ]: PrismaPermission.USER_READ,
-  [Permission.USER_WRITE]: PrismaPermission.USER_WRITE,
-  [Permission.USER_DELETE]: PrismaPermission.USER_DELETE,
-  [Permission.USER_ADMIN]: PrismaPermission.USER_ADMIN,
+const PERMISSION_MAP: Record<SystemPermission, PrismaPermission> = {
+  [SystemPermission.USER_READ]: PrismaPermission.SYSTEM_USER_READ,
+  [SystemPermission.USER_CREATE]: PrismaPermission.SYSTEM_USER_CREATE,
+  [SystemPermission.USER_UPDATE]: PrismaPermission.SYSTEM_USER_UPDATE,
+  [SystemPermission.USER_DELETE]: PrismaPermission.SYSTEM_USER_DELETE,
 
-  [Permission.PROJECT_CREATE]: PrismaPermission.PROJECT_CREATE,
-  [Permission.PROJECT_READ]: PrismaPermission.PROJECT_READ,
-  [Permission.PROJECT_WRITE]: PrismaPermission.PROJECT_WRITE,
-  [Permission.PROJECT_DELETE]: PrismaPermission.PROJECT_DELETE,
-  [Permission.PROJECT_ADMIN]: PrismaPermission.PROJECT_ADMIN,
-  [Permission.PROJECT_MEMBER_MANAGE]: PrismaPermission.PROJECT_MEMBER_MANAGE,
+  [SystemPermission.ROLE_READ]: PrismaPermission.SYSTEM_ROLE_READ,
+  [SystemPermission.ROLE_CREATE]: PrismaPermission.SYSTEM_ROLE_CREATE,
+  [SystemPermission.ROLE_UPDATE]: PrismaPermission.SYSTEM_ROLE_UPDATE,
+  [SystemPermission.ROLE_DELETE]: PrismaPermission.SYSTEM_ROLE_DELETE,
+  [SystemPermission.ROLE_PERMISSION_MANAGE]:
+    PrismaPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
 
-  [Permission.FILE_CREATE]: PrismaPermission.FILE_CREATE,
-  [Permission.FILE_READ]: PrismaPermission.FILE_READ,
-  [Permission.FILE_WRITE]: PrismaPermission.FILE_WRITE,
-  [Permission.FILE_DELETE]: PrismaPermission.FILE_DELETE,
-  [Permission.FILE_SHARE]: PrismaPermission.FILE_SHARE,
-  [Permission.FILE_DOWNLOAD]: PrismaPermission.FILE_DOWNLOAD,
-  [Permission.FILE_COMMENT]: PrismaPermission.FILE_COMMENT,
-  [Permission.FILE_PRINT]: PrismaPermission.FILE_PRINT,
-  [Permission.FILE_COMPARE]: PrismaPermission.FILE_COMPARE,
+  [SystemPermission.FONT_READ]: PrismaPermission.SYSTEM_FONT_READ,
+  [SystemPermission.FONT_UPLOAD]: PrismaPermission.SYSTEM_FONT_UPLOAD,
+  [SystemPermission.FONT_DELETE]: PrismaPermission.SYSTEM_FONT_DELETE,
+  [SystemPermission.FONT_DOWNLOAD]: PrismaPermission.SYSTEM_FONT_DOWNLOAD,
 
-  [Permission.CAD_SAVE]: PrismaPermission.CAD_SAVE,
-  [Permission.CAD_EXPORT]: PrismaPermission.CAD_EXPORT,
-  [Permission.CAD_EXTERNAL_REFERENCE]: PrismaPermission.CAD_EXTERNAL_REFERENCE,
-
-  [Permission.GALLERY_USE]: PrismaPermission.GALLERY_USE,
-
-  [Permission.VERSION_READ]: PrismaPermission.VERSION_READ,
-  [Permission.VERSION_CREATE]: PrismaPermission.VERSION_CREATE,
-  [Permission.VERSION_DELETE]: PrismaPermission.VERSION_DELETE,
-  [Permission.VERSION_RESTORE]: PrismaPermission.VERSION_RESTORE,
-
-  [Permission.FONT_MANAGE]: PrismaPermission.FONT_MANAGE,
-  [Permission.REVIEW_CONFIG]: PrismaPermission.REVIEW_CONFIG,
-  [Permission.TRASH_MANAGE]: PrismaPermission.TRASH_MANAGE,
-  [Permission.SYSTEM_ADMIN]: PrismaPermission.SYSTEM_ADMIN,
-  [Permission.SYSTEM_MONITOR]: PrismaPermission.SYSTEM_MONITOR,
+  [SystemPermission.SYSTEM_ADMIN]: PrismaPermission.SYSTEM_ADMIN,
+  [SystemPermission.SYSTEM_MONITOR]: PrismaPermission.SYSTEM_MONITOR,
 };
 
 /**
- * Prisma 枚举标识符到 Permission 字符串值的反向映射表
+ * Prisma 枚举标识符到 SystemPermission 字符串值的反向映射表
  */
-const REVERSE_PERMISSION_MAP: Record<PrismaPermission, Permission> =
+const REVERSE_PERMISSION_MAP: Record<PrismaPermission, SystemPermission> =
   Object.fromEntries(
     Object.entries(PERMISSION_MAP).map(([key, value]) => [value, key])
-  ) as Record<PrismaPermission, Permission>;
+  ) as Record<PrismaPermission, SystemPermission>;
 
 /**
- * 将业务层 Permission 或字符串转换为 Prisma Permission
- * 支持两种格式：
- * 1. 小写格式（后端内部使用）：'user:read'
- * 2. 大写格式（前端发送）：'USER_READ'
+ * 将业务层 SystemPermission 或字符串转换为 Prisma Permission
  */
-export function toPrismaPermission(permission: Permission | string): PrismaPermission {
-  // 如果已经是有效的 Prisma 枚举（大写），直接返回
+export function toPrismaPermission(
+  permission: SystemPermission | string
+): PrismaPermission {
+  // 如果已经是有效的 Prisma 枚举，直接返回
   if (isValidPrismaPermission(permission)) {
     return permission as PrismaPermission;
   }
 
-  // 尝试从小写格式映射
-  if (PERMISSION_MAP[permission as Permission]) {
-    return PERMISSION_MAP[permission as Permission];
-  }
-
-  // 尝试从大写格式映射（前端发送的格式）
-  // 将 'USER_READ' 直接作为 Prisma 枚举值
-  const upperCaseKey = permission as string;
-  const prismaPerm = upperCaseKey as PrismaPermission;
-  if (isValidPrismaPermission(prismaPerm)) {
-    return prismaPerm;
+  // 尝试从业务层枚举映射
+  if (PERMISSION_MAP[permission as SystemPermission]) {
+    return PERMISSION_MAP[permission as SystemPermission];
   }
 
   throw new Error(`无效的权限值: ${permission}`);
@@ -125,48 +97,45 @@ function isValidPrismaPermission(value: string): boolean {
 }
 
 /**
- * 将 Prisma Permission 转换为业务层 Permission
- * 注意：直接返回 Prisma 枚举值（大写格式），以保持与前端一致
+ * 将 Prisma Permission 转换为业务层 SystemPermission
  */
-export function fromPrismaPermission(permission: PrismaPermission): Permission {
-  // 直接返回 Prisma 枚举值（字符串），转换为 Permission 类型
-  // 这样可以保持与前端 Permission 枚举（大写格式）一致
-  return permission as unknown as Permission;
+export function fromPrismaPermission(
+  permission: PrismaPermission
+): SystemPermission {
+  return permission as unknown as SystemPermission;
 }
 
 /**
- * 批量转换业务层 Permission 为 Prisma Permission
+ * 批量转换业务层 SystemPermission 为 Prisma Permission
  */
 export function toPrismaPermissions(
-  permissions: Permission[]
+  permissions: SystemPermission[]
 ): PrismaPermission[] {
   return permissions.map(toPrismaPermission);
 }
 
 /**
- * 批量转换 Prisma Permission 为业务层 Permission
+ * 批量转换 Prisma Permission 为业务层 SystemPermission
  */
 export function fromPrismaPermissions(
   permissions: PrismaPermission[]
-): Permission[] {
+): SystemPermission[] {
   return permissions.map(fromPrismaPermission);
 }
 
 /**
- * 验证权限是否有效（支持大写和小写格式）
- * 大写格式：USER_READ（前端使用）
- * 小写格式：user:read（后端业务层使用）
+ * 验证权限是否有效
  */
 export function isValidPermission(permission: string): boolean {
-  // 检查是否为有效的 Prisma 枚举（大写格式）
+  // 检查是否为有效的 Prisma 枚举
   const prismaPermissions = Object.values(PrismaPermission);
   if (prismaPermissions.includes(permission as PrismaPermission)) {
     return true;
   }
 
-  // 检查是否为有效的业务层枚举（小写格式）
-  const businessPermissions = Object.values(Permission);
-  if (businessPermissions.includes(permission as Permission)) {
+  // 检查是否为有效的业务层枚举
+  const businessPermissions = Object.values(SystemPermission);
+  if (businessPermissions.includes(permission as SystemPermission)) {
     return true;
   }
 
@@ -174,7 +143,7 @@ export function isValidPermission(permission: string): boolean {
 }
 
 /**
- * 获取所有有效的权限（返回数据库格式：大写）
+ * 获取所有有效的权限（返回数据库格式）
  */
 export function getAllPermissions(): string[] {
   return Object.values(PrismaPermission);

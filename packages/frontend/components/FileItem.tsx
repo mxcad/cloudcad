@@ -142,7 +142,15 @@ export const FileItem: React.FC<FileItemProps> = ({
   const isImageFile = useCallback(() => {
     if (node.isFolder || node.isRoot) return false;
     const ext = node.extension?.toLowerCase();
-    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'];
+    const imageExtensions = [
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.webp',
+      '.bmp',
+      '.svg',
+    ];
     return imageExtensions.includes(ext || '');
   }, [node.extension, node.isFolder, node.isRoot]);
 
@@ -171,7 +179,14 @@ export const FileItem: React.FC<FileItemProps> = ({
         }
       }
     },
-    [node, isMultiSelectMode, onSelect, onEnter, isImageFile, handleImagePreview]
+    [
+      node,
+      isMultiSelectMode,
+      onSelect,
+      onEnter,
+      isImageFile,
+      handleImagePreview,
+    ]
   );
 
   const handleDoubleClick = useCallback(

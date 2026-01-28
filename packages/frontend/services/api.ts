@@ -11,11 +11,7 @@ export {
 } from './apiService';
 
 // 保留原有的 Mock API 以备后用
-import {
-  MAX_UPLOAD_SIZE,
-  type Role,
-  type User,
-} from '../types';
+import { MAX_UPLOAD_SIZE, type Role, type User } from '../types';
 import { mockDb } from './mockDb';
 
 export const mockApi = {

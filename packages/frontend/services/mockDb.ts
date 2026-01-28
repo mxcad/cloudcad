@@ -29,7 +29,10 @@ const MOCK_ROLES: Role[] = [
     id: 'USER',
     name: '普通用户',
     description: '可以参与项目设计，上传资源',
-    permissions: [MockPermission.VIEW_DASHBOARD, MockPermission.ASSET_UPLOAD] as any[],
+    permissions: [
+      MockPermission.VIEW_DASHBOARD,
+      MockPermission.ASSET_UPLOAD,
+    ] as any[],
   },
 ];
 
@@ -236,11 +239,7 @@ class MockDB {
     return this.roles;
   }
 
-  async createRole(
-    name: string,
-    description: string,
-    permissions: string[]
-  ) {
+  async createRole(name: string, description: string, permissions: string[]) {
     await delay(300);
     const newRole: Role = {
       id: `role_${Date.now()}`,
@@ -271,9 +270,9 @@ class MockDB {
   async getFiles(parentId: string | null) {
     await delay(300);
     const userRole = this.roles.find((r) => r.id === this.currentUser.role);
-      const hasViewAll = userRole?.permissions.includes(
-        MockPermission.PROJECT_VIEW_ALL as any
-      );
+    const hasViewAll = userRole?.permissions.includes(
+      MockPermission.PROJECT_VIEW_ALL as any
+    );
     return this.files.filter((f) => {
       // Exclude deleted files
       if (f.deletedAt) return false;
@@ -443,9 +442,9 @@ class MockDB {
   async getLibraries(type: 'block' | 'font') {
     await delay(300);
     const userRole = this.roles.find((r) => r.id === this.currentUser.role);
-      const canManage = userRole?.permissions.includes(
-        MockPermission.LIBRARY_MANAGE as any
-      );
+    const canManage = userRole?.permissions.includes(
+      MockPermission.LIBRARY_MANAGE as any
+    );
     const updatedLibraries = this.libraries.map((lib) => ({
       ...lib,
       itemCount: this.assets.filter((a) => a.libraryId === lib.id).length,

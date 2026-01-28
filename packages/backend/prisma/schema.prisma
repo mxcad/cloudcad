@@ -43,7 +43,6 @@ model Role {
   // 关联关系
   users       User[]
   permissions RolePermission[]
-  projectMembers ProjectMember[]
 
   @@index([category])
   @@map("roles")
@@ -110,6 +109,7 @@ model FileSystemNode {
 
   // 关联关系
   projectMembers ProjectMember[]
+  projectRoles ProjectRole[]
 
   // 索引优化
   @@index([parentId])
@@ -122,22 +122,56 @@ model FileSystemNode {
 
 // ============ 项目成员模块 ============
 
-// 项目成员（用户与项目的关联，使用系统角色）
+// 项目角色（每个项目可以有自定义的角色）
+model ProjectRole {
+  id          String   @id @default(cuid())
+  projectId   String   // 项目ID
+  name        String   // 角色名称
+  description String?  // 角色描述
+  isSystem    Boolean  @default(false) // 是否为系统默认角色
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联关系
+  project     FileSystemNode         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+  permissions ProjectRolePermission[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("project_roles")
+}
+
+// 项目角色权限关联
+model ProjectRolePermission {
+  id          String   @id @default(cuid())
+  projectRoleId String // 项目角色ID
+  permission  ProjectPermission // 项目权限
+  createdAt   DateTime @default(now())
+
+  // 关联关系
+  projectRole ProjectRole @relation(fields: [projectRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([projectRoleId, permission])
+  @@map("project_role_permissions")
+}
+
+// 项目成员（用户与项目的关联，使用项目角色）
 model ProjectMember {
   id        String      @id @default(cuid())
   projectId String      // 项目ID
   userId    String      // 用户ID
-  roleId    String      // 系统角色ID（关联到Role表）
+  projectRoleId String  // 项目角色ID
   createdAt DateTime    @default(now())
 
   // 关联关系
   project   FileSystemNode @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role            @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  projectRole ProjectRole    @relation(fields: [projectRoleId], references: [id], onDelete: Restrict)
 
   @@unique([projectId, userId])
   @@index([userId])
-  @@index([roleId])
+  @@index([projectRoleId])
   @@map("project_members")
 }
 
@@ -252,57 +286,71 @@ enum UserStatus {
 }
 
 enum Permission {
-  // 用户权限
-  USER_READ
-  USER_WRITE
-  USER_DELETE
-  USER_ADMIN
+  // ========== 用户管理 ==========
+  SYSTEM_USER_READ
+  SYSTEM_USER_CREATE
+  SYSTEM_USER_UPDATE
+  SYSTEM_USER_DELETE
 
-  // 项目权限
+  // ========== 角色权限管理 ==========
+  SYSTEM_ROLE_READ
+  SYSTEM_ROLE_CREATE
+  SYSTEM_ROLE_UPDATE
+  SYSTEM_ROLE_DELETE
+  SYSTEM_ROLE_PERMISSION_MANAGE
+
+  // ========== 字体库管理 ==========
+  SYSTEM_FONT_READ
+  SYSTEM_FONT_UPLOAD
+  SYSTEM_FONT_DELETE
+  SYSTEM_FONT_DOWNLOAD
+
+  // ========== 系统管理 ==========
+  SYSTEM_ADMIN
+  SYSTEM_MONITOR
+}
+
+// 项目权限枚举（与系统权限完全解耦）
+enum ProjectPermission {
+  // ========== 项目管理权限 ==========
   PROJECT_CREATE
   PROJECT_READ
-  PROJECT_WRITE
+  PROJECT_UPDATE
   PROJECT_DELETE
-  PROJECT_ADMIN
   PROJECT_MEMBER_MANAGE
+  PROJECT_MEMBER_ASSIGN
+  PROJECT_ROLE_MANAGE
+  PROJECT_ROLE_PERMISSION_MANAGE
+  PROJECT_TRANSFER
+  PROJECT_SETTINGS_MANAGE
 
-  // 文件权限
+  // ========== 文件操作权限 ==========
   FILE_CREATE
-  FILE_READ
-  FILE_WRITE
+  FILE_UPLOAD
+  FILE_OPEN
+  FILE_EDIT
   FILE_DELETE
-  FILE_SHARE
+  FILE_TRASH_MANAGE
   FILE_DOWNLOAD
+  FILE_SHARE
   FILE_COMMENT
   FILE_PRINT
   FILE_COMPARE
 
-  // CAD 图纸权限
+  // ========== CAD 图纸权限 ==========
   CAD_SAVE
   CAD_EXPORT
   CAD_EXTERNAL_REFERENCE
 
-  // 图库权限
+  // ========== 图库权限 ==========
   GALLERY_USE
+  GALLERY_ADD
 
-  // 版本管理权限
+  // ========== 版本管理权限 ==========
   VERSION_READ
   VERSION_CREATE
   VERSION_DELETE
   VERSION_RESTORE
-
-  // 字体管理权限
-  FONT_MANAGE
-
-  // 审图配置权限
-  REVIEW_CONFIG
-
-  // 回收站权限
-  TRASH_MANAGE
-
-  // 系统权限
-  SYSTEM_ADMIN
-  SYSTEM_MONITOR
 }
 
 enum ProjectStatus {

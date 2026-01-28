@@ -37,13 +37,13 @@ export class RolesGuard implements CanActivate {
     // 先检查缓存中的用户角色
     const cachedRole = this.cacheService.getUserRole(user.id);
     if (cachedRole) {
-      return requiredRoles.includes(cachedRole.name || '');
+      return requiredRoles.includes(cachedRole);
     }
 
     // 缓存未命中，检查实际角色并缓存
     const hasRole = this.permissionService.hasRole(user, requiredRoles);
     if (hasRole) {
-      this.cacheService.cacheUserRole(user.id, user.role);
+      this.cacheService.cacheUserRole(user.id, user.role.name);
     }
 
     return hasRole;

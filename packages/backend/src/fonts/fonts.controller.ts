@@ -26,7 +26,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
-import { Permission } from '../common/enums/permissions.enum';
+import { SystemPermission } from '../common/enums/permissions.enum';
 import { FontsService } from './fonts.service';
 import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
 
@@ -37,7 +37,7 @@ import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
 @ApiBearerAuth()
 @Controller('font-management')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions([Permission.FONT_MANAGE])
+@RequirePermissions([SystemPermission.FONT_UPLOAD])
 export class FontsController {
   private readonly logger = new Logger(FontsController.name);
 

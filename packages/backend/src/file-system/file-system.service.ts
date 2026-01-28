@@ -118,7 +118,7 @@ export class FileSystemService {
           projectMembers: {
             create: {
               userId,
-              roleId: projectOwnerRole.id,
+              projectRoleId: projectOwnerRole.id,
             },
           },
         },
@@ -134,7 +134,7 @@ export class FileSystemService {
                   avatar: true,
                 },
               },
-              role: {
+              projectRole: {
                 select: {
                   id: true,
                   name: true,
@@ -204,7 +204,7 @@ export class FileSystemService {
                     avatar: true,
                   },
                 },
-                role: {
+                projectRole: {
                   select: {
                     id: true,
                     name: true,
@@ -261,7 +261,7 @@ export class FileSystemService {
                   role: true,
                 },
               },
-              role: {
+              projectRole: {
                 select: {
                   id: true,
                   name: true,
@@ -330,7 +330,7 @@ export class FileSystemService {
                   avatar: true,
                 },
               },
-              role: {
+              projectRole: {
                 select: {
                   id: true,
                   name: true,
@@ -1776,7 +1776,7 @@ export class FileSystemService {
               status: true,
             },
           },
-          role: {
+          projectRole: {
             include: {
               permissions: {
                 select: {
@@ -1820,7 +1820,7 @@ export class FileSystemService {
 
     userId: string,
 
-    roleId: string,
+    projectRoleId: string,
 
     operatorId: string
   ) {
@@ -1853,10 +1853,10 @@ export class FileSystemService {
         throw new NotFoundException('用户不存在');
       }
 
-      // 检查角色是否存在（系统角色）
+      // 检查角色是否存在（项目角色）
 
-      const role = await this.prisma.role.findUnique({
-        where: { id: roleId },
+      const role = await this.prisma.projectRole.findUnique({
+        where: { id: projectRoleId },
       });
 
       if (!role) {
@@ -1885,7 +1885,7 @@ export class FileSystemService {
 
           userId,
 
-          roleId,
+          projectRoleId,
         },
 
         include: {
@@ -1903,7 +1903,7 @@ export class FileSystemService {
             },
           },
 
-          role: {
+          projectRole: {
             include: {
               permissions: {
                 select: {
@@ -1937,7 +1937,7 @@ export class FileSystemService {
         JSON.stringify({
           userId,
 
-          roleId,
+          projectRoleId,
 
           role: role.name,
         })
@@ -1967,7 +1967,7 @@ export class FileSystemService {
         JSON.stringify({
           userId,
 
-          roleId,
+          projectRoleId,
         })
       );
 
@@ -1989,7 +1989,7 @@ export class FileSystemService {
   async updateProjectMember(
     projectId: string,
     userId: string,
-    roleId: string,
+    projectRoleId: string,
     operatorId: string
   ) {
     try {
@@ -2015,9 +2015,9 @@ export class FileSystemService {
         throw new ForbiddenException('没有权限更新项目成员角色');
       }
 
-      // 检查角色是否存在（系统角色）
-      const role = await this.prisma.role.findUnique({
-        where: { id: roleId },
+      // 检查角色是否存在（项目角色）
+      const role = await this.prisma.projectRole.findUnique({
+        where: { id: projectRoleId },
       });
 
       if (!role) {
@@ -2025,7 +2025,7 @@ export class FileSystemService {
       }
 
       // 不能将成员设置为项目所有者，必须通过转让
-      if (role.name === 'PROJECT_OWNER') {
+      if (role.name === 'OWNER') {
         throw new ForbiddenException(
           '不能直接设置为项目所有者，请使用转让功能'
         );
@@ -2050,7 +2050,7 @@ export class FileSystemService {
               userId,
             },
           },
-          data: { roleId },
+          data: { projectRoleId },
           include: {
             user: {
               select: {
@@ -2061,7 +2061,7 @@ export class FileSystemService {
                 avatar: true,
               },
             },
-            role: {
+            projectRole: {
               include: {
                 permissions: {
                   select: {
@@ -2086,7 +2086,7 @@ export class FileSystemService {
           undefined,
           JSON.stringify({
             userId,
-            roleId,
+            projectRoleId,
             role: role.name,
           })
         );
@@ -2110,7 +2110,7 @@ export class FileSystemService {
         error instanceof Error ? error.message : String(error),
         JSON.stringify({
           userId,
-          roleId,
+          projectRoleId,
         })
       );
 
@@ -2271,7 +2271,7 @@ export class FileSystemService {
               userId: newOwnerId,
             },
           },
-          data: { roleId: ownerRole.id },
+          data: { projectRoleId: ownerRole.id },
         });
 
         // 2. 将原所有者的角色改为 PROJECT_ADMIN（或保留为 PROJECT_ADMIN）
@@ -2287,7 +2287,7 @@ export class FileSystemService {
                 userId: currentOwnerId,
               },
             },
-            data: { roleId: adminRole.id },
+            data: { projectRoleId: adminRole.id },
           });
         }
 
@@ -2347,7 +2347,7 @@ export class FileSystemService {
    */
   async batchAddProjectMembers(
     projectId: string,
-    members: Array<{ userId: string; roleId: string }>
+    members: Array<{ userId: string; projectRoleId: string }>
   ): Promise<{
     message: string;
     addedCount: number;
@@ -2372,7 +2372,7 @@ export class FileSystemService {
           await this.addProjectMember(
             projectId,
             member.userId,
-            member.roleId,
+            member.projectRoleId,
             'system'
           );
           addedCount++;
@@ -2411,7 +2411,7 @@ export class FileSystemService {
    */
   async batchUpdateProjectMembers(
     projectId: string,
-    updates: Array<{ userId: string; roleId: string }>
+    updates: Array<{ userId: string; projectRoleId: string }>
   ): Promise<{
     message: string;
     updatedCount: number;
@@ -2436,7 +2436,7 @@ export class FileSystemService {
           await this.updateProjectMember(
             projectId,
             update.userId,
-            update.roleId,
+            update.projectRoleId,
             'system'
           );
           updatedCount++;

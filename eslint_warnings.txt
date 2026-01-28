@@ -1,0 +1,267 @@
+﻿
+> cloudcad-manager@0.0.0 lint D:\web\MxCADOnline\cloudcad\packages\frontend
+> eslint . --ext .js,.jsx,.ts,.tsx
+
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\FileUploader.tsx
+  56:5  warning  React Hook useCallback has a missing dependency: 'addFiles'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  79:5  warning  React Hook useCallback has a missing dependency: 'addFiles'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\KeyboardShortcuts.tsx
+  31:13  warning  Unexpected console statement  no-console
+  37:13  warning  Unexpected console statement  no-console
+  40:11  warning  Unexpected console statement  no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\MxCadUploader.tsx
+  86:7  warning  React Hook useImperativeHandle has a missing dependency: 'handleSelectFiles'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\admin\GalleryTypeManagement.tsx
+  265:7   warning  Unexpected console statement                                                                                   no-console
+  275:6   warning  React Hook useEffect has a missing dependency: 'fetchTypes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  330:7   warning  Unexpected console statement                                                                                   no-console
+  389:7   warning  Unexpected console statement                                                                                   no-console
+  455:7   warning  Unexpected console statement                                                                                   no-console
+  601:19  error    Do not pass children as props. Instead, nest children between the opening and closing tags                     react/no-children-prop
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\admin\TagManagement.tsx
+   43:7  warning  Unexpected console statement  no-console
+  174:7  warning  Unexpected console statement  no-console
+  204:7  warning  Unexpected console statement  no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\file-item\FileItemExternalReferenceWarning.tsx
+  14:26  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\file-item\FileItemMenu.tsx
+  1:17  error  'useRef' is defined but never used  unused-imports/no-unused-imports
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\file-item\FileItemSelection.tsx
+  14:25  error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\file-system-manager\FileSystemBatchActions.tsx
+  15:24  error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  19:24  error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  23:26  error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  27:26  error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\modals\AddToGalleryModal.tsx
+  60:6  warning  React Hook useEffect has a missing dependency: 'fetchTypes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\modals\MembersModal.tsx
+    8:3   error    'Shield' is defined but never used                                                                                                       unused-imports/no-unused-imports
+   75:52  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+  109:42  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+  131:7   warning  Unexpected console statement                                                                                                             no-console
+  203:6   warning  React Hook useEffect has missing dependencies: 'loadMembers' and 'loadProjectRoles'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\components\ui\TruncateText.tsx
+  117:9  error  Unexpected lexical declaration in case block  no-case-declarations
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\config\apiConfig.ts
+  17:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\contexts\AuthContext.tsx
+   93:6  warning  React Hook useEffect has missing dependencies: 'token' and 'user'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  119:9  warning  Unexpected console statement                                                                                           no-console
+  123:7  warning  Unexpected console statement                                                                                           no-console
+  165:9  warning  Unexpected console statement                                                                                           no-console
+  168:7  warning  Unexpected console statement                                                                                           no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\file-system\useFileSystemCRUD.ts
+   4:10  error  'logger' is defined but never used                                 unused-imports/no-unused-imports
+   5:10  error  'handleError' is defined but never used                            unused-imports/no-unused-imports
+  40:33  error  Unnecessary escape character: \/                                   no-useless-escape
+  45:7   error  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\file-system\useFileSystemData.ts
+  191:6  warning  React Hook useCallback has a missing dependency: 'paginationRef'. Either include it or remove the dependency array. If 'setPaginationMeta' needs the current value of 'paginationRef', you can also switch to useReducer instead of useState and read 'paginationRef' in the reducer  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\file-system\useFileSystemNavigation.ts
+  19:33  error    Unexpected control character(s) in regular expression: \x00, \x1f                                                    no-control-regex
+  79:5   warning  React Hook useCallback has a missing dependency: 'handleDownload'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\file-system\useFileSystemUI.ts
+  25:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+  65:5   warning  React Hook useCallback has a missing dependency: 'closeConfirm'. Either include it or remove the dependency array                                                                                                                                                  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\useExternalReferenceUpload.ts
+   71:9  warning  Unexpected console statement                                                                                     no-console
+  160:7  warning  Unexpected console statement                                                                                     no-console
+  164:7  warning  Unexpected console statement                                                                                     no-console
+  173:7  warning  Unexpected console statement                                                                                     no-console
+  189:5  warning  Unexpected console statement                                                                                     no-console
+  190:5  warning  Unexpected console statement                                                                                     no-console
+  204:5  warning  Unexpected console statement                                                                                     no-console
+  210:7  warning  Unexpected console statement                                                                                     no-console
+  290:6  warning  React Hook useCallback has a missing dependency: 'config'. Either include it or remove the dependency array      react-hooks/exhaustive-deps
+  313:6  warning  React Hook useCallback has a missing dependency: 'config'. Either include it or remove the dependency array      react-hooks/exhaustive-deps
+  321:6  warning  React Hook useCallback has a missing dependency: 'config'. Either include it or remove the dependency array      react-hooks/exhaustive-deps
+  375:6  warning  React Hook useCallback has an unnecessary dependency: 'files'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\useFileSystem.ts
+     7:10  error    'logger' is defined but never used                                                                                                                                                                                                                                 unused-imports/no-unused-imports
+   166:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+   224:5   warning  React Hook useCallback has a missing dependency: 'closeConfirm'. Either include it or remove the dependency array                                                                                                                                                  react-hooks/exhaustive-deps
+   405:9   warning  Unexpected console statement                                                                                                                                                                                                                                       no-console
+   801:5   warning  React Hook useCallback has a missing dependency: 'handleDownload'. Either include it or remove the dependency array                                                                                                                                                react-hooks/exhaustive-deps
+   808:9   warning  Unexpected console statement                                                                                                                                                                                                                                       no-console
+  1014:5   warning  Unexpected console statement                                                                                                                                                                                                                                       no-console
+  1034:7   warning  Unexpected console statement                                                                                                                                                                                                                                       no-console
+  1049:6   warning  React Hook useEffect has missing dependencies: 'loadData' and 'location.pathname'. Either include them or remove the dependency array                                                                                                                              react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\useMxCadEditor.ts
+  56:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\useMxCadUploadNative.ts
+   39:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:5   warning  Unexpected console statement              no-console
+  154:5   warning  Unexpected console statement              no-console
+  158:7   warning  Unexpected console statement              no-console
+  188:7   warning  Unexpected console statement              no-console
+  193:7   warning  Unexpected console statement              no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\hooks\usePermission.ts
+  139:9  warning  Unexpected console statement                                                                                                                                                                                                                             no-console
+  204:7  warning  Unexpected console statement                                                                                                                                                                                                                             no-console
+  240:7  warning  Unexpected console statement                                                                                                                                                                                                                             no-console
+  262:7  warning  Unexpected console statement                                                                                                                                                                                                                             no-console
+  296:5  warning  React Hook useMemo has missing dependencies: 'getUserPermissions', 'getUserRole', 'hasAllPermissions', 'hasAnyPermission', 'hasNodeAccessRole', 'hasPermission', 'hasRole', 'isAdmin', and 'isUser'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\AuditLogPage.tsx
+    2:10  error    'Search' is defined but never used                                                                                                  unused-imports/no-unused-imports
+    2:26  error    'Download' is defined but never used                                                                                                unused-imports/no-unused-imports
+  125:21  warning  Unexpected any. Specify a different type                                                                                            @typescript-eslint/no-explicit-any
+  143:7   warning  Unexpected console statement                                                                                                        no-console
+  151:21  warning  Unexpected any. Specify a different type                                                                                            @typescript-eslint/no-explicit-any
+  159:7   warning  Unexpected console statement                                                                                                        no-console
+  166:6   warning  React Hook useEffect has missing dependencies: 'loadLogs' and 'loadStatistics'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\CADEditorDirect.tsx
+  165:13  warning  Unexpected console statement                                                                                                         no-console
+  194:9   warning  Unexpected console statement                                                                                                         no-console
+  211:6   warning  React Hook useEffect has missing dependencies: 'initMxCADConfig' and 'navigate'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\FileSystemManager.tsx
+  210:9   warning  Unexpected console statement                                                                                                                  no-console
+  265:6   warning  React Hook useCallback has a missing dependency: 'setEditingProject'. Either include it or remove the dependency array                        react-hooks/exhaustive-deps
+  384:5   warning  React Hook useCallback has a missing dependency: 'setDraggedNodes'. Either include it or remove the dependency array                          react-hooks/exhaustive-deps
+  398:5   warning  React Hook useCallback has a missing dependency: 'setDropTargetId'. Either include it or remove the dependency array                          react-hooks/exhaustive-deps
+  406:6   warning  React Hook useCallback has a missing dependency: 'setDropTargetId'. Either include it or remove the dependency array                          react-hooks/exhaustive-deps
+  439:5   warning  React Hook useCallback has missing dependencies: 'setDraggedNodes' and 'setDropTargetId'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  892:54  warning  Unexpected any. Specify a different type                                                                                                      @typescript-eslint/no-explicit-any
+  903:54  warning  Unexpected any. Specify a different type                                                                                                      @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\FontLibrary.tsx
+   49:7   warning  Unexpected console statement              no-console
+  173:7   warning  Unexpected console statement              no-console
+  198:7   warning  Unexpected console statement              no-console
+  216:7   warning  Unexpected console statement              no-console
+  596:7   warning  Unexpected console statement              no-console
+  634:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\Gallery.tsx
+   98:7   warning  Unexpected console statement                                                                                   no-console
+  131:7   warning  Unexpected console statement                                                                                   no-console
+  151:6   warning  React Hook useEffect has a missing dependency: 'fetchTypes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  156:6   warning  React Hook useEffect has a missing dependency: 'fetchFiles'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  241:7   warning  Unexpected console statement                                                                                   no-console
+  327:7   warning  Unexpected console statement                                                                                   no-console
+  531:35  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                react/no-unescaped-entities
+  531:41  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                react/no-unescaped-entities
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\Login.tsx
+  24:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\Profile.tsx
+  58:9  warning  Unexpected console statement  no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\ResetPassword.tsx
+  8:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\RoleManagement.tsx
+  113:6  warning  React Hook useEffect has a missing dependency: 'checkAccess'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  134:7  warning  Unexpected console statement                                                                                    no-console
+  198:9  warning  Unexpected console statement                                                                                    no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\TagManagement.tsx
+    2:19  error    'authApi' is defined but never used                                                                              unused-imports/no-unused-imports
+   78:6   warning  React Hook useEffect has a missing dependency: 'handleSearch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   87:7   warning  Unexpected console statement                                                                                     no-console
+  107:7   warning  Unexpected console statement                                                                                     no-console
+  148:7   warning  Unexpected console statement                                                                                     no-console
+  172:7   warning  Unexpected console statement                                                                                     no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\pages\UserManagement.tsx
+   68:6   warning  React Hook useEffect has a missing dependency: 'initialize'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   82:7   warning  Unexpected console statement                                                                                   no-console
+  129:6   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
+  152:29  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  223:26  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\services\apiClient.ts
+  168:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\services\galleryApi.ts
+  131:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  142:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\services\mockDb.ts
+   26:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   32:82  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  447:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\services\mxcadApi.ts
+  31:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\services\mxcadManager.ts
+    3:10  error    'apiService' is defined but never used    unused-imports/no-unused-imports
+   58:7   warning  Unexpected console statement              no-console
+   78:9   warning  Unexpected console statement              no-console
+   88:9   warning  Unexpected console statement              no-console
+   99:7   warning  Unexpected console statement              no-console
+  108:7   warning  Unexpected console statement              no-console
+  232:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  236:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  237:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  242:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  243:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  247:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  560:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\utils\globalAuth.ts
+  38:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\utils\logger.ts
+  73:11  warning  Unexpected console statement  no-console
+  77:9   warning  Unexpected console statement  no-console
+  80:9   warning  Unexpected console statement  no-console
+  83:9   warning  Unexpected console statement  no-console
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\utils\mxcadUtils.ts
+   5:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   6:5   warning  Unexpected console statement              no-console
+   9:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:5   warning  Unexpected console statement              no-console
+  13:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:5   warning  Unexpected console statement              no-console
+  17:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\web\MxCADOnline\cloudcad\packages\frontend\utils\validation.ts
+  59:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 172 problems (22 errors, 150 warnings)
+  9 errors and 0 warnings potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.

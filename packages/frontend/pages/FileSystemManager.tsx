@@ -10,7 +10,7 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useProjectManagement } from '../hooks/useProjectManagement';
-import { usePermission, Permission } from '../hooks/usePermission';
+import { usePermission } from '../hooks/usePermission';
 import { useAuth } from '../contexts/AuthContext';
 import { projectsApi } from '../services/apiService';
 import {
@@ -125,11 +125,14 @@ export const FileSystemManager: React.FC = () => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   // 检查是否可以创建项目
-  const canCreateProject = hasPermission(Permission.PROJECT_CREATE);
+  const canCreateProject = hasPermission('project:project:create');
 
   // 权限状态
   const [nodePermissions, setNodePermissions] = useState<
-    Map<string, { canEdit: boolean; canDelete: boolean; canManageMembers: boolean }>
+    Map<
+      string,
+      { canEdit: boolean; canDelete: boolean; canManageMembers: boolean }
+    >
   >(new Map());
 
   // 权限加载状态
@@ -203,7 +206,11 @@ export const FileSystemManager: React.FC = () => {
 
         setNodePermissions((prev) => {
           const newMap = new Map(prev);
-          newMap.set(urlProjectId, { canEdit, canDelete, canManageMembers: canManage });
+          newMap.set(urlProjectId, {
+            canEdit,
+            canDelete,
+            canManageMembers: canManage,
+          });
           return newMap;
         });
       } catch (error) {
@@ -802,16 +809,29 @@ export const FileSystemManager: React.FC = () => {
                 onPermanentlyDelete={handlePermanentlyDelete}
                 onRename={handleOpenRename}
                 onRefresh={handleRefresh}
-                onEdit={node.isRoot && permissions.canEdit ? () => openEditProject(node) : undefined}
+                onEdit={
+                  node.isRoot && permissions.canEdit
+                    ? () => openEditProject(node)
+                    : undefined
+                }
                 onDeleteNode={
-                  node.isRoot && permissions.canDelete ? () => handleDeleteProject(node.id, node.name) : undefined
+                  node.isRoot && permissions.canDelete
+                    ? () => handleDeleteProject(node.id, node.name)
+                    : undefined
                 }
                 onShowMembers={
-                  node.isRoot && permissions.canManageMembers ? () => handleShowMembers(node) : undefined
+                  node.isRoot && permissions.canManageMembers
+                    ? () => handleShowMembers(node)
+                    : undefined
                 }
                 onMove={!node.isRoot ? handleMove : undefined}
                 onCopy={!node.isRoot ? handleCopy : undefined}
-                onAddToGallery={!node.isFolder && (node.extension === '.dwg' || node.extension === '.dxf') ? handleAddToGallery : undefined}
+                onAddToGallery={
+                  !node.isFolder &&
+                  (node.extension === '.dwg' || node.extension === '.dxf')
+                    ? handleAddToGallery
+                    : undefined
+                }
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}

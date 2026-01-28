@@ -234,7 +234,6 @@ export class RolesService {
         _count: {
           select: {
             users: true,
-            projectMembers: true,
           },
         },
       },
@@ -251,11 +250,10 @@ export class RolesService {
 
     // 检查是否有用户正在使用该角色
     const userCount = role._count.users;
-    const memberCount = role._count.projectMembers;
 
-    if (userCount > 0 || memberCount > 0) {
+    if (userCount > 0) {
       throw new BadRequestException(
-        `该角色正在被 ${userCount} 个用户和 ${memberCount} 个项目成员使用，无法删除。请先将这些用户分配到其他角色。`
+        `该角色正在被 ${userCount} 个用户使用，无法删除。请先将这些用户分配到其他角色。`
       );
     }
 

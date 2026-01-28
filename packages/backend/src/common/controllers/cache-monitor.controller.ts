@@ -18,12 +18,12 @@ import { CacheWarmupService } from '../services/cache-warmup.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
-import { UserRole } from '../enums/permissions.enum';
+import { SystemRole } from '../enums/permissions.enum';
 
 @ApiTags('cache')
 @Controller('cache')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles(SystemRole.ADMIN)
 @ApiBearerAuth()
 export class CacheMonitorController {
   constructor(

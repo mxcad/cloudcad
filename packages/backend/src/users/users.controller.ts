@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { Permission } from '../common/enums/permissions.enum';
+import { SystemPermission } from '../common/enums/permissions.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -35,14 +35,14 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @RequirePermissions([Permission.USER_WRITE])
+  @RequirePermissions([SystemPermission.USER_CREATE])
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Get()
-  @RequirePermissions([Permission.USER_READ])
+  @RequirePermissions([SystemPermission.USER_READ])
   findAll(@Query() query: QueryUsersDto) {
     return this.usersService.findAll(query);
   }
@@ -51,7 +51,7 @@ export class UsersController {
   @ApiOperation({ summary: '根据邮箱搜索用户' })
   @ApiResponse({ status: 200, description: '搜索成功' })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  @RequirePermissions([Permission.USER_READ])
+  @RequirePermissions([SystemPermission.USER_READ])
   @HttpCode(HttpStatus.OK)
   searchByEmail(@Query('email') email: string) {
     return this.usersService.findByEmail(email);
@@ -60,7 +60,7 @@ export class UsersController {
   @Get('search')
   @ApiOperation({ summary: '搜索用户（用于添加项目成员）' })
   @ApiResponse({ status: 200, description: '搜索成功' })
-  @RequirePermissions([Permission.USER_READ])
+  @RequirePermissions([SystemPermission.USER_READ])
   @HttpCode(HttpStatus.OK)
   searchUsers(@Query() query: QueryUsersDto) {
     return this.usersService.findAll(query);
@@ -84,26 +84,26 @@ export class UsersController {
   }
 
   @Get(':id')
-  @RequirePermissions([Permission.USER_READ])
+  @RequirePermissions([SystemPermission.USER_READ])
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  @RequirePermissions([Permission.USER_WRITE])
+  @RequirePermissions([SystemPermission.USER_UPDATE])
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  @RequirePermissions([Permission.USER_DELETE])
+  @RequirePermissions([SystemPermission.USER_DELETE])
   @HttpCode(HttpStatus.OK)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
 
   @Patch(':id/status')
-  @RequirePermissions([Permission.USER_WRITE])
+  @RequirePermissions([SystemPermission.USER_UPDATE])
   @HttpCode(HttpStatus.OK)
   updateStatus(
     @Param('id') id: string,

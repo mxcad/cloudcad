@@ -14,7 +14,7 @@ import { Modal } from '../components/ui/Modal';
 import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi, authApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
-import { usePermission, Permission } from '../hooks/usePermission';
+import { usePermission } from '../hooks/usePermission';
 
 // 使用API类型
 type UserDto = components['schemas']['UserDto'];
@@ -88,10 +88,11 @@ export const UserManagement = () => {
       const response = await authApi.getProfile();
       const currentUser = response.data;
       // 拥有任意用户管理权限即可访问
-      const hasAccess = checkUserPermission(Permission.USER_READ) ||
-        checkUserPermission(Permission.USER_WRITE) ||
-        checkUserPermission(Permission.USER_DELETE) ||
-        checkUserPermission(Permission.USER_ADMIN);
+      const hasAccess =
+        checkUserPermission('system:user:read') ||
+        checkUserPermission('system:user:create') ||
+        checkUserPermission('system:user:update') ||
+        checkUserPermission('system:user:delete');
       setHasPermission(hasAccess);
       return hasAccess;
     } catch (error) {
@@ -312,7 +313,7 @@ export const UserManagement = () => {
                 管理团队成员、分配角色及存储配额
               </p>
             </div>
-            {checkUserPermission(Permission.USER_WRITE) && (
+            {checkUserPermission('system:user:create') && (
               <Button onClick={handleOpenCreate} disabled={loading}>
                 添加用户
               </Button>
@@ -491,7 +492,7 @@ export const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        {checkUserPermission(Permission.USER_WRITE) && (
+                        {checkUserPermission('system:user:update') && (
                           <button
                             onClick={() => handleOpenEdit(user)}
                             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -500,7 +501,7 @@ export const UserManagement = () => {
                             <Edit size={16} />
                           </button>
                         )}
-                        {checkUserPermission(Permission.USER_DELETE) && (
+                        {checkUserPermission('system:user:delete') && (
                           <button
                             onClick={() => handleDelete(user.id)}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

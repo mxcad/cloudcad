@@ -26,7 +26,7 @@ const AuditAction = {
   ACCESS_DENIED: 'ACCESS_DENIED',
 } as const;
 
-type AuditActionType = typeof AuditAction[keyof typeof AuditAction];
+type AuditActionType = (typeof AuditAction)[keyof typeof AuditAction];
 
 // 资源类型
 const ResourceType = {
@@ -38,7 +38,7 @@ const ResourceType = {
   FOLDER: 'FOLDER',
 } as const;
 
-type ResourceTypeType = typeof ResourceType[keyof typeof ResourceType];
+type ResourceTypeType = (typeof ResourceType)[keyof typeof ResourceType];
 
 // 审计日志接口
 interface AuditLog {
@@ -216,15 +216,21 @@ export const AuditLogPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 mb-1">总记录数</div>
-          <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {statistics.total}
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 mb-1">成功次数</div>
-          <div className="text-2xl font-bold text-green-600">{statistics.successCount}</div>
+          <div className="text-2xl font-bold text-green-600">
+            {statistics.successCount}
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 mb-1">失败次数</div>
-          <div className="text-2xl font-bold text-red-600">{statistics.failureCount}</div>
+          <div className="text-2xl font-bold text-red-600">
+            {statistics.failureCount}
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 mb-1">成功率</div>
@@ -277,7 +283,9 @@ export const AuditLogPage: React.FC = () => {
             <select
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={filters.resourceType}
-              onChange={(e) => handleFilterChange('resourceType', e.target.value)}
+              onChange={(e) =>
+                handleFilterChange('resourceType', e.target.value)
+              }
             >
               <option value="">全部</option>
               {Object.values(ResourceType).map((type) => (
@@ -337,11 +345,7 @@ export const AuditLogPage: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-2 mt-4">
-          <Button
-            onClick={handleResetFilters}
-            variant="outline"
-            size="sm"
-          >
+          <Button onClick={handleResetFilters} variant="outline" size="sm">
             重置筛选
           </Button>
           <Button
@@ -350,7 +354,9 @@ export const AuditLogPage: React.FC = () => {
             size="sm"
             disabled={loading}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+            />
             刷新
           </Button>
         </div>
@@ -388,13 +394,19 @@ export const AuditLogPage: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td
+                    colSpan={7}
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
                     加载中...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td
+                    colSpan={7}
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
                     暂无数据
                   </td>
                 </tr>
@@ -407,7 +419,9 @@ export const AuditLogPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div>
                         <div className="font-medium">{log.user.username}</div>
-                        <div className="text-gray-500 text-xs">{log.user.email}</div>
+                        <div className="text-gray-500 text-xs">
+                          {log.user.email}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -417,7 +431,10 @@ export const AuditLogPage: React.FC = () => {
                       {getResourceTypeDisplayName(log.resourceType)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <DescriptionText text={log.resourceId || '-'} maxLength={20} />
+                      <DescriptionText
+                        text={log.resourceId || '-'}
+                        maxLength={20}
+                      />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {log.success ? (
@@ -431,7 +448,10 @@ export const AuditLogPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <DescriptionText text={log.details || '-'} maxLength={30} />
+                      <DescriptionText
+                        text={log.details || '-'}
+                        maxLength={30}
+                      />
                       {log.errorMessage && (
                         <div className="text-red-600 text-xs mt-1">
                           {log.errorMessage}

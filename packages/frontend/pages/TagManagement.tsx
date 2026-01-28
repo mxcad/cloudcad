@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { DescriptionText } from '../components/ui/TruncateText';
-import { usePermission, Permission } from '../hooks/usePermission';
+import { usePermission } from '../hooks/usePermission';
 
 interface Tag {
   id: string;
@@ -42,7 +42,7 @@ const PREDEFINED_COLORS = [
 ];
 
 export default function TagManagement() {
-  const { hasPermission } = usePermission();
+  const { hasPermission, hasRole } = usePermission();
   const [canAccess, setCanAccess] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,11 +59,10 @@ export default function TagManagement() {
 
   useEffect(() => {
     // 检查是否有权限访问标签管理页面
-    // 使用 SYSTEM_ADMIN 权限，因为标签管理是系统级别的功能
-    const hasAccess = hasPermission(Permission.SYSTEM_ADMIN) ||
-                      hasPermission(Permission.USER_ADMIN);
+    // 使用角色检查，因为标签管理是系统级别的功能
+    const hasAccess = hasRole(['ADMIN', 'USER_MANAGER']);
     setCanAccess(hasAccess);
-  }, [hasPermission]);
+  }, [hasRole]);
 
   useEffect(() => {
     if (canAccess) {

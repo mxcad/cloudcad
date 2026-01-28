@@ -1,8 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { RedisCacheService } from './redis-cache.service';
-import { Permission } from '../enums/permissions.enum';
-import { NodeAccessRole } from '../enums/permissions.enum';
+import { SystemPermission, ProjectRole } from '../enums/permissions.enum';
 
 /**
  * 缓存预热服务
@@ -130,7 +129,7 @@ export class CacheWarmupService implements OnModuleInit {
               projectId: project.id,
             },
             include: {
-              role: true,
+              projectRole: true,
               user: {
                 select: {
                   id: true,
@@ -141,7 +140,9 @@ export class CacheWarmupService implements OnModuleInit {
 
           // 预热每个成员的访问角色
           for (const member of members) {
-            const accessRole = this.mapRoleToAccessRole(member.role.name);
+            const accessRole = this.mapRoleToAccessRole(
+              member.projectRole.name
+            );
             await this.redisCacheService.cacheNodeAccessRole(
               member.user.id,
               project.id,
@@ -153,7 +154,7 @@ export class CacheWarmupService implements OnModuleInit {
           await this.redisCacheService.cacheNodeAccessRole(
             project.ownerId,
             project.id,
-            NodeAccessRole.OWNER
+            ProjectRole.OWNER
           );
 
           this.logger.debug(
@@ -175,37 +176,26 @@ export class CacheWarmupService implements OnModuleInit {
   /**
    * 根据角色获取权限列表
    */
-  private getPermissionsByRole(role: string): Permission[] {
-    const rolePermissions: Record<string, Permission[]> = {
+  private getPermissionsByRole(role: string): SystemPermission[] {
+    const rolePermissions: Record<string, SystemPermission[]> = {
       ADMIN: [
-        Permission.USER_READ,
-        Permission.USER_WRITE,
-        Permission.USER_DELETE,
-        Permission.USER_ADMIN,
-        Permission.PROJECT_CREATE,
-        Permission.PROJECT_READ,
-        Permission.PROJECT_WRITE,
-        Permission.PROJECT_DELETE,
-        Permission.PROJECT_ADMIN,
-        Permission.PROJECT_MEMBER_MANAGE,
-        Permission.FILE_CREATE,
-        Permission.FILE_READ,
-        Permission.FILE_WRITE,
-        Permission.FILE_DELETE,
-        Permission.FILE_SHARE,
-        Permission.FILE_DOWNLOAD,
-        Permission.SYSTEM_ADMIN,
-        Permission.SYSTEM_MONITOR,
+        SystemPermission.USER_READ,
+        SystemPermission.USER_CREATE,
+        SystemPermission.USER_UPDATE,
+        SystemPermission.USER_DELETE,
+        SystemPermission.ROLE_READ,
+        SystemPermission.ROLE_CREATE,
+        SystemPermission.ROLE_UPDATE,
+        SystemPermission.ROLE_DELETE,
+        SystemPermission.ROLE_PERMISSION_MANAGE,
+        SystemPermission.FONT_READ,
+        SystemPermission.FONT_UPLOAD,
+        SystemPermission.FONT_DELETE,
+        SystemPermission.FONT_DOWNLOAD,
+        SystemPermission.SYSTEM_ADMIN,
+        SystemPermission.SYSTEM_MONITOR,
       ],
-      USER: [
-        Permission.PROJECT_CREATE,
-        Permission.PROJECT_READ,
-        Permission.FILE_CREATE,
-        Permission.FILE_READ,
-        Permission.FILE_WRITE,
-        Permission.FILE_SHARE,
-        Permission.FILE_DOWNLOAD,
-      ],
+      USER: [],
     };
 
     return rolePermissions[role] || [];
@@ -214,16 +204,16 @@ export class CacheWarmupService implements OnModuleInit {
   /**
    * 将角色名称映射到访问角色
    */
-  private mapRoleToAccessRole(roleName: string): NodeAccessRole {
-    const roleMap: Record<string, NodeAccessRole> = {
-      PROJECT_OWNER: NodeAccessRole.OWNER,
-      PROJECT_ADMIN: NodeAccessRole.ADMIN,
-      PROJECT_MEMBER: NodeAccessRole.MEMBER,
-      PROJECT_EDITOR: NodeAccessRole.EDITOR,
-      PROJECT_VIEWER: NodeAccessRole.VIEWER,
+  private mapRoleToAccessRole(roleName: string): ProjectRole {
+    const roleMap: Record<string, ProjectRole> = {
+      PROJECT_OWNER: ProjectRole.OWNER,
+      PROJECT_ADMIN: ProjectRole.ADMIN,
+      PROJECT_MEMBER: ProjectRole.MEMBER,
+      PROJECT_EDITOR: ProjectRole.EDITOR,
+      PROJECT_VIEWER: ProjectRole.VIEWER,
     };
 
-    return roleMap[roleName] || NodeAccessRole.VIEWER;
+    return roleMap[roleName] || ProjectRole.VIEWER;
   }
 
   /**
@@ -313,7 +303,7 @@ export class CacheWarmupService implements OnModuleInit {
           projectId: project.id,
         },
         include: {
-          role: true,
+          projectRole: true,
           user: {
             select: {
               id: true,
@@ -324,7 +314,7 @@ export class CacheWarmupService implements OnModuleInit {
 
       // 预热每个成员的访问角色
       for (const member of members) {
-        const accessRole = this.mapRoleToAccessRole(member.role.name);
+        const accessRole = this.mapRoleToAccessRole(member.projectRole.name);
         await this.redisCacheService.cacheNodeAccessRole(
           member.user.id,
           project.id,
@@ -336,7 +326,7 @@ export class CacheWarmupService implements OnModuleInit {
       await this.redisCacheService.cacheNodeAccessRole(
         project.ownerId,
         project.id,
-        NodeAccessRole.OWNER
+        ProjectRole.OWNER
       );
 
       this.logger.log(

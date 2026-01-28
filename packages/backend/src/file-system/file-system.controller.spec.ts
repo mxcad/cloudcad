@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileSystemController } from './file-system.controller';
 import { FileSystemService } from './file-system.service';
+import { ProjectPermissionService } from '../roles/project-permission.service';
 
 describe('FileSystemController', () => {
   let controller: FileSystemController;
   let service: FileSystemService;
+  let projectPermissionService: ProjectPermissionService;
 
   const mockFileSystemService = {
     createProject: jest.fn(),
@@ -19,6 +21,13 @@ describe('FileSystemController', () => {
     deleteNode: jest.fn(),
     moveNode: jest.fn(),
   };
+
+  const mockProjectPermissionService = {
+    hasRole: jest.fn(),
+    checkPermission: jest.fn(),
+    getUserPermissions: jest.fn(),
+    getUserRole: jest.fn(),
+  } as any;
 
   const mockRequest = {
     user: {
@@ -36,6 +45,10 @@ describe('FileSystemController', () => {
           provide: FileSystemService,
           useValue: mockFileSystemService,
         },
+        {
+          provide: ProjectPermissionService,
+          useValue: mockProjectPermissionService,
+        },
       ],
     })
       .setLogger({
@@ -49,6 +62,9 @@ describe('FileSystemController', () => {
 
     controller = module.get<FileSystemController>(FileSystemController);
     service = module.get<FileSystemService>(FileSystemService);
+    projectPermissionService = module.get<ProjectPermissionService>(
+      ProjectPermissionService
+    );
   });
 
   afterEach(() => {

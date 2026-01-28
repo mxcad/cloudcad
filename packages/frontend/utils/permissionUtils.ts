@@ -155,7 +155,9 @@ export const hasNodePermission = async (
       VIEWER: 'VIEWER',
     };
 
-    const userRole = roleName ? (roleMap[roleName] || roleName) as NodeAccessRole : undefined;
+    const userRole = roleName
+      ? ((roleMap[roleName] || roleName) as NodeAccessRole)
+      : undefined;
 
     // 缓存用户的角色
     if (userRole) {

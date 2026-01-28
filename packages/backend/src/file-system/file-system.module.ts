@@ -8,9 +8,16 @@ import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
 import { AuditLogModule } from '../audit/audit-log.module';
+import { RolesModule } from '../roles/roles.module';
 
 @Module({
-  imports: [DatabaseModule, CommonModule, StorageModule, AuditLogModule],
+  imports: [
+    DatabaseModule,
+    CommonModule,
+    StorageModule,
+    AuditLogModule,
+    RolesModule,
+  ],
   controllers: [FileSystemController],
   providers: [
     FileSystemService,

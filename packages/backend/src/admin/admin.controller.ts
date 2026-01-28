@@ -14,11 +14,11 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { PermissionService } from '../common/services/permission.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
-import { Permission } from '../common/enums/permissions.enum';
+import { SystemPermission } from '../common/enums/permissions.enum';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-@RequirePermissions([Permission.SYSTEM_ADMIN])
+@RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AdminController {
   constructor(
     private readonly permissionService: PermissionService,
@@ -59,24 +59,6 @@ export class AdminController {
     this.cacheService.clearUserCache(userId);
     return {
       message: `用户 ${userId} 的权限缓存已清除`,
-    };
-  }
-
-  @Delete('permissions/cache/project/:projectId')
-  @HttpCode(HttpStatus.OK)
-  async clearProjectCache(@Param('projectId') projectId: string) {
-    this.cacheService.clearProjectCache(projectId);
-    return {
-      message: `项目 ${projectId} 的权限缓存已清除`,
-    };
-  }
-
-  @Delete('permissions/cache/file/:fileId')
-  @HttpCode(HttpStatus.OK)
-  async clearFileCache(@Param('fileId') fileId: string) {
-    this.cacheService.clearFileCache(fileId);
-    return {
-      message: `文件 ${fileId} 的权限缓存已清除`,
     };
   }
 

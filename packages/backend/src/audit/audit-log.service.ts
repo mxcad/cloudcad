@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { PermissionService } from '../common/services/permission.service';
-import { Permission } from '../common/enums/permissions.enum';
+import { SystemPermission } from '../common/enums/permissions.enum';
 import { AuditAction, ResourceType } from '@prisma/client';
 
 /**
@@ -33,10 +33,9 @@ export class AuditLogService {
    * 检查系统管理员权限
    */
   private async checkSystemAdmin(userId: string): Promise<void> {
-    const hasPermission = await this.permissionService.checkPermission(
+    const hasPermission = await this.permissionService.checkSystemPermission(
       userId,
-      undefined,
-      Permission.SYSTEM_ADMIN
+      SystemPermission.SYSTEM_ADMIN
     );
     if (!hasPermission) {
       throw new ForbiddenException('需要系统管理员权限');
