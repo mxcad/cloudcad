@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, Plus, Trash2, Info } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -7,103 +7,148 @@ import { rolesApi, projectRolesApi } from '../services/rolesApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission, ProjectPermission } from '../constants/permissions';
 
-// 系统权限分组
-const SYSTEM_PERMISSION_GROUPS = [
-  {
-    label: '用户权限',
-    items: [
-      { key: 'SYSTEM_USER_READ', label: '查看用户' },
-      { key: 'SYSTEM_USER_CREATE', label: '创建用户' },
-      { key: 'SYSTEM_USER_UPDATE', label: '编辑用户' },
-      { key: 'SYSTEM_USER_DELETE', label: '删除用户' },
-    ],
-  },
-  {
-    label: '角色权限管理',
-    items: [
-      { key: 'SYSTEM_ROLE_READ', label: '查看角色' },
-      { key: 'SYSTEM_ROLE_CREATE', label: '创建角色' },
-      { key: 'SYSTEM_ROLE_UPDATE', label: '编辑角色' },
-      { key: 'SYSTEM_ROLE_DELETE', label: '删除角色' },
-      { key: 'SYSTEM_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
-    ],
-  },
-  {
-    label: '字体管理',
-    items: [
-      { key: 'SYSTEM_FONT_READ', label: '查看字体' },
-      { key: 'SYSTEM_FONT_UPLOAD', label: '上传字体' },
-      { key: 'SYSTEM_FONT_DELETE', label: '删除字体' },
-      { key: 'SYSTEM_FONT_DOWNLOAD', label: '下载字体' },
-    ],
-  },
-  {
-    label: '系统权限',
-    items: [
-      { key: 'SYSTEM_ADMIN', label: '系统管理' },
-      { key: 'SYSTEM_MONITOR', label: '系统监控' },
-    ],
-  },
-];
+// 权限依赖关系
+const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
+  'SYSTEM_USER_UPDATE': ['SYSTEM_USER_READ'],
+  'SYSTEM_USER_DELETE': ['SYSTEM_USER_READ'],
+  'SYSTEM_ROLE_UPDATE': ['SYSTEM_ROLE_READ'],
+  'SYSTEM_ROLE_DELETE': ['SYSTEM_ROLE_READ'],
+  'FILE_DELETE': ['FILE_OPEN'],
+  'FILE_EDIT': ['FILE_OPEN'],
+  'FILE_SHARE': ['FILE_OPEN'],
+  'FILE_DOWNLOAD': ['FILE_OPEN'],
+  'FILE_COMMENT': ['FILE_OPEN'],
+  'FILE_PRINT': ['FILE_OPEN'],
+  'FILE_COMPARE': ['FILE_OPEN'],
+  'CAD_SAVE': ['FILE_OPEN'],
+  'CAD_EXPORT': ['FILE_OPEN'],
+  'CAD_EXTERNAL_REFERENCE': ['FILE_OPEN'],
+  'VERSION_CREATE': ['VERSION_READ'],
+  'VERSION_DELETE': ['VERSION_READ'],
+  'VERSION_RESTORE': ['VERSION_READ'],
+};
 
-// 项目权限分组
-const PROJECT_PERMISSION_GROUPS = [
-  {
-    label: '项目权限',
-    items: [
-      { key: 'PROJECT_CREATE', label: '创建项目' },
-      { key: 'PROJECT_READ', label: '查看项目' },
-      { key: 'PROJECT_UPDATE', label: '编辑项目' },
-      { key: 'PROJECT_DELETE', label: '删除项目' },
-      { key: 'PROJECT_MEMBER_MANAGE', label: '成员管理' },
-      { key: 'PROJECT_MEMBER_ASSIGN', label: '成员分配' },
-      { key: 'PROJECT_ROLE_MANAGE', label: '角色管理' },
-      { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
-      { key: 'PROJECT_TRANSFER', label: '转让所有权' },
-      { key: 'PROJECT_SETTINGS_MANAGE', label: '项目设置' },
-    ],
-  },
-  {
-    label: '文件权限',
-    items: [
-      { key: 'FILE_CREATE', label: '创建文件' },
-      { key: 'FILE_UPLOAD', label: '上传文件' },
-      { key: 'FILE_OPEN', label: '查看文件' },
-      { key: 'FILE_EDIT', label: '编辑文件' },
-      { key: 'FILE_DELETE', label: '删除文件' },
-      { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
-      { key: 'FILE_DOWNLOAD', label: '下载文件' },
-      { key: 'FILE_SHARE', label: '分享文件' },
-      { key: 'FILE_COMMENT', label: '批注文件' },
-      { key: 'FILE_PRINT', label: '打印文件' },
-      { key: 'FILE_COMPARE', label: '图纸比对' },
-    ],
-  },
-  {
-    label: 'CAD 图纸权限',
-    items: [
-      { key: 'CAD_SAVE', label: '保存图纸' },
-      { key: 'CAD_EXPORT', label: '导出图纸' },
-      { key: 'CAD_EXTERNAL_REFERENCE', label: '管理外部参照' },
-    ],
-  },
-  {
-    label: '图库权限',
-    items: [
-      { key: 'GALLERY_USE', label: '使用图库' },
-      { key: 'GALLERY_ADD', label: '添加到图库' },
-    ],
-  },
-  {
-    label: '版本管理',
-    items: [
-      { key: 'VERSION_READ', label: '查看版本' },
-      { key: 'VERSION_CREATE', label: '创建版本' },
-      { key: 'VERSION_DELETE', label: '删除版本' },
-      { key: 'VERSION_RESTORE', label: '恢复版本' },
-    ],
-  },
-];
+// 检查权限是否满足依赖条件
+const isPermissionEnabled = (perm: string, selected: string[]): boolean => {
+  const dependencies = PERMISSION_DEPENDENCIES[perm];
+  if (!dependencies) return true;
+
+  return dependencies.every((dep) => selected.includes(dep));
+};
+
+// 获取权限缺失的依赖
+const getMissingDependencies = (perm: string, selected: string[]): string[] => {
+  const dependencies = PERMISSION_DEPENDENCIES[perm];
+  if (!dependencies) return [];
+
+  return dependencies.filter((dep) => !selected.includes(dep));
+};
+
+const togglePermission = (perm: string, selected: string[], setSelected: (perms: string[]) => void) => {
+  if (selected.includes(perm)) {
+    setSelected(selected.filter((p) => p !== perm));
+  } else {
+    setSelected([...selected, perm]);
+  }
+};
+
+// 权限分组定义
+const PERMISSION_GROUPS = {
+  system: [
+    {
+      label: '用户权限',
+      items: [
+        { key: 'SYSTEM_USER_READ', label: '查看用户' },
+        { key: 'SYSTEM_USER_CREATE', label: '创建用户' },
+        { key: 'SYSTEM_USER_UPDATE', label: '编辑用户' },
+        { key: 'SYSTEM_USER_DELETE', label: '删除用户' },
+      ],
+    },
+    {
+      label: '角色权限管理',
+      items: [
+        { key: 'SYSTEM_ROLE_READ', label: '查看角色' },
+        { key: 'SYSTEM_ROLE_CREATE', label: '创建角色' },
+        { key: 'SYSTEM_ROLE_UPDATE', label: '编辑角色' },
+        { key: 'SYSTEM_ROLE_DELETE', label: '删除角色' },
+        { key: 'SYSTEM_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
+      ],
+    },
+    {
+      label: '字体管理',
+      items: [
+        { key: 'SYSTEM_FONT_READ', label: '查看字体' },
+        { key: 'SYSTEM_FONT_UPLOAD', label: '上传字体' },
+        { key: 'SYSTEM_FONT_DELETE', label: '删除字体' },
+        { key: 'SYSTEM_FONT_DOWNLOAD', label: '下载字体' },
+      ],
+    },
+    {
+      label: '系统权限',
+      items: [
+        { key: 'SYSTEM_ADMIN', label: '系统管理' },
+        { key: 'SYSTEM_MONITOR', label: '系统监控' },
+      ],
+    },
+  ],
+  project: [
+    {
+      label: '项目权限',
+      items: [
+        { key: 'PROJECT_CREATE', label: '创建项目' },
+        { key: 'PROJECT_READ', label: '查看项目' },
+        { key: 'PROJECT_UPDATE', label: '编辑项目' },
+        { key: 'PROJECT_DELETE', label: '删除项目' },
+        { key: 'PROJECT_MEMBER_MANAGE', label: '成员管理' },
+        { key: 'PROJECT_MEMBER_ASSIGN', label: '成员分配' },
+        { key: 'PROJECT_ROLE_MANAGE', label: '角色管理' },
+        { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
+        { key: 'PROJECT_TRANSFER', label: '转让所有权' },
+        { key: 'PROJECT_SETTINGS_MANAGE', label: '项目设置' },
+      ],
+    },
+    {
+      label: '文件权限',
+      items: [
+        { key: 'FILE_CREATE', label: '创建文件' },
+        { key: 'FILE_UPLOAD', label: '上传文件' },
+        { key: 'FILE_OPEN', label: '查看文件' },
+        { key: 'FILE_EDIT', label: '编辑文件' },
+        { key: 'FILE_DELETE', label: '删除文件' },
+        { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
+        { key: 'FILE_DOWNLOAD', label: '下载文件' },
+        { key: 'FILE_SHARE', label: '分享文件' },
+        { key: 'FILE_COMMENT', label: '批注文件' },
+        { key: 'FILE_PRINT', label: '打印文件' },
+        { key: 'FILE_COMPARE', label: '图纸比对' },
+      ],
+    },
+    {
+      label: 'CAD 图纸权限',
+      items: [
+        { key: 'CAD_SAVE', label: '保存图纸' },
+        { key: 'CAD_EXPORT', label: '导出图纸' },
+        { key: 'CAD_EXTERNAL_REFERENCE', label: '管理外部参照' },
+      ],
+    },
+    {
+      label: '图库权限',
+      items: [
+        { key: 'GALLERY_USE', label: '使用图库' },
+        { key: 'GALLERY_ADD', label: '添加到图库' },
+      ],
+    },
+    {
+      label: '版本管理',
+      items: [
+        { key: 'VERSION_READ', label: '查看版本' },
+        { key: 'VERSION_CREATE', label: '创建版本' },
+        { key: 'VERSION_DELETE', label: '删除版本' },
+        { key: 'VERSION_RESTORE', label: '恢复版本' },
+      ],
+    },
+  ],
+};
 
 type SystemRole = {
   id: string;
@@ -126,6 +171,164 @@ type ProjectRole = {
   _count: {
     members: number;
   };
+};
+
+// 通用权限配置Modal组件
+interface PermissionConfigModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  roleName: string;
+  roleDesc: string;
+  onNameChange: (value: string) => void;
+  onDescChange: (value: string) => void;
+  permissions: string[];
+  onPermissionsChange: (perms: string[]) => void;
+  onSave: () => void;
+  isSystemRole: boolean;
+  isEditingSystemRole: boolean;
+  permissionType: 'system' | 'project';
+}
+
+const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  roleName,
+  roleDesc,
+  onNameChange,
+  onDescChange,
+  permissions,
+  onPermissionsChange,
+  onSave,
+  isSystemRole,
+  isEditingSystemRole,
+  permissionType,
+}) => {
+  const groups = PERMISSION_GROUPS[permissionType];
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            取消
+          </Button>
+          <Button onClick={onSave}>保存配置</Button>
+        </>
+      }
+    >
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-slate-700">
+            基本信息
+          </label>
+          <input
+            type="text"
+            placeholder="角色名称"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-400"
+            value={roleName}
+            onChange={(e) => onNameChange(e.target.value)}
+            disabled={isSystemRole && isEditingSystemRole}
+          />
+          <input
+            type="text"
+            placeholder="描述"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-400"
+            value={roleDesc}
+            onChange={(e) => onDescChange(e.target.value)}
+            disabled={isSystemRole && isEditingSystemRole}
+          />
+          {isSystemRole && isEditingSystemRole && (
+            <p className="text-xs text-amber-600">
+              系统角色不允许修改名称和描述，但可以修改权限
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">
+            权限分配
+          </label>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            {groups.map((group) => (
+              <div
+                key={group.label}
+                className="border border-slate-200 rounded-lg overflow-hidden"
+              >
+                <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                  {group.label}
+                </div>
+                <div className="p-3 grid grid-cols-1 gap-2">
+                  {group.items.map((perm) => {
+                    const isEnabled = isPermissionEnabled(perm.key, permissions);
+                    const dependencies = PERMISSION_DEPENDENCIES[perm.key];
+                    const missingDeps = dependencies
+                      ? dependencies.filter(dep => !permissions.includes(dep))
+                      : [];
+
+                    return (
+                      <label
+                        key={perm.key}
+                        className={`flex items-center gap-3 p-2 rounded transition-colors ${
+                          isEnabled ? 'hover:bg-slate-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        title={!isEnabled && missingDeps.length > 0
+                          ? `⚠️ 此权限需要先勾选：${missingDeps.map(dep => {
+                              const depItem = groups
+                                .flatMap(g => g.items)
+                                .find(i => i.key === dep);
+                              return depItem ? depItem.label : dep;
+                            }).join('、')}`
+                          : perm.label
+                        }
+                      >
+                        <div
+                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                            permissions.includes(perm.key)
+                              ? 'bg-indigo-600 border-indigo-600'
+                              : isEnabled
+                                ? 'border-slate-300 bg-white'
+                                : 'border-slate-200 bg-slate-50'
+                          }`}
+                        >
+                          {permissions.includes(perm.key) && (
+                            <Check size={12} className="text-white" />
+                          )}
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={permissions.includes(perm.key)}
+                          onChange={() =>
+                            isEnabled &&
+                            togglePermission(
+                              perm.key,
+                              permissions,
+                              onPermissionsChange
+                            )
+                          }
+                          disabled={!isEnabled}
+                        />
+                        <span className="text-sm text-slate-700">{perm.label}</span>
+                        {/* Info图标：只在依赖权限未勾选时显示 */}
+                        {!isEnabled && dependencies && dependencies.length > 0 && (
+                          <Info size={14} className="text-amber-500" />
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
 };
 
 export const RoleManagement = () => {
@@ -204,9 +407,13 @@ export const RoleManagement = () => {
     setSystemRoleDesc(role.description || '');
     // 提取权限值（可能是字符串数组或对象数组）
     const permissions = Array.isArray(role.permissions)
-      ? role.permissions.map((p: any) =>
-          typeof p === 'string' ? p : p.permission || p.toString()
-        )
+      ? role.permissions
+          .map((p: any) => {
+            if (typeof p === 'string') return p;
+            if (p && p.permission) return p.permission;
+            return null;
+          })
+          .filter((p): p is string => p !== null)
       : [];
     setSelectedSystemPerms(permissions);
     setSystemModalOpen(true);
@@ -277,9 +484,13 @@ export const RoleManagement = () => {
     setProjectRoleDesc(role.description || '');
     // 提取权限值（可能是字符串数组或对象数组）
     const permissions = Array.isArray(role.permissions)
-      ? role.permissions.map((p: any) =>
-          typeof p === 'string' ? p : p.permission || p.toString()
-        )
+      ? role.permissions
+          .map((p: any) => {
+            if (typeof p === 'string') return p;
+            if (p && p.permission) return p.permission;
+            return null;
+          })
+          .filter((p): p is string => p !== null)
       : [];
     setSelectedProjectPerms(permissions);
     setProjectModalOpen(true);
@@ -334,13 +545,37 @@ export const RoleManagement = () => {
     }
   };
 
-  const togglePermission = (perm: string, selected: string[], setSelected: (perms: string[]) => void) => {
-    if (selected.includes(perm)) {
-      setSelected(selected.filter((p) => p !== perm));
-    } else {
-      setSelected([...selected, perm]);
-    }
-  };
+  // 权限依赖关系
+const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
+  'SYSTEM_USER_UPDATE': ['SYSTEM_USER_READ'],
+  'SYSTEM_USER_DELETE': ['SYSTEM_USER_READ'],
+  'SYSTEM_ROLE_UPDATE': ['SYSTEM_ROLE_READ'],
+  'SYSTEM_ROLE_DELETE': ['SYSTEM_ROLE_READ'],
+};
+
+// 检查权限是否满足依赖条件
+const isPermissionEnabled = (perm: string, selected: string[]): boolean => {
+  const dependencies = PERMISSION_DEPENDENCIES[perm];
+  if (!dependencies) return true;
+
+  return dependencies.every((dep) => selected.includes(dep));
+};
+
+// 获取权限缺失的依赖
+const getMissingDependencies = (perm: string, selected: string[]): string[] => {
+  const dependencies = PERMISSION_DEPENDENCIES[perm];
+  if (!dependencies) return [];
+
+  return dependencies.filter((dep) => !selected.includes(dep));
+};
+
+const togglePermission = (perm: string, selected: string[], setSelected: (perms: string[]) => void) => {
+  if (selected.includes(perm)) {
+    setSelected(selected.filter((p) => p !== perm));
+  } else {
+    setSelected([...selected, perm]);
+  }
+};
 
   // 判断是否是管理员
   const isAdmin = hasRole('ADMIN') || hasRole('USER_MANAGER');
@@ -440,14 +675,24 @@ export const RoleManagement = () => {
                     拥有权限
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p: any) => (
-                      <span
-                        key={p.id || p}
-                        className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
-                      >
-                        {(typeof p === 'string' ? p : p.permission || p.toString()).split('_').slice(1).join('_')}
-                      </span>
-                    ))}
+                    {role.permissions.slice(0, 6).map((p: any) => {
+                      const permKey = typeof p === 'string' ? p : (p?.permission || '');
+                      const allPermissions = [
+                        ...PERMISSION_GROUPS.system.flatMap(g => g.items),
+                        ...PERMISSION_GROUPS.project.flatMap(g => g.items)
+                      ];
+                      const permItem = allPermissions.find(item => item.key === permKey);
+                      const label = permItem ? permItem.label : permKey.split('_').slice(1).join('_');
+
+                      return (
+                        <span
+                          key={p.id || p}
+                          className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                     {role.permissions.length > 6 && (
                       <span className="text-xs px-2 py-1 text-slate-400">
                         +{role.permissions.length - 6}
@@ -525,14 +770,24 @@ export const RoleManagement = () => {
                     拥有权限
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p: any) => (
-                      <span
-                        key={p.id || p}
-                        className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
-                      >
-                        {(typeof p === 'string' ? p : p.permission || p.toString()).split('_').slice(1).join('_')}
-                      </span>
-                    ))}
+                    {role.permissions.slice(0, 6).map((p: any) => {
+                      const permKey = typeof p === 'string' ? p : (p?.permission || '');
+                      const allPermissions = [
+                        ...PERMISSION_GROUPS.system.flatMap(g => g.items),
+                        ...PERMISSION_GROUPS.project.flatMap(g => g.items)
+                      ];
+                      const permItem = allPermissions.find(item => item.key === permKey);
+                      const label = permItem ? permItem.label : permKey.split('_').slice(1).join('_');
+
+                      return (
+                        <span
+                          key={p.id || p}
+                          className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                     {role.permissions.length > 6 && (
                       <span className="text-xs px-2 py-1 text-slate-400">
                         +{role.permissions.length - 6}
@@ -556,194 +811,38 @@ export const RoleManagement = () => {
       )}
 
       {/* 系统角色权限配置弹窗 */}
-      <Modal
+      <PermissionConfigModal
         isOpen={systemModalOpen}
         onClose={() => setSystemModalOpen(false)}
         title={editingSystemRole ? '配置系统角色权限' : '新建系统角色'}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setSystemModalOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSaveSystemRole}>保存配置</Button>
-          </>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
-              基本信息
-            </label>
-            <input
-              type="text"
-              placeholder="角色名称 (如: 内容审核员)"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-400"
-              value={systemRoleName}
-              onChange={(e) => setSystemRoleName(e.target.value)}
-              disabled={editingSystemRole && editingSystemRole.isSystem}
-            />
-            <input
-              type="text"
-              placeholder="描述"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-400"
-              value={systemRoleDesc}
-              onChange={(e) => setSystemRoleDesc(e.target.value)}
-              disabled={editingSystemRole && editingSystemRole.isSystem}
-            />
-            {editingSystemRole && editingSystemRole.isSystem && (
-              <p className="text-xs text-amber-600">
-                系统角色不允许修改名称和描述，但可以修改权限
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              权限分配
-            </label>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              {SYSTEM_PERMISSION_GROUPS.map((group) => (
-                <div
-                  key={group.label}
-                  className="border border-slate-200 rounded-lg overflow-hidden"
-                >
-                  <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
-                    {group.label}
-                  </div>
-                  <div className="p-3 grid grid-cols-1 gap-2">
-                    {group.items.map((perm) => (
-                      <label
-                        key={perm.key}
-                        className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer"
-                      >
-                        <div
-                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                            selectedSystemPerms.includes(perm.key)
-                              ? 'bg-indigo-600 border-indigo-600'
-                              : 'border-slate-300 bg-white'
-                          }`}
-                        >
-                          {selectedSystemPerms.includes(perm.key) && (
-                            <Check size={12} className="text-white" />
-                          )}
-                        </div>
-                        <input
-                          type="checkbox"
-                          className="hidden"
-                          checked={selectedSystemPerms.includes(perm.key)}
-                          onChange={() =>
-                            togglePermission(
-                              perm.key,
-                              selectedSystemPerms,
-                              setSelectedSystemPerms
-                            )
-                          }
-                        />
-                        <span className="text-sm text-slate-700">{perm.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Modal>
+        roleName={systemRoleName}
+        roleDesc={systemRoleDesc}
+        onNameChange={setSystemRoleName}
+        onDescChange={setSystemRoleDesc}
+        permissions={selectedSystemPerms}
+        onPermissionsChange={setSelectedSystemPerms}
+        onSave={handleSaveSystemRole}
+        isSystemRole={editingSystemRole?.isSystem || false}
+        isEditingSystemRole={!!editingSystemRole && editingSystemRole.isSystem}
+        permissionType="system"
+      />
 
       {/* 项目角色权限配置弹窗 */}
-      <Modal
+      <PermissionConfigModal
         isOpen={projectModalOpen}
         onClose={() => setProjectModalOpen(false)}
         title={editingProjectRole ? '配置项目角色权限' : '新建项目角色'}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setProjectModalOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSaveProjectRole}>保存配置</Button>
-          </>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
-              基本信息
-            </label>
-            <input
-              type="text"
-              placeholder="角色名称 (如: 设计主管)"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-400"
-              value={projectRoleName}
-              onChange={(e) => setProjectRoleName(e.target.value)}
-              disabled={editingProjectRole && editingProjectRole.isSystem}
-            />
-            <input
-              type="text"
-              placeholder="描述"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-400"
-              value={projectRoleDesc}
-              onChange={(e) => setProjectRoleDesc(e.target.value)}
-              disabled={editingProjectRole && editingProjectRole.isSystem}
-            />
-            {editingProjectRole && editingProjectRole.isSystem && (
-              <p className="text-xs text-amber-600">
-                系统角色不允许修改名称和描述，但可以修改权限
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              权限分配
-            </label>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              {PROJECT_PERMISSION_GROUPS.map((group) => (
-                <div
-                  key={group.label}
-                  className="border border-slate-200 rounded-lg overflow-hidden"
-                >
-                  <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
-                    {group.label}
-                  </div>
-                  <div className="p-3 grid grid-cols-1 gap-2">
-                    {group.items.map((perm) => (
-                      <label
-                        key={perm.key}
-                        className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer"
-                      >
-                        <div
-                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                            selectedProjectPerms.includes(perm.key)
-                              ? 'bg-indigo-600 border-indigo-600'
-                              : 'border-slate-300 bg-white'
-                          }`}
-                        >
-                          {selectedProjectPerms.includes(perm.key) && (
-                            <Check size={12} className="text-white" />
-                          )}
-                        </div>
-                        <input
-                          type="checkbox"
-                          className="hidden"
-                          checked={selectedProjectPerms.includes(perm.key)}
-                          onChange={() =>
-                            togglePermission(
-                              perm.key,
-                              selectedProjectPerms,
-                              setSelectedProjectPerms
-                            )
-                          }
-                        />
-                        <span className="text-sm text-slate-700">{perm.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Modal>
+        roleName={projectRoleName}
+        roleDesc={projectRoleDesc}
+        onNameChange={setProjectRoleName}
+        onDescChange={setProjectRoleDesc}
+        permissions={selectedProjectPerms}
+        onPermissionsChange={setSelectedProjectPerms}
+        onSave={handleSaveProjectRole}
+        isSystemRole={editingProjectRole?.isSystem || false}
+        isEditingSystemRole={!!editingProjectRole && editingProjectRole.isSystem}
+        permissionType="project"
+      />
     </div>
   );
 };

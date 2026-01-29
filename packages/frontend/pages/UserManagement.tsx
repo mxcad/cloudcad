@@ -30,7 +30,7 @@ type RoleDto = {
 };
 
 export const UserManagement = () => {
-  const { hasPermission, hasRole } = usePermission();
+  const { hasPermission } = usePermission();
   const [canAccess, setCanAccess] = useState(false);
   const [users, setUsers] = useState<UserDto[]>([]);
   const [roles, setRoles] = useState<RoleDto[]>([]);
@@ -86,17 +86,13 @@ export const UserManagement = () => {
 
   const checkAccess = async (): Promise<boolean> => {
     try {
-      // 管理员或用户管理员角色可以直接访问
-      const hasRoleAccess = hasRole('ADMIN') || hasRole('USER_MANAGER');
-
-      // 或者拥有任意用户管理权限
-      const hasPermissionAccess =
+      // 检查用户是否拥有任意用户管理权限
+      const hasAccess =
         hasPermission(SystemPermission.SYSTEM_USER_READ) ||
         hasPermission(SystemPermission.SYSTEM_USER_CREATE) ||
         hasPermission(SystemPermission.SYSTEM_USER_UPDATE) ||
         hasPermission(SystemPermission.SYSTEM_USER_DELETE);
 
-      const hasAccess = hasRoleAccess || hasPermissionAccess;
       setCanAccess(hasAccess);
       return hasAccess;
     } catch (error) {
@@ -281,6 +277,42 @@ export const UserManagement = () => {
         <AlertCircle size={48} className="text-red-400 mb-4" />
         <h2 className="text-xl font-bold text-slate-800">访问被拒绝</h2>
         <p>您没有权限访问此页面。</p>
+        <p className="text-sm mt-2">请联系管理员获取用户管理权限。</p>
+      </div>
+    );
+  }
+
+  // 有权限但无法查看列表的情况
+  if (!hasPermission(SystemPermission.SYSTEM_USER_READ)) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex flex-col items-center justify-center h-96 text-slate-500 bg-white rounded-xl border border-slate-200">
+          <AlertCircle size={48} className="text-amber-400 mb-4" />
+          <h2 className="text-xl font-bold text-slate-800">无法查看用户列表</h2>
+          <p className="text-center mt-2 max-w-md">
+            您没有查看用户列表的权限，但拥有以下操作权限：
+          </p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {hasPermission(SystemPermission.SYSTEM_USER_CREATE) && (
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                创建用户
+              </span>
+            )}
+            {hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                更新用户
+              </span>
+            )}
+            {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
+              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
+                删除用户
+              </span>
+            )}
+          </div>
+          <p className="text-sm mt-4 text-slate-400">
+            请联系管理员授予查看用户列表的权限（SYSTEM_USER_READ）
+          </p>
+        </div>
       </div>
     );
   }
@@ -496,24 +528,28 @@ export const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        {hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
-                          <button
-                            onClick={() => handleOpenEdit(user)}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                            title="编辑"
-                          >
-                            <Edit size={16} />
-                          </button>
-                        )}
-                        {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="删除"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
+                        {/* 编辑按钮：需要查看和编辑权限 */}
+                        {hasPermission(SystemPermission.SYSTEM_USER_READ) &&
+                          hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
+                            <button
+                              onClick={() => handleOpenEdit(user)}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="编辑"
+                            >
+                              <Edit size={16} />
+                            </button>
+                          )}
+                        {/* 删除按钮：需要查看和删除权限 */}
+                        {hasPermission(SystemPermission.SYSTEM_USER_READ) &&
+                          hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
+                            <button
+                              onClick={() => handleDelete(user.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="删除"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>

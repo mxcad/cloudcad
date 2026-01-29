@@ -143,11 +143,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             hasPermission(SystemPermission.FONT_DOWNLOAD),
         },
     {
-          to: '/users',
-          icon: Users,
-          label: '用户管理',
-          visible: hasRole('ADMIN') || hasRole('USER_MANAGER'),
-        },
+      to: '/users',
+      icon: Users,
+      label: '用户管理',
+      visible:
+        hasPermission(SystemPermission.SYSTEM_USER_READ) ||
+        hasPermission(SystemPermission.SYSTEM_USER_CREATE) ||
+        hasPermission(SystemPermission.SYSTEM_USER_UPDATE) ||
+        hasPermission(SystemPermission.SYSTEM_USER_DELETE),
+    },
     {
       to: '/roles',
       icon: ShieldCheck,
