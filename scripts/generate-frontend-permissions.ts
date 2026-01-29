@@ -80,6 +80,8 @@ async function generateFrontendPermissions() {
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
  * 然后运行 pnpm generate:frontend-permissions 重新生成
+ *
+ * 注意：权限格式为大写下划线（如 'PROJECT_CREATE'），与后端枚举和数据库保持一致
  */
 
 /**

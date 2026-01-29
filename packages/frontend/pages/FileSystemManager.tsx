@@ -28,6 +28,7 @@ import { MembersModal } from '../components/modals/MembersModal';
 import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
+import { ProjectPermission } from '../constants/permissions';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -132,7 +133,7 @@ export const FileSystemManager: React.FC = () => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   // 检查是否可以创建项目
-  const canCreateProject = hasPermission('PROJECT_CREATE');
+  const canCreateProject = hasPermission(ProjectPermission.PROJECT_CREATE);
 
   // 权限状态
   const [nodePermissions, setNodePermissions] = useState<
