@@ -11,9 +11,9 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleDto } from './dto/role.dto';
 import { RoleCategory } from '../common/enums/permissions.enum';
 import {
-  toPrismaPermission,
   isValidPermission,
 } from '../common/utils/permission.util';
+import { Permission as PrismaPermission } from '@prisma/client';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 
 /**
@@ -119,7 +119,7 @@ export class RolesService {
         isSystem: false, // 新创建的角色都不是系统角色
         permissions: {
           create: createRoleDto.permissions.map((permission) => ({
-            permission: toPrismaPermission(permission),
+            permission: permission as PrismaPermission,
           })),
         },
       },
@@ -199,7 +199,7 @@ export class RolesService {
           permissions: {
             deleteMany: {}, // 删除所有旧权限
             create: updateRoleDto.permissions.map((permission) => ({
-              permission: toPrismaPermission(permission),
+              permission: permission as PrismaPermission,
             })), // 创建新权限
           },
         }),
@@ -299,7 +299,7 @@ export class RolesService {
         permissions: {
           createMany: {
             data: permissions.map((permission) => ({
-              permission: toPrismaPermission(permission),
+              permission: permission as PrismaPermission,
             })),
             skipDuplicates: true, // 跳过已存在的权限
           },
@@ -345,7 +345,7 @@ export class RolesService {
         permissions: {
           deleteMany: {
             permission: {
-              in: permissions.map(toPrismaPermission),
+              in: permissions as PrismaPermission[],
             },
           },
         },

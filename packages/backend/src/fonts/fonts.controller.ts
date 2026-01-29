@@ -37,7 +37,7 @@ import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
 @ApiBearerAuth()
 @Controller('font-management')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions([SystemPermission.FONT_UPLOAD])
+@RequirePermissions([SystemPermission.SYSTEM_FONT_UPLOAD])
 export class FontsController {
   private readonly logger = new Logger(FontsController.name);
 

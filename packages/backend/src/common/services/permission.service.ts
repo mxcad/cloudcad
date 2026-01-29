@@ -295,9 +295,9 @@ export class PermissionService {
     // 示例规则 1：工作时间限制（9:00 - 18:00）
     // 仅对敏感操作（如 DELETE）进行时间限制
     const sensitivePermissions: SystemPermission[] = [
-      SystemPermission.USER_DELETE,
-      SystemPermission.ROLE_DELETE,
-      SystemPermission.FONT_DELETE,
+      SystemPermission.SYSTEM_USER_DELETE,
+      SystemPermission.SYSTEM_ROLE_DELETE,
+      SystemPermission.SYSTEM_FONT_DELETE,
     ];
 
     if (sensitivePermissions.includes(permission) && context.time) {
