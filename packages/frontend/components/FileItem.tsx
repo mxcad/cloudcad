@@ -27,6 +27,7 @@ interface FileItemProps {
   onEnter: (node: FileSystemNode) => void;
   onDownload: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;
+  onPermanentlyDelete?: (node: FileSystemNode) => void;
   onRename: (node: FileSystemNode) => void;
   onRefresh?: () => void;
   onEdit?: (e: React.MouseEvent) => void;
@@ -53,6 +54,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onEnter,
   onDownload,
   onDelete,
+  onPermanentlyDelete,
   onRename,
   onRefresh,
   onEdit,
@@ -294,6 +296,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             onCloseMenu={handleCloseMenu}
             onDownload={onDownload}
             onDelete={onDelete}
+            onPermanentlyDelete={onPermanentlyDelete}
             onRename={onRename}
             onEdit={onEdit}
             onShowMembers={onShowMembers}
@@ -370,7 +373,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       <FileItemInfo node={node} />
 
       <FileItemTypeTag node={node} />
-
+   
       <div className="flex items-center gap-1 opacity-100 transition-opacity duration-200">
         {isTrash ? (
           <>
@@ -398,7 +401,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete(node);
+                onPermanentlyDelete(node);
               }}
               className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
               title="彻底删除"
@@ -643,7 +646,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDelete(node);
+                    onRestore ? onPermanentlyDelete(node) : onDelete(node);
                   }}
                   className={`p-2 rounded-lg transition-colors ${
                     onRestore

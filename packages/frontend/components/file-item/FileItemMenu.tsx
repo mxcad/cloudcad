@@ -123,7 +123,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleMenuAction(() => onDelete(node));
+              handleMenuAction(() => onPermanentlyDelete ? onPermanentlyDelete(node) : onDelete(node));
             }}
             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
           >

@@ -95,7 +95,7 @@ export class FileSystemService {
 
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
-      // 1. 创建项目节点
+      // 创建项目节点（ownerId 字段标识了项目所有者）
       const rootNode = await this.prisma.fileSystemNode.create({
         data: {
           name: dto.name,
@@ -107,72 +107,8 @@ export class FileSystemService {
         },
       });
 
-      // 2. 为项目创建默认的项目角色（使用 ProjectRolesService 确保权限分配正确）
-      const { ProjectRolesService } = await import('../roles/project-roles.service');
-      const projectRolesService = new ProjectRolesService(this.prisma);
-      await projectRolesService.createDefaultRoles(rootNode.id);
-
-      // 3. 查找项目所有者角色
-      const ownerRole = await this.prisma.projectRole.findFirst({
-        where: {
-          projectId: rootNode.id,
-          name: 'PROJECT_OWNER',
-          isSystem: true,
-        },
-      });
-
-      if (!ownerRole) {
-        throw new BadRequestException('项目所有者角色创建失败');
-      }
-
-      // 4. 将创建者添加为项目所有者
-      await this.prisma.projectMember.create({
-        data: {
-          projectId: rootNode.id,
-          userId,
-          projectRoleId: ownerRole.id,
-        },
-      });
-
-      // 5. 重新查询完整的项目信息
-      const projectWithDetails = await this.prisma.fileSystemNode.findUnique({
-        where: { id: rootNode.id },
-        include: {
-          projectMembers: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  username: true,
-                  nickname: true,
-                  avatar: true,
-                  role: true,
-                },
-              },
-              projectRole: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                  isSystem: true,
-                },
-              },
-            },
-          },
-          projectRoles: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              isSystem: true,
-            },
-          },
-        },
-      });
-
       this.logger.log(`项目创建成功: ${rootNode.name} by user ${userId}`);
-      return projectWithDetails;
+      return rootNode;
     } catch (error) {
       this.logger.error(`项目创建失败: ${error.message}`, error.stack);
       throw error;
@@ -193,9 +129,16 @@ export class FileSystemService {
     const where: any = {
       isRoot: true,
       deletedAt: null,
-      projectMembers: {
-        some: { userId },
-      },
+      OR: [
+        // 用户拥有的项目
+        { ownerId: userId },
+        // 用户作为成员加入的项目
+        {
+          projectMembers: {
+            some: { userId },
+          },
+        },
+      ],
     };
 
     if (search) {
@@ -283,15 +226,27 @@ export class FileSystemService {
     const where: any = {
       isRoot: true,
       deletedAt: { not: null },
-      projectMembers: {
-        some: { userId },
-      },
+      OR: [
+        { ownerId: userId }, // 项目所有者
+        {
+          projectMembers: {
+            some: { userId }, // 项目成员
+          },
+        },
+      ],
     };
 
+    this.logger.log(`查询已删除项目 - 用户ID: ${userId}, 查询条件: ${JSON.stringify(where)}`);
+
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+      // 使用 AND 条件，避免覆盖原有的 OR 条件
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        },
       ];
     }
 
@@ -334,6 +289,8 @@ export class FileSystemService {
         }),
         this.prisma.fileSystemNode.count({ where }),
       ]);
+
+      this.logger.log(`查询已删除项目结果 - 找到 ${projects.length} 个项目，总计 ${total} 个`);
 
       return {
         data: projects,
@@ -463,8 +420,23 @@ export class FileSystemService {
 
   async deleteProject(projectId: string, permanently: boolean = false) {
     try {
+      this.logger.log(`开始删除项目: ${projectId}, permanently=${permanently}`);
+
+      // 先检查项目是否存在
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+
+      if (!project) {
+        this.logger.warn(`项目不存在: ${projectId}`);
+        throw new NotFoundException('项目不存在');
+      }
+
+      this.logger.log(`项目状态检查: ${projectId}, deletedAt=${project.deletedAt}, projectStatus=${project.projectStatus}`);
+
       if (permanently) {
         // 彻底删除：递归删除所有子节点和文件
+        this.logger.log(`开始彻底删除项目: ${projectId}`);
         await this.prisma.$transaction(async (tx) => {
           await this.deleteDescendantsWithFiles(tx, projectId);
           await tx.fileSystemNode.delete({
@@ -474,7 +446,9 @@ export class FileSystemService {
         this.logger.log(`项目彻底删除成功: ${projectId}`);
       } else {
         // 软删除到回收站：只删除项目根节点，不递归删除子节点
-        await this.prisma.fileSystemNode.update({
+        this.logger.log(`开始移至回收站: ${projectId}, permanently=${permanently}`);
+
+        const updatedNode = await this.prisma.fileSystemNode.update({
           where: { id: projectId, isRoot: true },
           data: {
             deletedAt: new Date(),
@@ -482,7 +456,8 @@ export class FileSystemService {
             deletedByCascade: false, // 主动删除标记
           },
         });
-        this.logger.log(`项目已移至回收站: ${projectId}`);
+
+        this.logger.log(`项目已移至回收站: ${projectId}, deletedAt=${updatedNode.deletedAt}`);
       }
       return { message: permanently ? '项目已彻底删除' : '项目已移至回收站' };
     } catch (error) {
@@ -1485,6 +1460,19 @@ export class FileSystemService {
     roles: string[]
   ): Promise<boolean> {
     try {
+      // 1. 如果检查的角色包含 OWNER，先检查是否是项目所有者
+      if (roles.includes('OWNER') || roles.includes('PROJECT_OWNER')) {
+        const project = await this.prisma.fileSystemNode.findUnique({
+          where: { id: projectId },
+          select: { ownerId: true },
+        });
+
+        if (project?.ownerId === userId) {
+          return true;
+        }
+      }
+
+      // 2. 检查是否是项目成员并具有指定角色
       return await this.permissionService.hasNodeAccessRole(
         userId,
         projectId,
@@ -1504,6 +1492,17 @@ export class FileSystemService {
    */
   async checkFileAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
+      // 1. 先检查是否是项目所有者
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { ownerId: true },
+      });
+
+      if (node?.ownerId === userId) {
+        return true;
+      }
+
+      // 2. 检查是否是项目成员
       const role = await this.permissionService.getNodeAccessRole(
         userId,
         nodeId
@@ -1838,6 +1837,18 @@ export class FileSystemService {
 
   async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
+      // 1. 先检查是否是项目所有者
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { ownerId: true },
+      });
+
+      // 如果是项目所有者，直接返回 true
+      if (node?.ownerId === userId) {
+        return true;
+      }
+
+      // 2. 检查是否是项目成员
       const role = await this.permissionService.getNodeAccessRole(
         userId,
         nodeId

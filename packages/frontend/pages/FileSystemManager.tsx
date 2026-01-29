@@ -28,7 +28,6 @@ import { MembersModal } from '../components/modals/MembersModal';
 import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
-import { ProjectPermission } from '../constants/permissions';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -100,6 +99,7 @@ export const FileSystemManager: React.FC = () => {
     handlePageChange,
     handlePageSizeChange,
     handleDeleteProject,
+    handlePermanentlyDeleteProject,
     isTrashView,
     handleToggleTrashView,
     handleRestoreNode,
@@ -132,8 +132,8 @@ export const FileSystemManager: React.FC = () => {
   const { isAdmin, hasPermission } = usePermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
-  // 检查是否可以创建项目
-  const canCreateProject = hasPermission(ProjectPermission.PROJECT_CREATE);
+  // 所有用户都可以创建项目，不需要权限检查
+  const canCreateProject = true;
 
   // 权限状态
   const [nodePermissions, setNodePermissions] = useState<
@@ -198,38 +198,9 @@ export const FileSystemManager: React.FC = () => {
     }
   }, [breadcrumbs]);
 
-  // 加载节点权限信息
-  useEffect(() => {
-    if (!user || !urlProjectId) return;
-
-    const loadPermissions = async () => {
-      setPermissionsLoading(true);
-      try {
-        const { canEditNode, canDeleteNode, canManageNodeMembers } =
-          await import('../utils/permissionUtils');
-
-        const canEdit = await canEditNode(user, urlProjectId);
-        const canDelete = await canDeleteNode(user, urlProjectId);
-        const canManage = await canManageNodeMembers(user, urlProjectId);
-
-        setNodePermissions((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(urlProjectId, {
-            canEdit,
-            canDelete,
-            canManageMembers: canManage,
-          });
-          return newMap;
-        });
-      } catch (error) {
-        console.error('加载权限信息失败:', error);
-      } finally {
-        setPermissionsLoading(false);
-      }
-    };
-
-    loadPermissions();
-  }, [user, urlProjectId]);
+  // 直接使用后端返回的数据（已包含分页和搜索）
+  // 不再进行前端过滤，避免破坏分页的正确性
+  const displayNodes = nodes;
 
   // 获取当前正确的父节点 ID（上传目标目录）
   // 使用 ref 缓存最新值，避免闭包问题
@@ -269,9 +240,64 @@ export const FileSystemManager: React.FC = () => {
     }
   }, [currentNode]);
 
-  // 直接使用后端返回的数据（已包含分页和搜索）
-  // 不再进行前端过滤，避免破坏分页的正确性
-  const displayNodes = nodes;
+  // 加载节点权限信息
+  useEffect(() => {
+    if (!user) return;
+
+    // 确定需要加载权限的节点列表
+    let nodesToLoad: string[] = [];
+
+    if (isAtRoot) {
+      // 项目列表页面：为所有项目根节点加载权限
+      nodesToLoad = displayNodes
+        .filter((node) => node.isRoot)
+        .map((node) => node.id);
+    } else if (urlProjectId) {
+      // 项目内部页面：为当前项目加载权限
+      nodesToLoad = [urlProjectId];
+    }
+
+    if (nodesToLoad.length === 0) return;
+
+    const loadPermissions = async () => {
+      setPermissionsLoading(true);
+      try {
+        const { canEditNode, canDeleteNode, canManageNodeMembers } =
+          await import('../utils/permissionUtils');
+
+        // 并行加载所有节点的权限
+        const permissionsPromises = nodesToLoad.map(async (nodeId) => {
+          const [canEdit, canDelete, canManage] = await Promise.all([
+            canEditNode(user, nodeId),
+            canDeleteNode(user, nodeId),
+            canManageNodeMembers(user, nodeId),
+          ]);
+
+          return { nodeId, canEdit, canDelete, canManageMembers: canManage };
+        });
+
+        const permissionsResults = await Promise.all(permissionsPromises);
+
+        setNodePermissions((prev) => {
+          const newMap = new Map(prev);
+          permissionsResults.forEach((result) => {
+            newMap.set(result.nodeId, {
+              canEdit: result.canEdit,
+              canDelete: result.canDelete,
+              canManageMembers: result.canManageMembers,
+            });
+          });
+          return newMap;
+        });
+      } catch (error) {
+        console.error('加载权限信息失败:', error);
+      } finally {
+        setPermissionsLoading(false);
+      }
+    };
+
+    loadPermissions();
+  }, [user, isAtRoot, urlProjectId, displayNodes]);
 
   // 打开成员管理模态框
   const handleShowMembers = useCallback((project: FileSystemNode) => {
@@ -919,7 +945,15 @@ export const FileSystemManager: React.FC = () => {
                 }
                 onDeleteNode={
                   node.isRoot && permissions.canDelete
-                    ? () => handleDeleteProject(node.id, node.name)
+                    ? () => {
+                        // 在回收站视图中，删除为彻底删除
+                        // 在正常视图中，删除为移到回收站
+                        if (isProjectTrashView) {
+                          handlePermanentlyDeleteProject(node.id, node.name);
+                        } else {
+                          handleDeleteProject(node.id, node.name);
+                        }
+                      }
                     : undefined
                 }
                 onShowMembers={
@@ -1048,12 +1082,24 @@ export const FileSystemManager: React.FC = () => {
               </>
             )}
             
-            <button
-              onClick={handleBatchDelete}
-              className="text-error-400 hover:text-white text-sm font-medium transition-colors"
-            >
-              删除
-            </button>
+            {(isTrashView || isProjectTrashView) && (
+              <button
+                onClick={() => handleBatchDelete(true)}
+                className="text-error-400 hover:text-white text-sm font-medium transition-colors"
+              >
+                彻底删除
+              </button>
+            )}
+
+            {/* 正常视图的删除按钮 */}
+            {!isTrashView && !isProjectTrashView && (
+              <button
+                onClick={() => handleBatchDelete(false)}
+                className="text-error-400 hover:text-white text-sm font-medium transition-colors"
+              >
+                删除
+              </button>
+            )}
             <button
               onClick={() => {
                 selectedNodes.clear();

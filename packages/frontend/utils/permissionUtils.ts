@@ -117,6 +117,21 @@ export const hasNodePermission = async (
     return true;
   }
 
+  try {
+    // 首先检查用户是否为项目所有者
+    const { projectsApi } = await import('../services/apiService');
+    const projectResponse = await projectsApi.getNode(nodeId);
+    const project = projectResponse.data;
+
+    // 如果用户是项目所有者，拥有所有权限
+    if (project.ownerId === user.id) {
+      return true;
+    }
+  } catch (error) {
+    logger.error('获取项目信息失败:', error);
+    return false;
+  }
+
   // 检查缓存
   if (nodePermissionCache.has(nodeId)) {
     const role = nodePermissionCache.get(nodeId);

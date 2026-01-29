@@ -71,6 +71,7 @@ export class FileSystemController {
   @Get('projects/trash')
   @ApiResponse({ status: 200, description: '获取已删除项目列表成功' })
   async getDeletedProjects(@Request() req, @Query() query?: QueryProjectsDto) {
+    this.logger.log(`获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`);
     return this.fileSystemService.getUserDeletedProjects(req.user.id, query);
   }
 
@@ -100,12 +101,15 @@ export class FileSystemController {
   @Delete('projects/:projectId')
   @NodePermission(ProjectRole.OWNER)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'ɾ����Ŀ�ɹ�' })
+  @ApiResponse({ status: 200, description: '删除项目成功' })
   async deleteProject(
     @Param('projectId') projectId: string,
-    @Body() body: { permanently?: boolean }
+    @Query('permanently') permanently?: boolean
   ) {
-    return this.fileSystemService.deleteProject(projectId, body?.permanently);
+    this.logger.log(`删除项目请求: projectId=${projectId}, permanently=${permanently}, userId=${this['request']?.user?.id}`);
+    const result = await this.fileSystemService.deleteProject(projectId, permanently);
+    this.logger.log(`删除项目响应: ${JSON.stringify(result)}`);
+    return result;
   }
 
   @Get('trash')

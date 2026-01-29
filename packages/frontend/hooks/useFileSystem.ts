@@ -98,6 +98,12 @@ export const useFileSystem = () => {
   const isFolderMode = !!urlProjectId;
   // 是否为项目回收站视图（仅在项目根目录模式下有效）
   const [isProjectTrashView, setIsProjectTrashView] = useState(false); // 状态管理
+  const isProjectTrashViewRef = useRef(isProjectTrashView); // ref 用于在 loadData 中获取最新值
+
+  // 同步 ref 和状态
+  useEffect(() => {
+    isProjectTrashViewRef.current = isProjectTrashView;
+  }, [isProjectTrashView]);
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [currentNode, setCurrentNode] = useState<FileSystemNode | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -138,6 +144,9 @@ export const useFileSystem = () => {
   const [isTrashView, setIsTrashView] = useState(false);
 
   const [refreshCount, setRefreshCount] = useState(0);
+
+  // 删除操作状态，防止重复点击
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 跟踪上一次的值，防止重复调用
   // 初始值设为 null，确保首次加载时能正确触发
@@ -262,11 +271,17 @@ export const useFileSystem = () => {
           });
 
           if (currentNode.parentId) {
-            const parentResponse = await projectsApi.getNode(
-              currentNode.parentId,
-              { signal }
-            );
-            currentNode = parentResponse.data;
+            try {
+              const parentResponse = await projectsApi.getNode(
+                currentNode.parentId,
+                { signal }
+              );
+              currentNode = parentResponse.data;
+            } catch (error) {
+              // 获取父节点失败（可能是权限问题或节点已删除），停止遍历
+              console.warn('[useFileSystem] 获取父节点失败，停止构建面包屑:', currentNode.parentId, error);
+              break;
+            }
           } else {
             break;
           }
@@ -339,14 +354,17 @@ export const useFileSystem = () => {
 
       if (isProjectRootMode) {
         // 项目根目录模式
+        console.log('[useFileSystem] 项目根目录模式, isProjectTrashView:', isProjectTrashViewRef.current);
         let response;
-        
-        if (isProjectTrashView) {
+
+        if (isProjectTrashViewRef.current) {
           // 加载已删除的项目列表（项目回收站）
+          console.log('[useFileSystem] 加载已删除项目，参数:', params);
           response = await projectsApi.getDeletedProjects({
             params,
             signal: abortController.signal,
           });
+          console.log('[useFileSystem] 已删除项目响应:', response);
         } else {
           // 加载正常项目列表
           response = await projectsApi.list({
@@ -356,7 +374,10 @@ export const useFileSystem = () => {
         }
 
         // 处理分页响应
+        console.log('[useFileSystem] 处理响应:', response.data);
+        console.log('[useFileSystem] 完整响应:', response);
         if (response.data?.data) {
+          console.log('[useFileSystem] 设置节点数据:', response.data.data);
           setNodes(response.data.data);
           setPaginationMeta(response.data.meta);
         } else {
@@ -380,14 +401,11 @@ export const useFileSystem = () => {
         const currentNodeId = urlNodeId || urlProjectId;
 
         if (isTrashView) {
-          // 回收站视图：加载项目回收站内容
-          const trashResponse = await projectsApi.getProjectTrash(
-            urlProjectId,
-            {
-              params,
-              signal: abortController.signal,
-            }
-          );
+          // 全局回收站视图：加载所有已删除的项目（从主导航进入的回收站）
+          const trashResponse = await trashApi.getList({
+            params,
+            signal: abortController.signal,
+          });
 
           // 处理分页响应
           if (trashResponse.data?.data) {
@@ -407,28 +425,47 @@ export const useFileSystem = () => {
             });
           }
 
-          // 获取项目信息作为当前节点
-          const projectResponse = await projectsApi.getNode(urlProjectId, {
-            signal: abortController.signal,
-          });
-          setCurrentNode(projectResponse.data);
+          // 尝试获取项目信息作为当前节点（可能失败，捕获错误）
+          try {
+            const projectResponse = await projectsApi.getNode(urlProjectId, {
+              signal: abortController.signal,
+            });
+            setCurrentNode(projectResponse.data);
 
-          // 构建面包屑（项目名称 + 回收站）
-          const projectData = projectResponse.data;
-          setBreadcrumbs([
-            {
-              id: projectData.id,
-              name: projectData.name,
-              isRoot: true,
-              isFolder: true,
-            },
-            {
-              id: 'trash',
-              name: '回收站',
-              isRoot: false,
-              isFolder: true,
-            },
-          ]);
+            // 构建面包屑（项目名称 + 回收站）
+            const projectData = projectResponse.data;
+            setBreadcrumbs([
+              {
+                id: projectData.id,
+                name: projectData.name,
+                isRoot: true,
+                isFolder: true,
+              },
+              {
+                id: 'trash',
+                name: '回收站',
+                isRoot: false,
+                isFolder: true,
+              },
+            ]);
+          } catch (error) {
+            // 获取项目信息失败（可能是权限问题），使用项目 ID 构建简单的面包屑
+            console.warn('[useFileSystem] 获取项目信息失败，使用默认面包屑:', error);
+            setBreadcrumbs([
+              {
+                id: urlProjectId,
+                name: '项目',
+                isRoot: true,
+                isFolder: true,
+              },
+              {
+                id: 'trash',
+                name: '回收站',
+                isRoot: false,
+                isFolder: true,
+              },
+            ]);
+          }
         } else {
           // 正常视图：加载文件夹内容
           const [nodeResponse, childrenResponse] = await Promise.all([
@@ -718,32 +755,30 @@ export const useFileSystem = () => {
   // 删除节点（默认到回收站）
   const handleDelete = useCallback(
     (node: FileSystemNode, permanently: boolean = false) => {
+      // 防止重复点击
+      if (isDeleting) {
+        return;
+      }
+
       let deleteMessage: string;
-      let deleteApi: Promise<unknown>;
 
       if (permanently) {
         // 彻底删除
         if (node.isRoot) {
           deleteMessage = `确定要彻底删除项目"${node.name}"吗？此操作将同时删除项目内的所有内容，且不可恢复。`;
-          deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要彻底删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容，且不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, true);
         } else {
           deleteMessage = `确定要彻底删除文件"${node.name}"吗？此操作不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, true);
         }
       } else {
         // 移到回收站
         if (node.isRoot) {
           deleteMessage = `确定要将项目"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要将文件夹"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, false);
         } else {
           deleteMessage = `确定要将文件"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, false);
         }
       }
 
@@ -752,9 +787,41 @@ export const useFileSystem = () => {
         deleteMessage,
         async () => {
           try {
-            await deleteApi;
+            setIsDeleting(true);
+
+            // 只在确认后才执行删除操作
+            if (permanently) {
+              if (node.isRoot) {
+                await projectsApi.delete(node.id, true);
+              } else if (node.isFolder) {
+                await projectsApi.deleteNode(node.id, true);
+              } else {
+                await projectsApi.deleteNode(node.id, true);
+              }
+            } else {
+              if (node.isRoot) {
+                await projectsApi.delete(node.id, false);
+              } else if (node.isFolder) {
+                await projectsApi.deleteNode(node.id, false);
+              } else {
+                await projectsApi.deleteNode(node.id, false);
+              }
+            }
+
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
-            loadData();
+
+            // 如果是在回收站视图中删除项目（permanently=true），重新加载回收站数据
+            if (isProjectTrashViewRef.current && permanently) {
+              loadData();
+            }
+            // 如果是彻底删除项目，跳转到项目根目录（仅当不在回收站视图时）
+            else if (permanently && node.isRoot) {
+              navigate('/projects');
+            }
+            // 其他情况重新加载数据
+            else {
+              loadData();
+            }
           } catch (error) {
             let errorMessage = '删除失败';
             if (error instanceof Error) {
@@ -770,13 +837,15 @@ export const useFileSystem = () => {
               errorMessage = err.response?.data?.message || errorMessage;
             }
             showToast(errorMessage, 'error');
+          } finally {
+            setIsDeleting(false);
           }
         },
         permanently ? 'danger' : 'warning',
         permanently ? '彻底删除' : '删除'
       );
     },
-    [showConfirm, loadData, showToast]
+    [showConfirm, loadData, showToast, isDeleting]
   );
 
   // 批量删除
@@ -800,14 +869,29 @@ export const useFileSystem = () => {
               Array.from(selectedNodes).map((nodeId: string) => {
                 const node = nodes.find((n) => n.id === nodeId);
                 if (node?.isRoot) {
-                  return projectsApi.delete(node.id);
+                  return projectsApi.delete(node.id, permanently);
                 }
                 return projectsApi.deleteNode(node.id, permanently);
               })
             );
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             setSelectedNodes(new Set<string>());
-            loadData();
+
+            // 如果是在回收站视图中删除项目（permanently=true），重新加载回收站数据
+            if (isProjectTrashViewRef.current && permanently) {
+              loadData();
+            }
+            // 如果是彻底删除且包含项目，跳转到项目根目录（仅当不在回收站视图时）
+            else if (permanently && Array.from(selectedNodes).some(nodeId => {
+              const node = nodes.find((n) => n.id === nodeId);
+              return node?.isRoot;
+            })) {
+              navigate('/projects');
+            }
+            // 其他情况重新加载数据
+            else {
+              loadData();
+            }
           } catch (error) {
             let errorMessage = '批量删除失败';
             if (error instanceof Error) {
@@ -1041,8 +1125,26 @@ export const useFileSystem = () => {
 
   const handleDeleteProject = useCallback(
     async (id: string, name: string) => {
-      // 注意：handleDeleteProject 默认为彻底删除（permanently=true）
-      // 如果需要移到回收站，请使用 handleDelete(node, false)
+      // 注意：handleDeleteProject 默认为移到回收站（permanently=false）
+      // 如果需要彻底删除，请使用 handlePermanentlyDeleteProject
+      const node: FileSystemNode = {
+        id,
+        name,
+        isRoot: true,
+        isFolder: true,
+        parentId: null,
+        ownerId: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      handleDelete(node, false);
+    },
+    [handleDelete]
+  );
+
+  // 彻底删除项目
+  const handlePermanentlyDeleteProject = useCallback(
+    async (id: string, name: string) => {
       const node: FileSystemNode = {
         id,
         name,
@@ -1144,22 +1246,29 @@ export const useFileSystem = () => {
    */
   const handleToggleProjectTrashView = useCallback(() => {
     const newIsTrashView = !isProjectTrashView;
+    console.log('[useFileSystem] handleToggleProjectTrashView 调用:', {
+      current: isProjectTrashView,
+      new: newIsTrashView,
+    });
     setIsProjectTrashView(newIsTrashView);
+  }, [isProjectTrashView]);
 
-    // 切换到回收站时，重置搜索和页码
-    if (newIsTrashView) {
+  // 监听 isProjectTrashView 变化，自动重置搜索和页码
+  const prevIsProjectTrashViewRef = useRef(isProjectTrashView);
+  useEffect(() => {
+    console.log('[useFileSystem] isProjectTrashView 变化:', {
+      prev: prevIsProjectTrashViewRef.current,
+      current: isProjectTrashView,
+    });
+
+    if (prevIsProjectTrashViewRef.current !== isProjectTrashView) {
+      console.log('[useFileSystem] isProjectTrashView 已变化，重置搜索和页码');
       setSearchTerm('');
       setPagination((prev) => ({ ...prev, page: 1 }));
-      // 触发数据加载
       setRefreshCount((prev) => prev + 1);
-    } else {
-      // 切换回正常视图时，重置搜索和页码
-      setSearchTerm('');
-      setPagination((prev) => ({ ...prev, page: 1 }));
-      // 触发数据加载
-      setRefreshCount((prev) => prev + 1);
+      prevIsProjectTrashViewRef.current = isProjectTrashView;
     }
-  }, [isProjectTrashView, setSearchTerm]);
+  }, [isProjectTrashView]);
 
   /**
    * 恢复节点
@@ -1246,15 +1355,9 @@ export const useFileSystem = () => {
     // 当 urlProjectId 或 urlNodeId 变化时，重置页码到第一页
     setPagination((prev) => ({ ...prev, page: 1 }));
 
-    // 使用防抖，避免短时间内多次调用
-    const timeoutId = setTimeout(() => {
-      loadData();
-    }, 100); // 减少防抖时间到 100ms，提高响应速度
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [urlProjectId, urlNodeId, refreshCount]); // 移除 location.pathname
+    // 直接调用 loadData，不使用防抖
+    loadData();
+  }, [urlProjectId, urlNodeId, refreshCount, isProjectTrashView]); // 移除 location.pathname
 
   // 监听 pagination 变化，当标志为 true 时加载数据
   useEffect(() => {
@@ -1348,6 +1451,7 @@ export const useFileSystem = () => {
     handleCreateProject,
     handleUpdateProject,
     handleDeleteProject,
+    handlePermanentlyDeleteProject,
     handleEnterProject,
     handleShowMembers,
 
