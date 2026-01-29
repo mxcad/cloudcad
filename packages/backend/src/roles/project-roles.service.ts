@@ -14,7 +14,7 @@ import {
 } from '../common/enums/permissions.enum';
 
 export interface CreateProjectRoleDto {
-  projectId: string;
+  ownerId: string;
   name: string;
   description?: string;
   permissions: ProjectPermission[];
@@ -37,10 +37,9 @@ export class ProjectRolesService {
   constructor(private readonly prisma: DatabaseService) {}
 
   /**
-   * 为项目创建默认角色
-   * 当项目创建时调用，初始化默认的项目角色
+   * 创建系统默认角色（仅在系统初始化时调用一次）
    */
-  async createDefaultRoles(projectId: string): Promise<void> {
+  async createSystemDefaultRoles(ownerId: string): Promise<void> {
     try {
       const defaultRoles = [
         { name: ProjectRole.OWNER, isSystem: true },
@@ -51,19 +50,27 @@ export class ProjectRolesService {
       ];
 
       for (const role of defaultRoles) {
-        await this.create({
-          projectId,
-          name: role.name,
-          description: `默认角色: ${role.name}`,
-          permissions:
-            DEFAULT_PROJECT_ROLE_PERMISSIONS[role.name as ProjectRole] || [],
-        });
+        try {
+          await this.create({
+            ownerId,
+            name: role.name,
+            description: `默认角色: ${role.name}`,
+            permissions:
+              DEFAULT_PROJECT_ROLE_PERMISSIONS[role.name as ProjectRole] || [],
+          });
+        } catch (error) {
+          // 如果角色已存在，跳过
+          if (error instanceof ConflictException) {
+            continue;
+          }
+          throw error;
+        }
       }
 
-      this.logger.log(`项目 ${projectId} 的默认角色创建成功`);
+      this.logger.log('系统默认项目角色创建成功');
     } catch (error) {
-      this.logger.error(`创建项目默认角色失败: ${error.message}`, error.stack);
-      throw new BadRequestException(`创建项目默认角色失败: ${error.message}`);
+      this.logger.error(`创建系统默认角色失败: ${error.message}`, error.stack);
+      throw new BadRequestException(`创建系统默认角色失败: ${error.message}`);
     }
   }
 
@@ -72,12 +79,9 @@ export class ProjectRolesService {
    */
   async create(dto: CreateProjectRoleDto): Promise<any> {
     try {
-      // 检查角色名称是否已存在
-      const existingRole = await this.prisma.projectRole.findFirst({
-        where: {
-          projectId: dto.projectId,
-          name: dto.name,
-        },
+      // 检查角色名称是否已存在（全局唯一）
+      const existingRole = await this.prisma.projectRole.findUnique({
+        where: { name: dto.name },
       });
 
       if (existingRole) {
@@ -87,7 +91,7 @@ export class ProjectRolesService {
       // 创建角色
       const role = await this.prisma.projectRole.create({
         data: {
-          projectId: dto.projectId,
+          ownerId: dto.ownerId,
           name: dto.name,
           description: dto.description,
         },
@@ -198,13 +202,15 @@ export class ProjectRolesService {
   }
 
   /**
-   * 获取项目的所有角色
+   * 获取所有项目角色
    */
-  async findByProject(projectId: string): Promise<any[]> {
+  async findAll(): Promise<any[]> {
     try {
       const roles = await this.prisma.projectRole.findMany({
-        where: { projectId },
         include: {
+          owner: {
+            select: { id: true, email: true, username: true, nickname: true },
+          },
           permissions: true,
           _count: {
             select: { members: true },
@@ -216,7 +222,7 @@ export class ProjectRolesService {
       return roles;
     } catch (error) {
       this.logger.error(`获取项目角色失败: ${error.message}`, error.stack);
-      throw new BadRequestException('获取项目角色失败');
+      throw new BadRequestException(`获取项目角色失败`);
     }
   }
 

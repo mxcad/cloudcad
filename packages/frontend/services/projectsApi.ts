@@ -55,7 +55,7 @@ export const projectsApi = {
   getMembers: (projectId: string) =>
     apiClient.get(`/file-system/projects/${projectId}/members`),
 
-  addMember: (projectId: string, data: { userId: string; roleId: string }) =>
+  addMember: (projectId: string, data: { userId: string; projectRoleId: string }) =>
     apiClient.post(`/file-system/projects/${projectId}/members`, data),
 
   removeMember: (projectId: string, userId: string) =>

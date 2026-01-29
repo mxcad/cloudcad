@@ -43,21 +43,6 @@ const rolePermissionRules = {
 
   // 普通用户：基础权限
   user: () => [],
-
-  // 项目所有者：项目权限 + 文件权限（暂时未实现）
-  projectOwner: () => [],
-
-  // 项目管理员：项目成员管理 + 文件管理（暂时未实现）
-  projectAdmin: () => [],
-
-  // 项目成员：项目读取 + 文件编辑（暂时未实现）
-  projectMember: () => [],
-
-  // 项目编辑者：仅文件编辑（暂时未实现）
-  projectEditor: () => [],
-
-  // 项目查看者：仅文件查看（暂时未实现）
-  projectViewer: () => [],
 };
 
 /**
@@ -109,105 +94,14 @@ async function main() {
     },
   });
 
-  // 创建项目专属的系统角色（暂时未实现）
-  const projectOwnerRole = await prisma.role.upsert({
-    where: { name: 'PROJECT_OWNER' },
-    update: {},
-    create: {
-      name: 'PROJECT_OWNER',
-      description: '项目所有者（权限暂时未实现）',
-      isSystem: true,
-    },
-  });
-
-  const projectAdminRole = await prisma.role.upsert({
-    where: { name: 'PROJECT_ADMIN' },
-    update: {},
-    create: {
-      name: 'PROJECT_ADMIN',
-      description: '项目管理员（权限暂时未实现）',
-      isSystem: true,
-    },
-  });
-
-  const projectMemberRole = await prisma.role.upsert({
-    where: { name: 'PROJECT_MEMBER' },
-    update: {},
-    create: {
-      name: 'PROJECT_MEMBER',
-      description: '项目成员（权限暂时未实现）',
-      isSystem: true,
-    },
-  });
-
-  const projectEditorRole = await prisma.role.upsert({
-    where: { name: 'PROJECT_EDITOR' },
-    update: {},
-    create: {
-      name: 'PROJECT_EDITOR',
-      description: '项目编辑者（权限暂时未实现）',
-      isSystem: true,
-    },
-  });
-
-  const projectViewerRole = await prisma.role.upsert({
-    where: { name: 'PROJECT_VIEWER' },
-    update: {},
-    create: {
-      name: 'PROJECT_VIEWER',
-      description: '项目查看者（权限暂时未实现）',
-      isSystem: true,
-    },
-  });
-
   console.log(
-    '角色已准备:',
+    '系统角色已准备:',
     adminRole.name,
-    userRole.name,
-    '项目所有者',
-    '项目管理员',
-    '项目成员',
-    '项目编辑者',
-    '项目查看者'
+    userRole.name
   );
 
   // 为角色分配权限
   console.log('开始为角色分配权限...');
-
-  // PROJECT_OWNER 权限
-  console.log('配置 PROJECT_OWNER 权限...');
-  await assignPermissionsToRole(
-    projectOwnerRole.id,
-    rolePermissionRules.projectOwner()
-  );
-
-  // PROJECT_ADMIN 权限
-  console.log('配置 PROJECT_ADMIN 权限...');
-  await assignPermissionsToRole(
-    projectAdminRole.id,
-    rolePermissionRules.projectAdmin()
-  );
-
-  // PROJECT_MEMBER 权限
-  console.log('配置 PROJECT_MEMBER 权限...');
-  await assignPermissionsToRole(
-    projectMemberRole.id,
-    rolePermissionRules.projectMember()
-  );
-
-  // PROJECT_EDITOR 权限
-  console.log('配置 PROJECT_EDITOR 权限...');
-  await assignPermissionsToRole(
-    projectEditorRole.id,
-    rolePermissionRules.projectEditor()
-  );
-
-  // PROJECT_VIEWER 权限
-  console.log('配置 PROJECT_VIEWER 权限...');
-  await assignPermissionsToRole(
-    projectViewerRole.id,
-    rolePermissionRules.projectViewer()
-  );
 
   // ADMIN 权限（系统管理员）
   console.log('配置 ADMIN 权限...');

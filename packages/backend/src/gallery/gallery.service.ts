@@ -647,7 +647,7 @@ export class GalleryService {
     // 1. 查找文件所属的项目根节点
     let currentNode = await this.database.fileSystemNode.findUnique({
       where: { id: nodeId },
-      select: { parentId: true, isRoot: true, ownerId: true },
+      select: { id: true, parentId: true, isRoot: true, ownerId: true },
     });
 
     let projectId: string | null = null;
@@ -659,10 +659,10 @@ export class GalleryService {
       while (currentNode && !currentNode.isRoot && currentNode.parentId) {
         currentNode = await this.database.fileSystemNode.findUnique({
           where: { id: currentNode.parentId },
-          select: { parentId: true, isRoot: true, ownerId: true },
+          select: { id: true, parentId: true, isRoot: true, ownerId: true },
         });
         if (currentNode?.isRoot) {
-          projectId = currentNode.parentId;
+          projectId = currentNode.id;
           break;
         }
       }

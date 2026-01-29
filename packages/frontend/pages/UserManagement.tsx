@@ -15,6 +15,7 @@ import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi, authApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
 import { usePermission } from '../hooks/usePermission';
+import { SystemPermission } from '../constants/permissions';
 
 // 使用API类型
 type UserDto = components['schemas']['UserDto'];
@@ -29,8 +30,8 @@ type RoleDto = {
 };
 
 export const UserManagement = () => {
-  const { hasPermission: checkUserPermission } = usePermission();
-  const [hasPermission, setHasPermission] = useState(false);
+  const { hasPermission, hasRole } = usePermission();
+  const [canAccess, setCanAccess] = useState(false);
   const [users, setUsers] = useState<UserDto[]>([]);
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,18 +86,21 @@ export const UserManagement = () => {
 
   const checkAccess = async (): Promise<boolean> => {
     try {
-      const response = await authApi.getProfile();
-      const currentUser = response.data;
-      // 拥有任意用户管理权限即可访问
-      const hasAccess =
-        checkUserPermission('system:user:read') ||
-        checkUserPermission('system:user:create') ||
-        checkUserPermission('system:user:update') ||
-        checkUserPermission('system:user:delete');
-      setHasPermission(hasAccess);
+      // 管理员或用户管理员角色可以直接访问
+      const hasRoleAccess = hasRole('ADMIN') || hasRole('USER_MANAGER');
+
+      // 或者拥有任意用户管理权限
+      const hasPermissionAccess =
+        hasPermission(SystemPermission.SYSTEM_USER_READ) ||
+        hasPermission(SystemPermission.SYSTEM_USER_CREATE) ||
+        hasPermission(SystemPermission.SYSTEM_USER_UPDATE) ||
+        hasPermission(SystemPermission.SYSTEM_USER_DELETE);
+
+      const hasAccess = hasRoleAccess || hasPermissionAccess;
+      setCanAccess(hasAccess);
       return hasAccess;
     } catch (error) {
-      setHasPermission(false);
+      setCanAccess(false);
       return false;
     }
   };
@@ -124,10 +128,10 @@ export const UserManagement = () => {
 
   // 当搜索、筛选、排序或分页改变时重新加载数据
   useEffect(() => {
-    if (hasPermission) {
+    if (canAccess) {
       loadData();
     }
-  }, [searchQuery, roleFilter, sortBy, sortOrder, currentPage, hasPermission]);
+  }, [searchQuery, roleFilter, sortBy, sortOrder, currentPage, canAccess]);
 
   const handleOpenCreate = () => {
     setEditingUser(null);
@@ -271,7 +275,7 @@ export const UserManagement = () => {
   };
 
   // 权限不足状态
-  if (!hasPermission) {
+  if (!canAccess) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-500">
         <AlertCircle size={48} className="text-red-400 mb-4" />
@@ -313,7 +317,7 @@ export const UserManagement = () => {
                 管理团队成员、分配角色及存储配额
               </p>
             </div>
-            {checkUserPermission('system:user:create') && (
+            {hasPermission(SystemPermission.SYSTEM_USER_CREATE) && (
               <Button onClick={handleOpenCreate} disabled={loading}>
                 添加用户
               </Button>
@@ -492,7 +496,7 @@ export const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        {checkUserPermission('system:user:update') && (
+                        {hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
                           <button
                             onClick={() => handleOpenEdit(user)}
                             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -501,7 +505,7 @@ export const UserManagement = () => {
                             <Edit size={16} />
                           </button>
                         )}
-                        {checkUserPermission('system:user:delete') && (
+                        {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
                           <button
                             onClick={() => handleDelete(user.id)}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

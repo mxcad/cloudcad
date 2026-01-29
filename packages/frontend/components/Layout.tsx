@@ -137,7 +137,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           to: '/font-library',
           icon: Type,
           label: '字体库',
-          visible: hasPermission(SystemPermission.FONT_UPLOAD) ||
+          visible: hasRole('ADMIN') || hasRole('FONT_MANAGER') ||
+            hasPermission(SystemPermission.FONT_UPLOAD) ||
             hasPermission(SystemPermission.FONT_DELETE) ||
             hasPermission(SystemPermission.FONT_DOWNLOAD),
         },
@@ -145,16 +146,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           to: '/users',
           icon: Users,
           label: '用户管理',
-          visible: hasPermission(SystemPermission.USER_READ) ||
-            hasPermission(SystemPermission.USER_CREATE) ||
-            hasPermission(SystemPermission.USER_UPDATE) ||
-            hasPermission(SystemPermission.USER_DELETE),
+          visible: hasRole('ADMIN') || hasRole('USER_MANAGER'),
         },
     {
       to: '/roles',
       icon: ShieldCheck,
       label: '角色权限',
-      visible: hasRole('ADMIN') || hasRole('USER_MANAGER'),
+      visible: true, // 所有用户都可以访问角色权限页面
     },
   ];
 

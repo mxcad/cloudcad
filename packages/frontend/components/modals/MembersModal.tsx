@@ -10,7 +10,8 @@ import {
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { TruncateText } from '../ui/TruncateText';
-import { projectsApi, usersApi, rolesApi } from '../../services/apiService';
+import { projectsApi, usersApi } from '../../services/apiService';
+import { projectRolesApi } from '../../services/rolesApi';
 
 interface Member {
   id: string;
@@ -104,37 +105,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
   const loadProjectRoles = useCallback(async () => {
     try {
-      const response = await rolesApi.list();
+      const response = await projectRolesApi.list();
       const allRoles = (response.data as any[]) || [];
 
-      // 所有项目专属角色
-      const allProjectRoleNames = [
-        'PROJECT_OWNER',
-        'PROJECT_ADMIN',
-        'PROJECT_MEMBER',
-        'PROJECT_EDITOR',
-        'PROJECT_VIEWER',
-      ];
-
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
-      const addMemberRoleNames = [
-        'PROJECT_ADMIN',
-        'PROJECT_MEMBER',
-        'PROJECT_EDITOR',
-        'PROJECT_VIEWER',
-      ];
+      const addMemberRoles = allRoles.filter((role) => role.name !== 'PROJECT_OWNER');
 
-      // 所有项目角色（用于筛选和显示）
-      const allProjectRoles = allRoles.filter((role) =>
-        allProjectRoleNames.includes(role.name)
-      );
-
-      // 添加成员时可用的角色
-      const addMemberRoles = allRoles.filter((role) =>
-        addMemberRoleNames.includes(role.name)
-      );
-
-      setProjectRoles(allProjectRoles);
+      setProjectRoles(allRoles);
 
       // 设置默认角色为 PROJECT_MEMBER
       const defaultRole = addMemberRoles.find(
@@ -144,7 +121,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         setNewRoleId((prev) => prev || defaultRole.id);
       }
     } catch (error) {
-      console.error('加载系统角色失败:', error);
+      console.error('加载项目角色失败:', error);
     }
   }, []);
 
@@ -228,7 +205,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       // 添加成员
       const response = await projectsApi.addMember(projectId, {
         userId: selectedUser.id,
-        roleId: newRoleId,
+        projectRoleId: newRoleId,
       });
 
       // 直接添加到列表，避免重新加载

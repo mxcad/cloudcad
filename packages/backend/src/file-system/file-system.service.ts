@@ -2587,7 +2587,6 @@ export class FileSystemService {
       // 查找项目的所有者角色
       const ownerRole = await this.prisma.projectRole.findFirst({
         where: {
-          projectId,
           name: 'PROJECT_OWNER',
           isSystem: true,
         },
@@ -2613,7 +2612,6 @@ export class FileSystemService {
         // 2. 将原所有者的角色改为管理员
         const adminRole = await tx.projectRole.findFirst({
           where: {
-            projectId,
             name: 'PROJECT_ADMIN',
             isSystem: true,
           },

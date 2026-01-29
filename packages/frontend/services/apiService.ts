@@ -9,6 +9,6 @@ export { trashApi } from './trashApi';
 export { filesApi } from './filesApi';
 export { adminApi } from './adminApi';
 export { fontsApi } from './fontsApi';
-export { rolesApi } from './rolesApi';
+export { rolesApi, projectRolesApi } from './rolesApi';
 export { mxcadApi } from './mxcadApi';
 export { galleryApi } from './galleryApi';

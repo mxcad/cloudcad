@@ -25,6 +25,7 @@ model User {
   // 关联关系
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   projectMembers     ProjectMember[]
+  projectRoles       ProjectRole[]   @relation("ProjectRoleOwner")
   auditLogs          AuditLog[]
 
   @@map("users")
@@ -109,7 +110,6 @@ model FileSystemNode {
 
   // 关联关系
   projectMembers ProjectMember[]
-  projectRoles ProjectRole[]
 
   // 索引优化
   @@index([parentId])
@@ -122,23 +122,23 @@ model FileSystemNode {
 
 // ============ 项目成员模块 ============
 
-// 项目角色（每个项目可以有自定义的角色）
+// 项目角色（用户自定义的项目角色，跨项目共享）
 model ProjectRole {
   id          String   @id @default(cuid())
-  projectId   String   // 项目ID
-  name        String   // 角色名称
+  ownerId     String   // 创建者 ID
+  name        String   // 角色名称（全局唯一）
   description String?  // 角色描述
   isSystem    Boolean  @default(false) // 是否为系统默认角色
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // 关联关系
-  project     FileSystemNode         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner       User     @relation("ProjectRoleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members     ProjectMember[]
   permissions ProjectRolePermission[]
 
-  @@unique([projectId, name])
-  @@index([projectId])
+  @@unique([name])
+  @@index([ownerId])
   @@map("project_roles")
 }
 
@@ -172,6 +172,7 @@ model ProjectMember {
   @@unique([projectId, userId])
   @@index([userId])
   @@index([projectRoleId])
+  @@index([projectId])
   @@map("project_members")
 }
 
