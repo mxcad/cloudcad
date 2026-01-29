@@ -5,6 +5,9 @@ export const projectsApi = {
   list: (config?: AxiosRequestConfig) =>
     apiClient.get('/file-system/projects', config),
 
+  getDeletedProjects: (config?: AxiosRequestConfig) =>
+    apiClient.get('/file-system/projects/trash', config),
+
   create: (data: { name: string; description?: string }) =>
     apiClient.post('/file-system/projects', data),
 
@@ -88,4 +91,24 @@ export const projectsApi = {
    */
   getRole: (projectId: string) =>
     apiClient.get(`/file-system/projects/${projectId}/role`),
+
+  // ========== 项目内回收站 ==========
+
+  /**
+   * 获取项目内回收站内容
+   */
+  getProjectTrash: (projectId: string, config?: AxiosRequestConfig) =>
+    apiClient.get(`/file-system/projects/${projectId}/trash`, config),
+
+  /**
+   * 恢复已删除的节点
+   */
+  restoreNode: (nodeId: string) =>
+    apiClient.post(`/file-system/nodes/${nodeId}/restore`),
+
+  /**
+   * 清空项目回收站
+   */
+  clearProjectTrash: (projectId: string) =>
+    apiClient.delete(`/file-system/projects/${projectId}/trash`),
 };

@@ -9,7 +9,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  Trash2,
   Type,
   Users,
   X,
@@ -133,7 +132,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
   const menuItems = [
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
-    { to: '/trash', icon: Trash2, label: '回收站', visible: true },
     { to: '/library-blocks', icon: Box, label: '图库', visible: true },
     {
           to: '/font-library',

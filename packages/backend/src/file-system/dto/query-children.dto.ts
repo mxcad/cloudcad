@@ -73,4 +73,13 @@ export class QueryChildrenDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+
+  @ApiProperty({
+    description: '是否包含已删除的节点（用于回收站）',
+    required: false,
+    default: false,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  includeDeleted?: boolean = false;
 }

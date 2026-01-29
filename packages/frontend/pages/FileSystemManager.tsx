@@ -99,6 +99,13 @@ export const FileSystemManager: React.FC = () => {
     handlePageChange,
     handlePageSizeChange,
     handleDeleteProject,
+    isTrashView,
+    handleToggleTrashView,
+    handleRestoreNode,
+    handleClearProjectTrash,
+    handleBatchRestore,
+    isProjectTrashView,
+    handleToggleProjectTrashView,
   } = useFileSystem();
 
   // 项目管理 hooks
@@ -125,7 +132,7 @@ export const FileSystemManager: React.FC = () => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   // 检查是否可以创建项目
-  const canCreateProject = hasPermission('project:project:create');
+  const canCreateProject = hasPermission('PROJECT_CREATE');
 
   // 权限状态
   const [nodePermissions, setNodePermissions] = useState<
@@ -498,6 +505,28 @@ export const FileSystemManager: React.FC = () => {
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
 
+          {!isAtRoot && (
+            <Button
+              variant={isTrashView ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={handleToggleTrashView}
+              disabled={loading}
+              className={isTrashView ? '' : 'text-slate-600 hover:bg-slate-100'}
+              title={isTrashView ? '返回文件列表' : '回收站'}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </Button>
+          )}
+
           {isAtRoot ? (
             <>
               {canCreateProject && (
@@ -596,6 +625,45 @@ export const FileSystemManager: React.FC = () => {
         </div>
       </div>
 
+      {/* 项目回收站标签页 - 仅在项目根目录模式下显示 */}
+      {isAtRoot && (
+        <div className="flex items-center gap-2 border-b border-slate-200">
+          <button
+            onClick={() => isProjectTrashView && handleToggleProjectTrashView()}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              !isProjectTrashView
+                ? 'text-primary-600 border-primary-600'
+                : 'text-slate-500 border-transparent hover:text-slate-700'
+            }`}
+          >
+            我的项目
+          </button>
+          <button
+            onClick={() => !isProjectTrashView && handleToggleProjectTrashView()}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              isProjectTrashView
+                ? 'text-primary-600 border-primary-600'
+                : 'text-slate-500 border-transparent hover:text-slate-700'
+            }`}
+          >
+            回收站
+          </button>
+          {isProjectTrashView && nodes.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="ml-auto text-slate-600"
+              title="刷新"
+            >
+              <RefreshIcon size={14} className={loading ? 'animate-spin mr-1' : 'mr-1'} />
+              刷新
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
         <div className="relative group flex-1 max-w-xs">
           <SearchIcon
@@ -604,7 +672,7 @@ export const FileSystemManager: React.FC = () => {
           />
           <input
             type="text"
-            placeholder="搜索文件或项目..."
+            placeholder={isAtRoot && isProjectTrashView ? "搜索已删除的项目..." : "搜索文件或项目..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
@@ -732,6 +800,28 @@ export const FileSystemManager: React.FC = () => {
               <ListIcon size={14} />
             </button>
           </div>
+
+          {/* 清空回收站按钮 - 仅在回收站视图显示 */}
+          {isTrashView && nodes.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearProjectTrash}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              title="清空回收站"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -744,14 +834,24 @@ export const FileSystemManager: React.FC = () => {
         className="text-slate-300 mb-6 animate-float"
       />
       <h3 className="text-xl font-bold text-slate-900 mb-2">
-        {isProjectsEmpty ? '暂无项目' : '这个文件夹是空的'}
+        {isProjectTrashView
+          ? '回收站是空的'
+          : isTrashView
+            ? '回收站是空的'
+            : isProjectsEmpty
+              ? '暂无项目'
+              : '这个文件夹是空的'}
       </h3>
       <p className="text-slate-500 text-sm mb-6">
-        {searchTerm
-          ? '没有找到匹配的内容'
-          : isProjectsEmpty
-            ? '开始创建您的第一个项目'
-            : '上传文件或创建文件夹来开始使用'}
+        {isProjectTrashView
+          ? '删除的项目会出现在这里'
+          : isTrashView
+            ? '删除的文件和文件夹会出现在这里'
+            : searchTerm
+              ? '没有找到匹配的内容'
+              : isProjectsEmpty
+                ? '开始创建您的第一个项目'
+                : '上传文件或创建文件夹来开始使用'}
       </p>
       {isProjectsEmpty && canCreateProject && (
         <Button
@@ -802,6 +902,7 @@ export const FileSystemManager: React.FC = () => {
                 isSelected={selectedNodes.has(node.id)}
                 viewMode={viewMode}
                 isMultiSelectMode={isMultiSelectMode}
+                isTrash={isTrashView || isProjectTrashView}
                 onSelect={handleNodeSelect}
                 onEnter={handleFileOpen}
                 onDownload={handleDownload}
@@ -809,6 +910,7 @@ export const FileSystemManager: React.FC = () => {
                 onPermanentlyDelete={handlePermanentlyDelete}
                 onRename={handleOpenRename}
                 onRefresh={handleRefresh}
+                onRestore={(isTrashView || isProjectTrashView) ? handleRestoreNode : undefined}
                 onEdit={
                   node.isRoot && permissions.canEdit
                     ? () => openEditProject(node)
@@ -824,10 +926,11 @@ export const FileSystemManager: React.FC = () => {
                     ? () => handleShowMembers(node)
                     : undefined
                 }
-                onMove={!node.isRoot ? handleMove : undefined}
+                onMove={!node.isRoot && handleMove}
                 onCopy={!node.isRoot ? handleCopy : undefined}
                 onAddToGallery={
                   !node.isFolder &&
+                  !isTrashView &&
                   (node.extension === '.dwg' || node.extension === '.dxf')
                     ? handleAddToGallery
                     : undefined
@@ -907,26 +1010,43 @@ export const FileSystemManager: React.FC = () => {
               已选中 {selectedNodes.size} 项
             </span>
             <div className="w-px h-4 bg-slate-700" />
-            <button
-              onClick={() => {
-                setMoveSourceNode({ id: 'batch' } as any);
-                setCopySourceNode(null);
-                setShowSelectFolderModal(true);
-              }}
-              className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
-            >
-              移动
-            </button>
-            <button
-              onClick={() => {
-                setMoveSourceNode(null);
-                setCopySourceNode({ id: 'batch' } as any);
-                setShowSelectFolderModal(true);
-              }}
-              className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
-            >
-              复制
-            </button>
+            
+            {/* 回收站视图显示恢复按钮 */}
+            {(isTrashView || isProjectTrashView) && (
+              <button
+                onClick={handleBatchRestore}
+                className="text-emerald-400 hover:text-white text-sm font-medium transition-colors"
+              >
+                恢复
+              </button>
+            )}
+            
+            {/* 正常视图显示移动和复制按钮 */}
+            {!isTrashView && !isProjectTrashView && (
+              <>
+                <button
+                  onClick={() => {
+                    setMoveSourceNode({ id: 'batch' } as any);
+                    setCopySourceNode(null);
+                    setShowSelectFolderModal(true);
+                  }}
+                  className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                >
+                  移动
+                </button>
+                <button
+                  onClick={() => {
+                    setMoveSourceNode(null);
+                    setCopySourceNode({ id: 'batch' } as any);
+                    setShowSelectFolderModal(true);
+                  }}
+                  className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                >
+                  复制
+                </button>
+              </>
+            )}
+            
             <button
               onClick={handleBatchDelete}
               className="text-error-400 hover:text-white text-sm font-medium transition-colors"

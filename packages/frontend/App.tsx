@@ -18,7 +18,6 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
-import { TrashPage } from './pages/TrashPage';
 import FontLibrary from './pages/FontLibrary';
 import Gallery from './pages/Gallery';
 import { useAuth } from './contexts/AuthContext';
@@ -120,9 +119,6 @@ function AppContent() {
 
                   {/* 图库 */}
                   <Route path="/library-blocks" element={<Gallery />} />
-
-                  {/* 回收站 */}
-                  <Route path="/trash" element={<TrashPage />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

@@ -67,6 +67,13 @@ export class FileSystemController {
   async getProjects(@Request() req, @Query() query?: QueryProjectsDto) {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
+
+  @Get('projects/trash')
+  @ApiResponse({ status: 200, description: '获取已删除项目列表成功' })
+  async getDeletedProjects(@Request() req, @Query() query?: QueryProjectsDto) {
+    return this.fileSystemService.getUserDeletedProjects(req.user.id, query);
+  }
+
   @Get('projects/:projectId')
   @NodePermission(
     ProjectRole.OWNER,
@@ -126,6 +133,53 @@ export class FileSystemController {
   @ApiResponse({ status: 200, description: '清空回收站成功' })
   async clearTrash(@Request() req) {
     return this.fileSystemService.clearTrash(req.user.id);
+  }
+
+  // ========== 项目内回收站端点 ==========
+
+  /**
+   * 获取项目内回收站内容
+   */
+  @Get('projects/:projectId/trash')
+  @NodePermission(
+    ProjectRole.OWNER,
+    ProjectRole.ADMIN,
+    ProjectRole.MEMBER,
+    ProjectRole.EDITOR,
+    ProjectRole.VIEWER
+  )
+  @ApiOperation({ summary: '获取项目内回收站内容' })
+  @ApiResponse({ status: 200, description: '成功获取项目回收站内容' })
+  async getProjectTrash(
+    @Request() req,
+    @Param('projectId') projectId: string,
+    @Query() query?: QueryChildrenDto
+  ) {
+    return this.fileSystemService.getProjectTrash(projectId, req.user.id, query);
+  }
+
+  /**
+   * 恢复已删除的节点
+   */
+  @Post('nodes/:nodeId/restore')
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '恢复已删除的节点' })
+  @ApiResponse({ status: 200, description: '节点恢复成功' })
+  async restoreNode(@Param('nodeId') nodeId: string) {
+    return this.fileSystemService.restoreNode(nodeId);
+  }
+
+  /**
+   * 清空项目回收站
+   */
+  @Delete('projects/:projectId/trash')
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '清空项目回收站' })
+  @ApiResponse({ status: 200, description: '项目回收站已清空' })
+  async clearProjectTrash(@Request() req, @Param('projectId') projectId: string) {
+    return this.fileSystemService.clearProjectTrash(projectId, req.user.id);
   }
 
   @Post('nodes/:parentId/folders')

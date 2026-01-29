@@ -643,6 +643,81 @@ export class GalleryService {
       throw new Error('不能添加文件夹到图库');
     }
 
+    // 权限检查：文件必须属于用户自己的项目，或者用户对文件所属项目有权限
+    // 1. 查找文件所属的项目根节点
+    let currentNode = await this.database.fileSystemNode.findUnique({
+      where: { id: nodeId },
+      select: { parentId: true, isRoot: true, ownerId: true },
+    });
+
+    let projectId: string | null = null;
+
+    if (currentNode?.isRoot) {
+      projectId = nodeId;
+    } else {
+      // 向上遍历找到项目根节点
+      while (currentNode && !currentNode.isRoot && currentNode.parentId) {
+        currentNode = await this.database.fileSystemNode.findUnique({
+          where: { id: currentNode.parentId },
+          select: { parentId: true, isRoot: true, ownerId: true },
+        });
+        if (currentNode?.isRoot) {
+          projectId = currentNode.parentId;
+          break;
+        }
+      }
+    }
+
+    if (!projectId) {
+      throw new Error('无法确定文件所属项目');
+    }
+
+    // 2. 检查项目所有者
+    const project = await this.database.fileSystemNode.findUnique({
+      where: { id: projectId, isRoot: true },
+      select: { ownerId: true },
+    });
+
+    if (!project) {
+      throw new Error('项目不存在');
+    }
+
+    // 3. 如果文件不属于用户自己的项目，检查权限
+    if (project.ownerId !== userId) {
+      // 检查用户是否是项目成员
+      const projectMember = await this.database.projectMember.findFirst({
+        where: {
+          projectId,
+          userId,
+        },
+      });
+
+      if (!projectMember) {
+        throw new Error('您没有权限将此文件添加到图库');
+      }
+
+      // 检查用户角色是否有添加到图库的权限
+      const role = await this.database.role.findUnique({
+        where: { id: projectMember.projectRoleId },
+        include: {
+          permissions: true,
+        },
+      });
+
+      if (!role) {
+        throw new Error('权限验证失败');
+      }
+
+      // 检查是否有 FILE_UPLOAD 权限（作为添加到图库的权限）
+      const hasAddToGalleryPermission = role.permissions.some(
+        (p) => p.permission === ('project:file:upload' as any)
+      );
+
+      if (!hasAddToGalleryPermission) {
+        throw new Error('您没有权限将此文件添加到图库');
+      }
+    }
+
     // 验证分类存在
     const type = await this.database.galleryType.findUnique({
       where: { id: secondType },

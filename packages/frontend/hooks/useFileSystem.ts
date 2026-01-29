@@ -95,7 +95,9 @@ export const useFileSystem = () => {
   // 是否为项目根目录模式（无 projectId）
   const isProjectRootMode = !urlProjectId;
   // 是否为文件夹模式（有 projectId）
-  const isFolderMode = !!urlProjectId; // 状态管理
+  const isFolderMode = !!urlProjectId;
+  // 是否为项目回收站视图（仅在项目根目录模式下有效）
+  const [isProjectTrashView, setIsProjectTrashView] = useState(false); // 状态管理
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [currentNode, setCurrentNode] = useState<FileSystemNode | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -131,6 +133,9 @@ export const useFileSystem = () => {
   // 拖拽状态
   const [draggedNodes, setDraggedNodes] = useState<FileSystemNode[]>([]);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  // 回收站视图状态
+  const [isTrashView, setIsTrashView] = useState(false);
 
   const [refreshCount, setRefreshCount] = useState(0);
 
@@ -333,11 +338,22 @@ export const useFileSystem = () => {
       }
 
       if (isProjectRootMode) {
-        // 项目根目录模式：加载项目列表
-        const response = await projectsApi.list({
-          params,
-          signal: abortController.signal,
-        });
+        // 项目根目录模式
+        let response;
+        
+        if (isProjectTrashView) {
+          // 加载已删除的项目列表（项目回收站）
+          response = await projectsApi.getDeletedProjects({
+            params,
+            signal: abortController.signal,
+          });
+        } else {
+          // 加载正常项目列表
+          response = await projectsApi.list({
+            params,
+            signal: abortController.signal,
+          });
+        }
 
         // 处理分页响应
         if (response.data?.data) {
@@ -362,41 +378,95 @@ export const useFileSystem = () => {
       } else {
         // 文件夹模式：加载项目/文件夹内容
         const currentNodeId = urlNodeId || urlProjectId;
-        const [nodeResponse, childrenResponse] = await Promise.all([
-          projectsApi.getNode(currentNodeId, {
-            signal: abortController.signal,
-          }),
-          projectsApi.getChildren(currentNodeId, {
-            params,
-            signal: abortController.signal,
-          }),
-        ]);
-        const nodeData = nodeResponse.data;
 
-        // 处理分页响应
-        if (childrenResponse.data?.data) {
-          setNodes(childrenResponse.data.data);
-          setPaginationMeta(childrenResponse.data.meta);
-        } else {
-          // 兼容旧格式（如果后端还未更新）
-          const childrenData = childrenResponse.data || [];
-          setNodes(childrenData);
-          setPaginationMeta({
-            total: childrenData.length,
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-            totalPages: Math.ceil(
-              childrenData.length / paginationRef.current.limit
-            ),
+        if (isTrashView) {
+          // 回收站视图：加载项目回收站内容
+          const trashResponse = await projectsApi.getProjectTrash(
+            urlProjectId,
+            {
+              params,
+              signal: abortController.signal,
+            }
+          );
+
+          // 处理分页响应
+          if (trashResponse.data?.data) {
+            setNodes(trashResponse.data.data);
+            setPaginationMeta(trashResponse.data.meta);
+          } else {
+            // 兼容旧格式
+            const trashData = trashResponse.data || [];
+            setNodes(trashData);
+            setPaginationMeta({
+              total: trashData.length,
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+              totalPages: Math.ceil(
+                trashData.length / paginationRef.current.limit
+              ),
+            });
+          }
+
+          // 获取项目信息作为当前节点
+          const projectResponse = await projectsApi.getNode(urlProjectId, {
+            signal: abortController.signal,
           });
+          setCurrentNode(projectResponse.data);
+
+          // 构建面包屑（项目名称 + 回收站）
+          const projectData = projectResponse.data;
+          setBreadcrumbs([
+            {
+              id: projectData.id,
+              name: projectData.name,
+              isRoot: true,
+              isFolder: true,
+            },
+            {
+              id: 'trash',
+              name: '回收站',
+              isRoot: false,
+              isFolder: true,
+            },
+          ]);
+        } else {
+          // 正常视图：加载文件夹内容
+          const [nodeResponse, childrenResponse] = await Promise.all([
+            projectsApi.getNode(currentNodeId, {
+              signal: abortController.signal,
+            }),
+            projectsApi.getChildren(currentNodeId, {
+              params,
+              signal: abortController.signal,
+            }),
+          ]);
+          const nodeData = nodeResponse.data;
+
+          // 处理分页响应
+          if (childrenResponse.data?.data) {
+            setNodes(childrenResponse.data.data);
+            setPaginationMeta(childrenResponse.data.meta);
+          } else {
+            // 兼容旧格式（如果后端还未更新）
+            const childrenData = childrenResponse.data || [];
+            setNodes(childrenData);
+            setPaginationMeta({
+              total: childrenData.length,
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+              totalPages: Math.ceil(
+                childrenData.length / paginationRef.current.limit
+              ),
+            });
+          }
+
+          setCurrentNode(nodeData);
+
+          // 后端已返回外部参照状态信息，直接使用（避免重复请求 preloading 接口）
+
+          // 构建面包屑
+          await buildBreadcrumbsFromNode(nodeData, abortController.signal);
         }
-
-        setCurrentNode(nodeData);
-
-        // 后端已返回外部参照状态信息，直接使用（避免重复请求 preloading 接口）
-
-        // 构建面包屑
-        await buildBreadcrumbsFromNode(nodeData, abortController.signal);
       }
     } catch (error) {
       // 如果是取消请求导致的错误，不显示错误，但仍需重置 loading 状态
@@ -422,6 +492,7 @@ export const useFileSystem = () => {
     urlProjectId,
     urlNodeId,
     isProjectRootMode,
+    isTrashView,
     searchTerm,
     showToast,
     buildBreadcrumbsFromNode,
@@ -761,6 +832,48 @@ export const useFileSystem = () => {
     [selectedNodes, nodes, showConfirm, loadData, showToast]
   );
 
+  // 批量恢复
+  const handleBatchRestore = useCallback(() => {
+    if (selectedNodes.size === 0) {
+      showToast('请先选择要恢复的项目', 'error');
+      return;
+    }
+
+    showConfirm(
+      '批量恢复',
+      `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
+      async () => {
+        try {
+          await Promise.all(
+            Array.from(selectedNodes).map((nodeId: string) =>
+              projectsApi.restoreNode(nodeId)
+            )
+          );
+          showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
+          setSelectedNodes(new Set<string>());
+          loadData();
+        } catch (error) {
+          let errorMessage = '批量恢复失败';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (
+            typeof error === 'object' &&
+            error !== null &&
+            'response' in error
+          ) {
+            const err = error as {
+              response?: { data?: { message?: string } };
+            };
+            errorMessage = err.response?.data?.message || errorMessage;
+          }
+          showToast(errorMessage, 'error');
+        }
+      },
+      'warning',
+      '恢复'
+    );
+  }, [selectedNodes, nodes, showConfirm, loadData, showToast]);
+
   // 进入文件夹
   const handleEnterFolder = useCallback(
     (node: FileSystemNode) => {
@@ -1002,6 +1115,102 @@ export const useFileSystem = () => {
     // 成员管理功能由父组件处理
   }, []);
 
+  // ========== 回收站相关方法 ==========
+
+  /**
+   * 切换回收站视图
+   */
+  const handleToggleTrashView = useCallback(() => {
+    const newIsTrashView = !isTrashView;
+    setIsTrashView(newIsTrashView);
+
+    // 切换到回收站时，重置搜索和页码
+    if (newIsTrashView) {
+      setSearchTerm('');
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      // 触发数据加载
+      setRefreshCount((prev) => prev + 1);
+    } else {
+      // 切换回正常视图时，重置搜索和页码
+      setSearchTerm('');
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      // 触发数据加载
+      setRefreshCount((prev) => prev + 1);
+    }
+  }, [isTrashView, setSearchTerm]);
+
+  /**
+   * 切换项目回收站视图（仅用于项目根目录）
+   */
+  const handleToggleProjectTrashView = useCallback(() => {
+    const newIsTrashView = !isProjectTrashView;
+    setIsProjectTrashView(newIsTrashView);
+
+    // 切换到回收站时，重置搜索和页码
+    if (newIsTrashView) {
+      setSearchTerm('');
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      // 触发数据加载
+      setRefreshCount((prev) => prev + 1);
+    } else {
+      // 切换回正常视图时，重置搜索和页码
+      setSearchTerm('');
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      // 触发数据加载
+      setRefreshCount((prev) => prev + 1);
+    }
+  }, [isProjectTrashView, setSearchTerm]);
+
+  /**
+   * 恢复节点
+   */
+  const handleRestoreNode = useCallback(
+    async (node: FileSystemNode) => {
+      showConfirm(
+        '确认恢复',
+        `确定要恢复 "${node.name}" 吗？`,
+        async () => {
+          try {
+            await projectsApi.restoreNode(node.id);
+            showToast(`已恢复 "${node.name}"`, 'success');
+            // 刷新数据
+            setRefreshCount((prev) => prev + 1);
+          } catch (error) {
+            handleError(error, showToast, '恢复失败');
+          }
+        },
+        'warning'
+      );
+    },
+    [showConfirm, showToast]
+  );
+
+  /**
+   * 清空项目回收站
+   */
+  const handleClearProjectTrash = useCallback(() => {
+    if (!urlProjectId) {
+      showToast('未选择项目', 'error');
+      return;
+    }
+
+    showConfirm(
+      '确认清空回收站',
+      '确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。',
+      async () => {
+        try {
+          await projectsApi.clearProjectTrash(urlProjectId);
+          showToast('项目回收站已清空', 'success');
+          // 刷新数据
+          setRefreshCount((prev) => prev + 1);
+        } catch (error) {
+          handleError(error, showToast, '清空回收站失败');
+        }
+      },
+      'danger'
+    );
+  }, [urlProjectId, showConfirm, showToast]);
+
   // 添加初始加载和参数变化监听
   useEffect(() => {
     const currentParams = {
@@ -1129,6 +1338,7 @@ export const useFileSystem = () => {
     handleDelete,
     handlePermanentlyDelete,
     handleBatchDelete,
+    handleBatchRestore,
     handleEnterFolder,
     handleFileOpen,
     handleDownload,
@@ -1142,6 +1352,12 @@ export const useFileSystem = () => {
     handleShowMembers,
 
     // 回收站相关操作
+    isTrashView,
+    handleToggleTrashView,
+    handleRestoreNode,
+    handleClearProjectTrash,
+    isProjectTrashView,
+    handleToggleProjectTrashView,
     trashApi,
   };
 };

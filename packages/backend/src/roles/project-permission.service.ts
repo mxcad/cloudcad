@@ -207,7 +207,7 @@ export class ProjectPermissionService {
       const isOwner = await this.isProjectOwner(userId, projectId);
       if (isOwner) {
         // 项目所有者拥有所有权限
-        return Object.values(ProjectPermission);
+        return Object.values(ProjectPermission) as ProjectPermission[];
       }
 
       // 2. 获取用户的项目角色权限
@@ -232,7 +232,7 @@ export class ProjectPermissionService {
       }
 
       return member.projectRole.permissions.map(
-        (rp) => rp.permission as ProjectPermission
+        (rp) => rp.permission as unknown as ProjectPermission
       );
     } catch (error) {
       this.logger.error(`获取用户项目权限失败: ${error.message}`, error.stack);

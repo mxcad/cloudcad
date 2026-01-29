@@ -95,17 +95,7 @@ export class FileSystemService {
 
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
-      // 获取 PROJECT_OWNER 角色
-      const projectOwnerRole = await this.prisma.role.findUnique({
-        where: { name: 'PROJECT_OWNER' },
-      });
-
-      if (!projectOwnerRole) {
-        throw new BadRequestException(
-          'PROJECT_OWNER 角色不存在，请先初始化系统角色'
-        );
-      }
-
+      // 1. 创建项目节点
       const rootNode = await this.prisma.fileSystemNode.create({
         data: {
           name: dto.name,
@@ -114,14 +104,39 @@ export class FileSystemService {
           isRoot: true,
           projectStatus: ProjectStatus.ACTIVE,
           ownerId: userId,
-          // 使用 ProjectMember 表添加项目创建者
-          projectMembers: {
-            create: {
-              userId,
-              projectRoleId: projectOwnerRole.id,
-            },
-          },
         },
+      });
+
+      // 2. 为项目创建默认的项目角色（使用 ProjectRolesService 确保权限分配正确）
+      const { ProjectRolesService } = await import('../roles/project-roles.service');
+      const projectRolesService = new ProjectRolesService(this.prisma);
+      await projectRolesService.createDefaultRoles(rootNode.id);
+
+      // 3. 查找项目所有者角色
+      const ownerRole = await this.prisma.projectRole.findFirst({
+        where: {
+          projectId: rootNode.id,
+          name: 'PROJECT_OWNER',
+          isSystem: true,
+        },
+      });
+
+      if (!ownerRole) {
+        throw new BadRequestException('项目所有者角色创建失败');
+      }
+
+      // 4. 将创建者添加为项目所有者
+      await this.prisma.projectMember.create({
+        data: {
+          projectId: rootNode.id,
+          userId,
+          projectRoleId: ownerRole.id,
+        },
+      });
+
+      // 5. 重新查询完整的项目信息
+      const projectWithDetails = await this.prisma.fileSystemNode.findUnique({
+        where: { id: rootNode.id },
         include: {
           projectMembers: {
             include: {
@@ -132,6 +147,7 @@ export class FileSystemService {
                   username: true,
                   nickname: true,
                   avatar: true,
+                  role: true,
                 },
               },
               projectRole: {
@@ -144,11 +160,19 @@ export class FileSystemService {
               },
             },
           },
+          projectRoles: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              isSystem: true,
+            },
+          },
         },
       });
 
       this.logger.log(`项目创建成功: ${rootNode.name} by user ${userId}`);
-      return rootNode;
+      return projectWithDetails;
     } catch (error) {
       this.logger.error(`项目创建失败: ${error.message}`, error.stack);
       throw error;
@@ -236,6 +260,92 @@ export class FileSystemService {
       };
     } catch (error) {
       this.logger.error(`查询项目列表失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取用户已删除的项目列表（项目回收站）
+   * @param userId 用户 ID
+   * @param query 查询参数
+   * @returns 已删除的项目列表
+   */
+  async getUserDeletedProjects(userId: string, query?: QueryProjectsDto) {
+    const {
+      search,
+      page = 1,
+      limit = 20,
+      sortBy,
+      sortOrder,
+    } = query || {};
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      isRoot: true,
+      deletedAt: { not: null },
+      projectMembers: {
+        some: { userId },
+      },
+    };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    try {
+      const [projects, total] = await Promise.all([
+        this.prisma.fileSystemNode.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: sortBy ? { [sortBy]: sortOrder } : { deletedAt: 'desc' },
+          include: {
+            projectMembers: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    username: true,
+                    nickname: true,
+                    avatar: true,
+                  },
+                },
+                projectRole: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    isSystem: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                children: true,
+                projectMembers: true,
+              },
+            },
+          },
+        }),
+        this.prisma.fileSystemNode.count({ where }),
+      ]);
+
+      return {
+        data: projects,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error(`查询已删除项目列表失败: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -602,12 +712,14 @@ export class FileSystemService {
       limit = 50,
       sortBy,
       sortOrder,
+      includeDeleted = false,
     } = query || {};
     const skip = (page - 1) * limit;
 
     const where: any = {
       parentId: nodeId,
-      deletedAt: null,
+      // 根据 includeDeleted 参数决定是否包含已删除的节点
+      deletedAt: includeDeleted ? undefined : null,
     };
 
     if (search) {
@@ -792,6 +904,249 @@ export class FileSystemService {
       this.logger.error(`节点删除失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 恢复已删除的节点
+   * @param nodeId 节点 ID
+   * @returns 恢复后的节点
+   */
+  async restoreNode(nodeId: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: {
+          isRoot: true,
+          isFolder: true,
+          deletedAt: true,
+          deletedByCascade: true,
+          parentId: true,
+        },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      if (!node.deletedAt) {
+        throw new BadRequestException('节点未被删除，无需恢复');
+      }
+
+      if (node.isRoot) {
+        throw new BadRequestException('请使用恢复项目接口恢复根节点');
+      }
+
+      // 检查父节点是否存在
+      if (node.parentId) {
+        const parentNode = await this.prisma.fileSystemNode.findUnique({
+          where: { id: node.parentId },
+          select: { deletedAt: true },
+        });
+
+        if (!parentNode) {
+          throw new NotFoundException('父节点不存在');
+        }
+
+        if (parentNode.deletedAt) {
+          throw new BadRequestException('父节点已被删除，无法恢复');
+        }
+      }
+
+      // 恢复节点
+      const restoredNode = await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: {
+          deletedAt: null,
+          fileStatus: FileStatus.COMPLETED,
+          deletedByCascade: false,
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              username: true,
+              nickname: true,
+            },
+          },
+        },
+      });
+
+      this.logger.log(`节点恢复成功: ${nodeId}`);
+      return restoredNode;
+    } catch (error) {
+      this.logger.error(`节点恢复失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取项目内回收站内容
+   * @param projectId 项目 ID
+   * @param userId 用户 ID
+   * @param query 查询参数
+   * @returns 回收站内容
+   */
+  async getProjectTrash(projectId: string, userId: string, query?: QueryChildrenDto) {
+    const {
+      search,
+      nodeType,
+      extension,
+      page = 1,
+      limit = 50,
+      sortBy,
+      sortOrder,
+    } = query || {};
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      deletedAt: { not: null }, // 只查询已删除的节点
+    };
+
+    // 查询项目内所有已删除的节点（递归查询）
+    const projectRoot = await this.prisma.fileSystemNode.findUnique({
+      where: { id: projectId, isRoot: true },
+      select: { id: true, ownerId: true },
+    });
+
+    if (!projectRoot) {
+      throw new NotFoundException('项目不存在');
+    }
+
+    // 获取项目内所有节点 ID（包括所有层级）
+    const allProjectNodeIds = await this.getAllProjectNodeIds(projectId);
+
+    where.id = { in: allProjectNodeIds };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (nodeType) {
+      where.isFolder = nodeType === 'folder';
+    }
+
+    if (extension) {
+      where.extension = extension;
+    }
+
+    try {
+      // 检查权限
+      const hasPermission = await this.checkNodeAccess(projectId, userId);
+      if (!hasPermission) {
+        throw new ForbiddenException('没有权限访问此项目回收站');
+      }
+
+      const [nodes, total] = await Promise.all([
+        this.prisma.fileSystemNode.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: sortBy
+            ? { [sortBy]: sortOrder }
+            : { deletedAt: 'desc' },
+          include: {
+            owner: {
+              select: {
+                id: true,
+                username: true,
+                nickname: true,
+              },
+            },
+          },
+        }),
+        this.prisma.fileSystemNode.count({ where }),
+      ]);
+
+      return {
+        data: nodes,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error(`查询项目回收站失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 清空项目回收站
+   * @param projectId 项目 ID
+   * @param userId 用户 ID
+   * @returns 操作结果
+   */
+  async clearProjectTrash(projectId: string, userId: string) {
+    try {
+      // 检查权限
+      const hasPermission = await this.checkNodeAccess(projectId, userId);
+      if (!hasPermission) {
+        throw new ForbiddenException('没有权限清空此项目回收站');
+      }
+
+      // 获取项目内所有已删除的节点
+      const allProjectNodeIds = await this.getAllProjectNodeIds(projectId);
+
+      const deletedNodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          id: { in: allProjectNodeIds },
+          deletedAt: { not: null },
+        },
+        select: { id: true, isFolder: true, path: true, fileHash: true },
+      });
+
+      // 彻底删除所有已删除的节点
+      await this.prisma.$transaction(async (tx) => {
+        for (const node of deletedNodes) {
+          if (!node.isFolder && node.path) {
+            await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
+          }
+        }
+
+        // 删除数据库记录
+        await tx.fileSystemNode.deleteMany({
+          where: {
+            id: { in: deletedNodes.map((n) => n.id) },
+          },
+        });
+      });
+
+      this.logger.log(`项目回收站已清空: ${projectId}`);
+      return { message: '项目回收站已清空' };
+    } catch (error) {
+      this.logger.error(`清空项目回收站失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取项目内所有节点 ID（递归查询）
+   * @param projectId 项目 ID
+   * @returns 所有节点 ID
+   */
+  private async getAllProjectNodeIds(projectId: string): Promise<string[]> {
+    const nodeIds: string[] = [];
+
+    const traverse = async (parentId: string) => {
+      const children = await this.prisma.fileSystemNode.findMany({
+        where: { parentId },
+        select: { id: true },
+      });
+
+      for (const child of children) {
+        nodeIds.push(child.id);
+        await traverse(child.id);
+      }
+    };
+
+    await traverse(projectId);
+
+    return nodeIds;
   }
 
   async moveNode(nodeId: string, targetParentId: string) {
@@ -1288,40 +1643,6 @@ export class FileSystemService {
       return { message: '项目已从回收站恢复' };
     } catch (error) {
       this.logger.error(`项目恢复失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
-  /**
-   * 从回收站恢复节点
-   * 递归恢复节点的所有子项
-   */
-  async restoreNode(nodeId: string) {
-    try {
-      const node = await this.prisma.fileSystemNode.findFirst({
-        where: { id: nodeId, deletedAt: { not: null } },
-      });
-
-      // 如果节点不在回收站中（可能已被恢复），直接返回
-      if (!node) {
-        this.logger.warn(`节点 ${nodeId} 不在回收站中，可能已被恢复`);
-        return { message: '节点已恢复或不存在' };
-      }
-
-      // 只恢复当前节点，不递归恢复子节点，也不恢复父节点
-      await this.prisma.fileSystemNode.update({
-        where: { id: nodeId },
-        data: {
-          deletedAt: null,
-          fileStatus: FileStatus.COMPLETED,
-          deletedByCascade: false, // 重置级联删除标记
-        },
-      });
-
-      this.logger.log(`节点恢复成功: ${nodeId}`);
-      return { message: '已从回收站恢复' };
-    } catch (error) {
-      this.logger.error(`节点恢复失败: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -2252,9 +2573,13 @@ export class FileSystemService {
         throw new BadRequestException('转让目标必须是项目成员');
       }
 
-      // 查找项目所有者角色
-      const ownerRole = await this.prisma.role.findFirst({
-        where: { name: 'PROJECT_OWNER' },
+      // 查找项目的所有者角色
+      const ownerRole = await this.prisma.projectRole.findFirst({
+        where: {
+          projectId,
+          name: 'PROJECT_OWNER',
+          isSystem: true,
+        },
       });
 
       if (!ownerRole) {
@@ -2263,7 +2588,7 @@ export class FileSystemService {
 
       // 使用事务执行转让
       await this.prisma.$transaction(async (tx) => {
-        // 1. 将新所有者的角色改为 PROJECT_OWNER
+        // 1. 将新所有者的角色改为所有者
         await tx.projectMember.update({
           where: {
             projectId_userId: {
@@ -2274,9 +2599,13 @@ export class FileSystemService {
           data: { projectRoleId: ownerRole.id },
         });
 
-        // 2. 将原所有者的角色改为 PROJECT_ADMIN（或保留为 PROJECT_ADMIN）
-        const adminRole = await tx.role.findFirst({
-          where: { name: 'PROJECT_ADMIN' },
+        // 2. 将原所有者的角色改为管理员
+        const adminRole = await tx.projectRole.findFirst({
+          where: {
+            projectId,
+            name: 'PROJECT_ADMIN',
+            isSystem: true,
+          },
         });
 
         if (adminRole) {

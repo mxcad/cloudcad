@@ -6,12 +6,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { ProjectPermission as PrismaProjectPermission } from '@prisma/client';
 import {
   ProjectRole,
   ProjectPermission,
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
 } from '../common/enums/permissions.enum';
-import { ProjectPermission as PrismaProjectPermission } from '@prisma/client';
 
 export interface CreateProjectRoleDto {
   projectId: string;
@@ -259,7 +259,9 @@ export class ProjectRolesService {
         select: { permission: true },
       });
 
-      return rolePermissions.map((rp) => rp.permission as ProjectPermission);
+      // 将 Prisma ProjectPermission 转换为 TypeScript ProjectPermission
+      // 两者使用相同的字符串值，所以可以直接使用 as 进行类型断言
+      return rolePermissions.map((rp) => rp.permission as unknown as ProjectPermission);
     } catch (error) {
       this.logger.error(`获取角色权限失败: ${error.message}`, error.stack);
       throw new BadRequestException('获取角色权限失败');
@@ -274,7 +276,7 @@ export class ProjectRolesService {
     permissions: ProjectPermission[]
   ): Promise<void> {
     try {
-      // 创建权限关联
+      // 创建权限关联（直接使用枚举值）
       const data = permissions.map((permission) => ({
         projectRoleId: roleId,
         permission: permission as unknown as PrismaProjectPermission,
