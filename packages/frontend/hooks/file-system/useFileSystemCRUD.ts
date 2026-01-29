@@ -161,29 +161,22 @@ export const useFileSystemCRUD = ({
   const handleDelete = useCallback(
     (node: FileSystemNode, permanently: boolean = false) => {
       let deleteMessage: string;
-      let deleteApi: Promise<unknown>;
 
       if (permanently) {
         if (node.isRoot) {
           deleteMessage = `确定要彻底删除项目"${node.name}"吗？此操作将同时删除项目内的所有内容，且不可恢复。`;
-          deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要彻底删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容，且不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, true);
         } else {
           deleteMessage = `确定要彻底删除文件"${node.name}"吗？此操作不可恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, true);
         }
       } else {
         if (node.isRoot) {
           deleteMessage = `确定要将项目"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.delete(node.id);
         } else if (node.isFolder) {
           deleteMessage = `确定要将文件夹"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, false);
         } else {
           deleteMessage = `确定要将文件"${node.name}"移到回收站吗？可以在回收站中恢复。`;
-          deleteApi = projectsApi.deleteNode(node.id, false);
         }
       }
 
@@ -192,7 +185,25 @@ export const useFileSystemCRUD = ({
         deleteMessage,
         async () => {
           try {
-            await deleteApi;
+            // 只在确认后才执行删除操作
+            if (permanently) {
+              if (node.isRoot) {
+                await projectsApi.delete(node.id, true);
+              } else if (node.isFolder) {
+                await projectsApi.deleteNode(node.id, true);
+              } else {
+                await projectsApi.deleteNode(node.id, true);
+              }
+            } else {
+              if (node.isRoot) {
+                await projectsApi.delete(node.id, false);
+              } else if (node.isFolder) {
+                await projectsApi.deleteNode(node.id, false);
+              } else {
+                await projectsApi.deleteNode(node.id, false);
+              }
+            }
+
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             loadData();
           } catch (error) {
@@ -239,7 +250,7 @@ export const useFileSystemCRUD = ({
               Array.from(selectedNodes).map((nodeId: string) => {
                 const node = nodes.find((n) => n.id === nodeId);
                 if (node?.isRoot) {
-                  return projectsApi.delete(node.id);
+                  return projectsApi.delete(node.id, permanently);
                 }
                 return projectsApi.deleteNode(node.id, permanently);
               })

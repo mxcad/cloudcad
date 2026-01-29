@@ -136,7 +136,7 @@ export class ProjectPermissionService {
   /**
    * 检查用户是否为项目所有者
    */
-  private async isProjectOwner(
+  async isProjectOwner(
     userId: string,
     projectId: string
   ): Promise<boolean> {

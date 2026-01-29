@@ -595,6 +595,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/file-system/projects/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FileSystemController_getDeletedProjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/file-system/projects/{projectId}": {
         parameters: {
             query?: never;
@@ -654,6 +670,41 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["FileSystemController_permanentlyDeleteTrashItems"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/file-system/projects/{projectId}/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取项目内回收站内容 */
+        get: operations["FileSystemController_getProjectTrash"];
+        put?: never;
+        post?: never;
+        /** 清空项目回收站 */
+        delete: operations["FileSystemController_clearProjectTrash"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/file-system/nodes/{nodeId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 恢复已删除的节点 */
+        post: operations["FileSystemController_restoreNode"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2101,7 +2152,7 @@ export interface components {
              *       "system:font:read"
              *     ]
              */
-            permissions: ("system:user:read" | "system:user:create" | "system:user:update" | "system:user:delete" | "system:role:read" | "system:role:create" | "system:role:update" | "system:role:delete" | "system:role:permission:manage" | "system:font:read" | "system:font:upload" | "system:font:delete" | "system:font:download" | "system:admin" | "system:monitor" | "project:project:create" | "project:project:read" | "project:project:update" | "project:project:delete" | "project:member:manage" | "project:member:assign" | "project:role:manage" | "project:role:permission:manage" | "project:project:transfer" | "project:file:create" | "project:file:upload" | "project:file:open" | "project:file:edit" | "project:file:delete" | "project:file:trash:manage" | "project:file:download" | "project:file:share" | "project:file:comment" | "project:file:print" | "project:file:compare" | "project:cad:save" | "project:cad:export" | "project:cad:external_reference" | "project:gallery:use" | "project:gallery:add" | "project:version:read" | "project:version:create" | "project:version:delete" | "project:version:restore" | "project:settings:manage")[];
+            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_CREATE" | "PROJECT_READ" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "FILE_COMMENT" | "FILE_PRINT" | "FILE_COMPARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_USE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE")[];
             /**
              * Format: date-time
              * @description 创建时间
@@ -2313,17 +2364,17 @@ export interface components {
          * @description 系统权限枚举
          * @enum {string}
          */
-        SystemPermission: "system:user:read" | "system:user:create" | "system:user:update" | "system:user:delete" | "system:role:read" | "system:role:create" | "system:role:update" | "system:role:delete" | "system:role:permission:manage" | "system:font:read" | "system:font:upload" | "system:font:delete" | "system:font:download" | "system:admin" | "system:monitor";
+        SystemPermission: "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR";
         /**
          * @description 项目权限枚举
          * @enum {string}
          */
-        ProjectPermission: "project:project:create" | "project:project:read" | "project:project:update" | "project:project:delete" | "project:member:manage" | "project:member:assign" | "project:role:manage" | "project:role:permission:manage" | "project:project:transfer" | "project:file:create" | "project:file:upload" | "project:file:open" | "project:file:edit" | "project:file:delete" | "project:file:trash:manage" | "project:file:download" | "project:file:share" | "project:file:comment" | "project:file:print" | "project:file:compare" | "project:cad:save" | "project:cad:export" | "project:cad:external_reference" | "project:gallery:use" | "project:gallery:add" | "project:version:read" | "project:version:create" | "project:version:delete" | "project:version:restore" | "project:settings:manage";
+        ProjectPermission: "PROJECT_CREATE" | "PROJECT_READ" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "FILE_COMMENT" | "FILE_PRINT" | "FILE_COMPARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_USE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
         /**
          * @description 统一权限枚举
          * @enum {string}
          */
-        Permission: "system:user:read" | "system:user:create" | "system:user:update" | "system:user:delete" | "system:role:read" | "system:role:create" | "system:role:update" | "system:role:delete" | "system:role:permission:manage" | "system:font:read" | "system:font:upload" | "system:font:delete" | "system:font:download" | "system:admin" | "system:monitor" | "project:project:create" | "project:project:read" | "project:project:update" | "project:project:delete" | "project:member:manage" | "project:member:assign" | "project:role:manage" | "project:role:permission:manage" | "project:project:transfer" | "project:file:create" | "project:file:upload" | "project:file:open" | "project:file:edit" | "project:file:delete" | "project:file:trash:manage" | "project:file:download" | "project:file:share" | "project:file:comment" | "project:file:print" | "project:file:compare" | "project:cad:save" | "project:cad:export" | "project:cad:external_reference" | "project:gallery:use" | "project:gallery:add" | "project:version:read" | "project:version:create" | "project:version:delete" | "project:version:restore" | "project:settings:manage";
+        Permission: "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_CREATE" | "PROJECT_READ" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "FILE_COMMENT" | "FILE_PRINT" | "FILE_COMPARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_USE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
     };
     responses: never;
     parameters: never;
@@ -3424,6 +3475,37 @@ export interface operations {
             };
         };
     };
+    FileSystemController_getDeletedProjects: {
+        parameters: {
+            query?: {
+                /** @description 搜索关键词（匹配名称或描述） */
+                search?: string;
+                /** @description 项目状态 */
+                projectStatus?: "ACTIVE" | "ARCHIVED" | "DELETED";
+                /** @description 页码 */
+                page?: number;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 排序字段 */
+                sortBy?: string;
+                /** @description 排序方向 */
+                sortOrder?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取已删除项目列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     FileSystemController_getProject: {
         parameters: {
             query?: never;
@@ -3552,6 +3634,85 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 永久删除项目成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FileSystemController_getProjectTrash: {
+        parameters: {
+            query?: {
+                /** @description 搜索关键词（匹配名称或描述） */
+                search?: string;
+                /** @description 节点类型 */
+                nodeType?: "folder" | "file";
+                /** @description 文件扩展名 */
+                extension?: string;
+                /** @description 文件状态 */
+                fileStatus?: "UPLOADING" | "PROCESSING" | "COMPLETED" | "FAILED" | "DELETED";
+                /** @description 页码 */
+                page?: number;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 排序字段 */
+                sortBy?: string;
+                /** @description 排序方向 */
+                sortOrder?: "asc" | "desc";
+                /** @description 是否包含已删除的节点（用于回收站） */
+                includeDeleted?: boolean;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功获取项目回收站内容 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FileSystemController_clearProjectTrash: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 项目回收站已清空 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FileSystemController_restoreNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 节点恢复成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3689,6 +3850,8 @@ export interface operations {
                 sortBy?: string;
                 /** @description 排序方向 */
                 sortOrder?: "asc" | "desc";
+                /** @description 是否包含已删除的节点（用于回收站） */
+                includeDeleted?: boolean;
             };
             header?: never;
             path: {

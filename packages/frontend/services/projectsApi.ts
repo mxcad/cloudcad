@@ -19,8 +19,10 @@ export const projectsApi = {
     data: { name?: string; description?: string; status?: string }
   ) => apiClient.patch(`/file-system/projects/${projectId}`, data),
 
-  delete: (projectId: string) =>
-    apiClient.delete(`/file-system/projects/${projectId}`),
+  delete: (projectId: string, permanently: boolean = false) =>
+    apiClient.delete(`/file-system/projects/${projectId}`, {
+      params: { permanently },
+    }),
 
   createFolder: (parentId: string, data: { name: string }) =>
     apiClient.post(`/file-system/nodes/${parentId}/folders`, data),

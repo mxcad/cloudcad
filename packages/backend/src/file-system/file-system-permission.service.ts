@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ProjectPermission } from '../common/enums/permissions.enum';
+import { ProjectPermission, ProjectRole } from '../common/enums/permissions.enum';
 import { ProjectPermissionService } from '../roles/project-permission.service';
 import { DatabaseService } from '../database/database.service';
 
@@ -62,6 +62,17 @@ export class FileSystemPermissionService {
     userId: string,
     nodeId: string
   ): Promise<string | null> {
+    // 1. 先检查是否是项目所有者
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId },
+      select: { ownerId: true },
+    });
+
+    if (node?.ownerId === userId) {
+      return ProjectRole.OWNER;
+    }
+
+    // 2. 检查是否是项目成员
     const member = await this.prisma.projectMember.findUnique({
       where: {
         projectId_userId: {

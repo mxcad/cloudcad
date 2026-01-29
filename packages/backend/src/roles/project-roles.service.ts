@@ -63,7 +63,7 @@ export class ProjectRolesService {
       this.logger.log(`项目 ${projectId} 的默认角色创建成功`);
     } catch (error) {
       this.logger.error(`创建项目默认角色失败: ${error.message}`, error.stack);
-      throw error;
+      throw new BadRequestException(`创建项目默认角色失败: ${error.message}`);
     }
   }
 
@@ -104,7 +104,7 @@ export class ProjectRolesService {
         throw error;
       }
       this.logger.error(`创建项目角色失败: ${error.message}`, error.stack);
-      throw new BadRequestException('创建项目角色失败');
+      throw new BadRequestException(`创建项目角色失败: ${error.message}`);
     }
   }
 
@@ -279,7 +279,7 @@ export class ProjectRolesService {
       // 创建权限关联（直接使用枚举值）
       const data = permissions.map((permission) => ({
         projectRoleId: roleId,
-        permission: permission as unknown as PrismaProjectPermission,
+        permission: permission as PrismaProjectPermission,
       }));
 
       await this.prisma.projectRolePermission.createMany({
@@ -290,7 +290,7 @@ export class ProjectRolesService {
       this.logger.log(`角色 ${roleId} 的权限分配成功`);
     } catch (error) {
       this.logger.error(`分配角色权限失败: ${error.message}`, error.stack);
-      throw new BadRequestException('分配角色权限失败');
+      throw new BadRequestException(`分配角色权限失败: ${error.message}`);
     }
   }
 
@@ -306,7 +306,7 @@ export class ProjectRolesService {
         where: {
           projectRoleId: roleId,
           permission: {
-            in: permissions as unknown as PrismaProjectPermission[],
+            in: permissions as PrismaProjectPermission[],
           },
         },
       });
