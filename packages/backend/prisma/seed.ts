@@ -41,7 +41,7 @@ const rolePermissionRules = {
   // 系统管理员：所有权限
   admin: () => getAllPermissions(),
 
-  // 普通用户：基础权限（暂时为空）
+  // 普通用户：基础权限
   user: () => [],
 
   // 项目所有者：项目权限 + 文件权限（暂时未实现）

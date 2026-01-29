@@ -18,7 +18,8 @@
     "backend:build": "pnpm --filter backend build",
     "backend:start": "pnpm --filter backend start",
     "backend:verify": "pnpm --filter backend verify",
-    "frontend:verify": "pnpm --filter cloudcad-manager verify"
+    "frontend:verify": "pnpm --filter cloudcad-manager verify",
+    "generate:frontend-permissions": "tsx scripts/generate-frontend-permissions.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -29,6 +30,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-unused-imports": "^4.3.0",
     "prettier": "^3.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.0.0"
   },
   "engines": {

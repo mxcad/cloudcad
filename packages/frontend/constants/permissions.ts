@@ -1,107 +1,86 @@
 /**
- * 权限常量
- * 从后端 OpenAPI 自动生成，与后端权限定义保持同步
+ * 权限常量 - 自动生成，请勿手动修改
  *
- * 注意：这些类型来自 packages/frontend/types/api.ts
- * 运行 `pnpm generate:types` 重新生成
+ * 生成时间: 2026-01-29T02:07:53.926Z
+ * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
+ *
+ * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
+ * 然后运行 pnpm generate:frontend-permissions 重新生成
  */
-
-import type { components } from '../types/api';
 
 /**
  * 系统权限枚举
- * 从 OpenAPI 自动生成，与后端 SystemPermission 枚举保持同步
+ * 用于后台管理功能的权限控制
  */
-export type SystemPermission = components['schemas']['SystemPermission'];
+export const SystemPermission = {
+  USER_READ: 'USER_READ',
+  USER_CREATE: 'USER_CREATE',
+  USER_UPDATE: 'USER_UPDATE',
+  USER_DELETE: 'USER_DELETE',
+  ROLE_READ: 'ROLE_READ',
+  ROLE_CREATE: 'ROLE_CREATE',
+  ROLE_UPDATE: 'ROLE_UPDATE',
+  ROLE_DELETE: 'ROLE_DELETE',
+  ROLE_PERMISSION_MANAGE: 'ROLE_PERMISSION_MANAGE',
+  FONT_READ: 'FONT_READ',
+  FONT_UPLOAD: 'FONT_UPLOAD',
+  FONT_DELETE: 'FONT_DELETE',
+  FONT_DOWNLOAD: 'FONT_DOWNLOAD',
+  SYSTEM_ADMIN: 'SYSTEM_ADMIN',
+  SYSTEM_MONITOR: 'SYSTEM_MONITOR',
+} as const;
 
 /**
  * 项目权限枚举
- * 从 OpenAPI 自动生成，与后端 ProjectPermission 枚举保持同步
- */
-export type ProjectPermission = components['schemas']['ProjectPermission'];
-
-/**
- * 统一权限枚举
- * 从 OpenAPI 自动生成，与后端 Permission 枚举保持同步
- */
-export type Permission = components['schemas']['Permission'];
-
-/**
- * 系统权限常量对象
- * 提供类型安全的权限引用
- */
-export const SystemPermission = {
-  // 用户管理
-  USER_READ: 'system:user:read',
-  USER_CREATE: 'system:user:create',
-  USER_UPDATE: 'system:user:update',
-  USER_DELETE: 'system:user:delete',
-
-  // 角色权限管理
-  ROLE_READ: 'system:role:read',
-  ROLE_CREATE: 'system:role:create',
-  ROLE_UPDATE: 'system:role:update',
-  ROLE_DELETE: 'system:role:delete',
-  ROLE_PERMISSION_MANAGE: 'system:role:permission:manage',
-
-  // 字体库管理
-  FONT_READ: 'system:font:read',
-  FONT_UPLOAD: 'system:font:upload',
-  FONT_DELETE: 'system:font:delete',
-  FONT_DOWNLOAD: 'system:font:download',
-
-  // 系统管理
-  SYSTEM_ADMIN: 'system:admin',
-  SYSTEM_MONITOR: 'system:monitor',
-} as const;
-
-/**
- * 项目权限常量对象
- * 提供类型安全的权限引用
+ * 用于项目和文件系统的权限控制
  */
 export const ProjectPermission = {
-  // 项目管理
-  PROJECT_CREATE: 'project:project:create',
-  PROJECT_READ: 'project:project:read',
-  PROJECT_UPDATE: 'project:project:update',
-  PROJECT_DELETE: 'project:project:delete',
-  PROJECT_MEMBER_MANAGE: 'project:member:manage',
-  PROJECT_MEMBER_ASSIGN: 'project:member:assign',
-  PROJECT_ROLE_MANAGE: 'project:role:manage',
-  PROJECT_ROLE_PERMISSION_MANAGE: 'project:role:permission:manage',
-  PROJECT_TRANSFER: 'project:project:transfer',
-
-  // 文件操作
-  FILE_CREATE: 'project:file:create',
-  FILE_UPLOAD: 'project:file:upload',
-  FILE_OPEN: 'project:file:open',
-  FILE_EDIT: 'project:file:edit',
-  FILE_DELETE: 'project:file:delete',
-  FILE_TRASH_MANAGE: 'project:file:trash:manage',
-  FILE_DOWNLOAD: 'project:file:download',
-  FILE_SHARE: 'project:file:share',
-  FILE_COMMENT: 'project:file:comment',
-  FILE_PRINT: 'project:file:print',
-  FILE_COMPARE: 'project:file:compare',
-
-  // CAD 图纸
-  CAD_SAVE: 'project:cad:save',
-  CAD_EXPORT: 'project:cad:export',
-  CAD_EXTERNAL_REFERENCE: 'project:cad:external_reference',
-
-  // 图库
-  GALLERY_USE: 'project:gallery:use',
-  GALLERY_ADD: 'project:gallery:add',
-
-  // 版本管理
-  VERSION_READ: 'project:version:read',
-  VERSION_CREATE: 'project:version:create',
-  VERSION_DELETE: 'project:version:delete',
-  VERSION_RESTORE: 'project:version:restore',
-
-  // 项目设置
-  PROJECT_SETTINGS_MANAGE: 'project:settings:manage',
+  PROJECT_CREATE: 'PROJECT_CREATE',
+  PROJECT_READ: 'PROJECT_READ',
+  PROJECT_UPDATE: 'PROJECT_UPDATE',
+  PROJECT_DELETE: 'PROJECT_DELETE',
+  PROJECT_MEMBER_MANAGE: 'PROJECT_MEMBER_MANAGE',
+  PROJECT_MEMBER_ASSIGN: 'PROJECT_MEMBER_ASSIGN',
+  PROJECT_ROLE_MANAGE: 'PROJECT_ROLE_MANAGE',
+  PROJECT_ROLE_PERMISSION_MANAGE: 'PROJECT_ROLE_PERMISSION_MANAGE',
+  PROJECT_TRANSFER: 'PROJECT_TRANSFER',
+  PROJECT_SETTINGS_MANAGE: 'PROJECT_SETTINGS_MANAGE',
+  FILE_CREATE: 'FILE_CREATE',
+  FILE_UPLOAD: 'FILE_UPLOAD',
+  FILE_OPEN: 'FILE_OPEN',
+  FILE_EDIT: 'FILE_EDIT',
+  FILE_DELETE: 'FILE_DELETE',
+  FILE_TRASH_MANAGE: 'FILE_TRASH_MANAGE',
+  FILE_DOWNLOAD: 'FILE_DOWNLOAD',
+  FILE_SHARE: 'FILE_SHARE',
+  FILE_COMMENT: 'FILE_COMMENT',
+  FILE_PRINT: 'FILE_PRINT',
+  FILE_COMPARE: 'FILE_COMPARE',
+  CAD_SAVE: 'CAD_SAVE',
+  CAD_EXPORT: 'CAD_EXPORT',
+  CAD_EXTERNAL_REFERENCE: 'CAD_EXTERNAL_REFERENCE',
+  GALLERY_USE: 'GALLERY_USE',
+  GALLERY_ADD: 'GALLERY_ADD',
+  VERSION_READ: 'VERSION_READ',
+  VERSION_CREATE: 'VERSION_CREATE',
+  VERSION_DELETE: 'VERSION_DELETE',
+  VERSION_RESTORE: 'VERSION_RESTORE',
 } as const;
+
+/**
+ * 系统权限类型
+ */
+export type SystemPermission = typeof SystemPermission[keyof typeof SystemPermission];
+
+/**
+ * 项目权限类型
+ */
+export type ProjectPermission = typeof ProjectPermission[keyof typeof ProjectPermission];
+
+/**
+ * 统一权限类型
+ */
+export type Permission = SystemPermission | ProjectPermission;
 
 /**
  * 获取系统权限的所有值

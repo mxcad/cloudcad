@@ -41,22 +41,22 @@ export interface ContextRule {
  * SystemPermission 字符串值到 Prisma 枚举标识符的映射表
  */
 const PERMISSION_MAP: Record<SystemPermission, PrismaPermission> = {
-  [SystemPermission.USER_READ]: PrismaPermission.SYSTEM_USER_READ,
-  [SystemPermission.USER_CREATE]: PrismaPermission.SYSTEM_USER_CREATE,
-  [SystemPermission.USER_UPDATE]: PrismaPermission.SYSTEM_USER_UPDATE,
-  [SystemPermission.USER_DELETE]: PrismaPermission.SYSTEM_USER_DELETE,
+  [SystemPermission.USER_READ]: PrismaPermission.USER_READ,
+  [SystemPermission.USER_CREATE]: PrismaPermission.USER_CREATE,
+  [SystemPermission.USER_UPDATE]: PrismaPermission.USER_UPDATE,
+  [SystemPermission.USER_DELETE]: PrismaPermission.USER_DELETE,
 
-  [SystemPermission.ROLE_READ]: PrismaPermission.SYSTEM_ROLE_READ,
-  [SystemPermission.ROLE_CREATE]: PrismaPermission.SYSTEM_ROLE_CREATE,
-  [SystemPermission.ROLE_UPDATE]: PrismaPermission.SYSTEM_ROLE_UPDATE,
-  [SystemPermission.ROLE_DELETE]: PrismaPermission.SYSTEM_ROLE_DELETE,
+  [SystemPermission.ROLE_READ]: PrismaPermission.ROLE_READ,
+  [SystemPermission.ROLE_CREATE]: PrismaPermission.ROLE_CREATE,
+  [SystemPermission.ROLE_UPDATE]: PrismaPermission.ROLE_UPDATE,
+  [SystemPermission.ROLE_DELETE]: PrismaPermission.ROLE_DELETE,
   [SystemPermission.ROLE_PERMISSION_MANAGE]:
-    PrismaPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
+    PrismaPermission.ROLE_PERMISSION_MANAGE,
 
-  [SystemPermission.FONT_READ]: PrismaPermission.SYSTEM_FONT_READ,
-  [SystemPermission.FONT_UPLOAD]: PrismaPermission.SYSTEM_FONT_UPLOAD,
-  [SystemPermission.FONT_DELETE]: PrismaPermission.SYSTEM_FONT_DELETE,
-  [SystemPermission.FONT_DOWNLOAD]: PrismaPermission.SYSTEM_FONT_DOWNLOAD,
+  [SystemPermission.FONT_READ]: PrismaPermission.FONT_READ,
+  [SystemPermission.FONT_UPLOAD]: PrismaPermission.FONT_UPLOAD,
+  [SystemPermission.FONT_DELETE]: PrismaPermission.FONT_DELETE,
+  [SystemPermission.FONT_DOWNLOAD]: PrismaPermission.FONT_DOWNLOAD,
 
   [SystemPermission.SYSTEM_ADMIN]: PrismaPermission.SYSTEM_ADMIN,
   [SystemPermission.SYSTEM_MONITOR]: PrismaPermission.SYSTEM_MONITOR,

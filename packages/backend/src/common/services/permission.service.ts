@@ -294,7 +294,7 @@ export class PermissionService {
   ): Promise<boolean> {
     // 示例规则 1：工作时间限制（9:00 - 18:00）
     // 仅对敏感操作（如 DELETE）进行时间限制
-    const sensitivePermissions = [
+    const sensitivePermissions: SystemPermission[] = [
       SystemPermission.USER_DELETE,
       SystemPermission.ROLE_DELETE,
       SystemPermission.FONT_DELETE,
