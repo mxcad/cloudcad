@@ -37,7 +37,6 @@ import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
 @ApiBearerAuth()
 @Controller('font-management')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions([SystemPermission.SYSTEM_FONT_UPLOAD])
 export class FontsController {
   private readonly logger = new Logger(FontsController.name);
 
@@ -57,6 +56,7 @@ export class FontsController {
     required: false,
     description: '字体位置：backend 或 frontend，不指定则返回全部',
   })
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_READ])
   async getFonts(@Query('location') location?: 'backend' | 'frontend') {
     try {
       const result = await this.fontsService.getFonts(location);
@@ -82,6 +82,7 @@ export class FontsController {
   })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_UPLOAD])
   async uploadFont(
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadFontDto: UploadFontDto,
@@ -128,6 +129,7 @@ export class FontsController {
     required: false,
     description: '删除目标',
   })
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_DELETE])
   async deleteFont(
     @Req() req: Request,
     @Param('fileName') fileName: string,
@@ -164,6 +166,7 @@ export class FontsController {
     description: '下载位置',
   })
   @Header('Content-Type', 'application/octet-stream')
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_DOWNLOAD])
   async downloadFont(
     @Req() req: Request,
     @Param('fileName') fileName: string,

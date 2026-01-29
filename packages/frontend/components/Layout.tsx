@@ -1,8 +1,10 @@
 import {
+  Activity,
   AlertTriangle,
   Bell,
   Box,
   CheckCircle,
+  FileText,
   FolderOpen,
   LogOut,
   Menu,
@@ -138,9 +140,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           icon: Type,
           label: '字体库',
           visible: hasRole('ADMIN') || hasRole('FONT_MANAGER') ||
-            hasPermission(SystemPermission.FONT_UPLOAD) ||
-            hasPermission(SystemPermission.FONT_DELETE) ||
-            hasPermission(SystemPermission.FONT_DOWNLOAD),
+            hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD) ||
+            hasPermission(SystemPermission.SYSTEM_FONT_DELETE) ||
+            hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD),
         },
     {
       to: '/users',
@@ -157,6 +159,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       icon: ShieldCheck,
       label: '角色权限',
       visible: true, // 所有用户都可以访问角色权限页面
+    },
+    {
+      to: '/audit-logs',
+      icon: FileText,
+      label: '审计日志',
+      visible: hasPermission(SystemPermission.SYSTEM_ADMIN),
+    },
+    {
+      to: '/system-monitor',
+      icon: Activity,
+      label: '系统监控',
+      visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
     },
   ];
 

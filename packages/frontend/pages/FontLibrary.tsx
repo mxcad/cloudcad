@@ -3,10 +3,33 @@ import { fontsApi } from '../services/api';
 import { Trash2, Download, Upload } from 'lucide-react';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/api';
+import { usePermission } from '../hooks/usePermission';
+import { SystemPermission } from '../constants/permissions';
 
 interface FontLibraryProps {}
 
 export default function FontLibrary(props: FontLibraryProps) {
+  const { hasPermission } = usePermission();
+
+  // 权限检查
+  const canReadFonts = hasPermission(SystemPermission.SYSTEM_FONT_READ);
+  const canUploadFonts = hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD);
+  const canDeleteFonts = hasPermission(SystemPermission.SYSTEM_FONT_DELETE);
+  const canDownloadFonts = hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD);
+
+  // 如果没有查看权限，返回无权限提示
+  if (!canReadFonts) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-gray-500">您没有查看字体库的权限</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [allFonts, setAllFonts] = useState<FontInfo[]>([]);
   const [fonts, setFonts] = useState<FontInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -364,15 +387,17 @@ export default function FontLibrary(props: FontLibraryProps) {
 
         {/* 操作按钮区 */}
         <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2"
-          >
-            <Upload size={16} />
-            上传字体
-          </button>
+          {canUploadFonts && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2"
+            >
+              <Upload size={16} />
+              上传字体
+            </button>
+          )}
 
-          {selectedFonts.size > 0 && (
+          {canDeleteFonts && selectedFonts.size > 0 && (
             <button
               onClick={handleBatchDelete}
               className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -474,20 +499,24 @@ export default function FontLibrary(props: FontLibraryProps) {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDownload(font.name)}
-                          className="text-gray-500 hover:text-blue-500 focus:outline-none"
-                          title="下载"
-                        >
-                          <Download size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(font.name)}
-                          className="text-gray-500 hover:text-red-500 focus:outline-none"
-                          title="删除"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {canDownloadFonts && (
+                          <button
+                            onClick={() => handleDownload(font.name)}
+                            className="text-gray-500 hover:text-blue-500 focus:outline-none"
+                            title="下载"
+                          >
+                            <Download size={16} />
+                          </button>
+                        )}
+                        {canDeleteFonts && (
+                          <button
+                            onClick={() => handleDelete(font.name)}
+                            className="text-gray-500 hover:text-red-500 focus:outline-none"
+                            title="删除"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">

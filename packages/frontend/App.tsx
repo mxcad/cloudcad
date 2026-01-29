@@ -20,6 +20,8 @@ import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
 import FontLibrary from './pages/FontLibrary';
 import Gallery from './pages/Gallery';
+import { AuditLogPage } from './pages/AuditLogPage';
+import { SystemMonitorPage } from './pages/SystemMonitorPage';
 import { useAuth } from './contexts/AuthContext';
 
 // 受保护的路由组件
@@ -119,6 +121,12 @@ function AppContent() {
 
                   {/* 图库 */}
                   <Route path="/library-blocks" element={<Gallery />} />
+
+                  {/* 系统管理 */}
+                  <Route path="/audit-logs" element={<AuditLogPage />} />
+
+                  {/* 系统监控 */}
+                  <Route path="/system-monitor" element={<SystemMonitorPage />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

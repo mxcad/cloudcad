@@ -3,6 +3,8 @@ import { Filter, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { apiService } from '../services/apiService';
+import { usePermission } from '../hooks/usePermission';
+import { SystemPermission } from '../constants/permissions';
 
 // 审计操作类型
 const AuditAction = {
@@ -94,6 +96,19 @@ const RESOURCE_TYPE_MAP: Record<string, string> = {
 };
 
 export const AuditLogPage: React.FC = () => {
+  const { hasPermission } = usePermission();
+
+  // 检查是否有系统管理员权限
+  if (!hasPermission(SystemPermission.SYSTEM_ADMIN)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-500">您没有访问审计日志的权限</p>
+        </div>
+      </div>
+    );
+  }
+
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
