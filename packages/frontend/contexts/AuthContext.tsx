@@ -108,31 +108,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('[AuthContext] Token 已存储到 localStorage');
 
-    // 创建 Session（用于 mxcad 上传权限验证）
-    try {
-      const sessionResponse = await fetch('/api/session/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // 包含 cookies
-        body: JSON.stringify({ user: userData }),
-      });
-
-      console.log('[AuthContext] Session 创建响应:', sessionResponse);
-
-      if (sessionResponse.ok) {
-        // Session 创建成功，继续
-        console.log('[AuthContext] Session 创建成功');
-      } else {
-        // Session 创建失败，但仍然使用 JWT 认证
-        console.error('Session creation failed');
-      }
-    } catch (error) {
-      // Session 创建失败，但仍然使用 JWT 认证
-      console.error('Session creation error:', error);
-    }
-
     // 更新状态
     setToken(accessToken);
     setUser(userData);
@@ -165,17 +140,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
-
-      // 清除 Session
-      try {
-        await fetch('/api/session/destroy', {
-          method: 'POST',
-          credentials: 'include', // 包含 cookies
-        });
-      } catch (error) {
-        // Session 清除失败，但仍然清除本地状态
-        console.error('Session destroy error:', error);
-      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

@@ -18,7 +18,7 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // 请求拦截器 - 添加认证 token 和 MxCAD 项目上下文
+    // 请求拦截器 - 添加认证 token
     this.client.interceptors.request.use(
       (config) => {
         // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
@@ -29,14 +29,6 @@ class ApiClient {
           delete config.headers['Content-Type'];
         }
 
-        // 为所有 MxCAD 接口添加节点上下文
-        if (config.url?.includes('/mxcad/')) {
-          const nodeId = this.getNodeIdFromMultipleSources(config);
-
-          if (nodeId && this.isValidNodeId(nodeId)) {
-            this.supplementNodeIdToRequest(config, nodeId);
-          }
-        }
         return config;
       },
       (error) => {
@@ -204,75 +196,6 @@ class ApiClient {
     return this.client.post(url, data);
   }
 
-  private getNodeIdFromMultipleSources(
-    config: AxiosRequestConfig
-  ): string | null {
-    if (config.data?.nodeId) return config.data.nodeId;
-
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlNodeId = urlParams.get('nodeId') || urlParams.get('parent');
-      if (urlNodeId) return urlNodeId;
-    }
-
-    if (typeof window !== 'undefined' && (window as any).__CURRENT_NODE_ID__) {
-      return (window as any).__CURRENT_NODE_ID__;
-    }
-
-    if (typeof window !== 'undefined') {
-      const storedNodeId = localStorage.getItem('currentNodeId');
-      if (storedNodeId) return storedNodeId;
-    }
-
-    return null;
   }
-
-  private isValidNodeId(nodeId: string): boolean {
-    if (!nodeId || typeof nodeId !== 'string') return false;
-    const cuid2Pattern = /^c[a-z0-9]{23,31}$/;
-    return cuid2Pattern.test(nodeId);
-  }
-
-  private supplementNodeIdToRequest(
-    config: AxiosRequestConfig,
-    nodeId: string
-  ): void {
-    if (!config || !nodeId) return;
-
-    const method = config.method?.toLowerCase();
-    if ((method === 'post' || method === 'put') && config.data) {
-      const isFormData = config.data instanceof FormData;
-
-      if (isFormData) {
-        if (!config.data.has('nodeId')) {
-          config.data.append('nodeId', nodeId);
-          Logger.info('[apiClient] 为 FormData 请求补充 nodeId:', nodeId);
-        }
-      } else {
-        if (config.data.nodeId) {
-          Logger.info(
-            '[apiClient] 请求中已包含 nodeId，使用已有值:',
-            config.data.nodeId
-          );
-          return;
-        }
-
-        Object.assign(config.data, { nodeId });
-        Logger.info('[apiClient] 为 JSON 请求补充 nodeId:', nodeId);
-      }
-    } else if (config.params) {
-      if (config.params.nodeId) {
-        Logger.info(
-          '[apiClient] params 中已包含 nodeId，使用已有值:',
-          config.params.nodeId
-        );
-        return;
-      }
-
-      Object.assign(config.params, { nodeId });
-      Logger.info('[apiClient] 为 params 补充 nodeId:', nodeId);
-    }
-  }
-}
 
 export const apiClient = new ApiClient();
