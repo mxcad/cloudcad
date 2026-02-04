@@ -6,6 +6,7 @@ import { GalleryService } from './gallery.service';
 import { DatabaseModule } from '../database/database.module';
 import { MxCadModule } from '../mxcad/mxcad.module';
 import { CommonModule } from '../common/common.module';
+import { FileSystemModule } from '../file-system/file-system.module';
 
 /**
  * 图库模块
@@ -15,6 +16,7 @@ import { CommonModule } from '../common/common.module';
     DatabaseModule,
     MxCadModule,
     CommonModule,
+    FileSystemModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

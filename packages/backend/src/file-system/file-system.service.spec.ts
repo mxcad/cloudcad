@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { FileSystemService } from './file-system.service';
 import { DatabaseService } from '../database/database.service';
 import { FileHashService } from './file-hash.service';
-import { MinioStorageProvider } from '../storage/minio-storage.provider';
+import { LocalStorageProvider } from '../storage/local-storage.provider';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { FileStatus, ProjectStatus } from '@prisma/client';
@@ -55,7 +55,7 @@ describe('FileSystemService', () => {
           useValue: mockPrisma,
         },
         {
-          provide: MinioStorageProvider,
+          provide: LocalStorageProvider,
           useValue: mockStorage,
         },
         {

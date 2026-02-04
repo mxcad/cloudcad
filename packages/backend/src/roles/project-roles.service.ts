@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { ProjectPermission as PrismaProjectPermission } from '@prisma/client';
@@ -14,7 +15,7 @@ import {
 } from '../common/enums/permissions.enum';
 
 export interface CreateProjectRoleDto {
-  ownerId: string;
+  projectId?: string; // 项目 ID（系统角色不需要）
   name: string;
   description?: string;
   permissions: ProjectPermission[];
@@ -37,9 +38,36 @@ export class ProjectRolesService {
   constructor(private readonly prisma: DatabaseService) {}
 
   /**
+   * 检查用户是否为管理员
+   */
+  private async checkIsAdmin(userId: string): Promise<boolean> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { roleId: true },
+      });
+
+      if (!user) {
+        return false;
+      }
+
+      // 检查用户角色是否为 ADMIN
+      const role = await this.prisma.role.findUnique({
+        where: { id: user.roleId },
+        select: { name: true },
+      });
+
+      return role?.name === 'ADMIN';
+    } catch (error) {
+      this.logger.error(`检查管理员权限失败: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
    * 创建系统默认角色（仅在系统初始化时调用一次）
    */
-  async createSystemDefaultRoles(ownerId: string): Promise<void> {
+  async createSystemDefaultRoles(): Promise<void> {
     try {
       const defaultRoles = [
         { name: ProjectRole.OWNER, isSystem: true },
@@ -52,9 +80,8 @@ export class ProjectRolesService {
       for (const role of defaultRoles) {
         try {
           await this.create({
-            ownerId,
             name: role.name,
-            description: `默认角色: ${role.name}`,
+            description: `系统默认角色: ${role.name}`,
             permissions:
               DEFAULT_PROJECT_ROLE_PERMISSIONS[role.name as ProjectRole] || [],
           });
@@ -74,24 +101,40 @@ export class ProjectRolesService {
     }
   }
 
-  /**
+/**
    * 创建项目角色
    */
-  async create(dto: CreateProjectRoleDto): Promise<any> {
+  async create(dto: CreateProjectRoleDto, userId?: string): Promise<any> {
     try {
-      // 检查角色名称是否已存在（全局唯一）
-      const existingRole = await this.prisma.projectRole.findUnique({
-        where: { name: dto.name },
+      // 权限检查：系统角色和全局角色需要管理员权限
+      const isSystemOrGlobal = !dto.projectId;
+      if (isSystemOrGlobal && userId) {
+        const isAdmin = await this.checkIsAdmin(userId);
+        if (!isAdmin) {
+          throw new ForbiddenException('只有管理员才能创建系统角色或全局共享的角色');
+        }
+      }
+
+      // 检查角色名称是否已存在（项目内唯一）
+      const existingRole = await this.prisma.projectRole.findFirst({
+        where: {
+          name: dto.name,
+          projectId: dto.projectId ?? null,
+        },
       });
 
       if (existingRole) {
-        throw new ConflictException(`角色名称 "${dto.name}" 已存在`);
+        throw new ConflictException(
+          dto.projectId
+            ? `项目内角色名称 "${dto.name}" 已存在`
+            : `全局角色名称 "${dto.name}" 已存在`,
+        );
       }
 
       // 创建角色
       const role = await this.prisma.projectRole.create({
         data: {
-          ownerId: dto.ownerId,
+          projectId: dto.projectId || null,
           name: dto.name,
           description: dto.description,
         },
@@ -104,7 +147,7 @@ export class ProjectRolesService {
 
       return role;
     } catch (error) {
-      if (error instanceof ConflictException) {
+      if (error instanceof ConflictException || error instanceof ForbiddenException) {
         throw error;
       }
       this.logger.error(`创建项目角色失败: ${error.message}`, error.stack);
@@ -115,7 +158,7 @@ export class ProjectRolesService {
   /**
    * 更新项目角色
    */
-  async update(roleId: string, dto: UpdateProjectRoleDto): Promise<any> {
+  async update(roleId: string, dto: UpdateProjectRoleDto, userId?: string): Promise<any> {
     try {
       const role = await this.prisma.projectRole.findUnique({
         where: { id: roleId },
@@ -123,6 +166,15 @@ export class ProjectRolesService {
 
       if (!role) {
         throw new NotFoundException('项目角色不存在');
+      }
+
+      // 权限检查：系统角色和全局角色需要管理员权限
+      const isSystemOrGlobal = role.isSystem || !role.projectId;
+      if (isSystemOrGlobal && userId) {
+        const isAdmin = await this.checkIsAdmin(userId);
+        if (!isAdmin) {
+          throw new ForbiddenException('只有管理员才能修改系统角色或全局共享的角色');
+        }
       }
 
       // 系统默认角色不能修改名称
@@ -148,7 +200,8 @@ export class ProjectRolesService {
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
       ) {
         throw error;
       }
@@ -160,7 +213,7 @@ export class ProjectRolesService {
   /**
    * 删除项目角色
    */
-  async delete(roleId: string): Promise<void> {
+  async delete(roleId: string, userId?: string): Promise<void> {
     try {
       const role = await this.prisma.projectRole.findUnique({
         where: { id: roleId },
@@ -171,6 +224,15 @@ export class ProjectRolesService {
 
       if (!role) {
         throw new NotFoundException('项目角色不存在');
+      }
+
+      // 权限检查：系统角色和全局角色需要管理员权限
+      const isSystemOrGlobal = role.isSystem || !role.projectId;
+      if (isSystemOrGlobal && userId) {
+        const isAdmin = await this.checkIsAdmin(userId);
+        if (!isAdmin) {
+          throw new ForbiddenException('只有管理员才能删除系统角色或全局共享的角色');
+        }
       }
 
       // 系统默认角色不能删除
@@ -192,7 +254,8 @@ export class ProjectRolesService {
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
       ) {
         throw error;
       }
@@ -208,8 +271,8 @@ export class ProjectRolesService {
     try {
       const roles = await this.prisma.projectRole.findMany({
         include: {
-          owner: {
-            select: { id: true, email: true, username: true, nickname: true },
+          project: {
+            select: { id: true, name: true },
           },
           permissions: true,
           _count: {
@@ -256,6 +319,59 @@ export class ProjectRolesService {
   }
 
   /**
+   * 获取特定项目的角色列表
+   */
+  async findByProject(projectId: string): Promise<any[]> {
+    try {
+      const roles = await this.prisma.projectRole.findMany({
+        where: {
+          OR: [
+            { projectId: projectId }, // 项目自定义角色
+            { isSystem: true }, // 系统角色（全局共享）
+          ],
+        },
+        include: {
+          permissions: true,
+          _count: {
+            select: { members: true },
+          },
+        },
+        orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }],
+      });
+
+      return roles;
+    } catch (error) {
+      this.logger.error(`获取项目角色列表失败: ${error.message}`, error.stack);
+      throw new BadRequestException(`获取项目角色列表失败`);
+    }
+  }
+
+  /**
+   * 获取系统默认项目角色列表（仅返回 isSystem=true 的角色）
+   */
+  async findSystemRoles(): Promise<any[]> {
+    try {
+      const roles = await this.prisma.projectRole.findMany({
+        where: {
+          isSystem: true,
+        },
+        include: {
+          permissions: true,
+          _count: {
+            select: { members: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      return roles;
+    } catch (error) {
+      this.logger.error(`获取系统项目角色失败: ${error.message}`, error.stack);
+      throw new BadRequestException(`获取系统项目角色失败`);
+    }
+  }
+
+  /**
    * 获取角色的所有权限
    */
   async getRolePermissions(roleId: string): Promise<ProjectPermission[]> {
@@ -279,9 +395,28 @@ export class ProjectRolesService {
    */
   async assignPermissions(
     roleId: string,
-    permissions: ProjectPermission[]
+    permissions: ProjectPermission[],
+    userId?: string
   ): Promise<void> {
     try {
+      // 检查角色是否存在
+      const role = await this.prisma.projectRole.findUnique({
+        where: { id: roleId },
+      });
+
+      if (!role) {
+        throw new NotFoundException('项目角色不存在');
+      }
+
+      // 权限检查：系统角色和全局角色需要管理员权限
+      const isSystemOrGlobal = role.isSystem || !role.projectId;
+      if (isSystemOrGlobal && userId) {
+        const isAdmin = await this.checkIsAdmin(userId);
+        if (!isAdmin) {
+          throw new ForbiddenException('只有管理员才能修改系统角色或全局共享的角色权限');
+        }
+      }
+
       // 创建权限关联（直接使用枚举值）
       const data = permissions.map((permission) => ({
         projectRoleId: roleId,
@@ -295,6 +430,9 @@ export class ProjectRolesService {
 
       this.logger.log(`角色 ${roleId} 的权限分配成功`);
     } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
       this.logger.error(`分配角色权限失败: ${error.message}`, error.stack);
       throw new BadRequestException(`分配角色权限失败: ${error.message}`);
     }
@@ -305,9 +443,28 @@ export class ProjectRolesService {
    */
   async removePermissions(
     roleId: string,
-    permissions: ProjectPermission[]
+    permissions: ProjectPermission[],
+    userId?: string
   ): Promise<void> {
     try {
+      // 检查角色是否存在
+      const role = await this.prisma.projectRole.findUnique({
+        where: { id: roleId },
+      });
+
+      if (!role) {
+        throw new NotFoundException('项目角色不存在');
+      }
+
+      // 权限检查：系统角色和全局角色需要管理员权限
+      const isSystemOrGlobal = role.isSystem || !role.projectId;
+      if (isSystemOrGlobal && userId) {
+        const isAdmin = await this.checkIsAdmin(userId);
+        if (!isAdmin) {
+          throw new ForbiddenException('只有管理员才能修改系统角色或全局共享的角色权限');
+        }
+      }
+
       await this.prisma.projectRolePermission.deleteMany({
         where: {
           projectRoleId: roleId,
@@ -319,6 +476,9 @@ export class ProjectRolesService {
 
       this.logger.log(`角色 ${roleId} 的权限移除成功`);
     } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
       this.logger.error(`移除角色权限失败: ${error.message}`, error.stack);
       throw new BadRequestException('移除角色权限失败');
     }

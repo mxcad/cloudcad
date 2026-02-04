@@ -249,3 +249,34 @@ export const canViewNode = async (
     'VIEWER',
   ]);
 };
+
+/**
+ * 检查用户是否可以管理节点角色
+ * @param user - 用户对象
+ * @param nodeId - 节点 ID（项目 ID）
+ * @returns boolean - 是否可以管理角色
+ */
+export const canManageNodeRoles = async (
+  user: User | null,
+  nodeId: string
+): Promise<boolean> => {
+  if (!user) {
+    return false;
+  }
+
+  try {
+    // 动态导入 API 服务以避免循环依赖
+    const { projectsApi } = await import('../services/apiService');
+
+    // 检查用户是否具有 PROJECT_ROLE_MANAGE 权限
+    const response = await projectsApi.checkPermission(
+      nodeId,
+      'PROJECT_ROLE_MANAGE'
+    );
+
+    return response.data?.hasPermission || false;
+  } catch (error) {
+    logger.error('检查角色管理权限失败:', error);
+    return false;
+  }
+};

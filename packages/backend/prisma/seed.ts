@@ -26,23 +26,35 @@ const prisma = new PrismaClient({
 });
 
 /**
- * 动态获取所有权限（从 Prisma 枚举）
- * 避免硬编码权限列表
+ * 系统权限定义（与 schema.prisma 中的 Permission 枚举一致）
  */
-const getAllPermissions = (): Permission[] => {
-  return Object.values(Permission);
-};
+const SYSTEM_PERMISSIONS: Permission[] = [
+  Permission.SYSTEM_USER_READ,
+  Permission.SYSTEM_USER_CREATE,
+  Permission.SYSTEM_USER_UPDATE,
+  Permission.SYSTEM_USER_DELETE,
+  Permission.SYSTEM_ROLE_READ,
+  Permission.SYSTEM_ROLE_CREATE,
+  Permission.SYSTEM_ROLE_UPDATE,
+  Permission.SYSTEM_ROLE_DELETE,
+  Permission.SYSTEM_ROLE_PERMISSION_MANAGE,
+  Permission.SYSTEM_FONT_READ,
+  Permission.SYSTEM_FONT_UPLOAD,
+  Permission.SYSTEM_FONT_DELETE,
+  Permission.SYSTEM_FONT_DOWNLOAD,
+  Permission.SYSTEM_ADMIN,
+  Permission.SYSTEM_MONITOR,
+];
 
 /**
  * 角色权限配置规则
- * 使用函数而非硬编码数组，便于维护和扩展
  */
 const rolePermissionRules = {
   // 系统管理员：所有权限
-  admin: () => getAllPermissions(),
+  admin: SYSTEM_PERMISSIONS,
 
-  // 普通用户：基础权限
-  user: () => [],
+  // 普通用户：基础权限（当前为空，可根据需要添加）
+  user: [] as Permission[],
 };
 
 /**
@@ -80,6 +92,8 @@ async function main() {
     create: {
       name: 'ADMIN',
       description: '系统管理员，拥有所有权限',
+      category: 'SYSTEM',
+      level: 100,
       isSystem: true,
     },
   });
@@ -90,6 +104,8 @@ async function main() {
     create: {
       name: 'USER',
       description: '普通用户，基础权限',
+      category: 'SYSTEM',
+      level: 0,
       isSystem: true,
     },
   });
@@ -105,11 +121,11 @@ async function main() {
 
   // ADMIN 权限（系统管理员）
   console.log('配置 ADMIN 权限...');
-  await assignPermissionsToRole(adminRole.id, rolePermissionRules.admin());
+  await assignPermissionsToRole(adminRole.id, rolePermissionRules.admin);
 
   // USER 权限（普通用户）
   console.log('配置 USER 权限...');
-  await assignPermissionsToRole(userRole.id, rolePermissionRules.user());
+  await assignPermissionsToRole(userRole.id, rolePermissionRules.user);
 
   // 创建管理员用户（管理员账号不需要邮箱验证）
   const adminPassword = await bcrypt.hash('Admin123!', 12);

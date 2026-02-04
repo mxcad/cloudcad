@@ -47,10 +47,14 @@ const setupXHR = (): void => {
     if (needsAuth(url)) {
       const token = localStorage.getItem('accessToken');
 
+      console.log('[globalAuth] XHR 请求:', url);
+      console.log('[globalAuth] Token:', token ? `${token.substring(0, 20)}...` : 'missing');
+
       // 检查是否已存在 Authorization header，避免重复
       const existingAuth = this.getRequestHeader?.('Authorization');
       if (!existingAuth && token) {
         this.setRequestHeader('Authorization', `Bearer ${token}`);
+        console.log('[globalAuth] 已添加 Authorization header');
       }
     }
     return originalXHRSend!.call(this, body);

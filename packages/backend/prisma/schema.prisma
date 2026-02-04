@@ -25,7 +25,6 @@ model User {
   // 关联关系
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   projectMembers     ProjectMember[]
-  projectRoles       ProjectRole[]   @relation("ProjectRoleOwner")
   auditLogs          AuditLog[]
 
   @@map("users")
@@ -107,9 +106,13 @@ model FileSystemNode {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime? // 软删除时间（回收站功能）
   deletedByCascade Boolean @default(false) // 是否因父节点删除而被自动删除
+  deletedFromStorage DateTime? // 从本地存储删除的时间（用于定期清理）
 
   // 关联关系
   projectMembers ProjectMember[]
+  projectRoles   ProjectRole[]
+
+  // 索引优化
 
   // 索引优化
   @@index([parentId])
@@ -122,23 +125,23 @@ model FileSystemNode {
 
 // ============ 项目成员模块 ============
 
-// 项目角色（用户自定义的项目角色，跨项目共享）
+// 项目角色（系统角色全局共享，自定义角色绑定到项目）
 model ProjectRole {
   id          String   @id @default(cuid())
-  ownerId     String   // 创建者 ID
-  name        String   // 角色名称（全局唯一）
+  projectId   String?  // 项目 ID（系统角色为null，自定义角色绑定到项目）
+  name        String   // 角色名称
   description String?  // 角色描述
-  isSystem    Boolean  @default(false) // 是否为系统默认角色
+  isSystem    Boolean  @default(false) // 是否为系统角色
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // 关联关系
-  owner       User     @relation("ProjectRoleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  project     FileSystemNode? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   members     ProjectMember[]
   permissions ProjectRolePermission[]
 
-  @@unique([name])
-  @@index([ownerId])
+  @@unique([projectId, name]) // 项目内唯一（projectId为null时表示全局唯一）
+  @@index([projectId])
   @@map("project_roles")
 }
 
@@ -314,8 +317,6 @@ enum Permission {
 // 项目权限枚举（与系统权限完全解耦）
 enum ProjectPermission {
   // ========== 项目管理权限 ==========
-  PROJECT_CREATE
-  PROJECT_READ
   PROJECT_UPDATE
   PROJECT_DELETE
   PROJECT_MEMBER_MANAGE
@@ -344,7 +345,6 @@ enum ProjectPermission {
   CAD_EXTERNAL_REFERENCE
 
   // ========== 图库权限 ==========
-  GALLERY_USE
   GALLERY_ADD
 
   // ========== 版本管理权限 ==========

@@ -17,7 +17,7 @@ interface Member {
   id: string;
   projectId: string;
   userId: string;
-  roleId: string;
+  projectRoleId: string;
   user: {
     id: string;
     email: string;
@@ -27,11 +27,19 @@ interface Member {
     role: string;
     status: string;
   };
-  role: {
+  projectRole: {
     id: string;
+    projectId: string | null;
     name: string;
     description: string | null;
     isSystem: boolean;
+    createdAt: string;
+    updatedAt: string;
+    permissions?: Array<{
+      id: string;
+      projectRoleId: string;
+      permission: string;
+    }>;
   };
   createdAt: string;
 }
@@ -105,7 +113,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
   const loadProjectRoles = useCallback(async () => {
     try {
-      const response = await projectRolesApi.list();
+      const response = await projectRolesApi.getByProject(projectId);
       const allRoles = (response.data as any[]) || [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
@@ -123,11 +131,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     } catch (error) {
       console.error('加载项目角色失败:', error);
     }
-  }, []);
+  }, [projectId]);
 
   // 根据角色筛选成员
   const filteredMembers = filterRoleId
-    ? members.filter((member) => member.roleId === filterRoleId)
+    ? members.filter((member) => member.projectRoleId === filterRoleId)
     : members;
 
   // 搜索用户
@@ -249,12 +257,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     }
   };
 
-  const handleUpdateRole = async (userId: string, roleId: string) => {
+  const handleUpdateRole = async (userId: string, projectRoleId: string) => {
     setErrorMessage('');
     try {
-      await projectsApi.updateMember(projectId, userId, { roleId });
+      await projectsApi.updateMember(projectId, userId, { roleId: projectRoleId });
       setMembers((prev) =>
-        prev.map((m) => (m.userId === userId ? { ...m, roleId } : m))
+        prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
     } catch (error) {
       if (
@@ -511,7 +519,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               </div>
             ) : (
               filteredMembers.map((member) => {
-                const isOwner = member.role.name === 'PROJECT_OWNER';
+                const isOwner = member.projectRole?.name === 'PROJECT_OWNER';
                 const displayName =
                   member.user.nickname ||
                   member.user.username ||
@@ -538,7 +546,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       </p>
                     </div>
                     <select
-                      value={member.roleId}
+                      value={member.projectRoleId}
                       onChange={(e) =>
                         handleUpdateRole(member.userId, e.target.value)
                       }

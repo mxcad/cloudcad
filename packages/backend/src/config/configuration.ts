@@ -32,15 +32,6 @@ export default (): AppConfig => ({
     retryDelayOnFailover:
       parseInt(process.env.REDIS_RETRY_DELAY || '100', 10) || 100,
   },
-  minio: {
-    endPoint: process.env.MINIO_ENDPOINT || 'localhost',
-    port: parseInt(process.env.MINIO_PORT || '9000', 10) || 9000,
-    useSSL: process.env.MINIO_USE_SSL === 'true',
-    accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-    secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-    region: process.env.MINIO_REGION || 'us-east-1',
-    bucket: process.env.MINIO_BUCKET || 'cloucad',
-  },
   upload: {
     maxSize:
       parseInt(process.env.UPLOAD_MAX_SIZE || '104857600', 10) ||
@@ -49,5 +40,6 @@ export default (): AppConfig => ({
       process.env.UPLOAD_ALLOWED_TYPES || '.dwg,.dxf,.pdf,.png,.jpg,.jpeg'
     ).split(','),
   },
+  filesDataPath: process.env.FILES_DATA_PATH || '../filesData', // 本地存储路径
   // debug 配置已删除，使用 NestJS 原生日志
 });

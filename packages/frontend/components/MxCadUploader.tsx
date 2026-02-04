@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   useMxCadUploadNative,
   LoadFileParam,
@@ -31,6 +31,49 @@ export interface MxCadUploaderRef {
 }
 
 /**
+ * 消息转义函数，防止 XSS 攻击
+ */
+const escapeHtml = (unsafe: string): string => {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+/**
+ * 节流函数，限制函数调用频率
+ */
+const throttle = <T extends (...args: unknown[]) => void>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let lastCall = 0;
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    const remaining = delay - (now - lastCall);
+
+    if (remaining <= 0) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      lastCall = now;
+      func(...args);
+    } else if (!timeoutId) {
+      timeoutId = setTimeout(() => {
+        lastCall = Date.now();
+        timeoutId = null;
+        func(...args);
+      }, remaining);
+    }
+  };
+};
+
+/**
  * MxCAD 文件上传组件（增强版本）
  *
  * 新增功能：
@@ -61,6 +104,13 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
     const { selectFiles } = useMxCadUploadNative();
 
+    // 节流后的进度更新函数（每 200ms 最多更新一次）
+    const throttledSetProgress = useCallback(
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      throttle((value: number) => setProgress(value), 200),
+      []
+    );
+
     // 外部参照上传 Hook
     const externalReferenceUpload = useExternalReferenceUpload({
       fileHash: currentFileHash,
@@ -77,16 +127,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       },
     });
 
-    // 暴露方法给父组件
-    useImperativeHandle(
-      ref,
-      () => ({
-        triggerUpload: () => handleSelectFiles(),
-      }),
-      []
-    );
-
-    const handleSelectFiles = () => {
+    const handleSelectFiles = useCallback(() => {
       // 每次上传前都获取最新的 nodeId
       const currentNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
 
@@ -130,7 +171,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           setTimeout(() => setShowToast(false), 5000);
         },
         onProgress: (percentage: number) => {
-          setProgress(percentage);
+          throttledSetProgress(percentage);
         },
         onFileQueued: (file: File) => {
           setUploading(true);
@@ -145,7 +186,24 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           setShowToast(true);
         },
       });
-    };
+    }, [
+      isAuthenticated,
+      nodeId,
+      onSuccess,
+      onError,
+      selectFiles,
+      externalReferenceUpload,
+      throttledSetProgress,
+    ]);
+
+    // 暴露方法给父组件
+    useImperativeHandle(
+      ref,
+      () => ({
+        triggerUpload: handleSelectFiles,
+      }),
+      [handleSelectFiles]
+    );
 
     return (
       <div className="mxcad-uploader">
@@ -174,7 +232,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
         {showToast && (
           <div className="fixed top-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50">
-            {message}
+            {escapeHtml(message)}
           </div>
         )}
 

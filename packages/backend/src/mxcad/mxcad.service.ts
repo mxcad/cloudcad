@@ -4,7 +4,7 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
-import { MinioSyncService } from './minio-sync.service';
+import { StorageManager } from '../common/services/storage-manager.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { ConversionOptions } from './interfaces/file-conversion.interface';
 import {
@@ -26,7 +26,7 @@ export class MxCadService {
     private readonly fileUploadManager: FileUploadManagerService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
-    private readonly minioSyncService: MinioSyncService
+    private readonly storageManager: StorageManager,
   ) {}
 
   /**
@@ -161,6 +161,30 @@ export class MxCadService {
   }
 
   /**
+   * 获取源图纸的存储根路径
+   * @param fileHash 源图纸文件的哈希值
+   * @returns 存储根路径，如果找不到源图纸则返回 uploads 路径（兼容旧文件）
+   */
+  private async getStorageRootPath(fileHash: string): Promise<string> {
+    try {
+      // 通过 fileHash 查找源图纸节点
+      const sourceNode = await this.fileSystemNodeService.findByFileHash(fileHash);
+
+      if (sourceNode && sourceNode.path) {
+        // 源图纸存在，返回源图纸节点目录（YYYYMM[/N]/sourceNodeId）
+        const fullPath = this.storageManager.getFullPath(sourceNode.path);
+        return fullPath;
+      }
+    } catch (error) {
+      this.logger.warn(`[getStorageRootPath] 查找源图纸节点失败: ${error.message}`);
+    }
+
+    // 源图纸不存在或查找失败，降级到 uploads 目录（兼容旧文件）
+    const uploadPath = this.configService.get('MXCAD_UPLOAD_PATH') || path.join(process.cwd(), 'uploads');
+    return uploadPath;
+  }
+
+  /**
    * 获取外部参照预加载数据
    * @param fileHash 文件哈希值
    * @returns 预加载数据，如果文件不存在则返回 null
@@ -173,70 +197,32 @@ export class MxCadService {
         return null;
       }
 
-      // 优先从 MinIO 读取预加载数据文件
-      const minioPath = `mxcad/file/${fileHash}.dwg.mxweb_preloading.json`;
-      const fileContent = await this.minioSyncService.getFileContent(minioPath);
+      // 获取存储根路径
+      const storageRootPath = await this.getStorageRootPath(fileHash);
+      this.logger.debug(`[getPreloadingData] 存储根路径: ${storageRootPath}`);
 
-      if (fileContent) {
-        const data = JSON.parse(
-          fileContent.toString('utf-8')
-        ) as PreloadingDataDto;
+      // 构造预加载数据文件路径
+      // 文件名格式：{fileHash}.dwg.mxweb_preloading.json
+      const preloadingFileName = `${fileHash}.dwg.mxweb_preloading.json`;
+      const preloadingFilePath = path.join(storageRootPath, preloadingFileName);
+
+      // 检查文件是否存在
+      try {
+        const content = await fsPromises.readFile(preloadingFilePath, 'utf-8');
+        const data = JSON.parse(content) as PreloadingDataDto;
+
         this.logger.debug(
-          `成功从 MinIO 获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`
+          `成功获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`
         );
         return data;
-      }
-
-      // 如果 MinIO 中不存在，回退到本地文件系统
-      const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
-        path.join(process.cwd(), 'uploads');
-
-      // 直接构造预期文件名，避免扫描整个目录
-      let preloadingFile: string | undefined;
-      try {
-        const files = await fsPromises.readdir(uploadPath);
-        // 匹配规则：文件名以 fileHash 开头，以 _preloading.json 结尾
-        // 实际文件名格式：{fileHash}.dwg.mxweb_preloading.json
-        preloadingFile = files.find(
-          (file) =>
-            file.startsWith(fileHash) && file.endsWith('_preloading.json')
-        );
-        this.logger.debug(
-          `[getPreloadingData] 查找预加载数据文件: fileHash=${fileHash}, 找到文件: ${preloadingFile || '无'}`
-        );
-      } catch (error) {
-        this.logger.warn(`[getPreloadingData] 读取目录失败: ${error.message}`);
-      }
-
-      if (!preloadingFile) {
-        this.logger.warn(
-          `[getPreloadingData] 预加载数据文件不存在: ${fileHash}`
-        );
+      } catch (readError) {
+        if (readError.code === 'ENOENT') {
+          this.logger.warn(`[getPreloadingData] 预加载数据文件不存在: ${preloadingFilePath}`);
+        } else {
+          this.logger.error(`[getPreloadingData] 读取文件失败: ${readError.message}`, readError.stack);
+        }
         return null;
       }
-
-      const filePath = path.join(uploadPath, preloadingFile);
-
-      // 验证路径安全性
-      if (!this.validateFilePath(filePath, uploadPath)) {
-        this.logger.error(`检测到路径遍历攻击: ${filePath}`);
-        return null;
-      }
-
-      const content = await fsPromises.readFile(filePath, 'utf-8');
-      this.logger.debug(`[getPreloadingData] 文件内容: ${content}`);
-
-      const data = JSON.parse(content) as PreloadingDataDto;
-      this.logger.debug(
-        `[getPreloadingData] 解析后的数据: ${JSON.stringify(data)}`
-      );
-
-      this.logger.debug(
-        `成功从本地获取预加载数据: ${fileHash}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`
-      );
-
-      return data;
     } catch (error) {
       this.logger.error(`获取预加载数据失败: ${error.message}`, error.stack);
       return null;
@@ -254,10 +240,8 @@ export class MxCadService {
     fileName: string
   ): Promise<boolean> {
     try {
-      const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
-        path.join(process.cwd(), 'uploads');
-      const hashDir = path.join(uploadPath, fileHash);
+      // 获取存储根路径（已包含 YYYYMM[/N]/nodeId）
+      const storageRootPath = await this.getStorageRootPath(fileHash);
 
       // 判断文件类型
       const ext = path.extname(fileName).toLowerCase();
@@ -274,28 +258,29 @@ export class MxCadService {
       // 构建目标文件名
       let targetFileName: string;
       if (isDwgFile) {
-        // DWG 文件：检查 {源文件名}.mxweb
+        // DWG 文件：检查 {fileName}.mxweb
         targetFileName = `${fileName}.mxweb`;
       } else if (isImageFile) {
-        // 图片文件：检查 {源图片名}
+        // 图片文件：检查 {fileName}
         targetFileName = fileName;
       } else {
         // 其他文件类型：假设为 DWG 处理
         targetFileName = `${fileName}.mxweb`;
       }
 
-      const targetFilePath = path.join(hashDir, targetFileName);
+      // 外部参照文件存储在 storageRootPath/fileHash/ 目录中
+      const targetFilePath = path.join(storageRootPath, fileHash, targetFileName);
 
       // 检查文件是否存在
       try {
         await fsPromises.access(targetFilePath);
         this.logger.log(
-          `[checkExternalReferenceExists] 文件存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`
+          `[checkExternalReferenceExists] 文件存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFilePath}`
         );
         return true;
       } catch (error) {
         this.logger.log(
-          `[checkExternalReferenceExists] 文件不存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFileName}`
+          `[checkExternalReferenceExists] 文件不存在: fileHash=${fileHash}, fileName=${fileName}, target=${targetFilePath}`
         );
         return false;
       }
@@ -610,7 +595,7 @@ export class MxCadService {
 
   /**
    * 根据存储路径查找文件节点（用于路径转换）
-   * @param storagePath MinIO 存储路径
+   * @param storagePath 本地存储路径
    * @returns 文件节点或 null
    */
   async getFileSystemNodeByPath(storagePath: string): Promise<any | null> {
@@ -628,14 +613,12 @@ export class MxCadService {
 
   /**
    * 查询缩略图是否存在
-   * 查询逻辑：先检查 MinIO 中是否存在，如果不存在则检查本地文件系统
-   * 缩略图文件名格式：{hash}.{图片后缀}
    * @param fileHash 文件哈希值（DWG 文件的 hash）
    * @returns 缩略图信息（是否存在、存储位置、文件名）
    */
   async checkThumbnailExists(fileHash: string): Promise<{
     exists: boolean;
-    location: 'minio' | 'local' | 'none';
+    location: 'local' | 'none';
     fileName?: string;
     mimeType?: string;
   }> {
@@ -651,34 +634,23 @@ export class MxCadService {
         };
       }
 
-      // 1. 直接检查 MinIO 中的 JPG 缩略图
-      // MinIO 路径格式：mxcad/file/{hash}.jpg
-      const minioPath = `mxcad/file/${fileHash}.jpg`;
-      const existsInMinio = await this.minioSyncService.fileExists(minioPath);
+      // 通过 fileHash 查找节点
+      const node = await this.fileSystemNodeService.findByFileHash(fileHash);
 
-      if (existsInMinio) {
-        this.logger.log(
-          `[checkThumbnailExists] 缩略图存在于 MinIO: ${minioPath}`
+      if (!node || !node.path) {
+        this.logger.warn(
+          `[checkThumbnailExists] 节点不存在或没有 path 字段: ${fileHash}`
         );
-        return {
-          exists: true,
-          location: 'minio',
-          fileName: `${fileHash}.jpg`,
-          mimeType: 'image/jpeg',
-        };
+        return { exists: false, location: 'none' };
       }
 
-      // 2. 如果 MinIO 中不存在，检查本地文件系统
-      const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
-        path.join(process.cwd(), 'uploads');
-      const localPath = path.join(uploadPath, `${fileHash}.jpg`);
+      // 构建缩略图路径：filesData/YYYYMM[/N]/nodeId/{fileHash}.jpg
+      const nodeFullPath = this.storageManager.getFullPath(node.path);
+      const thumbnailPath = path.join(nodeFullPath, `${fileHash}.jpg`);
 
+      // 检查文件是否存在
       try {
-        await fsPromises.access(localPath);
-        this.logger.log(
-          `[checkThumbnailExists] 缩略图存在于本地: ${localPath}`
-        );
+        await fsPromises.access(thumbnailPath);
         return {
           exists: true,
           location: 'local',
@@ -686,30 +658,15 @@ export class MxCadService {
           mimeType: 'image/jpeg',
         };
       } catch (error) {
-        // 文件不存在
+        return { exists: false, location: 'none' };
       }
-
-      // 3. 都不存在
-      this.logger.log(`[checkThumbnailExists] 缩略图不存在: ${fileHash}`);
-      return {
-        exists: false,
-        location: 'none',
-      };
     } catch (error) {
-      this.logger.error(
-        `[checkThumbnailExists] 查询缩略图失败: ${error.message}`,
-        error.stack
-      );
-      return {
-        exists: false,
-        location: 'none',
-      };
+      return { exists: false, location: 'none' };
     }
   }
 
   /**
    * 上传缩略图
-   * 上传到本地和 MinIO 相同的位置，并重命名为 {hash}.{图片后缀}
    * @param fileHash 文件哈希值（DWG 文件的 hash）
    * @param filePath 上传的缩略图文件路径
    * @returns 上传结果
@@ -756,13 +713,25 @@ export class MxCadService {
 
       // 构建目标文件名（固定为 jpg 格式）
       const targetFileName = `${fileHash}.jpg`;
-      const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
-        path.join(process.cwd(), 'uploads');
-      const targetLocalPath = path.join(uploadPath, targetFileName);
-      const targetMinioPath = `mxcad/file/${targetFileName}`;
 
-      // 1. 上传到本地文件系统
+      // 通过 fileHash 查找节点
+      const node = await this.fileSystemNodeService.findByFileHash(fileHash);
+
+      if (!node || !node.path) {
+        this.logger.warn(
+          `[uploadThumbnail] 节点不存在或没有 path 字段: ${fileHash}`
+        );
+        return {
+          success: false,
+          message: '文件节点不存在或没有 path 字段',
+        };
+      }
+
+      // 构建目标路径：filesData/YYYYMM[/N]/nodeId/{fileHash}.jpg
+      const nodeFullPath = this.storageManager.getFullPath(node.path);
+      const targetLocalPath = path.join(nodeFullPath, targetFileName);
+
+      // 上传到本地文件系统
       try {
         // 如果目标文件已存在，先删除
         if (fs.existsSync(targetLocalPath)) {
@@ -786,31 +755,6 @@ export class MxCadService {
           success: false,
           message: `上传到本地失败: ${error.message}`,
         };
-      }
-
-      // 2. 上传到 MinIO
-      try {
-        const success = await this.minioSyncService.syncFileToMinio(
-          targetLocalPath,
-          targetMinioPath
-        );
-
-        if (!success) {
-          this.logger.warn(
-            `[uploadThumbnail] 上传到 MinIO 失败，但本地上传成功`
-          );
-          // MinIO 上传失败不影响整体结果，因为本地已有文件
-        } else {
-          this.logger.log(
-            `[uploadThumbnail] 缩略图上传到 MinIO 成功: ${targetMinioPath}`
-          );
-        }
-      } catch (error) {
-        this.logger.error(
-          `[uploadThumbnail] 上传到 MinIO 失败: ${error.message}`,
-          error.stack
-        );
-        // MinIO 上传失败不影响整体结果
       }
 
       return {

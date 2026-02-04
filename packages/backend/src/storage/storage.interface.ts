@@ -16,6 +16,9 @@ export interface StorageProvider {
   deleteFile(key: string): Promise<void>;
   fileExists(key: string): Promise<boolean>;
 
+  // 文件流操作（用于图片代理等场景）
+  getFileStream(key: string): Promise<NodeJS.ReadableStream>;
+
   // 预签名 URL
   getPresignedPutUrl(key: string, expiry?: number): Promise<string>;
 }

@@ -42,28 +42,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # MinIO对象存储
-  minio:
-    image: minio/minio:latest
-    container_name: cloucad-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio_data:/data
-    ports:
-      - '9000:9000' # API端口
-      - '9001:9001' # 控制台端口
-    networks:
-      - cloucad-network
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
   # 后端API服务
   backend:
     build:
@@ -93,18 +71,20 @@ services:
       REDIS_DB: 0
       REDIS_MAX_RETRIES: 3
       REDIS_RETRY_DELAY: 100
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_USE_SSL: false
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_REGION: us-east-1
-      MINIO_BUCKET: cloucad
+      FILES_DATA_PATH: /app/filesData
+      FILES_NODE_LIMIT: 300000
+      STORAGE_CLEANUP_DELAY_DAYS: 30
+      FILE_LOCK_TIMEOUT: 30000
+      FILE_LOCK_RETRY_INTERVAL: 100
+      FILE_LOCK_MAX_RETRIES: 3
+      DISK_WARNING_THRESHOLD: 21474836480
+      DISK_CRITICAL_THRESHOLD: 10737418240
       UPLOAD_MAX_SIZE: 104857600
       UPLOAD_ALLOWED_TYPES: .dwg,.dxf,.pdf,.png,.jpg,.jpeg
     ports:
       - '3001:3001'
     volumes:
+      - ./filesData:/app/filesData
       - ./logs:/app/logs
     networks:
       - cloucad-network
@@ -112,8 +92,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3001/api/health']
@@ -126,8 +104,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  minio_data:
     driver: local
 
 networks:

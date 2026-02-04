@@ -40,10 +40,15 @@ export const rolesApi = {
 export const projectRolesApi = {
   list: () => apiClient.get('/roles/project-roles/all'),
 
+  getSystemRoles: () => apiClient.get('/roles/project-roles/system'),
+
+  getByProject: (projectId: string) =>
+    apiClient.get(`/roles/project-roles/project/${projectId}`),
+
   get: (id: string) => apiClient.get(`/roles/project-roles/${id}`),
 
   create: (data: {
-    ownerId: string;
+    projectId?: string;
     name: string;
     description?: string;
     permissions: string[];

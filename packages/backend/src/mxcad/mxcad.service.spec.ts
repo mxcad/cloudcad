@@ -5,7 +5,6 @@ import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
-import { MinioSyncService } from './minio-sync.service';
 import { MxUploadReturn } from './enums/mxcad-return.enum';
 
 describe('MxCadService', () => {
@@ -15,7 +14,6 @@ describe('MxCadService', () => {
   let mockFileUploadManager: jest.Mocked<FileUploadManagerService>;
   let mockFileSystemNodeService: jest.Mocked<FileSystemNodeService>;
   let mockFileConversionService: jest.Mocked<FileConversionService>;
-  let mockMinioSyncService: jest.Mocked<MinioSyncService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -48,15 +46,6 @@ describe('MxCadService', () => {
       convertFileAsync: jest.fn().mockResolvedValue('task-123'),
     } as any;
 
-    mockMinioSyncService = {
-      fileExists: jest.fn(),
-      getFileContent: jest.fn(),
-      minioClient: {
-        statObject: jest.fn(),
-      },
-      bucketName: 'test-bucket',
-    } as any;
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MxCadService,
@@ -79,10 +68,6 @@ describe('MxCadService', () => {
         {
           provide: FileConversionService,
           useValue: mockFileConversionService,
-        },
-        {
-          provide: MinioSyncService,
-          useValue: mockMinioSyncService,
         },
       ],
     }).compile();
@@ -206,40 +191,6 @@ describe('MxCadService', () => {
   describe('getPreloadingData', () => {
     it('should return null for invalid file hash', async () => {
       const result = await service.getPreloadingData('invalid-hash');
-      expect(result).toBeNull();
-    });
-
-    it.skip('should return data from MinIO when available', async () => {
-      const mockData = {
-        externalReference: [],
-        images: [],
-      };
-      const mockFileContent = Buffer.from(JSON.stringify(mockData));
-
-      // Mock getFileContent to return the data
-      jest
-        .spyOn(mockMinioSyncService, 'getFileContent')
-        .mockResolvedValue(mockFileContent);
-
-      const result = await service.getPreloadingData(
-        'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
-      );
-
-      expect(result).toEqual(mockData);
-      expect(mockMinioSyncService.getFileContent).toHaveBeenCalledWith(
-        'mxcad/file/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2.dwg.mxweb_preloading.json'
-      );
-    });
-
-    it('should return null when JSON parsing fails', async () => {
-      mockMinioSyncService.getFileContent.mockResolvedValue(
-        Buffer.from('invalid json')
-      );
-
-      const result = await service.getPreloadingData(
-        'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
-      );
-
       expect(result).toBeNull();
     });
   });

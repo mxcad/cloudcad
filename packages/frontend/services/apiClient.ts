@@ -22,6 +22,7 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config) => {
         // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
+        // axios 默认使用 XHR，所以 globalAuth.ts 会自动添加 Authorization 头
 
         // 如果是 FormData，移除默认的 Content-Type，让浏览器自动设置
         if (config.data instanceof FormData) {
@@ -46,6 +47,25 @@ class ApiClient {
     // 响应拦截器 - 自动解包后端响应格式和处理 token 刷新
     this.client.interceptors.response.use(
       (response) => {
+        // 检查 MxCAD 格式的错误响应
+        if (
+          response.data &&
+          typeof response.data === 'object' &&
+          response.data.ret === 'errorparam' &&
+          response.data.message === '用户未认证'
+        ) {
+          console.log('[apiClient] 检测到 MxCAD 格式的未认证响应，跳转到登录页');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject({
+            ...response,
+            isUnauthorized: true,
+            message: '用户未认证',
+          });
+        }
+
         const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
         const isGalleryEndpoint = response.config.url?.includes('/gallery/');
         const shouldSkipUnwrap = isMxCadEndpoint || isGalleryEndpoint;
@@ -64,25 +84,54 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
+        // 检查错误响应中的 MxCAD 格式
+        if (
+          error.response?.data &&
+          error.response.data.ret === 'errorparam' &&
+          error.response.data.message === '用户未认证'
+        ) {
+          console.log('[apiClient] 检测到 MxCAD 格式的未认证错误，跳转到登录页');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject({
+            ...error,
+            isUnauthorized: true,
+            message: '用户未认证',
+          });
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
+          const refreshToken = localStorage.getItem('refreshToken');
+
+          // 如果没有 refreshToken，直接跳转到登录页
+          if (!refreshToken) {
+            console.log('[apiClient] 没有 refreshToken，跳转到登录页');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+            return Promise.reject(error);
+          }
+
+          // 尝试用 refreshToken 刷新 token
           try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-              const response = await axios.post(
-                `${API_BASE_URL}/auth/refresh`,
-                { refreshToken }
-              );
+            const response = await axios.post(
+              `${API_BASE_URL}/auth/refresh`,
+              { refreshToken }
+            );
 
-              const responseData = response.data.data || response.data;
-              const { accessToken } = responseData;
-              localStorage.setItem('accessToken', accessToken);
+            const responseData = response.data.data || response.data;
+            const { accessToken } = responseData;
+            localStorage.setItem('accessToken', accessToken);
 
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-              return this.client(originalRequest);
-            }
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return this.client(originalRequest);
           } catch (refreshError) {
+            console.log('[apiClient] Token 刷新失败，跳转到登录页');
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');

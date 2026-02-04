@@ -6,7 +6,6 @@ import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from '../database/database.service';
 import { ConfigService } from '@nestjs/config';
-import { MinioSyncService } from './minio-sync.service';
 
 describe('MxCadController', () => {
   let controller: MxCadController;
@@ -51,12 +50,6 @@ describe('MxCadController', () => {
       get: jest.fn(),
     } as any;
 
-    const mockMinioSyncService = {
-      fileExists: jest.fn(),
-      getFileStream: jest.fn(),
-      getFileContent: jest.fn(),
-    } as any;
-
     mockResponse = {
       json: jest.fn(),
       send: jest.fn(),
@@ -96,10 +89,6 @@ describe('MxCadController', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
-        },
-        {
-          provide: MinioSyncService,
-          useValue: mockMinioSyncService,
         },
       ],
     }).compile();

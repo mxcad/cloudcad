@@ -5,6 +5,7 @@
   Head,
   Body,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   HttpStatus,
   HttpCode,
@@ -15,7 +16,7 @@
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import type { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
@@ -34,7 +35,7 @@ import { UploadFilesDto } from './dto/upload-files.dto';
 import { PdfConversionDto } from './dto/pdf-conversion.dto';
 import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
-import { MinioSyncService } from './minio-sync.service';
+import { StorageService } from '../storage/storage.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
 
 @ApiTags('MxCAD 文件上传与转换')
@@ -48,7 +49,7 @@ export class MxCadController {
     private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly minioSyncService: MinioSyncService,
+    private readonly storageService: StorageService,
     private readonly permissionService: FileSystemPermissionService
   ) {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
@@ -308,7 +309,7 @@ export class MxCadController {
    * 上传文件（支持分片）
    */
   @Post('files/uploadFiles')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(AnyFilesInterceptor())
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -347,11 +348,16 @@ export class MxCadController {
   })
   @ApiResponse({ status: 200, description: '上传文件' })
   async uploadFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() body: UploadFilesDto,
     @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
+    const file = files && files.length > 0 ? files[0] : null;
+    this.logger.log(
+      `[uploadFile] files count: ${files?.length || 0}, file exists: ${!!file}, file size: ${file?.size}, body: ${JSON.stringify(body)}`
+    );
+
     // 检查是否为合并请求（没有文件，只有 chunks 信息）
     const isMergeRequest = !file && body.chunks !== undefined;
 
@@ -396,6 +402,9 @@ export class MxCadController {
 
     if (body.chunk !== undefined) {
       // 分片上传 - 手动处理文件移动
+      this.logger.log(
+        `[uploadFiles] 收到分片上传请求: chunk=${body.chunk}, chunks=${body.chunks}, hash=${body.hash}`
+      );
       try {
         // 验证 chunks 参数
         if (body.chunks === undefined) {
@@ -422,7 +431,7 @@ export class MxCadController {
         }
 
         // 移动文件
-        if (!fs.existsSync(file.path)) {
+        if (!file || !fs.existsSync(file.path)) {
           return res.json({ ret: 'errorparam' });
         }
 
@@ -443,6 +452,10 @@ export class MxCadController {
       }
     } else {
       // 完整文件上传（带权限验证）
+      if (!file) {
+        return res.json({ ret: 'errorparam' });
+      }
+
       const result = await this.mxCadService.uploadAndConvertFileWithPermission(
         file.path,
         body.hash,
@@ -1243,7 +1256,7 @@ export class MxCadController {
   /**
    * 查询缩略图是否存在
    *
-   * 查询逻辑：通过文件 ID 获取 fileHash，先检查 MinIO 中是否存在缩略图，如果不存在则检查本地文件系统
+   * 查询逻辑：通过文件 ID 获取 fileHash，检查本地存储中是否存在缩略图
    * 缩略图文件名格式：{hash}.{图片后缀}
    *
    * @param nodeId 文件系统节点 ID
@@ -1309,7 +1322,7 @@ export class MxCadController {
   /**
    * 上传缩略图
    *
-   * 通过 nodeId 获取 fileHash，上传到本地和 MinIO 相同的位置，并重命名为 {hash}.{图片后缀}
+   * 通过 nodeId 获取 fileHash，上传到本地存储，并重命名为 {hash}.{图片后缀}
    *
    * @param nodeId 文件系统节点 ID
    * @param file 上传的缩略图文件
@@ -1434,9 +1447,9 @@ export class MxCadController {
 
   /**
    * 访问非 CAD 文件（图片、文档等）
-   * 从 MinIO 读取文件流并返回
+   * 从本地存储读取文件流并返回
    *
-   * @param storageKey MinIO 存储键，格式: files/{userId}/{timestamp}-{filename}
+   * @param storageKey 存储键，格式: files/{userId}/{timestamp}-{filename}
    * @param res Express Response 对象
    * @returns 返回文件流或错误信息
    */
@@ -1520,9 +1533,9 @@ export class MxCadController {
         }
       }
 
-      // 从 MinIO 获取文件流
+      // 从本地存储获取文件流
       const fileStream =
-        await this.minioSyncService.getFileStream(actualStorageKey);
+        await this.storageService.getFileStream(actualStorageKey);
 
       // 设置响应头
       res.setHeader('Content-Type', 'application/octet-stream');
@@ -1556,7 +1569,7 @@ export class MxCadController {
   /**
    * 访问转换后的文件 (.mxweb) - GET 方法
    * 支持 MxCAD-App 访问路径: /mxcad/file/{filename}
-   * 优先从 MinIO 读取，失败时降级到本地文件系统
+   * 从本地存储读取文件
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
@@ -1796,16 +1809,16 @@ export class MxCadController {
 
       this.logger.log(`访问文件 - 尝试路径: ${possiblePaths.join(', ')}`);
 
-      let foundMinioPath: string | null = null;
+      let foundStoragePath: string | null = null;
 
       // 尝试找到文件
       for (const mxcadPath of possiblePaths) {
         try {
           const exists =
-            await this.mxCadService['minioSyncService'].fileExists(mxcadPath);
+            await this.storageService.fileExists(mxcadPath);
           if (exists) {
-            foundMinioPath = mxcadPath;
-            this.logger.log(`找到 MinIO 文件: ${mxcadPath}`);
+            foundStoragePath = mxcadPath;
+            this.logger.log(`找到存储文件: ${mxcadPath}`);
             break;
           }
         } catch (error) {
@@ -1813,15 +1826,12 @@ export class MxCadController {
         }
       }
 
-      if (foundMinioPath) {
-        // MinIO 中存在文件
+      if (foundStoragePath) {
+        // 存储中存在文件
         if (isHeadRequest) {
-          // 对于 HEAD 请求，直接使用 MinIO SDK 获取文件信息
-          // MinIO 的预签名 GET URL 不支持 HEAD 请求
+          // 对于 HEAD 请求，获取文件信息
           try {
-            const fileInfo = await this.mxCadService[
-              'minioSyncService'
-            ].getFileInfo(foundMinioPath!);
+            const fileInfo = await this.storageService.getFileInfo(foundStoragePath!);
 
             if (fileInfo) {
               // 设置响应头
@@ -1834,30 +1844,23 @@ export class MxCadController {
               res.end();
               return;
             } else {
-              // 获取文件信息失败，降级到本地文件系统
-              this.mxCadService.logWarn(
-                `获取 MinIO 文件信息失败，降级到本地文件系统: ${normalizedFilename}`
-              );
+              throw new Error(`获取存储文件信息失败: ${normalizedFilename}`);
             }
           } catch (error) {
-            this.mxCadService.logError(
-              `获取 MinIO 文件信息失败: ${error.message}`,
+            this.logger.error(
+              `获取存储文件信息失败: ${error.message}`,
               error
             );
-            // 如果获取文件信息失败，降级到本地文件系统
+            throw error;
           }
         } else {
           // GET 请求直接返回文件流
           try {
-            this.logger.log(`准备返回文件流: ${foundMinioPath}`);
-            const fileStream = await this.mxCadService[
-              'minioSyncService'
-            ].getFileStream(foundMinioPath!);
+            this.logger.log(`准备返回文件流: ${foundStoragePath}`);
+            const fileStream = await this.storageService.getFileStream(foundStoragePath!);
 
             // 设置响应头
-            const fileInfo = await this.mxCadService[
-              'minioSyncService'
-            ].getFileInfo(foundMinioPath!);
+            const fileInfo = await this.storageService.getFileInfo(foundStoragePath!);
 
             if (fileInfo) {
               res.setHeader('Content-Type', fileInfo.contentType);
@@ -1867,7 +1870,7 @@ export class MxCadController {
             }
 
             // 返回文件流
-            this.logger.log(`开始返回文件流: ${foundMinioPath}`);
+            this.logger.log(`开始返回文件流: ${foundStoragePath}`);
 
             // 监听流错误
             fileStream.on('error', (error) => {
@@ -1880,162 +1883,20 @@ export class MxCadController {
             fileStream.pipe(res);
             return;
           } catch (error) {
-            this.logger.error(`获取 MinIO 文件流失败: ${error.message}`, error);
-            // 如果获取文件流失败，降级到本地文件系统
+            this.logger.error(`获取存储文件流失败: ${error.message}`, error);
+            throw error;
           }
         }
       }
 
-      // MinIO 中不存在，降级到本地文件系统
-      this.mxCadService.logWarn(
-        `MinIO 文件不存在，降级到本地文件系统: ${normalizedFilename}`
-      );
-
-      // 获取文件搜索路径列表
-      const uploadPath =
-        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
-      const resFilePath: string[] = [uploadPath];
-
-      // 如果配置了静态资源目录，也添加到搜索路径中
-      const staticResDirs = process.env.MXCAD_STATIC_RES_DIRS
-        ? process.env.MXCAD_STATIC_RES_DIRS.split(',')
-        : [];
-
-      staticResDirs.forEach((dir) => {
-        const staticMxCadResDir = path.join(dir, 'mxcad_res');
-        if (fs.existsSync(staticMxCadResDir)) {
-          resFilePath.push(staticMxCadResDir);
-        }
-      });
-
-      let foundFilePath = '';
-
-      // 在所有路径中查找文件
-      for (let i = 0; i < resFilePath.length; i++) {
-        // 直接查找
-        const directPath = path.join(resFilePath[i], normalizedFilename);
-        if (fs.existsSync(directPath)) {
-          foundFilePath = directPath;
-          break;
-        }
-
-        // 对于图片和资源文件，可能在哈希值命名的子目录中
-        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.json'].includes(ext)) {
-          // 从 normalizedFilename 中提取哈希值（如果包含路径）
-          const parts = normalizedFilename.split('/');
-          const hash = parts[0];
-          const shortName =
-            parts.length > 1 ? parts.slice(1).join('/') : normalizedFilename;
-
-          // 在哈希值命名的目录中查找
-          const hashDirPath = path.join(resFilePath[i], hash);
-          if (
-            fs.existsSync(hashDirPath) &&
-            fs.statSync(hashDirPath).isDirectory()
-          ) {
-            const fileInHashDir = path.join(hashDirPath, shortName);
-            if (fs.existsSync(fileInHashDir)) {
-              foundFilePath = fileInHashDir;
-              break;
-            }
-          }
-        }
-      }
-
-      // 如果没有找到文件
-      if (!foundFilePath) {
-        return res.status(404).json({
-          code: -1,
-          message: '文件不存在',
-        });
-      }
-
-      // 获取文件状态
-      const stats = fs.statSync(foundFilePath);
-
-      // 设置响应头，与参考代码保持一致（ext 已在上面声明）
-      let contentType = 'application/octet-stream';
-
-      // 根据文件扩展名设置适当的 Content-Type
-      switch (ext) {
-        case this.mxCadFileExt:
-          contentType = 'application/octet-stream';
-          break;
-        case '.dwg':
-          contentType = 'application/octet-stream';
-          break;
-        case '.dxf':
-          contentType = 'application/octet-stream';
-          break;
-        case '.json':
-          contentType = 'application/json';
-          break;
-        case '.png':
-          contentType = 'image/png';
-          break;
-        case '.jpg':
-        case '.jpeg':
-          contentType = 'image/jpeg';
-          break;
-        case '.gif':
-          contentType = 'image/gif';
-          break;
-        case '.webp':
-          contentType = 'image/webp';
-          break;
-        case '.svg':
-          contentType = 'image/svg+xml';
-          break;
-        case '.bmp':
-          contentType = 'image/bmp';
-          break;
-        case '.pdf':
-          contentType = 'application/pdf';
-          break;
-        case '.xml':
-          contentType = 'application/xml';
-          break;
-        case '.txt':
-          contentType = 'text/plain';
-          break;
-        case '.css':
-          contentType = 'text/css';
-          break;
-        case '.js':
-          contentType = 'application/javascript';
-          break;
-        case '.html':
-        case '.htm':
-          contentType = 'text/html';
-          break;
-      }
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', stats.size);
-      res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存1小时
-      res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
-
-      // 如果是 HEAD 请求，只返回头部信息，不发送文件内容
-      if (isHeadRequest) {
-        res.end();
-        return;
-      }
-
-      // 创建文件流并发送（仅对 GET 请求）
-      const fileStream = fs.createReadStream(foundFilePath);
-      fileStream.pipe(res);
-
-      fileStream.on('error', (error) => {
-        this.mxCadService.logError(`读取文件失败: ${error.message}`, error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            code: -1,
-            message: '读取文件失败',
-          });
-        }
+      // 存储中不存在文件，返回 404
+      this.logger.warn(`文件不存在: ${normalizedFilename}`);
+      return res.status(404).json({
+        code: -1,
+        message: '文件不存在',
       });
     } catch (error) {
-      this.mxCadService.logError(`访问文件失败: ${error.message}`, error);
+      this.logger.error(`访问文件失败: ${error.message}`, error);
       if (!res.headersSent) {
         res.status(500).json({
           code: -1,

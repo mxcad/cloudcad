@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -167,6 +168,26 @@ export class RolesController {
     return await this.projectRolesService.findAll();
   }
 
+  @Get('project-roles/system')
+  @ApiOperation({ summary: '获取系统默认项目角色' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取系统默认项目角色列表（仅返回 isSystem=true 的角色）',
+  })
+  async getSystemProjectRoles() {
+    return await this.projectRolesService.findSystemRoles();
+  }
+
+  @Get('project-roles/project/:projectId')
+  @ApiOperation({ summary: '获取特定项目的角色列表' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取项目角色列表（包含系统角色和项目自定义角色）',
+  })
+  async getProjectRolesByProject(@Param('projectId') projectId: string) {
+    return await this.projectRolesService.findByProject(projectId);
+  }
+
   @Get('project-roles/:id')
   @ApiOperation({ summary: '获取项目角色详情' })
   @ApiResponse({
@@ -189,38 +210,42 @@ export class RolesController {
   }
 
   @Post('project-roles')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_CREATE])
   @ApiOperation({ summary: '创建项目角色' })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: '成功创建项目角色',
   })
-  async createProjectRole(@Body() dto: any) {
-    return await this.projectRolesService.create(dto);
+  async createProjectRole(@Body() dto: any, @Request() req) {
+    return await this.projectRolesService.create(dto, req.user?.id);
   }
 
   @Patch('project-roles/:id')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_UPDATE])
   @ApiOperation({ summary: '更新项目角色' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功更新项目角色',
   })
-  async updateProjectRole(@Param('id') id: string, @Body() dto: any) {
-    return await this.projectRolesService.update(id, dto);
+  async updateProjectRole(@Param('id') id: string, @Body() dto: any, @Request() req) {
+    return await this.projectRolesService.update(id, dto, req.user?.id);
   }
 
   @Delete('project-roles/:id')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_DELETE])
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '删除项目角色' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功删除项目角色',
   })
-  async deleteProjectRole(@Param('id') id: string) {
-    await this.projectRolesService.delete(id);
+  async deleteProjectRole(@Param('id') id: string, @Request() req) {
+    await this.projectRolesService.delete(id, req.user?.id);
     return { message: '项目角色已删除' };
   }
 
   @Post('project-roles/:id/permissions')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
   @ApiOperation({ summary: '为项目角色分配权限' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -228,13 +253,15 @@ export class RolesController {
   })
   async addProjectRolePermissions(
     @Param('id') id: string,
-    @Body() body: { permissions: string[] }
+    @Body() body: { permissions: string[] },
+    @Request() req
   ) {
-    await this.projectRolesService.assignPermissions(id, body.permissions as any);
+    await this.projectRolesService.assignPermissions(id, body.permissions as any, req.user?.id);
     return await this.projectRolesService.findOne(id);
   }
 
   @Delete('project-roles/:id/permissions')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
   @ApiOperation({ summary: '从项目角色移除权限' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -242,9 +269,10 @@ export class RolesController {
   })
   async removeProjectRolePermissions(
     @Param('id') id: string,
-    @Body() body: { permissions: string[] }
+    @Body() body: { permissions: string[] },
+    @Request() req
   ) {
-    await this.projectRolesService.removePermissions(id, body.permissions as any);
+    await this.projectRolesService.removePermissions(id, body.permissions as any, req.user?.id);
     return await this.projectRolesService.findOne(id);
   }
 }

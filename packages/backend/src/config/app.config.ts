@@ -19,16 +19,6 @@ export interface RedisConfig {
   retryDelayOnFailover: number;
 }
 
-export interface MinIOConfig {
-  endPoint: string;
-  port: number;
-  useSSL: boolean;
-  accessKey: string;
-  secretKey: string;
-  region: string;
-  bucket: string;
-}
-
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -39,10 +29,10 @@ export interface AppConfig {
   };
   database: DatabaseConfig;
   redis: RedisConfig;
-  minio: MinIOConfig;
   upload: {
     maxSize: number;
     allowedTypes: string[];
   };
+  filesDataPath: string; // 本地存储路径
   // debug 配置已删除，使用 NestJS 原生日志
 }

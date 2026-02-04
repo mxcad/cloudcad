@@ -70,7 +70,7 @@ export class MxCadPermissionService {
     // 1. 检查用户是否是目标节点所有者
     const targetNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: targetNodeId, deletedAt: null },
-      select: { ownerId: true, parentId: true, isRoot: true, name: true },
+      select: { id: true, ownerId: true, parentId: true, isRoot: true, name: true },
     });
 
     if (targetNode?.ownerId === context.userId) {
@@ -78,7 +78,19 @@ export class MxCadPermissionService {
       return true;
     }
 
-    // 2. 检查用户是否有项目根目录的访问权限
+    // 2. 检查用户是否有项目成员权限
+    const projectRootId = targetNode?.isRoot 
+      ? targetNode.id 
+      : await this.findProjectRootId(targetNode?.parentId ?? undefined);
+    if (projectRootId) {
+      const isProjectMember = await this.checkProjectMember(context.userId, projectRootId);
+      if (isProjectMember) {
+        console.log(`[validateUploadPermission] 用户是项目成员，允许上传`);
+        return true;
+      }
+    }
+
+    // 3. 检查用户是否有项目根目录的访问权限（递归向上查找）
     if (targetNode && !targetNode.isRoot && targetNode.parentId) {
       console.log(
         `[validateUploadPermission] 目标节点不是根目录，检查父节点权限: parentId=${targetNode.parentId}`
@@ -125,8 +137,12 @@ export class MxCadPermissionService {
         currentNode = parentNode;
       }
 
+      // 递归深度达到限制时，拒绝访问
       if (depth >= maxDepth) {
-        console.warn(`[validateUploadPermission] 达到最大递归深度，停止检查`);
+        console.error(
+          `[validateUploadPermission] 达到最大递归深度 (${maxDepth})，拒绝访问以防止绕过权限检查`
+        );
+        throw new ForbiddenException('权限验证失败：目录层级过深，无法验证权限');
       }
     }
 
@@ -134,6 +150,60 @@ export class MxCadPermissionService {
       `[validateUploadPermission] 权限检查失败: 用户 ${context.userId} 没有任何访问权限`
     );
     throw new ForbiddenException('您没有该节点的访问权限，无法上传文件');
+  }
+
+  /**
+   * 查找项目根目录 ID
+   * @param nodeId 节点 ID
+   * @returns 项目根目录 ID，如果找不到返回 null
+   */
+  private async findProjectRootId(nodeId: string | undefined): Promise<string | null> {
+    if (!nodeId) return null;
+
+    let currentNodeId: string | undefined = nodeId;
+    let depth = 0;
+    const maxDepth = 10;
+
+    while (currentNodeId && depth < maxDepth) {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: currentNodeId, deletedAt: null },
+        select: { id: true, isRoot: true, parentId: true },
+      });
+
+      if (!node) break;
+
+      if (node.isRoot) {
+        return node.id;
+      }
+
+      currentNodeId = node.parentId ?? undefined;
+      depth++;
+    }
+
+    return null;
+  }
+
+  /**
+   * 检查用户是否是项目成员
+   * @param userId 用户 ID
+   * @param projectRootId 项目根目录 ID
+   * @returns 是否是项目成员
+   */
+  private async checkProjectMember(userId: string, projectRootId: string): Promise<boolean> {
+    try {
+      // 检查 ProjectMember 表中是否有记录
+      const member = await this.prisma.projectMember.findFirst({
+        where: {
+          userId: userId,
+          projectId: projectRootId,
+        },
+      });
+
+      return !!member;
+    } catch (error) {
+      console.error(`[checkProjectMember] 检查项目成员失败: ${error.message}`);
+      return false;
+    }
   }
 
   /**

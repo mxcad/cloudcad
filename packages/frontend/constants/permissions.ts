@@ -37,8 +37,6 @@ export const SystemPermission = {
  * 用于项目和文件系统的权限控制
  */
 export const ProjectPermission = {
-  PROJECT_CREATE: 'PROJECT_CREATE',
-  PROJECT_READ: 'PROJECT_READ',
   PROJECT_UPDATE: 'PROJECT_UPDATE',
   PROJECT_DELETE: 'PROJECT_DELETE',
   PROJECT_MEMBER_MANAGE: 'PROJECT_MEMBER_MANAGE',
@@ -61,7 +59,6 @@ export const ProjectPermission = {
   CAD_SAVE: 'CAD_SAVE',
   CAD_EXPORT: 'CAD_EXPORT',
   CAD_EXTERNAL_REFERENCE: 'CAD_EXTERNAL_REFERENCE',
-  GALLERY_USE: 'GALLERY_USE',
   GALLERY_ADD: 'GALLERY_ADD',
   VERSION_READ: 'VERSION_READ',
   VERSION_CREATE: 'VERSION_CREATE',
@@ -98,3 +95,198 @@ export const ProjectPermissionValues = Object.values(ProjectPermission) as reado
  * 获取所有权限的值
  */
 export const PermissionValues = [...SystemPermissionValues, ...ProjectPermissionValues] as readonly Permission[];
+
+/**
+ * 权限依赖关系
+ * 记录每个权限需要依赖的其他权限
+ */
+export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
+  // 系统权限依赖
+  'SYSTEM_USER_UPDATE': ['SYSTEM_USER_READ'],
+  'SYSTEM_USER_DELETE': ['SYSTEM_USER_READ'],
+  'SYSTEM_ROLE_UPDATE': ['SYSTEM_ROLE_READ'],
+  'SYSTEM_ROLE_DELETE': ['SYSTEM_ROLE_READ'],
+  'SYSTEM_FONT_UPLOAD': ['SYSTEM_FONT_READ'],
+  'SYSTEM_FONT_DELETE': ['SYSTEM_FONT_READ'],
+  'SYSTEM_FONT_DOWNLOAD': ['SYSTEM_FONT_READ'],
+  // 项目权限依赖
+  'PROJECT_UPDATE': [],
+  'PROJECT_DELETE': ['PROJECT_UPDATE'],
+  'PROJECT_MEMBER_MANAGE': ['PROJECT_UPDATE'],
+  'PROJECT_MEMBER_ASSIGN': ['PROJECT_UPDATE'],
+  'PROJECT_ROLE_MANAGE': ['PROJECT_UPDATE'],
+  'PROJECT_ROLE_PERMISSION_MANAGE': ['PROJECT_UPDATE'],
+  'PROJECT_TRANSFER': ['PROJECT_UPDATE'],
+  'PROJECT_SETTINGS_MANAGE': ['PROJECT_UPDATE'],
+  // 文件权限依赖
+  'FILE_CREATE': [],
+  'FILE_UPLOAD': [],
+  'FILE_OPEN': [],
+  'FILE_EDIT': ['FILE_OPEN'],
+  'FILE_DELETE': ['FILE_OPEN'],
+  'FILE_TRASH_MANAGE': [],
+  'FILE_DOWNLOAD': ['FILE_OPEN'],
+  'FILE_SHARE': ['FILE_OPEN'],
+  'FILE_COMMENT': ['FILE_OPEN'],
+  'FILE_PRINT': ['FILE_OPEN'],
+  'FILE_COMPARE': ['FILE_OPEN'],
+  // CAD 图纸权限依赖
+  'CAD_SAVE': ['FILE_OPEN'],
+  'CAD_EXPORT': ['FILE_OPEN'],
+  'CAD_EXTERNAL_REFERENCE': ['FILE_OPEN'],
+  // 图库权限依赖
+  'GALLERY_ADD': [],
+  // 版本管理权限依赖
+  'VERSION_READ': [],
+  'VERSION_CREATE': ['VERSION_READ'],
+  'VERSION_DELETE': ['VERSION_READ'],
+  'VERSION_RESTORE': ['VERSION_READ'],
+};
+
+/**
+ * 权限分组定义
+ */
+export const PERMISSION_GROUPS = {
+  system: [
+    {
+      label: '用户权限',
+      items: [
+        { key: 'SYSTEM_USER_READ', label: '查看用户' },
+        { key: 'SYSTEM_USER_CREATE', label: '创建用户' },
+        { key: 'SYSTEM_USER_UPDATE', label: '编辑用户' },
+        { key: 'SYSTEM_USER_DELETE', label: '删除用户' },
+      ],
+    },
+    {
+      label: '角色权限管理',
+      items: [
+        { key: 'SYSTEM_ROLE_READ', label: '查看角色' },
+        { key: 'SYSTEM_ROLE_CREATE', label: '创建角色' },
+        { key: 'SYSTEM_ROLE_UPDATE', label: '编辑角色' },
+        { key: 'SYSTEM_ROLE_DELETE', label: '删除角色' },
+        { key: 'SYSTEM_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
+      ],
+    },
+    {
+      label: '字体管理',
+      items: [
+        { key: 'SYSTEM_FONT_READ', label: '查看字体' },
+        { key: 'SYSTEM_FONT_UPLOAD', label: '上传字体' },
+        { key: 'SYSTEM_FONT_DELETE', label: '删除字体' },
+        { key: 'SYSTEM_FONT_DOWNLOAD', label: '下载字体' },
+      ],
+    },
+    {
+      label: '系统权限',
+      items: [
+        { key: 'SYSTEM_ADMIN', label: '系统管理' },
+        { key: 'SYSTEM_MONITOR', label: '系统监控' },
+      ],
+    },
+  ],
+  project: [
+    {
+      label: '项目权限',
+      items: [
+        { key: 'PROJECT_UPDATE', label: '编辑项目' },
+        { key: 'PROJECT_DELETE', label: '删除项目' },
+        { key: 'PROJECT_MEMBER_MANAGE', label: '成员管理' },
+        { key: 'PROJECT_MEMBER_ASSIGN', label: '成员分配' },
+        { key: 'PROJECT_ROLE_MANAGE', label: '角色管理' },
+        { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
+        { key: 'PROJECT_TRANSFER', label: '转让所有权' },
+        { key: 'PROJECT_SETTINGS_MANAGE', label: '项目设置' },
+      ],
+    },
+    {
+      label: '文件权限',
+      items: [
+        { key: 'FILE_CREATE', label: '创建文件' },
+        { key: 'FILE_UPLOAD', label: '上传文件' },
+        { key: 'FILE_OPEN', label: '查看文件' },
+        { key: 'FILE_EDIT', label: '编辑文件' },
+        { key: 'FILE_DELETE', label: '删除文件' },
+        { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
+        { key: 'FILE_DOWNLOAD', label: '下载文件' },
+        { key: 'FILE_SHARE', label: '分享文件' },
+        { key: 'FILE_COMMENT', label: '批注文件' },
+        { key: 'FILE_PRINT', label: '打印文件' },
+        { key: 'FILE_COMPARE', label: '图纸比对' },
+      ],
+    },
+    {
+      label: 'CAD 图纸权限',
+      items: [
+        { key: 'CAD_SAVE', label: '保存图纸' },
+        { key: 'CAD_EXPORT', label: '导出图纸' },
+        { key: 'CAD_EXTERNAL_REFERENCE', label: '管理外部参照' },
+      ],
+    },
+    {
+      label: '图库权限',
+      items: [
+        { key: 'GALLERY_ADD', label: '添加到图库' },
+      ],
+    },
+    {
+      label: '版本管理',
+      items: [
+        { key: 'VERSION_READ', label: '查看版本' },
+        { key: 'VERSION_CREATE', label: '创建版本' },
+        { key: 'VERSION_DELETE', label: '删除版本' },
+        { key: 'VERSION_RESTORE', label: '恢复版本' },
+      ],
+    },
+  ],
+} as const;
+
+/**
+ * 权限分组项类型
+ */
+export type PermissionGroupItem = {
+  key: Permission;
+  label: string;
+};
+
+/**
+ * 权限分组类型
+ */
+export type PermissionGroup = {
+  label: string;
+  items: PermissionGroupItem[];
+};
+
+/**
+ * 检查权限是否满足依赖条件
+ */
+export const isPermissionEnabled = (perm: string, selected: string[]): boolean => {
+  const dependencies = PERMISSION_DEPENDENCIES[perm];
+  if (!dependencies || dependencies.length === 0) return true;
+
+  return dependencies.every((dep) => selected.includes(dep));
+};
+
+/**
+ * 获取权限缺失的依赖
+ */
+export const getMissingDependencies = (perm: string, selected: string[]): string[] => {
+  const dependencies = PERMISSION_DEPENDENCIES[perm];
+  if (!dependencies || dependencies.length === 0) return [];
+
+  return dependencies.filter((dep) => !selected.includes(dep));
+};
+
+/**
+ * 切换权限选中状态
+ */
+export const togglePermission = (
+  perm: string,
+  selected: string[],
+  setSelected: (perms: string[]) => void
+): void => {
+  if (selected.includes(perm)) {
+    setSelected(selected.filter((p) => p !== perm));
+  } else {
+    setSelected([...selected, perm]);
+  }
+};

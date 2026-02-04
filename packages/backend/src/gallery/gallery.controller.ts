@@ -11,7 +11,6 @@ import {
   UseGuards,
   Req,
   InternalServerErrorException,
-  Inject,
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -28,7 +27,8 @@ import { ConfigService } from '@nestjs/config';
 import { GalleryService } from './gallery.service';
 import { GalleryFileListDto, AddToGalleryDto } from './dto/gallery.dto';
 import { DatabaseService } from '../database/database.service';
-import { MinioSyncService } from '../mxcad/minio-sync.service';
+import { StorageManager } from '../common/services/storage-manager.service';
+import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -48,8 +48,8 @@ export class GalleryController {
     private readonly database: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    @Inject(MinioSyncService)
-    private readonly minioSyncService: MinioSyncService
+    private readonly storageManager: StorageManager,
+    private readonly permissionService: FileSystemPermissionService,
   ) {}
 
   /**
@@ -964,10 +964,14 @@ export class GalleryController {
       let authorizedNodeId: string | null = null;
 
       for (const node of allNodes) {
-        // 检查文件所有者
-        if (node.ownerId === userId) {
+        // 使用统一的权限检查服务
+        const role = await this.permissionService.getNodeAccessRole(userId, node.id);
+        if (role !== null) {
           hasPermission = true;
           authorizedNodeId = node.id;
+          this.logger.log(
+            `[handleGalleryFileRequest] 用户有权限访问节点: ${node.id}, 角色: ${role}`
+          );
           break;
         }
       }
@@ -983,66 +987,88 @@ export class GalleryController {
         });
       }
 
-      // 构建可能的 MinIO 路径
-      // MXWEB 文件存储路径: mxcad/file/{fileHash}.dwg.mxweb
-      const possibleMinioPaths: string[] = [
-        `mxcad/file/${fileHash}.dwg.mxweb`,
-        `mxcad/file/${fileHash}.dxf.mxweb`,
-        `mxcad/file/${fileHash}.mxweb`,
-      ];
+      // 获取授权节点的完整路径信息
+      const authorizedNode = await this.database.fileSystemNode.findFirst({
+        where: {
+          fileHash: fileHash,
+          isFolder: false,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          path: true,
+          fileHash: true,
+        },
+      });
 
-      this.logger.log(
-        `[handleGalleryFileRequest] 尝试 MinIO 路径: ${possibleMinioPaths.join(', ')}`
-      );
+      let foundFilePath: string | null = null;
 
-      let foundMinioPath: string | null = null;
-
-      // 尝试从 MinIO 找到文件
-      for (const mxcadPath of possibleMinioPaths) {
+      // 从 filesData 目录查找文件（使用节点的 path 字段）
+      if (authorizedNode && authorizedNode.path) {
         try {
-          const exists = await this.minioSyncService.fileExists(mxcadPath);
-          if (exists) {
-            foundMinioPath = mxcadPath;
-            this.logger.log(
-              `[handleGalleryFileRequest] 找到 MinIO 文件: ${mxcadPath}`
-            );
-            break;
+          // 获取节点目录的完整路径
+          const nodeFullPath = this.storageManager.getFullPath(authorizedNode.path);
+          
+          // 构建可能的文件名
+          const possibleFileNames = [
+            `${fileHash}.dwg.mxweb`,
+            `${fileHash}.dxf.mxweb`,
+            `${fileHash}.mxweb`,
+            filename,
+          ];
+
+          // 尝试在节点目录中查找文件
+          for (const fileName of possibleFileNames) {
+            const targetPath = path.join(nodeFullPath, fileName);
+            if (fs.existsSync(targetPath)) {
+              foundFilePath = targetPath;
+              this.logger.log(
+                `[handleGalleryFileRequest] 从 filesData 目录找到文件: ${targetPath}`
+              );
+              break;
+            }
           }
         } catch (error) {
-          this.logger.log(
-            `[handleGalleryFileRequest] MinIO 路径 ${mxcadPath} 不存在，尝试下一个路径`
+          this.logger.error(
+            `[handleGalleryFileRequest] 从 filesData 目录查找失败: ${error.message}`,
+            error
           );
         }
       }
 
-      // 如果 MinIO 中找到文件，直接返回
-      if (foundMinioPath) {
+      // 如果找到文件，直接返回
+      if (foundFilePath) {
         try {
           // 对于 HEAD 请求，只返回文件头信息
           if (isHeadRequest) {
-            const fileInfo =
-              await this.minioSyncService.getFileInfo(foundMinioPath);
+            const stats = fs.statSync(foundFilePath);
 
-            if (fileInfo) {
-              // 设置响应头（与 MxCAD 保持一致）
-              res.setHeader('Content-Type', fileInfo.contentType);
-              res.setHeader('Content-Length', fileInfo.contentLength);
-              res.setHeader('Cache-Control', 'public, max-age=3600');
-              res.setHeader('Access-Control-Allow-Origin', '*');
-
-              // HEAD 请求只返回头部信息
-              res.end();
-              return;
-            } else {
-              // 获取文件信息失败，降级到本地文件系统
-              this.logger.warn(
-                `[handleGalleryFileRequest] 获取 MinIO 文件信息失败，降级到本地文件系统: ${foundMinioPath}`
-              );
+            // 检查路径是否是目录
+            if (stats.isDirectory()) {
+              this.logger.warn(`[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`);
+              return res.status(404).json({ code: -1, message: '文件不存在' });
             }
+
+            // 设置响应头（与 MxCAD 保持一致）
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Length', stats.size);
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+
+            // HEAD 请求只返回头部信息
+            res.end();
+            return;
           } else {
+            // 检查路径是否是目录
+            const stats = fs.statSync(foundFilePath);
+            if (stats.isDirectory()) {
+              this.logger.warn(`[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`);
+              return res.status(404).json({ code: -1, message: '文件不存在' });
+            }
+
             // GET 请求返回文件流
-            const fileStream =
-              await this.minioSyncService.getFileStream(foundMinioPath);
+            const fileStream = fs.createReadStream(foundFilePath);
 
             // 更新浏览次数
             await this.galleryService.incrementLookNum(fileHash, galleryType);
@@ -1059,7 +1085,7 @@ export class GalleryController {
 
             fileStream.on('error', (error) => {
               this.logger.error(
-                `[handleGalleryFileRequest] MinIO 文件流错误: ${error.message}`,
+                `[handleGalleryFileRequest] 本地文件流错误: ${error.message}`,
                 error
               );
               if (!res.headersSent) {
@@ -1071,105 +1097,19 @@ export class GalleryController {
           }
         } catch (error) {
           this.logger.error(
-            `[handleGalleryFileRequest] 获取 MinIO 文件失败: ${error.message}`,
+            `[handleGalleryFileRequest] 获取本地文件失败: ${error.message}`,
             error
           );
-          // 继续尝试本地文件
+          // 返回错误
+          return res.status(500).json({ code: -1, message: '文件读取失败' });
         }
       }
 
-      // MinIO 中未找到文件，尝试从本地文件系统获取
-      this.logger.log(
-        `[handleGalleryFileRequest] MinIO 中未找到文件，尝试本地文件系统`
+      // 本地文件系统中未找到文件
+      this.logger.warn(
+        `[handleGalleryFileRequest] 本地文件系统未找到文件: ${fileHash}`
       );
-
-      // 获取本地上传路径配置
-      const uploadPath = this.configService.get<string>(
-        'MXCAD_UPLOAD_PATH',
-        'D:\\web\\MxCADOnline\\cloudcad\\uploads'
-      );
-
-      // 构建可能的本地文件路径
-      const possibleLocalPaths: string[] = [
-        `${uploadPath}\\${fileHash}\\${fileHash}.dwg.mxweb`,
-        `${uploadPath}\\${fileHash}\\${fileHash}.dxf.mxweb`,
-        `${uploadPath}\\${fileHash}\\${fileHash}.mxweb`,
-      ];
-
-      this.logger.log(
-        `[handleGalleryFileRequest] 尝试本地路径: ${possibleLocalPaths.join(', ')}`
-      );
-
-      let foundLocalPath: string | null = null;
-
-      // 尝试从本地文件系统找到文件
-      for (const localPath of possibleLocalPaths) {
-        if (fs.existsSync(localPath)) {
-          foundLocalPath = localPath;
-          this.logger.log(
-            `[handleGalleryFileRequest] 找到本地文件: ${localPath}`
-          );
-          break;
-        }
-      }
-
-      if (!foundLocalPath) {
-        this.logger.warn(
-          `[handleGalleryFileRequest] MinIO 和本地文件系统均未找到文件: ${fileHash}`
-        );
-        return res.status(404).json({ code: -1, message: '文件不存在' });
-      }
-
-      // 读取本地文件
-      try {
-        if (isHeadRequest) {
-          // HEAD 请求：获取文件统计信息
-          const stats = fs.statSync(foundLocalPath);
-
-          // 设置响应头（与 MxCAD 保持一致）
-          res.setHeader('Content-Type', 'application/octet-stream');
-          res.setHeader('Content-Length', stats.size);
-          res.setHeader('Cache-Control', 'public, max-age=3600');
-          res.setHeader('Access-Control-Allow-Origin', '*');
-
-          // HEAD 请求只返回头部信息
-          res.end();
-        } else {
-          // GET 请求：返回文件流
-          const fileStream = fs.createReadStream(foundLocalPath);
-
-          // 更新浏览次数
-          await this.galleryService.incrementLookNum(fileHash, galleryType);
-
-          // 设置响应头
-          res.setHeader('Content-Type', 'application/octet-stream');
-          res.setHeader(
-            'Content-Disposition',
-            `inline; filename="${path.basename(filename)}"`
-          );
-
-          // 返回文件流
-          fileStream.pipe(res);
-
-          fileStream.on('error', (error) => {
-            this.logger.error(
-              `[handleGalleryFileRequest] 本地文件流错误: ${error.message}`,
-              error
-            );
-            if (!res.headersSent) {
-              res.status(500).json({ code: -1, message: '获取文件失败' });
-            }
-          });
-        }
-      } catch (error) {
-        this.logger.error(
-          `[handleGalleryFileRequest] 读取本地文件失败: ${error.message}`,
-          error
-        );
-        if (!res.headersSent) {
-          res.status(500).json({ code: -1, message: '获取文件失败' });
-        }
-      }
+      return res.status(404).json({ code: -1, message: '文件不存在' });
     } catch (error) {
       this.logger.error(
         `[handleGalleryFileRequest] 处理失败: ${error.message}`,
@@ -1224,6 +1164,7 @@ export class GalleryController {
           parentId: true,
           isRoot: true,
           fileHash: true,
+          path: true, // 添加 path 字段
         },
       });
 
@@ -1240,18 +1181,24 @@ export class GalleryController {
 
       // 检查用户对任何一个节点是否有权限
       let hasPermission = false;
+      let authorizedNode: any | null = null;
 
       for (const node of allNodes) {
-        // 检查文件所有者
-        if (node.ownerId === userId) {
+        // 使用统一的权限检查服务
+        const role = await this.permissionService.getNodeAccessRole(userId, node.id);
+        if (role !== null) {
           hasPermission = true;
+          authorizedNode = node;
+          this.logger.log(
+            `[handleThumbnailRequest] 用户有权限访问节点: ${node.id}, 角色: ${role}`
+          );
           break;
         }
       }
 
       this.logger.log(
         `[handleThumbnailRequest] 权限检查结果: userId=${userId}, hasPermission=${hasPermission}`
-      );
+            );
 
       if (!hasPermission) {
         return res.status(401).json({
@@ -1260,127 +1207,70 @@ export class GalleryController {
         });
       }
 
-      // 缩略图路径格式：mxcad/file/{fileHash}.jpg
-      const thumbnailPath = `mxcad/file/${fileHash}.jpg`;
-
-      this.logger.log(
-        `[handleThumbnailRequest] 尝试从 MinIO 获取缩略图: ${thumbnailPath}`
-      );
-
-      // 尝试从 MinIO 获取缩略图
-      try {
-        const existsInMinio =
-          await this.minioSyncService.fileExists(thumbnailPath);
-
-        if (existsInMinio) {
-          this.logger.log(
-            `[handleThumbnailRequest] 缩略图存在于 MinIO: ${thumbnailPath}`
-          );
-
-          // 对于 HEAD 请求，只返回文件头信息
-          if (isHeadRequest) {
-            const fileInfo =
-              await this.minioSyncService.getFileInfo(thumbnailPath);
-
-            if (fileInfo) {
-              res.setHeader('Content-Type', 'image/jpeg');
-              res.setHeader('Content-Length', fileInfo.contentLength);
-              res.setHeader('Cache-Control', 'public, max-age=3600');
-              res.setHeader('Access-Control-Allow-Origin', '*');
-              res.end();
-              return;
-            }
-          } else {
-            // GET 请求返回文件流
-            const fileStream =
-              await this.minioSyncService.getFileStream(thumbnailPath);
-
-            // 设置响应头
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=3600');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-
-            // 返回文件流
-            fileStream.pipe(res);
-
-            fileStream.on('error', (error) => {
-              this.logger.error(
-                `[handleThumbnailRequest] MinIO 文件流错误: ${error.message}`,
-                error
-              );
-              if (!res.headersSent) {
-                res.status(500).json({ code: -1, message: '获取缩略图失败' });
-              }
-            });
-
-            return;
-          }
-        }
-      } catch (error) {
-        this.logger.error(
-          `[handleThumbnailRequest] 从 MinIO 获取缩略图失败: ${error.message}`,
-          error
+      // 检查节点是否有 path 字段
+      if (!authorizedNode.path) {
+        this.logger.warn(
+          `[handleThumbnailRequest] 节点没有 path 字段: ${authorizedNode.id}`
         );
+        return res.status(404).json({ code: -1, message: '文件不存在' });
       }
 
-      // MinIO 中没有找到，尝试从本地文件系统获取
-      this.logger.log(
-        `[handleThumbnailRequest] MinIO 中未找到缩略图，尝试本地文件系统`
-      );
+      // 从 filesData 目录读取缩略图（使用 StorageManager 获取完整路径）
+      const nodeFullPath = this.storageManager.getFullPath(authorizedNode.path);
+      const localThumbnailPath = path.join(nodeFullPath, `${fileHash}.jpg`);
 
-      const uploadPath = this.configService.get<string>(
-        'MXCAD_UPLOAD_PATH',
-        'D:\\web\\MxCADOnline\\cloudcad\\uploads'
-      );
-      const localThumbnailPath = path.join(uploadPath, `${fileHash}.jpg`);
-
-      this.logger.log(
-        `[handleThumbnailRequest] 尝试本地路径: ${localThumbnailPath}`
-      );
-
+      // 检查文件是否存在
       if (fs.existsSync(localThumbnailPath)) {
         this.logger.log(
           `[handleThumbnailRequest] 缩略图存在于本地: ${localThumbnailPath}`
         );
 
-        try {
-          if (isHeadRequest) {
-            // HEAD 请求：获取文件统计信息
-            const stats = fs.statSync(localThumbnailPath);
+        // 对于 HEAD 请求，只返回文件头信息
+        if (isHeadRequest) {
+          const stats = fs.statSync(localThumbnailPath);
 
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Content-Length', stats.size);
-            res.setHeader('Cache-Control', 'public, max-age=3600');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.end();
-          } else {
-            // GET 请求：返回文件流
-            const fileStream = fs.createReadStream(localThumbnailPath);
-
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=3600');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-
-            fileStream.pipe(res);
-
-            fileStream.on('error', (error) => {
-              this.logger.error(
-                `[handleThumbnailRequest] 本地文件流错误: ${error.message}`,
-                error
-              );
-              if (!res.headersSent) {
-                res.status(500).json({ code: -1, message: '获取缩略图失败' });
-              }
-            });
+          // 检查路径是否是目录
+          if (stats.isDirectory()) {
+            this.logger.warn(`[handleThumbnailRequest] 路径是目录而非文件: ${localThumbnailPath}`);
+            return res.status(404).json({ code: -1, message: '缩略图不存在' });
           }
-        } catch (error) {
-          this.logger.error(
-            `[handleThumbnailRequest] 读取本地缩略图失败: ${error.message}`,
-            error
-          );
-          if (!res.headersSent) {
-            res.status(500).json({ code: -1, message: '获取缩略图失败' });
+
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.setHeader('Content-Length', stats.size);
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end();
+          return;
+        } else {
+          // 检查路径是否是目录
+          const stats = fs.statSync(localThumbnailPath);
+          if (stats.isDirectory()) {
+            this.logger.warn(`[handleThumbnailRequest] 路径是目录而非文件: ${localThumbnailPath}`);
+            return res.status(404).json({ code: -1, message: '缩略图不存在' });
           }
+
+          // GET 请求返回文件流
+          const fileStream = fs.createReadStream(localThumbnailPath);
+
+          // 设置响应头
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+
+          // 返回文件流
+          fileStream.pipe(res);
+
+          fileStream.on('error', (error) => {
+            this.logger.error(
+              `[handleThumbnailRequest] 本地文件流错误: ${error.message}`,
+              error
+            );
+            if (!res.headersSent) {
+              res.status(500).json({ code: -1, message: '获取缩略图失败' });
+            }
+          });
+
+          return;
         }
       } else {
         this.logger.warn(`[handleThumbnailRequest] 缩略图不存在: ${fileHash}`);

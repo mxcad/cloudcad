@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npm run dev:infra && nest start",
     "start:dev": "nest start --watch",
-    "dev:infra": "docker-compose -f docker-compose.dev.yml up -d postgres redis minio pgadmin redis-commander",
+    "dev:infra": "docker-compose -f docker-compose.dev.yml up -d postgres redis pgadmin redis-commander",
     "dev:infra:stop": "docker-compose -f docker-compose.dev.yml down",
     "build": "nest build",
     "start": "node dist/main",
@@ -71,7 +71,6 @@
     "express": "^5.2.1",
     "express-session": "^1.18.2",
     "handlebars": "^4.7.8",
-    "minio": "^8.0.6",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.11",
     "passport": "^0.7.0",

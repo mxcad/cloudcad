@@ -11,7 +11,7 @@ import {
   FileSystemNode as PrismaFileSystemNode,
 } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
-import { MinioStorageProvider } from '../storage/minio-storage.provider';
+import { LocalStorageProvider } from '../storage/local-storage.provider';
 import { FileHashService } from './file-hash.service';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -21,6 +21,11 @@ import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
+import { StorageManager } from '../common/services/storage-manager.service';
+import { FileCopyService } from '../common/services/file-copy.service';
+import { DiskMonitorService } from '../common/services/disk-monitor.service';
+import { FileLockService } from '../common/services/file-lock.service';
+import { ConfigService } from '@nestjs/config';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as archiver from 'archiver';
@@ -41,10 +46,15 @@ export class FileSystemService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly storage: MinioStorageProvider,
+    private readonly storage: LocalStorageProvider,
     private readonly fileHashService: FileHashService,
     private readonly permissionService: FileSystemPermissionService,
-    private readonly auditLogService: AuditLogService
+    private readonly auditLogService: AuditLogService,
+    private readonly storageManager: StorageManager,
+    private readonly fileCopyService: FileCopyService,
+    private readonly diskMonitorService: DiskMonitorService,
+    private readonly fileLockService: FileLockService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -81,16 +91,16 @@ export class FileSystemService {
   /**
    * 获取存储路径
    * @param node 文件系统节点
-   * @returns MinIO 存储路径
+   * @returns 本地存储路径
    */
   private getStoragePath(node: PrismaFileSystemNode): string {
     if (!node.path) {
       throw new NotFoundException('文件路径不存在');
     }
 
-    return node.path.startsWith('files/') && node.fileHash
-      ? `mxcad/file/${node.fileHash}/${node.name}`
-      : node.path;
+    // 本地存储：path 已经是完整的文件相对路径（YYYYMM/nodeId/fileHash.mxweb）
+    // 直接使用 storageManager.getFullPath 获取完整路径
+    return this.storageManager.getFullPath(node.path);
   }
 
   async createProject(userId: string, dto: CreateProjectDto) {
@@ -513,9 +523,14 @@ export class FileSystemService {
     // 删除当前层的子节点及其文件
     if (children.length > 0) {
       for (const child of children) {
-        // 如果是文件节点，检查是否需要删除 MinIO 文件
+        // 如果是文件节点，标记为待删除
         if (!child.isFolder && child.path) {
           await this.deleteFileIfNotReferenced(tx, child.path, child.fileHash);
+          // 更新 deletedFromStorage 字段
+          await tx.fileSystemNode.update({
+            where: { id: child.id },
+            data: { deletedFromStorage: new Date() },
+          });
         }
       }
 
@@ -528,7 +543,7 @@ export class FileSystemService {
   }
 
   /**
-   * 检查文件是否被其他节点引用，如果没有则从 MinIO 删除
+   * 检查文件是否被其他节点引用，如果没有则立即删除物理文件
    */
   private async deleteFileIfNotReferenced(
     tx: any,
@@ -538,40 +553,42 @@ export class FileSystemService {
     if (!path) return;
 
     // 如果有 fileHash，检查是否有其他节点使用相同的文件哈希
+    let hasReference = false;
     if (fileHash) {
       const referenceCount = await tx.fileSystemNode.count({
         where: {
           fileHash,
           isFolder: false,
           fileStatus: 'COMPLETED',
+          deletedAt: null, // 只检查未删除的节点
           NOT: { path }, // 排除当前节点
         },
       });
 
-      if (referenceCount > 0) {
-        this.logger.log(`文件被其他项目引用，保留MinIO和uploads文件: ${path}`);
+      hasReference = referenceCount > 0;
+      if (hasReference) {
+        this.logger.log(`文件被其他节点引用，保留物理文件: ${path} (引用数: ${referenceCount})`);
         return;
       }
     }
 
-    // 无引用或无 fileHash，删除 MinIO 文件
+    // 无引用，立即删除物理文件
+    this.logger.log(`文件无引用，准备删除物理文件: ${path}`);
+    
     try {
-      await this.storage.deleteFile(path);
-      this.logger.log(`MinIO文件删除成功: ${path}`);
+      // 获取文件的完整路径
+      const fullPath = this.storageManager.getFullPath(path);
+      
+      // 删除物理文件（包括目录）
+      await fsPromises.rm(fullPath, { recursive: true, force: true });
+      
+      this.logger.log(`物理文件已删除: ${fullPath}`);
     } catch (error) {
-      this.logger.error(`MinIO文件删除失败: ${path}`, error);
-      // 不抛出错误，继续处理
-    }
-
-    // 删除 uploads 文件
-    if (fileHash) {
-      try {
-        const deletedCount = await this.deleteMxCadFilesFromUploads(fileHash);
-        this.logger.log(`删除 uploads 文件成功，共删除 ${deletedCount} 个文件`);
-      } catch (error) {
-        this.logger.error(`删除 uploads 文件失败: ${error.message}`, error);
-        // 不抛出错误，继续处理
-      }
+      this.logger.error(
+        `删除物理文件失败: ${path} - ${error.message}`,
+        error.stack
+      );
+      // 删除物理文件失败不影响数据库删除，只记录错误
     }
   }
 
@@ -615,6 +632,139 @@ export class FileSystemService {
       this.logger.error(`文件夹创建失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 统一的文件节点创建方法
+   * 
+   * 1. 创建数据库节点
+   * 2. 根据节点 ID 创建物理目录
+   * 3. 将文件拷贝到节点目录
+   * 4. 更新节点的 path 字段
+   * 
+   * @param options 创建选项
+   * @returns 创建的文件节点
+   */
+  async createFileNode(options: {
+    name: string;
+    fileHash: string;
+    size: number;
+    mimeType: string;
+    extension: string;
+    parentId: string;
+    ownerId: string;
+    sourceFilePath?: string;
+    sourceDirectoryPath?: string;
+    skipFileCopy?: boolean;
+  }): Promise<PrismaFileSystemNode> {
+    const {
+      name,
+      fileHash,
+      size,
+      mimeType,
+      extension,
+      parentId,
+      ownerId,
+      sourceFilePath,
+      sourceDirectoryPath,
+      skipFileCopy = false,
+    } = options;
+
+    this.logger.log(
+      `[createFileNode] 开始创建文件节点: name=${name}, fileHash=${fileHash}, parentId=${parentId}, ownerId=${ownerId}`
+    );
+
+    // 验证父节点存在
+    const parent = await this.prisma.fileSystemNode.findUnique({
+      where: { id: parentId, deletedAt: null },
+      select: { id: true, isFolder: true, isRoot: true },
+    });
+
+    if (!parent) {
+      throw new NotFoundException(`父节点不存在: ${parentId}`);
+    }
+
+    if (!parent.isFolder) {
+      throw new BadRequestException('父节点必须是文件夹');
+    }
+
+    // 使用事务确保数据一致性
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. 创建数据库节点（path 临时设为 null）
+      const fileNode = await tx.fileSystemNode.create({
+        data: {
+          name,
+          isFolder: false,
+          isRoot: false,
+          parentId,
+          originalName: name,
+          path: null, // 临时设为 null，创建目录后更新
+          size,
+          mimeType,
+          extension,
+          fileStatus: FileStatus.COMPLETED,
+          fileHash,
+          ownerId,
+        },
+      });
+
+      this.logger.log(
+        `[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`
+      );
+
+      // 2. 根据节点 ID 创建物理目录
+      const storageInfo = await this.storageManager.allocateNodeStorage(
+        fileNode.id
+      );
+      this.logger.log(
+        `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
+      );
+
+      // 3. 将文件拷贝到节点目录
+      if (!skipFileCopy) {
+        if (sourceFilePath) {
+          // 从单个文件路径拷贝
+          const targetPath = path.join(
+            storageInfo.fullPath,
+            path.basename(sourceFilePath)
+          );
+          await fsPromises.copyFile(sourceFilePath, targetPath);
+          this.logger.log(
+            `[createFileNode] 文件拷贝成功: ${sourceFilePath} -> ${targetPath}`
+          );
+        } else if (sourceDirectoryPath) {
+          // 从目录拷贝所有文件
+          const files = await fsPromises.readdir(sourceDirectoryPath);
+          for (const file of files) {
+            const sourcePath = path.join(sourceDirectoryPath, file);
+            const targetPath = path.join(storageInfo.fullPath, file);
+            await fsPromises.copyFile(sourcePath, targetPath);
+          }
+          this.logger.log(
+            `[createFileNode] 目录文件拷贝成功: ${files.length} 个文件`
+          );
+        } else {
+          this.logger.warn(
+            `[createFileNode] 未提供源文件路径，跳过文件拷贝`
+          );
+        }
+      }
+
+      // 4. 更新节点的 path 字段
+      await tx.fileSystemNode.update({
+        where: { id: fileNode.id },
+        data: { path: storageInfo.relativePath },
+      });
+
+      this.logger.log(
+        `[createFileNode] 节点 path 已更新: ${storageInfo.relativePath}`
+      );
+
+      // 重新查询返回完整节点信息
+      return await tx.fileSystemNode.findUnique({
+        where: { id: fileNode.id },
+      }) as PrismaFileSystemNode;
+    });
   }
 
   async getNode(nodeId: string) {
@@ -1391,63 +1541,141 @@ export class FileSystemService {
         throw new BadRequestException('只能在文件夹下上传文件');
       }
 
+      // 检查磁盘空间
+      const diskStatus = this.diskMonitorService.checkDiskStatus();
+      if (diskStatus.critical) {
+        throw new BadRequestException(`磁盘空间不足，无法上传: ${diskStatus.message}`);
+      }
+
       // 计算文件哈希
       const fileBuffer = file.buffer;
       const fileHash = await this.fileHashService.calculateHash(fileBuffer);
 
-      // 检查是否已存在相同文件
-      const existingFile = await this.prisma.fileSystemNode.findFirst({
-        where: {
-          fileHash,
-          isFolder: false,
-          fileStatus: FileStatus.COMPLETED,
-        },
-      });
+      // 使用文件锁防止并发上传相同 hash 的文件
+      const lockName = `upload-${fileHash}`;
+      return await this.fileLockService.withLock(lockName, async () => {
+        // 再次检查是否已存在相同文件（在锁内检查）
+        const existingFile = await this.prisma.fileSystemNode.findFirst({
+          where: {
+            fileHash,
+            isFolder: false,
+            fileStatus: FileStatus.COMPLETED,
+            parentId,
+          },
+        });
 
-      let storageKey: string;
-      if (existingFile) {
-        // 文件已存在，创建引用
-        this.logger.log(
-          `文件已存在，创建引用: ${file.originalname} -> ${existingFile.id}`
-        );
-        storageKey = existingFile.path || '';
-      } else {
-        // 上传新文件到MinIO
-        const fileName = `${Date.now()}-${file.originalname}`;
-        storageKey = `files/${userId}/${fileName}`;
+        if (existingFile) {
+          this.logger.log(
+            `文件已存在，创建引用: ${file.originalname} -> ${existingFile.id}`
+          );
+          return existingFile;
+        }
 
-        await this.storage.uploadFile(storageKey, fileBuffer);
-        this.logger.log(`文件上传到MinIO成功: ${storageKey}`);
-      }
+        // 保存文件到 uploads 目录
+        const uploadsPath = this.configService.get('MXCAD_UPLOAD_PATH', '../uploads');
+        const uploadDir = path.resolve(uploadsPath, fileHash);
+        await fsPromises.mkdir(uploadDir, { recursive: true });
+        const uploadFilePath = path.join(uploadDir, file.originalname);
+        await fsPromises.writeFile(uploadFilePath, fileBuffer);
+        this.logger.log(`文件保存到 uploads: ${uploadFilePath}`);
 
-      const fileNode = await this.prisma.fileSystemNode.create({
-        data: {
-          name: file.originalname,
-          originalName: file.originalname,
-          isFolder: false,
-          isRoot: false,
-          parentId,
-          extension: file.originalname.split('.').pop()?.toLowerCase() || '',
-          mimeType: file.mimetype,
-          size: file.size,
-          path: storageKey,
-          fileHash,
-          fileStatus: FileStatus.COMPLETED,
-          ownerId: userId,
-        },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              username: true,
-              nickname: true,
+        // 创建数据库节点记录
+        const fileNode = await this.prisma.fileSystemNode.create({
+          data: {
+            name: file.originalname,
+            originalName: file.originalname,
+            isFolder: false,
+            isRoot: false,
+            parentId,
+            extension: file.originalname.split('.').pop()?.toLowerCase() || '',
+            mimeType: file.mimetype,
+            size: file.size,
+            path: '', // 暂时为空，拷贝成功后更新
+            fileHash,
+            fileStatus: FileStatus.UPLOADING,
+            ownerId: userId,
+          },
+          include: {
+            owner: {
+              select: {
+                id: true,
+                username: true,
+                nickname: true,
+              },
             },
           },
-        },
-      });
+        });
 
-      this.logger.log(`文件上传成功: ${fileNode.name} by user ${userId}`);
-      return fileNode;
+        try {
+          // 分配存储空间
+          const storageInfo = await this.storageManager.allocateNodeStorage(
+            fileNode.id,
+            file.originalname
+          );
+
+          // 拷贝文件到 filesData
+          const copyResult = await this.fileCopyService.copyFilesByHash(
+            fileHash,
+            path.dirname(storageInfo.fullPath)
+          );
+
+          if (!copyResult.success) {
+            throw new Error(`文件拷贝失败: ${copyResult.error}`);
+          }
+
+          // 更新节点的 path 字段
+          const updatedNode = await this.prisma.fileSystemNode.update({
+            where: { id: fileNode.id },
+            data: {
+              path: storageInfo.relativePath,
+              fileStatus: FileStatus.COMPLETED,
+            },
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  username: true,
+                  nickname: true,
+                },
+              },
+            },
+          });
+
+          this.logger.log(`文件上传成功: ${updatedNode.name} by user ${userId}`);
+          return updatedNode;
+        } catch (error) {
+          // 拷贝失败，回滚数据库操作
+          await this.prisma.fileSystemNode.update({
+            where: { id: fileNode.id },
+            data: {
+              fileStatus: FileStatus.FAILED,
+            },
+          });
+
+          // 删除已创建的节点目录（如果存在）
+          try {
+            // 尝试获取节点的存储信息
+            const nodeWithDirectory = await this.prisma.fileSystemNode.findUnique({
+              where: { id: fileNode.id },
+              select: { path: true },
+            });
+
+            if (nodeWithDirectory?.path) {
+              const pathParts = nodeWithDirectory.path.split('/');
+              if (pathParts.length >= 2) {
+                await this.storageManager.deleteNodeStorage(
+                  fileNode.id,
+                  pathParts[0]
+                );
+              }
+            }
+          } catch (cleanupError) {
+            this.logger.error(`清理节点存储失败: ${fileNode.id}`, cleanupError.stack);
+          }
+
+          throw error;
+        }
+      });
     } catch (error) {
       this.logger.error(`文件上传失败: ${error.message}`, error.stack);
       throw error;
@@ -1516,7 +1744,7 @@ export class FileSystemService {
 
   /**
    * 获取文件流（用于图片代理）
-   * @param path MinIO 存储路径
+   * @param path 本地存储路径
    * @returns 文件流
    */
   async getFileStream(path: string): Promise<NodeJS.ReadableStream> {
@@ -1683,12 +1911,9 @@ export class FileSystemService {
       }
 
       await this.prisma.$transaction(async (tx) => {
-        // 如果是文件节点，检查是否需要删除 MinIO 文件和 uploads 文件
-        if (!node.isFolder && node.path) {
-          await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
-        }
-        // 递归删除所有子节点和文件（检查文件引用）
+        // 递归删除所有子节点和文件
         await this.deleteDescendantsWithFiles(tx, nodeId);
+
         // 删除当前节点
         await tx.fileSystemNode.delete({ where: { id: nodeId } });
       });
@@ -1926,8 +2151,9 @@ export class FileSystemService {
   }
 
   /**
-   * 删除 uploads 目录和 MinIO 中与指定文件哈希相关的所有 MxCAD 文件
+   * 删除 uploads 目录中与指定文件哈希相关的所有 MxCAD 临时文件
    * 包括 .dwg, .mxweb, _preloading.json 等文件，以及外部参照子目录
+   * 注意：此方法只删除 uploads 目录中的临时文件，不删除 filesData 中的存储文件
    *
    * @param fileHash 文件哈希值
    * @returns 删除的文件数量
@@ -1993,52 +2219,12 @@ export class FileSystemService {
         );
       }
 
-      try {
-        const minioFiles = await this.storage.listFiles(
-          `mxcad/file/`,
-          `${fileHash}`
-        );
-
-        for (const minioFile of minioFiles) {
-          try {
-            await this.storage.deleteFile(minioFile);
-            this.logger.log(`删除 MinIO 文件成功: ${minioFile}`);
-            totalDeleted++;
-          } catch (error) {
-            this.logger.error(
-              `删除 MinIO 文件失败: ${minioFile}: ${error.message}`
-            );
-          }
-        }
-
-        try {
-          const extRefFiles = await this.storage.listFiles(
-            `mxcad/file/${fileHash}/`
-          );
-          for (const extRefFile of extRefFiles) {
-            try {
-              await this.storage.deleteFile(extRefFile);
-              this.logger.log(`删除 MinIO 外部参照文件成功: ${extRefFile}`);
-              totalDeleted++;
-            } catch (error) {
-              this.logger.error(
-                `删除 MinIO 外部参照文件失败: ${extRefFile}: ${error.message}`
-              );
-            }
-          }
-        } catch (error) {
-          this.logger.debug(`外部参照子目录不存在: mxcad/file/${fileHash}/`);
-        }
-      } catch (error) {
-        this.logger.warn(`删除 MinIO 文件失败: ${error.message}`);
-      }
-
       this.logger.log(
-        `共删除 ${totalDeleted} 个文件（uploads + MinIO），哈希值: ${fileHash}`
+        `共删除 ${totalDeleted} 个临时文件（uploads 目录），哈希值: ${fileHash}`
       );
       return totalDeleted;
     } catch (error) {
-      this.logger.error(`删除 MxCAD 文件失败: ${error.message}`, error.stack);
+      this.logger.error(`删除 MxCAD 临时文件失败: ${error.message}`, error.stack);
       return 0;
     }
   }
@@ -2837,10 +3023,21 @@ export class FileSystemService {
 
       // 如果是文件，直接返回文件流
       if (!node.isFolder) {
-        const storagePath = this.getStoragePath(node);
-        const stream = await this.getFileStream(storagePath);
+        const storageDir = this.getStoragePath(node);
         const filename = node.originalName || node.name;
-        const mimeType = this.getMimeType(filename);
+        
+        // 确定实际文件名
+        let actualFilename = filename;
+        
+        // CAD 文件：使用 .mxweb 文件
+        const ext = path.extname(filename).toLowerCase();
+        if (['.dwg', '.dxf'].includes(ext)) {
+          actualFilename = `${filename}.mxweb`;
+        }
+        
+        const fullPath = path.join(storageDir, actualFilename);
+        const stream = await this.getFileStream(fullPath);
+        const mimeType = this.getMimeType(actualFilename);
 
         this.logger.log(`文件下载: ${filename} (${nodeId}) by user ${userId}`);
         return { stream, filename, mimeType };
@@ -2962,12 +3159,22 @@ export class FileSystemService {
         throw new BadRequestException(`文件大小超过限制: ${node.name}`);
       }
 
-      const storagePath = this.getStoragePath(node);
+      const storageDir = this.getStoragePath(node);
+      const filename = node.originalName || node.name;
+      
+      // 确定实际文件名
+      let actualFilename = filename;
+      // CAD 文件：使用 .mxweb 文件
+      const ext = path.extname(filename).toLowerCase();
+      if (['.dwg', '.dxf'].includes(ext)) {
+        actualFilename = `${filename}.mxweb`;
+      }
+      
+      const fullPath = path.join(storageDir, actualFilename);
       let stream: NodeJS.ReadableStream | null = null;
 
       try {
-        stream = await this.getFileStream(storagePath);
-        const filename = node.originalName || node.name;
+        stream = await this.getFileStream(fullPath);
         // 验证文件名，防止路径遍历
         const sanitizedFileName = this.sanitizeFileName(filename);
         archive.append(stream as any, { name: sanitizedFileName });

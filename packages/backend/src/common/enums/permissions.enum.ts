@@ -132,8 +132,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
 > = {
   [ProjectRole.OWNER]: [
     // 项目所有者拥有所有项目权限
-    PrismaProjectPermission.PROJECT_CREATE,
-    PrismaProjectPermission.PROJECT_READ,
     PrismaProjectPermission.PROJECT_UPDATE,
     PrismaProjectPermission.PROJECT_DELETE,
     PrismaProjectPermission.PROJECT_MEMBER_MANAGE,
@@ -156,7 +154,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.CAD_SAVE,
     PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.CAD_EXTERNAL_REFERENCE,
-    PrismaProjectPermission.GALLERY_USE,
     PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
     PrismaProjectPermission.VERSION_CREATE,
@@ -165,7 +162,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
   ],
   [ProjectRole.ADMIN]: [
     // 项目管理员权限
-    PrismaProjectPermission.PROJECT_READ,
     PrismaProjectPermission.PROJECT_UPDATE,
     PrismaProjectPermission.PROJECT_MEMBER_MANAGE,
     PrismaProjectPermission.PROJECT_MEMBER_ASSIGN,
@@ -184,7 +180,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.CAD_SAVE,
     PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.CAD_EXTERNAL_REFERENCE,
-    PrismaProjectPermission.GALLERY_USE,
     PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
     PrismaProjectPermission.VERSION_CREATE,
@@ -193,7 +188,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
   ],
   [ProjectRole.MEMBER]: [
     // 项目成员权限
-    PrismaProjectPermission.PROJECT_READ,
     PrismaProjectPermission.FILE_CREATE,
     PrismaProjectPermission.FILE_UPLOAD,
     PrismaProjectPermission.FILE_OPEN,
@@ -205,13 +199,11 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_PRINT,
     PrismaProjectPermission.CAD_SAVE,
     PrismaProjectPermission.CAD_EXPORT,
-    PrismaProjectPermission.GALLERY_USE,
     PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
   ],
   [ProjectRole.EDITOR]: [
     // 项目编辑者权限
-    PrismaProjectPermission.PROJECT_READ,
     PrismaProjectPermission.FILE_UPLOAD,
     PrismaProjectPermission.FILE_OPEN,
     PrismaProjectPermission.FILE_EDIT,
@@ -222,18 +214,15 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_COMPARE,
     PrismaProjectPermission.CAD_SAVE,
     PrismaProjectPermission.CAD_EXPORT,
-    PrismaProjectPermission.GALLERY_USE,
     PrismaProjectPermission.VERSION_READ,
     PrismaProjectPermission.VERSION_CREATE,
   ],
   [ProjectRole.VIEWER]: [
     // 项目查看者权限
-    PrismaProjectPermission.PROJECT_READ,
     PrismaProjectPermission.FILE_OPEN,
     PrismaProjectPermission.FILE_DOWNLOAD,
     PrismaProjectPermission.FILE_PRINT,
     PrismaProjectPermission.CAD_EXPORT,
-    PrismaProjectPermission.GALLERY_USE,
     PrismaProjectPermission.VERSION_READ,
   ],
 };

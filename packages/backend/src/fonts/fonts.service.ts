@@ -306,7 +306,16 @@ export class FontsService {
       // 检查文件是否存在
       try {
         await fs.access(filePath);
+
+        // 检查路径是否是目录
+        const stats = await fs.stat(filePath);
+        if (stats.isDirectory()) {
+          throw new NotFoundException(`路径是目录而非文件: ${fileName}`);
+        }
       } catch (error) {
+        if (error instanceof NotFoundException) {
+          throw error;
+        }
         throw new NotFoundException(`字体文件 ${fileName} 不存在`);
       }
 

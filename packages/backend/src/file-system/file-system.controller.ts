@@ -534,7 +534,16 @@ export class FileSystemController {
       }
     }
 
-    const stream = await this.fileSystemService.getFileStream(storagePath);
+    let stream;
+    try {
+      stream = await this.fileSystemService.getFileStream(storagePath);
+    } catch (error) {
+      if (error.message.includes('路径是目录而非文件') || error.message.includes('directory')) {
+        this.logger.warn(`节点 ${nodeId} 的路径是目录，无法获取缩略图: ${storagePath}`);
+        throw new NotFoundException('文件不存在');
+      }
+      throw error;
+    }
 
     const mimeType = this.getMimeType(node.name);
     res.setHeader('Content-Type', mimeType);

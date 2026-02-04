@@ -25,6 +25,7 @@ import { CreateFolderModal } from '../components/modals/CreateFolderModal';
 import { RenameModal } from '../components/modals/RenameModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { MembersModal } from '../components/modals/MembersModal';
+import { ProjectRolesModal } from '../components/modals/ProjectRolesModal';
 import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
@@ -131,6 +132,7 @@ export const FileSystemManager: React.FC = () => {
   // 权限管理 hook
   const { isAdmin, hasPermission } = usePermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isProjectRolesModalOpen, setIsProjectRolesModalOpen] = useState(false);
 
   // 所有用户都可以创建项目，不需要权限检查
   const canCreateProject = true;
@@ -139,7 +141,12 @@ export const FileSystemManager: React.FC = () => {
   const [nodePermissions, setNodePermissions] = useState<
     Map<
       string,
-      { canEdit: boolean; canDelete: boolean; canManageMembers: boolean }
+      {
+        canEdit: boolean;
+        canDelete: boolean;
+        canManageMembers: boolean;
+        canManageRoles: boolean;
+      }
     >
   >(new Map());
 
@@ -200,7 +207,8 @@ export const FileSystemManager: React.FC = () => {
 
   // 直接使用后端返回的数据（已包含分页和搜索）
   // 不再进行前端过滤，避免破坏分页的正确性
-  const displayNodes = nodes;
+  // 确保 displayNodes 始终是数组，防止 map 错误
+  const displayNodes = Array.isArray(nodes) ? nodes : [];
 
   // 获取当前正确的父节点 ID（上传目标目录）
   // 使用 ref 缓存最新值，避免闭包问题
@@ -262,18 +270,25 @@ export const FileSystemManager: React.FC = () => {
     const loadPermissions = async () => {
       setPermissionsLoading(true);
       try {
-        const { canEditNode, canDeleteNode, canManageNodeMembers } =
+        const { canEditNode, canDeleteNode, canManageNodeMembers, canManageNodeRoles } =
           await import('../utils/permissionUtils');
 
         // 并行加载所有节点的权限
         const permissionsPromises = nodesToLoad.map(async (nodeId) => {
-          const [canEdit, canDelete, canManage] = await Promise.all([
+          const [canEdit, canDelete, canManageMembers, canManageRoles] = await Promise.all([
             canEditNode(user, nodeId),
             canDeleteNode(user, nodeId),
             canManageNodeMembers(user, nodeId),
+            canManageNodeRoles(user, nodeId),
           ]);
 
-          return { nodeId, canEdit, canDelete, canManageMembers: canManage };
+          return {
+            nodeId,
+            canEdit,
+            canDelete,
+            canManageMembers,
+            canManageRoles,
+          };
         });
 
         const permissionsResults = await Promise.all(permissionsPromises);
@@ -285,6 +300,7 @@ export const FileSystemManager: React.FC = () => {
               canEdit: result.canEdit,
               canDelete: result.canDelete,
               canManageMembers: result.canManageMembers,
+              canManageRoles: result.canManageRoles,
             });
           });
           return newMap;
@@ -303,6 +319,12 @@ export const FileSystemManager: React.FC = () => {
   const handleShowMembers = useCallback((project: FileSystemNode) => {
     setEditingProject(project);
     setIsMembersModalOpen(true);
+  }, []);
+
+  // 打开项目角色管理模态框
+  const handleShowRoles = useCallback((project: FileSystemNode) => {
+    setEditingProject(project);
+    setIsProjectRolesModalOpen(true);
   }, []);
 
   // 提交项目表单
@@ -644,6 +666,7 @@ export const FileSystemManager: React.FC = () => {
               buttonText=""
               buttonClassName="hidden"
               onSuccess={handleRefresh}
+              onExternalReferenceSuccess={handleRefresh}
               onError={(err: string) => {
                 // 错误已通过 MxCadUploader 组件处理
               }}
@@ -915,12 +938,12 @@ export const FileSystemManager: React.FC = () => {
             const cachedPermissions = nodePermissions.get(node.id);
             const isAdminUser = isAdmin();
             const defaultPermissions = isAdminUser
-              ? { canEdit: true, canDelete: true, canManageMembers: true }
-              : { canEdit: false, canDelete: false, canManageMembers: false };
+              ? { canEdit: true, canDelete: true, canManageMembers: true, canManageRoles: true }
+              : { canEdit: false, canDelete: false, canManageMembers: false, canManageRoles: false };
 
             const permissions = node.isRoot
               ? cachedPermissions || defaultPermissions
-              : { canEdit: true, canDelete: true, canManageMembers: false };
+              : { canEdit: true, canDelete: true, canManageMembers: false, canManageRoles: false };
 
             return (
               <FileItem
@@ -959,6 +982,11 @@ export const FileSystemManager: React.FC = () => {
                 onShowMembers={
                   node.isRoot && permissions.canManageMembers
                     ? () => handleShowMembers(node)
+                    : undefined
+                }
+                onShowRoles={
+                  node.isRoot && permissions.canManageRoles
+                    ? () => handleShowRoles(node)
                     : undefined
                 }
                 onMove={!node.isRoot && handleMove}
@@ -1152,6 +1180,15 @@ export const FileSystemManager: React.FC = () => {
         projectId={editingProject?.id || urlProjectId || ''}
         onClose={() => {
           setIsMembersModalOpen(false);
+          setEditingProject(null);
+        }}
+      />
+
+      <ProjectRolesModal
+        isOpen={isProjectRolesModalOpen}
+        projectId={editingProject?.id || urlProjectId || ''}
+        onClose={() => {
+          setIsProjectRolesModalOpen(false);
           setEditingProject(null);
         }}
       />

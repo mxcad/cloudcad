@@ -191,6 +191,23 @@ export class FileSystemService implements IFileSystemService {
 
     const data = fileList.shift();
     const { filePath: chunkFilePath } = data;
+
+    // 检查路径是否是目录
+    try {
+      const stats = statSync(chunkFilePath);
+      if (stats.isDirectory()) {
+        this.logger.error(`路径是目录而非文件: ${chunkFilePath}`);
+        fileWriteStream.close();
+        resultCall(1);
+        return;
+      }
+    } catch (error) {
+      this.logger.error(`无法读取文件信息: ${chunkFilePath}`, error);
+      fileWriteStream.close();
+      resultCall(1);
+      return;
+    }
+
     const currentReadStream = createReadStream(chunkFilePath);
 
     currentReadStream.pipe(fileWriteStream, { end: false });

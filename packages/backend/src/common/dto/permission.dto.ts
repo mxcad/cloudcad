@@ -50,10 +50,6 @@ export enum SystemPermission {
  */
 export enum ProjectPermission {
   // ========== 项目管理权限 ==========
-  /** 创建项目 */
-  PROJECT_CREATE = 'PROJECT_CREATE',
-  /** 访问项目（查看项目信息） */
-  PROJECT_READ = 'PROJECT_READ',
   /** 编辑项目信息 */
   PROJECT_UPDATE = 'PROJECT_UPDATE',
   /** 删除项目 */
@@ -102,8 +98,6 @@ export enum ProjectPermission {
   CAD_EXTERNAL_REFERENCE = 'CAD_EXTERNAL_REFERENCE',
 
   // ========== 图库权限 ==========
-  /** 使用图库（图纸库+图块库） */
-  GALLERY_USE = 'GALLERY_USE',
   /** 添加到图库 */
   GALLERY_ADD = 'GALLERY_ADD',
 

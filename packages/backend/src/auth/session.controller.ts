@@ -22,6 +22,10 @@ export class SessionController {
    */
   @Post('create')
   async createSession(@Req() req: Request, @Body() body: { user: any }) {
+    console.log('[SessionController] 创建 Session, 用户:', body.user?.id);
+    console.log('[SessionController] Session ID:', req.sessionID);
+    console.log('[SessionController] Cookies:', req.headers.cookie);
+
     if (!body.user) {
       return { success: false, message: '用户信息不能为空' };
     }
@@ -38,8 +42,10 @@ export class SessionController {
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => {
         if (err) {
+          console.error('[SessionController] Session 保存失败:', err);
           reject(err);
         } else {
+          console.log('[SessionController] Session 保存成功');
           resolve();
         }
       });
@@ -53,6 +59,11 @@ export class SessionController {
    */
   @Get('user')
   async getSessionUser(@Req() req: Request) {
+    console.log('[SessionController] 获取 Session 用户信息');
+    console.log('[SessionController] Session ID:', req.sessionID);
+    console.log('[SessionController] Session:', req.session);
+    console.log('[SessionController] Cookies:', req.headers.cookie);
+
     const user = req.session?.user;
     if (!user) {
       return { success: false, message: '用户未登录' };

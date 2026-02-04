@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StorageService } from './storage.service';
-import { MinioStorageProvider } from './minio-storage.provider';
+import { LocalStorageProvider } from './local-storage.provider';
 
 describe('StorageService', () => {
   let service: StorageService;
-  let minioProvider: jest.Mocked<MinioStorageProvider>;
+  let localStorageProvider: jest.Mocked<LocalStorageProvider>;
 
-  const mockMinioStorageProvider = {
+  const mockLocalStorageProvider = {
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
     getFileStream: jest.fn(),
@@ -18,8 +18,17 @@ describe('StorageService', () => {
       providers: [
         StorageService,
         {
-          provide: MinioStorageProvider,
-          useValue: mockMinioStorageProvider,
+          provide: LocalStorageProvider,
+          useValue: mockLocalStorageProvider,
+        },
+        {
+          provide: 'ConfigService',
+          useValue: {
+            get: jest.fn((key) => {
+              if (key === 'FILES_DATA_PATH') return '../filesData';
+              return undefined;
+            }),
+          },
         },
       ],
     })
@@ -33,7 +42,7 @@ describe('StorageService', () => {
       .compile();
 
     service = module.get<StorageService>(StorageService);
-    minioProvider = module.get(MinioStorageProvider);
+    localStorageProvider = module.get(LocalStorageProvider);
   });
 
   afterEach(() => {
@@ -50,7 +59,7 @@ describe('StorageService', () => {
 
       expect(result).toEqual({
         status: 'healthy',
-        message: 'MinIO存储服务正常',
+        message: '本地存储服务正常',
       });
     });
 

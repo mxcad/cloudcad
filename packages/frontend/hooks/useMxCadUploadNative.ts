@@ -198,6 +198,7 @@ export const useMxCadUploadNative = () => {
         continue;
       }
 
+      console.log('[uploadFiles] 开始上传分片:', chunkIndex, '/', totalChunks);
       // 上传分片
       const formData = new FormData();
       formData.append('file', chunk);
@@ -208,9 +209,10 @@ export const useMxCadUploadNative = () => {
       formData.append('size', file.size.toString());
       formData.append('nodeId', config.nodeId!);
 
-      await apiService.post('/mxcad/files/uploadFiles', formData, {
+      const uploadResponse = await apiService.post('/mxcad/files/uploadFiles', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      console.log('[uploadFiles] 响应:', uploadResponse.data);
 
       config.onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
     }

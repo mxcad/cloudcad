@@ -93,13 +93,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []); // 只在组件挂载时执行一次
 
   const login = useCallback(async (account: string, password: string) => {
+    console.log('[AuthContext] 开始登录:', account);
     const response = await authApi.login({ account, password });
+    console.log('[AuthContext] 登录响应:', response);
+
     const { accessToken, refreshToken, user: userData } = response.data;
+    console.log('[AuthContext] Access Token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'missing');
+    console.log('[AuthContext] Refresh Token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing');
 
     // 存储到本地存储
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
+
+    console.log('[AuthContext] Token 已存储到 localStorage');
 
     // 创建 Session（用于 mxcad 上传权限验证）
     try {
@@ -112,8 +119,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ user: userData }),
       });
 
+      console.log('[AuthContext] Session 创建响应:', sessionResponse);
+
       if (sessionResponse.ok) {
         // Session 创建成功，继续
+        console.log('[AuthContext] Session 创建成功');
       } else {
         // Session 创建失败，但仍然使用 JWT 认证
         console.error('Session creation failed');
@@ -126,6 +136,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // 更新状态
     setToken(accessToken);
     setUser(userData);
+
+    console.log('[AuthContext] 登录完成');
   }, []);
 
   const register = useCallback(

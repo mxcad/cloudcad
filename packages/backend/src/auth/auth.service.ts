@@ -424,6 +424,10 @@ export class AuthService {
     };
 
     const jwtSecret = this.configService.get<string>('jwt.secret');
+    console.log('[AuthService] JWT_SECRET:', jwtSecret ? '已配置' : '未配置');
+    console.log('[AuthService] JWT_SECRET 值:', jwtSecret);
+    console.log('[AuthService] 用户 ID:', user.id);
+
     if (!jwtSecret) {
       throw new Error('JWT_SECRET environment variable is required');
     }
@@ -441,6 +445,9 @@ export class AuthService {
         ) as any,
       }),
     ]);
+
+    console.log('[AuthService] Access Token 生成成功:', accessToken.substring(0, 20) + '...');
+    console.log('[AuthService] Refresh Token 生成成功:', refreshToken.substring(0, 20) + '...');
 
     await this.storeRefreshToken(user.id, refreshToken);
 

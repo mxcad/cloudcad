@@ -68,7 +68,7 @@ export const useExternalReferenceUpload = (
           fileHash,
           fileName
         );
-        console.log('[checkReferenceExists] 响应:', fileName, response.data);
+        logger.debug('[checkReferenceExists] 响应:', 'external-reference', fileName, response.data);
         // checkExternalReference 接口使用 res.json({ exists }) 直接返回，绕过了全局响应包装
         // 所以 response.data 就是 {exists: boolean}
         return response.data?.exists ?? false;
@@ -157,12 +157,14 @@ export const useExternalReferenceUpload = (
       // 过滤掉已存在的文件
       const trulyMissingFiles = missingFiles.filter((f) => !f.exists);
 
-      console.log(
+      logger.debug(
         '[useExternalReferenceUpload] 所有外部参照文件:',
+        'external-reference',
         missingFiles
       );
-      console.log(
+      logger.debug(
         '[useExternalReferenceUpload] 缺失的外部参照文件:',
+        'external-reference',
         trulyMissingFiles
       );
 
@@ -170,8 +172,9 @@ export const useExternalReferenceUpload = (
         return false;
       }
 
-      console.log(
-        `[useExternalReferenceUpload] 缺失的外部参照: ${trulyMissingFiles.length} 个`
+      logger.debug(
+        `[useExternalReferenceUpload] 缺失的外部参照: ${trulyMissingFiles.length} 个`,
+        'external-reference'
       );
 
       setFiles(trulyMissingFiles);
@@ -186,9 +189,10 @@ export const useExternalReferenceUpload = (
    * DWG 外部参照使用外部参照上传接口，图片外部参照直接上传
    */
   const uploadFiles = useCallback(async () => {
-    console.log('[useExternalReferenceUpload] uploadFiles 被调用');
-    console.log(
+    logger.debug('[useExternalReferenceUpload] uploadFiles 被调用', 'external-reference');
+    logger.debug(
       '[useExternalReferenceUpload] 当前文件列表:',
+      'external-reference',
       files.map((f) => ({
         name: f.name,
         type: f.type,
@@ -201,13 +205,14 @@ export const useExternalReferenceUpload = (
       (f) => f.source && f.uploadState === 'notSelected'
     );
 
-    console.log(
+    logger.debug(
       '[useExternalReferenceUpload] 筛选后待上传文件:',
+      'external-reference',
       filesToUpload.map((f) => f.name)
     );
 
     if (filesToUpload.length === 0) {
-      console.log('[useExternalReferenceUpload] 没有需要上传的文件');
+      logger.debug('[useExternalReferenceUpload] 没有需要上传的文件', 'external-reference');
       return;
     }
     setLoading(true);

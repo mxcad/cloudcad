@@ -21,7 +21,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
     this.logger.debug(`[JwtAuthGuard] URL: ${request.url}`);
-    this.logger.debug(`[JwtAuthGuard] Token: ${token ? 'present' : 'missing'}`);
+    this.logger.debug(`[JwtAuthGuard] Token: ${token ? `present (${token.substring(0, 20)}...)` : 'missing'}`);
     this.logger.debug(
       `[JwtAuthGuard] Session: ${request.session?.userId ? 'present' : 'missing'}`
     );
@@ -64,6 +64,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       }
       return result;
     } catch (error) {
+      console.error('[JwtAuthGuard] JWT验证失败:', error);
+      console.error('[JwtAuthGuard] 错误名称:', error.name);
+      console.error('[JwtAuthGuard] 错误消息:', error.message);
+      console.error('[JwtAuthGuard] 错误堆栈:', error.stack);
+
       if (error instanceof UnauthorizedException) {
         throw error;
       }

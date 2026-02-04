@@ -2,13 +2,18 @@ import { Module } from '@nestjs/common';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
 import { MxCadPermissionService } from './mxcad-permission.service';
-import { MinioSyncService } from './minio-sync.service';
-import { FileStorageService } from './services/file-storage.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { FileSystemService } from './services/file-system.service';
 import { CacheManagerService } from './services/cache-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
+import { ChunkUploadService } from './services/chunk-upload.service';
+import { FileCheckService } from './services/file-check.service';
+import { NodeCreationService } from './services/node-creation.service';
+import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
+import { ConcurrencyManager } from '../common/concurrency/concurrency-manager';
+import { StorageCheckService } from '../storage/storage-check.service';
+import { MxCadExceptionFilter } from './filters/mxcad-exception.filter';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -17,10 +22,13 @@ import { DatabaseModule } from '../database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { FileSystemModule } from '../file-system/file-system.module';
+import { CommonModule } from '../common/common.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
     DatabaseModule,
+    CommonModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -72,19 +80,30 @@ import { FileSystemModule } from '../file-system/file-system.module';
       },
     }),
     FileSystemModule,
+    StorageModule,
   ],
   controllers: [MxCadController],
   providers: [
     MxCadService,
     MxCadPermissionService,
-    MinioSyncService,
-    FileStorageService,
     FileConversionService,
     FileSystemService,
     CacheManagerService,
     FileSystemNodeService,
     FileUploadManagerService,
+    // 新服务
+    ConcurrencyManager,
+    StorageCheckService,
+    ChunkUploadService,
+    FileCheckService,
+    NodeCreationService,
+    UploadOrchestrator,
+    // 异常过滤器
+    {
+      provide: 'APP_FILTER',
+      useClass: MxCadExceptionFilter,
+    },
   ],
-  exports: [MxCadService, FileUploadManagerService, MinioSyncService],
+  exports: [MxCadService, FileUploadManagerService, UploadOrchestrator],
 })
 export class MxCadModule {}

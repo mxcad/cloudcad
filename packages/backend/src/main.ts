@@ -46,7 +46,7 @@ async function bootstrap() {
       maxAge: 24 * 60 * 60 * 1000, // 24小时
       httpOnly: true,
       sameSite: 'lax', // 允许跨站请求携带 Cookie
-      domain: 'localhost', // 允许在 localhost 的所有端口共享 Cookie
+      // 移除 domain 限制，让浏览器自动处理
     },
     name: 'mxcad.sid',
   });
