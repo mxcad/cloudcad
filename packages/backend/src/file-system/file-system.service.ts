@@ -990,6 +990,27 @@ export class FileSystemService {
     }
   }
 
+  /**
+   * 更新节点的 path 字段
+   * @param nodeId 节点 ID
+   * @param path 新的路径
+   * @returns 更新后的节点
+   */
+  async updateNodePath(nodeId: string, path: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: { path },
+      });
+
+      this.logger.log(`节点路径更新成功: ${nodeId} -> ${path}`);
+      return node;
+    } catch (error) {
+      this.logger.error(`节点路径更新失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   async deleteNode(nodeId: string, permanently: boolean = false) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
