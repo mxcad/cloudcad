@@ -33,3 +33,6 @@ pnpm-debug.log*
 # Generated files
 uploads/
 temp/
+
+# MinIO data
+**/minio-data/
