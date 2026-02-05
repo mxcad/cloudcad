@@ -87,10 +87,11 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const externalReferenceUpload = useExternalReferenceUpload({
     nodeId: node.id,
-    fileHash: node.fileHash || '',
     onSuccess: () => {
-      logger.info('外部参照上传成功', 'FileItem');
-      window.location.reload();
+      logger.info('外部参照上传成功，开始刷新文件列表', 'FileItem');
+      // 后端在上传成功后已经调用了 updateExternalReferenceAfterUpload 更新数据库
+      // 前端只需要刷新文件列表即可
+      onRefresh?.();
     },
     onError: (error) => {
       const appError = handleError(error, 'FileItem');
@@ -109,32 +110,19 @@ export const FileItem: React.FC<FileItemProps> = ({
       blockItemClickRef.current = true;
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      if (!node.fileHash) {
-        logger.error('文件哈希不存在', 'FileItem');
-        blockItemClickRef.current = false;
-        return;
+      try {
+        // 总是调用 checkMissingReferences 打开上传框
+        // 用户可以选择覆盖已存在的文件
+        await externalReferenceUpload.checkMissingReferences();
+      } catch (error) {
+        handleError(error, '检查外部参照失败');
+      } finally {
+        setTimeout(() => {
+          blockItemClickRef.current = false;
+        }, 1000);
       }
-
-      const hasMissing = await externalReferenceUpload.checkMissingReferences();
-
-      if (!hasMissing) {
-        // 没有缺失的外部参照，刷新数据库中的外部参照信息
-        try {
-          await mxcadApi.refreshExternalReferences(node.fileHash);
-          logger.info('外部参照信息已刷新', 'FileItem');
-        } catch (error) {
-          handleError(error, '刷新外部参照信息失败');
-        }
-        onRefresh?.();
-        alert('所有外部参照已存在，无需上传');
-      }
-      // 注意：checkMissingReferences 已经设置了 files 和 isOpen，所以不需要再调用 openModalForUpload
-
-      setTimeout(() => {
-        blockItemClickRef.current = false;
-      }, 1000);
     },
-    [node.fileHash, externalReferenceUpload, onRefresh]
+    [node.id, externalReferenceUpload]
   );
 
   const isCadFile = useCallback(() => {
@@ -423,7 +411,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           </>
         ) : (
           <>
-            {isCadFile() && node.hasMissingExternalReferences && (
+            {isCadFile() && (
               <button
                 onClick={handleUploadExternalReference}
                 className="p-2 rounded-lg transition-colors text-amber-600 hover:bg-amber-50"
