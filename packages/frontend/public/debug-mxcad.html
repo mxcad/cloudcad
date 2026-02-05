@@ -21,9 +21,10 @@
         try {
           log('测试 MxCAD 文件访问...');
 
-          // 测试一个存在的文件
+          // 测试文件访问路径格式：/mxcad/filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
+          // 注意：这是示例路径，实际使用时需要根据 node.path 动态构建
           const response = await fetch(
-            '/mxcad/file/41433130333200000000000003c00100.dwg.mxweb'
+            '/mxcad/filesData/202602/cml8t8wg60004ucufd7pb3sq6/cml8t8wg60004ucufd7pb3sq6.dwg.mxweb'
           );
           log('响应状态: ' + response.status);
           log('响应头: ' + JSON.stringify([...response.headers.entries()]));

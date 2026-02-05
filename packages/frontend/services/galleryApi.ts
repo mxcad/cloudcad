@@ -28,7 +28,7 @@ export const galleryApi = {
         filename: string;
         firstType: number;
         secondType: number;
-        filehash: string;
+        nodeId: string;
         type: string;
         lookNum: number;
         likeNum: number;
@@ -71,7 +71,7 @@ export const galleryApi = {
         filename: string;
         firstType: number;
         secondType: number;
-        filehash: string;
+        nodeId: string;
         type: string;
         lookNum: number;
         likeNum: number;
@@ -125,22 +125,22 @@ export const galleryApi = {
     galleryType: 'drawings' | 'blocks',
     secondType: number,
     firstType: number,
-    filehash: string
+    nodeId: string
   ) => {
     const baseUrl =
       (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
-    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.mxweb`;
+    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${nodeId}.mxweb`;
   },
 
   getPreviewImageUrl: (
     galleryType: 'drawings' | 'blocks',
     secondType: number,
     firstType: number,
-    filehash: string
+    nodeId: string
   ) => {
     const baseUrl =
       (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
-    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${filehash}.jpg`;
+    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${nodeId}.jpg`;
   },
 
   addToGallery: (

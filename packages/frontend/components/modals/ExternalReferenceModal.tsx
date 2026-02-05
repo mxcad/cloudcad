@@ -51,6 +51,9 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
     files.length > 0 && files.every((f) => f.uploadState === 'success');
   const hasUploading = files.some((f) => f.uploadState === 'uploading');
   const hasFailures = files.some((f) => f.uploadState === 'fail');
+  const missingCount = files.filter(
+    (f) => !f.exists && f.uploadState === 'notSelected'
+  ).length;
 
   // 禁止背景滚动
   useEffect(() => {
@@ -65,42 +68,66 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   }, [isOpen]);
 
   const getStatusIcon = (file: ExternalReferenceFile) => {
-    switch (file.uploadState) {
-      case 'success':
-        return <CheckCircle size={16} className="text-green-500" />;
-      case 'fail':
-        return <XCircle size={16} className="text-red-500" />;
-      case 'uploading':
-        return <Loader2 size={16} className="text-blue-500 animate-spin" />;
-      default:
-        return null;
+    // 优先显示上传状态
+    if (file.uploadState === 'success') {
+      return <CheckCircle size={16} className="text-green-500" />;
     }
+    if (file.uploadState === 'fail') {
+      return <XCircle size={16} className="text-red-500" />;
+    }
+    if (file.uploadState === 'uploading') {
+      return <Loader2 size={16} className="text-blue-500 animate-spin" />;
+    }
+
+    // 如果文件已存在，显示绿色对勾
+    if (file.exists) {
+      return <CheckCircle size={16} className="text-green-500" />;
+    }
+
+    // 默认状态
+    return null;
   };
 
   const getStatusColor = (file: ExternalReferenceFile) => {
-    switch (file.uploadState) {
-      case 'success':
-        return 'text-green-500';
-      case 'fail':
-        return 'text-red-500';
-      case 'uploading':
-        return 'text-blue-500';
-      default:
-        return 'text-slate-400';
+    // 优先显示上传状态
+    if (file.uploadState === 'success') {
+      return 'text-green-500';
     }
+    if (file.uploadState === 'fail') {
+      return 'text-red-500';
+    }
+    if (file.uploadState === 'uploading') {
+      return 'text-blue-500';
+    }
+
+    // 如果文件已存在，显示绿色
+    if (file.exists) {
+      return 'text-green-500';
+    }
+
+    // 默认状态
+    return 'text-slate-400';
   };
 
   const getStatusText = (file: ExternalReferenceFile) => {
-    switch (file.uploadState) {
-      case 'success':
-        return '上传成功';
-      case 'fail':
-        return '上传失败';
-      case 'uploading':
-        return '上传中';
-      default:
-        return '待上传';
+    // 优先显示上传状态
+    if (file.uploadState === 'success') {
+      return '上传成功';
     }
+    if (file.uploadState === 'fail') {
+      return '上传失败';
+    }
+    if (file.uploadState === 'uploading') {
+      return '上传中';
+    }
+
+    // 如果文件已存在，显示"已上传"
+    if (file.exists) {
+      return '已上传';
+    }
+
+    // 默认状态
+    return '待上传';
   };
 
   const modalContent = (
@@ -110,7 +137,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       title={
         <div className="flex items-center gap-2">
           <AlertTriangle size={20} className="text-amber-500" />
-          <span>上传外部参照文件</span>
+          <span>管理外部参照文件</span>
         </div>
       }
       footer={
@@ -125,19 +152,10 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             取消
           </Button>
           <Button
-            variant="outline"
-            onClick={() => {
-              onSkip();
-            }}
-            disabled={loading}
-          >
-            稍后上传
-          </Button>
-          <Button
             onClick={() => {
               onSelectAndUpload();
             }}
-            disabled={hasUploading || allSuccess}
+            disabled={hasUploading}
             variant="primary"
           >
             {hasUploading ? (
@@ -156,32 +174,52 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             onClick={() => {
               onComplete();
             }}
-            disabled={!allSuccess || loading}
+            disabled={loading}
           >
-            完成
+            {allSuccess ? '完成' : '关闭'}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle
-              size={16}
-              className="text-amber-600 mt-0.5 flex-shrink-0"
-            />
-            <div className="text-sm text-amber-800">
-              <p className="font-medium mb-1">
-                检测到 {files.length} 个缺失的外部参照文件
-              </p>
-              <p className="text-amber-700">
-                这些文件是图纸正常显示所必需的。您可以选择立即上传，也可以稍后上传。
-                稍后上传时，文件列表中会显示警告标识。
-              </p>
+        {/* 提示信息 */}
+        {missingCount > 0 ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle
+                size={16}
+                className="text-amber-600 mt-0.5 flex-shrink-0"
+              />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium mb-1">
+                  检测到 {missingCount} 个缺失的外部参照文件（共 {files.length} 个）
+                </p>
+                <p className="text-amber-700">
+                  这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle
+                size={16}
+                className="text-blue-600 mt-0.5 flex-shrink-0"
+              />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">
+                  所有外部参照文件已存在（共 {files.length} 个）
+                </p>
+                <p className="text-blue-700">
+                  图纸可以正常显示。如果您需要更新外部参照文件，可以选择覆盖已存在的文件。
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
+        {/* 文件列表 */}
         <div className="border border-slate-200 rounded-lg overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50">
@@ -202,7 +240,10 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {files.map((file, index) => (
-                <tr key={index} className="hover:bg-slate-50">
+                <tr
+                  key={index}
+                  className={`hover:bg-slate-50 ${file.exists && file.uploadState === 'notSelected' ? 'bg-green-50/50' : ''}`}
+                >
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-center">
                       {getStatusIcon(file)}
@@ -210,7 +251,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm text-slate-900">
+                      <span className={`text-sm ${file.exists && file.uploadState === 'notSelected' ? 'text-slate-500' : 'text-slate-900'}`}>
                         <FileNameText>{file.name}</FileNameText>
                       </span>
                       <span className={`text-xs ${getStatusColor(file)}`}>
@@ -232,6 +273,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                       <span className="text-xs text-green-600">100%</span>
                     ) : file.uploadState === 'fail' ? (
                       <span className="text-xs text-red-600">失败</span>
+                    ) : file.exists ? (
+                      <span className="text-xs text-slate-500">可覆盖</span>
                     ) : (
                       <span className="text-xs text-slate-400">-</span>
                     )}

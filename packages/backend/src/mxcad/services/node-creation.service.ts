@@ -19,8 +19,8 @@ export interface NodeCreationContext {
   userId: string;
   /** 用户角色 */
   userRole?: string;
-  /** 外部参照上传时的源图纸哈希 */
-  srcDwgFileHash?: string;
+  /** 外部参照上传时的源图纸节点 ID */
+  srcDwgNodeId?: string;
   /** 是否为图片外部参照 */
   isImage?: boolean;
 }

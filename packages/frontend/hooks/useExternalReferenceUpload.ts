@@ -37,14 +37,14 @@ export const useExternalReferenceUpload = (
      */
 
   const fetchPreloadingData = useCallback(
-    async (hash: string): Promise<PreloadingData | null> => {
-      if (!hash) {
-        logger.warn('fileHash 为空，无法获取预加载数据');
+    async (nodeId: string): Promise<PreloadingData | null> => {
+      if (!nodeId) {
+        logger.warn('nodeId 为空，无法获取预加载数据');
         return null;
       }
 
       try {
-        const response = await mxcadApi.getPreloadingData(hash);
+        const response = await mxcadApi.getPreloadingData(nodeId);
         // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
         // 需要提取 data 字段中的实际预加载数据
         return response.data?.data || null;
@@ -61,11 +61,11 @@ export const useExternalReferenceUpload = (
    * 检查外部参照是否存在
    */
   const checkReferenceExists = useCallback(
-    async (fileHash: string, fileName: string): Promise<boolean> => {
-      if (!fileHash) return false;
+    async (nodeId: string, fileName: string): Promise<boolean> => {
+      if (!nodeId) return false;
       try {
         const response = await mxcadApi.checkExternalReferenceExists(
-          fileHash,
+          nodeId,
           fileName
         );
         logger.debug('[checkReferenceExists] 响应:', 'external-reference', fileName, response.data);
@@ -82,12 +82,12 @@ export const useExternalReferenceUpload = (
 
   /**
    * 检查缺失的外部参照
-   * @param fileHash 可选的文件哈希值，如果不提供则使用 config.fileHash
+   * @param nodeId 可选的节点ID，如果不提供则使用 config.nodeId
    * @returns 是否有缺失的外部参照
    */
   const checkMissingReferences = useCallback(
-    async (fileHash?: string): Promise<boolean> => {
-      const hash = fileHash || config.fileHash;
+    async (nodeId?: string): Promise<boolean> => {
+      const id = nodeId || config.nodeId;
 
       // 增加重试逻辑：等待 preloading.json 生成
       // 解决文件转换未完成时检查外部参照导致预加载数据不存在的问题
@@ -97,7 +97,7 @@ export const useExternalReferenceUpload = (
       const retryDelay = 2000; // 每次间隔2秒（总共最多等待20秒）
 
       while (retryCount < maxRetries && !preloadingData) {
-        preloadingData = await fetchPreloadingData(hash);
+        preloadingData = await fetchPreloadingData(id);
 
         if (!preloadingData) {
           retryCount++;
@@ -132,7 +132,7 @@ export const useExternalReferenceUpload = (
 
       // 检查 DWG 外部参照
       for (const name of externalReference) {
-        const exists = await checkReferenceExists(hash, name);
+        const exists = await checkReferenceExists(id, name);
         missingFiles.push({
           name,
           type: 'ref',
@@ -144,7 +144,7 @@ export const useExternalReferenceUpload = (
 
       // 检查图片外部参照
       for (const name of missingImages) {
-        const exists = await checkReferenceExists(hash, name);
+        const exists = await checkReferenceExists(id, name);
         missingFiles.push({
           name,
           type: 'img',
@@ -154,34 +154,31 @@ export const useExternalReferenceUpload = (
         });
       }
 
-      // 过滤掉已存在的文件
-      const trulyMissingFiles = missingFiles.filter((f) => !f.exists);
+      // 不过滤已存在的文件，总是显示所有外部参照文件
+      // 用户可以选择覆盖已存在的文件
+      const allExternalReferences = missingFiles;
 
       logger.debug(
         '[useExternalReferenceUpload] 所有外部参照文件:',
         'external-reference',
-        missingFiles
-      );
-      logger.debug(
-        '[useExternalReferenceUpload] 缺失的外部参照文件:',
-        'external-reference',
-        trulyMissingFiles
+        allExternalReferences
       );
 
-      if (trulyMissingFiles.length === 0) {
+      if (allExternalReferences.length === 0) {
         return false;
       }
 
+      const missingCount = allExternalReferences.filter((f) => !f.exists).length;
       logger.debug(
-        `[useExternalReferenceUpload] 缺失的外部参照: ${trulyMissingFiles.length} 个`,
+        `[useExternalReferenceUpload] 外部参照总数: ${allExternalReferences.length} 个，缺失: ${missingCount} 个`,
         'external-reference'
       );
 
-      setFiles(trulyMissingFiles);
+      setFiles(allExternalReferences);
       setIsOpen(true);
       return true;
     },
-    [config.fileHash, fetchPreloadingData, checkReferenceExists]
+    [config.nodeId, fetchPreloadingData, checkReferenceExists]
   );
 
   /**
@@ -234,7 +231,7 @@ export const useExternalReferenceUpload = (
           // 图片外部参照：使用图片上传接口
           await mxcadApi.uploadExtReferenceImage(
             fileInfo.source,
-            config.fileHash,
+            config.nodeId,
             fileInfo.name,
             (progressEvent) => {
               if (progressEvent.total) {
@@ -252,7 +249,7 @@ export const useExternalReferenceUpload = (
           // DWG 外部参照：使用 DWG 外部参照上传接口
           await mxcadApi.uploadExtReferenceDwg(
             fileInfo.source,
-            config.fileHash,
+            config.nodeId,
             fileInfo.name,
             (progressEvent) => {
               if (progressEvent.total) {
@@ -292,7 +289,7 @@ export const useExternalReferenceUpload = (
     }
 
     setLoading(false);
-  }, [files, config.fileHash, config.onError]);
+  }, [files, config.nodeId, config.onError]);
 
   /**
    * 关闭模态框

@@ -93,10 +93,12 @@ export class DiskMonitorService {
         try {
           // 确保驱动器路径格式正确（例如：D:）
           const drive = path.parse(drivePath).root || drivePath;
+          // WMIC 的 DeviceID 格式应该是 "D:"（只有冒号，没有反斜杠）
+          const deviceId = drive.replace(/\\/g, '');
 
           // 使用 buffer 编码执行 WMIC 命令，然后转换为字符串
           const buffer = execSync(
-            `wmic logicaldisk where "DeviceID='${drive}'" get FreeSpace,Size /value`
+            `wmic logicaldisk where "DeviceID='${deviceId}'" get FreeSpace,Size /value`
           );
           const output = buffer.toString('latin1');
 
@@ -117,7 +119,7 @@ export class DiskMonitorService {
           // 尝试使用 PowerShell 备用方法
           try {
             const drive = path.parse(drivePath).root || drivePath;
-            const driveLetter = drive.replace(':', '');
+            const driveLetter = drive.replace(/[:\\]/g, ''); // 去掉冒号和反斜杠
             const psOutput = execSync(
               `powershell -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-PSDrive ${driveLetter} | Select-Object Used,Free | ConvertTo-Json"`,
               { encoding: 'utf-8' }

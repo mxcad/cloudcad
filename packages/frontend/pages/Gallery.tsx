@@ -36,7 +36,7 @@ interface GalleryFile {
   filename: string;
   firstType: number;
   secondType: number;
-  filehash: string;
+  nodeId: string;
   type: string;
   lookNum: number;
   likeNum: number;
@@ -170,7 +170,7 @@ export default function Gallery() {
       galleryType,
       file.secondType,
       file.firstType,
-      file.filehash
+      file.nodeId
     );
   };
 
@@ -180,7 +180,7 @@ export default function Gallery() {
       galleryType,
       file.secondType,
       file.firstType,
-      file.filehash
+      file.nodeId
     );
   };
 

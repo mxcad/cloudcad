@@ -30,11 +30,8 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
       ) {
         try {
           const fileInfo = await getFileInfo(initialFileUrl);
-          if (fileInfo?.fileHash) {
-            resolvedFileUrl = UrlHelper.buildMxCadFileUrl(
-              fileInfo.fileHash,
-              fileInfo.originalName
-            );
+          if (fileInfo?.path) {
+            resolvedFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
             Logger.info('首次初始化，准备打开文件', { url: resolvedFileUrl });
           }
         } catch (error) {
@@ -105,16 +102,20 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
         return;
       }
 
-      const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(
-        fileInfo.fileHash,
-        fileInfo.originalName
-      );
-      const targetFileName = `${fileInfo.fileHash}.mxweb`;
+      if (!fileInfo.path) {
+        Logger.error('文件路径不存在');
+        alert('文件路径不存在，无法打开文件');
+        return;
+      }
+
+      const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
+      const targetFileName = fileInfo.name;
 
       Logger.info('准备打开文件', {
         url: mxcadFileUrl,
         originalName: fileInfo.originalName,
         fileHash: fileInfo.fileHash,
+        path: fileInfo.path,
         targetFileName,
       });
 

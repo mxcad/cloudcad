@@ -15,8 +15,8 @@ export interface UploadContext {
   userId: string;
   /** 用户角色 */
   userRole?: string;
-  /** 外部参照上传时的源图纸哈希 */
-  srcDwgFileHash?: string;
+  /** 外部参照上传时的源图纸节点 ID */
+  srcDwgNodeId?: string;
   /** 是否为图片外部参照 */
   isImage?: boolean;
 }
@@ -489,10 +489,7 @@ export class UploadOrchestrator {
   }
 
   /**
-   * 转换上传上下文为节点创建上下文
-   *
-   * @param uploadContext 上传上下文
-   * @returns 节点创建上下文
+   * 将 UploadContext 转换为 NodeCreationContext
    */
   private convertUploadContextToNodeCreationContext(
     uploadContext: UploadContext,
@@ -501,7 +498,7 @@ export class UploadOrchestrator {
       nodeId: uploadContext.nodeId,
       userId: uploadContext.userId,
       userRole: uploadContext.userRole,
-      srcDwgFileHash: uploadContext.srcDwgFileHash,
+      srcDwgNodeId: uploadContext.srcDwgNodeId,
       isImage: uploadContext.isImage,
     };
   }

@@ -287,9 +287,6 @@ export class GalleryService {
     // 获取文件名
     const filename = node.originalName || node.name;
 
-    // 提取文件哈希
-    const filehash = node.fileHash || this.extractHashFromPath(node.path) || '';
-
     // 获取分类名称
     let typeName = '';
     if (node.gallerySecondType) {
@@ -305,21 +302,9 @@ export class GalleryService {
       filename: filename,
       firstType: node.galleryFirstType || 0,
       secondType: node.gallerySecondType || 0,
-      filehash: filehash,
+      nodeId: node.id, // 使用节点 ID 而不是文件哈希
       type: typeName,
     };
-  }
-
-  /**
-   * 从路径中提取文件哈希
-   */
-  private extractHashFromPath(path: string | null | undefined): string {
-    if (!path) return '';
-
-    // 示例路径: /mxcad/file/a1b2c3d4e5f6.../drawing.dwg.mxweb
-    // 提取: a1b2c3d4e5f6...
-    const match = path.match(/\/mxcad\/file\/([a-f0-9]+)\//);
-    return match ? match[1] : '';
   }
 
   /**
@@ -571,18 +556,18 @@ export class GalleryService {
 
   /**
    * 增加浏览次数
-   * @param fileHash 文件哈希值
+   * @param nodeId 文件节点 ID
    * @param galleryType 图库类型
    */
   async incrementLookNum(
-    fileHash: string,
+    nodeId: string,
     galleryType: 'drawings' | 'blocks'
   ): Promise<void> {
     try {
       // 查找对应的 FileSystemNode
       const node = await this.database.fileSystemNode.findFirst({
         where: {
-          fileHash: fileHash,
+          id: nodeId,
           isInGallery: true,
           galleryType: galleryType,
         },
@@ -590,7 +575,7 @@ export class GalleryService {
 
       if (!node) {
         this.logger.warn(
-          `[incrementLookNum] 未找到图库文件: ${fileHash}, ${galleryType}`
+          `[incrementLookNum] 未找到图库文件: ${nodeId}, ${galleryType}`
         );
         return;
       }

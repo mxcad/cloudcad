@@ -12,7 +12,7 @@ import { CacheManagerService } from './cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { MxCadService } from '../mxcad.service';
 import { RateLimiter } from '../../common/concurrency/rate-limiter';
-import { FileStatus } from '@prisma/client';
+import { StoragePathConstants } from '../constants/storage.constants';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
@@ -32,8 +32,18 @@ export interface MergeOptions {
   size: number;
   chunks: number;
   context: FileSystemNodeContext;
-  /** 源图纸哈希（用于外部参照上传，转换后将文件移动到源图纸的 hash 目录） */
-  srcDwgFileHash?: string;
+  /** 源图纸节点 ID（用于外部参照上传，转换后将文件移动到源图纸的节点目录） */
+  srcDwgNodeId?: string;
+}
+
+/** 文件上传合并结果 */
+export interface MergeResult {
+  /** 返回码 */
+  ret: string;
+  /** 是否转换完成 */
+  tz?: boolean;
+  /** 新创建的文件节点 ID（如果成功） */
+  nodeId?: string;
 }
 
 export interface UploadFileOptions {
@@ -197,7 +207,7 @@ export class FileUploadManagerService {
     filename: string,
     fileHash: string,
     context?: FileSystemNodeContext
-  ): Promise<{ ret: string }> {
+  ): Promise<{ ret: string; nodeId?: string }> {
     try {
       const targetFile = this.getConvertedFileName(fileHash, filename);
       const suffix = filename.substring(filename.lastIndexOf('.') + 1);
@@ -260,20 +270,20 @@ export class FileUploadManagerService {
    */
   async mergeConvertFile(
     options: MergeOptions
-  ): Promise<{ ret: string; tz?: boolean }> {
+  ): Promise<MergeResult> {
     const {
       hash: hashFile,
       chunks,
       name: fileName,
       size: fileSize,
       context,
-      srcDwgFileHash,
+      srcDwgNodeId,
     } = options;
     const fileMd5 = hashFile;
     const tmpDir = this.fileSystemService.getChunkTempDirPath(fileMd5);
 
     this.logger.log(
-      `[mergeConvertFile] 开始合并转换: userId=${context.userId}, nodeId=${context.nodeId}, fileHash=${fileMd5}, fileName=${fileName}, chunks=${chunks}, size=${fileSize}, srcDwgFileHash=${srcDwgFileHash}`
+      `[mergeConvertFile] 开始合并转换: userId=${context.userId}, nodeId=${context.nodeId}, fileHash=${fileMd5}, fileName=${fileName}, chunks=${chunks}, size=${fileSize}, srcDwgNodeId=${srcDwgNodeId}`
     );
 
     try {
@@ -375,15 +385,15 @@ export class FileUploadManagerService {
             await this.fileSystemService.deleteDirectory(tmpDir);
 
             // 检查是否为外部参照上传
-            if (srcDwgFileHash) {
-              // 外部参照：将转换后的文件移动到源图纸的 hash 目录
+            if (context.srcDwgNodeId) {
+              // 外部参照：将转换后的文件移动到源图纸的节点目录
               this.logger.log(
-                `[mergeConvertFile] 检测到外部参照上传: srcDwgFileHash=${srcDwgFileHash}, fileName=${fileName}`
+                `[mergeConvertFile] 检测到外部参照上传: srcDwgNodeId=${context.srcDwgNodeId}, fileName=${fileName}`
               );
               try {
                 await this.handleExternalReferenceFile(
                   fileMd5,
-                  srcDwgFileHash,
+                  context.srcDwgNodeId,
                   fileName,
                   filepath
                 );
@@ -409,9 +419,9 @@ export class FileUploadManagerService {
             this.mapCurrentFilesBeingMerged[fileMd5] = false;
 
             if (ret.tz) {
-              return { ret: MxUploadReturn.kOk, tz: true };
+              return { ret: MxUploadReturn.kOk, tz: true, nodeId: newNodeId };
             } else {
-              return { ret: MxUploadReturn.kOk };
+              return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
             }
           } else {
             // 转换失败，删除已创建的节点
@@ -450,43 +460,102 @@ export class FileUploadManagerService {
   }
 
   /**
+   * 获取外部参照目录名称
+   * 从源图纸的 preloading.json 文件中读取 src_file_md5 字段作为目录名
+   * @param srcDwgNodeId 源图纸节点 ID
+   * @returns 外部参照目录名称（src_file_md5 值）
+   */
+  private async getExternalRefDirName(srcDwgNodeId: string): Promise<string> {
+    try {
+      // 通过 nodeId 查找源图纸节点
+      const sourceNode = await this.fileSystemNodeService.findById(srcDwgNodeId);
+
+      if (!sourceNode || !sourceNode.path) {
+        throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
+      }
+
+      // 获取源图纸文件完整路径
+      const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
+
+      // 获取源图纸文件所在的目录（YYYYMM[/N]/sourceNodeId）
+      const sourceNodeDir = path.dirname(sourceNodePath);
+
+      // 构建 preloading.json 文件路径
+      const preloadingFileName = `${srcDwgNodeId}.dwg.mxweb_preloading.json`;
+      const preloadingFilePath = path.join(sourceNodeDir, preloadingFileName);
+
+      // 读取 preloading.json 文件
+      if (!(await this.fileSystemService.exists(preloadingFilePath))) {
+        this.logger.warn(`[getExternalRefDirName] preloading.json 文件不存在: ${preloadingFilePath}`);
+        // 如果文件不存在，降级使用 nodeId 作为目录名
+        return srcDwgNodeId;
+      }
+
+      const content = await fsPromises.readFile(preloadingFilePath, 'utf-8');
+      const data = JSON.parse(content);
+
+      // 提取 src_file_md5 字段
+      const srcFileMd5 = data.src_file_md5;
+
+      if (!srcFileMd5) {
+        this.logger.warn(`[getExternalRefDirName] preloading.json 中没有 src_file_md5 字段: ${preloadingFilePath}`);
+        // 如果字段不存在，降级使用 nodeId 作为目录名
+        return srcDwgNodeId;
+      }
+
+      this.logger.log(`[getExternalRefDirName] 获取到 src_file_md5: ${srcFileMd5}`);
+      return srcFileMd5;
+    } catch (error) {
+      this.logger.error(`[getExternalRefDirName] 读取失败: ${error.message}`, error.stack);
+      // 发生错误时，降级使用 nodeId 作为目录名
+      return srcDwgNodeId;
+    }
+  }
+
+  /**
    * 处理外部参照文件
-   * 将转换后的 mxweb 文件拷贝到源图纸的 hash 目录
+   * 将转换后的 mxweb 文件拷贝到以 src_file_md5 命名的目录
    * 文件名格式：A.dwg.mxweb（保留原始扩展名）
    * 注意：使用拷贝而非移动，保留原始文件供其他图纸复用
    */
-  private async handleExternalReferenceFile(
+  async handleExternalReferenceFile(
     extRefHash: string,
-    srcDwgFileHash: string,
+    srcDwgNodeId: string,
     extRefFileName: string,
     srcFilePath: string
   ): Promise<void> {
     try {
       this.logger.log(
-        `[handleExternalReferenceFile] 开始处理: extRefHash=${extRefHash}, srcDwgFileHash=${srcDwgFileHash}, extRefFileName=${extRefFileName}`
+        `[handleExternalReferenceFile] 开始处理: extRefHash=${extRefHash}, srcDwgNodeId=${srcDwgNodeId}, extRefFileName=${extRefFileName}`
       );
 
-      // 查找源图纸节点
-      const sourceNode = await this.fileSystemNodeService.findByFileHash(srcDwgFileHash);
+      // 通过 nodeId 查找源图纸节点
+      const sourceNode = await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
-        throw new Error(`源图纸节点不存在: ${srcDwgFileHash}`);
+        throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
       }
 
-      // 获取源图纸节点目录（YYYYMM[/N]/sourceNodeId）
-      const sourceNodeDirPath = this.storageManager.getFullPath(sourceNode.path);
+      // 获取源图纸文件完整路径
+      const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
 
-      // 构建 hash 目录（在节点 ID 目录内）
-      const hashDir = path.join(sourceNodeDirPath, srcDwgFileHash);
+      // 获取源图纸文件所在的目录（YYYYMM[/N]/sourceNodeId）
+      const sourceNodeDir = path.dirname(sourceNodePath);
+
+      // 获取外部参照目录名称（从 preloading.json 中提取 src_file_md5）
+      const externalRefDirName = await this.getExternalRefDirName(srcDwgNodeId);
+
+      // 构建外部参照目录（使用 src_file_md5 作为目录名）
+      const externalRefDir = path.join(sourceNodeDir, externalRefDirName);
 
       this.logger.log(
-        `[handleExternalReferenceFile] 源图纸节点目录: ${sourceNodeDirPath}, hash目录: ${hashDir}`
+        `[handleExternalReferenceFile] 源图纸文件路径: ${sourceNodePath}, 所在目录: ${sourceNodeDir}, 外部参照目录: ${externalRefDir}`
       );
 
-      // 确保目录存在
-      if (!(await this.fileSystemService.exists(hashDir))) {
-        await fsPromises.mkdir(hashDir, { recursive: true } as any);
-        this.logger.log(`[handleExternalReferenceFile] 创建目录: ${hashDir}`);
+      // 确保外部参照目录存在
+      if (!(await this.fileSystemService.exists(externalRefDir))) {
+        await fsPromises.mkdir(externalRefDir, { recursive: true } as any);
+        this.logger.log(`[handleExternalReferenceFile] 创建外部参照目录: ${externalRefDir}`);
       }
 
       // 获取转换后的文件路径
@@ -494,7 +563,7 @@ export class FileUploadManagerService {
 
       // 构建目标文件路径：使用外部参照文件名（带原始扩展名）+ .mxweb
       const convertedExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
-      const targetFile = path.join(hashDir, `${extRefFileName}${convertedExt}`);
+      const targetFile = path.join(externalRefDir, `${extRefFileName}${convertedExt}`);
 
       // 检查源文件是否存在
       if (!(await this.fileSystemService.exists(sourceFile))) {
@@ -571,11 +640,11 @@ export class FileUploadManagerService {
    */
   async mergeChunksWithPermission(
     options: MergeOptions
-  ): Promise<{ ret: string; tz?: boolean }> {
-    const { hash, name, size, chunks, context, srcDwgFileHash } = options;
+  ): Promise<MergeResult> {
+    const { hash, name, size, chunks, context, srcDwgNodeId } = options;
 
     this.logger.log(
-      `[mergeChunksWithPermission] 开始合并: hash=${hash}, name=${name}, srcDwgFileHash=${srcDwgFileHash}`
+      `[mergeChunksWithPermission] 开始合并: hash=${hash}, name=${name}, srcDwgNodeId=${srcDwgNodeId}`
     );
 
     // 检查文件类型
@@ -587,7 +656,7 @@ export class FileUploadManagerService {
         size,
         chunks,
         context,
-        srcDwgFileHash,
+        srcDwgNodeId,
       });
       return mergeResult;
     } else {
@@ -652,7 +721,7 @@ export class FileUploadManagerService {
             // 清理临时文件
             await this.fileSystemService.deleteDirectory(tmpDir);
 
-            return { ret: MxUploadReturn.kOk };
+            return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
           } catch (copyError) {
             this.logger.error(`[mergeChunksWithPermission] 文件拷贝失败: ${copyError.message}`);
             // 拷贝失败，删除已创建的节点
@@ -691,6 +760,7 @@ export class FileUploadManagerService {
       );
 
       // 分配存储空间
+      // 注意：传递文件名，确保 storageInfo.relativePath 包含完整文件路径
       const storageInfo = await this.storageManager.allocateNodeStorage(nodeId, fileName);
 
       // 确保目标目录存在
@@ -704,7 +774,8 @@ export class FileUploadManagerService {
       await fsPromises.copyFile(sourceFilePath, storageInfo.fullPath);
       this.logger.log(`[handleNonCadFileCopy] 拷贝成功: ${fileName} → ${storageInfo.fullPath}`);
 
-      // 更新节点的 path 字段
+      // storageInfo.relativePath 已经是完整路径：YYYYMM[/N]/nodeId/fileName
+      // 直接使用，不需要再次拼接
       await this.fileSystemServiceMain.updateNodePath(nodeId, storageInfo.relativePath);
 
       this.logger.log(`[handleNonCadFileCopy] 节点路径更新成功: ${nodeId} → ${storageInfo.relativePath}`);
@@ -770,7 +841,7 @@ export class FileUploadManagerService {
           await this.handleFileCopyAndPathUpdate(newNodeId, name, hash, extension.replace('.', ''), context.userId);
 
           // 如果是外部参照，额外拷贝文件
-          if (context.srcDwgFileHash) {
+          if (context.srcDwgNodeId) {
             const uploadPath =
               this.configService.get('MXCAD_UPLOAD_PATH') ||
               path.join(process.cwd(), 'uploads');
@@ -781,14 +852,14 @@ export class FileUploadManagerService {
             if (!context.isImage) {
               await this.handleExternalReferenceFile(
                 hash,
-                context.srcDwgFileHash,
+                context.srcDwgNodeId,
                 name,
                 targetFile
               );
             } else {
               await this.handleExternalReferenceImage(
                 hash,
-                context.srcDwgFileHash,
+                context.srcDwgNodeId,
                 name,
                 targetFile,
                 context
@@ -833,9 +904,9 @@ export class FileUploadManagerService {
         await this.handleFileNodeCreation(name, hash, size, context);
 
         // 如果是外部参照 DWG 上传，额外拷贝文件到源图纸目录
-        if (context.srcDwgFileHash && !context.isImage) {
+        if (context.srcDwgNodeId && !context.isImage) {
           this.logger.log(
-            `[uploadAndConvertFileWithPermission] 外部参照 DWG 上传: ${name}, srcDwgFileHash=${context.srcDwgFileHash}`
+            `[uploadAndConvertFileWithPermission] 外部参照 DWG 上传: ${name}, srcDwgNodeId=${context.srcDwgNodeId}`
           );
           try {
             // 传递转换后的文件路径（包含 .mxweb 扩展名）
@@ -848,7 +919,7 @@ export class FileUploadManagerService {
             );
             await this.handleExternalReferenceFile(
               hash,
-              context.srcDwgFileHash,
+              context.srcDwgNodeId,
               name,
               convertedFilePath
             );
@@ -912,6 +983,28 @@ export class FileUploadManagerService {
             // 将文件拷贝到 filesData/YYYYMM[/N]/nodeId/ 目录
             await this.handleNonCadFileCopy(newNodeId, name, filePath, context.userId);
 
+            // 如果是外部参照图片上传，额外拷贝文件到源图纸目录
+            if (context.srcDwgNodeId && context.isImage) {
+              this.logger.log(
+                `[uploadAndConvertFileWithPermission] 外部参照图片上传: ${name}, srcDwgNodeId=${context.srcDwgNodeId}`
+              );
+              try {
+                await this.handleExternalReferenceImage(
+                  hash,
+                  context.srcDwgNodeId,
+                  name,
+                  filePath,
+                  context
+                );
+              } catch (error) {
+                this.logger.error(
+                  `[uploadAndConvertFileWithPermission] 外部参照图片文件拷贝失败: ${error.message}`,
+                  error.stack
+                );
+                // 拷贝失败不影响主流程，只记录错误
+              }
+            }
+
             return { ret: MxUploadReturn.kOk };
           } catch (copyError) {
             this.logger.error(`[uploadAndConvertFileWithPermission] 非CAD文件拷贝失败: ${copyError.message}`);
@@ -931,81 +1024,55 @@ export class FileUploadManagerService {
 
   /**
    * 处理外部参照图片上传
-   * 1. 拷贝图片到源图纸的 hash 目录
+   * 1. 拷贝图片到源图纸的节点目录
    * 2. 创建独立的文件节点
    */
-  private async handleExternalReferenceImage(
+  async handleExternalReferenceImage(
     fileHash: string,
-    srcDwgFileHash: string,
+    srcDwgNodeId: string,
     extRefFileName: string,
     srcFilePath: string,
     context: FileSystemNodeContext
   ): Promise<void> {
     try {
       this.logger.log(
-        `[handleExternalReferenceImage] 开始处理: fileHash=${fileHash}, srcDwgFileHash=${srcDwgFileHash}, extRefFileName=${extRefFileName}`
+        `[handleExternalReferenceImage] 开始处理: srcDwgNodeId=${srcDwgNodeId}, extRefFileName=${extRefFileName}`
       );
 
-      // 查找源图纸节点
-      const sourceNode = await this.fileSystemNodeService.findByFileHash(srcDwgFileHash);
+      // 通过 nodeId 查找源图纸节点
+      const sourceNode = await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
-        throw new Error(`源图纸节点不存在: ${srcDwgFileHash}`);
+        throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
       }
 
-      // 获取源图纸节点目录（YYYYMM[/N]/sourceNodeId）
-      const sourceNodeDirPath = this.storageManager.getFullPath(sourceNode.path);
+      // 获取源图纸文件完整路径
+      const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
 
-      // 构建 hash 目录（在节点 ID 目录内）
-      const hashDir = path.join(sourceNodeDirPath, srcDwgFileHash);
+      // 获取源图纸文件所在的目录（YYYYMM[/N]/sourceNodeId）
+      const sourceNodeDir = path.dirname(sourceNodePath);
+
+      // 获取外部参照目录名称（从 preloading.json 中提取 src_file_md5）
+      const externalRefDirName = await this.getExternalRefDirName(srcDwgNodeId);
+
+      // 构建外部参照目录（使用 src_file_md5 作为目录名）
+      const externalRefDir = path.join(sourceNodeDir, externalRefDirName);
 
       this.logger.log(
-        `[handleExternalReferenceImage] 源图纸节点目录: ${sourceNodeDirPath}, hash目录: ${hashDir}`
+        `[handleExternalReferenceImage] 源图纸文件路径: ${sourceNodePath}, 所在目录: ${sourceNodeDir}, 外部参照目录: ${externalRefDir}`
       );
 
-      // 确保目录存在
-      if (!(await this.fileSystemService.exists(hashDir))) {
-        await fsPromises.mkdir(hashDir, { recursive: true } as any);
-        this.logger.log(`[handleExternalReferenceImage] 创建目录: ${hashDir}`);
+      // 确保外部参照目录存在
+      if (!(await this.fileSystemService.exists(externalRefDir))) {
+        await fsPromises.mkdir(externalRefDir, { recursive: true } as any);
+        this.logger.log(`[handleExternalReferenceImage] 创建外部参照目录: ${externalRefDir}`);
       }
 
-      // 拷贝图片到 hash 目录
-      const targetImageFile = path.join(hashDir, extRefFileName);
+      // 拷贝图片到外部参照目录
+      const targetImageFile = path.join(externalRefDir, extRefFileName);
       await fsPromises.copyFile(srcFilePath, targetImageFile);
       this.logger.log(
         `[handleExternalReferenceImage] 图片文件拷贝成功: ${targetImageFile}`
-      );
-
-      // 确定父节点：如果源图纸在项目根目录，使用项目根目录
-      // 否则使用源图纸的父节点（图纸所在目录）
-      const parentId = sourceNode.isRoot
-        ? sourceNode.id
-        : sourceNode.parentId;
-
-      this.logger.log(
-        `[handleExternalReferenceImage] 外部参照节点将创建在: parentId=${parentId}, 源图纸: ${sourceNode.name} (ID: ${sourceNode.id})`
-      );
-
-      // 获取文件信息
-      const fileSize = await fsPromises.stat(srcFilePath).then((stat) => stat.size);
-      const ext = path.extname(extRefFileName).toLowerCase();
-      const mimeType = this.getMimeType(ext);
-
-      // 使用统一的文件节点创建方法创建外部参照文件节点
-      await this.fileSystemServiceMain.createFileNode({
-        name: extRefFileName,
-        fileHash,
-        size: fileSize,
-        mimeType,
-        extension: ext,
-        parentId: parentId || context.nodeId,
-        ownerId: context.userId,
-        sourceFilePath: srcFilePath,
-        skipFileCopy: false,
-      });
-
-      this.logger.log(
-        `[handleExternalReferenceImage] 外部参照文件节点创建成功: ${extRefFileName}`
       );
     } catch (error) {
       this.logger.error(
@@ -1042,7 +1109,7 @@ export class FileUploadManagerService {
     suffix: string,
     convertedExt: string,
     context?: FileSystemNodeContext
-  ): Promise<{ ret: string }> {
+  ): Promise<{ ret: string; nodeId?: string }> {
     const targetFile = `${fileHash}.${suffix}${convertedExt}`;
     let fileExists = false;
     let fileSource = '';
@@ -1060,8 +1127,9 @@ export class FileUploadManagerService {
     // 返回检查结果
     if (fileExists) {
       // 使用辅助方法处理文件系统节点创建
+      let newNodeId: string | undefined;
       try {
-        await this.handleFileSystemNodeCreation(
+        newNodeId = await this.handleFileSystemNodeCreation(
           filename,
           fileHash,
           context,
@@ -1073,7 +1141,7 @@ export class FileUploadManagerService {
         this.logger.error(`⚠️ 文件系统节点创建失败: ${nodeError.message}`);
       }
 
-      return { ret: MxUploadReturn.kFileAlreadyExist };
+      return { ret: MxUploadReturn.kFileAlreadyExist, nodeId: newNodeId };
     } else {
       return { ret: MxUploadReturn.kFileNoExist };
     }
@@ -1091,7 +1159,7 @@ export class FileUploadManagerService {
     context: FileSystemNodeContext | undefined,
     fileSource: string,
     targetFile: string
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     if (!context) {
       throw new Error(
         `文件 ${filename} (${fileHash}) 缺少上下文信息，无法创建文件系统节点`
@@ -1111,17 +1179,25 @@ export class FileUploadManagerService {
     }
 
     // 检查当前目录下是否已有相同文件
-    const existingNodes = await this.fileSystemNodeService.findByFileHash(fileHash);
-    const existingNodeInCurrentDir = existingNodes.find(
-      (node) => node.parentId === context.nodeId
-    );
+    const existingNode = await this.fileSystemNodeService.findByFileHash(fileHash);
+    const existingNodeInCurrentDir = existingNode && existingNode.parentId === context.nodeId
+      ? existingNode
+      : null;
 
     if (existingNodeInCurrentDir) {
       // 当前目录下已有相同文件，不需要创建新节点
       this.logger.log(
         `[handleFileSystemNodeCreation] 当前目录下已有相同文件，跳过创建: ${filename} (${fileHash})，节点ID: ${existingNodeInCurrentDir.id}`
       );
-      return;
+      return existingNodeInCurrentDir.id;
+    }
+
+    // 检查是否为外部参照上传，外部参照不创建文件节点
+    if (context.srcDwgNodeId) {
+      this.logger.log(
+        `[handleFileSystemNodeCreation] 检测到外部参照上传，跳过文件节点创建: ${filename} (${fileHash})，srcDwgNodeId=${context.srcDwgNodeId}`
+      );
+      return undefined;
     }
 
     // 获取文件大小
@@ -1149,9 +1225,14 @@ export class FileUploadManagerService {
       context: context,
     });
 
+    // 查询刚创建的节点（重新查询，因为 createOrReferenceNode 不返回节点信息）
+    const newNode = await this.fileSystemNodeService.findByFileHash(fileHash);
+
     this.logger.log(
-      `✅ 文件系统节点创建成功: ${filename} (${fileHash}) 在目录 ${context.nodeId}`
+      `✅ 文件系统节点创建成功: ${filename} (${fileHash}) 在目录 ${context.nodeId}，节点ID: ${newNode?.id}`
     );
+
+    return newNode?.id;
   }
 
   /**
@@ -1172,8 +1253,20 @@ export class FileUploadManagerService {
         `[handleFileCopyAndPathUpdate] 开始处理: nodeId=${nodeId}, fileName=${fileName}, fileHash=${fileHash}`
       );
 
+      // 验证文件扩展名（防止扩展名注入）
+      const normalizedExt = fileExtName.toLowerCase();
+      const targetExtension = `.${normalizedExt}` as '.dwg' | '.dxf';
+      if (!StoragePathConstants.ALLOWED_CAD_EXTENSIONS.includes(targetExtension)) {
+        this.logger.error(
+          `[handleFileCopyAndPathUpdate] 不支持的文件扩展名: .${fileExtName}`
+        );
+        throw new Error(`不支持的文件扩展名: .${fileExtName}`);
+      }
+
       // 分配存储空间
-      const storageInfo = await this.storageManager.allocateNodeStorage(nodeId, fileName);
+      // 注意：传递目标文件名，确保 storageInfo.relativePath 包含完整文件路径
+      const targetFileName = `${nodeId}.${normalizedExt}${StoragePathConstants.MXWEB_EXTENSION}`;
+      const storageInfo = await this.storageManager.allocateNodeStorage(nodeId, targetFileName);
 
       // 确保目标目录存在
       const targetDir = path.dirname(storageInfo.fullPath);
@@ -1187,9 +1280,8 @@ export class FileUploadManagerService {
         this.configService.get('MXCAD_UPLOAD_PATH') ||
         path.join(process.cwd(), 'uploads');
 
-      // 扫描 uploads 目录中所有以 fileHash 开头的文件
-      const actualFiles = await this.fileSystemService.readDirectory(uploadPath);
-      const mxcadFiles = actualFiles.filter((file) => file.startsWith(fileHash));
+      // 优化：使用 findFilesByPrefix 直接查找匹配的文件，避免扫描整个目录
+      const mxcadFiles = await this.fileSystemService.findFilesByPrefix(uploadPath, fileHash);
 
       this.logger.log(
         `[handleFileCopyAndPathUpdate] 找到文件数=${mxcadFiles.length}, 文件列表: ${mxcadFiles.join(', ')}`
@@ -1206,25 +1298,23 @@ export class FileUploadManagerService {
 
         // 生成目标文件名：将 hash 替换为 nodeId
         // 例如：hash.dwg.mxweb → nodeId.dwg.mxweb
-        const targetFileName = mxcadFile.replace(fileHash, nodeId);
-        const targetFile = path.join(targetDir, targetFileName);
+        const currentTargetFileName = mxcadFile.replace(fileHash, nodeId);
+        const targetFile = path.join(targetDir, currentTargetFileName);
 
         // 拷贝文件
         await fsPromises.copyFile(sourceFile, targetFile);
-        this.logger.log(`[handleFileCopyAndPathUpdate] 拷贝成功: ${mxcadFile} → ${targetFileName}`);
+        this.logger.log(`[handleFileCopyAndPathUpdate] 拷贝成功: ${mxcadFile} → ${currentTargetFileName}`);
       }
 
-      // 构建新的访问路径：filesData/YYYYMM[/N]/nodeId/nodeId.dwg.mxweb
-      const newAccessPath = `${storageInfo.relativePath}/${nodeId}.${fileExtName}.mxweb`;
+      // storageInfo.relativePath 已经是完整路径：YYYYMM[/N]/nodeId/nodeId.dwg.mxweb
+      // 直接使用，不需要再次拼接
+      await this.fileSystemServiceMain.updateNodePath(nodeId, storageInfo.relativePath);
 
-      // 更新节点的 path 字段
-      await this.fileSystemServiceMain.updateNodePath(nodeId, newAccessPath);
-
-      this.logger.log(`[handleFileCopyAndPathUpdate] 节点路径更新成功: ${nodeId} → ${newAccessPath}`);
+      this.logger.log(`[handleFileCopyAndPathUpdate] 节点路径更新成功: ${nodeId} → ${storageInfo.relativePath}`);
 
       // 检查并更新外部参照信息
       try {
-        await this.mxCadService.updateExternalReferenceAfterUpload(fileHash);
+        await this.mxCadService.updateExternalReferenceAfterUpload(nodeId);
       } catch (extRefError) {
         this.logger.warn(
           `⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`
@@ -1302,7 +1392,7 @@ export class FileUploadManagerService {
 
       // 检查并更新外部参照信息
       try {
-        await this.mxCadService.updateExternalReferenceAfterUpload(fileHash);
+        await this.mxCadService.updateExternalReferenceAfterUpload(context.nodeId);
       } catch (extRefError) {
         this.logger.warn(
           `⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`

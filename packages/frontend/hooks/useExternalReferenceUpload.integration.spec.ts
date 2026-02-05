@@ -15,7 +15,7 @@ vi.mock('../services/apiService', () => ({
 }));
 
 describe('useExternalReferenceUpload Integration Tests', () => {
-  const testFileHash = 'test_integration_hash_1234567890';
+  const testNodeId = 'test_integration_node_1234567890';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +29,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     it('应该初始化所有状态为默认值', () => {
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -41,7 +41,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     it('应该正确返回控制方法', () => {
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -76,7 +76,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -107,7 +107,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -130,7 +130,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -166,7 +166,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -207,7 +207,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -245,7 +245,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -283,7 +283,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -331,7 +331,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
           onError: vi.fn(),
         })
       );
@@ -371,7 +371,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -394,7 +394,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
           onSkip,
         })
       );
@@ -432,7 +432,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
           onSuccess,
         })
       );
@@ -480,7 +480,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -505,7 +505,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     it('应该直接打开模态框不检查外部参照', async () => {
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -551,7 +551,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
           onSuccess,
           onSkip,
         })
@@ -596,7 +596,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
           onSkip,
         })
       );
@@ -622,7 +622,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
           onSkip,
         })
       );
@@ -669,7 +669,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 
@@ -705,7 +705,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
-          fileHash: testFileHash,
+          nodeId: testNodeId,
         })
       );
 

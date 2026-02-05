@@ -43,6 +43,8 @@ import { MoveNodeDto } from './dto/move-node.dto';
 import { CopyNodeDto } from './dto/copy-node.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard, NodePermissionGuard, PermissionsGuard)
@@ -482,15 +484,15 @@ export class FileSystemController {
   }
 
   /**
-   * ��ȡ�ļ�����ͼ��ͨ�� Session ��֤��
-   * ���� img.src ֱ�ӷ��ʣ�������Զ�Я�� Cookie
+   * 获取文件节点的缩略图
+   * 缩略图文件固定为 thumbnail.jpg，位于节点目录下
    */
   @Get('nodes/:nodeId/thumbnail')
-  @ApiOperation({ summary: '��ȡ�ļ�����ͼ' })
-  @ApiResponse({ status: 200, description: '��ȡ����ͼ�ɹ�', type: 'stream' })
-  @ApiResponse({ status: 401, description: 'δ��¼' })
-  @ApiResponse({ status: 403, description: '��Ȩ���ʸ��ļ�' })
-  @ApiResponse({ status: 404, description: '�ļ�������' })
+  @ApiOperation({ summary: '获取文件节点缩略图' })
+  @ApiResponse({ status: 200, description: '获取缩略图成功', type: 'stream' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权限访问该文件' })
+  @ApiResponse({ status: 404, description: '文件不存在' })
   async getThumbnail(
     @Param('nodeId') nodeId: string,
     @Request() req: any,
@@ -499,7 +501,7 @@ export class FileSystemController {
     const userId = req.session?.userId;
 
     if (!userId) {
-      throw new UnauthorizedException('δ��¼');
+      throw new UnauthorizedException('未登录');
     }
 
     const hasAccess = await this.fileSystemService.checkFileAccess(
@@ -508,48 +510,51 @@ export class FileSystemController {
     );
 
     if (!hasAccess) {
-      throw new ForbiddenException('��Ȩ���ʸ��ļ�');
+      throw new ForbiddenException('无权限访问该文件');
     }
 
     const node = await this.fileSystemService.getNode(nodeId);
 
     if (!node || node.isFolder || !node.path) {
-      throw new NotFoundException('�ļ�������');
+      throw new NotFoundException('文件节点不存在');
     }
 
-    const extension = node.extension?.toLowerCase() || '';
-    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+    // 构建缩略图完整路径：filesData/YYYYMM[/N]/nodeId/thumbnail.jpg
+    // 注意：node.path 包含文件名，需要先提取目录路径
+    const nodeFullPath = this.fileSystemService.getFullPath(node.path);
+    const nodeDir = path.dirname(nodeFullPath);
+    const thumbnailPath = path.join(nodeDir, 'thumbnail.jpg');
 
-    if (!imageExtensions.includes(extension)) {
-      throw new BadRequestException('���ļ�����ͼƬ�ļ�');
+    // 检查缩略图文件是否存在
+    if (!fs.existsSync(thumbnailPath)) {
+      this.logger.warn(`缩略图不存在: ${thumbnailPath}`);
+      throw new NotFoundException('缩略图不存在');
     }
 
-    let storagePath = node.path;
-    if (node.path.startsWith('files/')) {
-      if (node.fileHash) {
-        // ʹ���� MxCAD ����ͼ�ϴ�һ�µ�·����ʽ: {hash}.{extension}
-        const extension = node.extension?.toLowerCase() || '';
-        storagePath = `mxcad/file/${node.fileHash}${extension}`;
-        this.logger.log(`·��ת��: ${node.path} -> ${storagePath}`);
-      }
+    // 检查路径是否是目录
+    const stats = fs.statSync(thumbnailPath);
+    if (stats.isDirectory()) {
+      this.logger.warn(`缩略图路径是目录而非文件: ${thumbnailPath}`);
+      throw new NotFoundException('缩略图不存在');
     }
 
-    let stream;
-    try {
-      stream = await this.fileSystemService.getFileStream(storagePath);
-    } catch (error) {
-      if (error.message.includes('路径是目录而非文件') || error.message.includes('directory')) {
-        this.logger.warn(`节点 ${nodeId} 的路径是目录，无法获取缩略图: ${storagePath}`);
-        throw new NotFoundException('文件不存在');
-      }
-      throw error;
-    }
+    // 创建文件流
+    const fileStream = fs.createReadStream(thumbnailPath);
 
-    const mimeType = this.getMimeType(node.name);
-    res.setHeader('Content-Type', mimeType);
+    // 设置响应头
+    res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=3600');
 
-    stream.pipe(res);
+    // 返回文件流
+    fileStream.pipe(res);
+
+    // 处理错误
+    fileStream.on('error', (error) => {
+      this.logger.error(`读取缩略图失败: ${error.message}`, error.stack);
+      if (!res.headersSent) {
+        res.status(500).json({ message: '读取缩略图失败' });
+      }
+    });
   }
 
   /**

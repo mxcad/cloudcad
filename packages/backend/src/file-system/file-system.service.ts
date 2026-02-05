@@ -103,6 +103,26 @@ export class FileSystemService {
     return this.storageManager.getFullPath(node.path);
   }
 
+  /**
+   * 获取节点的完整存储路径
+   * @param nodePath 节点的相对路径
+   * @returns 本地存储的完整路径
+   */
+  getFullPath(nodePath: string): string {
+    if (!nodePath) {
+      throw new NotFoundException('文件路径不存在');
+    }
+    return this.storageManager.getFullPath(nodePath);
+  }
+
+  /**
+   * 获取存储管理器实例
+   * @returns StorageManager 实例
+   */
+  getStorageManager(): StorageManager {
+    return this.storageManager;
+  }
+
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
       // 创建项目节点（ownerId 字段标识了项目所有者）
@@ -635,13 +655,17 @@ export class FileSystemService {
   }
 
   /**
-   * 统一的文件节点创建方法
-   * 
-   * 1. 创建数据库节点
+   * 创建文件节点
+   * 流程：
+   * 1. 创建数据库节点（path 初始为 null）
    * 2. 根据节点 ID 创建物理目录
-   * 3. 将文件拷贝到节点目录
-   * 4. 更新节点的 path 字段
-   * 
+   * 3. 将文件拷贝到节点目录（如果 skipFileCopy 为 false）
+   * 4. 更新节点的 path 字段（如果 skipFileCopy 为 false）
+   *
+   * 注意：
+   * - 如果 skipFileCopy = true，path 保持为 null，等待后续单独更新
+   * - 这允许在文件转换后单独拷贝文件并设置完整路径
+   *
    * @param options 创建选项
    * @returns 创建的文件节点
    */
@@ -671,7 +695,7 @@ export class FileSystemService {
     } = options;
 
     this.logger.log(
-      `[createFileNode] 开始创建文件节点: name=${name}, fileHash=${fileHash}, parentId=${parentId}, ownerId=${ownerId}`
+      `[createFileNode] 开始创建文件节点: name=${name}, fileHash=${fileHash}, parentId=${parentId}, ownerId=${ownerId}, skipFileCopy=${skipFileCopy}`
     );
 
     // 验证父节点存在
@@ -690,7 +714,7 @@ export class FileSystemService {
 
     // 使用事务确保数据一致性
     return await this.prisma.$transaction(async (tx) => {
-      // 1. 创建数据库节点（path 临时设为 null）
+      // 1. 创建数据库节点（path 初始为 null）
       const fileNode = await tx.fileSystemNode.create({
         data: {
           name,
@@ -698,7 +722,7 @@ export class FileSystemService {
           isRoot: false,
           parentId,
           originalName: name,
-          path: null, // 临时设为 null，创建目录后更新
+          path: null, // 临时设为 null
           size,
           mimeType,
           extension,
@@ -748,17 +772,21 @@ export class FileSystemService {
             `[createFileNode] 未提供源文件路径，跳过文件拷贝`
           );
         }
+
+        // 4. 更新节点的 path 字段（仅在文件拷贝后）
+        await tx.fileSystemNode.update({
+          where: { id: fileNode.id },
+          data: { path: storageInfo.relativePath },
+        });
+
+        this.logger.log(
+          `[createFileNode] 节点 path 已更新: ${storageInfo.relativePath}`
+        );
+      } else {
+        this.logger.log(
+          `[createFileNode] skipFileCopy=true，保持 path 为 null，等待后续更新`
+        );
       }
-
-      // 4. 更新节点的 path 字段
-      await tx.fileSystemNode.update({
-        where: { id: fileNode.id },
-        data: { path: storageInfo.relativePath },
-      });
-
-      this.logger.log(
-        `[createFileNode] 节点 path 已更新: ${storageInfo.relativePath}`
-      );
 
       // 重新查询返回完整节点信息
       return await tx.fileSystemNode.findUnique({

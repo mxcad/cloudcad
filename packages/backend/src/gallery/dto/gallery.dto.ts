@@ -60,8 +60,8 @@ export class GalleryFileItemDto {
   @ApiProperty({ description: '二级分类 ID', example: 2 })
   secondType: number;
 
-  @ApiProperty({ description: '文件哈希值', example: 'a1b2c3d4e5f6...' })
-  filehash: string;
+  @ApiProperty({ description: '文件节点 ID', example: 'clxxx...' })
+  nodeId: string;
 
   @ApiProperty({ description: '分类名称', example: '门' })
   type: string;

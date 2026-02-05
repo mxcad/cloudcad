@@ -64,6 +64,26 @@ export class FileSystemService implements IFileSystemService {
     }
   }
 
+  /**
+   * 查找目录中以指定前缀开头的文件
+   * @param dirPath 目录路径
+   * @param prefix 文件名前缀
+   * @returns 匹配的文件名列表
+   */
+  async findFilesByPrefix(dirPath: string, prefix: string): Promise<string[]> {
+    try {
+      if (!fs.existsSync(dirPath)) {
+        return [];
+      }
+
+      const files = fs.readdirSync(dirPath);
+      return files.filter((file) => file.startsWith(prefix));
+    } catch (error) {
+      this.logger.error(`查找文件失败: ${dirPath}, prefix=${prefix}`, error);
+      return [];
+    }
+  }
+
   async delete(path: string): Promise<boolean> {
     try {
       if (fs.existsSync(path)) {

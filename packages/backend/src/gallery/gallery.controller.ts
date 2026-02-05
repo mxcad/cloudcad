@@ -201,7 +201,7 @@ export class GalleryController {
 
   /**
    * 访问图块文件 (.mxweb)
-   * 路由: GET /gallery/blocks/{secondType}/{firstType}/{filehash}.mxweb
+   * 路由: GET /gallery/blocks/{secondType}/{firstType}/{nodeId}.mxweb
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
@@ -238,7 +238,7 @@ export class GalleryController {
 
   /**
    * 访问图纸文件 (.mxweb)
-   * 路由: GET /gallery/drawings/{secondType}/{firstType}/{filehash}.mxweb
+   * 路由: GET /gallery/drawings/{secondType}/{firstType}/{nodeId}.mxweb
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
@@ -275,7 +275,7 @@ export class GalleryController {
 
   /**
    * 访问图块文件 (.mxweb) - HEAD 方法
-   * 路由: HEAD /gallery/blocks/{secondType}/{firstType}/{filehash}.mxweb
+   * 路由: HEAD /gallery/blocks/{secondType}/{firstType}/{nodeId}.mxweb
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
@@ -304,7 +304,7 @@ export class GalleryController {
 
   /**
    * 访问图纸文件 (.mxweb) - HEAD 方法
-   * 路由: HEAD /gallery/drawings/{secondType}/{firstType}/{filehash}.mxweb
+   * 路由: HEAD /gallery/drawings/{secondType}/{firstType}/{nodeId}.mxweb
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
@@ -898,8 +898,8 @@ export class GalleryController {
         return res.status(401).json({ code: -1, message: 'Unauthorized' });
       }
 
-      // 从路径中提取文件哈希值
-      // 路径格式: {secondType}/{firstType}/{filehash}.mxweb
+      // 从路径中提取节点 ID
+      // 路径格式: {secondType}/{firstType}/{nodeId}.mxweb
       const pathParts = filename.split('/');
       if (pathParts.length < 3) {
         this.logger.error(
@@ -908,13 +908,13 @@ export class GalleryController {
         return res.status(400).json({ code: -1, message: '无效的文件路径' });
       }
 
-      // 提取文件哈希（去掉扩展名）
-      const fileHashPart = pathParts[pathParts.length - 1];
-      const fileHash = path.basename(fileHashPart, path.extname(fileHashPart));
-      const fileExtension = path.extname(fileHashPart).toLowerCase();
+      // 提取节点 ID（去掉扩展名）
+      const nodeIdPart = pathParts[pathParts.length - 1];
+      const nodeId = path.basename(nodeIdPart, path.extname(nodeIdPart));
+      const fileExtension = path.extname(nodeIdPart).toLowerCase();
 
       this.logger.log(
-        `[handleGalleryFileRequest] 提取的 fileHash: ${fileHash}, 扩展名: ${fileExtension}`
+        `[handleGalleryFileRequest] 提取的 nodeId: ${nodeId}, 扩展名: ${fileExtension}`
       );
 
       // 如果是缩略图请求（.jpg），使用缩略图处理逻辑
@@ -926,15 +926,15 @@ export class GalleryController {
           req,
           res,
           galleryType,
-          fileHash,
+          nodeId,
           isHeadRequest
         );
       }
 
-      // 通过哈希值查找所有具有相同 fileHash 的节点，验证用户是否有访问权限
-      const allNodes = await this.database.fileSystemNode.findMany({
+      // 通过节点 ID 查找节点，验证用户是否有访问权限
+      const node = await this.database.fileSystemNode.findFirst({
         where: {
-          fileHash: fileHash,
+          id: nodeId,
           isFolder: false,
           deletedAt: null,
         },
@@ -944,40 +944,27 @@ export class GalleryController {
           ownerId: true,
           parentId: true,
           isRoot: true,
-          fileHash: true,
+          path: true,
         },
       });
 
       this.logger.log(
-        `[handleGalleryFileRequest] 查找文件节点: hash=${fileHash}, 找到=${allNodes.length}个节点`
+        `[handleGalleryFileRequest] 查找文件节点: nodeId=${nodeId}, 找到=${node ? '是' : '否'}`
       );
 
-      if (allNodes.length === 0) {
+      if (!node) {
         this.logger.warn(
-          `[handleGalleryFileRequest] 文件节点不存在: ${fileHash}`
+          `[handleGalleryFileRequest] 文件节点不存在: ${nodeId}`
         );
         return res.status(404).json({ code: -1, message: '文件不存在' });
       }
 
-      // 检查用户对任何一个节点是否有权限
-      let hasPermission = false;
-      let authorizedNodeId: string | null = null;
-
-      for (const node of allNodes) {
-        // 使用统一的权限检查服务
-        const role = await this.permissionService.getNodeAccessRole(userId, node.id);
-        if (role !== null) {
-          hasPermission = true;
-          authorizedNodeId = node.id;
-          this.logger.log(
-            `[handleGalleryFileRequest] 用户有权限访问节点: ${node.id}, 角色: ${role}`
-          );
-          break;
-        }
-      }
+      // 检查用户是否有权限
+      const role = await this.permissionService.getNodeAccessRole(userId, node.id);
+      const hasPermission = role !== null;
 
       this.logger.log(
-        `[handleGalleryFileRequest] 权限检查结果: userId=${userId}, hasPermission=${hasPermission}, authorizedNodeId=${authorizedNodeId}`
+        `[handleGalleryFileRequest] 权限检查结果: userId=${userId}, hasPermission=${hasPermission}, 角色: ${role}`
       );
 
       if (!hasPermission) {
@@ -987,34 +974,19 @@ export class GalleryController {
         });
       }
 
-      // 获取授权节点的完整路径信息
-      const authorizedNode = await this.database.fileSystemNode.findFirst({
-        where: {
-          fileHash: fileHash,
-          isFolder: false,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          path: true,
-          fileHash: true,
-        },
-      });
-
       let foundFilePath: string | null = null;
 
       // 从 filesData 目录查找文件（使用节点的 path 字段）
-      if (authorizedNode && authorizedNode.path) {
+      if (node.path) {
         try {
           // 获取节点目录的完整路径
-          const nodeFullPath = this.storageManager.getFullPath(authorizedNode.path);
-          
-          // 构建可能的文件名
+          const nodeFullPath = this.storageManager.getFullPath(node.path);
+
+          // 构建可能的文件名（使用 nodeId）
           const possibleFileNames = [
-            `${fileHash}.dwg.mxweb`,
-            `${fileHash}.dxf.mxweb`,
-            `${fileHash}.mxweb`,
+            `${nodeId}.dwg.mxweb`,
+            `${nodeId}.dxf.mxweb`,
+            `${nodeId}.mxweb`,
             filename,
           ];
 
@@ -1071,7 +1043,7 @@ export class GalleryController {
             const fileStream = fs.createReadStream(foundFilePath);
 
             // 更新浏览次数
-            await this.galleryService.incrementLookNum(fileHash, galleryType);
+            await this.galleryService.incrementLookNum(nodeId, galleryType);
 
             // 设置响应头
             res.setHeader('Content-Type', 'application/octet-stream');
@@ -1107,7 +1079,7 @@ export class GalleryController {
 
       // 本地文件系统中未找到文件
       this.logger.warn(
-        `[handleGalleryFileRequest] 本地文件系统未找到文件: ${fileHash}`
+        `[handleGalleryFileRequest] 本地文件系统未找到文件: ${nodeId}`
       );
       return res.status(404).json({ code: -1, message: '文件不存在' });
     } catch (error) {
@@ -1128,19 +1100,19 @@ export class GalleryController {
    * @param req Express Request 对象
    * @param res Express Response 对象
    * @param galleryType 图库类型：'blocks' 或 'drawings'
-   * @param fileHash 文件哈希值
+   * @param nodeId 节点 ID
    * @param isHeadRequest 是否为 HEAD 请求（默认 false）
    */
   private async handleThumbnailRequest(
     req: any,
     res: Response,
     galleryType: 'blocks' | 'drawings',
-    fileHash: string,
+    nodeId: string,
     isHeadRequest: boolean = false
   ) {
     try {
       this.logger.log(
-        `[handleThumbnailRequest] 处理缩略图请求: galleryType=${galleryType}, fileHash=${fileHash}`
+        `[handleThumbnailRequest] 处理缩略图请求: galleryType=${galleryType}, nodeId=${nodeId}`
       );
 
       // 获取用户 ID（从 JWT token）
@@ -1150,10 +1122,10 @@ export class GalleryController {
         return res.status(401).json({ code: -1, message: 'Unauthorized' });
       }
 
-      // 通过哈希值查找所有具有相同 fileHash 的节点，验证用户是否有访问权限
-      const allNodes = await this.database.fileSystemNode.findMany({
+      // 通过节点 ID 查找节点，验证用户是否有访问权限
+      const node = await this.database.fileSystemNode.findFirst({
         where: {
-          fileHash: fileHash,
+          id: nodeId,
           isFolder: false,
           deletedAt: null,
         },
@@ -1163,42 +1135,28 @@ export class GalleryController {
           ownerId: true,
           parentId: true,
           isRoot: true,
-          fileHash: true,
-          path: true, // 添加 path 字段
+          path: true,
         },
       });
 
       this.logger.log(
-        `[handleThumbnailRequest] 查找文件节点: hash=${fileHash}, 找到=${allNodes.length}个节点`
+        `[handleThumbnailRequest] 查找文件节点: nodeId=${nodeId}, 找到=${node ? '是' : '否'}`
       );
 
-      if (allNodes.length === 0) {
+      if (!node) {
         this.logger.warn(
-          `[handleThumbnailRequest] 文件节点不存在: ${fileHash}`
+          `[handleThumbnailRequest] 文件节点不存在: ${nodeId}`
         );
         return res.status(404).json({ code: -1, message: '文件不存在' });
       }
 
-      // 检查用户对任何一个节点是否有权限
-      let hasPermission = false;
-      let authorizedNode: any | null = null;
-
-      for (const node of allNodes) {
-        // 使用统一的权限检查服务
-        const role = await this.permissionService.getNodeAccessRole(userId, node.id);
-        if (role !== null) {
-          hasPermission = true;
-          authorizedNode = node;
-          this.logger.log(
-            `[handleThumbnailRequest] 用户有权限访问节点: ${node.id}, 角色: ${role}`
-          );
-          break;
-        }
-      }
+      // 检查用户是否有权限
+      const role = await this.permissionService.getNodeAccessRole(userId, node.id);
+      const hasPermission = role !== null;
 
       this.logger.log(
-        `[handleThumbnailRequest] 权限检查结果: userId=${userId}, hasPermission=${hasPermission}`
-            );
+        `[handleThumbnailRequest] 权限检查结果: userId=${userId}, hasPermission=${hasPermission}, 角色: ${role}`
+      );
 
       if (!hasPermission) {
         return res.status(401).json({
@@ -1208,16 +1166,18 @@ export class GalleryController {
       }
 
       // 检查节点是否有 path 字段
-      if (!authorizedNode.path) {
+      if (!node.path) {
         this.logger.warn(
-          `[handleThumbnailRequest] 节点没有 path 字段: ${authorizedNode.id}`
+          `[handleThumbnailRequest] 节点没有 path 字段: ${node.id}`
         );
         return res.status(404).json({ code: -1, message: '文件不存在' });
       }
 
       // 从 filesData 目录读取缩略图（使用 StorageManager 获取完整路径）
-      const nodeFullPath = this.storageManager.getFullPath(authorizedNode.path);
-      const localThumbnailPath = path.join(nodeFullPath, `${fileHash}.jpg`);
+      // 注意：node.path 包含文件名，需要先提取目录路径
+      const nodeFullPath = this.storageManager.getFullPath(node.path);
+      const nodeDir = path.dirname(nodeFullPath);
+      const localThumbnailPath = path.join(nodeDir, 'thumbnail.jpg');
 
       // 检查文件是否存在
       if (fs.existsSync(localThumbnailPath)) {
@@ -1273,7 +1233,7 @@ export class GalleryController {
           return;
         }
       } else {
-        this.logger.warn(`[handleThumbnailRequest] 缩略图不存在: ${fileHash}`);
+        this.logger.warn(`[handleThumbnailRequest] 缩略图不存在: ${nodeId}`);
         return res.status(404).json({ code: -1, message: '缩略图不存在' });
       }
     } catch (error) {

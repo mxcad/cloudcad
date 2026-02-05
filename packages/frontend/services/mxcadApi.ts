@@ -2,9 +2,9 @@ import { apiClient } from './apiClient';
 import { calculateFileHash } from '../utils/hashUtils';
 
 export const mxcadApi = {
-  getPreloadingData: (fileHash: string) =>
+  getPreloadingData: (nodeId: string) =>
     apiClient.get<import('../types/api').PreloadingData>(
-      `/mxcad/file/${fileHash}/preloading`
+      `/mxcad/file/${nodeId}/preloading`
     ),
 
   checkThumbnail: (nodeId: string) =>
@@ -21,20 +21,20 @@ export const mxcadApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 
-  checkExternalReferenceExists: (fileHash: string, fileName: string) =>
+  checkExternalReferenceExists: (nodeId: string, fileName: string) =>
     apiClient.post<import('../types/api').CheckReferenceExistsResult>(
-      `/mxcad/file/${fileHash}/check-reference`,
+      `/mxcad/file/${nodeId}/check-reference`,
       { fileName }
     ),
 
-  refreshExternalReferences: (fileHash: string) =>
+  refreshExternalReferences: (nodeId: string) =>
     apiClient.post<{ code: number; message: string; stats?: any }>(
-      `/mxcad/file/${fileHash}/refresh-external-references`
+      `/mxcad/file/${nodeId}/refresh-external-references`
     ),
 
   uploadExtReferenceDwg: (
     file: File,
-    srcDwgFileHash: string,
+    nodeId: string,
     extRefFile: string,
     onProgress?: (progressEvent: any) => void
   ) => {
@@ -45,7 +45,7 @@ export const mxcadApi = {
 
           const formData = new FormData();
           formData.append('hash', hash);
-          formData.append('src_dwgfile_hash', srcDwgFileHash);
+          formData.append('nodeId', nodeId);
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 
@@ -72,7 +72,7 @@ export const mxcadApi = {
 
   uploadExtReferenceImage: (
     file: File,
-    srcDwgFileHash: string,
+    nodeId: string,
     extRefFile: string,
     onProgress?: (progressEvent: any) => void
   ) => {
@@ -83,7 +83,7 @@ export const mxcadApi = {
 
           const formData = new FormData();
           formData.append('hash', hash);
-          formData.append('src_dwgfile_hash', srcDwgFileHash);
+          formData.append('nodeId', nodeId);
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 

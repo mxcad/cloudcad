@@ -5,7 +5,7 @@ export interface FileSystemNode {
   isRoot: boolean;
   parentId: string | null;
   originalName?: string;
-  path?: string; // 改为存储访问路径：/mxcad/file/xxx.dwg.mxweb
+  path?: string; // 存储访问路径：filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
   size?: number | null;
   mimeType?: string | null;
   extension?: string | null;
@@ -91,10 +91,8 @@ export interface ExternalReferenceFile {
  * useExternalReferenceUpload 配置
  */
 export interface UseExternalReferenceUploadConfig {
-  /** 节点 ID（用于权限验证） */
+  /** 节点 ID（用于权限验证和API调用） */
   nodeId: string;
-  /** 文件哈希值 */
-  fileHash: string;
   /** 上传成功回调 */
   onSuccess?: () => void;
   /** 上传失败回调 */
@@ -114,7 +112,7 @@ export interface UseExternalReferenceUploadReturn {
   /** 是否正在上传 */
   loading: boolean;
   /** 检查缺失的外部参照 */
-  checkMissingReferences: (fileHash?: string) => Promise<boolean>;
+  checkMissingReferences: (nodeId?: string) => Promise<boolean>;
   /** 选择文件 */
   selectFiles: () => void;
   /** 上传文件 */
@@ -127,6 +125,8 @@ export interface UseExternalReferenceUploadReturn {
   skip: () => void;
   /** 打开模态框准备上传（任务009 - 随时上传） */
   openModalForUpload: () => void;
+  /** 选择文件并自动上传 */
+  selectAndUploadFiles: () => void;
 }
 
 /**

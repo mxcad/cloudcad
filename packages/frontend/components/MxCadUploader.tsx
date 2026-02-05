@@ -100,7 +100,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const [progress, setProgress] = useState(0);
     const [message, setMessage] = useState('');
     const [showToast, setShowToast] = useState(false);
-    const [currentFileHash, setCurrentFileHash] = useState('');
+    const [currentNodeId, setCurrentNodeId] = useState('');
 
     const { selectFiles } = useMxCadUploadNative();
 
@@ -113,7 +113,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
     // 外部参照上传 Hook
     const externalReferenceUpload = useExternalReferenceUpload({
-      fileHash: currentFileHash,
+      nodeId: currentNodeId,
       onSuccess: () => {
         onExternalReferenceSuccess?.();
       },
@@ -151,11 +151,11 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           setShowToast(true);
           onSuccess?.(param);
 
-          // 保存文件哈希值
-          setCurrentFileHash(param.hash);
+          // 保存节点ID
+          setCurrentNodeId(param.nodeId);
 
-          // 检查外部参照（传入 fileHash 确保不为空）
-          await externalReferenceUpload.checkMissingReferences(param.hash);
+          // 检查外部参照（传入 nodeId 确保不为空）
+          await externalReferenceUpload.checkMissingReferences(param.nodeId);
 
           // 3秒后隐藏提示
           setTimeout(() => setShowToast(false), 3000);

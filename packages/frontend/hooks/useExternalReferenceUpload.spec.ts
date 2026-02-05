@@ -25,7 +25,7 @@ describe('useExternalReferenceUpload', () => {
   it('应该初始化正确的状态', () => {
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 
@@ -53,7 +53,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 
@@ -82,7 +82,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 
@@ -104,7 +104,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 
@@ -122,7 +122,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
         onSkip,
       })
     );
@@ -138,7 +138,7 @@ describe('useExternalReferenceUpload', () => {
   it('应该正确关闭模态框', () => {
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 
@@ -174,7 +174,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
         onSuccess,
       })
     );
@@ -237,7 +237,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 
@@ -273,7 +273,7 @@ describe('useExternalReferenceUpload', () => {
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
-        fileHash: 'testhash123',
+        nodeId: 'testnode123',
       })
     );
 

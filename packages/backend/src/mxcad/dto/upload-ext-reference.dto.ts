@@ -15,12 +15,12 @@ export class UploadExtReferenceDto {
   hash?: string;
 
   @ApiProperty({
-    description: '源图纸文件的哈希值（32位十六进制）',
-    example: '25e89b5adf19984330f4e68b0f99db64',
+    description: '源图纸文件的节点 ID（FileSystemNode ID）',
+    example: 'cml8t8wg60004ucufd7pb3sq6',
   })
   @IsString()
   @IsNotEmpty()
-  src_dwgfile_hash: string;
+  nodeId: string;
 
   @ApiProperty({
     description: '外部参照文件名（含扩展名）',

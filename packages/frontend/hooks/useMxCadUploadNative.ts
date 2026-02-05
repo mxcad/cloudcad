@@ -157,6 +157,10 @@ export const useMxCadUploadNative = () => {
       // 秒传成功，但需要确保文件节点已在目标目录创建
       console.log('[fileisExist] 秒传成功，文件节点应在目标目录创建');
 
+      // 获取后端返回的节点 ID
+      const instantNodeId = existResponse.data.nodeId || config.nodeId;
+      console.log('[fileisExist] 秒传成功，节点 ID:', instantNodeId);
+
       config.onSuccess?.({
         file,
         id: hash,
@@ -166,13 +170,16 @@ export const useMxCadUploadNative = () => {
         hash,
         isUseServerExistingFile: true,
         isInstantUpload: true,
-        nodeId: config.nodeId,
+        nodeId: instantNodeId,
       });
       return;
     }
 
     // 2. 开始分片上传
     config.onBeginUpload?.();
+
+    let newNodeId: string | undefined;
+    const isLastChunk = (chunkIndex: number) => chunkIndex === totalChunks - 1;
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * chunkSize;
@@ -214,6 +221,12 @@ export const useMxCadUploadNative = () => {
       });
       console.log('[uploadFiles] 响应:', uploadResponse.data);
 
+      // 最后一个分片上传完成后，检查响应中是否包含 nodeId
+      if (isLastChunk(chunkIndex) && uploadResponse.data.nodeId) {
+        newNodeId = uploadResponse.data.nodeId;
+        console.log('[uploadFiles] 新创建的节点 ID:', newNodeId);
+      }
+
       config.onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
     }
 
@@ -234,6 +247,10 @@ export const useMxCadUploadNative = () => {
 
       if (verifyResponse.data.ret === 'fileAlreadyExist') {
         uploadSuccess = true;
+        // 优先使用合并时返回的 nodeId，否则使用 fileisExist 返回的 nodeId
+        const finalNodeId = newNodeId || verifyResponse.data.nodeId || config.nodeId;
+        console.log('[uploadInChunks] 上传成功，节点 ID:', finalNodeId);
+
         config.onSuccess?.({
           file,
           id: hash,
@@ -242,7 +259,7 @@ export const useMxCadUploadNative = () => {
           type: file.type,
           hash,
           isUseServerExistingFile: false,
-          nodeId: config.nodeId,
+          nodeId: finalNodeId,
         });
         break;
       }

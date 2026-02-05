@@ -1,4 +1,6 @@
-﻿/**
+﻿import { StoragePathConstants, ValidationHelper } from '../constants/storage.constants';
+
+/**
  * 日志工具
  */
 export class Logger {
@@ -100,24 +102,29 @@ export class FileStatusHelper {
  * URL 工具
  */
 export class UrlHelper {
+  // 存储路径常量
+  private static readonly STORAGE_PATH_PREFIX = 'filesData/';
+  private static readonly MXWEB_EXTENSION = '.mxweb';
+
   static getFileIdFromPath(pathname: string): string {
     const pathSegments = pathname.split('/');
     return pathSegments[pathSegments.length - 1] || '';
   }
 
-  static buildMxCadFileUrl(fileHash: string, originalName?: string): string {
-    // 根据原始文件扩展名动态构建 mxweb 文件名
-    // 格式：{fileHash}.{原始扩展名}.mxweb
-    let suffix = 'dwg'; // 默认扩展名
-
-    if (originalName) {
-      const lastDotIndex = originalName.lastIndexOf('.');
-      if (lastDotIndex > 0) {
-        suffix = originalName.substring(lastDotIndex + 1).toLowerCase();
-      }
+  /**
+   * 构建 MxCAD 文件访问 URL
+   * @param nodePath - 节点路径（格式：filesData/YYYYMM/nodeId/nodeId.dwg.mxweb）
+   * @returns 完整的文件访问路径（格式：/mxcad/filesData/YYYYMM/nodeId/nodeId.dwg.mxweb）
+   */
+  static buildMxCadFileUrl(nodePath: string): string {
+    // 验证路径格式，防止路径遍历攻击
+    if (!ValidationHelper.isValidNodePath(nodePath)) {
+      Logger.error('无效的节点路径格式', { nodePath });
+      throw new Error('无效的节点路径格式');
     }
 
-    return `/mxcad/file/${fileHash}.${suffix}.mxweb`;
+    // 使用常量拼接路径
+    return `${StoragePathConstants.MXWEB_ACCESS_PREFIX}${nodePath}`;
   }
 }
 

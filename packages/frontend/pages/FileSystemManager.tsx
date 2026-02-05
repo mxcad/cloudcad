@@ -249,71 +249,134 @@ export const FileSystemManager: React.FC = () => {
   }, [currentNode]);
 
   // 加载节点权限信息
-  useEffect(() => {
-    if (!user) return;
 
-    // 确定需要加载权限的节点列表
-    let nodesToLoad: string[] = [];
+    useEffect(() => {
 
-    if (isAtRoot) {
-      // 项目列表页面：为所有项目根节点加载权限
-      nodesToLoad = displayNodes
-        .filter((node) => node.isRoot)
-        .map((node) => node.id);
-    } else if (urlProjectId) {
-      // 项目内部页面：为当前项目加载权限
-      nodesToLoad = [urlProjectId];
-    }
+      if (!user) return;
 
-    if (nodesToLoad.length === 0) return;
+  
 
-    const loadPermissions = async () => {
-      setPermissionsLoading(true);
-      try {
-        const { canEditNode, canDeleteNode, canManageNodeMembers, canManageNodeRoles } =
-          await import('../utils/permissionUtils');
+      // 确定需要加载权限的节点列表
 
-        // 并行加载所有节点的权限
-        const permissionsPromises = nodesToLoad.map(async (nodeId) => {
-          const [canEdit, canDelete, canManageMembers, canManageRoles] = await Promise.all([
-            canEditNode(user, nodeId),
-            canDeleteNode(user, nodeId),
-            canManageNodeMembers(user, nodeId),
-            canManageNodeRoles(user, nodeId),
-          ]);
+      let nodesToLoad: string[] = [];
 
-          return {
-            nodeId,
-            canEdit,
-            canDelete,
-            canManageMembers,
-            canManageRoles,
-          };
-        });
+  
 
-        const permissionsResults = await Promise.all(permissionsPromises);
+      if (isAtRoot) {
 
-        setNodePermissions((prev) => {
-          const newMap = new Map(prev);
-          permissionsResults.forEach((result) => {
-            newMap.set(result.nodeId, {
-              canEdit: result.canEdit,
-              canDelete: result.canDelete,
-              canManageMembers: result.canManageMembers,
-              canManageRoles: result.canManageRoles,
-            });
-          });
-          return newMap;
-        });
-      } catch (error) {
-        console.error('加载权限信息失败:', error);
-      } finally {
-        setPermissionsLoading(false);
+        // 项目列表页面：为所有项目根节点加载权限
+
+        nodesToLoad = displayNodes
+
+          .filter((node) => node.isRoot)
+
+          .map((node) => node.id);
+
+      } else if (urlProjectId) {
+
+        // 项目内部页面：为当前项目加载权限
+
+        nodesToLoad = [urlProjectId];
+
       }
-    };
 
-    loadPermissions();
-  }, [user, isAtRoot, urlProjectId, displayNodes]);
+  
+
+      if (nodesToLoad.length === 0) return;
+
+  
+
+      const loadPermissions = async () => {
+
+        setPermissionsLoading(true);
+
+        try {
+
+          const { canEditNode, canDeleteNode, canManageNodeMembers, canManageNodeRoles } =
+
+            await import('../utils/permissionUtils');
+
+  
+
+          // 并行加载所有节点的权限
+
+          const permissionsPromises = nodesToLoad.map(async (nodeId) => {
+
+            const [canEdit, canDelete, canManageMembers, canManageRoles] = await Promise.all([
+
+              canEditNode(user, nodeId),
+
+              canDeleteNode(user, nodeId),
+
+              canManageNodeMembers(user, nodeId),
+
+              canManageNodeRoles(user, nodeId),
+
+            ]);
+
+  
+
+            return {
+
+              nodeId,
+
+              canEdit,
+
+              canDelete,
+
+              canManageMembers,
+
+              canManageRoles,
+
+            };
+
+          });
+
+  
+
+          const permissionsResults = await Promise.all(permissionsPromises);
+
+          setNodePermissions((prev) => {
+
+            const newMap = new Map(prev);
+
+            permissionsResults.forEach((result) => {
+
+              newMap.set(result.nodeId, {
+
+                canEdit: result.canEdit,
+
+                canDelete: result.canDelete,
+
+                canManageMembers: result.canManageMembers,
+
+                canManageRoles: result.canManageRoles,
+
+              });
+
+            });
+
+            return newMap;
+
+          });
+
+        } catch (error) {
+
+          console.error('加载权限信息失败:', error);
+
+        } finally {
+
+          setPermissionsLoading(false);
+
+        }
+
+      };
+
+  
+
+      loadPermissions();
+
+    }, [user, isAtRoot, urlProjectId, nodes.length]);
 
   // 打开成员管理模态框
   const handleShowMembers = useCallback((project: FileSystemNode) => {

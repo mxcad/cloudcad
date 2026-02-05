@@ -485,7 +485,7 @@ describe('MxCadController', () => {
       };
     });
 
-    it('应该成功上传有效的外部参照 DWG', async () => {
+    it('应该成功上传有效的外部参�?DWG', async () => {
       const mockFile = {
         path: '/tmp/test.dwg',
         originalname: 'ref1.dwg',
@@ -493,7 +493,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'ref1.dwg',
       };
 
@@ -534,7 +534,7 @@ describe('MxCadController', () => {
 
     it('应该在缺少文件时返回错误', async () => {
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'ref1.dwg',
       };
 
@@ -559,7 +559,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: '',
+        nodeId: '',
         ext_ref_file: '',
       };
 
@@ -576,7 +576,7 @@ describe('MxCadController', () => {
       });
     });
 
-    it('应该在图纸不存在时返回错误', async () => {
+    it('应该在图纸不存在时返回错�?, async () => {
       const mockFile = {
         path: '/tmp/test.dwg',
         originalname: 'ref1.dwg',
@@ -584,7 +584,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'nonexistent',
+        nodeId: 'nonexistent',
         ext_ref_file: 'ref1.dwg',
       };
 
@@ -602,11 +602,11 @@ describe('MxCadController', () => {
       );
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
-        message: '图纸文件不存在',
+        message: '图纸文件不存�?,
       });
     });
 
-    it('应该拒绝无效的外部参照文件', async () => {
+    it('应该拒绝无效的外部参照文�?, async () => {
       const mockFile = {
         path: '/tmp/test.dwg',
         originalname: 'invalid.dwg',
@@ -614,7 +614,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'invalid.dwg',
       };
 
@@ -638,7 +638,7 @@ describe('MxCadController', () => {
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
-        message: '无效的外部参照文件',
+        message: '无效的外部参照文�?,
       });
     });
 
@@ -650,7 +650,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'ref1.dwg',
       };
 
@@ -695,7 +695,7 @@ describe('MxCadController', () => {
       };
     });
 
-    it('应该成功上传有效的外部参照图片', async () => {
+    it('应该成功上传有效的外部参照图�?, async () => {
       const mockFile = {
         path: '/tmp/test.png',
         originalname: 'ref1.png',
@@ -703,7 +703,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'ref1.png',
       };
 
@@ -741,7 +741,7 @@ describe('MxCadController', () => {
 
     it('应该在缺少文件时返回错误', async () => {
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'ref1.png',
       };
 
@@ -766,7 +766,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: '',
+        nodeId: '',
         ext_ref_file: '',
       };
 
@@ -783,7 +783,7 @@ describe('MxCadController', () => {
       });
     });
 
-    it('应该在图纸不存在时返回错误', async () => {
+    it('应该在图纸不存在时返回错�?, async () => {
       const mockFile = {
         path: '/tmp/test.png',
         originalname: 'ref1.png',
@@ -791,7 +791,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'nonexistent',
+        nodeId: 'nonexistent',
         ext_ref_file: 'ref1.png',
       };
 
@@ -809,11 +809,11 @@ describe('MxCadController', () => {
       );
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
-        message: '图纸文件不存在',
+        message: '图纸文件不存�?,
       });
     });
 
-    it('应该拒绝无效的外部参照文件', async () => {
+    it('应该拒绝无效的外部参照文�?, async () => {
       const mockFile = {
         path: '/tmp/test.png',
         originalname: 'invalid.png',
@@ -821,7 +821,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'invalid.png',
       };
 
@@ -845,7 +845,7 @@ describe('MxCadController', () => {
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
-        message: '无效的外部参照文件',
+        message: '无效的外部参照文�?,
       });
     });
 
@@ -857,7 +857,7 @@ describe('MxCadController', () => {
       } as Express.Multer.File;
 
       const mockBody = {
-        src_dwgfile_hash: 'testhash123',
+        nodeId: 'testhash123',
         ext_ref_file: 'ref1.png',
       };
 
@@ -928,7 +928,7 @@ describe('MxCadController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
-        message: '文件不存在',
+        message: '文件不存�?,
       });
     });
   });

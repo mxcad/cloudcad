@@ -42,12 +42,12 @@ export class UploadFilesDto {
   nodeId?: string;
 
   @ApiProperty({
-    description: '源图纸哈希（外部参照上传时使用）',
+    description: '源图纸节点 ID（外部参照上传时使用）',
     required: false,
   })
   @IsOptional()
   @IsString()
-  src_dwgfile_hash?: string;
+  srcDwgNodeId?: string;
 
   @ApiProperty({
     description: '文件ID（前端传递的标识符）',

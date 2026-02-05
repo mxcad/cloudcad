@@ -21,8 +21,13 @@ class ApiClient {
     // 请求拦截器 - 添加认证 token
     this.client.interceptors.request.use(
       (config) => {
-        // Authorization 由 mxcadManager.ts 在 XHR/fetch 底层统一处理
-        // axios 默认使用 XHR，所以 globalAuth.ts 会自动添加 Authorization 头
+        // 从 localStorage 获取 token
+        const token = localStorage.getItem('accessToken');
+
+        // 如果 token 存在，添加到 Authorization 头
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
 
         // 如果是 FormData，移除默认的 Content-Type，让浏览器自动设置
         if (config.data instanceof FormData) {

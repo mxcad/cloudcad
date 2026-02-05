@@ -29,9 +29,9 @@ describe('MxCAD API Methods', () => {
         .spyOn(apiService, 'get')
         .mockResolvedValue(mockResponse);
 
-      const result = await apiService.getPreloadingData('testhash123');
+      const result = await apiService.getPreloadingData('testnode123');
 
-      expect(getSpy).toHaveBeenCalledWith('/mxcad/file/testhash123/preloading');
+      expect(getSpy).toHaveBeenCalledWith('/mxcad/file/testnode123/preloading');
       expect(result.data).toEqual(mockData);
     });
 
@@ -64,12 +64,12 @@ describe('MxCAD API Methods', () => {
         .mockResolvedValue(mockResponse);
 
       const result = await apiService.checkExternalReferenceExists(
-        'testhash123',
+        'testnode123',
         'ref1.dwg'
       );
 
       expect(postSpy).toHaveBeenCalledWith(
-        '/mxcad/file/testhash123/check-reference',
+        '/mxcad/file/testnode123/check-reference',
         { fileName: 'ref1.dwg' }
       );
       expect(result.data.exists).toBe(true);
@@ -86,13 +86,13 @@ describe('MxCAD API Methods', () => {
         .mockResolvedValue(mockResponse);
 
       const result = await apiService.checkExternalReferenceExists(
-        'testhash123',
+        'testnode123',
         'nonexistent.dwg'
       );
 
       expect(result.data.exists).toBe(false);
       expect(postSpy).toHaveBeenCalledWith(
-        '/mxcad/file/testhash123/check-reference',
+        '/mxcad/file/testnode123/check-reference',
         { fileName: 'nonexistent.dwg' }
       );
     });
@@ -116,9 +116,9 @@ describe('MxCAD API Methods', () => {
         .spyOn(apiService, 'get')
         .mockResolvedValue(mockResponse);
 
-      const result = await mxcadApi.getPreloadingData('abc123');
+      const result = await mxcadApi.getPreloadingData('abcnode123');
 
-      expect(getSpy).toHaveBeenCalledWith('/mxcad/file/abc123/preloading');
+      expect(getSpy).toHaveBeenCalledWith('/mxcad/file/abcnode123/preloading');
       expect(result.data).toEqual(mockData);
     });
 
@@ -133,12 +133,12 @@ describe('MxCAD API Methods', () => {
         .mockResolvedValue(mockResponse);
 
       const result = await mxcadApi.checkExternalReferenceExists(
-        'abc123',
+        'abcnode123',
         'test.dwg'
       );
 
       expect(postSpy).toHaveBeenCalledWith(
-        '/mxcad/file/abc123/check-reference',
+        '/mxcad/file/abcnode123/check-reference',
         { fileName: 'test.dwg' }
       );
       expect(result.data.exists).toBe(true);
@@ -157,7 +157,7 @@ describe('MxCAD API Methods', () => {
       const testFile = new File(['test content'], 'test.dwg', {
         type: 'application/dwg',
       });
-      await mxcadApi.uploadExtReferenceDwg(testFile, 'srcHash', 'refFile.dwg');
+      await mxcadApi.uploadExtReferenceDwg(testFile, 'srcNode', 'refFile.dwg');
 
       expect(postSpy).toHaveBeenCalledWith(
         '/mxcad/up_ext_reference_dwg',
@@ -170,7 +170,7 @@ describe('MxCAD API Methods', () => {
       // 验证 FormData 内容
       const calledWith = postSpy.mock.calls[0][1] as FormData;
       expect(calledWith.get('file')).toBeDefined();
-      expect(calledWith.get('src_dwgfile_hash')).toBe('srcHash');
+      expect(calledWith.get('nodeId')).toBe('srcNode');
       expect(calledWith.get('ext_ref_file')).toBe('refFile.dwg');
     });
 
@@ -189,7 +189,7 @@ describe('MxCAD API Methods', () => {
       });
       await mxcadApi.uploadExtReferenceImage(
         testFile,
-        'srcHash',
+        'srcNode',
         'refImage.png'
       );
 
@@ -204,7 +204,7 @@ describe('MxCAD API Methods', () => {
       // 验证 FormData 内容
       const calledWith = postSpy.mock.calls[0][1] as FormData;
       expect(calledWith.get('file')).toBeDefined();
-      expect(calledWith.get('src_dwgfile_hash')).toBe('srcHash');
+      expect(calledWith.get('nodeId')).toBe('srcNode');
       expect(calledWith.get('ext_ref_file')).toBe('refImage.png');
     });
   });
