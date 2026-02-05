@@ -139,7 +139,7 @@ export const CADEditorDirect: React.FC = () => {
         const fileResponse = await apiService.get(
           `/file-system/nodes/${fileId}`
         );
-        const file = fileResponse.data;
+        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string };
 
         if (!file.fileHash) {
           setError('文件尚未转换完成');
@@ -183,8 +183,10 @@ export const CADEditorDirect: React.FC = () => {
         // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
         await initMxCADConfig(file);
 
-        // 直接使用数据库中的path字段
-        const mxcadFileUrl = file.path;
+        // 构造正确的 mxweb 文件访问 URL
+        // file.path 是存储路径（如：202602/cml96ilqt000ftsufa6h6q7v7/cml96ilqt000ftsufa6h6q7v7.dwg.mxweb）
+        // 需要通过后端接口访问：/mxcad/filesData/202602/cml96ilqt000ftsufa6h6q7v7/cml96ilqt000ftsufa6h6q7v7.dwg.mxweb
+        const mxcadFileUrl = `/mxcad/filesData/${file.path}`;
 
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);

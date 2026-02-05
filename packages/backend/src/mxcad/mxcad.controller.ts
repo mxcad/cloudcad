@@ -126,11 +126,11 @@ export class MxCadController {
   /**
    * 获取外部参照预加载数据
    *
-   * @param fileHash 文件哈希值
+   * @param nodeId 节点 ID
    * @returns 预加载数据
    * @throws NotFoundException 预加载数据不存在时抛出异常
    */
-  @Get('file/:hash/preloading')
+  @Get('file/:nodeId/preloading')
   @ApiResponse({
     status: 200,
     description: '成功获取预加载数据',
@@ -141,29 +141,29 @@ export class MxCadController {
     description: '预加载数据不存在',
   })
   async getPreloadingData(
-    @Param('hash') fileHash: string
+    @Param('nodeId') nodeId: string
   ): Promise<PreloadingDataDto> {
-    this.logger.debug(`[getPreloadingData] 请求参数: fileHash=${fileHash}`);
+    this.logger.debug(`[getPreloadingData] 请求参数: nodeId=${nodeId}`);
 
-    const data = await this.mxCadService.getPreloadingData(fileHash);
+    const data = await this.mxCadService.getPreloadingData(nodeId);
 
     if (!data) {
-      this.logger.warn(`[getPreloadingData] 预加载数据不存在: ${fileHash}`);
+      this.logger.warn(`[getPreloadingData] 预加载数据不存在: ${nodeId}`);
       throw new NotFoundException('预加载数据不存在');
     }
 
-    this.logger.debug(`[getPreloadingData] 成功返回预加载数据: ${fileHash}`);
+    this.logger.debug(`[getPreloadingData] 成功返回预加载数据: ${nodeId}`);
     return data;
   }
 
   /**
    * 检查外部参照文件是否存在
    *
-   * @param fileHash 源图纸文件的哈希值
+   * @param nodeId 源图纸节点 ID
    * @param body 请求体，包含 fileName 字段
    * @returns 文件是否存在
    */
-  @Post('file/:hash/check-reference')
+  @Post('file/:nodeId/check-reference')
   @ApiResponse({
     status: 200,
     description: '成功检查文件存在性',
@@ -186,12 +186,12 @@ export class MxCadController {
     },
   })
   async checkExternalReference(
-    @Param('hash') fileHash: string,
+    @Param('nodeId') nodeId: string,
     @Body() body: { fileName: string },
     @Res() res: Response
   ) {
     this.logger.log(
-      `[checkExternalReference] 请求参数: fileHash=${fileHash}, fileName=${body.fileName}`
+      `[checkExternalReference] 请求参数: nodeId=${nodeId}, fileName=${body.fileName}`
     );
 
     // 验证参数
@@ -202,7 +202,7 @@ export class MxCadController {
     }
 
     const exists = await this.mxCadService.checkExternalReferenceExists(
-      fileHash,
+      nodeId,
       body.fileName
     );
 
@@ -213,10 +213,10 @@ export class MxCadController {
 
   /**
    * 获取文件的外部参照统计信息
-   * @param fileHash 文件哈希值
+   * @param nodeId 文件系统节点 ID
    * @returns 外部参照统计信息
    */
-  @Get('file/:hash/external-references')
+  @Get('file/:nodeId/external-references')
   @ApiResponse({
     status: 200,
     description: '成功获取外部参照统计信息',
@@ -235,13 +235,13 @@ export class MxCadController {
     description: '文件不存在',
   })
   async getExternalReferences(
-    @Param('hash') fileHash: string,
+    @Param('nodeId') nodeId: string,
     @Res() res: Response
   ) {
-    this.logger.log(`[getExternalReferences] 请求参数: fileHash=${fileHash}`);
+    this.logger.log(`[getExternalReferences] 请求参数: nodeId=${nodeId}`);
 
     try {
-      const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
+      const stats = await this.mxCadService.getExternalReferenceStats(nodeId);
 
       this.logger.log(
         `[getExternalReferences] 检查结果: 缺失=${stats.missingCount}, 总数=${stats.totalCount}`
@@ -258,10 +258,10 @@ export class MxCadController {
 
   /**
    * 手动刷新文件的外部参照信息
-   * @param fileHash 文件哈希值
+   * @param nodeId 文件系统节点 ID
    * @returns 刷新结果
    */
-  @Post('file/:hash/refresh-external-references')
+  @Post('file/:nodeId/refresh-external-references')
   @ApiResponse({
     status: 200,
     description: '刷新成功',
@@ -279,18 +279,18 @@ export class MxCadController {
     description: '刷新失败',
   })
   async refreshExternalReferences(
-    @Param('hash') fileHash: string,
+    @Param('nodeId') nodeId: string,
     @Res() res: Response
   ) {
     this.logger.log(
-      `[refreshExternalReferences] 请求参数: fileHash=${fileHash}`
+      `[refreshExternalReferences] 请求参数: nodeId=${nodeId}`
     );
 
     try {
-      const stats = await this.mxCadService.getExternalReferenceStats(fileHash);
-      await this.mxCadService.updateExternalReferenceInfo(fileHash, stats);
+      const stats = await this.mxCadService.getExternalReferenceStats(nodeId);
+      await this.mxCadService.updateExternalReferenceInfo(nodeId, stats);
 
-      this.logger.log(`[refreshExternalReferences] 刷新成功: ${fileHash}`);
+      this.logger.log(`[refreshExternalReferences] 刷新成功: nodeId=${nodeId}`);
 
       return res.json({
         code: 0,
@@ -391,7 +391,7 @@ export class MxCadController {
           body.size,
           body.chunks,
           context,
-          body.src_dwgfile_hash // 外部参照上传时的源图纸哈希
+          body.srcDwgNodeId // 外部参照上传时的源图纸节点 ID
         );
         return res.json(result);
       } catch (error) {
@@ -868,8 +868,7 @@ export class MxCadController {
   /**
    * 上传外部参照 DWG
    *
-   * 复用现有的上传方法（/mxcad/files/uploadFiles），上传完成后将转换后的文件
-   * 拷贝到源图纸的 hash 目录并重命名。
+   * 优化流程：先上传到临时目录，验证通过后直接移动到目标目录，避免转换后再拷贝。
    */
   @Post('up_ext_reference_dwg')
   @UseInterceptors(FileInterceptor('file'))
@@ -927,57 +926,31 @@ export class MxCadController {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceDwg] 用户ID: ${userId}`);
 
-      // 检查用户是否有权限访问该图纸（全局查找，不限制项目）
-      const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+      // 通过 nodeId 直接获取源图纸节点
+      const node = await this.mxCadService.getFileSystemNodeByNodeId(body.nodeId);
       if (!node) {
         this.logger.warn(
-          `[uploadExtReferenceDwg] 未找到源图纸: ${body.src_dwgfile_hash}`
+          `[uploadExtReferenceDwg] 未找到源图纸: nodeId=${body.nodeId}`
         );
         return res.json({ code: -1, message: '未找到源图纸' });
       }
 
-      // 检查用户对任何一个具有相同 fileHash 的节点是否有权限
-      const allNodes = await this.prisma.fileSystemNode.findMany({
-        where: {
-          fileHash: body.src_dwgfile_hash,
-          isFolder: false,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          ownerId: true,
-          parentId: true,
-          isRoot: true,
-          fileHash: true,
-        },
-      });
+      // 检查用户是否有权限访问该图纸
+      const permission = await this.checkFileAccessPermission(
+        body.nodeId,
+        userId,
+        userId
+      );
 
-      let hasPermission = false;
-      let authorizedNode: any = null;
-
-      for (const n of allNodes) {
-        const permission = await this.checkFileAccessPermission(
-          n.id,
-          userId,
-          userId
-        );
-        if (permission) {
-          hasPermission = true;
-          authorizedNode = n;
-          break;
-        }
-      }
-
-      if (!hasPermission) {
+      if (!permission) {
         this.logger.warn(
-          `[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
+          `[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 nodeId=${body.nodeId}`
         );
         return res.json({ code: -1, message: '无权限访问该图纸' });
       }
 
-      // 保存授权的节点，供后续使用
-      sourceNode = authorizedNode;
+      // 保存节点信息，供后续使用
+      sourceNode = node;
       this.logger.log(
         `[uploadExtReferenceDwg] 用户有权限访问图纸: ${sourceNode.name} (ID: ${sourceNode.id})`
       );
@@ -1019,19 +992,19 @@ export class MxCadController {
     // 外部参照文件应该创建在源图纸所在目录中
     // 如果源图纸在项目根目录，则使用项目根目录
     // 否则使用源图纸的父节点（图纸所在目录）
-    const nodeId =
+    const parentFolderId =
       sourceNode?.parentId || sourceNode?.id || 'external-reference';
 
     this.logger.log(
-      `[uploadExtReferenceDwg] 外部参照文件将存储在目录: ${nodeId} (源图纸: ${sourceNode?.name})`
+      `[uploadExtReferenceDwg] 外部参照文件将存储在目录: ${parentFolderId} (源图纸: ${sourceNode?.name})`
     );
 
     // 构建上下文（外部参照上传）
     const context = {
-      nodeId: nodeId, // 使用源图纸所在目录
+      nodeId: parentFolderId, // 使用源图纸所在目录
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
-      srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
+      srcDwgNodeId: sourceNode.id, // 源图纸节点 ID（从节点获取）
       isImage: false, // DWG 文件
     };
 
@@ -1049,10 +1022,10 @@ export class MxCadController {
       // 更新源图纸的外部参照信息
       try {
         await this.mxCadService.updateExternalReferenceAfterUpload(
-          body.src_dwgfile_hash
+          body.nodeId
         );
         this.logger.log(
-          `[uploadExtReferenceDwg] 外部参照信息已更新: ${body.src_dwgfile_hash}`
+          `[uploadExtReferenceDwg] 外部参照信息已更新: nodeId=${body.nodeId}`
         );
       } catch (updateError) {
         this.logger.error(
@@ -1124,57 +1097,31 @@ export class MxCadController {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceImage] 用户ID: ${userId}`);
 
-      // 检查用户是否有权限访问该图纸（全局查找，不限制项目）
-      const node = await this.getFileSystemNodeByHash(body.src_dwgfile_hash);
+      // 通过 nodeId 直接获取源图纸节点
+      const node = await this.mxCadService.getFileSystemNodeByNodeId(body.nodeId);
       if (!node) {
         this.logger.warn(
-          `[uploadExtReferenceImage] 未找到源图纸: ${body.src_dwgfile_hash}`
+          `[uploadExtReferenceImage] 未找到源图纸: nodeId=${body.nodeId}`
         );
         return res.json({ code: -1, message: '未找到源图纸' });
       }
 
-      // 检查用户对任何一个具有相同 fileHash 的节点是否有权限
-      const allNodes = await this.prisma.fileSystemNode.findMany({
-        where: {
-          fileHash: body.src_dwgfile_hash,
-          isFolder: false,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          ownerId: true,
-          parentId: true,
-          isRoot: true,
-          fileHash: true,
-        },
-      });
+      // 检查用户是否有权限访问该图纸
+      const permission = await this.checkFileAccessPermission(
+        body.nodeId,
+        userId,
+        userId
+      );
 
-      let hasPermission = false;
-      let authorizedNode: any = null;
-
-      for (const n of allNodes) {
-        const permission = await this.checkFileAccessPermission(
-          n.id,
-          userId,
-          userId
-        );
-        if (permission) {
-          hasPermission = true;
-          authorizedNode = n;
-          break;
-        }
-      }
-
-      if (!hasPermission) {
+      if (!permission) {
         this.logger.warn(
-          `[uploadExtReferenceImage] 用户 ${userId} 无权限访问图纸 ${body.src_dwgfile_hash}`
+          `[uploadExtReferenceImage] 用户 ${userId} 无权限访问图纸 nodeId=${body.nodeId}`
         );
         return res.json({ code: -1, message: '无权限访问该图纸' });
       }
 
-      // 保存授权的节点，供后续使用
-      sourceNode = authorizedNode;
+      // 保存节点信息，供后续使用
+      sourceNode = node;
       this.logger.log(
         `[uploadExtReferenceImage] 用户有权限访问图纸: ${sourceNode.name} (ID: ${sourceNode.id})`
       );
@@ -1202,43 +1149,32 @@ export class MxCadController {
       );
     }
 
-    // 外部参照文件应该创建在源图纸所在目录中
-    // 如果源图纸在项目根目录，则使用项目根目录
-    // 否则使用源图纸的父节点（图纸所在目录）
-    const nodeId =
-      sourceNode?.parentId || sourceNode?.id || 'external-reference';
-
-    this.logger.log(
-      `[uploadExtReferenceImage] 外部参照文件将存储在目录: ${nodeId} (源图纸: ${sourceNode?.name})`
-    );
-
     // 构建上下文（外部参照上传）
     const context = {
-      nodeId: nodeId, // 使用源图纸所在目录
+      nodeId: sourceNode?.id,
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
-      srcDwgFileHash: body.src_dwgfile_hash, // 源图纸哈希
+      srcDwgNodeId: sourceNode.id, // 源图纸节点 ID（从节点获取）
       isImage: true, // 图片文件
     };
 
-    // 复用现有的上传逻辑
-    const result = await this.mxCadService.uploadAndConvertFileWithPermission(
-      file.path,
-      fileHash,
-      body.ext_ref_file,
-      file.size,
-      context
-    );
+    // 直接拷贝图片到源图纸目录，不创建数据库记录
+    try {
+      await this.mxCadService.handleExternalReferenceImage(
+        fileHash,
+        sourceNode.id,
+        body.ext_ref_file,
+        file.path,
+        context
+      );
 
-    // 统一返回格式：与参考代码保持一致
-    if (result.ret === 'ok' || result.ret === 'fileAlreadyExist') {
       // 更新源图纸的外部参照信息
       try {
         await this.mxCadService.updateExternalReferenceAfterUpload(
-          body.src_dwgfile_hash
+          body.nodeId
         );
         this.logger.log(
-          `[uploadExtReferenceImage] 外部参照信息已更新: ${body.src_dwgfile_hash}`
+          `[uploadExtReferenceImage] 外部参照信息已更新: nodeId=${body.nodeId}`
         );
       } catch (updateError) {
         this.logger.error(
@@ -1247,17 +1183,22 @@ export class MxCadController {
         );
         // 更新失败不影响主流程
       }
+
       return res.json({ code: 0, message: 'ok' });
-    } else {
-      return res.json({ code: -1, message: result.ret || 'upload failed' });
+    } catch (error) {
+      this.logger.error(
+        `[uploadExtReferenceImage] 图片文件拷贝失败: ${error.message}`,
+        error.stack
+      );
+      return res.json({ code: -1, message: '图片文件拷贝失败' });
     }
   }
 
   /**
    * 查询缩略图是否存在
    *
-   * 查询逻辑：通过文件 ID 获取 fileHash，检查本地存储中是否存在缩略图
-   * 缩略图文件名格式：{hash}.{图片后缀}
+   * 查询逻辑：通过 nodeId 检查本地存储中是否存在缩略图
+   * 缩略图文件名格式：thumbnail.jpg
    *
    * @param nodeId 文件系统节点 ID
    * @returns 缩略图是否存在
@@ -1287,20 +1228,19 @@ export class MxCadController {
     this.logger.log(`[checkThumbnail] 查询缩略图, nodeId: ${nodeId}`);
 
     try {
-      // 通过 nodeId 查询 fileHash
+      // 通过 nodeId 查询节点
       const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
 
-      if (!node || !node.fileHash) {
+      if (!node || !node.path) {
         return res.status(404).json({
           code: -1,
-          message: '文件不存在或没有 fileHash',
+          message: '文件不存在或没有 path',
         });
       }
 
-      const fileHash = node.fileHash;
-      this.logger.log(`[checkThumbnail] 获取到 fileHash: ${fileHash}`);
+      this.logger.log(`[checkThumbnail] 获取到节点: ${nodeId}`);
 
-      const result = await this.mxCadService.checkThumbnailExists(fileHash);
+      const result = await this.mxCadService.checkThumbnailExists(nodeId);
 
       return res.json({
         code: 0,
@@ -1371,39 +1311,87 @@ export class MxCadController {
       });
     }
 
+    // 详细日志记录
+    this.logger.log(
+      `[uploadThumbnail] 文件信息: path=${file.path}, originalname=${file.originalname}, size=${file.size}, mimetype=${file.mimetype}`
+    );
+
+    // 检查文件是否实际存在
+    if (!fs.existsSync(file.path)) {
+      this.logger.error(
+        `[uploadThumbnail] 文件不存在: ${file.path}`
+      );
+      return res.status(500).json({
+        code: -1,
+        message: '上传的文件不存在',
+      });
+    }
+
     try {
-      // 通过 nodeId 查询 fileHash
+      // 通过 nodeId 查询节点
       const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
 
-      if (!node || !node.fileHash) {
+      if (!node || !node.path) {
         return res.status(404).json({
           code: -1,
-          message: '文件不存在或没有 fileHash',
+          message: '文件不存在或没有 path',
         });
       }
 
-      const fileHash = node.fileHash;
-      this.logger.log(`[uploadThumbnail] 获取到 fileHash: ${fileHash}`);
+      this.logger.log(`[uploadThumbnail] 获取到节点: ${nodeId}, path=${node.path}`);
 
-      const result = await this.mxCadService.uploadThumbnail(
-        fileHash,
-        file.path
-      );
+      // 构建目标目录路径
+      // 注意：node.path 包含完整路径（如：202602/nodeId/nodeId.dwg.mxweb）
+      // 需要提取目录部分（如：202602/nodeId）
+      const filesDataPath = this.configService.get('FILES_DATA_PATH', '../filesData');
+      const nodePathParts = node.path.split('/');
+      // 移除最后一个部分（文件名），保留目录部分
+      const dirParts = nodePathParts.slice(0, -1);
+      const targetDirPath = dirParts.join('/');
+      const targetDir = path.resolve(filesDataPath, targetDirPath);
 
-      if (result.success) {
-        return res.json({
-          code: 0,
-          message: result.message,
-          data: {
-            fileName: result.fileName,
-          },
-        });
-      } else {
+      // 确保目标目录存在
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+        this.logger.log(`[uploadThumbnail] 创建目录: ${targetDir}`);
+      }
+
+      // 构建目标文件名（固定为 thumbnail.jpg）
+      const targetFileName = 'thumbnail.jpg';
+      const targetFilePath = path.join(targetDir, targetFileName);
+
+      // 将文件从临时目录直接移动到目标目录
+      try {
+        // 如果目标文件已存在，先删除
+        if (fs.existsSync(targetFilePath)) {
+          fs.unlinkSync(targetFilePath);
+          this.logger.log(`[uploadThumbnail] 删除已存在的缩略图: ${targetFilePath}`);
+        }
+
+        // 移动文件（而不是拷贝）
+        fs.renameSync(file.path, targetFilePath);
+        file.path = targetFilePath; // 更新文件路径引用
+        this.logger.log(
+          `[uploadThumbnail] 缩略图已移动到目标位置: ${targetFilePath}`
+        );
+      } catch (moveError) {
+        this.logger.error(
+          `[uploadThumbnail] 移动文件失败: ${moveError.message}`,
+          moveError.stack
+        );
         return res.status(500).json({
           code: -1,
-          message: result.message,
+          message: '移动缩略图失败',
         });
       }
+
+      return res.json({
+        code: 0,
+        message: '缩略图上传成功',
+        data: {
+          fileName: targetFileName,
+        },
+      });
     } catch (error) {
       this.logger.error(
         `[uploadThumbnail] 上传缩略图失败: ${error.message}`,
@@ -1520,8 +1508,9 @@ export class MxCadController {
         try {
           const node =
             await this.mxCadService.getFileSystemNodeByPath(storageKey);
-          if (node && node.fileHash) {
-            actualStorageKey = `mxcad/file/${node.fileHash}/${node.name}`;
+          if (node) {
+            const extension = node.extension?.toLowerCase() || '';
+            actualStorageKey = `mxcad/file/${node.id}${extension}`;
             this.logger.log(
               `[getNonCadFile] 路径转换: ${storageKey} -> ${actualStorageKey}`
             );
@@ -1564,6 +1553,207 @@ export class MxCadController {
       }
       return res.status(500).json({ code: -1, message: '获取文件失败' });
     }
+  }
+
+  /**
+   * 访问 filesData 目录中的文件
+   * 支持访问路径: /mxcad/filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
+   * 从本地存储读取文件
+   *
+   * @param res Express Response 对象
+   * @param req Express Request 对象
+   * @returns 返回文件流或错误信息
+   */
+  @Get('filesData/*path')
+  @ApiResponse({
+    status: 200,
+    description: '成功获取文件',
+    content: {
+      'application/octet-stream': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '文件不存在',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            code: { type: 'number', example: -1 },
+            message: { type: 'string', example: '文件不存在' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            code: { type: 'number', example: -1 },
+            message: { type: 'string', example: '获取文件失败' },
+          },
+        },
+      },
+    },
+  })
+  async getFilesDataFile(@Res() res: Response, @Req() req: any) {
+    // 从 req.params.path 获取完整的路径（支持多层路径）
+    const pathArray = req.params.path;
+    const filename = Array.isArray(pathArray)
+      ? pathArray.join('/')
+      : pathArray || '';
+    if (!filename) {
+      this.logger.error(
+        `无法获取文件路径，req.params: ${JSON.stringify(req.params)}`
+      );
+      return res.status(400).json({ code: -1, message: '无效的文件路径' });
+    }
+    return this.handleFilesDataFileRequest(filename, res, req, false);
+  }
+
+  /**
+   * 访问 filesData 目录中的文件 - HEAD 方法
+   * 用于获取文件信息而不下载文件内容
+   *
+   * @param res Express Response 对象
+   * @param req Express Request 对象
+   * @returns 返回文件头信息或错误信息
+   */
+  @Head('filesData/*path')
+  @ApiResponse({
+    status: 200,
+    description: '成功获取文件信息',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '文件不存在',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+  })
+  async getFilesDataFileHead(@Res() res: Response, @Req() req: any) {
+    // 从 req.params.path 获取完整的路径（支持多层路径）
+    const pathArray = req.params.path;
+    const filename = Array.isArray(pathArray)
+      ? pathArray.join('/')
+      : pathArray || '';
+    if (!filename) {
+      this.logger.error(
+        `无法获取文件路径，req.params: ${JSON.stringify(req.params)}`
+      );
+      return res.status(400).json({ code: -1, message: '无效的文件路径' });
+    }
+    return this.handleFilesDataFileRequest(filename, res, req, true);
+  }
+
+  /**
+   * 处理 filesData 目录的文件请求
+   * @param filename 文件名
+   * @param res Express Response 对象
+   * @param req Express Request 对象
+   * @param isHeadRequest 是否为 HEAD 请求
+   */
+  private async handleFilesDataFileRequest(
+    filename: string,
+    @Res() res: Response,
+    @Req() req: any,
+    isHeadRequest: boolean
+  ) {
+    try {
+      // 调试日志
+      this.logger.log(`访问 filesData 文件: ${filename}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}`);
+
+      // Express 的 *filename 通配符会将路径中的 / 替换为 ,，需要先还原
+      const normalizedFilename = filename.replace(/,/g, '/');
+
+      // 构建完整的文件路径: filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
+      const filesDataPath = this.configService.get('FILES_DATA_PATH', '../filesData');
+      const absoluteFilePath = path.resolve(filesDataPath, normalizedFilename);
+
+      this.logger.log(`尝试访问文件: ${absoluteFilePath}`);
+
+      // 检查文件是否存在
+      if (!fs.existsSync(absoluteFilePath)) {
+        this.logger.error(`文件不存在: ${absoluteFilePath}`);
+        return res.status(404).json({ code: -1, message: '文件不存在' });
+      }
+
+      // 获取文件信息
+      const fileStats = fs.statSync(absoluteFilePath);
+
+      if (isHeadRequest) {
+        // 对于 HEAD 请求，只返回头部信息
+        const contentType = this.getContentType(absoluteFilePath);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', fileStats.size);
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存1小时
+        res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
+        res.end();
+        return;
+      }
+
+      // GET 请求直接返回文件流
+      const contentType = this.getContentType(absoluteFilePath);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', fileStats.size);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      // 创建文件流并返回
+      const fileStream = fs.createReadStream(absoluteFilePath);
+      fileStream.pipe(res);
+
+      // 监听流错误
+      fileStream.on('error', (error) => {
+        this.logger.error(`文件流错误: ${error.message}`, error);
+        if (!res.headersSent) {
+          res.status(500).json({ code: -1, message: '获取文件失败' });
+        }
+      });
+
+      this.logger.log(`成功返回文件: ${absoluteFilePath}`);
+    } catch (error) {
+      this.logger.error(`获取 filesData 文件失败: ${error.message}`, error.stack);
+      if (!res.headersSent) {
+        res.status(500).json({ code: -1, message: '获取文件失败' });
+      }
+    }
+  }
+
+  /**
+   * 根据文件扩展名获取 MIME 类型
+   * @param filePath 文件路径
+   * @returns MIME 类型
+   */
+  private getContentType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.mxweb': 'application/octet-stream',
+      '.dwg': 'application/dwg',
+      '.dxf': 'application/dxf',
+      '.pdf': 'application/pdf',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+      '.webp': 'image/webp',
+      '.json': 'application/json',
+      '.txt': 'text/plain',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
   }
 
   /**
@@ -1716,22 +1906,22 @@ export class MxCadController {
       // Express 的 *filename 通配符会将路径中的 / 替换为 ,，需要先还原
       const normalizedFilename = filename.replace(/,/g, '/');
 
-      // 从文件路径中提取哈希值（可能是完整路径如: hash/filename 或直接是 filename）
+      // 从文件路径中提取节点 ID（格式：nodeId/filename）
       const pathParts = normalizedFilename.split('/');
-      const fileHash = pathParts[0]; // 第一个部分是哈希值
+      const nodeId = pathParts[0]; // 第一个部分是节点 ID
       const actualFilename =
         pathParts.length > 1
           ? pathParts.slice(1).join('/')
           : normalizedFilename;
 
       this.logger.log(
-        `提取的fileHash: ${fileHash}, actualFilename: ${actualFilename}`
+        `提取的nodeId: ${nodeId}, actualFilename: ${actualFilename}`
       );
 
-      // 通过哈希值查找所有具有相同 fileHash 的节点，验证用户是否有访问权限
-      const allNodes = await this.prisma.fileSystemNode.findMany({
+      // 通过节点 ID 查找节点，验证用户是否有访问权限
+      const node = await this.prisma.fileSystemNode.findFirst({
         where: {
-          fileHash: fileHash,
+          id: nodeId,
           isFolder: false,
           deletedAt: null,
         },
@@ -1741,39 +1931,29 @@ export class MxCadController {
           ownerId: true,
           parentId: true,
           isRoot: true,
-          fileHash: true,
         },
       });
 
       this.logger.log(
-        `查找文件节点: hash=${fileHash}, 找到=${allNodes.length}个节点`
+        `查找文件节点: nodeId=${nodeId}, 找到=${node ? '是' : '否'}`
       );
 
-      if (allNodes.length === 0) {
+      if (!node) {
         // 文件节点不存在，降级到本地文件系统查找（兼容旧文件）
         this.logger.log(
           `文件节点不存在，降级到本地文件系统: ${normalizedFilename}`
         );
       } else {
-        // 检查用户对任何一个节点是否有权限
-        let hasPermission = false;
-        let authorizedNodeId: string | null = null;
-
-        for (const node of allNodes) {
-          const permission = await this.checkFileAccessPermission(
-            node.id,
-            userId,
-            userId
-          );
-          if (permission) {
-            hasPermission = true;
-            authorizedNodeId = node.id;
-            break;
-          }
-        }
+        // 检查用户是否有权限
+        const permission = await this.checkFileAccessPermission(
+          node.id,
+          userId,
+          userId
+        );
+        const hasPermission = !!permission;
 
         this.logger.log(
-          `权限检查结果: userId=${userId}, hasPermission=${hasPermission}, authorizedNodeId=${authorizedNodeId}`
+          `权限检查结果: userId=${userId}, hasPermission=${hasPermission}, nodeId=${nodeId}`
         );
 
         if (!hasPermission) {
@@ -2266,18 +2446,18 @@ export class MxCadController {
     }
 
     // 2. 验证参数
-    if (!body.src_dwgfile_hash || !body.ext_ref_file) {
+    if (!body.nodeId || !body.ext_ref_file) {
       this.logger.warn(`[${methodPrefix}] 缺少必要参数`);
       return { success: false, error: { code: -1, message: '缺少必要参数' } };
     }
 
     // 3. 验证图纸文件是否存在
     const preloadingData = await this.mxCadService.getPreloadingData(
-      body.src_dwgfile_hash
+      body.nodeId
     );
     if (!preloadingData) {
       this.logger.warn(
-        `[${methodPrefix}] 图纸文件不存在: ${body.src_dwgfile_hash}`
+        `[${methodPrefix}] 图纸文件不存在: nodeId=${body.nodeId}`
       );
       return { success: false, error: { code: -1, message: '图纸文件不存在' } };
     }
