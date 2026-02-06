@@ -36,7 +36,7 @@ export class SecurityConstants {
 export class ValidationHelper {
   /**
    * 验证节点路径格式
-   * @param nodePath 节点路径
+   * @param nodePath 节点路径（格式：filesData/YYYYMM/nodeId/file.dwg.mxweb）
    * @returns 是否有效
    */
   static isValidNodePath(nodePath: string): boolean {

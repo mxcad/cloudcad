@@ -1,4 +1,5 @@
-﻿import { StoragePathConstants, ValidationHelper } from '../constants/storage.constants';
+﻿import { StoragePathConstants } from '../constants/storage.constants';
+import { ValidationHelper as StorageValidationHelper } from '../constants/storage.constants';
 
 /**
  * 日志工具
@@ -113,12 +114,17 @@ export class UrlHelper {
 
   /**
    * 构建 MxCAD 文件访问 URL
-   * @param nodePath - 节点路径（格式：filesData/YYYYMM/nodeId/nodeId.dwg.mxweb）
-   * @returns 完整的文件访问路径（格式：/mxcad/filesData/YYYYMM/nodeId/nodeId.dwg.mxweb）
+   * @param nodePath 节点路径（格式：YYYYMM/nodeId/file.dwg.mxweb 或 filesData/YYYYMM/nodeId/file.dwg.mxweb）
+   * @returns MxCAD 文件访问 URL（格式：/mxcad/filesData/YYYYMM/nodeId/file.dwg.mxweb）
    */
   static buildMxCadFileUrl(nodePath: string): string {
+    // 如果路径不以 filesData/ 开头，自动添加
+    if (!nodePath.startsWith(StoragePathConstants.STORAGE_PATH_PREFIX + '/')) {
+      nodePath = `${StoragePathConstants.STORAGE_PATH_PREFIX}/${nodePath}`;
+    }
+
     // 验证路径格式，防止路径遍历攻击
-    if (!ValidationHelper.isValidNodePath(nodePath)) {
+    if (!StorageValidationHelper.isValidNodePath(nodePath)) {
       Logger.error('无效的节点路径格式', { nodePath });
       throw new Error('无效的节点路径格式');
     }
