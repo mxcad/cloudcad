@@ -1,9 +1,9 @@
 ﻿import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { FileSystemService } from '../../file-system/file-system.service';
 import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { FileConversionService } from './file-conversion.service';
 import { FileSystemService as MxFileSystemService } from './file-system.service';
-import { FileSystemService } from '../../file-system/file-system.service';
 import {
   FileSystemNodeService,
   FileSystemNodeContext,
@@ -72,6 +72,7 @@ export class FileUploadManagerService {
     private readonly configService: ConfigService,
     private readonly fileConversionService: FileConversionService,
     private readonly fileSystemService: MxFileSystemService,
+    @Inject('FileSystemServiceMain')
     private readonly fileSystemServiceMain: FileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
@@ -1211,7 +1212,11 @@ export class FileUploadManagerService {
     // 在事务中创建文件系统节点
     const extension = path.extname(filename).toLowerCase();
     const mimeType = this.fileSystemNodeService.getMimeType(extension);
-    const accessPath = `/mxcad/file/${targetFile}`;
+
+    // 关键修复：使用已存在节点的相对路径（path字段），而不是访问路径
+    // 秒传场景下，文件已经在存储中存在，应该复用相同的相对路径
+    const existingNodeForPath = await this.fileSystemNodeService.findByFileHash(fileHash);
+    const accessPath = existingNodeForPath?.path || `/mxcad/file/${targetFile}`;
 
     // 关键修复：直接调用 createOrReferenceNode，不再检查是否已存在
     // createOrReferenceNode 内部会检查是否需要在当前目录创建新节点
@@ -1374,9 +1379,13 @@ export class FileUploadManagerService {
         return;
       }
 
-      const accessPath = `/mxcad/file/${mainMxwebFile}`;
       const extension = path.extname(originalName).toLowerCase();
       const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+      // 关键修复：使用已存在节点的相对路径（path字段），而不是访问路径
+      // 查询已存在节点的 path 字段
+      const existingNodeForPath = await this.fileSystemNodeService.findByFileHash(fileHash);
+      const accessPath = existingNodeForPath?.path || `/mxcad/file/${mainMxwebFile}`;
 
       await this.fileSystemNodeService.createOrReferenceNode({
         originalName: originalName,

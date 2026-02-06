@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
 import { MxCadPermissionService } from './mxcad-permission.service';
@@ -22,6 +22,7 @@ import { DatabaseModule } from '../database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { FileSystemModule } from '../file-system/file-system.module';
+import { FileSystemService as MainFileSystemService } from '../file-system/file-system.service';
 import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
 
@@ -79,8 +80,8 @@ import { StorageModule } from '../storage/storage.module';
         fieldSize: 1024 * 1024, // 每个字段最大1MB
       },
     }),
-    FileSystemModule,
-    StorageModule,
+    forwardRef(() => FileSystemModule),
+    forwardRef(() => StorageModule),
   ],
   controllers: [MxCadController],
   providers: [
@@ -98,6 +99,11 @@ import { StorageModule } from '../storage/storage.module';
     FileCheckService,
     NodeCreationService,
     UploadOrchestrator,
+    // 来自 FileSystemModule 的 FileSystemService 别名
+    {
+      provide: 'FileSystemServiceMain',
+      useExisting: MainFileSystemService,
+    },
     // 异常过滤器
     {
       provide: 'APP_FILTER',
