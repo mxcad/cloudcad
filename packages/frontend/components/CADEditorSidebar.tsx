@@ -189,6 +189,15 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
 
   // 获取二级分类列表
   const secondLevelTypes = types.filter((t) => t.pid === selectedFirstType);
+  const selectedSecondTypeData = secondLevelTypes.find(
+    (t) => t.id === selectedSecondType
+  );
+
+  // 获取三级分类列表
+  const thirdLevelTypes = types.filter((t) => t.pid === selectedSecondType);
+  const selectedThirdTypeData = thirdLevelTypes.find(
+    (t) => t.id === selectedThirdType
+  );
 
   // 获取文件预览图 URL
   const getPreviewImageUrl = (file: GalleryFile): string => {
@@ -404,6 +413,29 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                   : '请先选择'}
               </option>
               {secondLevelTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+
+            {/* 三级分类 */}
+            <select
+              value={selectedThirdType}
+              onChange={(e) => setSelectedThirdType(Number(e.target.value))}
+              disabled={!selectedSecondTypeData}
+              className={`w-full px-2 py-1.5 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#4F46E5] ${
+                !selectedSecondTypeData
+                  ? 'bg-[#2D3748] border border-[#4A5568] text-[#718096] cursor-not-allowed'
+                  : 'bg-[#252B3A] border border-[#4A5568] text-[#E2E8F0]'
+              }`}
+            >
+              <option value={-1}>
+                {selectedSecondTypeData
+                  ? `全部${selectedSecondTypeData.name}`
+                  : '请先选择二级分类'}
+              </option>
+              {thirdLevelTypes.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.name}
                 </option>

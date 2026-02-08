@@ -19,7 +19,6 @@ import { Register } from './pages/Register';
 import { RoleManagement } from './pages/RoleManagement';
 import { UserManagement } from './pages/UserManagement';
 import FontLibrary from './pages/FontLibrary';
-import Gallery from './pages/Gallery';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { SystemMonitorPage } from './pages/SystemMonitorPage';
 import { useAuth } from './contexts/AuthContext';
@@ -118,9 +117,6 @@ function AppContent() {
 
                   {/* 字体库 */}
                   <Route path="/font-library" element={<FontLibrary />} />
-
-                  {/* 图库 */}
-                  <Route path="/library-blocks" element={<Gallery />} />
 
                   {/* 系统管理 */}
                   <Route path="/audit-logs" element={<AuditLogPage />} />
