@@ -42,17 +42,15 @@ async function main() {
   }
 
   // 查询所有图库文件
-  const items = await prisma.fileSystemNode.findMany({
-    where: {
-      isInGallery: true,
-    },
-    select: {
-      originalName: true,
-      fileHash: true,
-      galleryFirstType: true,
-      gallerySecondType: true,
-      galleryType: true,
-      createdAt: true,
+  const items = await prisma.galleryItem.findMany({
+    include: {
+      node: {
+        select: {
+          originalName: true,
+          fileHash: true,
+          createdAt: true,
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc',
@@ -64,7 +62,7 @@ async function main() {
     console.log('\n图库文件列表:');
     for (const item of items) {
       console.log(
-        `  - ${item.originalName} (firstType: ${item.galleryFirstType}, secondType: ${item.gallerySecondType}, galleryType: ${item.galleryType})`
+        `  - ${item.node.originalName} (firstType: ${item.firstType}, secondType: ${item.secondType}, galleryType: ${item.galleryType}, userId: ${item.userId})`
       );
     }
   } else {
@@ -77,10 +75,9 @@ async function main() {
   console.log('========================================\n');
 
   for (const type of types) {
-    const itemCount = await prisma.fileSystemNode.count({
+    const itemCount = await prisma.galleryItem.count({
       where: {
-        galleryFirstType: type.id,
-        isInGallery: true,
+        firstType: type.id,
       },
     });
 

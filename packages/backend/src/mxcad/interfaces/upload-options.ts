@@ -90,11 +90,6 @@ export interface FileUploadOptions {
   ownerId: string;
 
   /**
-   * 是否在图库中
-   */
-  isInGallery?: boolean;
-
-  /**
    * 自定义元数据
    */
   metadata?: Record<string, unknown>;
@@ -169,11 +164,6 @@ export interface MergeOptions {
    * 所有者用户 ID
    */
   ownerId: string;
-
-  /**
-   * 是否在图库中
-   */
-  isInGallery?: boolean;
 
   /**
    * 合并完成后是否立即转换为 MXWEB 格式

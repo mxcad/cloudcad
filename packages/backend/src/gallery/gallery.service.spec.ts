@@ -1,21 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GalleryService } from './gallery.service';
 import { DatabaseService } from '../database/database.service';
-import { GalleryFileListDto } from './dto/gallery.dto';
+import { PrismaClient } from '@prisma/client';
 
 describe('GalleryService', () => {
   let service: GalleryService;
-  let databaseService: DatabaseService;
+  let database: DatabaseService;
+  let prisma: PrismaClient;
 
-  const mockDatabaseService = {
-    fileSystemNode: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-    tag: {
-      findMany: jest.fn(),
-    },
-  };
+  const mockUserId = 'test-user-id';
+  const mockProjectId = 'test-project-id';
+  const mockNodeId = 'test-node-id';
+  const mockGalleryType = 'drawings' as const;
+  const mockFirstType = 1;
+  const mockSecondType = 2;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,13 +21,45 @@ describe('GalleryService', () => {
         GalleryService,
         {
           provide: DatabaseService,
-          useValue: mockDatabaseService,
+          useValue: {
+            galleryType: {
+              findMany: jest.fn(),
+              findUnique: jest.fn(),
+              findFirst: jest.fn(),
+              create: jest.fn(),
+              update: jest.fn(),
+              delete: jest.fn(),
+              deleteMany: jest.fn(),
+              count: jest.fn(),
+            },
+            galleryItem: {
+              findMany: jest.fn(),
+              findFirst: jest.fn(),
+              create: jest.fn(),
+              update: jest.fn(),
+              deleteMany: jest.fn(),
+              count: jest.fn(),
+            },
+            fileSystemNode: {
+              findUnique: jest.fn(),
+              findMany: jest.fn(),
+              findFirst: jest.fn(),
+              count: jest.fn(),
+            },
+            projectMember: {
+              findFirst: jest.fn(),
+            },
+            role: {
+              findUnique: jest.fn(),
+            },
+          },
         },
       ],
     }).compile();
 
     service = module.get<GalleryService>(GalleryService);
-    databaseService = module.get<DatabaseService>(DatabaseService);
+    database = module.get<DatabaseService>(DatabaseService);
+    prisma = database['prisma'];
   });
 
   afterEach(() => {
@@ -37,586 +67,375 @@ describe('GalleryService', () => {
   });
 
   describe('getTypes', () => {
-    const mockUserId = 'user-123';
-
-    it('应该成功获取图纸库分类列表', async () => {
-      const mockProjects = [
-        {
-          id: 'project-1',
-          name: '建筑项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
-        {
-          id: 'project-2',
-          name: '机械项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
+    it('应该返回分类列表', async () => {
+      const mockTypes = [
+        { id: 1, pid: 0, name: '建筑', status: 1, galleryType: 'drawings', ownerId: mockUserId },
+        { id: 2, pid: 1, name: '门', status: 1, galleryType: 'drawings', ownerId: mockUserId },
       ];
 
-      const mockTags = [
-        {
-          id: 'tag-1',
-          name: '门',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-        {
-          id: 'tag-2',
-          name: '窗',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(
-        mockProjects
-      );
-      mockDatabaseService.tag.findMany.mockResolvedValue(mockTags);
+      jest.spyOn(prisma.galleryType, 'findMany')
+        .mockResolvedValueOnce([mockTypes[0]])
+        .mockResolvedValueOnce([mockTypes[1]]);
 
       const result = await service.getTypes('drawings', mockUserId);
 
-      expect(result).toBeDefined();
       expect(result.code).toBe('success');
-      expect(result.result).toBeDefined();
-      expect(result.result.allblocks).toBeDefined();
-      expect(Array.isArray(result.result.allblocks)).toBe(true);
-      expect(result.result.allblocks.length).toBeGreaterThan(0);
-    });
-
-    it('应该成功获取图块库分类列表', async () => {
-      const mockProjects = [
-        {
-          id: 'project-1',
-          name: '建筑项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
-      ];
-
-      const mockTags = [
-        {
-          id: 'tag-1',
-          name: '门',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(
-        mockProjects
-      );
-      mockDatabaseService.tag.findMany.mockResolvedValue(mockTags);
-
-      const result = await service.getTypes('blocks', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result.code).toBe('success');
-      expect(result.result).toBeDefined();
-      expect(result.result.allblocks).toBeDefined();
-      expect(Array.isArray(result.result.allblocks)).toBe(true);
-    });
-
-    it('应该返回正确的分类数据结构', async () => {
-      const mockProjects = [
-        {
-          id: 'project-1',
-          name: '建筑项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
-      ];
-
-      const mockTags = [
-        {
-          id: 'tag-1',
-          name: '门',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(
-        mockProjects
-      );
-      mockDatabaseService.tag.findMany.mockResolvedValue(mockTags);
-
-      const result = await service.getTypes('drawings', mockUserId);
-
-      const firstType = result.result.allblocks[0];
-      expect(firstType).toHaveProperty('id');
-      expect(firstType).toHaveProperty('pid');
-      expect(firstType).toHaveProperty('name');
-      expect(firstType).toHaveProperty('pname');
-      expect(firstType).toHaveProperty('status');
-      expect(typeof firstType.id).toBe('number');
-      expect(typeof firstType.pid).toBe('number');
-      expect(typeof firstType.name).toBe('string');
-      expect(typeof firstType.pname).toBe('string');
-      expect(typeof firstType.status).toBe('number');
-    });
-
-    it('应该包含一级和二级分类', async () => {
-      const mockProjects = [
-        {
-          id: 'project-1',
-          name: '建筑项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
-      ];
-
-      const mockTags = [
-        {
-          id: 'tag-1',
-          name: '门',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(
-        mockProjects
-      );
-      mockDatabaseService.tag.findMany.mockResolvedValue(mockTags);
-
-      const result = await service.getTypes('drawings', mockUserId);
-
-      const types = result.result.allblocks;
-      const hasFirstLevel = types.some((t) => t.pid === 0);
-      const hasSecondLevel = types.some((t) => t.pid !== 0);
-
-      expect(hasFirstLevel).toBe(true);
-      expect(hasSecondLevel).toBe(true);
-    });
-
-    it('所有分类状态应该为 1（启用）', async () => {
-      const mockProjects = [
-        {
-          id: 'project-1',
-          name: '建筑项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
-      ];
-
-      const mockTags = [
-        {
-          id: 'tag-1',
-          name: '门',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(
-        mockProjects
-      );
-      mockDatabaseService.tag.findMany.mockResolvedValue(mockTags);
-
-      const result = await service.getTypes('drawings', mockUserId);
-
-      const allEnabled = result.result.allblocks.every((t) => t.status === 1);
-      expect(allEnabled).toBe(true);
-    });
-
-    it('应该只返回用户自定义标签（排除系统标签）', async () => {
-      const mockProjects = [
-        {
-          id: 'project-1',
-          name: '建筑项目',
-          ownerId: mockUserId,
-          isRoot: true,
-          isFolder: true,
-          deletedAt: null,
-          createdAt: new Date(),
-        },
-      ];
-
-      const mockTags = [
-        {
-          id: 'tag-1',
-          name: '门',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-        {
-          id: 'tag-2',
-          name: '窗',
-          isSystem: false,
-          createdAt: new Date(),
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(
-        mockProjects
-      );
-      mockDatabaseService.tag.findMany.mockResolvedValue(mockTags);
-
-      const result = await service.getTypes('drawings', mockUserId);
-
-      const typeNames = result.result.allblocks.map((t) => t.name);
-      expect(typeNames).toContain('门');
-      expect(typeNames).toContain('窗');
-      expect(typeNames).toContain('建筑项目');
+      expect(result.result.allblocks).toHaveLength(2);
+      expect(result.result.allblocks[0].id).toBe(1);
+      expect(result.result.allblocks[1].id).toBe(2);
     });
   });
 
-  describe('getFileList', () => {
-    const mockUserId = 'user-123';
-
-    it('应该成功获取图纸列表（无过滤条件）', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
+  describe('addToGallery', () => {
+    it('应该成功添加文件到图库', async () => {
+      const mockNode = {
+        id: mockNodeId,
+        isFolder: false,
+        parentId: mockProjectId,
+        ownerId: mockUserId,
+        isRoot: false,
       };
 
-      const mockNodes = [
-        {
-          id: 'file-1',
-          originalName: 'drawing.dwg',
-          name: 'drawing.dwg',
-          ownerId: mockUserId,
-          isFolder: false,
-          deletedAt: null,
-          extension: '.dwg',
-          fileHash: 'abc123',
-          path: '/mxcad/file/abc123/drawing.dwg',
-          parentId: 'project-1',
-          createdAt: new Date(),
-          nodeTags: [
-            {
-              tag: {
-                id: 'tag-1',
-                name: '图纸',
-                isSystem: true,
-              },
-            },
-          ],
-          parent: {
-            id: 'project-1',
-            name: '建筑项目',
-          },
+      const mockProject = {
+        id: mockProjectId,
+        ownerId: mockUserId,
+        isRoot: true,
+      };
+
+      const mockType = {
+        id: mockSecondType,
+        pid: mockFirstType,
+        name: '门',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      const mockFirstTypeRecord = {
+        id: mockFirstType,
+        pid: 0,
+        galleryType: 'drawings',
+      };
+
+      const mockCreatedItem = {
+        id: 'gallery-item-id',
+        userId: mockUserId,
+        nodeId: mockNodeId,
+        galleryType: 'drawings',
+        firstType: mockFirstType,
+        secondType: mockSecondType,
+        thirdType: null,
+        lookNum: 0,
+      };
+
+      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockNode as any);
+      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockProject as any);
+      jest.spyOn(prisma.galleryType, 'findUnique')
+        .mockResolvedValueOnce(mockType as any)
+        .mockResolvedValueOnce(mockFirstTypeRecord as any);
+      jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(null);
+      jest.spyOn(prisma.galleryItem, 'create').mockResolvedValue(mockCreatedItem as any);
+
+      const result = await service.addToGallery(
+        mockNodeId,
+        mockFirstType,
+        mockSecondType,
+        undefined,
+        'drawings',
+        mockUserId
+      );
+
+      expect(result.nodeId).toBe(mockNodeId);
+      expect(result.firstType).toBe(mockFirstType);
+      expect(result.secondType).toBe(mockSecondType);
+      expect(result.galleryType).toBe('drawings');
+    });
+
+    it('如果文件不存在应该抛出错误', async () => {
+      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(null);
+
+      await expect(
+        service.addToGallery(
+          mockNodeId,
+          mockFirstType,
+          mockSecondType,
+          undefined,
+          'drawings',
+          mockUserId
+        )
+      ).rejects.toThrow('文件不存在');
+    });
+
+    it('如果是文件夹应该抛出错误', async () => {
+      const mockNode = {
+        id: mockNodeId,
+        isFolder: true,
+        parentId: mockProjectId,
+        ownerId: mockUserId,
+        isRoot: false,
+      };
+
+      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockNode as any);
+
+      await expect(
+        service.addToGallery(
+          mockNodeId,
+          mockFirstType,
+          mockSecondType,
+          undefined,
+          'drawings',
+          mockUserId
+        )
+      ).rejects.toThrow('不能添加文件夹到图库');
+    });
+
+    it('如果文件已经在图库中应该抛出错误', async () => {
+      const mockNode = {
+        id: mockNodeId,
+        isFolder: false,
+        parentId: mockProjectId,
+        ownerId: mockUserId,
+        isRoot: false,
+      };
+
+      const mockProject = {
+        id: mockProjectId,
+        ownerId: mockUserId,
+        isRoot: true,
+      };
+
+      const mockType = {
+        id: mockSecondType,
+        pid: mockFirstType,
+        name: '门',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      const mockFirstTypeRecord = {
+        id: mockFirstType,
+        pid: 0,
+        galleryType: 'drawings',
+      };
+
+      const mockExistingItem = {
+        id: 'existing-gallery-item-id',
+        userId: mockUserId,
+        nodeId: mockNodeId,
+        galleryType: 'drawings',
+        firstType: mockFirstType,
+        secondType: mockSecondType,
+      };
+
+      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockNode as any);
+      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockProject as any);
+      jest.spyOn(prisma.galleryType, 'findUnique')
+        .mockResolvedValueOnce(mockType as any)
+        .mockResolvedValueOnce(mockFirstTypeRecord as any);
+      jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(mockExistingItem as any);
+
+      await expect(
+        service.addToGallery(
+          mockNodeId,
+          mockFirstType,
+          mockSecondType,
+          undefined,
+          'drawings',
+          mockUserId
+        )
+      ).rejects.toThrow('该文件已经在您的图库中');
+    });
+  });
+
+  describe('removeFromGallery', () => {
+    it('应该成功从图库移除文件', async () => {
+      jest.spyOn(prisma.galleryItem, 'deleteMany').mockResolvedValue({ count: 1 });
+
+      await expect(
+        service.removeFromGallery(mockNodeId, 'drawings', mockUserId)
+      ).resolves.not.toThrow();
+
+      expect(prisma.galleryItem.deleteMany).toHaveBeenCalledWith({
+        where: {
+          userId: mockUserId,
+          nodeId: mockNodeId,
+          galleryType: 'drawings',
         },
-      ];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(1);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result.sharedwgs).toBeDefined();
-      expect(result.page).toBeDefined();
-      expect(Array.isArray(result.sharedwgs)).toBe(true);
-      expect(result.sharedwgs.length).toBeGreaterThan(0);
+      });
     });
+  });
 
-    it('应该成功获取图块列表（无过滤条件）', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
+  describe('incrementLookNum', () => {
+    it('应该成功增加浏览次数', async () => {
+      const mockGalleryItem = {
+        id: 'gallery-item-id',
+        nodeId: mockNodeId,
+        galleryType: 'drawings',
+        lookNum: 5,
       };
 
-      const mockNodes = [
-        {
-          id: 'file-1',
-          originalName: 'block.dwg',
-          name: 'block.dwg',
-          ownerId: mockUserId,
-          isFolder: false,
-          deletedAt: null,
-          extension: '.dwg',
-          fileHash: 'def456',
-          path: '/mxcad/file/def456/block.dwg',
-          parentId: 'project-1',
-          createdAt: new Date(),
-          nodeTags: [
-            {
-              tag: {
-                id: 'tag-1',
-                name: '图块',
-                isSystem: true,
-              },
-            },
-          ],
-          parent: {
-            id: 'project-1',
-            name: '建筑项目',
-          },
-        },
-      ];
+      jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(mockGalleryItem as any);
+      jest.spyOn(prisma.galleryItem, 'update').mockResolvedValue({
+        ...mockGalleryItem,
+        lookNum: 6,
+      } as any);
 
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(1);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
+      await expect(
+        service.incrementLookNum(mockNodeId, 'drawings')
+      ).resolves.not.toThrow();
 
-      const result = await service.getFileList(dto, 'blocks', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result.sharedwgs).toBeDefined();
-      expect(result.page).toBeDefined();
-      expect(Array.isArray(result.sharedwgs)).toBe(true);
-    });
-
-    it('应该支持关键字搜索', async () => {
-      const dto: GalleryFileListDto = {
-        keywords: '箭头',
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(0);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result.sharedwgs).toBeDefined();
-      expect(Array.isArray(result.sharedwgs)).toBe(true);
-    });
-
-    it('应该支持按项目筛选（firstType）', async () => {
-      const dto: GalleryFileListDto = {
-        firstType: 123,
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(0);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result.sharedwgs).toBeDefined();
-      expect(Array.isArray(result.sharedwgs)).toBe(true);
-    });
-
-    it('应该支持按标签筛选（secondType）', async () => {
-      const dto: GalleryFileListDto = {
-        secondType: 456,
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(0);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result.sharedwgs).toBeDefined();
-      expect(Array.isArray(result.sharedwgs)).toBe(true);
-    });
-
-    it('应该返回正确的文件数据结构', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [
-        {
-          id: 'file-1',
-          originalName: 'drawing.dwg',
-          name: 'drawing.dwg',
-          ownerId: mockUserId,
-          isFolder: false,
-          deletedAt: null,
-          extension: '.dwg',
-          fileHash: 'abc123',
-          path: '/mxcad/file/abc123/drawing.dwg',
-          parentId: 'project-1',
-          createdAt: new Date(),
-          nodeTags: [
-            {
-              tag: {
-                id: 'tag-1',
-                name: '图纸',
-                isSystem: true,
-              },
-            },
-          ],
-          parent: {
-            id: 'project-1',
-            name: '建筑项目',
-          },
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(1);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      const firstFile = result.sharedwgs[0];
-      expect(firstFile).toHaveProperty('uuid');
-      expect(firstFile).toHaveProperty('filename');
-      expect(firstFile).toHaveProperty('firstType');
-      expect(firstFile).toHaveProperty('secondType');
-      expect(firstFile).toHaveProperty('filehash');
-      expect(firstFile).toHaveProperty('type');
-      expect(firstFile).toHaveProperty('lookNum');
-      expect(firstFile).toHaveProperty('likeNum');
-      expect(firstFile).toHaveProperty('collect');
-      expect(typeof firstFile.uuid).toBe('string');
-      expect(typeof firstFile.filename).toBe('string');
-      expect(typeof firstFile.firstType).toBe('number');
-      expect(typeof firstFile.secondType).toBe('number');
-      expect(typeof firstFile.filehash).toBe('string');
-      expect(typeof firstFile.type).toBe('string');
-      expect(typeof firstFile.lookNum).toBe('number');
-      expect(typeof firstFile.likeNum).toBe('number');
-      expect(typeof firstFile.collect).toBe('boolean');
-    });
-
-    it('应该返回正确的分页信息', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(0);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result.page).toHaveProperty('index');
-      expect(result.page).toHaveProperty('size');
-      expect(result.page).toHaveProperty('count');
-      expect(result.page).toHaveProperty('max');
-      expect(result.page).toHaveProperty('up');
-      expect(result.page).toHaveProperty('down');
-      expect(typeof result.page.index).toBe('number');
-      expect(typeof result.page.size).toBe('number');
-      expect(typeof result.page.count).toBe('number');
-      expect(typeof result.page.max).toBe('number');
-      expect(typeof result.page.up).toBe('boolean');
-      expect(typeof result.page.down).toBe('boolean');
-    });
-
-    it('应该正确计算总页数', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(100);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result.page.max).toBe(2);
-    });
-
-    it('第一页应该没有上一页', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(0);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      expect(result.page.up).toBe(false);
-    });
-
-    it('lookNum 和 likeNum 应该为非负数', async () => {
-      const dto: GalleryFileListDto = {
-        pageIndex: 0,
-        pageSize: 50,
-      };
-
-      const mockNodes = [
-        {
-          id: 'file-1',
-          originalName: 'drawing.dwg',
-          name: 'drawing.dwg',
-          ownerId: mockUserId,
-          isFolder: false,
-          deletedAt: null,
-          extension: '.dwg',
-          fileHash: 'abc123',
-          path: '/mxcad/file/abc123/drawing.dwg',
-          parentId: 'project-1',
-          createdAt: new Date(),
-          nodeTags: [
-            {
-              tag: {
-                id: 'tag-1',
-                name: '图纸',
-                isSystem: true,
-              },
-            },
-          ],
-          parent: {
-            id: 'project-1',
-            name: '建筑项目',
-          },
-        },
-      ];
-
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(1);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
-
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
-
-      result.sharedwgs.forEach((file) => {
-        expect(file.lookNum).toBeGreaterThanOrEqual(0);
-        expect(file.likeNum).toBeGreaterThanOrEqual(0);
+      expect(prisma.galleryItem.update).toHaveBeenCalledWith({
+        where: { id: mockGalleryItem.id },
+        data: { lookNum: { increment: 1 } },
       });
     });
 
-    it('应该正确处理参数类型转换（字符串转数字）', async () => {
-      const dto: GalleryFileListDto = {
-        firstType: '123' as any,
-        secondType: '456' as any,
-        pageIndex: '0' as any,
-        pageSize: '50' as any,
+    it('如果图库项不存在应该忽略', async () => {
+      jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(null);
+
+      await expect(
+        service.incrementLookNum(mockNodeId, 'drawings')
+      ).resolves.not.toThrow();
+
+      expect(prisma.galleryItem.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createType', () => {
+    it('应该成功创建一级分类', async () => {
+      const mockCreatedType = {
+        id: 1,
+        pid: 0,
+        name: '建筑',
+        status: 1,
+        galleryType: 'drawings',
+        ownerId: mockUserId,
       };
 
-      const mockNodes = [];
+      jest.spyOn(prisma.galleryType, 'findFirst').mockResolvedValue(null);
+      jest.spyOn(prisma.galleryType, 'create').mockResolvedValue(mockCreatedType as any);
 
-      mockDatabaseService.fileSystemNode.count.mockResolvedValue(0);
-      mockDatabaseService.fileSystemNode.findMany.mockResolvedValue(mockNodes);
+      const result = await service.createType('drawings', '建筑', 0, mockUserId);
 
-      const result = await service.getFileList(dto, 'drawings', mockUserId);
+      expect(result.id).toBe(1);
+      expect(result.name).toBe('建筑');
+      expect(result.pid).toBe(0);
+    });
 
-      expect(result.page.index).toBe(0);
-      expect(result.page.size).toBe(50);
+    it('如果分类名称已存在应该抛出错误', async () => {
+      const mockExistingType = {
+        id: 1,
+        pid: 0,
+        name: '建筑',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      jest.spyOn(prisma.galleryType, 'findFirst').mockResolvedValue(mockExistingType as any);
+
+      await expect(
+        service.createType('drawings', '建筑', 0, mockUserId)
+      ).rejects.toThrow('分类名称已存在');
+    });
+  });
+
+  describe('updateType', () => {
+    it('应该成功更新分类名称', async () => {
+      const mockType = {
+        id: 1,
+        pid: 0,
+        name: '建筑',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      const mockUpdatedType = {
+        ...mockType,
+        name: '建筑设计',
+      };
+
+      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest.spyOn(prisma.galleryType, 'findFirst').mockResolvedValue(null);
+      jest.spyOn(prisma.galleryType, 'update').mockResolvedValue(mockUpdatedType as any);
+
+      const result = await service.updateType(1, '建筑设计', 'drawings', mockUserId);
+
+      expect(result.name).toBe('建筑设计');
+    });
+
+    it('如果分类不存在应该抛出错误', async () => {
+      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(null);
+
+      await expect(
+        service.updateType(999, '建筑设计', 'drawings', mockUserId)
+      ).rejects.toThrow('分类不存在');
+    });
+  });
+
+  describe('deleteType', () => {
+    it('应该成功删除分类', async () => {
+      const mockType = {
+        id: 1,
+        pid: 0,
+        name: '建筑',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest.spyOn(prisma.galleryType, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.galleryItem, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.galleryType, 'delete').mockResolvedValue(mockType as any);
+
+      await expect(
+        service.deleteType(1, 'drawings', mockUserId)
+      ).resolves.not.toThrow();
+
+      expect(prisma.galleryType.delete).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+    });
+
+    it('如果分类下有子分类应该抛出错误', async () => {
+      const mockType = {
+        id: 1,
+        pid: 0,
+        name: '建筑',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      const mockChildTypes = [
+        { id: 2, pid: 1, name: '门', galleryType: 'drawings', ownerId: mockUserId },
+      ];
+
+      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest.spyOn(prisma.galleryType, 'findMany').mockResolvedValue(mockChildTypes as any);
+
+      await expect(
+        service.deleteType(1, 'drawings', mockUserId)
+      ).rejects.toThrow('该分类下有子分类，无法删除');
+    });
+
+    it('如果分类下有文件应该抛出错误', async () => {
+      const mockType = {
+        id: 1,
+        pid: 0,
+        name: '建筑',
+        galleryType: 'drawings',
+        ownerId: mockUserId,
+      };
+
+      const mockItems = [
+        { id: 'item-1', userId: mockUserId, nodeId: 'node-1', firstType: 1, secondType: 2, galleryType: 'drawings' },
+      ];
+
+      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest.spyOn(prisma.galleryType, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.galleryItem, 'findMany').mockResolvedValue(mockItems as any);
+
+      await expect(
+        service.deleteType(1, 'drawings', mockUserId)
+      ).rejects.toThrow('该分类下有文件，无法删除');
     });
   });
 });

@@ -148,15 +148,13 @@ export class GalleryService {
       effectivePageIndex = 0;
     }
 
-    // 构建查询条件（直接查询 FileSystemNode）
+    // 构建查询条件（查询 GalleryItem 表）
     const whereClause: any = {
-      isInGallery: true,
+      userId: userId,
       galleryType: galleryType,
-      isFolder: false,
-      deletedAt: null,
     };
 
-    // 按一级分类筛选（galleryFirstType）
+    // 按一级分类筛选
     if (firstType && firstType !== 0) {
       // 检查是否为二级分类（pid != 0）
       const type = await this.database.galleryType.findUnique({
@@ -170,27 +168,27 @@ export class GalleryService {
           this.logger.log(
             `[getFileList] firstType ${firstType} 是二级分类，使用父分类 ID ${type.pid} 进行查询`
           );
-          whereClause.galleryFirstType = type.pid;
+          whereClause.firstType = type.pid;
         } else {
           // 是一级分类，直接使用
-          whereClause.galleryFirstType = firstType;
+          whereClause.firstType = firstType;
         }
       } else {
         // 分类不存在，使用原值（会导致返回空结果）
-        whereClause.galleryFirstType = firstType;
+        whereClause.firstType = firstType;
       }
     }
 
-    // 按二级分类筛选（gallerySecondType）
+    // 按二级分类筛选
     if (dto.secondType && dto.secondType !== 0) {
       const secondTypeValue =
         typeof dto.secondType === 'string'
           ? parseInt(dto.secondType, 10)
           : dto.secondType;
-      whereClause.gallerySecondType = secondTypeValue;
+      whereClause.secondType = secondTypeValue;
     }
 
-    // 按三级分类筛选（galleryThirdType）
+    // 按三级分类筛选
     if (
       dto.thirdType !== undefined &&
       dto.thirdType !== null &&
@@ -200,39 +198,31 @@ export class GalleryService {
         typeof dto.thirdType === 'string'
           ? parseInt(dto.thirdType, 10)
           : dto.thirdType;
-      whereClause.galleryThirdType = thirdTypeValue;
-    }
-
-    // 关键字搜索（通过文件名）
-    if (keywords && keywords.trim()) {
-      whereClause.OR = [
-        { originalName: { contains: keywords, mode: 'insensitive' } },
-        { name: { contains: keywords, mode: 'insensitive' } },
-      ];
+      whereClause.thirdType = thirdTypeValue;
     }
 
     // 查询总数
-    const count = await this.database.fileSystemNode.count({
+    const count = await this.database.galleryItem.count({
       where: whereClause,
     });
 
-    // 查询文件列表
+    // 查询图库收藏记录（关联文件节点）
     const skip =
       originalPageIndex === -1 ? 999999999 : effectivePageIndex * pageSize;
 
-    const nodes = await this.database.fileSystemNode.findMany({
+    const galleryItems = await this.database.galleryItem.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        originalName: true,
-        name: true,
-        fileHash: true,
-        path: true,
-        createdAt: true,
-        galleryFirstType: true,
-        gallerySecondType: true,
-        galleryThirdType: true,
-        galleryLookNum: true,
+      include: {
+        node: {
+          select: {
+            id: true,
+            originalName: true,
+            name: true,
+            fileHash: true,
+            path: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -241,9 +231,19 @@ export class GalleryService {
       take: pageSize,
     });
 
+    // 关键字搜索过滤
+    let filteredItems = galleryItems;
+    if (keywords && keywords.trim()) {
+      filteredItems = galleryItems.filter((item) =>
+        (item.node.originalName || item.node.name)
+          .toLowerCase()
+          .includes(keywords.toLowerCase())
+      );
+    }
+
     // 转换为 API 格式
     const sharedwgs = await Promise.all(
-      nodes.map((node) => this.convertNodeToFileItem(node, userId))
+      filteredItems.map((item) => this.convertGalleryItemToFileItem(item, userId))
     );
 
     // 计算分页信息
@@ -264,45 +264,50 @@ export class GalleryService {
   }
 
   /**
-   * 将文件节点转换为 API 格式
-   * @param node 文件节点
+   * 将图库收藏记录转换为 API 格式
+   * @param item 图库收藏记录
    * @param userId 用户 ID（用于判断收藏状态）
    * @returns API 格式的文件项
    */
-  private async convertNodeToFileItem(
-    node: {
+  private async convertGalleryItemToFileItem(
+    item: {
       id: string;
-      originalName: string | null;
-      name: string;
-      fileHash: string | null;
-      path: string | null;
-      createdAt: Date;
-      galleryFirstType: number | null;
-      gallerySecondType: number | null;
-      galleryThirdType: number | null;
-      galleryLookNum: number;
+      nodeId: string;
+      galleryType: string;
+      firstType: number;
+      secondType: number;
+      thirdType: number | null;
+      lookNum: number;
+      node: {
+        id: string;
+        originalName: string | null;
+        name: string;
+        fileHash: string | null;
+        path: string | null;
+        createdAt: Date;
+      };
     },
     userId: string
   ): Promise<GalleryFileItemDto> {
     // 获取文件名
-    const filename = node.originalName || node.name;
+    const filename = item.node.originalName || item.node.name;
 
     // 获取分类名称
     let typeName = '';
-    if (node.gallerySecondType) {
+    if (item.secondType) {
       const type = await this.database.galleryType.findUnique({
-        where: { id: node.gallerySecondType },
+        where: { id: item.secondType },
         select: { name: true },
       });
       typeName = type?.name || '';
     }
 
     return {
-      uuid: node.id,
+      uuid: item.node.id,
       filename: filename,
-      firstType: node.galleryFirstType || 0,
-      secondType: node.gallerySecondType || 0,
-      nodeId: node.id, // 使用节点 ID 而不是文件哈希
+      firstType: item.firstType,
+      secondType: item.secondType,
+      nodeId: item.node.id,
       type: typeName,
     };
   }
@@ -509,16 +514,15 @@ export class GalleryService {
     }
 
     // 检查是否有文件关联
-    const relatedNodes = await this.database.fileSystemNode.findMany({
+    const relatedItems = await this.database.galleryItem.findMany({
       where: {
-        gallerySecondType: typeId,
+        secondType: typeId,
         galleryType,
-        isInGallery: true,
-        ownerId: userId,
+        userId: userId,
       },
     });
 
-    if (relatedNodes.length > 0) {
+    if (relatedItems.length > 0) {
       throw new Error('该分类下有文件，无法删除');
     }
 
@@ -564,16 +568,15 @@ export class GalleryService {
     galleryType: 'drawings' | 'blocks'
   ): Promise<void> {
     try {
-      // 查找对应的 FileSystemNode
-      const node = await this.database.fileSystemNode.findFirst({
+      // 查找对应的 GalleryItem
+      const galleryItem = await this.database.galleryItem.findFirst({
         where: {
-          id: nodeId,
-          isInGallery: true,
+          nodeId: nodeId,
           galleryType: galleryType,
         },
       });
 
-      if (!node) {
+      if (!galleryItem) {
         this.logger.warn(
           `[incrementLookNum] 未找到图库文件: ${nodeId}, ${galleryType}`
         );
@@ -581,15 +584,102 @@ export class GalleryService {
       }
 
       // 更新浏览次数
-      await this.database.fileSystemNode.update({
-        where: { id: node.id },
-        data: { galleryLookNum: { increment: 1 } },
+      await this.database.galleryItem.update({
+        where: { id: galleryItem.id },
+        data: { lookNum: { increment: 1 } },
       });
     } catch (error) {
       this.logger.error(
         `[incrementLookNum] 更新浏览次数失败: ${error.message}`,
         error
       );
+    }
+  }
+
+  /**
+   * 检查用户是否有添加到图库的权限
+   * @param userId 用户 ID
+   * @param nodeId 文件节点 ID
+   * @returns 是否有权限
+   */
+  private async checkGalleryPermission(
+    userId: string,
+    nodeId: string
+  ): Promise<boolean> {
+    try {
+      // 1. 查找文件所属的项目
+      let currentNode = await this.database.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { id: true, parentId: true, isRoot: true, ownerId: true },
+      });
+
+      let projectId: string | null = null;
+
+      if (currentNode?.isRoot) {
+        projectId = nodeId;
+      } else {
+        while (currentNode && !currentNode.isRoot && currentNode.parentId) {
+          currentNode = await this.database.fileSystemNode.findUnique({
+            where: { id: currentNode.parentId },
+            select: { id: true, parentId: true, isRoot: true, ownerId: true },
+          });
+          if (currentNode?.isRoot) {
+            projectId = currentNode.id;
+            break;
+          }
+        }
+      }
+
+      if (!projectId) {
+        return false;
+      }
+
+      // 2. 检查项目所有者
+      const project = await this.database.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+        select: { ownerId: true },
+      });
+
+      if (!project) {
+        return false;
+      }
+
+      // 3. 如果是项目所有者，允许添加
+      if (project.ownerId === userId) {
+        return true;
+      }
+
+      // 4. 检查项目成员权限
+      const projectMember = await this.database.projectMember.findFirst({
+        where: {
+          projectId,
+          userId,
+        },
+        include: {
+          projectRole: {
+            include: {
+              permissions: true,
+            },
+          },
+        },
+      });
+
+      if (!projectMember) {
+        return false;
+      }
+
+      // 5. 检查是否有 GALLERY_ADD 权限
+      const hasPermission = projectMember.projectRole.permissions.some(
+        (p) => p.permission === ('GALLERY_ADD' as any)
+      );
+
+      return hasPermission;
+    } catch (error) {
+      this.logger.error(
+        `[checkGalleryPermission] 权限检查失败: ${error.message}`,
+        error
+      );
+      return false;
     }
   }
 
@@ -629,78 +719,9 @@ export class GalleryService {
     }
 
     // 权限检查：文件必须属于用户自己的项目，或者用户对文件所属项目有权限
-    // 1. 查找文件所属的项目根节点
-    let currentNode = await this.database.fileSystemNode.findUnique({
-      where: { id: nodeId },
-      select: { id: true, parentId: true, isRoot: true, ownerId: true },
-    });
-
-    let projectId: string | null = null;
-
-    if (currentNode?.isRoot) {
-      projectId = nodeId;
-    } else {
-      // 向上遍历找到项目根节点
-      while (currentNode && !currentNode.isRoot && currentNode.parentId) {
-        currentNode = await this.database.fileSystemNode.findUnique({
-          where: { id: currentNode.parentId },
-          select: { id: true, parentId: true, isRoot: true, ownerId: true },
-        });
-        if (currentNode?.isRoot) {
-          projectId = currentNode.id;
-          break;
-        }
-      }
-    }
-
-    if (!projectId) {
-      throw new Error('无法确定文件所属项目');
-    }
-
-    // 2. 检查项目所有者
-    const project = await this.database.fileSystemNode.findUnique({
-      where: { id: projectId, isRoot: true },
-      select: { ownerId: true },
-    });
-
-    if (!project) {
-      throw new Error('项目不存在');
-    }
-
-    // 3. 如果文件不属于用户自己的项目，检查权限
-    if (project.ownerId !== userId) {
-      // 检查用户是否是项目成员
-      const projectMember = await this.database.projectMember.findFirst({
-        where: {
-          projectId,
-          userId,
-        },
-      });
-
-      if (!projectMember) {
-        throw new Error('您没有权限将此文件添加到图库');
-      }
-
-      // 检查用户角色是否有添加到图库的权限
-      const role = await this.database.role.findUnique({
-        where: { id: projectMember.projectRoleId },
-        include: {
-          permissions: true,
-        },
-      });
-
-      if (!role) {
-        throw new Error('权限验证失败');
-      }
-
-      // 检查是否有 FILE_UPLOAD 权限（作为添加到图库的权限）
-      const hasAddToGalleryPermission = role.permissions.some(
-        (p) => p.permission === ('project:file:upload' as any)
-      );
-
-      if (!hasAddToGalleryPermission) {
-        throw new Error('您没有权限将此文件添加到图库');
-      }
+    const hasPermission = await this.checkGalleryPermission(userId, nodeId);
+    if (!hasPermission) {
+      throw new Error('您没有权限将此文件添加到图库');
     }
 
     // 验证分类存在
@@ -738,31 +759,40 @@ export class GalleryService {
       throw new Error('二级分类不属于选择的一级分类');
     }
 
-    // 检查是否已经添加到图库
-    if (node.isInGallery) {
-      throw new Error('该文件已经在图库中');
+    // 检查是否已经添加到图库（检查 GalleryItem 表）
+    const existingItem = await this.database.galleryItem.findFirst({
+      where: {
+        userId: userId,
+        nodeId: nodeId,
+        galleryType: galleryType,
+        secondType: secondType,
+      },
+    });
+
+    if (existingItem) {
+      throw new Error('该文件已经在您的图库中');
     }
 
-    // 更新文件节点的图库属性
-    const updatedNode = await this.database.fileSystemNode.update({
-      where: { id: nodeId },
+    // 创建图库收藏记录
+    const newItem = await this.database.galleryItem.create({
       data: {
-        isInGallery: true,
+        userId: userId,
+        nodeId: nodeId,
         galleryType: galleryType,
-        galleryFirstType: firstType,
-        gallerySecondType: secondType,
-        galleryThirdType: thirdType,
-        galleryLookNum: 0,
+        firstType: firstType,
+        secondType: secondType,
+        thirdType: thirdType,
+        lookNum: 0,
       },
     });
 
     return {
-      id: updatedNode.id,
-      nodeId: updatedNode.id,
-      firstType: updatedNode.galleryFirstType,
-      secondType: updatedNode.gallerySecondType,
-      thirdType: updatedNode.galleryThirdType,
-      galleryType: updatedNode.galleryType,
+      id: newItem.id,
+      nodeId: newItem.nodeId,
+      firstType: newItem.firstType,
+      secondType: newItem.secondType,
+      thirdType: newItem.thirdType,
+      galleryType: newItem.galleryType,
     };
   }
 
@@ -781,32 +811,12 @@ export class GalleryService {
       `[removeFromGallery] 从图库移除文件: nodeId=${nodeId}, galleryType=${galleryType}, userId=${userId}`
     );
 
-    // 查找文件节点
-    const node = await this.database.fileSystemNode.findUnique({
-      where: { id: nodeId },
-    });
-
-    if (!node) {
-      throw new Error('文件不存在');
-    }
-
-    if (!node.isInGallery) {
-      throw new Error('文件不在图库中');
-    }
-
-    if (node.galleryType !== galleryType) {
-      throw new Error('图库类型不匹配');
-    }
-
-    // 更新文件节点，清空图库属性
-    await this.database.fileSystemNode.update({
-      where: { id: nodeId },
-      data: {
-        isInGallery: false,
-        galleryType: null,
-        galleryFirstType: null,
-        gallerySecondType: null,
-        galleryThirdType: null,
+    // 删除用户的图库收藏记录
+    await this.database.galleryItem.deleteMany({
+      where: {
+        userId: userId,
+        nodeId: nodeId,
+        galleryType: galleryType,
       },
     });
 
@@ -835,21 +845,17 @@ export class GalleryService {
       `[updateGalleryItem] 更新图库文件分类: nodeId=${nodeId}, firstType=${firstType}, secondType=${secondType}, galleryType=${galleryType}, userId=${userId}`
     );
 
-    // 查找文件节点
-    const node = await this.database.fileSystemNode.findUnique({
-      where: { id: nodeId },
+    // 查找图库收藏记录
+    const galleryItem = await this.database.galleryItem.findFirst({
+      where: {
+        userId: userId,
+        nodeId: nodeId,
+        galleryType: galleryType,
+      },
     });
 
-    if (!node) {
-      throw new Error('文件不存在');
-    }
-
-    if (!node.isInGallery) {
+    if (!galleryItem) {
       throw new Error('文件不在图库中');
-    }
-
-    if (node.galleryType !== galleryType) {
-      throw new Error('图库类型不匹配');
     }
 
     // 验证分类存在
@@ -865,23 +871,23 @@ export class GalleryService {
       throw new Error('分类类型不匹配');
     }
 
-    // 更新文件节点的分类
-    const updatedNode = await this.database.fileSystemNode.update({
-      where: { id: nodeId },
+    // 更新图库收藏记录的分类
+    const updatedItem = await this.database.galleryItem.update({
+      where: { id: galleryItem.id },
       data: {
-        galleryFirstType: firstType,
-        gallerySecondType: secondType,
-        galleryThirdType: thirdType,
+        firstType: firstType,
+        secondType: secondType,
+        thirdType: thirdType,
       },
     });
 
     return {
-      id: updatedNode.id,
-      nodeId: updatedNode.id,
-      firstType: updatedNode.galleryFirstType,
-      secondType: updatedNode.gallerySecondType,
-      thirdType: updatedNode.galleryThirdType,
-      galleryType: updatedNode.galleryType,
+      id: updatedItem.id,
+      nodeId: updatedItem.nodeId,
+      firstType: updatedItem.firstType,
+      secondType: updatedItem.secondType,
+      thirdType: updatedItem.thirdType,
+      galleryType: updatedItem.galleryType,
     };
   }
 }

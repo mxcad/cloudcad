@@ -26,6 +26,7 @@ model User {
   ownedNodes         FileSystemNode[] @relation("NodeOwner")
   projectMembers     ProjectMember[]
   auditLogs          AuditLog[]
+  galleryItems       GalleryItem[]
 
   @@map("users")
 }
@@ -91,14 +92,6 @@ model FileSystemNode {
   missingExternalReferencesCount Int    @default(0)      // 缺失的外部参照数量
   externalReferencesJson        String?                // 完整的外部参照信息（JSON格式）
 
-  // 图库相关字段（仅文件使用）
-  isInGallery      Boolean  @default(false)  // 是否在图库中
-  galleryType      String?                   // 图库类型：'drawings' 或 'blocks'
-  galleryFirstType Int?                      // 一级分类 ID
-  gallerySecondType Int?                      // 二级分类 ID
-  galleryThirdType  Int?                      // 三级分类 ID（可选）
-  galleryLookNum   Int      @default(0)      // 浏览次数
-
   // 权限与审计
   ownerId     String
   owner       User     @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -111,6 +104,7 @@ model FileSystemNode {
   // 关联关系
   projectMembers ProjectMember[]
   projectRoles   ProjectRole[]
+  galleryItems   GalleryItem[]
 
   // 索引优化
 
@@ -280,6 +274,30 @@ model GalleryType {
   @@index([galleryType])
   @@index([ownerId])
   @@map("gallery_types")
+}
+
+// 图库收藏关系
+model GalleryItem {
+  id              String   @id @default(cuid())
+  userId          String   // 用户 ID
+  nodeId          String   // 文件节点 ID
+  galleryType     String   // 图库类型：'drawings' 或 'blocks'
+  firstType       Int      // 一级分类 ID
+  secondType      Int      // 二级分类 ID
+  thirdType       Int?     // 三级分类 ID（可选）
+  lookNum         Int      @default(0)  // 浏览次数
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联关系
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node            FileSystemNode  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, nodeId, galleryType, secondType])  // 防止重复添加
+  @@index([userId])
+  @@index([nodeId])
+  @@index([galleryType])
+  @@map("gallery_items")
 }
 
 // 枚举类型

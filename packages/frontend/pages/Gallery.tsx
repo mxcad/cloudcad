@@ -1,7 +1,6 @@
 import {
   BookOpen,
   Box,
-  Download,
   FileText,
   Loader2,
   Search,
@@ -172,28 +171,6 @@ export default function Gallery() {
       file.firstType,
       file.nodeId
     );
-  };
-
-  // 获取文件访问 URL
-  const getFileUrl = (file: GalleryFile): string => {
-    return galleryApi.getFileUrl(
-      galleryType,
-      file.secondType,
-      file.firstType,
-      file.nodeId
-    );
-  };
-
-  // 下载文件
-  const handleDownload = (file: GalleryFile) => {
-    const url = getFileUrl(file);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = file.filename;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // 处理上一页
@@ -555,18 +532,6 @@ export default function Gallery() {
 
                       {/* 悬停操作按钮 */}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(file);
-                          }}
-                          className="bg-white/90 hover:bg-white"
-                          title="下载"
-                        >
-                          <Download size={16} />
-                        </Button>
                         <Button
                           size="sm"
                           variant="secondary"

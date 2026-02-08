@@ -121,17 +121,6 @@ export const galleryApi = {
       message: string;
     }>(`/gallery/${galleryType}/types/${typeId}`),
 
-  getFileUrl: (
-    galleryType: 'drawings' | 'blocks',
-    secondType: number,
-    firstType: number,
-    nodeId: string
-  ) => {
-    const baseUrl =
-      (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
-    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${nodeId}.mxweb`;
-  },
-
   getPreviewImageUrl: (
     galleryType: 'drawings' | 'blocks',
     secondType: number,
