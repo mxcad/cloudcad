@@ -915,8 +915,8 @@ export class GalleryController {
       // URL 解码（处理中文文件名等特殊字符）
       pathParts = pathParts.map(part => decodeURIComponent(part));
 
-      // 第三位（索引2）是 nodeId
-      const nodeId = pathParts[2];
+      // 第三位（索引2）是 nodeId（需要去除扩展名）
+      const nodeId = path.basename(pathParts[2], path.extname(pathParts[2]));
 
       // 提取文件扩展名（最后一个元素）
       const nodeIdPart = pathParts[pathParts.length - 1];

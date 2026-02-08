@@ -268,7 +268,10 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   // 处理插入文件到CAD编辑器
   const handleInsertFile = (file: GalleryFile) => {
     if (onInsertFile) {
-      onInsertFile(file);
+      onInsertFile({
+        nodeId: file.nodeId,
+        filename: file.filename,
+      });
     } else {
       console.log('插入文件:', file);
       alert(`插入文件: ${file.filename}`);

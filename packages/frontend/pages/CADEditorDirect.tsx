@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
@@ -26,6 +26,9 @@ export const CADEditorDirect: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shouldLoadEditor, setShouldLoadEditor] = useState(false);
+
+  // 标记是否已初始化 MxCAD，避免重复初始化
+  const isInitializedRef = useRef(false);
 
   // 下载格式弹窗状态
   const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
@@ -188,6 +191,12 @@ export const CADEditorDirect: React.FC = () => {
         });
         setNavigateFunction(navigate);
 
+        // 如果已经初始化过 MxCAD，只更新 currentFileInfo，不重新初始化
+        if (isInitializedRef.current) {
+          setLoading(false);
+          return;
+        }
+
         // 按需加载 MxCAD 依赖
         const { mxcadManager } = await loadMxCADDependencies();
 
@@ -202,6 +211,10 @@ export const CADEditorDirect: React.FC = () => {
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);
         mxcadManager.showMxCAD(true);
+
+        // 标记为已初始化
+        isInitializedRef.current = true;
+
         setLoading(false);
       } catch (err) {
         console.log(err);
@@ -229,15 +242,89 @@ export const CADEditorDirect: React.FC = () => {
       // 移除事件监听
       window.removeEventListener('mxcad-export-file', handleExportEvent);
 
-      // 动态导入 mxcadManager 进行清理
-      import('../services/mxcadManager').then(
-        ({ mxcadManager, clearCurrentFileInfo }) => {
-          mxcadManager.showMxCAD(false);
-          clearCurrentFileInfo(); // 清除文件信息
-        }
-      );
+      // 注意：不在这里清理 MxCAD，避免 URL 更新时白屏闪烁
+      // MxCAD 是全局单例，会在组件卸载时自动清理
+      // 只清理文件信息
+      if (isInitializedRef.current) {
+        import('../services/mxcadManager').then(
+          ({ clearCurrentFileInfo }) => {
+            clearCurrentFileInfo(); // 清除文件信息
+          }
+        );
+      }
     };
-  }, [shouldLoadEditor, fileId, user, location.search]);
+  }, [shouldLoadEditor, user, location.search]); // 移除 fileId 依赖
+
+  // 单独的 effect 监听 fileId 变化，只更新 currentFileInfo
+  useEffect(() => {
+    if (!shouldLoadEditor || !isInitializedRef.current) return;
+
+    const updateFileInfo = async () => {
+      try {
+        const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
+        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string };
+
+        if (!file.fileHash) {
+          return;
+        }
+
+        const { setCurrentFileInfo } = await import('../services/mxcadManager');
+
+        // 获取项目根节点 ID
+        let projectId = file.parentId || null;
+        if (!file.isRoot && file.parentId) {
+          try {
+            const rootResponse = await apiService.get(`/file-system/nodes/${file.id}/root`);
+            if (rootResponse.data?.id) {
+              projectId = rootResponse.data.id;
+            }
+          } catch (error) {
+            console.error('获取根节点失败:', error);
+          }
+        } else if (file.isRoot) {
+          projectId = file.id;
+        }
+
+        setCurrentFileInfo({
+          fileId: file.id,
+          parentId: file.parentId || null,
+          projectId,
+          name: file.name,
+        });
+      } catch (error) {
+        console.error('更新文件信息失败:', error);
+      }
+    };
+
+    updateFileInfo();
+  }, [fileId, shouldLoadEditor]);
+
+  // 处理从图库插入文件
+  const handleInsertFile = async (file: {
+    nodeId: string;
+    filename: string;
+  }) => {
+    try {
+      // 获取当前文件信息，确定 uploadTargetNodeId
+      const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
+      const currentFile = fileResponse.data as { parentId?: string | null; id?: string; isRoot?: boolean };
+
+      // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
+      let uploadTargetNodeId = currentFile.parentId || '';
+      if (currentFile.isRoot && currentFile.id) {
+        uploadTargetNodeId = currentFile.id;
+      }
+
+      // 动态导入 openUploadedFile 函数，复用 openFile 命令的逻辑
+      const { openUploadedFile } = await import('../services/mxcadManager');
+
+      // 调用 openUploadedFile 打开文件，保持与 openFile 命令完全一致的行为
+      await openUploadedFile(file.nodeId, uploadTargetNodeId, true);
+    } catch (error) {
+      console.error('打开文件失败:', error);
+      alert(error instanceof Error ? error.message : '打开文件失败');
+    }
+  };
 
   // 处理下载请求
   const handleDownloadWithFormat = async (
@@ -302,7 +389,7 @@ export const CADEditorDirect: React.FC = () => {
   return (
     <div className="flex w-full h-screen relative">
       {/* CAD编辑器侧边栏 */}
-      <CADEditorSidebar />
+      <CADEditorSidebar onInsertFile={handleInsertFile} />
 
       {/* CAD编辑器内容区域 */}
       <div className="flex-1 relative">

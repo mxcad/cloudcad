@@ -161,6 +161,9 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
   Logger.info('========== 执行返回命令 ==========');
   Logger.info('currentFileInfo:', JSON.stringify(currentFileInfo, null, 2));
 
+  // 隐藏 CAD 编辑器
+  mxcadManager.showMxCAD(false);
+
   if (!currentFileInfo) {
     navigateToProjectsList();
     return;
@@ -337,7 +340,7 @@ async function uploadAndProcessFile(
  * @param newNodeId 节点 ID
  * @param uploadTargetNodeId 上传目标节点 ID
  */
-async function openUploadedFile(newNodeId: string, uploadTargetNodeId: string): Promise<void> {
+export async function openUploadedFile(newNodeId: string, uploadTargetNodeId: string): Promise<void> {
   updateLoadingMessage(DEFAULT_MESSAGES.OPENING_FILE);
   const fileInfoResponse = await apiService.get(`/file-system/nodes/${newNodeId}`);
   const fileInfo = fileInfoResponse.data;
@@ -360,12 +363,8 @@ async function openUploadedFile(newNodeId: string, uploadTargetNodeId: string): 
   Logger.info('构建的文件 URL:', mxcadFileUrl);
   await mxcadManager.openFile(mxcadFileUrl);
 
-  // 更新 URL 中的 nodeId 参数
-  if (navigateFunction) {
-    const newUrl = `/cad-editor/${newNodeId}?nodeId=${newNodeId}`;
-    Logger.info('更新 URL:', newUrl);
-    navigateFunction(newUrl);
-  }
+  // 注意：不在这里更新 URL，避免触发 clearCurrentFileInfo 导致文件信息被清空
+  // URL 应该在调用 openUploadedFile 之前就已经由调用方（如 handleInsertFile）更新
 }
 
 /**
@@ -714,8 +713,7 @@ private setupFileOpenListener(): void {
         Logger.error('缩略图处理失败', error);
       }
     }
-
-    this.mxcadView?.mxcad.off('openFileComplete', onOpen);
+    // 注意：不移除监听器，让监听器持续存在以支持多次打开文件
   };
 
   this.mxcadView?.mxcad.on('openFileComplete', onOpen);
@@ -804,8 +802,6 @@ private async createInstance(openFile?: string): Promise<void> {
         Logger.error('mxcad 对象不可用，无法打开文件');
         throw new Error('mxcad 对象不可用');
       }
-
-      this.setupFileOpenListener();
 
       // 使用重试机制打开文件，防止 mxdrawObject 未初始化的问题
       for (let attempt = 0; attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES; attempt++) {
