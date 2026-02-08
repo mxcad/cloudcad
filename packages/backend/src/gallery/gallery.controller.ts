@@ -899,8 +899,12 @@ export class GalleryController {
       }
 
       // 从路径中提取节点 ID
-      // 路径格式: {secondType}/{firstType}/{nodeId}.mxweb
-      const pathParts = filename.split('/');
+      // 路径格式: {secondType}/{firstType}/{nodeId}[/{extraPath}]
+      // pathParts[0] = secondType
+      // pathParts[1] = firstType
+      // pathParts[2] = nodeId
+      // pathParts[3...] = 额外路径（如果有）
+      let pathParts = filename.split('/');
       if (pathParts.length < 3) {
         this.logger.error(
           `[handleGalleryFileRequest] 路径格式错误: ${filename}`
@@ -908,17 +912,27 @@ export class GalleryController {
         return res.status(400).json({ code: -1, message: '无效的文件路径' });
       }
 
-      // 提取节点 ID（去掉扩展名）
+      // URL 解码（处理中文文件名等特殊字符）
+      pathParts = pathParts.map(part => decodeURIComponent(part));
+
+      // 第三位（索引2）是 nodeId
+      const nodeId = pathParts[2];
+
+      // 提取文件扩展名（最后一个元素）
       const nodeIdPart = pathParts[pathParts.length - 1];
-      const nodeId = path.basename(nodeIdPart, path.extname(nodeIdPart));
       const fileExtension = path.extname(nodeIdPart).toLowerCase();
 
+      // 判断是否是主文件（文件名是 nodeId.xxx）
+      const lastFileName = path.basename(nodeIdPart);
+      const nodeIdFromFile = path.basename(nodeIdPart, path.extname(nodeIdPart));
+      const isMainFile = nodeIdFromFile === nodeId;
+
       this.logger.log(
-        `[handleGalleryFileRequest] 提取的 nodeId: ${nodeId}, 扩展名: ${fileExtension}`
+        `[handleGalleryFileRequest] 提取的 nodeId: ${nodeId}, 扩展名: ${fileExtension}, 文件名: ${nodeIdFromFile}, 是否主文件: ${isMainFile}`
       );
 
-      // 如果是缩略图请求（.jpg），使用缩略图处理逻辑
-      if (fileExtension === '.jpg') {
+      // 如果是缩略图请求（主文件且文件名为 nodeId.jpg），使用缩略图处理逻辑
+      if (isMainFile && fileExtension === '.jpg' && lastFileName === `${nodeId}.jpg`) {
         this.logger.log(
           `[handleGalleryFileRequest] 检测到缩略图请求，调用 handleThumbnailRequest`
         );
@@ -976,29 +990,40 @@ export class GalleryController {
 
       let foundFilePath: string | null = null;
 
-      // 从 filesData 目录查找文件（使用节点的 path 字段）
+      // 从 filesData 目录查找文件
       if (node.path) {
         try {
-          // 获取节点目录的完整路径
+          // 获取节点目录的完整路径（node.path 包含文件名，需要提取目录）
           const nodeFullPath = this.storageManager.getFullPath(node.path);
+          const nodeDir = path.dirname(nodeFullPath);
 
-          // 构建可能的文件名（使用 nodeId）
-          const possibleFileNames = [
-            `${nodeId}.dwg.mxweb`,
-            `${nodeId}.dxf.mxweb`,
-            `${nodeId}.mxweb`,
-            filename,
-          ];
+          if (isMainFile) {
+            // 主文件：尝试多种格式
+            const possibleFileNames = [
+              `${nodeId}.dwg.mxweb`,
+              `${nodeId}.dxf.mxweb`,
+              `${nodeId}.mxweb`,
+            ];
 
-          // 尝试在节点目录中查找文件
-          for (const fileName of possibleFileNames) {
-            const targetPath = path.join(nodeFullPath, fileName);
-            if (fs.existsSync(targetPath)) {
-              foundFilePath = targetPath;
+            // 尝试在节点目录中查找文件
+            for (const fileName of possibleFileNames) {
+              const targetPath = path.join(nodeDir, fileName);
+              if (fs.existsSync(targetPath)) {
+                foundFilePath = targetPath;
+                this.logger.log(
+                  `[handleGalleryFileRequest] 找到主文件: ${targetPath}`
+                );
+                break;
+              }
+            }
+          } else {
+            // 外部参照文件：拼接额外路径
+            if (pathParts.length > 3) {
+              const extraPath = pathParts.slice(3).join('/');
+              foundFilePath = path.join(nodeDir, extraPath);
               this.logger.log(
-                `[handleGalleryFileRequest] 从 filesData 目录找到文件: ${targetPath}`
+                `[handleGalleryFileRequest] 外部参照文件路径: ${foundFilePath}`
               );
-              break;
             }
           }
         } catch (error) {
@@ -1012,18 +1037,26 @@ export class GalleryController {
       // 如果找到文件，直接返回
       if (foundFilePath) {
         try {
+          const stats = fs.statSync(foundFilePath);
+
+          // 检查路径是否是目录
+          if (stats.isDirectory()) {
+            this.logger.warn(`[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`);
+            return res.status(404).json({ code: -1, message: '文件不存在' });
+          }
+
+          // 根据 Content-Disposition 中使用的文件名（使用原始文件名或节点 ID）
+          const downloadFilename = isMainFile
+            ? pathParts[pathParts.length - 1]  // 主文件使用路径中的文件名
+            : pathParts[pathParts.length - 1];  // 外部参照使用路径中的文件名
+
+          // 对文件名进行 URL 编码（处理中文文件名）
+          const encodedFilename = encodeURIComponent(downloadFilename);
+
           // 对于 HEAD 请求，只返回文件头信息
           if (isHeadRequest) {
-            const stats = fs.statSync(foundFilePath);
-
-            // 检查路径是否是目录
-            if (stats.isDirectory()) {
-              this.logger.warn(`[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`);
-              return res.status(404).json({ code: -1, message: '文件不存在' });
-            }
-
             // 设置响应头（与 MxCAD 保持一致）
-            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Type', isMainFile ? 'application/octet-stream' : 'image/jpeg');
             res.setHeader('Content-Length', stats.size);
             res.setHeader('Cache-Control', 'public, max-age=3600');
             res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1032,24 +1065,19 @@ export class GalleryController {
             res.end();
             return;
           } else {
-            // 检查路径是否是目录
-            const stats = fs.statSync(foundFilePath);
-            if (stats.isDirectory()) {
-              this.logger.warn(`[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`);
-              return res.status(404).json({ code: -1, message: '文件不存在' });
-            }
-
             // GET 请求返回文件流
             const fileStream = fs.createReadStream(foundFilePath);
 
-            // 更新浏览次数
-            await this.galleryService.incrementLookNum(nodeId, galleryType);
+            // 只对主文件更新浏览次数
+            if (isMainFile) {
+              await this.galleryService.incrementLookNum(nodeId, galleryType);
+            }
 
             // 设置响应头
-            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Type', isMainFile ? 'application/octet-stream' : 'image/jpeg');
             res.setHeader(
               'Content-Disposition',
-              `inline; filename="${path.basename(filename)}"`
+              `inline; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
             );
 
             // 返回文件流
@@ -1114,6 +1142,33 @@ export class GalleryController {
       this.logger.log(
         `[handleThumbnailRequest] 处理缩略图请求: galleryType=${galleryType}, nodeId=${nodeId}`
       );
+
+      // 重新从路径中提取节点 ID（因为现在格式是 {secondType}/{firstType}/{nodeId}/{nodeId}.jpg）
+      const pathArray = req.params.path;
+      const filename = Array.isArray(pathArray)
+        ? pathArray.join('/')
+        : pathArray || '';
+
+      const pathParts = filename.split('/');
+      if (pathParts.length >= 2) {
+        // 提取倒数第二个元素作为 nodeId
+        const extractedNodeId = pathParts[pathParts.length - 2];
+        const nodeIdPart = pathParts[pathParts.length - 1];
+        const nodeIdFromFile = path.basename(nodeIdPart, path.extname(nodeIdPart));
+        
+        if (extractedNodeId !== nodeIdFromFile) {
+          this.logger.warn(
+            `[handleThumbnailRequest] 路径中的 nodeId 不一致: ${extractedNodeId} vs ${nodeIdFromFile}`
+          );
+        }
+        
+        // 使用提取的 nodeId
+        if (nodeId !== extractedNodeId) {
+          this.logger.warn(
+            `[handleThumbnailRequest] 传入的 nodeId 与路径提取的不一致: ${nodeId} vs ${extractedNodeId}`
+          );
+        }
+      }
 
       // 获取用户 ID（从 JWT token）
       const userId = req.user?.id;

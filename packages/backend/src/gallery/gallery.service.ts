@@ -309,6 +309,7 @@ export class GalleryService {
       secondType: item.secondType,
       nodeId: item.node.id,
       type: typeName,
+      filehash: `${item.node.id}/${item.node.id}`, // 用于兼容 mxcad-app 图库设计
     };
   }
 
