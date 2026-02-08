@@ -427,6 +427,35 @@ MxFun.addCommand('openFile', async () => {
     alert(error instanceof Error ? error.message : '命令执行失败');
   }
 });
+
+// ==================== exportFile 命令 ====================
+
+/**
+ * exportFile 命令：打开下载格式选择弹窗
+ */
+MxFun.addCommand('exportFile', () => {
+  Logger.info('========== 执行 exportFile 命令 ==========');
+
+  if (!currentFileInfo) {
+    Logger.error('当前文件信息为空，无法导出');
+    alert('无法获取当前文件信息，请重新打开文件');
+    return;
+  }
+
+  // 触发自定义事件，通知 React 组件打开下载格式弹窗
+  const event = new CustomEvent('mxcad-export-file', {
+    detail: {
+      fileId: currentFileInfo.fileId,
+      fileName: currentFileInfo.name,
+    },
+  });
+
+  window.dispatchEvent(event);
+  Logger.info('已触发导出事件', {
+    fileId: currentFileInfo.fileId,
+    fileName: currentFileInfo.name,
+  });
+});
 /**
  * MxCAD 容器管理器
  * 负责创建和管理永不销毁的全局容器

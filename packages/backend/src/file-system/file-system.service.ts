@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import {
   FileStatus,
   ProjectStatus,
@@ -26,6 +27,8 @@ import { FileCopyService } from '../common/services/file-copy.service';
 import { DiskMonitorService } from '../common/services/disk-monitor.service';
 import { FileLockService } from '../common/services/file-lock.service';
 import { ConfigService } from '@nestjs/config';
+import { MxCadService } from '../mxcad/mxcad.service';
+import { CadDownloadFormat } from './dto/download-node.dto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as archiver from 'archiver';
@@ -34,6 +37,9 @@ import { PassThrough } from 'stream';
 @Injectable()
 export class FileSystemService {
   private readonly logger = new Logger(FileSystemService.name);
+
+  // 使用 ModuleRef 延迟加载 MxCadService，避免循环依赖
+  private mxCadService: MxCadService | null = null;
 
   // ZIP 压缩配置
   private readonly ZIP_CONFIG = {
@@ -55,7 +61,18 @@ export class FileSystemService {
     private readonly diskMonitorService: DiskMonitorService,
     private readonly fileLockService: FileLockService,
     private readonly configService: ConfigService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
+  /**
+   * 获取 MxCadService 实例（延迟加载）
+   */
+  private getMxCadService(): MxCadService {
+    if (!this.mxCadService) {
+      this.mxCadService = this.moduleRef.get(MxCadService, { strict: false });
+    }
+    return this.mxCadService!;
+  }
 
   /**
    * 验证并清理文件名，防止路径遍历攻击
@@ -3098,6 +3115,205 @@ export class FileSystemService {
       return zipResult;
     } catch (error) {
       this.logger.error(`节点下载失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 下载节点（支持多格式转换）
+   * @param nodeId 节点 ID
+   * @param userId 用户 ID
+   * @param format 下载格式（dwg、mxweb、pdf）
+   * @param pdfParams PDF 参数（仅当 format=pdf 时有效）
+   * @returns 文件流
+   */
+  async downloadNodeWithFormat(
+    nodeId: string,
+    userId: string,
+    format: CadDownloadFormat = CadDownloadFormat.MXWEB,
+    pdfParams?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+    }
+  ): Promise<{
+    stream: NodeJS.ReadableStream;
+    filename: string;
+    mimeType: string;
+  }> {
+    try {
+      // 检查文件访问权限
+      const hasAccess = await this.checkFileAccess(nodeId, userId);
+      if (!hasAccess) {
+        throw new ForbiddenException('无权访问该文件');
+      }
+
+      // 获取节点信息
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      // 如果是文件夹，不支持多格式下载，返回 ZIP
+      if (node.isFolder) {
+        const zipResult = await this.downloadNodeAsZip(nodeId, userId);
+        this.logger.log(`目录下载: ${node.name} (${nodeId}) by user ${userId}`);
+        return zipResult;
+      }
+
+      // 文件下载
+      const originalFilename = node.originalName || node.name;
+      const ext = path.extname(originalFilename).toLowerCase();
+
+      // 判断是否为 CAD 文件
+      const isCadFile = ['.dwg', '.dxf'].includes(ext);
+
+      // 非CAD 文件：直接下载原始文件
+      if (!isCadFile) {
+        const storageDir = this.getStoragePath(node);
+        const fullPath = path.join(storageDir, originalFilename);
+        const stream = await this.getFileStream(fullPath);
+        const mimeType = this.getMimeType(originalFilename);
+
+        this.logger.log(
+          `文件下载（非CAD）: ${originalFilename} (${nodeId}) by user ${userId}`
+        );
+        return { stream, filename: originalFilename, mimeType };
+      }
+
+      // CAD 文件：根据 format 参数处理
+      // node.path 已经是完整的相对路径（YYYYMM/nodeId/nodeId.dwg.mxweb）
+      if (!node.path) {
+        throw new NotFoundException('文件路径不存在');
+      }
+      const mxwebPath = node.path;
+
+      // 检查 mxweb 文件是否存在
+      const mxwebFullPath = this.storageManager.getFullPath(mxwebPath);
+      const mxwebExists = await fsPromises
+        .access(mxwebFullPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!mxwebExists) {
+        throw new NotFoundException('MXWEB 文件不存在，请确认文件已转换完成');
+      }
+
+      // 根据格式处理
+      switch (format) {
+        case CadDownloadFormat.MXWEB: {
+          // 直接下载 MXWEB 文件
+          const stream = await this.getFileStream(mxwebPath);
+          // 使用原始文件名 + .mxweb 扩展名作为下载文件名
+          const mxwebFilename = `${originalFilename}.mxweb`;
+          const mimeType = this.getMimeType(mxwebFilename);
+          this.logger.log(
+            `文件下载（MXWEB）: ${originalFilename} -> ${mxwebFilename} (${nodeId}) by user ${userId}`
+          );
+          return { stream, filename: mxwebFilename, mimeType };
+        }
+
+        case CadDownloadFormat.DWG:
+        case CadDownloadFormat.DXF:
+        case CadDownloadFormat.PDF: {
+          // 需要转换文件
+          let targetExt: string;
+          if (format === CadDownloadFormat.DWG) {
+            targetExt = '.dwg';
+          } else if (format === CadDownloadFormat.DXF) {
+            targetExt = '.dxf';
+          } else {
+            targetExt = '.pdf';
+          }
+          // 去除原始扩展名，再添加新的扩展名（避免重复扩展名，如 dxf.dxf.dwg）
+          const targetFilename = `${path.basename(originalFilename, ext)}${targetExt}`;
+
+          // 构建转换参数（使用下划线命名以匹配 mxcad.service.ts 的期望）
+          const conversionOptions: any = {
+            srcpath: mxwebFullPath.replace(/\\/g, '/'),
+            src_file_md5: node.fileHash || '',
+            outname: targetFilename,
+            create_preloading_data: false,
+          };
+
+          // PDF 转换添加额外参数
+          if (format === CadDownloadFormat.PDF) {
+            conversionOptions.width = pdfParams?.width || '2000';
+            conversionOptions.height = pdfParams?.height || '2000';
+            conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
+          }
+
+          // 调用转换服务
+          this.logger.log(
+            `开始转换文件: ${originalFilename} -> ${targetFilename}`
+          );
+          const result = await this.getMxCadService().convertServerFile(conversionOptions);
+
+          if (result.code !== 0) {
+            this.logger.error(`文件转换失败: ${result.message}`);
+            throw new BadRequestException(`文件转换失败: ${result.message}`);
+          }
+
+          // 获取转换后的文件路径（与 mxweb 文件在同一目录）
+          const mxwebDir = path.dirname(node.path);  // 使用相对路径
+          // 使用正斜杠构建路径（避免 Windows 上 path.join() 使用反斜杠导致验证失败）
+          const targetRelativePath = `${mxwebDir}/${targetFilename}`;
+
+          // 检查转换后的文件是否存在
+          const targetFullPath = this.storageManager.getFullPath(targetRelativePath);
+          const targetExists = await fsPromises
+            .access(targetFullPath)
+            .then(() => true)
+            .catch(() => false);
+
+          if (!targetExists) {
+            throw new NotFoundException(
+              `转换后的文件不存在: ${targetFilename}`
+            );
+          }
+
+          // 返回转换后的文件流
+          const convertedStream = await this.getFileStream(targetRelativePath);
+          const convertedMimeType = this.getMimeType(targetFilename);
+
+          // 流结束后删除临时转换文件
+          convertedStream.on('end', async () => {
+            try {
+              await fsPromises.unlink(targetFullPath);
+              this.logger.log(`临时转换文件已删除: ${targetFullPath}`);
+            } catch (error) {
+              this.logger.warn(`删除临时文件失败: ${targetFullPath}, error: ${error.message}`);
+            }
+          });
+
+          // 流出错时也尝试删除临时文件
+          convertedStream.on('error', async () => {
+            try {
+              await fsPromises.unlink(targetFullPath);
+              this.logger.log(`流出错时删除临时文件: ${targetFullPath}`);
+            } catch (error) {
+              this.logger.warn(`删除临时文件失败: ${targetFullPath}, error: ${error.message}`);
+            }
+          });
+
+          this.logger.log(
+            `文件下载（${format.toUpperCase()}）: ${originalFilename} -> ${targetFilename} (${nodeId}) by user ${userId}`
+          );
+          return {
+            stream: convertedStream,
+            filename: targetFilename,
+            mimeType: convertedMimeType,
+          };
+        }
+
+        default:
+          throw new BadRequestException(`不支持的下载格式: ${format}`);
+      }
+    } catch (error) {
+      this.logger.error(`多格式下载失败: ${error.message}`, error.stack);
       throw error;
     }
   }

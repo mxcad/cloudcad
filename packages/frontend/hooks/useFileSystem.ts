@@ -161,8 +161,10 @@ export const useFileSystem = () => {
 
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
   const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
   const [folderName, setFolderName] = useState('');
+  const [downloadingNode, setDownloadingNode] = useState<FileSystemNode | null>(null);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -1000,6 +1002,19 @@ export const useFileSystem = () => {
   // 文件下载
   const handleDownload = useCallback(
     async (node: FileSystemNode) => {
+      // 判断是否为 CAD 文件
+      const isCadFile = ['.dwg', '.dxf'].some((ext) =>
+        node.name.toLowerCase().endsWith(ext)
+      );
+
+      // 如果是 CAD 文件，显示格式选择模态框
+      if (isCadFile && !node.isFolder) {
+        setDownloadingNode(node);
+        setShowDownloadFormatModal(true);
+        return;
+      }
+
+      // 非 CAD 文件或文件夹，直接下载
       try {
         console.log('[useFileSystem] 开始下载文件', {
           nodeId: node.id,
@@ -1048,7 +1063,68 @@ export const useFileSystem = () => {
         showToast(errorMessage, 'error');
       }
     },
-    [showToast]
+    [showToast, filesApi, handleError]
+  );
+
+  // 多格式文件下载
+  const handleDownloadWithFormat = useCallback(
+    async (
+      format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
+      pdfOptions?: {
+        width?: string;
+        height?: string;
+        colorPolicy?: string;
+      }
+    ) => {
+      if (!downloadingNode) return;
+
+      try {
+        console.log('[useFileSystem] 开始下载文件（多格式）', {
+          nodeId: downloadingNode.id,
+          fileName: downloadingNode.name,
+          format,
+        });
+
+        const response = await filesApi.downloadWithFormat(
+          downloadingNode.id,
+          format,
+          pdfOptions
+        );
+
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        const fileName = downloadingNode.originalName || downloadingNode.name;
+
+        // 根据格式生成文件名（去除原始扩展名，添加新扩展名）
+        const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+        const finalFileName = `${sanitizeFileName(nameWithoutExt)}.${format}`;
+
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast(`文件下载成功（${format.toUpperCase()} 格式）`, 'success');
+
+        // 关闭模态框
+        setShowDownloadFormatModal(false);
+        setDownloadingNode(null);
+      } catch (error) {
+        let errorMessage = '文件下载失败';
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        handleError(error, '文件下载失败');
+        showToast(errorMessage, 'error');
+      }
+    },
+    [downloadingNode, showToast, filesApi, handleError]
   );
 
   // 打开重命名对话框
@@ -1411,9 +1487,11 @@ export const useFileSystem = () => {
     confirmDialog,
     showCreateFolderModal,
     showRenameModal,
+    showDownloadFormatModal,
     folderName,
     setFolderName,
     editingNode,
+    downloadingNode,
 
     // 拖拽状态
     draggedNodes,
@@ -1424,6 +1502,7 @@ export const useFileSystem = () => {
     // 操作方法
     setShowCreateFolderModal,
     setShowRenameModal,
+    setShowDownloadFormatModal,
     setEditingNode,
     showToast,
     removeToast,
@@ -1445,6 +1524,7 @@ export const useFileSystem = () => {
     handleEnterFolder,
     handleFileOpen,
     handleDownload,
+    handleDownloadWithFormat,
     handleOpenRename,
 
     // 项目相关操作

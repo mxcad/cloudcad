@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
+import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
+import { filesApi } from '../services/filesApi';
+import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
+import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
 declare global {
   interface Window {
@@ -21,6 +25,12 @@ export const CADEditorDirect: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shouldLoadEditor, setShouldLoadEditor] = useState(false);
+
+  // 下载格式弹窗状态
+  const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
+  const [downloadingNodeId, setDownloadingNodeId] = useState<string>('');
+  const [downloadingFileName, setDownloadingFileName] = useState<string>('');
+  const [downloading, setDownloading] = useState(false);
 
   // 从URL获取文件ID
   const fileId = location.pathname.split('/').pop() || '';
@@ -201,7 +211,23 @@ export const CADEditorDirect: React.FC = () => {
 
     initEditor();
 
+    // 监听导出事件
+    const handleExportEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        fileId: string;
+        fileName: string;
+      }>;
+      setDownloadingNodeId(customEvent.detail.fileId);
+      setDownloadingFileName(customEvent.detail.fileName);
+      setShowDownloadFormatModal(true);
+    };
+
+    window.addEventListener('mxcad-export-file', handleExportEvent);
+
     return () => {
+      // 移除事件监听
+      window.removeEventListener('mxcad-export-file', handleExportEvent);
+
       // 动态导入 mxcadManager 进行清理
       import('../services/mxcadManager').then(
         ({ mxcadManager, clearCurrentFileInfo }) => {
@@ -211,6 +237,43 @@ export const CADEditorDirect: React.FC = () => {
       );
     };
   }, [shouldLoadEditor, fileId, user, location.search]);
+
+  // 处理下载请求
+  const handleDownloadWithFormat = async (
+    format: DownloadFormat,
+    pdfOptions?: PdfOptions
+  ) => {
+    try {
+      setDownloading(true);
+      const response = await filesApi.downloadWithFormat(
+        downloadingNodeId,
+        format,
+        pdfOptions
+      );
+
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      // 根据格式生成文件名（去除原始扩展名，添加新扩展名）
+      const nameWithoutExt = downloadingFileName.replace(/\.[^.]+$/, '');
+      const finalFileName = `${nameWithoutExt}.${format}`;
+
+      a.download = finalFileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setShowDownloadFormatModal(false);
+    } catch (error) {
+      console.error('下载失败:', error);
+      alert('下载失败，请重试');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -238,6 +301,15 @@ export const CADEditorDirect: React.FC = () => {
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
       {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
+
+      {/* 下载格式选择弹窗 */}
+      <DownloadFormatModal
+        isOpen={showDownloadFormatModal}
+        fileName={downloadingFileName}
+        onClose={() => setShowDownloadFormatModal(false)}
+        onDownload={handleDownloadWithFormat}
+        loading={downloading}
+      />
     </div>
   );
 };

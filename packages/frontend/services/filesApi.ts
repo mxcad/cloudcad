@@ -29,6 +29,27 @@ export const filesApi = {
       responseType: 'blob',
     }),
 
+  downloadWithFormat: (
+    id: string,
+    format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
+    pdfOptions?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+    }
+  ) => {
+    const params: any = { format };
+    if (format === 'pdf' && pdfOptions) {
+      if (pdfOptions.width) params.width = pdfOptions.width;
+      if (pdfOptions.height) params.height = pdfOptions.height;
+      if (pdfOptions.colorPolicy) params.colorPolicy = pdfOptions.colorPolicy;
+    }
+    return apiClient.get(`/file-system/nodes/${id}/download-with-format`, {
+      params,
+      responseType: 'blob',
+    });
+  },
+
   update: (id: string, data: Record<string, unknown>) =>
     apiClient.patch(`/files/${id}`, data),
 

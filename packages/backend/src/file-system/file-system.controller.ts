@@ -25,6 +25,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NodePermissionGuard } from '../common/guards/project-permission.guard';
@@ -43,12 +44,13 @@ import { MoveNodeDto } from './dto/move-node.dto';
 import { CopyNodeDto } from './dto/copy-node.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
+import { DownloadNodeQueryDto, CadDownloadFormat } from './dto/download-node.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard, NodePermissionGuard, PermissionsGuard)
-@ApiTags('�ļ�ϵͳ')
+@ApiTags('文件系统')
 @ApiBearerAuth()
 export class FileSystemController {
   private readonly logger = new Logger(FileSystemController.name);
@@ -85,14 +87,14 @@ export class FileSystemController {
     ProjectRole.EDITOR,
     ProjectRole.VIEWER
   )
-  @ApiResponse({ status: 200, description: '��ȡ��Ŀ����ɹ�' })
+  @ApiResponse({ status: 200, description: '获取项目详情成功' })
   async getProject(@Param('projectId') projectId: string) {
     return this.fileSystemService.getProject(projectId);
   }
 
   @Patch('projects/:projectId')
   @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN)
-  @ApiResponse({ status: 200, description: '������Ŀ�ɹ�' })
+  @ApiResponse({ status: 200, description: '更新项目信息成功' })
   async updateProject(
     @Param('projectId') projectId: string,
     @Body() dto: UpdateNodeDto
@@ -695,6 +697,184 @@ export class FileSystemController {
               : 500;
         res.status(status).json({
           message: error.message || '�ļ�����ʧ��',
+        });
+      }
+    }
+  }
+
+  /**
+   * 下载节点（支持多格式转换）
+   * @param nodeId 节点 ID
+   * @param req 请求对象
+   * @param res 响应对象
+   * @param query 查询参数（format、width、height、colorPolicy）
+   */
+  @Get('nodes/:nodeId/download-with-format')
+  @ApiOperation({
+    summary: '下载节点（支持多格式转换）',
+    description: '支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。',
+  })
+  @ApiQuery({
+    name: 'format',
+    enum: CadDownloadFormat,
+    required: false,
+    description: '下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）',
+  })
+  @ApiQuery({
+    name: 'width',
+    required: false,
+    description: 'PDF 输出宽度（像素），仅当 format=pdf 时有效，默认：2000',
+  })
+  @ApiQuery({
+    name: 'height',
+    required: false,
+    description: 'PDF 输出高度（像素），仅当 format=pdf 时有效，默认：2000',
+  })
+  @ApiQuery({
+    name: 'colorPolicy',
+    required: false,
+    description: 'PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono',
+  })
+  @ApiResponse({ status: 200, description: '下载成功', type: 'stream' })
+  @ApiResponse({ status: 400, description: '参数错误或转换失败' })
+  @ApiResponse({ status: 401, description: '未登录' })
+  @ApiResponse({ status: 403, description: '无权访问该节点' })
+  @ApiResponse({ status: 404, description: '节点不存在或文件不存在' })
+  async downloadNodeWithFormat(
+    @Param('nodeId') nodeId: string,
+    @Request() req: any,
+    @Res() res: any,
+    @Query() query: DownloadNodeQueryDto
+  ) {
+    const userId = req.user?.id || req.session?.userId;
+    const clientIp = req.ip || req.connection.remoteAddress;
+
+    if (!userId) {
+      throw new UnauthorizedException('未登录');
+    }
+
+    try {
+      // 设置默认格式
+      const format = query.format || CadDownloadFormat.MXWEB;
+
+      // 构建 PDF 参数
+      const pdfParams =
+        format === CadDownloadFormat.PDF
+          ? {
+              width: query.width || '2000',
+              height: query.height || '2000',
+              colorPolicy: query.colorPolicy || 'mono',
+            }
+          : undefined;
+
+      // 调用服务方法
+      const { stream, filename, mimeType } =
+        await this.fileSystemService.downloadNodeWithFormat(
+          nodeId,
+          userId,
+          format,
+          pdfParams
+        );
+
+      // 设置响应头（在开始流传输之前）
+      // 1. CORS 头（放在最前面）
+      const origin = req.headers.origin || '*';
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS'
+      );
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization'
+      );
+
+      this.logger.log(`[下载] CORS 头已设置: ${origin}`);
+
+      // 2. Content-Type
+      res.setHeader('Content-Type', mimeType);
+
+      // 3. Content-Disposition
+      const encodedFilename = encodeURIComponent(filename);
+      // eslint-disable-next-line no-control-regex
+      const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, '_');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
+      );
+
+      // 4. Cache-Control 和 ETag
+      const node = await this.fileSystemService.getNode(nodeId);
+      if (node && !node.isFolder && (node.fileHash || node.id)) {
+        const etag = `"${node.fileHash || node.id}_${format}"`;
+        res.setHeader('ETag', etag);
+
+        // 处理 If-None-Match
+        if (req.headers['if-none-match'] === etag) {
+          if (typeof (stream as any).destroy === 'function') {
+            (stream as any).destroy();
+          }
+          return res.status(304).end();
+        }
+
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+      } else {
+        // 对于动态生成的文件或文件夹，不缓存
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+
+      // 记录下载开始
+      this.logger.log(
+        `多格式下载开始: ${filename} (格式: ${format}) (${nodeId}) by user ${userId} from IP ${clientIp}`
+      );
+
+      // 管道流传输
+      stream.pipe(res);
+
+      // 错误处理
+      stream.on('error', (error) => {
+        this.logger.error(
+          `文件流传输错误: ${error.message}`,
+          error.stack
+        );
+
+        // 清理资源
+        if (typeof (stream as any).destroy === 'function') {
+          (stream as any).destroy();
+        }
+
+        if (!res.headersSent) {
+          res.status(500).json({ message: '文件下载失败' });
+        } else if (!res.writableEnded) {
+          // 如果响应已发送但未结束，可以结束响应
+          res.end();
+        }
+      });
+
+      // 完成处理
+      stream.on('finish', () => {
+        this.logger.log(
+          `多格式下载完成: ${filename} (格式: ${format}) (${nodeId}) by user ${userId}`
+        );
+      });
+    } catch (error) {
+      this.logger.error(
+        `多格式下载失败: ${nodeId} by user ${userId} - ${error.message}`,
+        error.stack
+      );
+
+      if (!res.headersSent) {
+        const status =
+          error instanceof NotFoundException
+            ? 404
+            : error instanceof ForbiddenException
+              ? 403
+              : error instanceof BadRequestException
+                ? 400
+                : 500;
+        res.status(status).json({
+          message: error.message || '文件下载失败',
         });
       }
     }
