@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { filesApi } from '../services/filesApi';
+import CADEditorSidebar from '../components/CADEditorSidebar';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
@@ -299,17 +300,23 @@ export const CADEditorDirect: React.FC = () => {
   }
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
+    <div className="flex w-full h-screen relative">
+      {/* CAD编辑器侧边栏 */}
+      <CADEditorSidebar />
 
-      {/* 下载格式选择弹窗 */}
-      <DownloadFormatModal
-        isOpen={showDownloadFormatModal}
-        fileName={downloadingFileName}
-        onClose={() => setShowDownloadFormatModal(false)}
-        onDownload={handleDownloadWithFormat}
-        loading={downloading}
-      />
+      {/* CAD编辑器内容区域 */}
+      <div className="flex-1 relative">
+        {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
+
+        {/* 下载格式选择弹窗 */}
+        <DownloadFormatModal
+          isOpen={showDownloadFormatModal}
+          fileName={downloadingFileName}
+          onClose={() => setShowDownloadFormatModal(false)}
+          onDownload={handleDownloadWithFormat}
+          loading={downloading}
+        />
+      </div>
     </div>
   );
 };

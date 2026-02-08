@@ -456,6 +456,21 @@ MxFun.addCommand('exportFile', () => {
     fileName: currentFileInfo.name,
   });
 });
+
+// ==================== Mx_ShowSidebar 命令 ====================
+
+/**
+ * Mx_ShowSidebar 命令：显示/隐藏侧边栏
+ */
+MxFun.addCommand('Mx_ShowSidebar', () => {
+  Logger.info('========== 执行 Mx_ShowSidebar 命令 ==========');
+
+  // 触发自定义事件，通知侧边栏组件切换显示/隐藏状态
+  const event = new CustomEvent('mxcad-toggle-sidebar');
+
+  window.dispatchEvent(event);
+  Logger.info('已触发侧边栏切换事件');
+});
 /**
  * MxCAD 容器管理器
  * 负责创建和管理永不销毁的全局容器
@@ -482,11 +497,11 @@ class MxCADContainerManager {
       container = document.createElement('div');
       container.id = CSS_CLASSES.GLOBAL_CONTAINER;
       container.style.cssText = `
-        position: fixed;
+        position: absolute;
         top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        left: 300px;
+        right: 0;
+        bottom: 0;
         pointer-events: none;
       `;
       document.body.appendChild(container);
@@ -494,6 +509,17 @@ class MxCADContainerManager {
     }
 
     this.globalContainer = container;
+  }
+
+  /**
+   * 调整容器位置，为侧边栏留出空间
+   * @param sidebarWidth 侧边栏宽度
+   */
+  adjustContainerPosition(sidebarWidth: number = 300): void {
+    if (this.globalContainer) {
+      this.globalContainer.style.left = `${sidebarWidth}px`;
+      Logger.info(`调整CAD编辑器容器位置，左边距: ${sidebarWidth}px`);
+    }
   }
 
   getContainer(): HTMLElement {
@@ -914,6 +940,14 @@ export class MxCADManager {
 
   setBrowse(is: boolean) {
     this.getCurrentView()?.mxcad.setBrowse(is);
+  }
+
+  /**
+   * 调整CAD编辑器容器位置，为侧边栏留出空间
+   * @param sidebarWidth 侧边栏宽度
+   */
+  adjustContainerPosition(sidebarWidth: number = 300): void {
+    this.containerManager.adjustContainerPosition(sidebarWidth);
   }
 }
 

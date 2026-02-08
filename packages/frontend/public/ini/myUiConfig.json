@@ -92,13 +92,8 @@
     },
     {
       "icon": "a-4-9tukuaiku",
-      "prompt": "图块库",
-      "cmd": "Mx_BlockLibrary"
-    },
-    {
-      "icon": "tuzhiku",
-      "prompt": "图纸库",
-      "cmd": "Mx_DrawingsLibrary"
+      "prompt": "图库",
+      "cmd": "Mx_ShowSidebar"
     },
     {
       "icon": "class: iconfont  icon_shujuzhongtai",
