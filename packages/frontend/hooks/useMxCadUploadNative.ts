@@ -1,6 +1,11 @@
 import { useRef, useCallback } from 'react';
-import { apiService } from '../services/apiService';
 import { calculateFileHash } from '../utils/hashUtils';
+import {
+  uploadMxCadFile,
+  MxCadUploadOptions,
+  MxCadUploadResult,
+  MxCadUploadError,
+} from '../utils/mxcadUploadUtils';
 
 export interface MxCadUploadConfig {
   nodeId?: string;
@@ -77,32 +82,41 @@ export const useMxCadUploadNative = () => {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // 验证文件类型 - 支持各种大小写组合
-        const fileExtension = '.' + file.name.split('.').pop();
-        const allowedExtensions = ['.dwg', '.dxf'];
-        const normalizedExtension = fileExtension.toLowerCase();
-
-        if (!allowedExtensions.includes(normalizedExtension)) {
-          config.onError?.(`文件类型不支持: ${file.name} (支持 .dwg, .dxf)`);
-          continue;
-        }
-
-        // 验证文件大小（100MB）
-        if (file.size > 100 * 1024 * 1024) {
-          config.onError?.(`文件过大: ${file.name} (最大100MB)`);
-          continue;
-        }
-
         try {
-          config.onFileQueued?.(file);
-
           // 计算文件哈希
           const hash = await calculateFileHash(file);
-          // 开始上传
-          await uploadInChunks(file, hash, config);
+
+          // 使用统一的上传工具函数
+          const uploadOptions: MxCadUploadOptions = {
+            file,
+            hash,
+            nodeId: config.nodeId || '',
+            onFileQueued: config.onFileQueued,
+            onBeginUpload: config.onBeginUpload,
+            onProgress: config.onProgress,
+          };
+
+          const result: MxCadUploadResult = await uploadMxCadFile(uploadOptions);
+
+          // 调用成功回调
+          config.onSuccess?.({
+            file: result.file,
+            id: result.hash,
+            name: result.name,
+            size: result.size,
+            type: result.type,
+            hash: result.hash,
+            isUseServerExistingFile: result.isUseServerExistingFile,
+            isInstantUpload: result.isInstantUpload,
+            nodeId: result.nodeId,
+          });
         } catch (error) {
           const errorMessage =
-            error instanceof Error ? error.message : String(error);
+            error instanceof MxCadUploadError
+              ? error.message
+              : error instanceof Error
+              ? error.message
+              : String(error);
           config.onError?.(`文件 ${file.name} 上传失败: ${errorMessage}`);
         }
       }
@@ -114,168 +128,6 @@ export const useMxCadUploadNative = () => {
     // 触发文件选择
     inputElement.click();
   }, []);
-
-  /**
-   * 分片上传文件
-   * 参考原始 upload.ts 设计：
-   * 1. 先调用 chunkisExist 检查分片是否存在
-   * 2. 如果分片不存在，上传分片
-   * 3. 分片上传后自动触发合并（在 chunkisExist 返回 chunkAlreadyExist 时）
-   * 4. 最后调用 fileisExist 验证文件
-   */
-  const uploadInChunks = async (
-    file: File,
-    hash: string,
-    config: MxCadUploadConfig
-  ): Promise<void> => {
-    const chunkSize = 5 * 1024 * 1024; // 5MB
-    const totalChunks = Math.ceil(file.size / chunkSize);
-
-    // 检查 nodeId 是否已传递
-    if (!config.nodeId) {
-      throw new Error('缺少节点ID，请确保已选择目标文件夹');
-    }
-
-    // 构建请求参数
-    const buildRequest = (extra?: Record<string, any>) => ({
-      fileHash: hash,
-      filename: file.name,
-      nodeId: config.nodeId,
-      ...extra,
-    });
-
-    // 1. 先检查文件是否已存在（秒传）
-    const existRequest = buildRequest();
-    console.log('[fileisExist] 请求:', existRequest);
-    const existResponse = await apiService.post(
-      '/mxcad/files/fileisExist',
-      existRequest
-    );
-    console.log('[fileisExist] 响应:', existResponse.data);
-
-    if (existResponse.data.ret === 'fileAlreadyExist') {
-      // 秒传成功，但需要确保文件节点已在目标目录创建
-      console.log('[fileisExist] 秒传成功，文件节点应在目标目录创建');
-
-      // 获取后端返回的节点 ID
-      const instantNodeId = existResponse.data.nodeId || config.nodeId;
-      console.log('[fileisExist] 秒传成功，节点 ID:', instantNodeId);
-
-      config.onSuccess?.({
-        file,
-        id: hash,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        hash,
-        isUseServerExistingFile: true,
-        isInstantUpload: true,
-        nodeId: instantNodeId,
-      });
-      return;
-    }
-
-    // 2. 开始分片上传
-    config.onBeginUpload?.();
-
-    let newNodeId: string | undefined;
-    const isLastChunk = (chunkIndex: number) => chunkIndex === totalChunks - 1;
-
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      const start = chunkIndex * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunk = file.slice(start, end);
-
-      // 检查分片是否存在
-      const chunkRequest = buildRequest({
-        chunk: chunkIndex,
-        chunks: totalChunks,
-        size: chunk.size,
-      });
-      console.log('[chunkisExist] 请求:', chunkRequest);
-      const chunkResponse = await apiService.post(
-        '/mxcad/files/chunkisExist',
-        chunkRequest
-      );
-      console.log('[chunkisExist] 响应:', chunkResponse.data);
-
-      if (chunkResponse.data.ret === 'chunkAlreadyExist') {
-        // 分片已存在，跳过
-        config.onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
-        continue;
-      }
-
-      console.log('[uploadFiles] 开始上传分片:', chunkIndex, '/', totalChunks);
-      // 上传分片
-      const formData = new FormData();
-      formData.append('file', chunk);
-      formData.append('chunk', chunkIndex.toString());
-      formData.append('chunks', totalChunks.toString());
-      formData.append('name', file.name);
-      formData.append('hash', hash);
-      formData.append('size', file.size.toString());
-      formData.append('nodeId', config.nodeId!);
-
-      const uploadResponse = await apiService.post('/mxcad/files/uploadFiles', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      console.log('[uploadFiles] 响应:', uploadResponse.data);
-
-      // 最后一个分片上传完成后，检查响应中是否包含 nodeId
-      if (isLastChunk(chunkIndex) && uploadResponse.data.nodeId) {
-        newNodeId = uploadResponse.data.nodeId;
-        console.log('[uploadFiles] 新创建的节点 ID:', newNodeId);
-      }
-
-      config.onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
-    }
-
-    // 3. 所有分片上传完成，等待后端处理转换
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // 4. 验证文件是否真正上传成功
-    let verifyAttempts = 0;
-    const maxAttempts = 10;
-    let uploadSuccess = false;
-
-    while (verifyAttempts < maxAttempts && !uploadSuccess) {
-      const verifyRequest = buildRequest();
-      const verifyResponse = await apiService.post(
-        '/mxcad/files/fileisExist',
-        verifyRequest
-      );
-
-      if (verifyResponse.data.ret === 'fileAlreadyExist') {
-        uploadSuccess = true;
-        // 优先使用合并时返回的 nodeId，否则使用 fileisExist 返回的 nodeId
-        const finalNodeId = newNodeId || verifyResponse.data.nodeId || config.nodeId;
-        console.log('[uploadInChunks] 上传成功，节点 ID:', finalNodeId);
-
-        config.onSuccess?.({
-          file,
-          id: hash,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          hash,
-          isUseServerExistingFile: false,
-          nodeId: finalNodeId,
-        });
-        break;
-      }
-
-      verifyAttempts++;
-      if (verifyAttempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    }
-
-    if (!uploadSuccess) {
-      config.onError?.(
-        '文件上传完成，正在后台处理转换，请稍后在文件列表中查看'
-      );
-    }
-  };
 
   /**
    * 销毁上传器

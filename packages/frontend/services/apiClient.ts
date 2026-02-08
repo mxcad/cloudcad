@@ -200,7 +200,6 @@ class ApiClient {
   upload<T = unknown>(url: string, data: unknown): Promise<AxiosResponse<T>> {
     return this.client.post(url, data);
   }
-
-  }
+}
 
 export const apiClient = new ApiClient();

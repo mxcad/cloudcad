@@ -138,7 +138,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
     return (
       <>
-        {isCadFile() && onUploadExternalReference && (
+        {isCadFile() && node.hasMissingExternalReferences && onUploadExternalReference && (
           <button
             onClick={onUploadExternalReference}
             className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors text-amber-600 hover:bg-amber-50"

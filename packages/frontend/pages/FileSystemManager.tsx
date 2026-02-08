@@ -29,6 +29,7 @@ import { ProjectRolesModal } from '../components/modals/ProjectRolesModal';
 import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
+import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -72,11 +73,14 @@ export const FileSystemManager: React.FC = () => {
     confirmDialog,
     showCreateFolderModal,
     showRenameModal,
+    showDownloadFormatModal,
     folderName,
     setFolderName,
     editingNode,
+    downloadingNode,
     setShowCreateFolderModal,
     setShowRenameModal,
+    setShowDownloadFormatModal,
     setEditingNode,
     removeToast,
     closeConfirm,
@@ -91,6 +95,7 @@ export const FileSystemManager: React.FC = () => {
     handleBatchDelete,
     handleFileOpen,
     handleDownload,
+    handleDownloadWithFormat,
     handleOpenRename,
     draggedNodes,
     setDraggedNodes,
@@ -1282,6 +1287,18 @@ export const FileSystemManager: React.FC = () => {
         onSuccess={handleRefresh}
         nodeId={selectedNodeForGallery?.id || ''}
         fileName={selectedNodeForGallery?.name || ''}
+      />
+
+      {/* 下载格式选择模态框 */}
+      <DownloadFormatModal
+        isOpen={showDownloadFormatModal}
+        fileName={downloadingNode?.name || ''}
+        onClose={() => {
+          setShowDownloadFormatModal(false);
+          setDownloadingNode(null);
+        }}
+        onDownload={handleDownloadWithFormat}
+        loading={loading}
       />
 
       {/* 键盘快捷键组件（任务009 - 可选功能） */}

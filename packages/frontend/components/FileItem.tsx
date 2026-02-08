@@ -411,7 +411,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           </>
         ) : (
           <>
-            {isCadFile() && (
+            {isCadFile() && node.hasMissingExternalReferences && (
               <button
                 onClick={handleUploadExternalReference}
                 className="p-2 rounded-lg transition-colors text-amber-600 hover:bg-amber-50"

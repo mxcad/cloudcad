@@ -1,322 +1,410 @@
-# CloudCAD 图纸管理平台
+# 功能开发插件
 
-一个基于 NestJS + React 的现代化图纸管理平台，支持图纸转换、云存储、用户权限管理等核心功能。
+一个全面的、结构化的工作流，用于功能开发，包含专门用于代码库探索、架构设计和质量审查的代理。
 
-## 🚀 快速开始
+## 概述
 
-### 环境要求
+功能开发插件提供了系统化的 7 阶段方法来构建新功能。它不是直接跳入代码，而是引导您理解代码库、提出澄清问题、设计架构并确保质量——从而产生设计更好、与现有代码无缝集成的功能。
 
-- Node.js 18+
-- pnpm 8+
-- Docker & Docker Compose
-- Git
+## 理念
 
-### 项目结构
+构建功能不仅仅是编写代码。您需要：
+- **在进行更改前理解代码库**
+- **提出问题**以澄清模糊的需求
+- **在实现前深思熟虑地设计**
+- **构建后进行质量审查**
 
-```
-cloudcad/
-├── packages/
-│   ├── backend/          # NestJS 后端服务
-│   └── frontend/         # React 前端应用
-├── docker-compose.yml           # 生产环境配置
-├── docker-compose.dev.yml       # 开发环境配置
-├── package.json                 # 根目录配置
-└── README.md                    # 项目文档
-```
+此插件将这些实践嵌入到结构化的工作流中，当您使用 `/feature-dev` 命令时会自动运行。
 
-### 一键启动开发环境
+## 命令: `/feature-dev`
 
+启动引导式功能开发工作流，包含 7 个不同的阶段。
+
+**用法：**
 ```bash
-# 克隆项目
-git clone https://github.com/your-org/cloucad.git
-cd cloudcad
-
-# 安装依赖
-pnpm install
-
-# 启动开发环境
-cd packages/backend
-pnpm run dev
-
-# 启动前端开发服务器
-cd ../frontend
-pnpm run dev
+/feature-dev Add user authentication with OAuth
 ```
 
-## 📋 开发指南
-
-### 后端开发
-
-#### 环境配置
-
-1. 复制环境变量文件：
-
+或简单地：
 ```bash
-cd packages/backend
-cp .env.example .env
+/feature-dev
 ```
 
-2. 启动开发环境：
+该命令将引导您完成整个交互式过程。
 
+## 7 阶段工作流
+
+### 阶段 1：发现
+
+**目标**：理解需要构建什么
+
+**发生什么：**
+- 如果功能请求不清晰，则进行澄清
+- 询问您要解决什么问题
+- 识别约束和需求
+- 总结理解并与您确认
+
+**示例：**
+```
+You: /feature-dev Add caching
+Claude: 让我了解您的需求...
+        - 应该缓存什么？（API 响应、计算值等）
+        - 您的性能要求是什么？
+        - 您有偏好的缓存解决方案吗？
+```
+
+### 阶段 2：代码库探索
+
+**目标**：理解相关的现有代码和模式
+
+**发生什么：**
+- 并行启动 2-3 个 `code-explorer` 代理
+- 每个代理探索不同的方面（类似功能、架构、UI 模式）
+- 代理返回包含要读取的关键文件的全面分析
+- Claude 读取所有识别的文件以构建深入理解
+- 呈现全面的调查结果摘要
+
+**启动的代理：**
+- "查找类似于 [功能] 的功能并追踪实现"
+- "映射 [区域] 的架构和抽象"
+- "分析 [相关功能] 的当前实现"
+
+**示例输出：**
+```
+发现类似功能：
+- 用户认证 (src/auth/)：使用 JWT 令牌、中间件模式
+- 会话管理 (src/session/)：Redis 支持，24 小时过期
+- API 安全 (src/api/middleware/)：速率限制、CORS
+
+要理解的关键文件：
+- src/auth/AuthService.ts:45 - 核心认证逻辑
+- src/middleware/authMiddleware.ts:12 - 请求认证
+- src/config/security.ts:8 - 安全配置
+```
+
+### 阶段 3：澄清问题
+
+**目标**：填补空白并解决所有模糊之处
+
+**发生什么：**
+- 审查代码库调查结果和功能请求
+- 识别未明确指定的方面：
+  - 边缘情况
+  - 错误处理
+  - 集成点
+  - 向后兼容性
+  - 性能需求
+- 以组织化的列表呈现所有问题
+- **在继续之前等待您的回答**
+
+**示例：**
+```
+在设计架构之前，我需要澄清：
+
+1. OAuth 提供商：哪些 OAuth 提供商？（Google、GitHub、自定义？）
+2. 用户数据：存储 OAuth 令牌还是仅用户配置文件？
+3. 现有认证：替换当前认证还是并行添加？
+4. 会话：与现有会话管理集成？
+5. 错误处理：如何处理 OAuth 失败？
+```
+
+**关键**：此阶段确保在设计开始前没有任何模糊之处。
+
+### 阶段 4：架构设计
+
+**目标**：设计多种实现方法
+
+**发生什么：**
+- 启动 2-3 个 `code-architect` 代理，关注点不同：
+  - **最小更改**：最小更改，最大重用
+  - **干净架构**：可维护性、优雅的抽象
+  - **务实平衡**：速度 + 质量
+- 审查所有方法
+- 为此任务形成最适合的意见
+- 呈现比较、权衡和建议
+- **询问您更喜欢哪种方法**
+
+**示例输出：**
+```
+我设计了 3 种方法：
+
+方法 1：最小更改
+- 用 OAuth 方法扩展现有的 AuthService
+- 将新的 OAuth 路由添加到现有的认证路由器
+- 需要的重构最少
+优点：快速，风险低
+缺点：OAuth 与现有认证耦合，更难测试
+
+方法 2：干净架构
+- 具有专用接口的新 OAuthService
+- 独立的 OAuth 路由器和中间件
+- 使用通用接口重构 AuthService
+优点：清晰分离，可测试，可维护
+缺点：更多文件，更多重构
+
+方法 3：务实平衡
+- 新的 OAuthProvider 抽象
+- 集成到现有的 AuthService 中
+- 最小重构，良好的边界
+优点：平衡复杂性和简洁性
+缺点：仍存在一些耦合
+
+建议：方法 3 - 在不进行过多重构的情况下为您提供清晰的边界，并且非常适合您现有的架构。
+
+您想使用哪种方法？
+```
+
+### 阶段 5：实现
+
+**目标**：构建功能
+
+**发生什么：**
+- **在开始前等待明确批准**
+- 读取在先前阶段识别的所有相关文件
+- 遵循选择的架构进行实现
+- 严格遵循代码库约定
+- 编写干净、文档良好的代码
+- 随着进度更新待办事项
+
+**注意：**
+- 实现仅在您批准后开始
+- 遵循阶段 2 发现的模式
+- 使用阶段 4 设计的架构
+- 持续跟踪进度
+
+### 阶段 6：质量审查
+
+**目标**：确保代码简单、DRY、优雅且功能正确
+
+**发生什么：**
+- 启动 3 个 `code-reviewer` 代理，关注点不同：
+  - **简单性/DRY/优雅性**：代码质量和可维护性
+  - **错误/正确性**：功能正确性和逻辑错误
+  - **约定/抽象**：项目标准和模式
+- 整合调查结果
+- 识别最高严重性问题
+- **呈现调查结果并询问您想做什么**：
+  - 立即修复
+  - 稍后修复
+  - 按原样继续
+- 根据您的决定解决问题
+
+**示例输出：**
+```
+代码审查结果：
+
+高优先级问题：
+1. OAuth 回调缺少错误处理 (src/auth/oauth.ts:67)
+2. 内存泄漏：OAuth 状态未清理 (src/auth/oauth.ts:89)
+
+中等优先级：
+1. 可以简化令牌刷新逻辑 (src/auth/oauth.ts:120)
+2. 考虑提取 OAuth 配置验证
+
+所有测试通过。代码遵循项目约定。
+
+您想做什么？
+```
+
+### 阶段 7：总结
+
+**目标**：记录完成的内容
+
+**发生什么：**
+- 标记所有待办事项完成
+- 总结：
+  - 构建了什么
+  - 做出的关键决策
+  - 修改的文件
+  - 建议的后续步骤
+
+**示例：**
+```
+功能完成：OAuth 认证
+
+构建了什么：
+- 支持 Google 和 GitHub 的 OAuth 提供商抽象
+- 与现有认证集成的 OAuth 路由和中间件
+- 令牌刷新和会话集成
+- 所有 OAuth 流的错误处理
+
+关键决策：
+- 使用具有 OAuthProvider 抽象的务实方法
+- 与现有会话管理集成
+- 添加 OAuth 状态以防止 CSRF
+
+修改的文件：
+- src/auth/OAuthProvider.ts (新)
+- src/auth/AuthService.ts
+- src/routes/auth.ts
+- src/middleware/authMiddleware.ts
+
+建议的后续步骤：
+- 为 OAuth 流添加测试
+- 添加更多 OAuth 提供商（Microsoft、Apple）
+- 更新文档
+```
+
+## 代理
+
+### `code-explorer`
+
+**目的**：通过追踪执行路径深入分析现有代码库功能
+
+**关注领域：**
+- 入口点和调用链
+- 数据流和转换
+- 架构层和模式
+- 依赖关系和集成
+- 实现细节
+
+**触发时机：**
+- 在阶段 2 自动触发
+- 可以在探索代码时手动调用
+
+**输出：**
+- 包含 file:line 引用的入口点
+- 逐步执行流
+- 关键组件和职责
+- 架构见解
+- 要读取的基本文件列表
+
+### `code-architect`
+
+**目的**：设计功能架构和实现蓝图
+
+**关注领域：**
+- 代码库模式分析
+- 架构决策
+- 组件设计
+- 实现路线图
+- 数据流和构建顺序
+
+**触发时机：**
+- 在阶段 4 自动触发
+- 可以在架构设计时手动调用
+
+**输出：**
+- 发现的模式和约定
+- 带有原理的架构决策
+- 完整的组件设计
+- 包含特定文件的实现映射
+- 包含阶段的构建顺序
+
+### `code-reviewer`
+
+**目的**：审查代码中的错误、质量问题和项目约定
+
+**关注领域：**
+- 项目指南合规性（CLAUDE.md）
+- 错误检测
+- 代码质量问题
+- 基于置信度的过滤（仅报告置信度 ≥80 的问题）
+
+**触发时机：**
+- 在阶段 6 自动触发
+- 可以在编写代码后手动调用
+
+**输出：**
+- 关键问题（置信度 75-100）
+- 重要问题（置信度 50-74）
+- 包含 file:line 引用的具体修复
+- 项目指南引用
+
+## 使用模式
+
+### 完整工作流（推荐用于新功能）：
 ```bash
-pnpm run dev          # 启动数据库、Redis、MinIO
-pnpm run start:dev    # 启动后端开发服务器
+/feature-dev Add rate limiting to API endpoints
 ```
 
-#### 可用命令
+让工作流引导您完成所有 7 个阶段。
 
-```bash
-# 开发环境
-pnpm run dev          # 启动开发环境服务
-pnpm run dev:stop     # 停止开发环境
-pnpm run dev:logs     # 查看服务日志
-pnpm run dev:status   # 查看服务状态
+### 手动代理调用：
 
-# 后端开发
-pnpm run start:dev    # 启动后端开发服务器
-pnpm run build        # 构建项目
-pnpm run test         # 运行测试
-
-# 数据库
-pnpm run prisma:studio    # 打开数据库管理界面
-pnpm run prisma:migrate   # 运行数据库迁移
-pnpm run prisma:generate  # 生成 Prisma 客户端
+**探索功能：**
+```
+"Launch code-explorer to trace how authentication works"
 ```
 
-#### 服务地址
-
-- **后端 API**: http://localhost:3001
-- **API 文档**: http://localhost:3001/api/docs
-- **数据库**: localhost:5432 (postgres/password)
-- **Redis**: localhost:6379
-- **MinIO**: http://localhost:9000 (minioadmin/minioadmin)
-- **PgAdmin**: http://localhost:5050 (admin@cloucad.com/admin123)
-
-### 前端开发
-
-#### 环境配置
-
-1. 安装依赖：
-
-```bash
-cd packages/frontend
-pnpm install
+**设计架构：**
+```
+"Launch code-architect to design the caching layer"
 ```
 
-2. 启动开发服务器：
-
-```bash
-pnpm run dev
+**审查代码：**
+```
+"Launch code-reviewer to check my recent changes"
 ```
 
-#### 可用命令
+## 最佳实践
 
-```bash
-pnpm run dev          # 启动开发服务器
-pnpm run build        # 构建生产版本
-pnpm run preview      # 预览生产版本
-pnpm run test         # 运行测试
-pnpm run lint         # 代码检查
-```
+1. **对复杂功能使用完整工作流**：7 个阶段确保彻底规划
+2. **深思熟虑地回答澄清问题**：阶段 3 防止未来混淆
+4. **不要跳过代码审查**：阶段 6 在代码到达生产环境前捕获问题
+5. **阅读建议的文件**：阶段 2 识别关键文件——阅读它们以理解上下文
 
-## 🏗️ 技术栈
+## 使用时机
 
-### 后端技术栈
+**适用于：**
+- 触及多个文件的新功能
+- 需要架构决策的功能
+- 与现有代码的复杂集成
+- 需求有些模糊的功能
 
-- **框架**: NestJS 11 + Fastify
-- **语言**: TypeScript
-- **数据库**: PostgreSQL 15 + Prisma ORM
-- **缓存**: Redis 7
-- **存储**: MinIO (S3兼容)
-- **认证**: JWT + RBAC权限
-- **文档**: Swagger/OpenAPI
-- **容器化**: Docker + Docker Compose
+**不适用于：**
+- 单行错误修复
+- 琐碎的更改
+- 定义明确、简单的任务
+- 紧急热修复
 
-### 前端技术栈
+## 要求
 
-- **框架**: React 18 + TypeScript
-- **构建工具**: Vite
-- **UI组件**: Bootstrap + Material Design
-- **状态管理**: React Context / Zustand
-- **HTTP客户端**: Axios
-- **路由**: React Router
-- **表单**: React Hook Form
+- 已安装 Claude Code
+- Git 仓库（用于代码审查）
+- 具有现有代码库的项目（工作流假设存在现有代码供学习）
 
-## 🔧 开发规范
+## 故障排除
 
-### 代码规范
+### 代理耗时过长
 
-- 使用 TypeScript 严格模式
-- 遵循 ESLint + Prettier 配置
-- 组件使用 PascalCase 命名
-- 文件使用 camelCase 命名
-- 常量使用 UPPER_SNAKE_CASE
+**问题**：代码探索或架构代理运行缓慢
 
-### Git 规范
+**解决方案**：
+- 对于大型代码库很正常
+- 代理尽可能并行运行
+- 彻底性在更好的理解中得到回报
 
-```bash
-git commit -m "feat: 添加用户管理功能"
-git commit -m "fix: 修复文件上传bug"
-git commit -m "docs: 更新API文档"
-git commit -m "style: 代码格式调整"
-git commit -m "refactor: 重构认证模块"
-git commit -m "test: 添加单元测试"
-```
+### 过多的澄清问题
 
-### 分支策略
+**问题**：阶段 3 提出太多问题
 
-- `main`: 生产环境分支
-- `develop`: 开发环境分支
-- `feature/*`: 功能开发分支
-- `hotfix/*`: 紧急修复分支
+**解决方案**：
+- 在初始功能请求中更具体
+- 在开头提供有关约束的上下文
+- 如果确实没有偏好，说"您认为什么最好"
 
-## 📦 部署指南
+### 架构选项过多
 
-### 开发环境部署
+**问题**：阶段 4 的架构选项过多
 
-```bash
-cd packages/backend
-pnpm run dev
-```
+**解决方案**：
+- 信任推荐——它基于代码库分析
+- 如果仍然不确定，要求更多解释
+- 当不确定时选择务实的选项
 
-### 生产环境部署
+## 提示
 
-```bash
-cd packages/backend
-pnpm run prod
-```
+- **在功能请求中具体**：更多细节 = 更少的澄清问题
+- **信任过程**：每个阶段都建立在前一个阶段的基础上
+- **审查代理输出**：代理提供有关您自己代码库的宝贵见解
+- **不要跳过阶段**：每个阶段都有其目的
+- **用于学习**：探索阶段教您了解自己的代码库
 
-### Docker 部署
+## 作者
 
-```bash
-# 构建镜像
-pnpm run docker:build
+Sid Bidasaria (sbidasaria@anthropic.com)
 
-# 启动服务
-pnpm run docker:up
+## 版本
 
-# 查看日志
-pnpm run docker:logs
-```
-
-## 🔐 环境变量
-
-### 后端环境变量
-
-```env
-# 应用配置
-PORT=3001
-NODE_ENV=development
-
-# JWT配置
-JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=1h
-JWT_REFRESH_EXPIRES_IN=7d
-
-# 数据库配置
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=password
-DB_DATABASE=cloucad
-
-# Redis配置
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# MinIO配置
-MINIO_ENDPOINT=localhost
-MINIO_PORT=9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-```
-
-### 前端环境变量
-
-```env
-VITE_API_BASE_URL=http://localhost:3001/api
-VITE_APP_NAME=CloudCAD
-```
-
-## 🧪 测试
-
-### 后端测试
-
-```bash
-cd packages/backend
-pnpm run test              # 运行单元测试
-pnpm run test:e2e          # 运行端到端测试
-pnpm run test:cov          # 查看测试覆盖率
-```
-
-### 前端测试
-
-```bash
-cd packages/frontend
-pnpm run test              # 运行单元测试
-pnpm run test:e2e          # 运行端到端测试
-```
-
-## 📊 监控与日志
-
-### 健康检查
-
-- 后端健康检查: http://localhost:3001/api/health
-- 数据库健康检查: http://localhost:3001/api/health/db
-- 存储健康检查: http://localhost:3001/api/health/storage
-
-### 日志查看
-
-```bash
-# 开发环境日志
-pnpm run dev:logs
-
-# 生产环境日志
-pnpm run prod:logs
-
-# Docker日志
-docker-compose logs -f
-```
-
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'feat: Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🆘 支持
-
-如果您遇到问题或有建议，请：
-
-1. 查看 [FAQ](docs/FAQ.md)
-2. 搜索 [Issues](https://github.com/your-org/cloucad/issues)
-3. 创建新的 Issue
-
-## 🎯 路线图
-
-- [x] 基础架构搭建
-- [x] 用户认证系统
-- [x] 文件上传下载
-- [ ] 图纸转换功能
-- [ ] 项目管理
-- [ ] 权限管理
-- [ ] 图块库
-- [ ] 字体库
-- [ ] 分享功能
-- [ ] 移动端适配
-
-## 📞 联系我们
-
-- 项目主页: https://github.com/your-org/cloucad
-- 问题反馈: https://github.com/your-org/cloucad/issues
-- 邮箱: dev@cloucad.com
-
----
-
-⭐ 如果这个项目对您有帮助，请给我们一个 Star！
+1.0.0

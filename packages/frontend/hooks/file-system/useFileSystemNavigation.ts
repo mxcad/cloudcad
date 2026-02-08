@@ -126,7 +126,7 @@ export const useFileSystemNavigation = ({
         showToast(errorMessage, 'error');
       }
     },
-    [showToast]
+    [showToast, filesApi, handleError]
   );
 
   return {

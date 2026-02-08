@@ -34,7 +34,7 @@
   "mTitleButtonBarData": [
     {
       "icon": "dakaidwg",
-      "cmd": "OpenDwg",
+      "cmd": "openFile",
       "prompt": "打开文件"
     },
     {
@@ -362,33 +362,12 @@
         {
           "tab": "打开文件(M)",
           "icon": "dakaidwg",
-          "cmd": "OpenDwg"
+          "cmd": "openFile"
         },
         {
-          "tab": "打开文件(不使用缓存)(C)",
-          "icon": "dakaidwg",
-          "cmd": "OpenDwg_DoNotUseCache"
-        },
-        {
-          "tab": "另存为dwg文件",
+          "tab": "另存为",
           "icon": "lingcunweiDWG",
-          "cmd": "Mx_Export_DWG"
-        },
-        {
-          "tab": "另存为mxweb文件",
-          "icon": "baocun",
-          "cmd": "Mx_SaveAs"
-        },
-        {
-          "type": "divider"
-        },
-        {
-          "tab": "打印",
-          "icon": "dayin1",
-          "cmd": "Mx_PrintDialog"
-        },
-        {
-          "type": "divider"
+          "cmd": "exportFile"
         }
       ]
     },

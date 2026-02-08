@@ -293,8 +293,8 @@ export class FontsService {
     location: 'backend' | 'frontend'
   ): Promise<{ stream: fsSync.ReadStream; fileName: string }> {
     try {
-      // 验证文件名
-      if (!fileName || fileName.includes('..') || fileName.includes('/')) {
+      // 验证文件名（防止路径遍历攻击）
+      if (!fileName || fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
         throw new BadRequestException('无效的文件名');
       }
 
