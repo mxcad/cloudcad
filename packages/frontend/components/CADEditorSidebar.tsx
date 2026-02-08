@@ -307,29 +307,29 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       {/* 侧边栏 */}
       <div
         ref={sidebarRef}
-        className={`bg-[#1a1a1a] text-white flex flex-col transition-all duration-200 ease-in-out ${
+        className={`bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out ${
           isCollapsed ? 'w-0 overflow-hidden' : ''
         }`}
         style={{ width: isCollapsed ? 0 : width }}
       >
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#4A5568]">
           <div className="flex items-center gap-2">
-            <Box className="w-5 h-5 text-indigo-400" />
-            <span className="font-semibold text-sm">
+            <Box className="w-5 h-5 text-[#4F46E5]" />
+            <span className="font-semibold text-sm text-[#E2E8F0]">
               {galleryType === 'drawings' ? '图纸库' : '图块库'}
             </span>
           </div>
         </div>
 
         {/* 图库类型切换 */}
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-[#4A5568]">
           <button
             onClick={() => setGalleryType('drawings')}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               galleryType === 'drawings'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? 'bg-[#1A202C] text-[#E2E8F0]'
+                : 'text-[#94A3B8] hover:text-[#E2E8F0] hover:bg-[#333A47]'
             }`}
           >
             <FileText className="w-4 h-4 mx-auto mb-1" />
@@ -339,8 +339,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
             onClick={() => setGalleryType('blocks')}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               galleryType === 'blocks'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? 'bg-[#1A202C] text-[#E2E8F0]'
+                : 'text-[#94A3B8] hover:text-[#E2E8F0] hover:bg-[#333A47]'
             }`}
           >
             <Box className="w-4 h-4 mx-auto mb-1" />
@@ -349,22 +349,22 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         </div>
 
         {/* 搜索框 */}
-        <div className="px-3 py-2 border-b border-gray-700">
+        <div className="px-3 py-2 border-b border-[#4A5568]">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-[#94A3B8] w-4 h-4" />
             <input
               type="text"
               placeholder="搜索文件..."
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-8 pr-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-8 pr-3 py-1.5 bg-[#252B3A] border border-[#4A5568] rounded text-sm text-[#E2E8F0] placeholder-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#4F46E5] focus:border-transparent"
             />
           </div>
         </div>
 
         {/* 分类筛选 */}
-        <div className="px-3 py-2 border-b border-gray-700">
+        <div className="px-3 py-2 border-b border-[#4A5568]">
           <div className="space-y-2">
             {/* 一级分类 */}
             <select
@@ -374,7 +374,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                 setSelectedSecondType(-1);
                 setSelectedThirdType(-1);
               }}
-              className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-2 py-1.5 bg-[#252B3A] border border-[#4A5568] rounded text-sm text-[#E2E8F0] focus:outline-none focus:ring-1 focus:ring-[#4F46E5]"
             >
               <option value={-1}>全部分类</option>
               {firstLevelTypes.map((type) => (
@@ -392,10 +392,10 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                 setSelectedThirdType(-1);
               }}
               disabled={!selectedFirstTypeData}
-              className={`w-full px-2 py-1.5 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+              className={`w-full px-2 py-1.5 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#4F46E5] ${
                 !selectedFirstTypeData
-                  ? 'bg-gray-700 border border-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-gray-800 border border-gray-700 text-white'
+                  ? 'bg-[#2D3748] border border-[#4A5568] text-[#718096] cursor-not-allowed'
+                  : 'bg-[#252B3A] border border-[#4A5568] text-[#E2E8F0]'
               }`}
             >
               <option value={-1}>
@@ -416,10 +416,10 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         <div className="flex-1 overflow-y-auto">
           {loading && files.length === 0 ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+              <Loader2 className="w-6 h-6 text-[#4F46E5] animate-spin" />
             </div>
           ) : files.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+            <div className="flex flex-col items-center justify-center py-8 text-[#94A3B8]">
               {galleryType === 'drawings' ? (
                 <FileText className="w-10 h-10 mb-2 opacity-50" />
               ) : (
@@ -436,11 +436,11 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                 {files.map((file) => (
                   <div
                     key={file.uuid}
-                    className="group relative bg-gray-800 rounded overflow-hidden hover:bg-gray-700 transition-colors cursor-pointer"
+                    className="group relative bg-[#252B3A] rounded overflow-hidden hover:bg-[#333A47] transition-colors cursor-pointer"
                     onClick={() => handleInsertFile(file)}
                   >
                     {/* 预览图 */}
-                    <div className="aspect-[4/3] bg-gray-900 relative overflow-hidden">
+                    <div className="aspect-[4/3] bg-[#1A202C] relative overflow-hidden">
                       <img
                         src={getPreviewImageUrl(file)}
                         alt={file.filename}
@@ -458,7 +458,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                             e.stopPropagation();
                             handleInsertFile(file);
                           }}
-                          className="p-1.5 bg-indigo-600 hover:bg-indigo-700 rounded transition-colors pointer-events-auto"
+                          className="p-1.5 bg-[#4F46E5] hover:bg-[#4338CA] rounded transition-colors pointer-events-auto"
                           title={galleryType === 'blocks' ? '插入' : '打开'}
                         >
                           <Box className="w-3 h-3" />
@@ -468,7 +468,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                             e.stopPropagation();
                             handleRemoveFromGallery(file);
                           }}
-                          className="p-1.5 bg-red-600 hover:bg-red-700 rounded transition-colors pointer-events-auto"
+                          className="p-1.5 bg-[#EF4444] hover:bg-[#DC2626] rounded transition-colors pointer-events-auto"
                           title="移除"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -478,14 +478,14 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
 
                     {/* 文件信息 */}
                     <div className="p-1.5">
-                      <p className="text-xs font-medium text-gray-200 truncate">
+                      <p className="text-xs font-medium text-[#CBD5E0] truncate">
                         {file.filename}
                       </p>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-500 bg-gray-700 px-1 rounded">
+                        <span className="text-xs text-[#94A3B8] bg-[#2D3748] px-1 rounded">
                           {file.type}
                         </span>
-                        <div className="flex items-center gap-0.5 text-xs text-gray-500">
+                        <div className="flex items-center gap-0.5 text-xs text-[#94A3B8]">
                           <BookOpen className="w-3 h-3" />
                           <span>{file.lookNum}</span>
                         </div>
@@ -497,8 +497,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
 
               {/* 分页 */}
               {pagination && pagination.count > 0 && (
-                <div className="px-2 py-2 border-t border-gray-700 flex items-center justify-between">
-                  <div className="text-xs text-gray-400">
+                <div className="px-2 py-2 border-t border-[#4A5568] flex items-center justify-between">
+                  <div className="text-xs text-[#94A3B8]">
                     {pagination.index + 1} / {pagination.max}
                   </div>
                   <div className="flex gap-1">
@@ -508,8 +508,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                       disabled={!pagination.up}
                       className={`px-2 py-1 text-xs rounded ${
                         !pagination.up
-                          ? 'text-gray-600 cursor-not-allowed'
-                          : 'text-gray-300 hover:bg-gray-700'
+                          ? 'text-[#718096] cursor-not-allowed'
+                          : 'text-[#CBD5E0] hover:bg-[#333A47]'
                       }`}
                     >
                       上一页
@@ -520,8 +520,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                       disabled={!pagination.down}
                       className={`px-2 py-1 text-xs rounded ${
                         !pagination.down
-                          ? 'text-gray-600 cursor-not-allowed'
-                          : 'text-gray-300 hover:bg-gray-700'
+                          ? 'text-[#718096] cursor-not-allowed'
+                          : 'text-[#CBD5E0] hover:bg-[#333A47]'
                       }`}
                     >
                       下一页
@@ -539,8 +539,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         <div
           ref={resizerRef}
           onMouseDown={handleMouseDown}
-          className={`absolute top-0 w-1 h-full bg-transparent hover:bg-indigo-500 cursor-col-resize z-50 transition-colors ${
-            isResizing ? 'bg-indigo-500' : ''
+          className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${
+            isResizing ? 'bg-[#4F46E5]' : ''
           }`}
           style={{ left: width }}
         />
