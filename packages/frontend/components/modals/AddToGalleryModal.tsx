@@ -435,7 +435,6 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
   // 获取三级分类列表
   const thirdLevelTypes = types.filter((t) => t.pid === selectedSecondType);
-  const selectedThirdTypeData = thirdLevelTypes.find((t) => t.id === selectedThirdType);
 
   // 处理提交
   const handleSubmit = async () => {

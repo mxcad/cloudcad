@@ -195,9 +195,6 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
 
   // 获取三级分类列表
   const thirdLevelTypes = types.filter((t) => t.pid === selectedSecondType);
-  const selectedThirdTypeData = thirdLevelTypes.find(
-    (t) => t.id === selectedThirdType
-  );
 
   // 获取文件预览图 URL
   const getPreviewImageUrl = (file: GalleryFile): string => {
