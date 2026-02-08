@@ -318,6 +318,11 @@ export const CADEditorDirect: React.FC = () => {
       // 动态导入 openUploadedFile 函数，复用 openFile 命令的逻辑
       const { openUploadedFile } = await import('../services/mxcadManager');
 
+      // 更新浏览器 URL（不触发 React Router）
+      // 路径部分：新打开的文件 ID
+      // nodeId 参数：保持不变（所在目录）
+      window.history.replaceState(null, '', `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}`);
+
       // 调用 openUploadedFile 打开文件，保持与 openFile 命令完全一致的行为
       await openUploadedFile(file.nodeId, uploadTargetNodeId, true);
     } catch (error) {

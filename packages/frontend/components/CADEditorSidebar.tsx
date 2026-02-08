@@ -3,6 +3,7 @@ import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { galleryApi } from '../services/galleryApi';
 import { mxcadManager } from '../services/mxcadManager';
+import { MxFun } from 'mxdraw';
 
 // 图库类型
 type GalleryType = 'drawings' | 'blocks';
@@ -266,15 +267,38 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   };
 
   // 处理插入文件到CAD编辑器
-  const handleInsertFile = (file: GalleryFile) => {
-    if (onInsertFile) {
-      onInsertFile({
-        nodeId: file.nodeId,
-        filename: file.filename,
-      });
-    } else {
-      console.log('插入文件:', file);
-      alert(`插入文件: ${file.filename}`);
+  const handleInsertFile = async (file: GalleryFile) => {
+    try {
+      // 图块库：使用 Mx_Insert 插入图块
+      if (galleryType === 'blocks') {
+        // 通过 nodeId 获取 mxweb 文件 URL
+        const mxwebFileUrl = await galleryApi.getMxwebFileUrlByNodeId(file.nodeId);
+
+        // 使用 MxFun.sendStringToExecute 插入图块
+        MxFun.sendStringToExecute('Mx_Insert', {
+          filePath: mxwebFileUrl,
+          name: file.filename,
+          hash: file.nodeId,
+          isBlockLibrary: true,
+        });
+
+        console.log('插入图块:', file.filename, mxwebFileUrl);
+      }
+      // 图纸库：调用 onInsertFile 打开图纸
+      else if (galleryType === 'drawings') {
+        if (onInsertFile) {
+          onInsertFile({
+            nodeId: file.nodeId,
+            filename: file.filename,
+          });
+        } else {
+          console.log('打开图纸:', file);
+          alert(`打开图纸: ${file.filename}`);
+        }
+      }
+    } catch (error) {
+      console.error('操作失败:', error);
+      alert(`${galleryType === 'blocks' ? '插入图块' : '打开图纸'}失败: ${file.filename}`);
     }
   };
 
@@ -413,29 +437,29 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                   <div
                     key={file.uuid}
                     className="group relative bg-gray-800 rounded overflow-hidden hover:bg-gray-700 transition-colors cursor-pointer"
+                    onClick={() => handleInsertFile(file)}
                   >
                     {/* 预览图 */}
                     <div className="aspect-[4/3] bg-gray-900 relative overflow-hidden">
                       <img
                         src={getPreviewImageUrl(file)}
                         alt={file.filename}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform pointer-events-none"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23374151"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%236b7280" font-size="12"%3E无预览%3C/text%3E%3C/svg%3E';
                         }}
-                        onClick={() => handleInsertFile(file)}
                       />
 
                       {/* 悬停操作按钮 */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 pointer-events-none">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleInsertFile(file);
                           }}
-                          className="p-1.5 bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
-                          title="插入"
+                          className="p-1.5 bg-indigo-600 hover:bg-indigo-700 rounded transition-colors pointer-events-auto"
+                          title={galleryType === 'blocks' ? '插入' : '打开'}
                         >
                           <Box className="w-3 h-3" />
                         </button>
@@ -444,7 +468,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
                             e.stopPropagation();
                             handleRemoveFromGallery(file);
                           }}
-                          className="p-1.5 bg-red-600 hover:bg-red-700 rounded transition-colors"
+                          className="p-1.5 bg-red-600 hover:bg-red-700 rounded transition-colors pointer-events-auto"
                           title="移除"
                         >
                           <Trash2 className="w-3 h-3" />

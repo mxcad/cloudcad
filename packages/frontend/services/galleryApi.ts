@@ -179,4 +179,19 @@ export const galleryApi = {
         galleryType: string;
       };
     }>(`/gallery/${galleryType}/items/${nodeId}`, params),
+
+  /**
+   * 获取 mxweb 文件 URL（通过 nodeId）
+   * @param nodeId 节点 ID
+   * @returns Promise<mxweb 文件的完整 URL>
+   */
+  getMxwebFileUrlByNodeId: async (nodeId: string): Promise<string> => {
+    const { UrlHelper } = await import('../utils/mxcadUtils');
+    const response = await apiClient.get<{
+      path: string;
+      fileHash: string;
+    }>(`/file-system/nodes/${nodeId}`);
+    const fileInfo = response.data;
+    return UrlHelper.buildMxCadFileUrl(fileInfo.path);
+  },
 };
