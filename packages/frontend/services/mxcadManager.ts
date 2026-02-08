@@ -470,6 +470,117 @@ MxFun.addCommand('Mx_ShowSidebar', () => {
   window.dispatchEvent(event);
   Logger.info('已触发侧边栏切换事件');
 });
+
+// ==================== Mx_Save 命令 ====================
+
+/**
+ * Mx_Save 命令：保存当前 CAD 文件
+ */
+MxFun.addCommand('Mx_Save', async () => {
+  try {
+    Logger.info('========== 执行 Mx_Save 命令 ==========');
+
+    // 检查当前文件信息
+    if (!currentFileInfo) {
+      Logger.error('当前文件信息为空，无法保存');
+      alert('无法获取当前文件信息，请重新打开文件');
+      return;
+    }
+
+    const { fileId, name } = currentFileInfo;
+    Logger.info(`准备保存文件: fileId=${fileId}, name=${name}`);
+
+    // 显示加载动画
+    showLoadingOverlay('正在保存文件...');
+
+    // 保存文件为 mxweb 格式
+    const savedFile = await new Promise<any>((resolve, reject) => {
+      MxCpp.App.getCurrentMxCAD().saveFile(
+        name,
+        (data) => {
+          try {
+            let blob: Blob;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isSafari) {
+              blob = new Blob([data.buffer], { type: 'application/octet-stream' });
+            } else {
+              blob = new Blob([data.buffer], { type: 'application/octet-binary' });
+            }
+            resolve({
+              blob,
+              data,
+              filename: name,
+            });
+          } catch (e) {
+            reject(e);
+            Logger.error('保存文件失败', e);
+          }
+        },
+        false, // isDownload
+        false, // isShowSaveFileDialog
+        undefined // compression
+      );
+    });
+
+    Logger.info('文件保存到内存成功，开始上传到服务器');
+
+    // 上传到服务器
+    updateLoadingMessage('正在上传到服务器...');
+    await mxcadApi.saveMxwebFile(
+      savedFile.blob,
+      fileId,
+      (percentage) => {
+        updateLoadingMessage(`正在上传到服务器... ${percentage.toFixed(1)}%`);
+      }
+    );
+
+    Logger.info('服务器上传成功，开始更新本地缓存');
+
+    // 更新 indexedDB 中的缓存
+    try {
+      // 获取当前文件的 URL
+      const fileInfoResponse = await apiService.get(`/file-system/nodes/${fileId}`);
+      const fileInfo = fileInfoResponse.data;
+
+      if (fileInfo.path) {
+        // 构建缓存路径
+        const cachePath = `/mxcad/filesData/${fileInfo.path}`;
+        Logger.info(`缓存路径: ${cachePath}`);
+
+        // 直接连接 indexedDB 更新缓存
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open('emscripten_filesystem', 1);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+
+        const transaction = db.transaction(['FILES'], 'readwrite');
+        const objectStore = transaction.objectStore('FILES');
+
+        // 直接存储 ArrayBuffer
+        await new Promise<void>((resolve, reject) => {
+          const request = objectStore.put(savedFile.data.buffer, cachePath);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve();
+        });
+
+        Logger.success(`indexedDB 缓存更新成功: ${cachePath}`);
+      }
+    } catch (cacheError) {
+      Logger.error('更新 indexedDB 缓存失败，但不影响保存结果', cacheError);
+      // 缓存更新失败不影响主流程，继续显示保存成功
+    }
+
+    Logger.success('文件保存成功');
+    hideLoadingOverlay();
+    alert('文件保存成功');
+  } catch (error) {
+    Logger.error('保存文件失败', error);
+    hideLoadingOverlay();
+    const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后重试';
+    alert(errorMessage);
+  }
+});
 /**
  * MxCAD 容器管理器
  * 负责创建和管理永不销毁的全局容器

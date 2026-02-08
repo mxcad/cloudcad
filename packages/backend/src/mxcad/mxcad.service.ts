@@ -894,4 +894,87 @@ export class MxCadService {
     };
     return mimeTypes[ext] || 'application/octet-stream';
   }
+
+  /**
+   * 保存 mxweb 文件到指定节点
+   * @param nodeId 节点 ID
+   * @param file 上传的 mxweb 文件
+   * @returns 保存结果
+   */
+  async saveMxwebFile(
+    nodeId: string,
+    file: Express.Multer.File
+  ): Promise<{ success: boolean; message: string; path?: string }> {
+    try {
+      this.logger.log(`[saveMxwebFile] 开始保存: nodeId=${nodeId}, file=${file?.originalname}`);
+
+      // 验证文件是否存在
+      if (!file || !file.path) {
+        return {
+          success: false,
+          message: '缺少文件',
+        };
+      }
+
+      // 通过 nodeId 查找节点
+      const node = await this.fileSystemNodeService.findById(nodeId);
+
+      if (!node) {
+        this.logger.error(`[saveMxwebFile] 节点不存在: nodeId=${nodeId}`);
+        return {
+          success: false,
+          message: '节点不存在',
+        };
+      }
+
+      // 验证文件扩展名
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (ext !== '.mxweb') {
+        return {
+          success: false,
+          message: `不支持的文件格式: ${ext}，仅支持 .mxweb 文件`,
+        };
+      }
+
+      // 获取节点目录路径
+      const nodeFullPath = this.storageManager.getFullPath(node.path);
+      const nodeDir = path.dirname(nodeFullPath);
+
+      // 确保目标目录存在
+      if (!fs.existsSync(nodeDir)) {
+        await fsPromises.mkdir(nodeDir, { recursive: true });
+        this.logger.log(`[saveMxwebFile] 创建目录: ${nodeDir}`);
+      }
+
+      // 目标文件路径
+      const targetPath = nodeFullPath;
+
+      // 拷贝文件到目标位置（覆盖原文件）
+      await fsPromises.copyFile(file.path, targetPath);
+      this.logger.log(`[saveMxwebFile] 文件保存成功: ${file.path} -> ${targetPath}`);
+
+      // 删除临时上传文件
+      try {
+        await fsPromises.unlink(file.path);
+        this.logger.log(`[saveMxwebFile] 删除临时文件: ${file.path}`);
+      } catch (error) {
+        this.logger.warn(`[saveMxwebFile] 删除临时文件失败: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        message: '保存成功',
+        path: node.path,
+      };
+    } catch (error) {
+      this.logger.error(
+        `[saveMxwebFile] 保存失败: ${error.message}`,
+        error.stack
+      );
+      return {
+        success: false,
+        message: `保存失败: ${error.message}`,
+      };
+    }
+  }
 }

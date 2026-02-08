@@ -37,6 +37,7 @@ import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -664,6 +665,76 @@ export class MxCadController {
       return res.json(result);
     } catch (e) {
       return res.json({ ret: 'failed', code: -1, message: 'catch error' });
+    }
+  }
+
+  /**
+   * 保存 mxweb 文件到指定节点
+   * 路由: POST /api/mxcad/savemxweb/:nodeId
+   */
+  @Post('savemxweb/:nodeId')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: '保存 mxweb 文件到指定节点' })
+  async saveMxwebToNode(
+    @Param('nodeId') nodeId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: any,
+    @Res() res: Response
+  ) {
+    try {
+      this.logger.log(`[saveMxwebToNode] 开始保存: nodeId=${nodeId}`);
+
+      // 验证用户身份
+      const userId = await this.validateTokenAndGetUserId(request);
+
+      // 检查用户是否有 CAD_SAVE 权限
+      const hasPermission = await this.permissionService.checkNodePermission(
+        userId,
+        nodeId,
+        ProjectPermission.CAD_SAVE
+      );
+
+      if (!hasPermission) {
+        this.logger.warn(
+          `[saveMxwebToNode] 权限不足: userId=${userId}, nodeId=${nodeId}, permission=CAD_SAVE`
+        );
+        return res.status(HttpStatus.FORBIDDEN).json({
+          code: 'FORBIDDEN',
+          message: '权限不足，需要 CAD_SAVE 权限',
+        });
+      }
+
+      // 调用服务保存文件
+      const result = await this.mxCadService.saveMxwebFile(nodeId, file);
+
+      if (result.success) {
+        this.logger.log(`[saveMxwebToNode] 保存成功: nodeId=${nodeId}`);
+        return res.json({
+          code: 'SUCCESS',
+          message: result.message,
+          data: {
+            nodeId,
+            path: result.path,
+          },
+        });
+      } else {
+        this.logger.error(`[saveMxwebToNode] 保存失败: ${result.message}`);
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          code: 'FAILED',
+          message: result.message,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `[saveMxwebToNode] 保存失败: ${error.message}`,
+        error.stack
+      );
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        code: 'ERROR',
+        message: '保存失败，请稍后重试',
+      });
     }
   }
 
