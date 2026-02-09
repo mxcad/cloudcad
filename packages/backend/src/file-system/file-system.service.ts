@@ -584,10 +584,18 @@ export class FileSystemService {
    */
   private async deleteFileIfNotReferenced(
     tx: any,
-    path: string,
+    nodePath: string,
     fileHash: string | null
   ): Promise<void> {
-    if (!path) return;
+    if (!nodePath) return;
+
+    // 验证 nodePath 格式，确保它包含文件名部分
+    // 预期格式：YYYYMM[/N]/nodeId/文件名.扩展名
+    const pathParts = nodePath.split('/');
+    if (pathParts.length < 3) {
+      this.logger.warn(`nodePath 格式不正确，跳过删除: ${nodePath} (期望格式: YYYYMM[/N]/nodeId/文件名)`);
+      return;
+    }
 
     // 如果有 fileHash，检查是否有其他节点使用相同的文件哈希
     let hasReference = false;
@@ -598,31 +606,42 @@ export class FileSystemService {
           isFolder: false,
           fileStatus: 'COMPLETED',
           deletedAt: null, // 只检查未删除的节点
-          NOT: { path }, // 排除当前节点
+          NOT: { path: nodePath }, // 排除当前节点
         },
       });
 
       hasReference = referenceCount > 0;
       if (hasReference) {
-        this.logger.log(`文件被其他节点引用，保留物理文件: ${path} (引用数: ${referenceCount})`);
+        this.logger.log(`文件被其他节点引用，保留物理文件: ${nodePath} (引用数: ${referenceCount})`);
         return;
       }
     }
 
     // 无引用，立即删除物理文件
-    this.logger.log(`文件无引用，准备删除物理文件: ${path}`);
-    
+    this.logger.log(`文件无引用，准备删除物理文件: ${nodePath}`);
+
     try {
       // 获取文件的完整路径
-      const fullPath = this.storageManager.getFullPath(path);
-      
-      // 删除物理文件（包括目录）
-      await fsPromises.rm(fullPath, { recursive: true, force: true });
-      
-      this.logger.log(`物理文件已删除: ${fullPath}`);
+      const fullPath = this.storageManager.getFullPath(nodePath);
+
+      // 提取 nodeid 目录路径（nodePath 格式：YYYYMM/nodeId/文件名）
+      const nodeDirectoryPath = path.dirname(fullPath);
+
+      // 再次验证删除路径，确保不会误删上级目录
+      // nodeDirectoryPath 应该以 nodeId 结尾，而不是 YYYYMM
+      const nodeId = pathParts[pathParts.length - 2]; // 倒数第二个部分是 nodeId
+      if (!nodeDirectoryPath.endsWith(nodeId)) {
+        this.logger.error(`路径验证失败，拒绝删除: ${nodeDirectoryPath} (期望以 ${nodeId} 结尾)`);
+        throw new Error(`路径验证失败，无法安全删除`);
+      }
+
+      // 删除整个 nodeid 目录（包括其中的所有文件）
+      await fsPromises.rm(nodeDirectoryPath, { recursive: true, force: true });
+
+      this.logger.log(`节点目录已删除: ${nodeDirectoryPath}`);
     } catch (error) {
       this.logger.error(
-        `删除物理文件失败: ${path} - ${error.message}`,
+        `删除物理文件失败: ${nodePath} - ${error.message}`,
         error.stack
       );
       // 删除物理文件失败不影响数据库删除，只记录错误
@@ -1074,7 +1093,13 @@ export class FileSystemService {
       if (permanently) {
         // 彻底删除：递归删除所有子节点和文件
         await this.prisma.$transaction(async (tx) => {
+          // 如果是文件节点，先删除物理文件
+          if (!node.isFolder && node.path) {
+            await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
+          }
+          // 递归删除所有子节点和文件
           await this.deleteDescendantsWithFiles(tx, nodeId);
+          // 删除当前节点的数据库记录
           await tx.fileSystemNode.delete({ where: { id: nodeId } });
         });
         this.logger.log(`节点彻底删除成功: ${nodeId}`);
@@ -1945,9 +1970,30 @@ export class FileSystemService {
    */
   async permanentlyDeleteProject(projectId: string) {
     try {
+      // 获取项目根节点信息
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId },
+        select: { isFolder: true, path: true, fileHash: true },
+      });
+
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+
       await this.prisma.$transaction(async (tx) => {
         // 递归删除所有子节点和文件（检查文件引用）
         await this.deleteDescendantsWithFiles(tx, projectId);
+
+        // 删除项目根节点的文件（如果有）
+        if (!project.isFolder && project.path) {
+          await this.deleteFileIfNotReferenced(tx, project.path, project.fileHash);
+          // 更新 deletedFromStorage 字段
+          await tx.fileSystemNode.update({
+            where: { id: projectId },
+            data: { deletedFromStorage: new Date() },
+          });
+        }
+
         // 删除项目根节点
         await tx.fileSystemNode.delete({
           where: { id: projectId, isRoot: true, deletedAt: { not: null } },
@@ -1979,6 +2025,16 @@ export class FileSystemService {
       await this.prisma.$transaction(async (tx) => {
         // 递归删除所有子节点和文件
         await this.deleteDescendantsWithFiles(tx, nodeId);
+
+        // 删除当前节点的文件（如果有）
+        if (!node.isFolder && node.path) {
+          await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
+          // 更新 deletedFromStorage 字段
+          await tx.fileSystemNode.update({
+            where: { id: nodeId },
+            data: { deletedFromStorage: new Date() },
+          });
+        }
 
         // 删除当前节点
         await tx.fileSystemNode.delete({ where: { id: nodeId } });
