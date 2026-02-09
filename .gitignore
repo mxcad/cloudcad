@@ -34,6 +34,7 @@ pnpm-debug.log*
 uploads/
 temp/
 filesData/
+svn-repo/
 
 # MinIO data
 **/minio-data/

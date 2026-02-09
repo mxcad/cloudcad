@@ -28,6 +28,7 @@ import { DiskMonitorService } from '../common/services/disk-monitor.service';
 import { FileLockService } from '../common/services/file-lock.service';
 import { ConfigService } from '@nestjs/config';
 import { MxCadService } from '../mxcad/mxcad.service';
+import { VersionControlService } from '../version-control/version-control.service';
 import { CadDownloadFormat } from './dto/download-node.dto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
@@ -62,6 +63,7 @@ export class FileSystemService {
     private readonly fileLockService: FileLockService,
     private readonly configService: ConfigService,
     private readonly moduleRef: ModuleRef,
+    private readonly versionControlService: VersionControlService,
   ) {}
 
   /**
@@ -1733,6 +1735,10 @@ export class FileSystemService {
           });
 
           this.logger.log(`文件上传成功: ${updatedNode.name} by user ${userId}`);
+
+          // 提交文件到 SVN 版本控制
+          await this.commitFileToSvn(updatedNode, userId);
+
           return updatedNode;
         } catch (error) {
           // 拷贝失败，回滚数据库操作
@@ -3647,5 +3653,39 @@ export class FileSystemService {
       hpp: 'text/x-c++',
     };
     return mimeTypes[ext || ''] || 'application/octet-stream';
+  }
+
+  /**
+   * 提交节点目录到 SVN 版本控制
+   * @param node 文件节点
+   * @param userId 用户 ID
+   */
+  private async commitFileToSvn(node: PrismaFileSystemNode, userId: string): Promise<void> {
+    try {
+      if (!node.path) {
+        this.logger.warn(`文件路径为空，跳过 SVN 提交: ${node.name}`);
+        return;
+      }
+
+      // 获取文件的完整路径
+      const fullPath = this.storageManager.getFullPath(node.path);
+      // 获取 nodeId 目录路径（去掉文件名）
+      const nodeDirectory = path.dirname(fullPath);
+
+      // 提交节点目录到 SVN
+      const commitResult = await this.versionControlService.commitNodeDirectory(
+        nodeDirectory,
+        `上传文件: ${node.name} (用户: ${userId})`
+      );
+
+      if (commitResult.success) {
+        this.logger.log(`节点目录已提交到 SVN: ${node.name} (${nodeDirectory})`);
+      } else {
+        this.logger.warn(`节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`);
+      }
+    } catch (error) {
+      // SVN 提交失败不应影响文件上传流程，仅记录日志
+      this.logger.error(`节点目录 SVN 提交异常: ${node.name}`, error.stack);
+    }
   }
 }

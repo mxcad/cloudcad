@@ -24,6 +24,7 @@ import { RolesModule } from './roles/roles.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 import { AuditLogModule } from './audit/audit-log.module';
+import { VersionControlModule } from './version-control/version-control.module';
 import { SystemPermission, ProjectPermission } from './common/dto/permission.dto';
 
 @Module({
@@ -48,6 +49,7 @@ import { SystemPermission, ProjectPermission } from './common/dto/permission.dto
     StorageModule,
     HealthModule,
     AuditLogModule,
+    VersionControlModule,
   ],
   controllers: [AppController],
   providers: [

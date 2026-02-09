@@ -9,6 +9,7 @@ import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
 import { AuditLogModule } from '../audit/audit-log.module';
 import { RolesModule } from '../roles/roles.module';
+import { VersionControlModule } from '../version-control/version-control.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { RolesModule } from '../roles/roles.module';
     StorageModule,
     AuditLogModule,
     RolesModule,
+    VersionControlModule,
   ],
   controllers: [FileSystemController],
   providers: [

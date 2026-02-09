@@ -41,5 +41,6 @@ export default (): AppConfig => ({
     ).split(','),
   },
   filesDataPath: process.env.FILES_DATA_PATH || '../filesData', // 本地存储路径
+  svnRepoPath: process.env.SVN_REPO_PATH || '../svn-repo', // SVN 仓库存储路径
   // debug 配置已删除，使用 NestJS 原生日志
 });

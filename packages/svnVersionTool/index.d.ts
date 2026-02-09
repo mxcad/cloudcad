@@ -78,3 +78,17 @@ export function svnadminCreate(
   repoPath: string,
   callback: SvnCallback
 ): void;
+
+/**
+ * SVN import - 将未版本控制的目录树导入仓库
+ * @param importPath - 要导入的路径
+ * @param repoUrl - 仓库 URL
+ * @param message - 提交日志
+ * @param callback - 回调函数
+ */
+export function svnImport(
+  importPath: string,
+  repoUrl: string,
+  message: string,
+  callback: SvnCallback
+): void;

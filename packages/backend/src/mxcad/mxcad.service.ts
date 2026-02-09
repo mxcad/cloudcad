@@ -5,6 +5,7 @@ import { FileUploadManagerService } from './services/file-upload-manager.service
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { StorageManager } from '../common/services/storage-manager.service';
+import { VersionControlService } from '../version-control/version-control.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { ConversionOptions } from './interfaces/file-conversion.interface';
 import {
@@ -27,6 +28,7 @@ export class MxCadService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
     private readonly storageManager: StorageManager,
+    private readonly versionControlService: VersionControlService,
   ) {}
 
   /**
@@ -953,6 +955,9 @@ export class MxCadService {
       await fsPromises.copyFile(file.path, targetPath);
       this.logger.log(`[saveMxwebFile] 文件保存成功: ${file.path} -> ${targetPath}`);
 
+      // 提交文件到 SVN 版本控制
+      await this.commitMxwebToSvn(node);
+
       // 删除临时上传文件
       try {
         await fsPromises.unlink(file.path);
@@ -975,6 +980,34 @@ export class MxCadService {
         success: false,
         message: `保存失败: ${error.message}`,
       };
+    }
+  }
+
+  /**
+   * 提交 mxweb 文件到 SVN 版本控制
+   * @param node 文件节点
+   */
+  private async commitMxwebToSvn(node: any): Promise<void> {
+    try {
+      // 获取文件的完整路径
+      const fullPath = this.storageManager.getFullPath(node.path);
+      // 获取 nodeId 目录路径（去掉文件名）
+      const nodeDirectory = path.dirname(fullPath);
+
+      // 提交节点目录到 SVN
+      const commitResult = await this.versionControlService.commitNodeDirectory(
+        nodeDirectory,
+        `保存 mxweb 文件: ${node.name}`
+      );
+
+      if (commitResult.success) {
+        this.logger.log(`mxweb 节点目录已提交到 SVN: ${node.name} (${nodeDirectory})`);
+      } else {
+        this.logger.warn(`mxweb 节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`);
+      }
+    } catch (error) {
+      // SVN 提交失败不应影响文件保存流程，仅记录日志
+      this.logger.error(`mxweb 节点目录 SVN 提交异常: ${node.name}`, error.stack);
     }
   }
 }

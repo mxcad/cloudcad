@@ -11,6 +11,7 @@ import {
 import { CacheManagerService } from './cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { MxCadService } from '../mxcad.service';
+import { VersionControlService } from '../../version-control/version-control.service';
 import { RateLimiter } from '../../common/concurrency/rate-limiter';
 import { StoragePathConstants } from '../constants/storage.constants';
 import * as fs from 'fs';
@@ -77,6 +78,7 @@ export class FileUploadManagerService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
     private readonly storageManager: StorageManager,
+    private readonly versionControlService: VersionControlService,
     @Inject(forwardRef(() => MxCadService))
     private readonly mxCadService: MxCadService
   ) {
@@ -1324,6 +1326,24 @@ export class FileUploadManagerService {
         this.logger.warn(
           `⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`
         );
+      }
+
+      // 提交节点目录到 SVN 版本控制
+      try {
+        // 获取 nodeId 目录路径（去掉文件名）
+        const nodeDirectory = targetDir;
+        const commitResult = await this.versionControlService.commitNodeDirectory(
+          nodeDirectory,
+          `上传文件: ${fileName} (用户: ${userId})`
+        );
+
+        if (commitResult.success) {
+          this.logger.log(`节点目录已提交到 SVN: ${fileName} (${nodeDirectory})`);
+        } else {
+          this.logger.warn(`节点目录 SVN 提交失败: ${fileName}, 原因: ${commitResult.message}`);
+        }
+      } catch (svnError) {
+        this.logger.error(`节点目录 SVN 提交异常: ${fileName}`, svnError.stack);
       }
     } catch (error) {
       this.logger.error(

@@ -25,6 +25,7 @@ import { FileSystemModule } from '../file-system/file-system.module';
 import { FileSystemService as MainFileSystemService } from '../file-system/file-system.service';
 import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
+import { VersionControlModule } from '../version-control/version-control.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { StorageModule } from '../storage/storage.module';
     }),
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
+    VersionControlModule,
   ],
   controllers: [MxCadController],
   providers: [
