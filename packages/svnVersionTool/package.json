@@ -1,1 +1,37 @@
-{"name": "@cloudcad/svn-version-tool", "version": "1.0.0", "description": "SVN 版本控制工具包，提供 SVN 仓库管理、检出、添加、提交等操作", "main": "svncmd.js", "types": "index.d.ts", "scripts": {"test": "node test.js"}, "keywords": ["svn", "version-control", "subversion"], "author": "CloudCAD Team", "license": "UNLICENSED", "engines": {"node": ">=18.0.0"}, "os": ["win32"], "files": ["svncmd.js", "svncheckout.js", "svnadd.js", "svncommit.js", "svnlist.js", "svnadmincreate.js", "svnimport.js", "svnpath.js", "svnadminpath.js", "subversion", "index.d.ts", "README.md"]}
+{
+  "name": "@cloudcad/svn-version-tool",
+  "version": "1.0.0",
+  "description": "SVN 版本控制工具包，提供 SVN 仓库管理、检出、添加、提交等操作",
+  "main": "svncmd.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "svn",
+    "version-control",
+    "subversion"
+  ],
+  "author": "CloudCAD Team",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "win32"
+  ],
+  "files": [
+    "svncmd.js",
+    "svncheckout.js",
+    "svnadd.js",
+    "svncommit.js",
+    "svnlist.js",
+    "svnadmincreate.js",
+    "svnimport.js",
+    "svnpath.js",
+    "svnadminpath.js",
+    "subversion",
+    "index.d.ts",
+    "README.md"
+  ]
+}
