@@ -339,7 +339,7 @@ export class FileUploadManagerService {
             filepath
           );
 
-          // 【新步骤1】立即创建节点（path 初始为 null）
+          // 【新步骤1】立即创建节点并创建物理目录
           if (context && context.userId && context.nodeId) {
             const extension = path.extname(fileName).toLowerCase();
             const mimeType = this.fileSystemNodeService.getMimeType(extension);
@@ -360,7 +360,12 @@ export class FileUploadManagerService {
               return { ret: MxUploadReturn.kConvertFileError };
             }
 
-            // 创建新节点，path 初始为 null，使用 createFileNode 方法
+            // 获取 uploads 目录路径，用于后续拷贝文件
+            const uploadPath =
+              this.configService.get('MXCAD_UPLOAD_PATH') ||
+              path.join(process.cwd(), 'uploads');
+
+            // 创建新节点，不使用 skipFileCopy，直接创建物理目录
             const newNode = await this.fileSystemServiceMain.createFileNode({
               name: fileName,
               fileHash: fileMd5,
@@ -369,7 +374,7 @@ export class FileUploadManagerService {
               extension,
               parentId: parentId,
               ownerId: context.userId,
-              skipFileCopy: true, // 跳过文件拷贝，稍后处理
+              sourceDirectoryPath: uploadPath, // 提供源目录路径，用于拷贝文件
             });
 
             newNodeId = newNode.id;
@@ -408,16 +413,8 @@ export class FileUploadManagerService {
                 );
                 throw error;
               }
-            } else if (newNodeId) {
-              // 【新步骤2】转换成功后，将文件从 uploads 拷贝到 filesData/YYYYMM[/N]/nodeId/ 目录并重命名
-              await this.handleFileCopyAndPathUpdate(
-                newNodeId,
-                fileName,
-                fileMd5,
-                fileExtName,
-                context.userId
-              );
             }
+            // 注意：文件已经在创建节点时拷贝到物理目录，不需要再次调用 handleFileCopyAndPathUpdate
 
             this.mapCurrentFilesBeingMerged[fileMd5] = false;
 
@@ -711,27 +708,16 @@ export class FileUploadManagerService {
             extension,
             parentId: parentId,
             ownerId: context.userId,
-            skipFileCopy: true, // 跳过文件拷贝，稍后处理
+            sourceFilePath: mergedFilePath, // 提供源文件路径，用于拷贝文件
           });
 
           const newNodeId = newNode.id;
           this.logger.log(`[mergeChunksWithPermission] 非CAD节点创建成功: ${newNodeId}, path=${newNode.path}`);
 
-          try {
-            // 【新步骤2】将文件拷贝到 filesData/YYYYMM[/N]/nodeId/ 目录并重命名
-            await this.handleNonCadFileCopy(newNodeId, name, mergedFilePath, context.userId);
+          // 清理临时文件
+          await this.fileSystemService.deleteDirectory(tmpDir);
 
-            // 清理临时文件
-            await this.fileSystemService.deleteDirectory(tmpDir);
-
-            return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
-          } catch (copyError) {
-            this.logger.error(`[mergeChunksWithPermission] 文件拷贝失败: ${copyError.message}`);
-            // 拷贝失败，删除已创建的节点
-            await this.fileSystemServiceMain.deleteNode(newNodeId, true); // 彻底删除
-            await this.fileSystemService.deleteDirectory(tmpDir);
-            return { ret: MxUploadReturn.kConvertFileError };
-          }
+          return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
         } else {
           await this.fileSystemService.deleteDirectory(tmpDir);
           return { ret: MxUploadReturn.kConvertFileError };
@@ -796,7 +782,7 @@ export class FileUploadManagerService {
    */
   async uploadAndConvertFileWithPermission(
     options: UploadFileOptions
-  ): Promise<{ ret: string; tz?: boolean }> {
+  ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
     const { filePath, hash, name, size, context } = options;
 
     // 检查文件是否已存在（秒传）
@@ -806,7 +792,7 @@ export class FileUploadManagerService {
         `[uploadAndConvertFileWithPermission] 文件已存在，执行秒传: ${name}`
       );
 
-      // 【新步骤】秒传时立即创建节点（path 初始为 null）
+      // 【修复】秒传时创建新节点，并创建独立的物理目录和文件拷贝
       if (context && context.userId && context.nodeId) {
         const extension = path.extname(name).toLowerCase();
         const mimeType = this.fileSystemNodeService.getMimeType(extension);
@@ -824,7 +810,13 @@ export class FileUploadManagerService {
           return { ret: MxUploadReturn.kConvertFileError };
         }
 
-        // 创建新节点，使用 createFileNode 方法
+        // 获取源文件路径（uploads 目录中的转换后文件）
+        const uploadPath =
+          this.configService.get('MXCAD_UPLOAD_PATH') ||
+          path.join(process.cwd(), 'uploads');
+        const sourceDirectoryPath = path.join(uploadPath);
+
+        // 创建新节点，不使用 skipFileCopy，直接创建物理目录并拷贝文件
         const newNode = await this.fileSystemServiceMain.createFileNode({
           name: name,
           fileHash: hash,
@@ -833,21 +825,15 @@ export class FileUploadManagerService {
           extension,
           parentId: parentId,
           ownerId: context.userId,
-          skipFileCopy: true, // 跳过文件拷贝，稍后处理
+          sourceDirectoryPath, // 提供源目录路径，用于拷贝文件
         });
 
         const newNodeId = newNode.id;
-        this.logger.log(`[uploadAndConvertFileWithPermission] 秒传节点创建成功: ${newNodeId}, path=null`);
+        this.logger.log(`[uploadAndConvertFileWithPermission] 秒传节点创建成功: ${newNodeId}, path=${newNode.path}`);
 
-        try {
-          // 【新步骤】将文件从 uploads 拷贝到 filesData/YYYYMM[/N]/nodeId/ 目录并重命名
-          await this.handleFileCopyAndPathUpdate(newNodeId, name, hash, extension.replace('.', ''), context.userId);
-
-          // 如果是外部参照，额外拷贝文件
-          if (context.srcDwgNodeId) {
-            const uploadPath =
-              this.configService.get('MXCAD_UPLOAD_PATH') ||
-              path.join(process.cwd(), 'uploads');
+        // 如果是外部参照，额外拷贝文件到源图纸目录
+        if (context.srcDwgNodeId) {
+          try {
             const targetFile = path.join(
               uploadPath,
               this.getConvertedFileName(hash, name)
@@ -868,15 +854,13 @@ export class FileUploadManagerService {
                 context
               );
             }
+          } catch (extRefError) {
+            this.logger.error(`[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${extRefError.message}`);
+            // 外部参照文件拷贝失败不影响主流程
           }
-
-          return { ret: MxUploadReturn.kFileAlreadyExist };
-        } catch (copyError) {
-          this.logger.error(`[uploadAndConvertFileWithPermission] 秒传文件拷贝失败: ${copyError.message}`);
-          // 拷贝失败，删除已创建的节点
-          await this.fileSystemServiceMain.deleteNode(newNodeId, true); // 彻底删除
-          return { ret: MxUploadReturn.kConvertFileError };
         }
+
+        return { ret: MxUploadReturn.kFileAlreadyExist, nodeId: newNodeId };
       } else {
         return { ret: MxUploadReturn.kConvertFileError };
       }
@@ -976,45 +960,35 @@ export class FileUploadManagerService {
             extension,
             parentId: parentId,
             ownerId: context.userId,
-            skipFileCopy: true, // 跳过文件拷贝，稍后处理
+            sourceFilePath: filePath, // 提供源文件路径，用于拷贝文件
           });
 
           const newNodeId = newNode.id;
           this.logger.log(`[uploadAndConvertFileWithPermission] 非CAD节点创建成功: ${newNodeId}, path=${newNode.path}`);
 
-          try {
-            // 将文件拷贝到 filesData/YYYYMM[/N]/nodeId/ 目录
-            await this.handleNonCadFileCopy(newNodeId, name, filePath, context.userId);
-
-            // 如果是外部参照图片上传，额外拷贝文件到源图纸目录
-            if (context.srcDwgNodeId && context.isImage) {
-              this.logger.log(
-                `[uploadAndConvertFileWithPermission] 外部参照图片上传: ${name}, srcDwgNodeId=${context.srcDwgNodeId}`
+          // 如果是外部参照图片上传，额外拷贝文件到源图纸目录
+          if (context.srcDwgNodeId && context.isImage) {
+            this.logger.log(
+              `[uploadAndConvertFileWithPermission] 外部参照图片上传: ${name}, srcDwgNodeId=${context.srcDwgNodeId}`
+            );
+            try {
+              await this.handleExternalReferenceImage(
+                hash,
+                context.srcDwgNodeId,
+                name,
+                filePath,
+                context
               );
-              try {
-                await this.handleExternalReferenceImage(
-                  hash,
-                  context.srcDwgNodeId,
-                  name,
-                  filePath,
-                  context
-                );
-              } catch (error) {
-                this.logger.error(
-                  `[uploadAndConvertFileWithPermission] 外部参照图片文件拷贝失败: ${error.message}`,
-                  error.stack
-                );
-                // 拷贝失败不影响主流程，只记录错误
-              }
+            } catch (error) {
+              this.logger.error(
+                `[uploadAndConvertFileWithPermission] 外部参照图片文件拷贝失败: ${error.message}`,
+                error.stack
+              );
+              // 拷贝失败不影响主流程，只记录错误
             }
-
-            return { ret: MxUploadReturn.kOk };
-          } catch (copyError) {
-            this.logger.error(`[uploadAndConvertFileWithPermission] 非CAD文件拷贝失败: ${copyError.message}`);
-            // 拷贝失败，删除已创建的节点
-            await this.fileSystemServiceMain.deleteNode(newNodeId, true); // 彻底删除
-            return { ret: MxUploadReturn.kConvertFileError };
           }
+
+          return { ret: MxUploadReturn.kOk };
         } else {
           return { ret: MxUploadReturn.kConvertFileError };
         }
@@ -1129,118 +1103,132 @@ export class FileUploadManagerService {
 
     // 返回检查结果
     if (fileExists) {
-      // 使用辅助方法处理文件系统节点创建
-      let newNodeId: string | undefined;
-      try {
-        newNodeId = await this.handleFileSystemNodeCreation(
-          filename,
-          fileHash,
-          context,
-          fileSource,
-          targetFile
-        );
-      } catch (nodeError) {
-        // 文件系统节点创建失败不影响文件检查结果，只记录错误
-        this.logger.error(`⚠️ 文件系统节点创建失败: ${nodeError.message}`);
-      }
+      // 【修复】文件存在时，创建新节点和物理目录，实现真正的秒传
+      // 每个文件节点都有独立的物理目录和文件拷贝
+      this.logger.log(`✅ 文件已存在，准备秒传: ${targetFile}`);
 
-      return { ret: MxUploadReturn.kFileAlreadyExist, nodeId: newNodeId };
+      // 创建新节点和物理目录
+      if (context && context.userId && context.nodeId) {
+        try {
+          const extension = `.${suffix}`.toLowerCase();
+          const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+          const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+
+          if (!parentNode) {
+            this.logger.error(`[performFileExistenceCheck] 父节点不存在: ${context.nodeId}`);
+            return { ret: MxUploadReturn.kConvertFileError };
+          }
+
+          const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+          if (!parentId) {
+            this.logger.error(`[performFileExistenceCheck] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`);
+            return { ret: MxUploadReturn.kConvertFileError };
+          }
+
+          // 处理文件名重复
+          const uniqueName = await this.generateUniqueFileName(parentId, filename);
+          if (uniqueName !== filename) {
+            this.logger.log(`[performFileExistenceCheck] 文件名重复，自动重命名: ${filename} -> ${uniqueName}`);
+          }
+
+          // 获取源文件路径（uploads 目录中的转换后文件）
+          const uploadPath =
+            this.configService.get('MXCAD_UPLOAD_PATH') ||
+            path.join(process.cwd(), 'uploads');
+          const sourceDirectoryPath = path.join(uploadPath);
+
+          // 创建新节点，不使用 skipFileCopy，直接创建物理目录并拷贝文件
+          // 使用 context.fileSize 作为文件大小
+          const fileSize = context.fileSize || 0;
+          this.logger.log(`[performFileExistenceCheck] 准备创建节点: fileSize=${fileSize}, context.fileSize=${context.fileSize}`);
+          const newNode = await this.fileSystemServiceMain.createFileNode({
+            name: uniqueName,
+            fileHash: fileHash,
+            size: fileSize,
+            mimeType,
+            extension,
+            parentId: parentId,
+            ownerId: context.userId,
+            sourceDirectoryPath, // 提供源目录路径，用于拷贝文件
+          });
+
+          const newNodeId = newNode.id;
+          this.logger.log(`[performFileExistenceCheck] 秒传节点创建成功: ${newNodeId}, name=${uniqueName}, size=${newNode.size}, path=${newNode.path}`);
+
+          // 【新增】提交节点目录到 SVN 版本控制
+          if (newNode.path) {
+            try {
+              // 获取节点目录路径（完整路径，包含 nodeId）
+              const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+              const fullPath = path.join(filesDataPath, newNode.path);
+              // 【修复】直接使用 fullPath 作为节点目录，不使用 dirname
+              // 因为 newNode.path 已经是相对路径（如：202602/cmlewuzvw0000o8uf0ewsta9u）
+              const nodeDirectory = fullPath;
+              this.logger.log(`[performFileExistenceCheck] 准备提交 SVN: filesDataPath=${filesDataPath}, newNode.path=${newNode.path}, nodeDirectory=${nodeDirectory}`);
+
+              const commitResult = await this.versionControlService.commitNodeDirectory(
+                nodeDirectory,
+                `秒传文件: ${uniqueName} (用户: ${context.userId})`
+              );
+
+              if (commitResult.success) {
+                this.logger.log(`[performFileExistenceCheck] 秒传节点目录已提交到 SVN: ${uniqueName} (${nodeDirectory})`);
+              } else {
+                this.logger.warn(`[performFileExistenceCheck] 秒传节点目录 SVN 提交失败: ${uniqueName}, 原因: ${commitResult.message}`);
+              }
+            } catch (svnError) {
+              this.logger.error(`[performFileExistenceCheck] 秒传节点目录 SVN 提交异常: ${uniqueName}`, svnError.stack);
+              // SVN 提交失败不影响主流程
+            }
+          } else {
+            this.logger.warn(`[performFileExistenceCheck] 节点 path 为空，跳过 SVN 提交: ${newNodeId}`);
+          }
+
+          // 如果是外部参照，额外拷贝文件到源图纸目录
+          if (context.srcDwgNodeId) {
+            try {
+              const targetFile = path.join(
+                uploadPath,
+                this.getConvertedFileName(fileHash, filename)
+              );
+              if (!context.isImage) {
+                await this.handleExternalReferenceFile(
+                  fileHash,
+                  context.srcDwgNodeId,
+                  filename,
+                  targetFile
+                );
+              } else {
+                await this.handleExternalReferenceImage(
+                  fileHash,
+                  context.srcDwgNodeId,
+                  filename,
+                  targetFile,
+                  context
+                );
+              }
+            } catch (extRefError) {
+              this.logger.error(`[performFileExistenceCheck] 外部参照文件拷贝失败: ${extRefError.message}`);
+              // 外部参照文件拷贝失败不影响主流程
+            }
+          }
+
+          return { ret: MxUploadReturn.kFileAlreadyExist, nodeId: newNodeId };
+        } catch (error) {
+          this.logger.error(`[performFileExistenceCheck] 秒传节点创建失败: ${error.message}`, error.stack);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+      } else {
+        this.logger.warn(`[performFileExistenceCheck] 秒传缺少必要参数: userId=${context?.userId}, nodeId=${context?.nodeId}`);
+        return { ret: MxUploadReturn.kConvertFileError };
+      }
     } else {
       return { ret: MxUploadReturn.kFileNoExist };
     }
   }
 
-  /**
-   * 处理文件系统节点创建
-   * 关键修复：每次秒传成功时，都在目标目录创建新的文件节点引用
-   * 这样相同文件上传到不同目录时，每个目录都有独立的文件节点
-   * 但底层存储路径是共享的，节省存储空间
-   */
-  private async handleFileSystemNodeCreation(
-    filename: string,
-    fileHash: string,
-    context: FileSystemNodeContext | undefined,
-    fileSource: string,
-    targetFile: string
-  ): Promise<string | undefined> {
-    if (!context) {
-      throw new Error(
-        `文件 ${filename} (${fileHash}) 缺少上下文信息，无法创建文件系统节点`
-      );
-    }
-
-    if (!context.nodeId) {
-      throw new Error(
-        `文件 ${filename} (${fileHash}) 缺少节点ID，无法创建文件系统节点`
-      );
-    }
-
-    if (!context.userId) {
-      throw new Error(
-        `文件 ${filename} (${fileHash}) 缺少用户ID，无法创建文件系统节点`
-      );
-    }
-
-    // 检查当前目录下是否已有相同文件
-    const existingNode = await this.fileSystemNodeService.findByFileHash(fileHash);
-    const existingNodeInCurrentDir = existingNode && existingNode.parentId === context.nodeId
-      ? existingNode
-      : null;
-
-    if (existingNodeInCurrentDir) {
-      // 当前目录下已有相同文件，不需要创建新节点
-      this.logger.log(
-        `[handleFileSystemNodeCreation] 当前目录下已有相同文件，跳过创建: ${filename} (${fileHash})，节点ID: ${existingNodeInCurrentDir.id}`
-      );
-      return existingNodeInCurrentDir.id;
-    }
-
-    // 检查是否为外部参照上传，外部参照不创建文件节点
-    if (context.srcDwgNodeId) {
-      this.logger.log(
-        `[handleFileSystemNodeCreation] 检测到外部参照上传，跳过文件节点创建: ${filename} (${fileHash})，srcDwgNodeId=${context.srcDwgNodeId}`
-      );
-      return undefined;
-    }
-
-    // 获取文件大小
-    const actualFileSize = await this.getFileSize(
-      fileHash,
-      filename,
-      fileSource,
-      targetFile
-    );
-
-    // 在事务中创建文件系统节点
-    const extension = path.extname(filename).toLowerCase();
-    const mimeType = this.fileSystemNodeService.getMimeType(extension);
-
-    // 关键修复：使用已存在节点的相对路径（path字段），而不是访问路径
-    // 秒传场景下，文件已经在存储中存在，应该复用相同的相对路径
-    const existingNodeForPath = await this.fileSystemNodeService.findByFileHash(fileHash);
-    const accessPath = existingNodeForPath?.path || `/mxcad/file/${targetFile}`;
-
-    // 关键修复：直接调用 createOrReferenceNode，不再检查是否已存在
-    // createOrReferenceNode 内部会检查是否需要在当前目录创建新节点
-    await this.fileSystemNodeService.createOrReferenceNode({
-      originalName: filename,
-      fileHash: fileHash,
-      fileSize: actualFileSize,
-      accessPath: accessPath,
-      mimeType: mimeType,
-      extension: extension,
-      context: context,
-    });
-
-    // 查询刚创建的节点（重新查询，因为 createOrReferenceNode 不返回节点信息）
-    const newNode = await this.fileSystemNodeService.findByFileHash(fileHash);
-
-    this.logger.log(
-      `✅ 文件系统节点创建成功: ${filename} (${fileHash}) 在目录 ${context.nodeId}，节点ID: ${newNode?.id}`
-    );
-
-    return newNode?.id;
-  }
+  
 
   /**
    * 处理文件拷贝和路径更新
@@ -1355,7 +1343,8 @@ export class FileUploadManagerService {
   }
 
   /**
-   * 处理文件节点创建（保留用于兼容性，主要用于秒传场景）
+   * 处理文件节点创建（正常上传流程）
+   * 【修复】使用 createFileNode 方法，确保每个节点都有独立的物理目录
    */
   private async handleFileNodeCreation(
     originalName: string,
@@ -1371,50 +1360,39 @@ export class FileUploadManagerService {
     }
 
     try {
-      // 扫描MxCAD实际生成的所有相关文件
+      // 获取父节点
+      const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+
+      if (!parentNode) {
+        this.logger.error(`[handleFileNodeCreation] 父节点不存在: ${context.nodeId}`);
+        return;
+      }
+
+      const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+      if (!parentId) {
+        this.logger.error(`[handleFileNodeCreation] 无法确定父节点ID: ${context.nodeId}`);
+        return;
+      }
+
+      // 获取源文件路径（uploads 目录）
       const uploadPath =
         this.configService.get('MXCAD_UPLOAD_PATH') ||
         path.join(process.cwd(), 'uploads');
-      const actualFiles =
-        await this.fileSystemService.readDirectory(uploadPath);
-
-      // 匹配所有以fileHash开头的文件（包含.mxweb、.mxweb_preloading.json、_xxx.dwg等）
-      const mxcadFiles = actualFiles.filter((file) =>
-        file.startsWith(fileHash)
-      );
-
-      this.logger.log(
-        `🔍 扫描MxCAD文件: 哈希=${fileHash}, 找到文件数=${mxcadFiles.length}, 文件列表: ${mxcadFiles.join(', ')}`
-      );
-
-      if (mxcadFiles.length === 0) {
-        this.logger.error(`❌ 未找到MxCAD转换后的文件: ${fileHash}`);
-        return;
-      }
-
-      // 找到主.mxweb文件
-      const mainMxwebFile = mxcadFiles.find((file) => file.endsWith('.mxweb'));
-      if (!mainMxwebFile) {
-        this.logger.error(`❌ 未找到MxCAD主文件: ${fileHash}`);
-        return;
-      }
+      const sourceDirectoryPath = uploadPath;
 
       const extension = path.extname(originalName).toLowerCase();
       const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
-      // 关键修复：使用已存在节点的相对路径（path字段），而不是访问路径
-      // 查询已存在节点的 path 字段
-      const existingNodeForPath = await this.fileSystemNodeService.findByFileHash(fileHash);
-      const accessPath = existingNodeForPath?.path || `/mxcad/file/${mainMxwebFile}`;
-
-      await this.fileSystemNodeService.createOrReferenceNode({
-        originalName: originalName,
+      // 【修复】使用 createFileNode 方法，确保每个节点都有独立的物理目录
+      await this.fileSystemServiceMain.createFileNode({
+        name: originalName,
         fileHash: fileHash,
-        fileSize: fileSize,
-        accessPath: accessPath,
-        mimeType: mimeType,
-        extension: extension,
-        context: context,
+        size: fileSize,
+        mimeType,
+        extension,
+        parentId: parentId,
+        ownerId: context.userId,
+        sourceDirectoryPath, // 提供源目录路径，用于拷贝文件
       });
 
       this.logger.log(`✅ 文件系统节点创建成功: ${originalName} (${fileHash})`);
@@ -1438,29 +1416,43 @@ export class FileUploadManagerService {
 
   /**
    * 创建非CAD文件节点
-   * 修复：使用统一的 createOrReferenceNode 方法，确保文件节点创建路径的一致性
+   * 【修复】使用 createFileNode 方法，确保每个节点都有独立的物理目录
    */
   private async createNonCadNode(
     originalName: string,
     fileHash: string,
     fileSize: number,
-    storageKey: string,
+    sourceFilePath: string,
     context: FileSystemNodeContext
   ): Promise<void> {
     try {
+      // 获取父节点
+      const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+
+      if (!parentNode) {
+        this.logger.error(`[createNonCadNode] 父节点不存在: ${context.nodeId}`);
+        throw new Error(`父节点不存在: ${context.nodeId}`);
+      }
+
+      const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+      if (!parentId) {
+        this.logger.error(`[createNonCadNode] 无法确定父节点ID: ${context.nodeId}`);
+        throw new Error(`无法确定父节点ID: ${context.nodeId}`);
+      }
+
       const extension = path.extname(originalName).toLowerCase();
       const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
-      // 修复：使用统一的 createOrReferenceNode 方法，与 CAD 文件保持一致
-      // 这样可以确保文件节点创建、目录分配、文件拷贝等逻辑完全统一
-      await this.fileSystemNodeService.createOrReferenceNode({
-        originalName: originalName,
+      // 【修复】使用 createFileNode 方法，确保每个节点都有独立的物理目录
+      await this.fileSystemServiceMain.createFileNode({
+        name: originalName,
         fileHash: fileHash,
-        fileSize: fileSize,
-        accessPath: storageKey,
-        mimeType: mimeType,
-        extension: extension,
-        context: context,
+        size: fileSize,
+        mimeType,
+        extension,
+        parentId: parentId,
+        ownerId: context.userId,
+        sourceFilePath, // 提供源文件路径，用于拷贝文件
       });
 
       this.logger.log(
@@ -1559,5 +1551,104 @@ export class FileUploadManagerService {
     const convertedExt =
       this.fileConversionService.getConvertedExtension(originalFilename);
     return `${fileHash}.${suffix}${convertedExt}`;
+  }
+
+  /**
+   * 生成唯一的文件名（处理同名文件）
+   * 如果文件名已存在，自动添加序号，例如：file.dxf -> file (1).dxf
+   *
+   * @param parentId 父节点ID
+   * @param baseName 原始文件名
+   * @returns 唯一的文件名
+   */
+  private async generateUniqueFileName(
+    parentId: string,
+    baseName: string
+  ): Promise<string> {
+    try {
+      // 获取父节点下的所有子节点
+      const childrenResult = await this.fileSystemServiceMain.getChildren(parentId);
+      const existingNodes = childrenResult.data || [];
+
+      // 提取现有文件名
+      const existingNames = existingNodes.map((n) => n.name);
+
+      // 如果文件名不重复，直接返回
+      if (!existingNames.includes(baseName)) {
+        return baseName;
+      }
+
+      // 文件名处理：提取名称和扩展名
+      const lastDotIndex = baseName.lastIndexOf('.');
+      if (lastDotIndex === -1) {
+        // 没有扩展名
+        return this.generateNumberedFileName(baseName, '', existingNames);
+      }
+
+      const nameWithoutExt = baseName.substring(0, lastDotIndex);
+      const extension = baseName.substring(lastDotIndex);
+      const numberedName = this.generateNumberedFileName(
+        nameWithoutExt,
+        extension,
+        existingNames
+      );
+      return `${numberedName}${extension}`;
+    } catch (error) {
+      this.logger.error(
+        `[generateUniqueFileName] 生成唯一文件名失败: ${error.message}`,
+        error.stack
+      );
+      // 出错时返回原文件名，让后续逻辑处理
+      return baseName;
+    }
+  }
+
+  /**
+   * 生成带序号的文件名
+   * 例如：file.dxf -> file (1).dxf, file (2).dxf, ...
+   * 智能分配序号：找到当前最大序号，然后加 1
+   *
+   * @param baseName 基础文件名（不含扩展名）
+   * @param extension 文件扩展名（如 ".dxf"）
+   * @param existingNames 已存在的文件名数组
+   * @returns 带序号的文件名（不含扩展名）
+   */
+  private generateNumberedFileName(
+    baseName: string,
+    extension: string,
+    existingNames: string[]
+  ): string {
+    // 找到所有匹配的序号文件名
+    const numberedFiles: number[] = [];
+
+    // 构建匹配模式：基础文件名 (数字).扩展名
+    const pattern = new RegExp(`^${this.escapeRegExp(baseName)} \\((\\d+)\\)${this.escapeRegExp(extension)}$`);
+
+    for (const name of existingNames) {
+      const match = name.match(pattern);
+      if (match) {
+        numberedFiles.push(parseInt(match[1], 10));
+      }
+    }
+
+    // 如果没有序号文件，从 1 开始
+    if (numberedFiles.length === 0) {
+      return `${baseName} (1)`;
+    }
+
+    // 找到最大序号，加 1
+    const maxNumber = Math.max(...numberedFiles);
+    const nextNumber = maxNumber + 1;
+
+    this.logger.log(`[generateNumberedFileName] 找到 ${numberedFiles.length} 个序号文件: [${numberedFiles.join(', ')}], 最大序号: ${maxNumber}, 下一个序号: ${nextNumber}`);
+
+    return `${baseName} (${nextNumber})`;
+  }
+
+  /**
+   * 转义正则表达式特殊字符
+   */
+  private escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }

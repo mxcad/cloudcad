@@ -582,7 +582,8 @@ export class FileSystemService {
   }
 
   /**
-   * 检查文件是否被其他节点引用，如果没有则立即删除物理文件
+   * 删除节点的物理目录
+   * 每个文件节点都有独立的物理目录，删除节点时应该删除对应的物理目录
    */
   private async deleteFileIfNotReferenced(
     tx: any,
@@ -599,28 +600,9 @@ export class FileSystemService {
       return;
     }
 
-    // 如果有 fileHash，检查是否有其他节点使用相同的文件哈希
-    let hasReference = false;
-    if (fileHash) {
-      const referenceCount = await tx.fileSystemNode.count({
-        where: {
-          fileHash,
-          isFolder: false,
-          fileStatus: 'COMPLETED',
-          deletedAt: null, // 只检查未删除的节点
-          NOT: { path: nodePath }, // 排除当前节点
-        },
-      });
-
-      hasReference = referenceCount > 0;
-      if (hasReference) {
-        this.logger.log(`文件被其他节点引用，保留物理文件: ${nodePath} (引用数: ${referenceCount})`);
-        return;
-      }
-    }
-
-    // 无引用，立即删除物理文件
-    this.logger.log(`文件无引用，准备删除物理文件: ${nodePath}`);
+    // 直接删除物理目录，不检查文件是否被其他节点引用
+    // 每个文件节点都有独立的物理目录，删除节点时应该删除对应的物理目录
+    this.logger.log(`准备删除节点物理目录: ${nodePath}`);
 
     try {
       // 获取文件的完整路径
@@ -774,13 +756,20 @@ export class FileSystemService {
         `[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`
       );
 
-      // 2. 根据节点 ID 创建物理目录
-      const storageInfo = await this.storageManager.allocateNodeStorage(
-        fileNode.id
-      );
-      this.logger.log(
-        `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
-      );
+      // 2. 根据节点 ID 创建物理目录（仅在 skipFileCopy=false 时）
+      let storageInfo: any = null;
+      if (!skipFileCopy) {
+        storageInfo = await this.storageManager.allocateNodeStorage(
+          fileNode.id
+        );
+        this.logger.log(
+          `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
+        );
+      } else {
+        this.logger.log(
+          `[createFileNode] skipFileCopy=true，跳过物理目录创建`
+        );
+      }
 
       // 3. 将文件拷贝到节点目录
       if (!skipFileCopy) {
@@ -795,16 +784,31 @@ export class FileSystemService {
             `[createFileNode] 文件拷贝成功: ${sourceFilePath} -> ${targetPath}`
           );
         } else if (sourceDirectoryPath) {
-          // 从目录拷贝所有文件
+          // 从目录拷贝所有文件（用于秒传）
           const files = await fsPromises.readdir(sourceDirectoryPath);
-          for (const file of files) {
-            const sourcePath = path.join(sourceDirectoryPath, file);
-            const targetPath = path.join(storageInfo.fullPath, file);
-            await fsPromises.copyFile(sourcePath, targetPath);
+
+          // 查找所有以 fileHash 开头的文件
+          const matchingFiles = files.filter(file => file.startsWith(fileHash));
+
+          if (matchingFiles.length === 0) {
+            this.logger.warn(
+              `[createFileNode] 未找到匹配 ${fileHash} 的文件`
+            );
+          } else {
+            for (const file of matchingFiles) {
+              const sourcePath = path.join(sourceDirectoryPath, file);
+              // 将文件名中的 fileHash 替换为 nodeId
+              const targetFileName = file.replace(fileHash, fileNode.id);
+              const targetPath = path.join(storageInfo.fullPath, targetFileName);
+              await fsPromises.copyFile(sourcePath, targetPath);
+              this.logger.log(
+                `[createFileNode] 文件拷贝成功: ${file} -> ${targetFileName}`
+              );
+            }
+            this.logger.log(
+              `[createFileNode] 目录文件拷贝成功: ${matchingFiles.length} 个文件`
+            );
           }
-          this.logger.log(
-            `[createFileNode] 目录文件拷贝成功: ${files.length} 个文件`
-          );
         } else {
           this.logger.warn(
             `[createFileNode] 未提供源文件路径，跳过文件拷贝`

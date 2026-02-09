@@ -6,6 +6,7 @@ export interface FileSystemNodeContext {
   nodeId: string; // 当前节点ID（项目根目录或文件夹）
   userId: string;
   userRole: string;
+  fileSize?: number; // 文件大小（用于秒传时传递文件大小）
   srcDwgNodeId?: string; // 外部参照上传时的源图纸节点 ID
   isImage?: boolean; // 是否为图片外部参照
 }
@@ -582,25 +583,7 @@ export class FileSystemNodeService {
       `[handleExistingNode] 处理现有节点: originalName=${originalName}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), targetParentId=${targetParentId}, existingNodeId=${existingNode.id}, fileHash=${existingNode.fileHash}`
     );
 
-    // 检查是否在当前目录下已存在相同哈希值的文件
-    // 如果存在，说明文件已经上传过了，直接返回
-    const existingFileWithSameHash = await tx.fileSystemNode.findFirst({
-      where: {
-        parentId: targetParentId,
-        fileHash: existingNode.fileHash, // 检查哈希值而不是文件名
-        ownerId: context.userId,
-      },
-    });
-
-    if (existingFileWithSameHash) {
-      this.logger.log(
-        `[handleExistingNode] 相同哈希值的文件已存在于当前目录: ID=${existingFileWithSameHash.id}, 不创建新节点`
-      );
-      return; // 文件已存在，无需重复创建
-    }
-
-    // 文件在存储中存在，但当前目录下没有相同哈希值的文件
-    // 需要创建新的文件节点，并处理同名文件情况
+    // 文件在存储中存在，需要创建新的文件节点，并处理同名文件情况
     this.logger.log(
       `[handleExistingNode] 文件在存储中存在，当前目录没有相同文件，创建新节点...`
     );
@@ -647,6 +630,7 @@ export class FileSystemNodeService {
       `[handleExistingNode] 父节点存在: ${parentExists.name} (${parentExists.id})`
     );
 
+    // 创建新节点，path 初始设为 null，后续文件拷贝时会创建独立物理目录
     const newNode = await tx.fileSystemNode.create({
       data: {
         name: uniqueName,
@@ -654,7 +638,7 @@ export class FileSystemNodeService {
         isRoot: false,
         parentId: targetParentId,
         originalName: uniqueName,
-        path: existingNode.path, // 共享存储路径
+        path: null, // 【修复】初始设为 null，每个节点将拥有独立的物理目录
         size: existingNode.size,
         mimeType: existingNode.mimeType,
         extension: existingNode.extension,
@@ -664,7 +648,7 @@ export class FileSystemNodeService {
       },
     });
     this.logger.log(
-      `✅ 引用节点创建成功，ID: ${newNode.id}, parentId: ${newNode.parentId}, 共享存储: ${existingNode.path}`
+      `✅ 引用节点创建成功，ID: ${newNode.id}, parentId: ${newNode.parentId}, path=null (等待文件拷贝)`
     );
   }
 

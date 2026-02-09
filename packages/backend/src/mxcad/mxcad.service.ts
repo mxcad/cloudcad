@@ -458,7 +458,7 @@ export class MxCadService {
     name: string,
     size: number,
     context?: any
-  ): Promise<{ ret: string; tz?: boolean }> {
+  ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
     // 验证权限
     await this.permissionService.validateUploadPermission(context);
 

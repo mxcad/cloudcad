@@ -27,35 +27,142 @@ export const useExternalReferenceUpload = (
   const [isOpen, setIsOpen] = useState(false);
 
   // 使用 ref 存储 nodeId，确保闭包中始终使用最新值
-  const nodeIdRef = useRef(config.nodeId);
-  nodeIdRef.current = config.nodeId;
 
-  /**
+    const nodeIdRef = useRef(config.nodeId);
 
-     * 获取预加载数据
+    nodeIdRef.current = config.nodeId;
 
-     */
+  
 
-  const fetchPreloadingData = useCallback(
-    async (nodeId: string): Promise<PreloadingData | null> => {
-      if (!nodeId) {
-        logger.warn('nodeId 为空，无法获取预加载数据');
-        return null;
-      }
+    // 使用 ref 存储正在进行的请求，避免重复请求
 
-      try {
-        const response = await mxcadApi.getPreloadingData(nodeId);
-        // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
-        // 需要提取 data 字段中的实际预加载数据
-        return response.data?.data || null;
-      } catch (error) {
-        handleError(error, '获取预加载数据失败');
-        return null;
-      }
-    },
+    const pendingRequestsRef = useRef<Set<string>>(new Set());
 
-    []
-  );
+  
+
+    // 使用 ref 存储预加载数据缓存，避免重复请求
+
+    const preloadingDataCacheRef = useRef<Map<string, PreloadingData>>(new Map());
+
+  
+
+    /**
+
+       * 获取预加载数据
+
+       *
+
+       * 添加了请求去重和缓存机制：
+
+       * 1. 如果已有相同请求在进行中，跳过重复请求
+
+       * 2. 如果缓存中存在数据且未过期，直接返回缓存数据
+
+       */
+
+  
+
+    const fetchPreloadingData = useCallback(
+
+      async (nodeId: string): Promise<PreloadingData | null> => {
+
+        if (!nodeId) {
+
+          logger.warn('nodeId 为空，无法获取预加载数据');
+
+          return null;
+
+        }
+
+  
+
+        // 检查缓存（缓存有效期 5 秒）
+
+        const cached = preloadingDataCacheRef.current.get(nodeId);
+
+        if (cached) {
+
+          logger.debug(`[fetchPreloadingData] 返回缓存数据: ${nodeId}`);
+
+          return cached;
+
+        }
+
+  
+
+        // 检查是否已有相同请求在进行中
+
+        if (pendingRequestsRef.current.has(nodeId)) {
+
+          logger.debug(`[fetchPreloadingData] 节点 ${nodeId} 的请求已在进行中，跳过重复请求`);
+
+          return null;
+
+        }
+
+  
+
+        // 标记请求开始
+
+        pendingRequestsRef.current.add(nodeId);
+
+  
+
+        try {
+
+          const response = await mxcadApi.getPreloadingData(nodeId);
+
+          // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
+
+          // 需要提取 data 字段中的实际预加载数据
+
+          const data = response.data?.data || null;
+
+  
+
+          // 如果成功获取数据，更新缓存
+
+          if (data) {
+
+            preloadingDataCacheRef.current.set(nodeId, data);
+
+  
+
+            // 5 秒后清除缓存
+
+            setTimeout(() => {
+
+              preloadingDataCacheRef.current.delete(nodeId);
+
+            }, 5000);
+
+          }
+
+  
+
+          return data;
+
+        } catch (error) {
+
+          handleError(error, '获取预加载数据失败');
+
+          return null;
+
+        } finally {
+
+          // 请求完成后移除标记
+
+          pendingRequestsRef.current.delete(nodeId);
+
+        }
+
+      },
+
+  
+
+      []
+
+    );
 
   /**
    * 检查外部参照是否存在

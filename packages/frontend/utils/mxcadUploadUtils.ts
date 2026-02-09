@@ -117,7 +117,7 @@ export const uploadMxCadFile = async (
   });
 
   // 1. 检查文件是否已存在（秒传）
-  const existRequest = buildRequest();
+  const existRequest = buildRequest({ fileSize: file.size });
   const existResponse = await apiService.post(
     '/mxcad/files/fileisExist',
     existRequest

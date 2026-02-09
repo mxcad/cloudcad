@@ -45,6 +45,10 @@ export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
   private readonly mxCadFileExt: string;
 
+  // 预加载数据缓存
+  private preloadingDataCache = new Map<string, { data: PreloadingDataDto; timestamp: number }>();
+  private readonly CACHE_TTL = 5000; // 5 秒缓存有效期
+
   constructor(
     private readonly mxCadService: MxCadService,
     private readonly prisma: DatabaseService,
@@ -105,6 +109,9 @@ export class MxCadController {
     @Res() res: Response
   ) {
     const context = await this.buildContextFromRequest(request);
+    // 添加文件大小到 context
+    context.fileSize = body.fileSize;
+    this.logger.log(`[checkFileExist] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, fileSize=${body.fileSize}, nodeId=${context.nodeId}`);
     const result = await this.mxCadService.checkFileExist(
       body.filename,
       body.fileHash,
@@ -146,6 +153,16 @@ export class MxCadController {
   ): Promise<PreloadingDataDto> {
     this.logger.debug(`[getPreloadingData] 请求参数: nodeId=${nodeId}`);
 
+    // 检查缓存
+    const cached = this.preloadingDataCache.get(nodeId);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
+      this.logger.debug(`[getPreloadingData] 返回缓存数据: ${nodeId}`);
+      return cached.data;
+    }
+
+    // 从服务获取数据
     const data = await this.mxCadService.getPreloadingData(nodeId);
 
     if (!data) {
@@ -153,8 +170,26 @@ export class MxCadController {
       throw new NotFoundException('预加载数据不存在');
     }
 
+    // 更新缓存
+    this.preloadingDataCache.set(nodeId, { data, timestamp: now });
+
+    // 清理过期缓存
+    this.cleanExpiredCache();
+
     this.logger.debug(`[getPreloadingData] 成功返回预加载数据: ${nodeId}`);
     return data;
+  }
+
+  /**
+   * 清理过期的缓存项
+   */
+  private cleanExpiredCache(): void {
+    const now = Date.now();
+    for (const [key, value] of this.preloadingDataCache.entries()) {
+      if ((now - value.timestamp) >= this.CACHE_TTL) {
+        this.preloadingDataCache.delete(key);
+      }
+    }
   }
 
   /**
