@@ -38,3 +38,6 @@ svn-repo/
 
 # MinIO data
 **/minio-data/
+
+# Test files
+test-sidebar.html
