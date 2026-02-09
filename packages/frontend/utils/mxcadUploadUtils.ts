@@ -192,46 +192,18 @@ export const uploadMxCadFile = async (
     onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
   }
 
-  // 3. 等待后端处理转换
-  await new Promise((resolve) => setTimeout(resolve, 3000));
-
-  // 4. 验证文件是否真正上传成功
-  let verifyAttempts = 0;
-  const maxAttempts = 10;
-  let uploadSuccess = false;
-
-  while (verifyAttempts < maxAttempts && !uploadSuccess) {
-    const verifyRequest = buildRequest();
-    const verifyResponse = await apiService.post(
-      '/mxcad/files/fileisExist',
-      verifyRequest
-    );
-
-    if (verifyResponse.data.ret === 'fileAlreadyExist') {
-      uploadSuccess = true;
-      // 优先使用合并时返回的 nodeId，否则使用 fileisExist 返回的 nodeId
-      const finalNodeId = newNodeId || verifyResponse.data.nodeId || nodeId;
-      return {
-        file,
-        hash,
-        nodeId: finalNodeId,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        isUseServerExistingFile: false,
-        isInstantUpload: false,
-      };
-    }
-
-    verifyAttempts++;
-    if (verifyAttempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-  }
-
-  // 上传超时
-  throw new MxCadUploadError(
-    '文件上传完成，正在后台处理转换，请稍后在文件列表中查看',
-    file.name
-  );
+  // 3. 直接使用合并时返回的 nodeId
+  // 避免再次调用 fileisExist API，防止触发秒传逻辑导致重复创建节点
+  const finalNodeId = newNodeId || nodeId;
+  
+  return {
+    file,
+    hash,
+    nodeId: finalNodeId,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    isUseServerExistingFile: false,
+    isInstantUpload: false,
+  };
 };
