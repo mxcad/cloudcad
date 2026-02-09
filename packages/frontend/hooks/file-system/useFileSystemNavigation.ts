@@ -60,6 +60,11 @@ export const useFileSystemNavigation = ({
 
   const handleFileOpen = useCallback(
     (node: FileSystemNode) => {
+      // 检查节点是否在回收站中
+      if (node.deletedAt) {
+        return;
+      }
+
       if (node.isFolder) {
         const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
         navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
@@ -82,6 +87,11 @@ export const useFileSystemNavigation = ({
 
   const handleDownload = useCallback(
     async (node: FileSystemNode) => {
+      // 检查节点是否在回收站中
+      if (node.deletedAt) {
+        return;
+      }
+
       try {
         logger.info('开始下载文件', 'useFileSystemNavigation', {
           nodeId: node.id,

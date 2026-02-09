@@ -38,9 +38,9 @@
       "prompt": "打开文件"
     },
     {
-      "prompt": "另存为mxweb文件",
+      "prompt": "保存",
       "icon": "baocun",
-      "cmd": "Mx_SaveAs"
+      "cmd": "Mx_Save"
     }
   ],
   "isShowTopButtonBar": true,

@@ -973,6 +973,11 @@ export const useFileSystem = () => {
   // 处理文件打开（包括CAD文件跳转到编辑器）
   const handleFileOpen = useCallback(
     (node: FileSystemNode) => {
+      // 检查节点是否在回收站中
+      if (node.deletedAt) {
+        return;
+      }
+
       if (node.isFolder) {
         // 如果是项目根目录（isRoot=true），使用 node.id 作为 projectId
         // 如果是普通文件夹，使用 URL 中的 projectId
@@ -1015,6 +1020,11 @@ export const useFileSystem = () => {
       }
 
       // 非 CAD 文件或文件夹，直接下载
+      // 检查节点是否在回收站中
+      if (node.deletedAt) {
+        return;
+      }
+
       try {
         console.log('[useFileSystem] 开始下载文件', {
           nodeId: node.id,

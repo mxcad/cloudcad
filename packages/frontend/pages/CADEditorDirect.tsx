@@ -153,7 +153,13 @@ export const CADEditorDirect: React.FC = () => {
         const fileResponse = await apiService.get(
           `/file-system/nodes/${fileId}`
         );
-        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string };
+        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string; deletedAt?: string | null };
+
+        // 检查文件是否在回收站中
+        if (file.deletedAt) {
+          setLoading(false);
+          return;
+        }
 
         if (!file.fileHash) {
           setError('文件尚未转换完成');
@@ -262,7 +268,12 @@ export const CADEditorDirect: React.FC = () => {
     const updateFileInfo = async () => {
       try {
         const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
-        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string };
+        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string; deletedAt?: string | null };
+
+        // 检查文件是否在回收站中
+        if (file.deletedAt) {
+          return;
+        }
 
         if (!file.fileHash) {
           return;
@@ -305,6 +316,15 @@ export const CADEditorDirect: React.FC = () => {
     filename: string;
   }) => {
     try {
+      // 获取目标文件信息（要打开的文件）
+      const targetFileResponse = await apiService.get(`/file-system/nodes/${file.nodeId}`);
+      const targetFile = targetFileResponse.data as { deletedAt?: string | null };
+
+      // 检查目标文件是否在回收站中
+      if (targetFile.deletedAt) {
+        return;
+      }
+
       // 获取当前文件信息，确定 uploadTargetNodeId
       const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
       const currentFile = fileResponse.data as { parentId?: string | null; id?: string; isRoot?: boolean };
