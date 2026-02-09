@@ -1162,10 +1162,10 @@ export class FileUploadManagerService {
               // 获取节点目录路径（完整路径，包含 nodeId）
               const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
               const fullPath = path.join(filesDataPath, newNode.path);
-              // 【修复】直接使用 fullPath 作为节点目录，不使用 dirname
-              // 因为 newNode.path 已经是相对路径（如：202602/cmlewuzvw0000o8uf0ewsta9u）
-              const nodeDirectory = fullPath;
-              this.logger.log(`[performFileExistenceCheck] 准备提交 SVN: filesDataPath=${filesDataPath}, newNode.path=${newNode.path}, nodeDirectory=${nodeDirectory}`);
+              // 【修复】获取节点目录（不包含文件名）
+              // newNode.path 格式：YYYYMM/nodeId/filename，所以需要获取父目录
+              const nodeDirectory = path.dirname(fullPath);
+              this.logger.log(`[performFileExistenceCheck] 准备提交 SVN: filesDataPath=${filesDataPath}, newNode.path=${newNode.path}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`);
 
               const commitResult = await this.versionControlService.commitNodeDirectory(
                 nodeDirectory,

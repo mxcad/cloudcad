@@ -5,6 +5,7 @@ import {
   svnCheckout,
   svnAdd,
   svnCommit,
+  svnDelete,
   svnadminCreate,
   svnImport,
 } from '@cloudcad/svn-version-tool';
@@ -15,6 +16,7 @@ import * as fs from 'fs';
 const svnCheckoutAsync = promisify(svnCheckout);
 const svnAddAsync = promisify(svnAdd);
 const svnCommitAsync = promisify(svnCommit);
+const svnDeleteAsync = promisify(svnDelete);
 const svnadminCreateAsync = promisify(svnadminCreate);
 const svnImportAsync = promisify(svnImport);
 
@@ -240,5 +242,74 @@ export class VersionControlService implements OnModuleInit {
    */
   isReady(): boolean {
     return this.isInitialized;
+  }
+
+  /**
+   * 删除节点目录从 SVN（仅标记删除，不提交）
+   */
+  async deleteNodeDirectory(nodeDirectory: string): Promise<SvnOperationResult> {
+    if (!this.isInitialized) {
+      this.logger.warn('SVN 未初始化，跳过删除');
+      return { success: false, message: 'SVN 未初始化' };
+    }
+
+    try {
+      // 从 SVN 删除目录（仅标记删除）
+      const result = await svnDeleteAsync(
+        [nodeDirectory],
+        true, // 递归删除
+        true, // 保留本地文件（因为物理文件会在之后被删除）
+        null,
+        null
+      );
+
+      this.logger.log(`目录已从 SVN 标记删除: ${nodeDirectory}`);
+      return {
+        success: true,
+        message: '删除成功',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${error.message}`);
+      return {
+        success: false,
+        message: `删除失败: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * 提交 SVN 工作副本中的更改（用于批量提交删除）
+   */
+  async commitWorkingCopy(message: string): Promise<SvnOperationResult> {
+    if (!this.isInitialized) {
+      this.logger.warn('SVN 未初始化，跳过提交');
+      return { success: false, message: 'SVN 未初始化' };
+    }
+
+    try {
+      // 提交工作副本中的所有更改
+      const filesDataPath = this.filesDataPath;
+      const result = await svnCommitAsync(
+        [filesDataPath],
+        message,
+        true, // 递归提交
+        null,
+        null
+      );
+
+      this.logger.log(`工作副本已提交: ${message}`);
+      return {
+        success: true,
+        message: '提交成功',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`工作副本提交失败: ${error.message}`);
+      return {
+        success: false,
+        message: `提交失败: ${error.message}`,
+      };
+    }
   }
 }

@@ -54,6 +54,24 @@ export function svnCommit(
 ): void;
 
 /**
+ * 从 SVN 工作副本中删除文件或目录（仅标记删除，不提交）
+ * @param targetPaths - 目标路径数组
+ * @param isRecursive - 是否递归
+ * @param keepLocal - 是否保留本地文件
+ * @param username - 用户名（可选）
+ * @param password - 密码（可选）
+ * @param callback - 回调函数
+ */
+export function svnDelete(
+  targetPaths: string[],
+  isRecursive: boolean,
+  keepLocal: boolean,
+  username: string | null,
+  password: string | null,
+  callback: SvnCallback
+): void;
+
+/**
  * 列出 SVN 仓库内容
  * @param repoUrl - 仓库 URL
  * @param isRecursive - 是否递归

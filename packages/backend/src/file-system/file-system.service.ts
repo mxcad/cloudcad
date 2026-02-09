@@ -605,6 +605,23 @@ export class FileSystemService {
     this.logger.log(`准备删除节点物理目录: ${nodePath}`);
 
     try {
+      // 从 SVN 删除节点目录（仅标记删除）
+      const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+      const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
+
+      if (this.versionControlService.isReady()) {
+        try {
+          const deleteResult = await this.versionControlService.deleteNodeDirectory(nodeDirectory);
+          if (deleteResult.success) {
+            this.logger.log(`节点目录已从 SVN 标记删除: ${nodeDirectory}`);
+          } else {
+            this.logger.warn(`节点目录从 SVN 标记删除失败: ${nodeDirectory}, 原因: ${deleteResult.message}`);
+          }
+        } catch (svnError) {
+          this.logger.error(`节点目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${svnError.message}`);
+          // SVN 删除失败不影响物理文件删除
+        }
+      }
       // 获取文件的完整路径
       const fullPath = this.storageManager.getFullPath(nodePath);
 
@@ -757,14 +774,26 @@ export class FileSystemService {
       );
 
       // 2. 根据节点 ID 创建物理目录（仅在 skipFileCopy=false 时）
-      let storageInfo: any = null;
-      if (!skipFileCopy) {
-        storageInfo = await this.storageManager.allocateNodeStorage(
-          fileNode.id
-        );
-        this.logger.log(
-          `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
-        );
+
+            let storageInfo: any = null;
+
+      
+
+            if (!skipFileCopy) {
+
+              storageInfo = await this.storageManager.allocateNodeStorage(
+
+                fileNode.id,
+
+                name
+
+              );
+
+              this.logger.log(
+
+                `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
+
+              );
       } else {
         this.logger.log(
           `[createFileNode] skipFileCopy=true，跳过物理目录创建`
@@ -775,13 +804,9 @@ export class FileSystemService {
       if (!skipFileCopy) {
         if (sourceFilePath) {
           // 从单个文件路径拷贝
-          const targetPath = path.join(
-            storageInfo.fullPath,
-            path.basename(sourceFilePath)
-          );
-          await fsPromises.copyFile(sourceFilePath, targetPath);
+          await fsPromises.copyFile(sourceFilePath, storageInfo.fullPath);
           this.logger.log(
-            `[createFileNode] 文件拷贝成功: ${sourceFilePath} -> ${targetPath}`
+            `[createFileNode] 文件拷贝成功: ${sourceFilePath} -> ${storageInfo.fullPath}`
           );
         } else if (sourceDirectoryPath) {
           // 从目录拷贝所有文件（用于秒传）
@@ -795,11 +820,13 @@ export class FileSystemService {
               `[createFileNode] 未找到匹配 ${fileHash} 的文件`
             );
           } else {
+            // 获取节点目录路径（YYYYMM/nodeId）
+            const nodeDirectory = path.dirname(storageInfo.fullPath);
             for (const file of matchingFiles) {
               const sourcePath = path.join(sourceDirectoryPath, file);
-              // 将文件名中的 fileHash 替换为 nodeId
+              // 将文件名中的 fileHash 替换为 nodeId，并保持文件扩展名
               const targetFileName = file.replace(fileHash, fileNode.id);
-              const targetPath = path.join(storageInfo.fullPath, targetFileName);
+              const targetPath = path.join(nodeDirectory, targetFileName);
               await fsPromises.copyFile(sourcePath, targetPath);
               this.logger.log(
                 `[createFileNode] 文件拷贝成功: ${file} -> ${targetFileName}`
@@ -1978,12 +2005,12 @@ export class FileSystemService {
   /**
    * 彻底删除回收站中的项目
    */
-  async permanentlyDeleteProject(projectId: string) {
+  async permanentlyDeleteProject(projectId: string, commitSvn: boolean = true) {
     try {
       // 获取项目根节点信息
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId },
-        select: { isFolder: true, path: true, fileHash: true },
+        select: { isFolder: true, path: true, fileHash: true, name: true },
       });
 
       if (!project) {
@@ -2010,6 +2037,23 @@ export class FileSystemService {
         });
       });
 
+      // 提交 SVN 工作副本（仅在需要时）
+      if (commitSvn && this.versionControlService.isReady()) {
+        try {
+          const commitResult = await this.versionControlService.commitWorkingCopy(
+            `删除项目: ${project.name} (${projectId})`
+          );
+          if (commitResult.success) {
+            this.logger.log(`删除项目的 SVN 更改已提交: ${project.name}`);
+          } else {
+            this.logger.warn(`删除项目的 SVN 更改提交失败: ${project.name}, 原因: ${commitResult.message}`);
+          }
+        } catch (svnError) {
+          this.logger.error(`删除项目的 SVN 更改提交失败: ${project.name}, 错误: ${svnError.message}`);
+          // SVN 提交失败不影响删除操作
+        }
+      }
+
       this.logger.log(`项目已从回收站彻底删除: ${projectId}`);
       return { message: '项目已彻底删除' };
     } catch (error) {
@@ -2021,11 +2065,11 @@ export class FileSystemService {
   /**
    * 彻底删除回收站中的节点
    */
-  async permanentlyDeleteNode(nodeId: string) {
+  async permanentlyDeleteNode(nodeId: string, commitSvn: boolean = true) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { isFolder: true, path: true, fileHash: true },
+        select: { isFolder: true, path: true, fileHash: true, name: true },
       });
 
       if (!node) {
@@ -2049,6 +2093,23 @@ export class FileSystemService {
         // 删除当前节点
         await tx.fileSystemNode.delete({ where: { id: nodeId } });
       });
+
+      // 提交 SVN 工作副本（仅在需要时）
+      if (commitSvn && this.versionControlService.isReady()) {
+        try {
+          const commitResult = await this.versionControlService.commitWorkingCopy(
+            `删除节点: ${node.name} (${nodeId})`
+          );
+          if (commitResult.success) {
+            this.logger.log(`删除节点的 SVN 更改已提交: ${node.name}`);
+          } else {
+            this.logger.warn(`删除节点的 SVN 更改提交失败: ${node.name}, 原因: ${commitResult.message}`);
+          }
+        } catch (svnError) {
+          this.logger.error(`删除节点的 SVN 更改提交失败: ${node.name}, 错误: ${svnError.message}`);
+          // SVN 提交失败不影响删除操作
+        }
+      }
 
       this.logger.log(`节点已从回收站彻底删除: ${nodeId}`);
       return { message: '已彻底删除' };
@@ -2118,9 +2179,26 @@ export class FileSystemService {
 
       for (const item of items) {
         if (item.isRoot) {
-          await this.permanentlyDeleteProject(item.id);
+          await this.permanentlyDeleteProject(item.id, false); // 不立即提交
         } else {
-          await this.permanentlyDeleteNode(item.id);
+          await this.permanentlyDeleteNode(item.id, false); // 不立即提交
+        }
+      }
+
+      // 统一提交 SVN 工作副本
+      if (this.versionControlService.isReady()) {
+        try {
+          const commitResult = await this.versionControlService.commitWorkingCopy(
+            `批量删除 ${items.length} 个项目/节点`
+          );
+          if (commitResult.success) {
+            this.logger.log(`批量删除的 SVN 更改已提交: ${items.length} 个项目/节点`);
+          } else {
+            this.logger.warn(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`);
+          }
+        } catch (svnError) {
+          this.logger.error(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 错误: ${svnError.message}`);
+          // SVN 提交失败不影响删除操作
         }
       }
 
@@ -2165,7 +2243,7 @@ export class FileSystemService {
       }
 
       for (const project of projects) {
-        await this.permanentlyDeleteProject(project.id);
+        await this.permanentlyDeleteProject(project.id, false); // 不立即提交
       }
 
       for (const node of nodes) {
@@ -2183,6 +2261,23 @@ export class FileSystemService {
           id: { in: nodes.map((n) => n.id) },
         },
       });
+
+      // 统一提交 SVN 工作副本
+      if (this.versionControlService.isReady()) {
+        try {
+          const commitResult = await this.versionControlService.commitWorkingCopy(
+            `清空用户回收站: ${userId}`
+          );
+          if (commitResult.success) {
+            this.logger.log(`清空回收站的 SVN 更改已提交: ${userId}`);
+          } else {
+            this.logger.warn(`清空回收站的 SVN 更改提交失败: ${userId}, 原因: ${commitResult.message}`);
+          }
+        } catch (svnError) {
+          this.logger.error(`清空回收站的 SVN 更改提交失败: ${userId}, 错误: ${svnError.message}`);
+          // SVN 提交失败不影响清空操作
+        }
+      }
 
       this.logger.log(`用户回收站已清空: ${userId}`);
       return { message: '回收站已清空' };

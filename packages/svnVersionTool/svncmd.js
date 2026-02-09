@@ -4,6 +4,7 @@ const svnCommit = require('./svncommit');
 const svnList = require('./svnlist');
 const svnadminCreate = require('./svnadmincreate');
 const svnImport = require('./svnimport');
+const svnDelete = require('./svndelete');
 
 
 // 导出函数
@@ -13,5 +14,6 @@ module.exports = {
     svnCommit,
     svnList,
     svnadminCreate,
-    svnImport
+    svnImport,
+    svnDelete
 };
