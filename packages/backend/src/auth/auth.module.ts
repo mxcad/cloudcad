@@ -16,6 +16,7 @@ import { EmailService } from './services/email.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { InitializationService } from '../common/services/initialization.service';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     TokenBlacklistService,
     EmailService,
     EmailVerificationService,
+    InitializationService,
   ],
   exports: [
     AuthService,

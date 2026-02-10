@@ -80,12 +80,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new Error('用户已被禁用');
     }
 
-    // 返回用户基本信息 + JWT payload 中的角色信息
-    // 这样避免每次请求都查询角色和权限表
+    // 查询用户的角色和权限信息
+    const role = await this.prisma.role.findUnique({
+      where: { name: payload.role },
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    if (!role) {
+      if (this.isDevelopment) {
+        this.logger.warn(`角色不存在: ${payload.role}`);
+      }
+      throw new Error('角色不存在');
+    }
+
+    // 返回用户基本信息 + 角色和权限信息
     return {
       ...user,
       role: {
-        name: payload.role,
+        name: role.name,
+        description: role.description,
+        permissions: role.permissions,
       },
     };
   }

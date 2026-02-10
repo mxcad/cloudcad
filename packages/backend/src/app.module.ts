@@ -26,6 +26,8 @@ import { UsersModule } from './users/users.module';
 import { AuditLogModule } from './audit/audit-log.module';
 import { VersionControlModule } from './version-control/version-control.module';
 import { SystemPermission, ProjectPermission } from './common/dto/permission.dto';
+import { PolicyEngineModule } from './policy-engine/policy-engine.module';
+import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 
 @Module({
   imports: [
@@ -36,6 +38,7 @@ import { SystemPermission, ProjectPermission } from './common/dto/permission.dto
     }),
     DatabaseModule,
     RedisModule,
+    CacheArchitectureModule, // 缓存架构模块（必须在 SchedulerModule 之前导入）
     AuthModule,
     CommonModule,
     UsersModule,
@@ -50,6 +53,7 @@ import { SystemPermission, ProjectPermission } from './common/dto/permission.dto
     HealthModule,
     AuditLogModule,
     VersionControlModule,
+    PolicyEngineModule,
   ],
   controllers: [AppController],
   providers: [

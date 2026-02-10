@@ -35,8 +35,11 @@ model Role {
   id          String       @id @default(cuid())
   name        String       @unique
   description String?
+  parentId    String?      // 父角色ID（支持角色层级继承）
+  parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Role[]       @relation("RoleHierarchy")
   category    RoleCategory @default(SYSTEM) // 角色类别
-  level       Int          @default(0)      // 角色级别（用于权限继承）
+  level       Int          @default(0)      // 角色层级深度（用于优化继承查询）
   isSystem    Boolean      @default(false)  // 是否为系统角色（不可删除）
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -45,7 +48,10 @@ model Role {
   users       User[]
   permissions RolePermission[]
 
+  @@unique([name, parentId]) // 允许同名角色存在于不同层级
+  @@index([parentId])
   @@index([category])
+  @@index([level])
   @@map("roles")
 }
 
@@ -438,4 +444,68 @@ enum RoleCategory {
   SYSTEM   // 系统角色（ADMIN, USER）
   PROJECT  // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
   CUSTOM   // 自定义角色
+}
+
+// ============ 缓存架构模块 ============
+
+// L3 缓存条目表（数据库缓存）
+model CacheEntry {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  value            String   // JSON 序列化的缓存值
+  expiresAt        DateTime? // 过期时间（null 表示永不过期）
+  lastAccessedAt   DateTime @default(now()) // 最后访问时间
+  accessCount      Int      @default(0) // 访问次数
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([lastAccessedAt])
+  @@index([accessCount])
+  @@map("cache_entries")
+}
+
+// ============ 权限策略引擎模块 ============
+
+// 权限策略类型
+enum PolicyType {
+  TIME      // 时间策略
+  IP        // IP 地址策略
+  DEVICE    // 设备策略
+}
+
+// 权限策略表
+model PermissionPolicy {
+  id          String   @id @default(cuid())
+  type        PolicyType // 策略类型
+  name        String   // 策略名称
+  description String?  // 策略描述
+  config      Json     // 策略配置（JSON 格式）
+  enabled     Boolean  @default(true) // 是否启用
+  priority    Int      @default(0) // 优先级（数值越大优先级越高）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联关系
+  permissions PolicyPermission[]
+
+  @@index([type])
+  @@index([enabled])
+  @@index([priority])
+  @@map("permission_policies")
+}
+
+// 策略-权限关联表
+model PolicyPermission {
+  id          String   @id @default(cuid())
+  policyId    String   // 策略 ID
+  permission  Permission // 权限
+  createdAt   DateTime @default(now())
+
+  // 关联关系
+  policy      PermissionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, permission])
+  @@index([permission])
+  @@map("policy_permissions")
 }

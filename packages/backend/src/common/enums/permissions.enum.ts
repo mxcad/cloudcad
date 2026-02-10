@@ -77,7 +77,7 @@ export enum ProjectRole {
 
 /**
  * 系统角色权限映射
- * 定义系统角色拥有的系统权限
+ * 定义系统角色拥有的系统权限（直接权限，不包括继承）
  */
 export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
   [SystemRole.ADMIN]: [
@@ -120,6 +120,17 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
   [SystemRole.USER]: [
     // 普通用户：暂无系统权限（仅用于登录）
   ],
+};
+
+/**
+ * 系统角色继承关系
+ * 定义角色的父角色（从父角色继承权限）
+ */
+export const SYSTEM_ROLE_HIERARCHY: Record<SystemRole, SystemRole | null> = {
+  [SystemRole.ADMIN]: null, // 顶级角色
+  [SystemRole.USER_MANAGER]: SystemRole.USER, // 继承自 USER
+  [SystemRole.FONT_MANAGER]: SystemRole.USER, // 继承自 USER
+  [SystemRole.USER]: null, // 基础角色
 };
 
 /**

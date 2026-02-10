@@ -28,6 +28,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "test:ci": "jest --coverage --ci --watchAll=false",
+    "test:permission": "jest --testPathPatterns=permission --testNamePattern=\"PermissionTestRunner\"",
+    "test:permission:scenarios": "jest --testPathPatterns=permission-scenarios",
+    "test:permission:full": "ts-node scripts/run-permission-tests.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -44,6 +47,7 @@
     "verify": "pnpm check:fix && pnpm test && pnpm build"
   },
   "dependencies": {
+    "@cloudcad/svn-version-tool": "workspace:*",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^11.0.1",
@@ -79,8 +83,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "tsx": "^4.21.0",
-    "uuid": "^13.0.0",
-    "@cloudcad/svn-version-tool": "workspace:*"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.14",

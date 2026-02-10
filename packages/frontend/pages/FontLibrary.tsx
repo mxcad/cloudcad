@@ -17,19 +17,6 @@ export default function FontLibrary(props: FontLibraryProps) {
   const canDeleteFonts = hasPermission(SystemPermission.SYSTEM_FONT_DELETE);
   const canDownloadFonts = hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD);
 
-  // 如果没有查看权限，返回无权限提示
-  if (!canReadFonts) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <p className="text-gray-500">您没有查看字体库的权限</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const [allFonts, setAllFonts] = useState<FontInfo[]>([]);
   const [fonts, setFonts] = useState<FontInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +41,19 @@ export default function FontLibrary(props: FontLibraryProps) {
 
   // 选中的字体
   const [selectedFonts, setSelectedFonts] = useState<Set<string>>(new Set());
+
+  // 如果没有查看权限，返回无权限提示
+  if (!canReadFonts) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-gray-500">您没有查看字体库的权限</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 获取字体列表
   const fetchFonts = useCallback(async () => {

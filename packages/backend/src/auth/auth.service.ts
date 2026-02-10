@@ -3,6 +3,7 @@ import {
   Logger,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +12,7 @@ import { DatabaseService } from '../database/database.service';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { InitializationService } from '../common/services/initialization.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 
@@ -24,6 +26,7 @@ export class AuthService {
     private configService: ConfigService,
     private tokenBlacklistService: TokenBlacklistService,
     private emailVerificationService: EmailVerificationService,
+    private initializationService: InitializationService,
     @InjectRedis() private readonly redis: Redis
   ) {}
 
@@ -31,6 +34,12 @@ export class AuthService {
     registerDto: RegisterDto
   ): Promise<{ message: string; email: string }> {
     const { email, username, password, nickname } = registerDto;
+
+    // 检查是否允许注册（仅在首次启动时允许）
+    const isRegistrationAllowed = await this.initializationService.isRegistrationAllowed();
+    if (!isRegistrationAllowed) {
+      throw new BadRequestException('系统已初始化，注册功能已关闭。请联系管理员创建账户。');
+    }
 
     const existingUserByEmail = await this.prisma.user.findUnique({
       where: { email },

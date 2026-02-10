@@ -128,6 +128,16 @@ jobs:
           cd packages/backend
           pnpm test:ci
 
+      - name: 运行权限测试套件
+        run: |
+          cd packages/backend
+          pnpm test --testPathPatterns=permission --testNamePattern="PermissionTestRunner"
+
+      - name: 运行权限场景测试
+        run: |
+          cd packages/backend
+          pnpm test --testPathPatterns=permission-scenarios
+
       - name: 运行前端测试
         run: |
           cd packages/frontend

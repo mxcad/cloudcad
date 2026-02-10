@@ -1,10 +1,15 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { SystemPermission, SystemRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
+import { RoleInheritanceService } from './role-inheritance.service';
 import { PermissionContext } from '../utils/permission.util';
-import { AuditAction, ResourceType } from '@prisma/client';
+import { AuditAction, ResourceType, Permission as PrismaPermission } from '@prisma/client';
+import { PolicyConfigService } from '../../policy-engine/services/policy-config.service';
+import { PolicyEngineService } from '../../policy-engine/services/policy-engine.service';
+import { PolicyType } from '../../policy-engine/enums/policy-type.enum';
+import { IPermissionPolicy } from '../../policy-engine/interfaces/permission-policy.interface';
 
 export interface Role {
   id: string;
@@ -40,8 +45,13 @@ export class PermissionService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly cacheService: PermissionCacheService,
+    private readonly roleInheritanceService: RoleInheritanceService,
     @Inject(forwardRef(() => AuditLogService))
-    private readonly auditLogService: AuditLogService
+    private readonly auditLogService: AuditLogService,
+    @Optional()
+    private readonly policyConfigService?: PolicyConfigService,
+    @Optional()
+    private readonly policyEngineService?: PolicyEngineService
   ) {}
 
   /**
@@ -62,7 +72,7 @@ export class PermissionService {
     try {
       // 1. 检查缓存
       const cacheKey = `system_perm:${userId}:${permission}`;
-      const cached = this.cacheService.get<boolean>(cacheKey);
+      const cached = await this.cacheService.get<boolean>(cacheKey);
       if (cached !== null) {
         decisionReason = '缓存命中';
         hasPermission = cached;
@@ -150,7 +160,7 @@ export class PermissionService {
    */
   private async isSystemAdmin(userId: string): Promise<boolean> {
     const cacheKey = `is_admin:${userId}`;
-    const cached = this.cacheService.get<boolean>(cacheKey);
+    const cached = await this.cacheService.get<boolean>(cacheKey);
     if (cached !== null) {
       return cached;
     }
@@ -172,32 +182,18 @@ export class PermissionService {
   }
 
   /**
-   * 检查用户的系统权限
+   * 检查用户的系统权限（支持角色继承）
    */
   private async checkUserSystemPermission(
     userId: string,
     permission: SystemPermission
   ): Promise<boolean> {
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          role: {
-            include: {
-              permissions: true,
-            },
-          },
-        },
-      });
-
-      if (!user?.role) {
-        return false;
-      }
-
-      const userPermissions = user.role.permissions.map(
-        (p) => p.permission as SystemPermission
+      // 使用角色继承服务检查权限（包括继承的权限）
+      return await this.roleInheritanceService.checkUserPermissionWithInheritance(
+        userId,
+        permission
       );
-      return userPermissions.includes(permission as SystemPermission);
     } catch (error) {
       this.logger.error(`检查用户系统权限失败: ${error.message}`, error.stack);
       return false;
@@ -205,15 +201,19 @@ export class PermissionService {
   }
 
   /**
-   * 获取用户的系统权限
+   * 获取用户的系统权限（包括继承的权限）
    */
   async getUserPermissions(
     user: UserWithPermissions
   ): Promise<SystemPermission[]> {
     try {
-      return (
-        user.role?.permissions?.map((p) => p.permission as SystemPermission) ||
-        []
+      if (!user.role) {
+        return [];
+      }
+
+      // 使用角色继承服务获取所有权限（包括继承的权限）
+      return await this.roleInheritanceService.getRolePermissions(
+        user.role.name as SystemRole
       );
     } catch (error) {
       this.logger.error(`获取用户权限失败: ${error.message}`, error.stack);
@@ -285,9 +285,93 @@ export class PermissionService {
   /**
    * 检查上下文规则
    *
+   * 使用策略引擎评估动态权限策略
+   *
    * @returns 是否通过上下文规则检查
    */
   private async checkContextRules(
+    userId: string,
+    permission: SystemPermission,
+    context: PermissionContext
+  ): Promise<boolean> {
+    // 如果策略引擎服务未注入，使用旧的硬编码规则（向后兼容）
+    if (!this.policyConfigService || !this.policyEngineService) {
+      return this.checkLegacyContextRules(userId, permission, context);
+    }
+
+    try {
+      // 获取该权限的所有启用的策略
+      const policyConfigs = await this.policyConfigService.getEnabledPoliciesForPermission(
+        permission as PrismaPermission
+      );
+
+      // 如果没有配置策略，默认允许
+      if (policyConfigs.length === 0) {
+        return true;
+      }
+
+      // 创建策略实例
+      const policies: IPermissionPolicy[] = [];
+      for (const config of policyConfigs) {
+        try {
+          const policy = this.policyEngineService.createPolicy(
+            config.type,
+            config.id || 'temp',
+            config.config
+          );
+          policies.push(policy);
+        } catch (error) {
+          this.logger.error(
+            `创建策略实例失败: ${config.name} - ${error.message}`,
+            error.stack
+          );
+        }
+      }
+
+      // 如果没有有效的策略，默认允许
+      if (policies.length === 0) {
+        return true;
+      }
+
+      // 构建策略上下文
+      const policyContext = {
+        userId,
+        permission: permission as PrismaPermission,
+        time: context.time,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        metadata: context.metadata,
+      };
+
+      // 评估所有策略（AND 逻辑，所有策略都通过才允许）
+      const summary = await this.policyEngineService.evaluatePolicies(
+        policies,
+        policyContext
+      );
+
+      if (!summary.allowed) {
+        this.logger.warn(
+          `用户 ${userId} 的权限 ${permission} 被策略拒绝: ${summary.denialReason}`
+        );
+      }
+
+      return summary.allowed;
+    } catch (error) {
+      this.logger.error(
+        `策略引擎评估失败: ${error.message}`,
+        error.stack
+      );
+      // 出错时默认拒绝（安全原则）
+      return false;
+    }
+  }
+
+  /**
+   * 旧的硬编码上下文规则（向后兼容）
+   *
+   * @deprecated 使用策略引擎替代
+   */
+  private async checkLegacyContextRules(
     userId: string,
     permission: SystemPermission,
     context: PermissionContext
@@ -397,5 +481,94 @@ export class PermissionService {
    */
   async clearUserCache(userId: string): Promise<void> {
     await this.cacheService.clearUserCache(userId);
+
+    // 同时清除用户角色的缓存
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: { select: { name: true } } },
+    });
+
+    if (user?.role) {
+      await this.roleInheritanceService.clearRoleCache(
+        user.role.name as SystemRole
+      );
+    }
+  }
+
+  /**
+   * 批量检查系统权限
+   *
+   * @param userId 用户ID
+   * @param permissions 需要检查的权限列表
+   * @returns 权限检查结果映射（权限 -> 是否有权限）
+   */
+  async checkSystemPermissionsBatch(
+    userId: string,
+    permissions: SystemPermission[]
+  ): Promise<Map<SystemPermission, boolean>> {
+    const results = new Map<SystemPermission, boolean>();
+    const uncachedPermissions: SystemPermission[] = [];
+
+    // 先从缓存中获取
+    for (const permission of permissions) {
+      const cacheKey = `system_perm:${userId}:${permission}`;
+      const cached = await this.cacheService.get<boolean>(cacheKey);
+
+      if (cached !== null) {
+        results.set(permission, cached);
+      } else {
+        uncachedPermissions.push(permission);
+      }
+    }
+
+    // 批量查询未缓存的权限
+    if (uncachedPermissions.length > 0) {
+      try {
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        });
+
+        if (!user?.role) {
+          // 用户不存在或没有角色，所有权限返回 false
+          for (const permission of uncachedPermissions) {
+            results.set(permission, false);
+          }
+          return results;
+        }
+
+        // 获取用户的所有权限（包括继承）
+        const userPermissions =
+          await this.roleInheritanceService.getRolePermissions(
+            user.role.name as SystemRole
+          );
+
+        for (const permission of uncachedPermissions) {
+          const hasPermission = userPermissions.includes(permission);
+          results.set(permission, hasPermission);
+
+          // 缓存结果
+          const cacheKey = `system_perm:${userId}:${permission}`;
+          this.cacheService.set(cacheKey, hasPermission, 300000); // 5 分钟
+        }
+      } catch (error) {
+        this.logger.error(
+          `批量检查系统权限失败: ${error.message}`,
+          error.stack
+        );
+        // 出错时所有未缓存的权限返回 false
+        for (const permission of uncachedPermissions) {
+          results.set(permission, false);
+        }
+      }
+    }
+
+    return results;
   }
 }

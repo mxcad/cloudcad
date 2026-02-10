@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, CheckSquare, Square, Check, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
@@ -33,6 +33,13 @@ type ProjectRole = {
 export const RoleManagement = () => {
   const { hasPermission, hasRole } = usePermission();
   const [activeTab, setActiveTab] = useState<'system' | 'project'>('project');
+
+  // 批量选择状态
+  const [selectedSystemRoles, setSelectedSystemRoles] = useState<string[]>([]);
+  const [selectedProjectRoles, setSelectedProjectRoles] = useState<string[]>([]);
+
+  // 搜索和过滤状态
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 系统角色状态
   const [systemRoles, setSystemRoles] = useState<SystemRole[]>([]);
@@ -233,6 +240,116 @@ export const RoleManagement = () => {
     alert('系统默认项目角色不允许删除');
   };
 
+  // 批量操作 - 全选系统角色
+  const handleSelectAllSystemRoles = () => {
+    if (selectedSystemRoles.length === systemRoles.length) {
+      setSelectedSystemRoles([]);
+    } else {
+      setSelectedSystemRoles(systemRoles.map(role => role.id));
+    }
+  };
+
+  // 批量操作 - 全选项目角色
+  const handleSelectAllProjectRoles = () => {
+    if (selectedProjectRoles.length === projectRoles.length) {
+      setSelectedProjectRoles([]);
+    } else {
+      setSelectedProjectRoles(projectRoles.map(role => role.id));
+    }
+  };
+
+  // 批量操作 - 切换系统角色选择
+  const handleToggleSystemRole = (roleId: string) => {
+    setSelectedSystemRoles(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
+  };
+
+  // 批量操作 - 切换项目角色选择
+  const handleToggleProjectRole = (roleId: string) => {
+    setSelectedProjectRoles(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
+  };
+
+  // 批量操作 - 批量授权
+  const handleBulkGrant = async (permissions: string[]) => {
+    if (activeTab === 'system') {
+      for (const roleId of selectedSystemRoles) {
+        const role = systemRoles.find(r => r.id === roleId);
+        if (role) {
+          const currentPerms = role.permissions.map((p: any) =>
+            typeof p === 'string' ? p : (p?.permission || '')
+          );
+          const newPerms = Array.from(new Set([...currentPerms, ...permissions]));
+          await rolesApi.update(roleId, { permissions: newPerms });
+        }
+      }
+      loadSystemRoles();
+    } else {
+      for (const roleId of selectedProjectRoles) {
+        const role = projectRoles.find(r => r.id === roleId);
+        if (role) {
+          const currentPerms = role.permissions.map((p: any) =>
+            typeof p === 'string' ? p : (p?.permission || '')
+          );
+          const newPerms = Array.from(new Set([...currentPerms, ...permissions]));
+          await projectRolesApi.update(roleId, { permissions: newPerms });
+        }
+      }
+      loadProjectRoles();
+    }
+    setSelectedSystemRoles([]);
+    setSelectedProjectRoles([]);
+  };
+
+  // 批量操作 - 批量撤销
+  const handleBulkRevoke = async (permissions: string[]) => {
+    if (activeTab === 'system') {
+      for (const roleId of selectedSystemRoles) {
+        const role = systemRoles.find(r => r.id === roleId);
+        if (role) {
+          const currentPerms = role.permissions.map((p: any) =>
+            typeof p === 'string' ? p : (p?.permission || '')
+          );
+          const newPerms = currentPerms.filter(p => !permissions.includes(p));
+          await rolesApi.update(roleId, { permissions: newPerms });
+        }
+      }
+      loadSystemRoles();
+    } else {
+      for (const roleId of selectedProjectRoles) {
+        const role = projectRoles.find(r => r.id === roleId);
+        if (role) {
+          const currentPerms = role.permissions.map((p: any) =>
+            typeof p === 'string' ? p : (p?.permission || '')
+          );
+          const newPerms = currentPerms.filter(p => !permissions.includes(p));
+          await projectRolesApi.update(roleId, { permissions: newPerms });
+        }
+      }
+      loadProjectRoles();
+    }
+    setSelectedSystemRoles([]);
+    setSelectedProjectRoles([]);
+  };
+
+  // 过滤后的系统角色
+  const filteredSystemRoles = systemRoles.filter(role =>
+    role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (role.description && role.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // 过滤后的项目角色
+  const filteredProjectRoles = projectRoles.filter(role =>
+    role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (role.description && role.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   // 判断是否是管理员
   const isAdmin = hasRole('ADMIN') || hasRole('USER_MANAGER');
 
@@ -243,6 +360,13 @@ export const RoleManagement = () => {
           <h1 className="text-2xl font-bold text-slate-900">角色与权限</h1>
           <p className="text-slate-500 mt-1">管理系统角色和项目角色及其操作权限</p>
         </div>
+        <input
+          type="text"
+          placeholder="搜索角色..."
+          className="px-4 py-2 border border-slate-300 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       {/* Tab 切换 */}
@@ -277,42 +401,87 @@ export const RoleManagement = () => {
       {activeTab === 'project' && (
         <>
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">项目角色</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                系统默认项目角色，所有项目共享使用
-              </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSelectAllProjectRoles}
+                className="p-1 hover:bg-slate-100 rounded transition-colors"
+                title={selectedProjectRoles.length === projectRoles.length ? '取消全选' : '全选'}
+              >
+                {selectedProjectRoles.length === projectRoles.length && projectRoles.length > 0 ? (
+                  <CheckSquare size={20} className="text-indigo-600" />
+                ) : (
+                  <Square size={20} className="text-slate-400" />
+                )}
+              </button>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">项目角色</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  系统默认项目角色，所有项目共享使用
+                </p>
+              </div>
             </div>
+            {selectedProjectRoles.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Check}
+                  onClick={() => handleBulkGrant(['FILE_READ', 'FILE_OPEN'])}
+                >
+                  批量授权查看权限
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={X}
+                  onClick={() => handleBulkRevoke(['FILE_DELETE', 'FILE_EDIT'])}
+                >
+                  批量撤销编辑权限
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projectRoles.map((role) => (
+            {filteredProjectRoles.map((role) => (
               <div
                 key={role.id}
                 className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
                   role.isSystem ? 'border-slate-200' : 'border-2 border-emerald-200'
-                }`}
+                } ${selectedProjectRoles.includes(role.id) ? 'ring-2 ring-indigo-500' : ''}`}
               >
                 <div
                   className={`p-6 border-b border-slate-100 flex items-start justify-between ${
                     role.isSystem ? '' : 'bg-emerald-50/30'
                   }`}
                 >
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      {role.name}
-                      {role.isSystem && (
-                        <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                          系统
-                        </span>
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => handleToggleProjectRole(role.id)}
+                      className="mt-1 p-1 hover:bg-slate-100 rounded transition-colors"
+                    >
+                      {selectedProjectRoles.includes(role.id) ? (
+                        <CheckSquare size={18} className="text-indigo-600" />
+                      ) : (
+                        <Square size={18} className="text-slate-400" />
                       )}
-                    </h3>
+                    </button>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        {role.name}
+                        {role.isSystem && (
+                          <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                            系统
+                          </span>
+                        )}
+                      </h3>
                     <p className="text-sm text-slate-500 mt-1">
                       <DescriptionText>{role.description}</DescriptionText>
                     </p>
                     <p className="text-xs text-slate-400 mt-2">
                       {role._count.members} 个成员
                     </p>
+                  </div>
                   </div>
                   {!role.isSystem && (
                     <button
@@ -372,42 +541,89 @@ export const RoleManagement = () => {
       {activeTab === 'system' && isAdmin && (
         <>
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">系统角色</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                管理系统用户的角色和权限，系统默认角色不可删除
-              </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSelectAllSystemRoles}
+                className="p-1 hover:bg-slate-100 rounded transition-colors"
+                title={selectedSystemRoles.length === systemRoles.length ? '取消全选' : '全选'}
+              >
+                {selectedSystemRoles.length === systemRoles.length && systemRoles.length > 0 ? (
+                  <CheckSquare size={20} className="text-indigo-600" />
+                ) : (
+                  <Square size={20} className="text-slate-400" />
+                )}
+              </button>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">系统角色</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  管理系统用户的角色和权限，系统默认角色不可删除
+                </p>
+              </div>
             </div>
-            <Button icon={Plus} onClick={handleCreateSystemRole}>
-              新建角色
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button icon={Plus} onClick={handleCreateSystemRole}>
+                新建角色
+              </Button>
+              {selectedSystemRoles.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={Check}
+                    onClick={() => handleBulkGrant(['SYSTEM_USER_READ', 'SYSTEM_ROLE_READ'])}
+                  >
+                    批量授权基础权限
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={X}
+                    onClick={() => handleBulkRevoke(['SYSTEM_ADMIN', 'SYSTEM_MONITOR'])}
+                  >
+                    批量撤销高级权限
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {systemRoles.map((role) => (
+            {filteredSystemRoles.map((role) => (
               <div
                 key={role.id}
                 className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
                   role.isSystem ? 'border-slate-200' : 'border-2 border-emerald-200'
-                }`}
+                } ${selectedSystemRoles.includes(role.id) ? 'ring-2 ring-indigo-500' : ''}`}
               >
                 <div
                   className={`p-6 border-b border-slate-100 flex items-start justify-between ${
                     role.isSystem ? '' : 'bg-emerald-50/30'
                   }`}
                 >
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      {role.name}
-                      {role.isSystem && (
-                        <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                          系统
-                        </span>
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => handleToggleSystemRole(role.id)}
+                      className="mt-1 p-1 hover:bg-slate-100 rounded transition-colors"
+                    >
+                      {selectedSystemRoles.includes(role.id) ? (
+                        <CheckSquare size={18} className="text-indigo-600" />
+                      ) : (
+                        <Square size={18} className="text-slate-400" />
                       )}
-                    </h3>
+                    </button>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        {role.name}
+                        {role.isSystem && (
+                          <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                            系统
+                          </span>
+                        )}
+                      </h3>
                     <p className="text-sm text-slate-500 mt-1">
                       <DescriptionText>{role.description}</DescriptionText>
                     </p>
+                  </div>
                   </div>
                   {!role.isSystem && (
                     <button

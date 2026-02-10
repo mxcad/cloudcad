@@ -17,6 +17,8 @@ import { DiskMonitorService } from './services/disk-monitor.service';
 import { StorageCleanupService } from './services/storage-cleanup.service';
 import { StorageCleanupScheduler } from './schedulers/storage-cleanup.scheduler';
 import { CacheMonitorController } from './controllers/cache-monitor.controller';
+import { RoleInheritanceService } from './services/role-inheritance.service';
+import { InitializationService } from './services/initialization.service';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
     DiskMonitorService,
     StorageCleanupService,
     StorageCleanupScheduler,
+    RoleInheritanceService,
+    InitializationService,
   ],
   controllers: [CacheMonitorController],
   exports: [
@@ -53,6 +57,8 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
     FileCopyService,
     DiskMonitorService,
     StorageCleanupService,
+    RoleInheritanceService,
+    InitializationService,
   ],
 })
 export class CommonModule {}

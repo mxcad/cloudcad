@@ -8,12 +8,14 @@ import {
 } from './permission.service';
 import { PermissionCacheService } from './permission-cache.service';
 import { AuditLogService } from '../../audit/audit-log.service';
+import { RoleInheritanceService } from './role-inheritance.service';
 
 describe('PermissionService', () => {
   let service: PermissionService;
   let mockPrisma: any;
   let cacheService: jest.Mocked<PermissionCacheService>;
   let auditLogService: jest.Mocked<AuditLogService>;
+  let roleInheritanceService: jest.Mocked<RoleInheritanceService>;
 
   const mockRole: Role = {
     id: 'role-id',
@@ -22,8 +24,8 @@ describe('PermissionService', () => {
     category: 'SYSTEM',
     isSystem: true,
     permissions: [
-      { permission: SystemPermission.USER_READ },
-      { permission: SystemPermission.FONT_UPLOAD },
+      { permission: SystemPermission.SYSTEM_USER_READ },
+      { permission: SystemPermission.SYSTEM_FONT_UPLOAD },
     ],
   };
 
@@ -34,17 +36,20 @@ describe('PermissionService', () => {
     category: 'SYSTEM',
     isSystem: true,
     permissions: [
-      { permission: SystemPermission.USER_READ },
-      { permission: SystemPermission.USER_CREATE },
-      { permission: SystemPermission.USER_UPDATE },
-      { permission: SystemPermission.USER_DELETE },
-      { permission: SystemPermission.ROLE_READ },
-      { permission: SystemPermission.ROLE_CREATE },
-      { permission: SystemPermission.ROLE_UPDATE },
-      { permission: SystemPermission.ROLE_DELETE },
-      { permission: SystemPermission.ROLE_PERMISSION_MANAGE },
-      { permission: SystemPermission.ROLE_PERMISSION_MANAGE },
-      { permission: SystemPermission.FONT_UPLOAD },
+      { permission: SystemPermission.SYSTEM_USER_READ },
+      { permission: SystemPermission.SYSTEM_USER_CREATE },
+      { permission: SystemPermission.SYSTEM_USER_UPDATE },
+      { permission: SystemPermission.SYSTEM_USER_DELETE },
+      { permission: SystemPermission.SYSTEM_ROLE_READ },
+      { permission: SystemPermission.SYSTEM_ROLE_CREATE },
+      { permission: SystemPermission.SYSTEM_ROLE_UPDATE },
+      { permission: SystemPermission.SYSTEM_ROLE_DELETE },
+      { permission: SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE },
+      { permission: SystemPermission.SYSTEM_FONT_READ },
+      { permission: SystemPermission.SYSTEM_FONT_UPLOAD },
+      { permission: SystemPermission.SYSTEM_FONT_DELETE },
+      { permission: SystemPermission.SYSTEM_FONT_DOWNLOAD },
+      { permission: SystemPermission.SYSTEM_ADMIN },
       { permission: SystemPermission.SYSTEM_MONITOR },
     ],
   };
@@ -81,6 +86,12 @@ describe('PermissionService', () => {
       log: jest.fn().mockResolvedValue(undefined),
     } as any;
 
+    const mockRoleInheritanceService = {
+      checkUserPermissionWithInheritance: jest.fn(),
+      getRolePermissions: jest.fn(),
+      clearRoleCache: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PermissionService,
@@ -95,6 +106,10 @@ describe('PermissionService', () => {
         {
           provide: AuditLogService,
           useValue: mockAuditLogService,
+        },
+        {
+          provide: RoleInheritanceService,
+          useValue: mockRoleInheritanceService,
         },
       ],
     })
@@ -114,6 +129,9 @@ describe('PermissionService', () => {
     auditLogService = module.get(
       AuditLogService
     ) as jest.Mocked<AuditLogService>;
+    roleInheritanceService = module.get(
+      RoleInheritanceService
+    ) as jest.Mocked<RoleInheritanceService>;
   });
 
   afterEach(() => {
@@ -122,14 +140,14 @@ describe('PermissionService', () => {
 
   describe('checkSystemPermission', () => {
     it('should return true for admin user with any permission', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         role: { name: SystemRole.ADMIN },
       });
 
       const result = await service.checkSystemPermission(
         'admin-id',
-        SystemPermission.USER_DELETE
+        SystemPermission.SYSTEM_USER_DELETE
       );
 
       expect(result).toBe(true);
@@ -137,14 +155,17 @@ describe('PermissionService', () => {
     });
 
     it('should return true for user with specific permission', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       expect(result).toBe(true);
@@ -153,14 +174,17 @@ describe('PermissionService', () => {
     });
 
     it('should return false for user without permission', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        false
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_DELETE
+        SystemPermission.SYSTEM_USER_DELETE
       );
 
       expect(result).toBe(false);
@@ -169,11 +193,11 @@ describe('PermissionService', () => {
     });
 
     it('should return true when cache hit', async () => {
-      cacheService.get.mockReturnValue(true);
+      cacheService.get.mockResolvedValue(true);
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       expect(result).toBe(true);
@@ -182,11 +206,11 @@ describe('PermissionService', () => {
     });
 
     it('should return false when cache hit with false value', async () => {
-      cacheService.get.mockReturnValue(false);
+      cacheService.get.mockResolvedValue(false);
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_DELETE
+        SystemPermission.SYSTEM_USER_DELETE
       );
 
       expect(result).toBe(false);
@@ -195,38 +219,38 @@ describe('PermissionService', () => {
     });
 
     it('should return false when user does not exist', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       const result = await service.checkSystemPermission(
         'invalid-user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       expect(result).toBe(false);
     });
 
     it('should return false when user has no role', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         role: null,
       });
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       expect(result).toBe(false);
     });
 
     it('should handle database errors gracefully', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
       mockPrisma.user.findUnique.mockRejectedValue(new Error('Database error'));
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       expect(result).toBe(false);
@@ -236,7 +260,10 @@ describe('PermissionService', () => {
 
   describe('checkSystemPermissionWithContext', () => {
     it('should return true when user has permission and context rules pass', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
@@ -249,7 +276,7 @@ describe('PermissionService', () => {
 
       const result = await service.checkSystemPermissionWithContext(
         'user-id',
-        SystemPermission.USER_READ,
+        SystemPermission.SYSTEM_USER_READ,
         context
       );
 
@@ -257,7 +284,10 @@ describe('PermissionService', () => {
     });
 
     it('should return false when user does not have permission', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        false
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
@@ -268,7 +298,7 @@ describe('PermissionService', () => {
 
       const result = await service.checkSystemPermissionWithContext(
         'user-id',
-        SystemPermission.USER_DELETE,
+        SystemPermission.SYSTEM_USER_DELETE,
         context
       );
 
@@ -276,7 +306,10 @@ describe('PermissionService', () => {
     });
 
     it('should return false when sensitive operation is outside working hours', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockAdminRole,
       });
@@ -288,7 +321,7 @@ describe('PermissionService', () => {
 
       const result = await service.checkSystemPermissionWithContext(
         'admin-id',
-        SystemPermission.USER_DELETE,
+        SystemPermission.SYSTEM_USER_DELETE,
         context
       );
 
@@ -297,7 +330,10 @@ describe('PermissionService', () => {
     });
 
     it('should allow sensitive operation during working hours', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockAdminRole,
       });
@@ -313,7 +349,7 @@ describe('PermissionService', () => {
 
       const result = await service.checkSystemPermissionWithContext(
         'admin-id',
-        SystemPermission.USER_DELETE,
+        SystemPermission.SYSTEM_USER_DELETE,
         context
       );
 
@@ -321,7 +357,10 @@ describe('PermissionService', () => {
     });
 
     it('should allow non-sensitive operations outside working hours', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
@@ -333,7 +372,7 @@ describe('PermissionService', () => {
 
       const result = await service.checkSystemPermissionWithContext(
         'user-id',
-        SystemPermission.USER_READ,
+        SystemPermission.SYSTEM_USER_READ,
         context
       );
 
@@ -343,10 +382,15 @@ describe('PermissionService', () => {
 
   describe('getUserPermissions', () => {
     it('should return user permissions', async () => {
+      roleInheritanceService.getRolePermissions.mockResolvedValue([
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_FONT_UPLOAD,
+      ]);
+
       const result = await service.getUserPermissions(mockUser);
 
-      expect(result).toContain(SystemPermission.USER_READ);
-      expect(result).toContain(SystemPermission.FONT_UPLOAD);
+      expect(result).toContain(SystemPermission.SYSTEM_USER_READ);
+      expect(result).toContain(SystemPermission.SYSTEM_FONT_UPLOAD);
     });
 
     it('should return empty array for user without role', async () => {
@@ -361,12 +405,9 @@ describe('PermissionService', () => {
     });
 
     it('should return empty array for user without permissions', async () => {
-      const userWithoutPermissions: UserWithPermissions = {
-        ...mockUser,
-        role: { ...mockRole, permissions: [] },
-      };
+      roleInheritanceService.getRolePermissions.mockResolvedValue([]);
 
-      const result = await service.getUserPermissions(userWithoutPermissions);
+      const result = await service.getUserPermissions(mockUser);
 
       expect(result).toEqual([]);
     });
@@ -408,15 +449,109 @@ describe('PermissionService', () => {
 
   describe('clearUserCache', () => {
     it('should clear user cache', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        role: { name: SystemRole.USER },
+      });
+
       await service.clearUserCache('user-id');
 
       expect(cacheService.clearUserCache).toHaveBeenCalledWith('user-id');
+      expect(roleInheritanceService.clearRoleCache).toHaveBeenCalledWith(
+        SystemRole.USER
+      );
+    });
+  });
+
+  describe('checkSystemPermissionsBatch', () => {
+    it('should batch check permissions with cache hits', async () => {
+      const permissions = [
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+      ];
+
+      // Mock cache hits
+      cacheService.get
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      const result = await service.checkSystemPermissionsBatch(
+        'user-id',
+        permissions
+      );
+
+      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(true);
+      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should batch check permissions without cache hits', async () => {
+      const permissions = [
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+      ];
+
+      // Mock cache misses
+      cacheService.get.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        role: { name: SystemRole.ADMIN },
+      });
+      roleInheritanceService.getRolePermissions.mockResolvedValue([
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+        SystemPermission.SYSTEM_USER_UPDATE,
+        SystemPermission.SYSTEM_USER_DELETE,
+      ]);
+
+      const result = await service.checkSystemPermissionsBatch(
+        'admin-id',
+        permissions
+      );
+
+      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(true);
+      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(true);
+      expect(cacheService.set).toHaveBeenCalledTimes(2);
+    });
+
+    it('should return false for all permissions when user does not exist', async () => {
+      const permissions = [
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+      ];
+
+      cacheService.get.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.checkSystemPermissionsBatch(
+        'invalid-user-id',
+        permissions
+      );
+
+      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(false);
+      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
+    });
+
+    it('should handle database errors gracefully in batch check', async () => {
+      const permissions = [
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+      ];
+
+      cacheService.get.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockRejectedValue(new Error('Database error'));
+
+      const result = await service.checkSystemPermissionsBatch(
+        'user-id',
+        permissions
+      );
+
+      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(false);
+      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
     });
   });
 
   describe('cache behavior', () => {
     it('should cache admin check result', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
       mockPrisma.user.findUnique.mockResolvedValue({
         role: { name: SystemRole.ADMIN },
       });
@@ -424,14 +559,14 @@ describe('PermissionService', () => {
       // First call - should check database
       await service.checkSystemPermission(
         'admin-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       // Second call - should use cache
-      cacheService.get.mockReturnValue(true);
+      cacheService.get.mockResolvedValue(true);
       await service.checkSystemPermission(
         'admin-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       // Database should only be called once for the first request
@@ -439,7 +574,10 @@ describe('PermissionService', () => {
     });
 
     it('should cache permission check result', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
@@ -447,19 +585,19 @@ describe('PermissionService', () => {
       // First call - should check database and set cache
       await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       // Reset all mocks after first call
       jest.clearAllMocks();
 
       // Set cache to return cached value for second call
-      cacheService.get.mockReturnValue(true);
+      cacheService.get.mockResolvedValue(true);
 
       // Second call - should use cache
       await service.checkSystemPermission(
         'user-id',
-        SystemPermission.USER_READ
+        SystemPermission.SYSTEM_USER_READ
       );
 
       // Database should not be called again
@@ -470,14 +608,17 @@ describe('PermissionService', () => {
   describe('permission types', () => {
     it('should handle all user management permissions', async () => {
       const userPermissions = [
-        SystemPermission.USER_READ,
-        SystemPermission.USER_CREATE,
-        SystemPermission.USER_UPDATE,
-        SystemPermission.USER_DELETE,
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+        SystemPermission.SYSTEM_USER_UPDATE,
+        SystemPermission.SYSTEM_USER_DELETE,
       ];
 
       for (const permission of userPermissions) {
-        cacheService.get.mockReturnValue(null);
+        cacheService.get.mockResolvedValue(null);
+        roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+          true
+        );
         mockPrisma.user.findUnique.mockResolvedValue({
           role: mockAdminRole,
         });
@@ -492,16 +633,18 @@ describe('PermissionService', () => {
 
     it('should handle all role management permissions', async () => {
       const rolePermissions = [
-        SystemPermission.ROLE_READ,
-        SystemPermission.ROLE_CREATE,
-        SystemPermission.ROLE_UPDATE,
-        SystemPermission.ROLE_DELETE,
-        SystemPermission.ROLE_PERMISSION_MANAGE,
-        SystemPermission.ROLE_PERMISSION_MANAGE,
+        SystemPermission.SYSTEM_ROLE_READ,
+        SystemPermission.SYSTEM_ROLE_CREATE,
+        SystemPermission.SYSTEM_ROLE_UPDATE,
+        SystemPermission.SYSTEM_ROLE_DELETE,
+        SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
       ];
 
       for (const permission of rolePermissions) {
-        cacheService.get.mockReturnValue(null);
+        cacheService.get.mockResolvedValue(null);
+        roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+          true
+        );
         mockPrisma.user.findUnique.mockResolvedValue({
           role: mockAdminRole,
         });
@@ -515,21 +658,27 @@ describe('PermissionService', () => {
     });
 
     it('should handle font management permission', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockRole,
       });
 
       const result = await service.checkSystemPermission(
         'user-id',
-        SystemPermission.FONT_UPLOAD
+        SystemPermission.SYSTEM_FONT_UPLOAD
       );
 
       expect(result).toBe(true);
     });
 
     it('should handle system monitor permission', async () => {
-      cacheService.get.mockReturnValue(null);
+      cacheService.get.mockResolvedValue(null);
+      roleInheritanceService.checkUserPermissionWithInheritance.mockResolvedValue(
+        true
+      );
       mockPrisma.user.findUnique.mockResolvedValue({
         role: mockAdminRole,
       });

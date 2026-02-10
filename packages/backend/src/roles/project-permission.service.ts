@@ -56,7 +56,7 @@ export class ProjectPermissionService {
 
       // 2. 检查缓存
       const cacheKey = `project:permission:${userId}:${projectId}:${permission}`;
-      const cached = this.cacheService.get<boolean>(cacheKey);
+      const cached = await this.cacheService.get<boolean>(cacheKey);
       if (cached !== null) {
         return cached;
       }
@@ -142,7 +142,7 @@ export class ProjectPermissionService {
   ): Promise<boolean> {
     try {
       const cacheKey = `project:owner:${userId}:${projectId}`;
-      const cached = this.cacheService.get<boolean>(cacheKey);
+      const cached = await this.cacheService.get<boolean>(cacheKey);
       if (cached !== null) {
         return cached;
       }
