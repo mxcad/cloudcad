@@ -33,6 +33,7 @@ interface FileItemMenuProps {
   onCopy?: (node: FileSystemNode) => void;
   onAddToGallery?: (node: FileSystemNode) => void;
   onUploadExternalReference?: (e: React.MouseEvent) => void;
+  onShowVersionHistory?: (node: FileSystemNode) => void;
   isCadFile: () => boolean;
 }
 
@@ -57,6 +58,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onCopy,
   onAddToGallery,
   onUploadExternalReference,
+  onShowVersionHistory,
   isCadFile,
 }) => {
   const isRoot = node.isRoot;
@@ -222,6 +224,28 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                   >
                     <DownloadIcon size={16} />
                     下载
+                  </button>
+                )}
+                {isCadFile() && onShowVersionHistory && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMenuAction(() => onShowVersionHistory(node));
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    版本历史
                   </button>
                 )}
                 {onAddToGallery && (

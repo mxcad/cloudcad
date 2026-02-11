@@ -15,6 +15,7 @@
   Logger,
   NotFoundException,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -37,7 +38,11 @@ import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
-import { ProjectPermission } from '../common/enums/permissions.enum';
+import { VersionControlService } from '../version-control/version-control.service';
+import { ProjectPermission, ProjectRole } from '../common/enums/permissions.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { NodePermissionGuard } from '../common/guards/project-permission.guard';
+import { NodePermission } from '../common/decorators/project-permission.decorator';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -55,7 +60,8 @@ export class MxCadController {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly storageService: StorageService,
-    private readonly permissionService: FileSystemPermissionService
+    private readonly permissionService: FileSystemPermissionService,
+    private readonly versionControlService: VersionControlService
   ) {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
   }
@@ -342,10 +348,11 @@ export class MxCadController {
   }
 
   /**
-   * 上传文件（支持分片）
-   */
+     * 上传文件（支持分片）
+     */
   @Post('files/uploadFiles')
   @UseInterceptors(AnyFilesInterceptor())
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -704,14 +711,15 @@ export class MxCadController {
   }
 
   /**
-   * 保存 mxweb 文件到指定节点
-   * 路由: POST /api/mxcad/savemxweb/:nodeId
-   */
+     * 保存 mxweb 文件到指定节点
+     * 路由: POST /api/mxcad/savemxweb/:nodeId
+     */
   @Post('savemxweb/:nodeId')
+  @UseGuards(JwtAuthGuard, NodePermissionGuard)
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.EDITOR)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '保存 mxweb 文件到指定节点' })
+  @ApiConsumes('multipart/form-data')  @ApiResponse({ status: 200, description: '保存 mxweb 文件到指定节点' })
   async saveMxwebToNode(
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
@@ -721,28 +729,17 @@ export class MxCadController {
     try {
       this.logger.log(`[saveMxwebToNode] 开始保存: nodeId=${nodeId}`);
 
-      // 验证用户身份
-      const userId = await this.validateTokenAndGetUserId(request);
-
-      // 检查用户是否有 CAD_SAVE 权限
-      const hasPermission = await this.permissionService.checkNodePermission(
-        userId,
-        nodeId,
-        ProjectPermission.CAD_SAVE
-      );
-
-      if (!hasPermission) {
-        this.logger.warn(
-          `[saveMxwebToNode] 权限不足: userId=${userId}, nodeId=${nodeId}, permission=CAD_SAVE`
-        );
-        return res.status(HttpStatus.FORBIDDEN).json({
-          code: 'FORBIDDEN',
-          message: '权限不足，需要 CAD_SAVE 权限',
-        });
-      }
+      // 获取用户信息
+      const userId = request.user?.id;
+      const userName = request.user?.username || request.user?.nickname || request.user?.email;
 
       // 调用服务保存文件
-      const result = await this.mxCadService.saveMxwebFile(nodeId, file);
+      const result = await this.mxCadService.saveMxwebFile(
+        nodeId,
+        file,
+        userId,
+        userName
+      );
 
       if (result.success) {
         this.logger.log(`[saveMxwebToNode] 保存成功: nodeId=${nodeId}`);
@@ -972,14 +969,15 @@ export class MxCadController {
   }
 
   /**
-   * 上传外部参照 DWG
-   *
-   * 优化流程：先上传到临时目录，验证通过后直接移动到目标目录，避免转换后再拷贝。
-   */
+     * 上传外部参照 DWG
+     *
+     * 优化流程：先上传到临时目录，验证通过后直接移动到目标目录，避免转换后再拷贝。
+     */
   @Post('up_ext_reference_dwg')
+  @UseGuards(JwtAuthGuard, NodePermissionGuard)
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.EDITOR)
   @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({
+  @ApiConsumes('multipart/form-data')  @ApiResponse({
     status: 200,
     description: '上传成功',
     schema: {
@@ -1026,46 +1024,18 @@ export class MxCadController {
       return res.json(validationResult.error);
     }
 
-    // 验证用户权限
-    let sourceNode: any = null;
-    try {
-      const userId = await this.validateTokenAndGetUserId(request);
-      this.logger.log(`[uploadExtReferenceDwg] 用户ID: ${userId}`);
-
-      // 通过 nodeId 直接获取源图纸节点
-      const node = await this.mxCadService.getFileSystemNodeByNodeId(body.nodeId);
-      if (!node) {
-        this.logger.warn(
-          `[uploadExtReferenceDwg] 未找到源图纸: nodeId=${body.nodeId}`
-        );
-        return res.json({ code: -1, message: '未找到源图纸' });
-      }
-
-      // 检查用户是否有权限访问该图纸
-      const permission = await this.checkFileAccessPermission(
-        body.nodeId,
-        userId,
-        userId
-      );
-
-      if (!permission) {
-        this.logger.warn(
-          `[uploadExtReferenceDwg] 用户 ${userId} 无权限访问图纸 nodeId=${body.nodeId}`
-        );
-        return res.json({ code: -1, message: '无权限访问该图纸' });
-      }
-
-      // 保存节点信息，供后续使用
-      sourceNode = node;
-      this.logger.log(
-        `[uploadExtReferenceDwg] 用户有权限访问图纸: ${sourceNode.name} (ID: ${sourceNode.id})`
-      );
-    } catch (authError) {
+    // 通过 nodeId 直接获取源图纸节点
+    const node = await this.mxCadService.getFileSystemNodeByNodeId(body.nodeId);
+    if (!node) {
       this.logger.warn(
-        `[uploadExtReferenceDwg] 权限验证失败: ${authError.message}`
+        `[uploadExtReferenceDwg] 未找到源图纸: nodeId=${body.nodeId}`
       );
-      return res.json({ code: -1, message: '权限验证失败' });
+      return res.json({ code: -1, message: '未找到源图纸' });
     }
+
+    this.logger.log(
+      `[uploadExtReferenceDwg] 找到源图纸: ${node.name} (ID: ${node.id})`
+    );
 
     // 计算文件哈希（优先使用前端传递的值，避免二次计算）
     let fileHash = body.hash;
@@ -1099,10 +1069,10 @@ export class MxCadController {
     // 如果源图纸在项目根目录，则使用项目根目录
     // 否则使用源图纸的父节点（图纸所在目录）
     const parentFolderId =
-      sourceNode?.parentId || sourceNode?.id || 'external-reference';
+      node?.parentId || node?.id || 'external-reference';
 
     this.logger.log(
-      `[uploadExtReferenceDwg] 外部参照文件将存储在目录: ${parentFolderId} (源图纸: ${sourceNode?.name})`
+      `[uploadExtReferenceDwg] 外部参照文件将存储在目录: ${parentFolderId} (源图纸: ${node?.name})`
     );
 
     // 构建上下文（外部参照上传）
@@ -1110,7 +1080,7 @@ export class MxCadController {
       nodeId: parentFolderId, // 使用源图纸所在目录
       userId: await this.validateTokenAndGetUserId(request),
       userRole: 'USER',
-      srcDwgNodeId: sourceNode.id, // 源图纸节点 ID（从节点获取）
+      srcDwgNodeId: node.id, // 源图纸节点 ID（从节点获取）
       isImage: false, // DWG 文件
     };
 
@@ -1784,10 +1754,24 @@ export class MxCadController {
       // Express 的 *filename 通配符会将路径中的 / 替换为 ,，需要先还原
       const normalizedFilename = filename.replace(/,/g, '/');
 
-      // 构建完整的文件路径: filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
+      // 检查是否请求历史版本（通过 v 参数）
+      const versionParam = req.query.v as string | undefined;
+
+      if (versionParam) {
+        // 请求历史版本
+        return this.handleHistoricalVersionRequest(
+          normalizedFilename,
+          versionParam,
+          res,
+          req,
+          isHeadRequest
+        );
+      }
+
+      // 正常请求：构建完整的文件路径: filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
       const filesDataPath = this.configService.get('FILES_DATA_PATH', '../filesData');
       const absoluteFilePath = path.resolve(filesDataPath, normalizedFilename);
-
+      console.log(filesDataPath, filename, fs.existsSync(absoluteFilePath))
       this.logger.log(`尝试访问文件: ${absoluteFilePath}`);
 
       // 检查文件是否存在
@@ -1834,6 +1818,103 @@ export class MxCadController {
       this.logger.error(`获取 filesData 文件失败: ${error.message}`, error.stack);
       if (!res.headersSent) {
         res.status(500).json({ code: -1, message: '获取文件失败' });
+      }
+    }
+  }
+
+  /**
+   * 处理历史版本文件请求
+   * @param filename 文件路径
+   * @param version 版本号
+   * @param res Express Response 对象
+   * @param req Express Request 对象
+   * @param isHeadRequest 是否为 HEAD 请求
+   */
+  private async handleHistoricalVersionRequest(
+    filename: string,
+    version: string,
+    @Res() res: Response,
+    @Req() req: any,
+    isHeadRequest: boolean
+  ) {
+    try {
+      this.logger.log(`访问历史版本文件: ${filename} v${version}, 方法: ${isHeadRequest ? 'HEAD' : 'GET'}`);
+
+      // 构建完整的文件路径
+      const filesDataPath = this.configService.get('FILES_DATA_PATH', '../filesData');
+      const absoluteFilePath = path.resolve(filesDataPath, filename);
+
+      // 对于 HEAD 请求，直接返回本地文件信息（当前版本），不从 SVN 获取
+      if (isHeadRequest) {
+        this.logger.log(`HEAD 请求 - 返回本地文件信息: ${absoluteFilePath}`);
+
+        // 检查本地文件是否存在
+        if (!fs.existsSync(absoluteFilePath)) {
+          this.logger.error(`本地文件不存在: ${absoluteFilePath}`);
+          return res.status(404).json({ code: -1, message: '文件不存在' });
+        }
+
+        // 获取本地文件信息
+        const fileStats = fs.statSync(absoluteFilePath);
+        const contentType = this.getContentType(filename);
+
+        // 对于历史版本，使用 ETag 包含版本号，确保浏览器不会错误使用缓存
+        const etag = `"v${version}-${fileStats.mtime.getTime()}"`;
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', fileStats.size);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // 禁用缓存
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('ETag', etag);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.end();
+        return;
+      }
+
+      // GET 请求：从版本控制服务获取历史版本文件内容
+      this.logger.log(`GET 请求 - 从 SVN 获取历史版本: ${filename} v${version}`);
+
+      // 对于历史版本，忽略条件请求头，始终返回完整内容
+      res.removeHeader('If-None-Match');
+      res.removeHeader('If-Modified-Since');
+
+      const result = await this.versionControlService.getFileContentAtRevision(
+        absoluteFilePath,
+        parseInt(version, 10)
+      );
+
+      if (!result.success || !result.content) {
+        this.logger.error(`历史版本文件不存在或读取失败: ${filename} v${version}`);
+        return res.status(404).json({
+          code: -1,
+          message: result.message || '历史版本文件不存在',
+        });
+      }
+
+      // result.content 已经是 Buffer 类型，直接使用
+      const buffer = result.content;
+
+      // 设置响应头
+      const contentType = this.getContentType(filename);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // 历史版本不缓存
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
+
+      // 发送文件流
+      res.status(200).send(buffer);
+
+      this.logger.log(`成功返回历史版本文件: ${filename} v${version}`);
+    } catch (error) {
+      this.logger.error(
+        `获取历史版本文件失败: ${filename} v${version}, 错误: ${error.message}`,
+        error.stack
+      );
+      if (!res.headersSent) {
+        res.status(500).json({ code: -1, message: '获取历史版本文件失败' });
       }
     }
   }

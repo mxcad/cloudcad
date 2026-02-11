@@ -30,6 +30,8 @@ import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
+import { VersionHistoryModal } from '../components/modals/VersionHistoryModal';
+import { versionControlApi } from '../services/versionControlApi';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -171,6 +173,13 @@ export const FileSystemManager: React.FC = () => {
   const [showAddToGalleryModal, setShowAddToGalleryModal] = useState(false);
   const [selectedNodeForGallery, setSelectedNodeForGallery] =
     useState<FileSystemNode | null>(null);
+
+  // 版本历史相关状态
+  const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
+  const [versionHistoryNode, setVersionHistoryNode] = useState<FileSystemNode | null>(null);
+  const [versionHistoryEntries, setVersionHistoryEntries] = useState<any[]>([]);
+  const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
+  const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
 
   // 是否在根级别（无 projectId）
   const isAtRoot = !urlProjectId;
@@ -457,6 +466,51 @@ export const FileSystemManager: React.FC = () => {
     },
     [setSelectedNodeForGallery, setShowAddToGalleryModal]
   );
+
+  /**
+   * 显示版本历史
+   */
+  const handleShowVersionHistory = useCallback(async (node: FileSystemNode) => {
+    if (!node.path) {
+      console.error('[FileSystemManager] 节点没有 path', node);
+      return;
+    }
+
+    setVersionHistoryNode(node);
+    setShowVersionHistoryModal(true);
+    setVersionHistoryLoading(true);
+    setVersionHistoryError(null);
+
+    try {
+      const response = await versionControlApi.getFileHistory(urlProjectId || '', node.path, 50);
+      console.log('[FileSystemManager] 版本历史 API 响应:', response);
+      // apiClient.get 返回 AxiosResponse，响应拦截器解包后 response.data 是 { success: true, message: "获取成功", entries: [...] }
+      if (response.data?.success) {
+        setVersionHistoryEntries(response.data.entries || []);
+      } else {
+        setVersionHistoryError(response.data?.message || '加载版本历史失败');
+      }
+    } catch (err) {
+      console.error('[FileSystemManager] 版本历史加载失败:', err);
+      setVersionHistoryError(err instanceof Error ? err.message : '加载版本历史失败');
+    } finally {
+      setVersionHistoryLoading(false);
+    }
+  }, [urlProjectId]);
+
+  /**
+   * 打开历史版本编辑器
+   */
+  const handleOpenHistoricalVersion = useCallback((revision: number) => {
+    if (!versionHistoryNode?.path || !versionHistoryNode.id) {
+      return;
+    }
+
+    // 在新标签页中打开历史版本编辑器
+    // 同时传递 nodeId（父节点）和 v（版本号）参数
+    const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}`;
+    window.open(url, '_blank');
+  }, [versionHistoryNode]);
 
   /**
    * 确认移动/拷贝
@@ -1066,6 +1120,13 @@ export const FileSystemManager: React.FC = () => {
                     ? handleAddToGallery
                     : undefined
                 }
+                onShowVersionHistory={
+                  !node.isFolder &&
+                  !isTrashView &&
+                  (node.extension === '.dwg' || node.extension === '.dxf')
+                    ? handleShowVersionHistory
+                    : undefined
+                }
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1287,6 +1348,22 @@ export const FileSystemManager: React.FC = () => {
         onSuccess={handleRefresh}
         nodeId={selectedNodeForGallery?.id || ''}
         fileName={selectedNodeForGallery?.name || ''}
+      />
+
+      {/* 版本历史模态框 */}
+      <VersionHistoryModal
+        isOpen={showVersionHistoryModal}
+        node={versionHistoryNode}
+        entries={versionHistoryEntries}
+        loading={versionHistoryLoading}
+        error={versionHistoryError}
+        onClose={() => {
+          setShowVersionHistoryModal(false);
+          setVersionHistoryNode(null);
+          setVersionHistoryEntries([]);
+          setVersionHistoryError(null);
+        }}
+        onOpenVersion={handleOpenHistoricalVersion}
       />
 
       {/* 下载格式选择模态框 */}

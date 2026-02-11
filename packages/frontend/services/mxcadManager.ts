@@ -62,6 +62,9 @@ let currentFileInfo: {
   name: string;
 } | null = null;
 
+// 是否处于只读模式（历史版本访问）
+let isBrowseMode = false;
+
 // React Router navigate 函数（由 CADEditorDirect 组件设置）
 let navigateFunction: ((path: string) => void) | null = null;
 
@@ -480,6 +483,13 @@ MxFun.addCommand('Mx_Save', async () => {
   try {
     Logger.info('========== 执行 Mx_Save 命令 ==========');
 
+    // 检查是否处于只读模式（历史版本访问）
+    if (isBrowseMode) {
+      Logger.warn('当前处于只读模式（历史版本），禁止保存文件');
+      alert('当前处于只读模式（历史版本访问），无法保存文件！');
+      return;
+    }
+
     // 检查当前文件信息
     if (!currentFileInfo) {
       Logger.error('当前文件信息为空，无法保存');
@@ -824,6 +834,13 @@ private setupFileOpenListener(): void {
         Logger.error('缩略图处理失败', error);
       }
     }
+
+    // 如果处于只读模式（历史版本访问），设置只读模式
+    if (isBrowseMode) {
+      Logger.info('文件打开完成，设置只读模式');
+      this.mxcadView?.mxcad.setBrowse(true);
+    }
+    
     // 注意：不移除监听器，让监听器持续存在以支持多次打开文件
   };
 
@@ -1046,7 +1063,9 @@ export class MxCADManager {
   }
 
   setBrowse(is: boolean) {
-    this.getCurrentView()?.mxcad.setBrowse(is);
+    isBrowseMode = is;
+    Logger.info(`设置只读模式标志: ${is}`);
+    // 实际的 setBrowse 调用会在文件打开完成事件 (openFileComplete) 中执行
   }
 
   /**

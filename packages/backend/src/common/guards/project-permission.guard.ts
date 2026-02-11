@@ -86,47 +86,17 @@ export class NodePermissionGuard implements CanActivate {
       return request.query.projectId;
     }
 
-    // 从请求体中获取
+    // 从请求体中获取（包括 FormData 字段）
     if (request.body?.projectId) {
       return request.body.projectId;
     }
 
-    // 如果有 parentId（例如创建文件夹、上传文件等操作），从数据库查找其所属的项目根节点
-    if (request.params?.parentId) {
-      try {
-        const parentId = request.params.parentId;
-        // 使用 getNodeTree 而不是 getNode，因为 getNode 会过滤已删除的节点（deletedAt: null）
-        // 对于回收站中的项目，我们需要能够获取节点信息
-        const node = await this.fileSystemService.getNodeTree(parentId);
-
-        if (node) {
-          // 如果节点本身是项目根节点，直接返回其ID
-          if (node.isRoot) {
-            return node.id;
-          }
-
-          // 如果节点不是项目根节点，返回其所属项目的根节点ID
-          // 通过向上遍历找到项目根节点
-          const projectRoot = await this.findProjectRoot(parentId);
-          return projectRoot;
-        }
-        // 节点不存在（可能是已删除的节点，如回收站中的项目），返回 null 让请求继续
-        return null;
-      } catch (error) {
-        if (error instanceof NotFoundException) {
-          // 节点不存在，可能是已删除的节点，返回 null
-          return null;
-        }
-        console.error('从父节点ID推导项目ID失败:', error);
-        // 查询失败时继续尝试其他方式
-        return null;
-      }
-    }
-
     // 如果有 nodeId，从数据库查找其所属的项目根节点
-    if (request.params?.nodeId) {
+    // 注意：nodeId 可能来自 request.body（FormData）或 request.params
+    let nodeId = request.params?.nodeId || request.body?.nodeId;
+
+    if (nodeId) {
       try {
-        const nodeId = request.params.nodeId;
         // 使用 getNodeTree 而不是 getNode，因为 getNode 会过滤已删除的节点（deletedAt: null）
         // 对于回收站中的项目，我们需要能够获取节点信息
         const node = await this.fileSystemService.getNodeTree(nodeId);
@@ -149,7 +119,7 @@ export class NodePermissionGuard implements CanActivate {
           // 节点不存在，可能是已删除的节点，返回 null
           return null;
         }
-        console.error('从节点ID推导项目ID失败:', error);
+        console.error('[NodePermissionGuard] 从节点ID推导项目ID失败:', error);
         // 查询失败时继续尝试其他方式
         return null;
       }
@@ -189,7 +159,7 @@ export class NodePermissionGuard implements CanActivate {
         // 节点不存在（可能是已删除的节点），返回 null
         return null;
       }
-      console.error('查找项目根节点失败:', error);
+      console.error('[findProjectRoot] 查找项目根节点失败:', error);
       return null;
     }
   }

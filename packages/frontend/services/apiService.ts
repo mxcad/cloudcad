@@ -12,3 +12,4 @@ export { fontsApi } from './fontsApi';
 export { rolesApi, projectRolesApi } from './rolesApi';
 export { mxcadApi } from './mxcadApi';
 export { galleryApi } from './galleryApi';
+export { versionControlApi } from './versionControlApi';

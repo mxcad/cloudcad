@@ -38,6 +38,7 @@ interface FileItemProps {
   onMove?: (node: FileSystemNode) => void;
   onCopy?: (node: FileSystemNode) => void;
   onAddToGallery?: (node: FileSystemNode) => void;
+  onShowVersionHistory?: (node: FileSystemNode) => void;
   onDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragLeave?: () => void;
@@ -66,6 +67,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onMove,
   onCopy,
   onAddToGallery,
+  onShowVersionHistory,
   onDragStart,
   onDragOver,
   onDragLeave,
@@ -295,6 +297,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             onMove={onMove}
             onCopy={onCopy}
             onAddToGallery={onAddToGallery}
+            onShowVersionHistory={onShowVersionHistory}
             onUploadExternalReference={handleUploadExternalReference}
             isCadFile={isCadFile}
           />

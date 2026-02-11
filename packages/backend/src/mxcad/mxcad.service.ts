@@ -901,11 +901,15 @@ export class MxCadService {
    * 保存 mxweb 文件到指定节点
    * @param nodeId 节点 ID
    * @param file 上传的 mxweb 文件
+   * @param userId 用户 ID（可选）
+   * @param userName 用户名称（可选）
    * @returns 保存结果
    */
   async saveMxwebFile(
     nodeId: string,
-    file: Express.Multer.File
+    file: Express.Multer.File,
+    userId?: string,
+    userName?: string
   ): Promise<{ success: boolean; message: string; path?: string }> {
     try {
       this.logger.log(`[saveMxwebFile] 开始保存: nodeId=${nodeId}, file=${file?.originalname}`);
@@ -956,7 +960,7 @@ export class MxCadService {
       this.logger.log(`[saveMxwebFile] 文件保存成功: ${file.path} -> ${targetPath}`);
 
       // 提交文件到 SVN 版本控制
-      await this.commitMxwebToSvn(node);
+      await this.commitMxwebToSvn(node, userId, userName);
 
       // 删除临时上传文件
       try {
@@ -986,8 +990,14 @@ export class MxCadService {
   /**
    * 提交 mxweb 文件到 SVN 版本控制
    * @param node 文件节点
+   * @param userId 用户 ID（可选）
+   * @param userName 用户名称（可选）
    */
-  private async commitMxwebToSvn(node: any): Promise<void> {
+  private async commitMxwebToSvn(
+    node: any,
+    userId?: string,
+    userName?: string
+  ): Promise<void> {
     try {
       // 获取文件的完整路径
       const fullPath = this.storageManager.getFullPath(node.path);
@@ -995,9 +1005,12 @@ export class MxCadService {
       const nodeDirectory = path.dirname(fullPath);
 
       // 提交节点目录到 SVN
+      this.logger.log(`[commitMxwebToSvn] node.name=${node.name}, userId=${userId}, userName=${userName}`);
       const commitResult = await this.versionControlService.commitNodeDirectory(
         nodeDirectory,
-        `保存 mxweb 文件: ${node.name}`
+        `Save mxweb file: ${node.name}`,
+        userId,
+        userName
       );
 
       if (commitResult.success) {

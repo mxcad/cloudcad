@@ -142,6 +142,7 @@ export const uploadMxCadFile = async (
   onBeginUpload?.();
 
   let newNodeId: string | undefined;
+  let hasUploadedAnyChunk = false; // 标记是否有任何分片被上传
   const isLastChunk = (chunkIndex: number) => chunkIndex === totalChunks - 1;
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
@@ -168,13 +169,13 @@ export const uploadMxCadFile = async (
 
     // 上传分片
     const formData = new FormData();
-    formData.append('file', chunk);
     formData.append('chunk', chunkIndex.toString());
     formData.append('chunks', totalChunks.toString());
     formData.append('name', file.name);
     formData.append('hash', hash);
     formData.append('size', file.size.toString());
     formData.append('nodeId', nodeId);
+    formData.append('file', chunk);
 
     const uploadResponse = await apiService.post(
       '/mxcad/files/uploadFiles',
@@ -184,6 +185,8 @@ export const uploadMxCadFile = async (
       }
     );
 
+    hasUploadedAnyChunk = true; // 标记已上传至少一个分片
+
     // 最后一个分片上传完成后，检查响应中是否包含 nodeId
     if (isLastChunk(chunkIndex) && uploadResponse.data.nodeId) {
       newNodeId = uploadResponse.data.nodeId;
@@ -192,7 +195,30 @@ export const uploadMxCadFile = async (
     onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
   }
 
-  // 3. 直接使用合并时返回的 nodeId
+  // 3. 如果所有分片都已存在（没有上传任何新分片），发送合并请求
+  if (!hasUploadedAnyChunk) {
+    // 发送合并请求（不包含文件，只包含合并参数）
+    const mergeFormData = new FormData();
+    mergeFormData.append('chunks', totalChunks.toString());
+    mergeFormData.append('name', file.name);
+    mergeFormData.append('hash', hash);
+    mergeFormData.append('size', file.size.toString());
+    mergeFormData.append('nodeId', nodeId);
+
+    const mergeResponse = await apiService.post(
+      '/mxcad/files/uploadFiles',
+      mergeFormData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
+
+    if (mergeResponse.data.nodeId) {
+      newNodeId = mergeResponse.data.nodeId;
+    }
+  }
+
+  // 4. 直接使用合并时返回的 nodeId
   // 避免再次调用 fileisExist API，防止触发秒传逻辑导致重复创建节点
   const finalNodeId = newNodeId || nodeId;
   

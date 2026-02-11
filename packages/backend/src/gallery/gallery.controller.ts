@@ -22,6 +22,8 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { NodePermissionGuard } from '../common/guards/project-permission.guard';
+import { ProjectRole } from '../common/enums/permissions.enum';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { GalleryService } from './gallery.service';
@@ -39,7 +41,6 @@ import * as fs from 'fs';
 @ApiTags('图库管理')
 @ApiBearerAuth()
 @Controller('gallery')
-@UseGuards(JwtAuthGuard)
 export class GalleryController {
   private readonly logger = new Logger(GalleryController.name);
 

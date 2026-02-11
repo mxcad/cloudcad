@@ -39,6 +39,12 @@ export const CADEditorDirect: React.FC = () => {
   // 从URL获取文件ID
   const fileId = location.pathname.split('/').pop() || '';
 
+  // 从 URL 获取版本参数（用于访问历史版本）
+  const versionParam = React.useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get('v');
+  }, [location.search]);
+
   const loadMxCADDependencies = async () => {
     // @ts-expect-error - mxcad-app 没有类型定义
     await import('mxcad-app/style');
@@ -212,7 +218,14 @@ export const CADEditorDirect: React.FC = () => {
         // 构造正确的 mxweb 文件访问 URL
         // file.path 是存储路径（如：202602/cml96ilqt000ftsufa6h6q7v7/cml96ilqt000ftsufa6h6q7v7.dwg.mxweb）
         // 需要通过后端接口访问：/mxcad/filesData/202602/cml96ilqt000ftsufa6h6q7v7/cml96ilqt000ftsufa6h6q7v7.dwg.mxweb
-        const mxcadFileUrl = `/mxcad/filesData/${file.path}`;
+        let mxcadFileUrl: string;
+
+        // 如果有版本参数，在 URL 中添加 v 参数访问历史版本
+        if (versionParam) {
+          mxcadFileUrl = `/mxcad/filesData/${file.path}?v=${versionParam}`;
+        } else {
+          mxcadFileUrl = `/mxcad/filesData/${file.path}`;
+        }
 
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);
@@ -222,6 +235,12 @@ export const CADEditorDirect: React.FC = () => {
         isInitializedRef.current = true;
 
         setLoading(false);
+
+        // 如果访问的是历史版本，设置只读模式标志（实际的 setBrowse 会在文件打开完成事件中执行）
+        if (versionParam) {
+          mxcadManager.setBrowse(true);
+        }
+
       } catch (err) {
         console.log(err);
         setError('CAD编辑器初始化失败');

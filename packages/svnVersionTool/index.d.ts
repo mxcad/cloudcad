@@ -110,3 +110,37 @@ export function svnImport(
   message: string,
   callback: SvnCallback
 ): void;
+
+/**
+ * 获取 SVN 提交历史
+ * @param targetPath - 目标路径（文件或目录）
+ * @param limit - 限制返回的提交记录数量（可选）
+ * @param verbose - 是否显示详细信息（包括变更的文件列表）
+ * @param username - 用户名（可选）
+ * @param password - 密码（可选）
+ * @param callback - 回调函数
+ */
+export function svnLog(
+  targetPath: string,
+  limit: number | null,
+  verbose: boolean,
+  username: string | null,
+  password: string | null,
+  callback: SvnCallback
+): void;
+
+/**
+ * 获取指定版本的文件内容
+ * @param filePath - 文件路径
+ * @param revision - 修订版本号（可选，不指定则获取最新版本）
+ * @param username - 用户名（可选）
+ * @param password - 密码（可选）
+ * @param callback - 回调函数
+ */
+export function svnCat(
+  filePath: string,
+  revision: number | null,
+  username: string | null,
+  password: string | null,
+  callback: SvnCallback
+): void;

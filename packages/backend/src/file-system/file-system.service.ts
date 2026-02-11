@@ -144,6 +144,15 @@ export class FileSystemService {
 
   async createProject(userId: string, dto: CreateProjectDto) {
     try {
+      // 获取 PROJECT_OWNER 角色
+      const ownerRole = await this.prisma.projectRole.findFirst({
+        where: { name: 'PROJECT_OWNER', isSystem: true },
+      });
+
+      if (!ownerRole) {
+        throw new Error('PROJECT_OWNER 角色不存在，请检查系统初始化');
+      }
+
       // 创建项目节点（ownerId 字段标识了项目所有者）
       const rootNode = await this.prisma.fileSystemNode.create({
         data: {
@@ -153,6 +162,13 @@ export class FileSystemService {
           isRoot: true,
           projectStatus: ProjectStatus.ACTIVE,
           ownerId: userId,
+          // 为创建者自动分配 PROJECT_OWNER 角色
+          projectMembers: {
+            create: {
+              userId,
+              projectRoleId: ownerRole.id,
+            },
+          },
         },
       });
 

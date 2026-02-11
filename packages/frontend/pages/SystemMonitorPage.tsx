@@ -19,21 +19,15 @@ interface SystemHealth {
 
 export const SystemMonitorPage: React.FC = () => {
   const { hasPermission } = usePermission();
-
-  // 检查是否有系统监控权限
-  if (!hasPermission(SystemPermission.SYSTEM_MONITOR)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-gray-500">您没有访问系统监控的权限</p>
-        </div>
-      </div>
-    );
-  }
-
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [permissionChecked, setPermissionChecked] = useState(false);
+
+  // 延迟检查权限，确保用户数据已加载
+  useEffect(() => {
+    setPermissionChecked(true);
+  }, []);
 
   // 获取系统健康状态
   const fetchSystemHealth = async () => {
@@ -68,12 +62,38 @@ export const SystemMonitorPage: React.FC = () => {
     }
   };
 
+  // 仅在有权限时才执行健康状态检查
   useEffect(() => {
+    if (!permissionChecked || !hasPermission(SystemPermission.SYSTEM_MONITOR)) {
+      return;
+    }
     fetchSystemHealth();
     // 每 30 秒自动刷新
     const interval = setInterval(fetchSystemHealth, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [permissionChecked]);
+
+  // 等待权限检查完成
+  if (!permissionChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 检查是否有系统监控权限
+  if (!hasPermission(SystemPermission.SYSTEM_MONITOR)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-500">您没有访问系统监控的权限</p>
+        </div>
+      </div>
+    );
+  }
 
   // 获取状态图标
   const getStatusIcon = (status: 'up' | 'down') => {
