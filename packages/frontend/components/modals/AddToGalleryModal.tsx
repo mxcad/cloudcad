@@ -58,6 +58,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
 
   const filteredTypes = types.filter((t) => t.pid === parentId && (searchQuery === '' || t.name.toLowerCase().includes(searchQuery.toLowerCase())));
 
@@ -89,7 +90,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     setIsCreating(true);
     setNewTypeName('');
     setSearchQuery('');
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setTimeout(() => createInputRef.current?.focus(), 100);
   };
 
   const handleSaveCreate = async () => {
@@ -244,13 +245,13 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
             {isCreating ? (
               <div className="p-3 bg-indigo-50 border-b border-indigo-100">
                 <input
+                  ref={createInputRef}
                   type="text"
                   value={newTypeName}
                   onChange={(e) => setNewTypeName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isSubmitting && handleSaveCreate()}
                   placeholder="输入分类名称"
                   className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus
                   disabled={isSubmitting}
                 />
                 <div className="flex gap-2 mt-2">
@@ -296,7 +297,10 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                                         />
                                       ) : (
                                         <button
-                                          onClick={() => onChange(type.id)}
+                                          onClick={() => {
+                                            onChange(type.id);
+                                            setIsOpen(false);
+                                          }}
                                           className={`flex-1 text-left text-sm ${value === type.id ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
                                         >
                                           {type.name}
