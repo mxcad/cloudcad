@@ -138,7 +138,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           to: '/font-library',
           icon: Type,
           label: '字体库',
-          visible: hasRole('ADMIN') || hasRole('FONT_MANAGER') ||
+          visible: hasPermission(SystemPermission.SYSTEM_FONT_READ) ||
             hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD) ||
             hasPermission(SystemPermission.SYSTEM_FONT_DELETE) ||
             hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD),

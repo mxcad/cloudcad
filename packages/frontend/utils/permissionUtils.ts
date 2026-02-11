@@ -4,6 +4,7 @@
  */
 
 import { logger } from './logger';
+import { SystemPermission } from '../constants/permissions';
 
 export type Role = 'ADMIN' | 'USER' | 'VIEWER';
 
@@ -38,6 +39,7 @@ export const clearNodePermissionCache = (nodeId?: string) => {
 
 /**
  * 检查用户是否具有指定角色
+ * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission 方法。
  * @param user - 用户对象
  * @param requiredRole - 需要的角色
  * @returns boolean - 是否具有该角色
@@ -47,16 +49,13 @@ export const hasRole = (user: User | null, requiredRole: Role): boolean => {
     return false;
   }
 
-  // ADMIN 拥有所有权限
-  if (user.role.name === 'ADMIN') {
-    return true;
-  }
-
+  // 不再自动赋予 ADMIN 所有权限，权限检查应该使用 hasPermission 方法
   return user.role.name === requiredRole;
 };
 
 /**
  * 检查用户是否是管理员
+ * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission(SystemPermission.SYSTEM_ADMIN) 方法。
  * @param user - 用户对象
  * @returns boolean - 是否是管理员
  */
@@ -66,6 +65,7 @@ export const isAdmin = (user: User | null): boolean => {
 
 /**
  * 检查用户是否可以执行管理操作
+ * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission 方法。
  * @param user - 用户对象
  * @returns boolean - 是否可以执行管理操作
  */
@@ -75,6 +75,7 @@ export const canManage = (user: User | null): boolean => {
 
 /**
  * 检查用户是否可以编辑
+ * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission 方法。
  * @param user - 用户对象
  * @returns boolean - 是否可以编辑
  */
@@ -83,7 +84,7 @@ export const canEdit = (user: User | null): boolean => {
     return false;
   }
 
-  // ADMIN 和 USER 都可以编辑
+  // 不再使用角色检查，权限检查应该使用 hasPermission 方法
   return user.role?.name === 'ADMIN' || user.role?.name === 'USER';
 };
 
@@ -112,25 +113,7 @@ export const hasNodePermission = async (
     return false;
   }
 
-  // 管理员拥有所有权限
-  if (user.role?.name === 'ADMIN') {
-    return true;
-  }
-
-  try {
-    // 首先检查用户是否为项目所有者
-    const { projectsApi } = await import('../services/apiService');
-    const projectResponse = await projectsApi.getNode(nodeId);
-    const project = projectResponse.data;
-
-    // 如果用户是项目所有者，拥有所有权限
-    if (project.ownerId === user.id) {
-      return true;
-    }
-  } catch (error) {
-    logger.error('获取项目信息失败:', error);
-    return false;
-  }
+  // 不再自动赋予 ADMIN 所有权限，权限检查应该通过权限服务进行
 
   // 检查缓存
   if (nodePermissionCache.has(nodeId)) {
@@ -197,12 +180,25 @@ export const canEditNode = async (
   user: User | null,
   nodeId: string
 ): Promise<boolean> => {
-  return hasNodePermission(user, nodeId, [
-    'OWNER',
-    'ADMIN',
-    'MEMBER',
-    'EDITOR',
-  ]);
+  if (!user) {
+    return false;
+  }
+
+  try {
+    // 动态导入 API 服务以避免循环依赖
+    const { projectsApi } = await import('../services/apiService');
+
+    // 检查用户是否具有 PROJECT_UPDATE 权限
+    const response = await projectsApi.checkPermission(
+      nodeId,
+      'PROJECT_UPDATE'
+    );
+
+    return response.data?.hasPermission || false;
+  } catch (error) {
+    logger.error('检查编辑权限失败:', error);
+    return false;
+  }
 };
 
 /**
@@ -215,7 +211,25 @@ export const canDeleteNode = async (
   user: User | null,
   nodeId: string
 ): Promise<boolean> => {
-  return hasNodePermission(user, nodeId, ['OWNER', 'ADMIN']);
+  if (!user) {
+    return false;
+  }
+
+  try {
+    // 动态导入 API 服务以避免循环依赖
+    const { projectsApi } = await import('../services/apiService');
+
+    // 检查用户是否具有 PROJECT_DELETE 权限
+    const response = await projectsApi.checkPermission(
+      nodeId,
+      'PROJECT_DELETE'
+    );
+
+    return response.data?.hasPermission || false;
+  } catch (error) {
+    logger.error('检查删除权限失败:', error);
+    return false;
+  }
 };
 
 /**
@@ -228,7 +242,25 @@ export const canManageNodeMembers = async (
   user: User | null,
   nodeId: string
 ): Promise<boolean> => {
-  return hasNodePermission(user, nodeId, ['OWNER', 'ADMIN']);
+  if (!user) {
+    return false;
+  }
+
+  try {
+    // 动态导入 API 服务以避免循环依赖
+    const { projectsApi } = await import('../services/apiService');
+
+    // 检查用户是否具有 PROJECT_MEMBER_MANAGE 权限
+    const response = await projectsApi.checkPermission(
+      nodeId,
+      'PROJECT_MEMBER_MANAGE'
+    );
+
+    return response.data?.hasPermission || false;
+  } catch (error) {
+    logger.error('检查成员管理权限失败:', error);
+    return false;
+  }
 };
 
 /**

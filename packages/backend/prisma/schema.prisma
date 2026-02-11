@@ -344,10 +344,9 @@ enum ProjectPermission {
   PROJECT_DELETE
   PROJECT_MEMBER_MANAGE
   PROJECT_MEMBER_ASSIGN
+  PROJECT_TRANSFER
   PROJECT_ROLE_MANAGE
   PROJECT_ROLE_PERMISSION_MANAGE
-  PROJECT_TRANSFER
-  PROJECT_SETTINGS_MANAGE
 
   // ========== 文件操作权限 ==========
   FILE_CREATE
@@ -357,10 +356,6 @@ enum ProjectPermission {
   FILE_DELETE
   FILE_TRASH_MANAGE
   FILE_DOWNLOAD
-  FILE_SHARE
-  FILE_COMMENT
-  FILE_PRINT
-  FILE_COMPARE
 
   // ========== CAD 图纸权限 ==========
   CAD_SAVE
@@ -372,9 +367,6 @@ enum ProjectPermission {
 
   // ========== 版本管理权限 ==========
   VERSION_READ
-  VERSION_CREATE
-  VERSION_DELETE
-  VERSION_RESTORE
 }
 
 enum ProjectStatus {

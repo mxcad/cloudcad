@@ -16,14 +16,14 @@ import {
 import { RedisCacheService } from '../services/redis-cache.service';
 import { CacheWarmupService } from '../services/cache-warmup.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { Roles } from '../decorators/roles.decorator';
-import { RolesGuard } from '../guards/roles.guard';
-import { SystemRole } from '../enums/permissions.enum';
+import { RequirePermissions } from '../decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../guards/permissions.guard';
+import { SystemPermission } from '../enums/permissions.enum';
 
 @ApiTags('cache')
 @Controller('cache')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(SystemRole.ADMIN)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 @ApiBearerAuth()
 export class CacheMonitorController {
   constructor(

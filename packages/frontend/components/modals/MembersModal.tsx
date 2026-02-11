@@ -12,6 +12,8 @@ import { Modal } from '../ui/Modal';
 import { TruncateText } from '../ui/TruncateText';
 import { projectsApi, usersApi } from '../../services/apiService';
 import { projectRolesApi } from '../../services/rolesApi';
+import { useProjectPermission } from '../../hooks/useProjectPermission';
+import { ProjectPermission, getRoleDisplayName } from '../../constants/permissions';
 
 interface Member {
   id: string;
@@ -60,20 +62,6 @@ interface MembersModalProps {
   onClose: () => void;
 }
 
-// 角色名称中文映射
-const ROLE_NAME_MAP: Record<string, string> = {
-  PROJECT_OWNER: '项目所有者',
-  PROJECT_ADMIN: '项目管理员',
-  PROJECT_MEMBER: '项目成员',
-  PROJECT_EDITOR: '项目编辑者',
-  PROJECT_VIEWER: '项目查看者',
-};
-
-// 获取角色中文名称
-const getRoleDisplayName = (roleName: string): string => {
-  return ROLE_NAME_MAP[roleName] || roleName;
-};
-
 export const MembersModal: React.FC<MembersModalProps> = ({
   isOpen,
   projectId,
@@ -96,10 +84,14 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
     null
   );
+  const [canManageMembers, setCanManageMembers] = useState(false);
+  const [canAssignRoles, setCanAssignRoles] = useState(false);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isInitializedRef = useRef(false);
+  const { checkPermission } = useProjectPermission();
 
   const loadMembers = useCallback(async () => {
     setErrorMessage('');
@@ -189,19 +181,36 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setErrorMessage('');
       setSearchResults([]);
       setSelectedUser(null);
+      setCanManageMembers(false);
+      setCanAssignRoles(false);
 
       // 开始加载
       setLoading(true);
+      setLoadingPermissions(true);
 
-      // 并行加载数据
-      Promise.all([loadMembers(), loadProjectRoles()]).finally(() => {
-        setLoading(false);
-      });
+      // 并行加载数据和权限
+      Promise.all([
+        loadMembers(),
+        loadProjectRoles(),
+        checkPermission(projectId, ProjectPermission.PROJECT_MEMBER_MANAGE),
+        checkPermission(projectId, ProjectPermission.PROJECT_MEMBER_ASSIGN),
+      ])
+        .then((results) => {
+          setCanManageMembers(results[2]);
+          setCanAssignRoles(results[3]);
+        })
+        .catch((error) => {
+          console.error('权限检查失败:', error);
+        })
+        .finally(() => {
+          setLoading(false);
+          setLoadingPermissions(false);
+        });
     }
     if (!isOpen) {
       isInitializedRef.current = false;
     }
-  }, [isOpen, projectId]);
+  }, [isOpen, projectId, checkPermission]);
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,15 +340,22 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
           {/* 添加成员按钮/表单 */}
           {!showAddForm ? (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full py-2 px-4 border-2 border-dashed border-slate-300 rounded-lg
-                       text-slate-500 hover:border-indigo-400 hover:text-indigo-600
-                       flex items-center justify-center gap-2 transition-colors"
-            >
-              <UserPlus size={18} />
-              添加成员
-            </button>
+            canManageMembers ? (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="w-full py-2 px-4 border-2 border-dashed border-slate-300 rounded-lg
+                         text-slate-500 hover:border-indigo-400 hover:text-indigo-600
+                         flex items-center justify-center gap-2 transition-colors"
+              >
+                <UserPlus size={18} />
+                添加成员
+              </button>
+            ) : loadingPermissions ? (
+              <div className="w-full py-2 px-4 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center gap-2">
+                <Loader2 size={18} className="animate-spin text-slate-400" />
+                <span className="text-slate-400">检查权限中...</span>
+              </div>
+            ) : null
           ) : (
             <form
               onSubmit={handleAddMember}
@@ -469,7 +485,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       .filter((role) => role.name !== 'PROJECT_OWNER')
                       .map((role) => (
                         <option key={role.id} value={role.id}>
-                          {getRoleDisplayName(role.name)}
+                          {getRoleDisplayName(role.name, false)}
                         </option>
                       ))}
                   </select>
@@ -499,7 +515,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 <option value="">所有角色</option>
                 {projectRoles.map((role) => (
                   <option key={role.id} value={role.id}>
-                    {getRoleDisplayName(role.name)}
+                    {getRoleDisplayName(role.name, false)}
                   </option>
                 ))}
               </select>
@@ -550,20 +566,22 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       onChange={(e) =>
                         handleUpdateRole(member.userId, e.target.value)
                       }
-                      disabled={isOwner}
+                      disabled={isOwner || !canAssignRoles}
                       className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
-                        isOwner ? 'opacity-50 cursor-not-allowed' : ''
+                        isOwner || !canAssignRoles
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
                       }`}
                     >
                       {projectRoles
                         .filter((role) => role.name !== 'PROJECT_OWNER')
                         .map((role) => (
                           <option key={role.id} value={role.id}>
-                            {getRoleDisplayName(role.name)}
+                            {getRoleDisplayName(role.name, false)}
                           </option>
                         ))}
                     </select>
-                    {!isOwner && (
+                    {!isOwner && canManageMembers && (
                       <button
                         onClick={() => {
                           setTransferTarget(member);
@@ -575,7 +593,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         <ArrowUpRight size={16} />
                       </button>
                     )}
-                    {!isOwner && (
+                    {!isOwner && canManageMembers && (
                       <button
                         onClick={() => handleRemoveMember(member.userId)}
                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex-shrink-0"

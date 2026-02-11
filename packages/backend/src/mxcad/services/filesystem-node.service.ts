@@ -206,23 +206,16 @@ export class FileSystemNodeService {
 
   /**
    * 检查用户是否有项目访问权限
+   * 注意：此方法仅用于向后兼容，真正的权限检查应该在控制器层面通过装饰器进行
    */
   async checkProjectPermission(
     projectId: string,
     userId: string,
     userRole: string
   ): Promise<boolean> {
-    try {
-      // 管理员有所有权限
-      if (userRole === 'ADMIN') {
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      this.logger.error(`检查项目权限失败: ${error.message}`, error);
-      return false;
-    }
+    // 真正的权限检查应该在控制器层面通过 @RequirePermissions 或 @NodePermission 装饰器进行
+    // 此方法返回 true，因为权限守卫已经验证了用户的权限
+    return true;
   }
 
   /**

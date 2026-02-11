@@ -82,12 +82,6 @@ export enum ProjectPermission {
   FILE_DOWNLOAD = 'FILE_DOWNLOAD',
   /** 分享文件 */
   FILE_SHARE = 'FILE_SHARE',
-  /** 文件批注 */
-  FILE_COMMENT = 'FILE_COMMENT',
-  /** 打印文件 */
-  FILE_PRINT = 'FILE_PRINT',
-  /** 图纸比对 */
-  FILE_COMPARE = 'FILE_COMPARE',
 
   // ========== CAD 图纸权限 ==========
   /** 保存图纸（DWG/MXWEB） */

@@ -23,7 +23,9 @@ import {
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NodePermissionGuard } from '../common/guards/project-permission.guard';
-import { ProjectRole } from '../common/enums/permissions.enum';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { ProjectRole, ProjectPermission } from '../common/enums/permissions.enum';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { GalleryService } from './gallery.service';
@@ -41,6 +43,7 @@ import * as fs from 'fs';
 @ApiTags('图库管理')
 @ApiBearerAuth()
 @Controller('gallery')
+@UseGuards(JwtAuthGuard, NodePermissionGuard, PermissionsGuard)
 export class GalleryController {
   private readonly logger = new Logger(GalleryController.name);
 
@@ -591,6 +594,7 @@ export class GalleryController {
    * 路由: POST /gallery/{galleryType}/items
    */
   @Post(':galleryType/items')
+  @RequirePermissions([ProjectPermission.GALLERY_ADD])
   @ApiOperation({
     summary: '添加文件到图库',
     description: '将项目文件添加到图库',

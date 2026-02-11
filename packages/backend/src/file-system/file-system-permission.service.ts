@@ -266,16 +266,21 @@ export class FileSystemPermissionService {
    * @param nodeId 节点 ID
    */
   clearNodeCache(nodeId: string): void {
-    // 暂时不实现，因为 ProjectPermissionService 没有这个方法
-    // 可以通过清除所有用户的缓存来实现
+    // 清除项目的所有缓存
+    this.projectPermissionService.clearUserCache('', nodeId);
   }
 
   /**
    * 清除用户权限缓存
    *
    * @param userId 用户 ID
+   * @param projectId 项目 ID（可选）
    */
-  clearUserCache(userId: string): void {
-    // 暂时不实现，因为 ProjectPermissionService 需要 projectId
+  clearUserCache(userId: string, projectId?: string): void {
+    if (projectId) {
+      this.projectPermissionService.clearUserCache(userId, projectId);
+    }
+    // TODO: 如果没有 projectId，需要清除用户在所有项目中的缓存
+    // 这需要查询用户参与的所有项目，然后逐个清除
   }
 }

@@ -14,7 +14,7 @@ import { Modal } from '../ui/Modal';
 import { DescriptionText } from '../ui/TruncateText';
 import { PermissionConfigModal } from '../permission/PermissionAssignment';
 import { projectRolesApi } from '../../services/rolesApi';
-import { usePermission } from '../../hooks/usePermission';
+import { useProjectPermission } from '../../hooks/useProjectPermission';
 import { ProjectPermission } from '../../constants/permissions';
 
 // 角色名称中文映射
@@ -56,10 +56,12 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   onClose,
   projectId,
 }) => {
-  const { hasPermission } = usePermission();
+  const { checkPermission } = useProjectPermission();
   const [roles, setRoles] = useState<ProjectRole[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [canManageRoles, setCanManageRoles] = useState(false);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
 
   // Tab 切换状态
   const [activeTab, setActiveTab] = useState<'system' | 'custom'>('custom');
@@ -76,12 +78,6 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<ProjectRole | null>(null);
 
-  // 检查是否有角色管理权限
-  const canManageRoles = hasPermission(
-    ProjectPermission.PROJECT_ROLE_MANAGE,
-    projectId
-  );
-
   const loadRoles = useCallback(async () => {
     setLoading(true);
     setErrorMessage('');
@@ -96,11 +92,28 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     }
   }, [projectId]);
 
+  const loadPermissions = useCallback(async () => {
+    setLoadingPermissions(true);
+    try {
+      const hasManagePermission = await checkPermission(
+        projectId,
+        ProjectPermission.PROJECT_ROLE_MANAGE
+      );
+      setCanManageRoles(hasManagePermission);
+    } catch (error) {
+      console.error('检查角色管理权限失败:', error);
+      setCanManageRoles(false);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  }, [projectId, checkPermission]);
+
   useEffect(() => {
     if (isOpen) {
       loadRoles();
+      loadPermissions();
     }
-  }, [isOpen, loadRoles]);
+  }, [isOpen, loadRoles, loadPermissions]);
 
   // 创建角色
   const handleCreateRole = () => {
@@ -398,6 +411,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
         onSave={handleSaveRole}
         isSystemRole={editingRole?.isSystem || false}
         isEditingSystemRole={!!editingRole && editingRole.isSystem}
+        permissionType="project"
         loading={saving}
       />
 

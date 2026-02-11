@@ -15,7 +15,7 @@ import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
 import { usePermission } from '../hooks/usePermission';
-import { SystemPermission } from '../constants/permissions';
+import { SystemPermission, getRoleDisplayName } from '../constants/permissions';
 
 // 使用API类型
 type UserDto = components['schemas']['UserDto'];
@@ -673,7 +673,7 @@ export const UserManagement = () => {
                   >
                     {roles.map((role) => (
                       <option key={role.id} value={role.id}>
-                        {role.name}
+                        {getRoleDisplayName(role.name, role.isSystem)}
                       </option>
                     ))}
                   </select>

@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-01-29T02:58:35.827Z
+ * 生成时间: 2026-02-11T10:09:09.401Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -41,10 +41,9 @@ export const ProjectPermission = {
   PROJECT_DELETE: 'PROJECT_DELETE',
   PROJECT_MEMBER_MANAGE: 'PROJECT_MEMBER_MANAGE',
   PROJECT_MEMBER_ASSIGN: 'PROJECT_MEMBER_ASSIGN',
+  PROJECT_TRANSFER: 'PROJECT_TRANSFER',
   PROJECT_ROLE_MANAGE: 'PROJECT_ROLE_MANAGE',
   PROJECT_ROLE_PERMISSION_MANAGE: 'PROJECT_ROLE_PERMISSION_MANAGE',
-  PROJECT_TRANSFER: 'PROJECT_TRANSFER',
-  PROJECT_SETTINGS_MANAGE: 'PROJECT_SETTINGS_MANAGE',
   FILE_CREATE: 'FILE_CREATE',
   FILE_UPLOAD: 'FILE_UPLOAD',
   FILE_OPEN: 'FILE_OPEN',
@@ -52,18 +51,11 @@ export const ProjectPermission = {
   FILE_DELETE: 'FILE_DELETE',
   FILE_TRASH_MANAGE: 'FILE_TRASH_MANAGE',
   FILE_DOWNLOAD: 'FILE_DOWNLOAD',
-  FILE_SHARE: 'FILE_SHARE',
-  FILE_COMMENT: 'FILE_COMMENT',
-  FILE_PRINT: 'FILE_PRINT',
-  FILE_COMPARE: 'FILE_COMPARE',
   CAD_SAVE: 'CAD_SAVE',
   CAD_EXPORT: 'CAD_EXPORT',
   CAD_EXTERNAL_REFERENCE: 'CAD_EXTERNAL_REFERENCE',
   GALLERY_ADD: 'GALLERY_ADD',
   VERSION_READ: 'VERSION_READ',
-  VERSION_CREATE: 'VERSION_CREATE',
-  VERSION_DELETE: 'VERSION_DELETE',
-  VERSION_RESTORE: 'VERSION_RESTORE',
 } as const;
 
 /**
@@ -101,46 +93,27 @@ export const PermissionValues = [...SystemPermissionValues, ...ProjectPermission
  * 记录每个权限需要依赖的其他权限
  */
 export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
-  // 系统权限依赖
-  'SYSTEM_USER_UPDATE': ['SYSTEM_USER_READ'],
-  'SYSTEM_USER_DELETE': ['SYSTEM_USER_READ'],
-  'SYSTEM_ROLE_UPDATE': ['SYSTEM_ROLE_READ'],
-  'SYSTEM_ROLE_DELETE': ['SYSTEM_ROLE_READ'],
-  'SYSTEM_FONT_UPLOAD': ['SYSTEM_FONT_READ'],
-  'SYSTEM_FONT_DELETE': ['SYSTEM_FONT_READ'],
-  'SYSTEM_FONT_DOWNLOAD': ['SYSTEM_FONT_READ'],
-  // 项目权限依赖
-  'PROJECT_UPDATE': [],
-  'PROJECT_DELETE': ['PROJECT_UPDATE'],
-  'PROJECT_MEMBER_MANAGE': ['PROJECT_UPDATE'],
-  'PROJECT_MEMBER_ASSIGN': ['PROJECT_UPDATE'],
-  'PROJECT_ROLE_MANAGE': ['PROJECT_UPDATE'],
-  'PROJECT_ROLE_PERMISSION_MANAGE': ['PROJECT_UPDATE'],
-  'PROJECT_TRANSFER': ['PROJECT_UPDATE'],
-  'PROJECT_SETTINGS_MANAGE': ['PROJECT_UPDATE'],
-  // 文件权限依赖
-  'FILE_CREATE': [],
-  'FILE_UPLOAD': [],
-  'FILE_OPEN': [],
-  'FILE_EDIT': ['FILE_OPEN'],
-  'FILE_DELETE': ['FILE_OPEN'],
-  'FILE_TRASH_MANAGE': [],
-  'FILE_DOWNLOAD': ['FILE_OPEN'],
-  'FILE_SHARE': ['FILE_OPEN'],
-  'FILE_COMMENT': ['FILE_OPEN'],
-  'FILE_PRINT': ['FILE_OPEN'],
-  'FILE_COMPARE': ['FILE_OPEN'],
-  // CAD 图纸权限依赖
-  'CAD_SAVE': ['FILE_OPEN'],
-  'CAD_EXPORT': ['FILE_OPEN'],
-  'CAD_EXTERNAL_REFERENCE': ['FILE_OPEN'],
-  // 图库权限依赖
-  'GALLERY_ADD': [],
-  // 版本管理权限依赖
-  'VERSION_READ': [],
-  'VERSION_CREATE': ['VERSION_READ'],
-  'VERSION_DELETE': ['VERSION_READ'],
-  'VERSION_RESTORE': ['VERSION_READ'],
+  'SYSTEM_USER_UPDATE': ["SYSTEM_USER_READ"],
+  'SYSTEM_USER_DELETE': ["SYSTEM_USER_READ"],
+  'SYSTEM_ROLE_UPDATE': ["SYSTEM_ROLE_READ"],
+  'SYSTEM_ROLE_DELETE': ["SYSTEM_ROLE_READ"],
+  'SYSTEM_FONT_UPLOAD': ["SYSTEM_FONT_READ"],
+  'SYSTEM_FONT_DELETE': ["SYSTEM_FONT_READ"],
+  'SYSTEM_FONT_DOWNLOAD': ["SYSTEM_FONT_READ"],
+  'PROJECT_UPDATE': ["FILE_OPEN"],
+  'PROJECT_DELETE': ["PROJECT_UPDATE"],
+  'PROJECT_MEMBER_MANAGE': ["PROJECT_UPDATE"],
+  'PROJECT_MEMBER_ASSIGN': ["PROJECT_UPDATE"],
+  'PROJECT_TRANSFER': ["PROJECT_UPDATE"],
+  'FILE_EDIT': ["FILE_OPEN"],
+  'FILE_DELETE': ["FILE_OPEN"],
+  'FILE_TRASH_MANAGE': ["FILE_OPEN"],
+  'FILE_DOWNLOAD': ["FILE_OPEN"],
+  'CAD_SAVE': ["FILE_OPEN"],
+  'CAD_EXPORT': ["FILE_OPEN"],
+  'CAD_EXTERNAL_REFERENCE': ["FILE_OPEN"],
+  'GALLERY_ADD': ["FILE_OPEN"],
+  'VERSION_READ': ["FILE_OPEN"],
 };
 
 /**
@@ -192,10 +165,9 @@ export const PERMISSION_GROUPS = {
         { key: 'PROJECT_DELETE', label: '删除项目' },
         { key: 'PROJECT_MEMBER_MANAGE', label: '成员管理' },
         { key: 'PROJECT_MEMBER_ASSIGN', label: '成员分配' },
-        { key: 'PROJECT_ROLE_MANAGE', label: '角色管理' },
-        { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: '角色权限管理' },
         { key: 'PROJECT_TRANSFER', label: '转让所有权' },
-        { key: 'PROJECT_SETTINGS_MANAGE', label: '项目设置' },
+        { key: 'PROJECT_ROLE_MANAGE', label: '角色管理' },
+        { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: '角色权限配置' },
       ],
     },
     {
@@ -208,10 +180,6 @@ export const PERMISSION_GROUPS = {
         { key: 'FILE_DELETE', label: '删除文件' },
         { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
         { key: 'FILE_DOWNLOAD', label: '下载文件' },
-        { key: 'FILE_SHARE', label: '分享文件' },
-        { key: 'FILE_COMMENT', label: '批注文件' },
-        { key: 'FILE_PRINT', label: '打印文件' },
-        { key: 'FILE_COMPARE', label: '图纸比对' },
       ],
     },
     {
@@ -232,12 +200,10 @@ export const PERMISSION_GROUPS = {
       label: '版本管理',
       items: [
         { key: 'VERSION_READ', label: '查看版本' },
-        { key: 'VERSION_CREATE', label: '创建版本' },
-        { key: 'VERSION_DELETE', label: '删除版本' },
-        { key: 'VERSION_RESTORE', label: '恢复版本' },
       ],
     },
   ],
+
 } as const;
 
 /**

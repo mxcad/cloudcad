@@ -23,11 +23,27 @@ export const SystemMonitorPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionChecked, setPermissionChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
 
-  // 延迟检查权限，确保用户数据已加载
+  // 检查权限
   useEffect(() => {
+    const canAccess = hasPermission(SystemPermission.SYSTEM_MONITOR);
+    setHasAccess(canAccess);
     setPermissionChecked(true);
-  }, []);
+  }, [hasPermission]);
+
+  // 如果没有权限，显示无权限提示
+  if (permissionChecked && !hasAccess) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md text-center">
+          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">无权限访问</h2>
+          <p className="text-gray-600">您需要系统监控权限才能访问此页面</p>
+        </div>
+      </div>
+    );
+  }
 
   // 获取系统健康状态
   const fetchSystemHealth = async () => {

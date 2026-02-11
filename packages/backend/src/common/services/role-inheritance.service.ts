@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SystemRole, SystemPermission, SYSTEM_ROLE_HIERARCHY } from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
+import { CACHE_TTL } from '../constants/cache.constants';
 
 /**
  * 角色基本信息接口
@@ -43,13 +44,6 @@ export class RoleInheritanceService implements OnModuleInit {
 
   // 最大层级深度限制，防止无限递归
   private static readonly MAX_HIERARCHY_DEPTH = 50;
-
-  // 缓存时间配置（毫秒）
-  private static readonly CACHE_TTL = {
-    PERMISSION: 10 * 60 * 1000,  // 10 分钟 - 角色权限
-    INHERITANCE: 10 * 60 * 1000, // 10 分钟 - 继承关系
-    PATH: 15 * 60 * 1000,        // 15 分钟 - 层级路径
-  };
 
   constructor(
     private readonly prisma: DatabaseService,
@@ -95,9 +89,9 @@ export class RoleInheritanceService implements OnModuleInit {
 
       // 缓存结果（支持空结果）
       if (allPermissions.length === 0) {
-        this.cacheService.set(cacheKey, 'null', RoleInheritanceService.CACHE_TTL.PERMISSION);
+        this.cacheService.set(cacheKey, 'null', CACHE_TTL.ROLE_PERMISSION);
       } else {
-        this.cacheService.set(cacheKey, allPermissions, RoleInheritanceService.CACHE_TTL.PERMISSION);
+        this.cacheService.set(cacheKey, allPermissions, CACHE_TTL.ROLE_PERMISSION);
       }
 
       return allPermissions;
@@ -141,14 +135,14 @@ export class RoleInheritanceService implements OnModuleInit {
       `;
 
       if (result.length === 0 || result[0]?.ancestors === null) {
-        this.cacheService.set(cacheKey, false, RoleInheritanceService.CACHE_TTL.INHERITANCE);
+        this.cacheService.set(cacheKey, false, CACHE_TTL.ROLE_INHERITANCE);
         return false;
       }
 
       // 检查父角色是否在继承路径中
       const hasInheritance = result[0].ancestors.includes(parentRoleName);
 
-      this.cacheService.set(cacheKey, hasInheritance, RoleInheritanceService.CACHE_TTL.INHERITANCE);
+      this.cacheService.set(cacheKey, hasInheritance, CACHE_TTL.ROLE_INHERITANCE);
       return hasInheritance;
     } catch (error) {
       this.logger.error(
@@ -190,7 +184,7 @@ export class RoleInheritanceService implements OnModuleInit {
       `;
 
       const path = result[0]?.ancestors || [];
-      this.cacheService.set(cacheKey, path, RoleInheritanceService.CACHE_TTL.PATH);
+      this.cacheService.set(cacheKey, path, CACHE_TTL.ROLE_HIERARCHY_PATH);
       return path;
     } catch (error) {
       this.logger.error(

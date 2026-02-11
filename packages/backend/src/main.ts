@@ -10,6 +10,12 @@ import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // 设置控制台编码为 UTF-8，解决 Windows 中文乱码问题
+  if (process.platform === 'win32') {
+    process.stdout.setEncoding('utf8');
+    process.stderr.setEncoding('utf8');
+  }
+
   const server = express();
   server.use(express.json({ limit: '50mb' }));
   server.use(express.urlencoded({ extended: true, limit: '50mb' }));

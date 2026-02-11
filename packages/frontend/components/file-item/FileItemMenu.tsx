@@ -1,16 +1,8 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  DownloadIcon,
-  DeleteIcon,
-  EditIcon,
-  MoreIcon,
-  UsersIcon,
-  RestoreIcon,
-  GalleryIcon,
-} from '../FileIcons';
-import { Upload } from 'lucide-react';
+import { MoreIcon } from '../FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
+import { getAvailableActions, type ActionType } from './fileActionConfig';
 
 interface FileItemMenuProps {
   node: FileSystemNode;
@@ -35,6 +27,12 @@ interface FileItemMenuProps {
   onUploadExternalReference?: (e: React.MouseEvent) => void;
   onShowVersionHistory?: (node: FileSystemNode) => void;
   isCadFile: () => boolean;
+  // 权限检查
+  canDownload?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canAddToGallery?: boolean;
+  canViewVersionHistory?: boolean;
 }
 
 export const FileItemMenu: React.FC<FileItemMenuProps> = ({
@@ -60,13 +58,66 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onUploadExternalReference,
   onShowVersionHistory,
   isCadFile,
+  canDownload,
+  canEdit,
+  canDelete,
+  canAddToGallery,
+  canViewVersionHistory,
 }) => {
   const isRoot = node.isRoot;
+  const isFolder = node.isFolder;
 
   const handleMenuAction = (action: () => void) => {
     action();
     onCloseMenu();
   };
+
+  // 操作处理函数映射
+  const actionHandlers: Record<ActionType, () => void> = {
+    upload_external_reference: () => onUploadExternalReference?.({ stopPropagation: () => {}, preventDefault: () => {} } as React.MouseEvent),
+    download: () => onDownload?.(node),
+    view_version_history: () => onShowVersionHistory?.(node),
+    add_to_gallery: () => onAddToGallery?.(node),
+    rename: () => onRename(node),
+    move: () => onMove?.(node),
+    copy: () => onCopy?.(node),
+    restore: () => onRestore?.(node),
+    delete: () => onDelete(node),
+    permanently_delete: () => onPermanentlyDelete?.(node),
+    edit: () => onEdit?.({ stopPropagation: () => {} } as React.MouseEvent),
+    show_members: () => onShowMembers?.({ stopPropagation: () => {} } as React.MouseEvent),
+    show_roles: () => onShowRoles?.({ stopPropagation: () => {} } as React.MouseEvent),
+  };
+
+  // 获取可用操作列表
+  const availableActions = getAvailableActions({
+    node,
+    isTrash,
+    isRoot,
+    isCadFile: isCadFile(),
+    isFolder,
+    hasMissingExternalReferences: node.hasMissingExternalReferences || false,
+    canDownload,
+    canEdit,
+    canDelete,
+    canAddToGallery,
+    canViewVersionHistory,
+    canComment,
+    canPrint,
+    canCompare,
+    canManageTrash: !!onRestore || !!onPermanentlyDelete,
+    onDownload: !!onDownload,
+    onAddToGallery: !!onAddToGallery,
+    onShowVersionHistory: !!onShowVersionHistory,
+    onEdit: !!onEdit,
+    onShowMembers: !!onShowMembers,
+    onShowRoles: !!onShowRoles,
+    onMove: !!onMove,
+    onCopy: !!onCopy,
+    onRestore: !!onRestore,
+    onPermanentlyDelete: !!onPermanentlyDelete,
+    onDeleteNode: !!onDelete,
+  });
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -108,250 +159,30 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   }, [showMenu, menuButtonRef, menuContainerRef, onCloseMenu, onToggleMenu]);
 
   const renderMenu = () => {
-    if (isTrash) {
-      return (
-        <>
-          {onRestore && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMenuAction(() => onRestore(node));
-              }}
-              className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 transition-colors"
-            >
-              <RestoreIcon size={16} />
-              恢复
-            </button>
-          )}
-          <hr className="my-1 border-slate-100" />
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMenuAction(() => onPermanentlyDelete ? onPermanentlyDelete(node) : onDelete(node));
-            }}
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-          >
-            <DeleteIcon size={16} />
-            彻底删除
-          </button>
-        </>
-      );
-    }
-
     return (
       <>
-        {isCadFile() && node.hasMissingExternalReferences && onUploadExternalReference && (
-          <button
-            onClick={onUploadExternalReference}
-            className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors text-amber-600 hover:bg-amber-50"
-          >
-            <Upload size={16} />
-            上传外部参照
-          </button>
-        )}
+        {availableActions.map((action, index) => {
+          const isLast = index === availableActions.length - 1;
+          const isDividerAfter = isLast && action.isDestructive && availableActions.length > 1;
 
-        {isRoot ? (
-          <>
-            {onEdit && (
+          return (
+            <React.Fragment key={action.type}>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleMenuAction(() => onEdit(e));
+                  handleMenuAction(() => actionHandlers[action.type]?.());
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                  action.colorClass || 'text-slate-700'
+                } ${action.hoverClass || 'hover:bg-slate-50'}`}
               >
-                <EditIcon size={16} />
-                编辑
+                {action.icon}
+                {action.label}
               </button>
-            )}
-            {onShowMembers && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuAction(() => onShowMembers(e));
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-              >
-                <UsersIcon size={16} />
-                成员
-              </button>
-            )}
-            {onShowRoles && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuAction(() => onShowRoles(e));
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-                  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
-                </svg>
-                角色管理
-              </button>
-            )}
-            <hr className="my-1 border-slate-100" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMenuAction(() => onDelete(node));
-              }}
-              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-            >
-              <DeleteIcon size={16} />
-              删除
-            </button>
-          </>
-        ) : (
-          <>
-            {!node.isFolder && (
-              <>
-                {onDownload && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(() => onDownload(node));
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-                  >
-                    <DownloadIcon size={16} />
-                    下载
-                  </button>
-                )}
-                {isCadFile() && onShowVersionHistory && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(() => onShowVersionHistory(node));
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    版本历史
-                  </button>
-                )}
-                {onAddToGallery && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(() => onAddToGallery(node));
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 transition-colors"
-                  >
-                    <GalleryIcon size={16} />
-                    添加到图库
-                  </button>
-                )}
-              </>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMenuAction(() => onRename(node));
-              }}
-              className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-            >
-              <EditIcon size={16} />
-              重命名
-            </button>
-            {onMove && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuAction(() => onMove(node));
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M5 9l7-7 7 7M5 15l7 7 7-7" />
-                </svg>
-                移动到...
-              </button>
-            )}
-            {onCopy && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuAction(() => onCopy(node));
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                </svg>
-                复制到...
-              </button>
-            )}
-            {onRestore && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuAction(() => onRestore(node));
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 transition-colors"
-              >
-                <RestoreIcon size={16} />
-                恢复
-              </button>
-            )}
-            <hr className="my-1 border-slate-100" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMenuAction(() => onDelete(node));
-              }}
-              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-            >
-              <DeleteIcon size={16} />
-              删除
-            </button>
-            {onPermanentlyDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuAction(() => onPermanentlyDelete(node));
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-100 flex items-center gap-2 transition-colors"
-              >
-                <DeleteIcon size={16} />
-                彻底删除
-              </button>
-            )}
-          </>
-        )}
+              {isDividerAfter && <hr className="my-1 border-slate-100" />}
+            </React.Fragment>
+          );
+        })}
       </>
     );
   };

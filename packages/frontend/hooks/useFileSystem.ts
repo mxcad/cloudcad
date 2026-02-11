@@ -930,11 +930,8 @@ export const useFileSystem = () => {
       `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
       async () => {
         try {
-          await Promise.all(
-            Array.from(selectedNodes).map((nodeId: string) =>
-              projectsApi.restoreNode(nodeId)
-            )
-          );
+          const { trashApi } = await import('../services/apiService');
+          await trashApi.restoreItems(Array.from(selectedNodes));
           showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
           setSelectedNodes(new Set<string>());
           loadData();
@@ -1366,7 +1363,12 @@ export const useFileSystem = () => {
         `确定要恢复 "${node.name}" 吗？`,
         async () => {
           try {
-            await projectsApi.restoreNode(node.id);
+            // 根据节点类型选择正确的恢复接口
+            if (node.isRoot) {
+              await projectsApi.restoreProject(node.id);
+            } else {
+              await projectsApi.restoreNode(node.id);
+            }
             showToast(`已恢复 "${node.name}"`, 'success');
             // 刷新数据
             setRefreshCount((prev) => prev + 1);

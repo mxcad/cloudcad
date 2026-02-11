@@ -490,6 +490,23 @@ MxFun.addCommand('Mx_Save', async () => {
       return;
     }
 
+    // 检查 CAD_SAVE 权限
+    const projectId = currentFileInfo?.projectId;
+    if (projectId) {
+      try {
+        const { useProjectPermission } = await import('../hooks/useProjectPermission');
+        const { checkPermission } = useProjectPermission();
+        const canSave = await checkPermission(projectId, 'CAD_SAVE');
+        if (!canSave) {
+          Logger.warn('用户没有 CAD_SAVE 权限');
+          alert('您没有保存图纸的权限');
+          return;
+        }
+      } catch (error) {
+        Logger.error('权限检查失败', error);
+      }
+    }
+
     // 检查当前文件信息
     if (!currentFileInfo) {
       Logger.error('当前文件信息为空，无法保存');

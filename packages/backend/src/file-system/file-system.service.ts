@@ -28,6 +28,7 @@ import { DiskMonitorService } from '../common/services/disk-monitor.service';
 import { FileLockService } from '../common/services/file-lock.service';
 import { ConfigService } from '@nestjs/config';
 import { MxCadService } from '../mxcad/mxcad.service';
+import { ProjectRole } from '../common/enums/permissions.enum';
 import { VersionControlService } from '../version-control/version-control.service';
 import { CadDownloadFormat } from './dto/download-node.dto';
 import * as fsPromises from 'fs/promises';
@@ -1354,31 +1355,10 @@ export class FileSystemService {
         throw new ForbiddenException('没有权限清空此项目回收站');
       }
 
-      // 获取项目内所有已删除的节点
-      const allProjectNodeIds = await this.getAllProjectNodeIds(projectId);
-
-      const deletedNodes = await this.prisma.fileSystemNode.findMany({
-        where: {
-          id: { in: allProjectNodeIds },
-          deletedAt: { not: null },
-        },
-        select: { id: true, isFolder: true, path: true, fileHash: true },
-      });
-
-      // 彻底删除所有已删除的节点
+      // 彻底删除项目的所有子节点和文件
       await this.prisma.$transaction(async (tx) => {
-        for (const node of deletedNodes) {
-          if (!node.isFolder && node.path) {
-            await this.deleteFileIfNotReferenced(tx, node.path, node.fileHash);
-          }
-        }
-
-        // 删除数据库记录
-        await tx.fileSystemNode.deleteMany({
-          where: {
-            id: { in: deletedNodes.map((n) => n.id) },
-          },
-        });
+        // 递归删除所有子节点和文件
+        await this.deleteDescendantsWithFiles(tx, projectId);
       });
 
       this.logger.log(`项目回收站已清空: ${projectId}`);
@@ -1833,7 +1813,7 @@ export class FileSystemService {
   ): Promise<boolean> {
     try {
       // 1. 如果检查的角色包含 OWNER，先检查是否是项目所有者
-      if (roles.includes('OWNER') || roles.includes('PROJECT_OWNER')) {
+      if (roles.includes(ProjectRole.OWNER)) {
         const project = await this.prisma.fileSystemNode.findUnique({
           where: { id: projectId },
           select: { ownerId: true },
@@ -2786,7 +2766,7 @@ export class FileSystemService {
       }
 
       // 不能将成员设置为项目所有者，必须通过转让
-      if (role.name === 'OWNER') {
+      if (role.name === ProjectRole.OWNER) {
         throw new ForbiddenException(
           '不能直接设置为项目所有者，请使用转让功能'
         );

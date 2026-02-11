@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useProjectPermission } from '../hooks/useProjectPermission';
+import { ProjectPermission } from '../constants/permissions';
 import { apiService } from '../services/apiService';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { filesApi } from '../services/filesApi';
@@ -36,14 +38,48 @@ export const CADEditorDirect: React.FC = () => {
   const [downloadingFileName, setDownloadingFileName] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
 
+  // CAD 权限状态
+  const [canSave, setCanSave] = useState(false);
+  const [canExport, setCanExport] = useState(false);
+  const [canManageExternalRef, setCanManageExternalRef] = useState(false);
+
   // 从URL获取文件ID
   const fileId = location.pathname.split('/').pop() || '';
+
+  // 从 URL 获取项目 ID
+  const urlProjectId = React.useMemo(() => {
+    const match = location.pathname.match(/\/projects\/([^/]+)/);
+    return match ? match[1] : '';
+  }, [location.pathname]);
 
   // 从 URL 获取版本参数（用于访问历史版本）
   const versionParam = React.useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
     return searchParams.get('v');
   }, [location.search]);
+
+  // 加载 CAD 权限
+  useEffect(() => {
+    if (!urlProjectId) return;
+
+    const checkPermissions = async () => {
+      try {
+        const { checkPermission } = await import('../hooks/useProjectPermission');
+        const [save, export_, externalRef] = await Promise.all([
+          checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
+          checkPermission(urlProjectId, ProjectPermission.CAD_EXPORT),
+          checkPermission(urlProjectId, ProjectPermission.CAD_EXTERNAL_REFERENCE),
+        ]);
+        setCanSave(save);
+        setCanExport(export_);
+        setCanManageExternalRef(externalRef);
+      } catch (error) {
+        console.error('加载 CAD 权限失败:', error);
+      }
+    };
+
+    checkPermissions();
+  }, [urlProjectId]);
 
   const loadMxCADDependencies = async () => {
     // @ts-expect-error - mxcad-app 没有类型定义
@@ -252,6 +288,10 @@ export const CADEditorDirect: React.FC = () => {
 
     // 监听导出事件
     const handleExportEvent = (event: Event) => {
+      if (!canExport) {
+        alert('您没有导出图纸的权限');
+        return;
+      }
       const customEvent = event as CustomEvent<{
         fileId: string;
         fileName: string;

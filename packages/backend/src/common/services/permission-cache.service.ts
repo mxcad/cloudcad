@@ -298,8 +298,10 @@ export class PermissionCacheService implements OnModuleDestroy {
    */
   private clearRoleCacheInternal(roleName: string): void {
     const keysToDelete = [
-      CacheKeyUtil.role(roleName.length), // 简化处理
-      // 删除所有使用该角色的用户缓存（需要查询）
+      CacheKeyUtil.custom('role', roleName),
+      // 删除该角色的权限缓存
+      `role:permissions:${roleName}`,
+      `role:path:${roleName}`,
     ];
 
     this.multiLevelCache.deleteMany(keysToDelete);

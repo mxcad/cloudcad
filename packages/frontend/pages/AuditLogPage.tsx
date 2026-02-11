@@ -165,7 +165,12 @@ export const AuditLogPage: React.FC = () => {
       if (filters.userId) params.userId = filters.userId;
 
       const response = await apiService.get('/audit/statistics', { params });
-      setStatistics(response.data);
+      setStatistics({
+        total: response.data.total || 0,
+        successCount: response.data.successCount || 0,
+        failureCount: response.data.failureCount || 0,
+        successRate: response.data.successRate ?? 0,
+      });
     } catch (error) {
       console.error('加载统计信息失败:', error);
     }
@@ -246,7 +251,7 @@ export const AuditLogPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 mb-1">成功率</div>
           <div className="text-2xl font-bold text-blue-600">
-            {statistics.successRate.toFixed(1)}%
+            {(statistics.successRate ?? 0).toFixed(1)}%
           </div>
         </div>
       </div>

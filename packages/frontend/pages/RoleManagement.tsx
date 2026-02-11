@@ -5,7 +5,7 @@ import { DescriptionText } from '../components/ui/TruncateText';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
 import { rolesApi, projectRolesApi } from '../services/rolesApi';
 import { usePermission } from '../hooks/usePermission';
-import { PERMISSION_GROUPS, getRoleDisplayName } from '../constants/permissions';
+import { PERMISSION_GROUPS, getRoleDisplayName, ProjectPermission, SystemPermission } from '../constants/permissions';
 
 type SystemRole = {
   id: string;
@@ -248,9 +248,6 @@ export const RoleManagement = () => {
     (role.description && role.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // 判断是否是管理员
-  const isAdmin = hasRole('ADMIN') || hasRole('USER_MANAGER');
-
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -280,7 +277,7 @@ export const RoleManagement = () => {
           >
             项目角色
           </button>
-          {isAdmin && (
+          {hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
             <button
               onClick={() => setActiveTab('system')}
               className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
@@ -306,9 +303,11 @@ export const RoleManagement = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button icon={Plus} onClick={handleCreateProjectRole}>
-                新建角色
-              </Button>
+              {hasPermission(ProjectPermission.PROJECT_ROLE_MANAGE) && (
+                <Button icon={Plus} onClick={handleCreateProjectRole}>
+                  新建角色
+                </Button>
+              )}
             </div>
           </div>
 
@@ -400,7 +399,7 @@ export const RoleManagement = () => {
       )}
 
       {/* 系统角色模块（仅管理员可见） */}
-      {activeTab === 'system' && isAdmin && (
+      {activeTab === 'system' && hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
         <>
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -410,9 +409,11 @@ export const RoleManagement = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button icon={Plus} onClick={handleCreateSystemRole}>
-                新建角色
-              </Button>
+              {hasPermission(SystemPermission.SYSTEM_ROLE_CREATE) && (
+                <Button icon={Plus} onClick={handleCreateSystemRole}>
+                  新建角色
+                </Button>
+              )}
             </div>
           </div>
 

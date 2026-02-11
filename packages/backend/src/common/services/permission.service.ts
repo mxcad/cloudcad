@@ -10,6 +10,7 @@ import { PolicyConfigService } from '../../policy-engine/services/policy-config.
 import { PolicyEngineService } from '../../policy-engine/services/policy-engine.service';
 import { PolicyType } from '../../policy-engine/enums/policy-type.enum';
 import { IPermissionPolicy } from '../../policy-engine/interfaces/permission-policy.interface';
+import { CACHE_TTL } from '../constants/cache.constants';
 
 export interface Role {
   id: string;
@@ -82,7 +83,7 @@ export class PermissionService {
         if (isAdmin) {
           decisionReason = '系统管理员权限';
           hasPermission = true;
-          this.cacheService.set(cacheKey, true, 600000); // 10 分钟
+          this.cacheService.set(cacheKey, true, CACHE_TTL.USER_ROLE); // 10 分钟
         } else {
           // 3. 检查用户的系统权限
           decisionReason = '系统权限检查';
@@ -90,7 +91,7 @@ export class PermissionService {
             userId,
             permission
           );
-          this.cacheService.set(cacheKey, hasPermission, 300000); // 5 分钟
+          this.cacheService.set(cacheKey, hasPermission, CACHE_TTL.SYSTEM_PERMISSION); // 5 分钟
         }
       }
 
@@ -114,19 +115,13 @@ export class PermissionService {
       return cached;
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        role: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+    // 检查用户是否具有 SYSTEM_ADMIN 权限
+    const isAdmin = await this.checkUserSystemPermission(
+      userId,
+      SystemPermission.SYSTEM_ADMIN
+    );
 
-    const isAdmin = user?.role?.name === SystemRole.ADMIN;
-    this.cacheService.set(cacheKey, isAdmin, 600000); // 10 分钟
+    this.cacheService.set(cacheKey, isAdmin, CACHE_TTL.USER_ROLE); // 10 分钟
     return isAdmin;
   }
 
@@ -497,7 +492,7 @@ export class PermissionService {
 
           // 缓存结果
           const cacheKey = `system_perm:${userId}:${permission}`;
-          this.cacheService.set(cacheKey, hasPermission, 300000); // 5 分钟
+          this.cacheService.set(cacheKey, hasPermission, CACHE_TTL.SYSTEM_PERMISSION); // 5 分钟
         }
       } catch (error) {
         this.logger.error(

@@ -113,4 +113,10 @@ export const projectsApi = {
    */
   clearProjectTrash: (projectId: string) =>
     apiClient.delete(`/file-system/projects/${projectId}/trash`),
+
+  /**
+   * 恢复项目
+   */
+  restoreProject: (projectId: string) =>
+    apiClient.post('/file-system/trash/restore', { itemIds: [projectId] }),
 };

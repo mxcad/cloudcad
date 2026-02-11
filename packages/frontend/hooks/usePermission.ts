@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import type { Permission } from '../constants/permissions';
+import { SystemPermission } from '../constants/permissions';
 
 /**
  * 权限管理 Hook
@@ -23,8 +24,21 @@ export const usePermission = () => {
       return [];
     }
 
-    // 后端已经返回了 permission 字符串数组，直接使用即可
-    return user.role.permissions.map((p) => p as Permission);
+    // 后端返回的权限格式验证
+    const permissions: Permission[] = [];
+    for (const p of user.role.permissions) {
+      // 检查权限是否为字符串
+      if (typeof p === 'string') {
+        permissions.push(p as Permission);
+      } else if (p && typeof p.permission === 'string') {
+        // 兼容后端可能返回 { permission: string } 的格式
+        permissions.push(p.permission as Permission);
+      } else {
+        console.warn(`[usePermission] 无效的权限格式:`, p);
+      }
+    }
+
+    return permissions;
   };
 
   /**
@@ -79,9 +93,10 @@ export const usePermission = () => {
 
   /**
    * 检查是否为系统管理员
+   * 注意：此方法仅用于 UI 展示，权限控制应该使用 hasPermission
    */
   const isAdmin = (): boolean => {
-    return hasRole('ADMIN');
+    return hasPermission(SystemPermission.SYSTEM_ADMIN);
   };
 
   return useMemo(

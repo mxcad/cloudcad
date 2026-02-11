@@ -8,6 +8,7 @@ import { ProjectRolesService } from './project-roles.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { ResourceType } from '@prisma/client';
+import { CACHE_TTL } from '../common/constants/cache.constants';
 
 /**
  * 项目权限检查服务
@@ -61,7 +62,7 @@ export class ProjectPermissionService {
       );
 
       // 4. 缓存结果
-      this.cacheService.set(cacheKey, hasPermission, 300000); // 5分钟
+      this.cacheService.set(cacheKey, hasPermission, CACHE_TTL.PROJECT_PERMISSION); // 5分钟
 
       // 权限检查不记录审计日志（避免日志过多）
       return hasPermission;
@@ -104,7 +105,7 @@ export class ProjectPermissionService {
         );
       }
 
-      this.cacheService.set(cacheKey, isOwner, 600000); // 10分钟
+      this.cacheService.set(cacheKey, isOwner, CACHE_TTL.PROJECT_OWNER); // 10分钟
 
       return isOwner;
     } catch (error) {
@@ -206,7 +207,7 @@ export class ProjectPermissionService {
 
       const role = (member?.projectRole?.name as ProjectRole) || null;
       if (role) {
-        this.cacheService.set(cacheKey, role, 300000); // 5分钟
+        this.cacheService.set(cacheKey, role, CACHE_TTL.PROJECT_MEMBER_ROLE); // 5分钟
       }
 
       return role;

@@ -12,6 +12,8 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { galleryApi } from '../services/api';
+import { usePermission } from '../hooks/usePermission';
+import { SystemPermission } from '../constants/permissions';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { FileNameText } from '../components/ui/TruncateText';
@@ -53,6 +55,10 @@ interface PaginationInfo {
 
 // 图库主页面组件
 export default function Gallery() {
+  // 权限管理
+  const { hasPermission } = usePermission();
+  const canEditTypes = hasPermission(SystemPermission.SYSTEM_ADMIN);
+
   // 根据路由确定默认图库类型
   const location = useLocation();
   const isBlocksRoute = location.pathname === '/blocks';
@@ -465,14 +471,16 @@ export default function Gallery() {
                 <Search size={16} />
                 搜索
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsTypeManagementOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Settings size={16} />
-                分类管理
-              </Button>
+              {canEditTypes && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTypeManagementOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Settings size={16} />
+                  分类管理
+                </Button>
+              )}
             </div>
           </div>
         </div>

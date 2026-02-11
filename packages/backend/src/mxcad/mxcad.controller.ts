@@ -82,6 +82,8 @@ export class MxCadController {
    * 检查分片是否存在
    */
   @Post('files/chunkisExist')
+  @UseGuards(JwtAuthGuard, NodePermissionGuard)
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
   async checkChunkExist(
@@ -107,6 +109,8 @@ export class MxCadController {
    * 检查文件是否存在
    */
   @Post('files/fileisExist')
+  @UseGuards(JwtAuthGuard, NodePermissionGuard)
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
   async checkFileExist(
@@ -145,6 +149,8 @@ export class MxCadController {
    * @throws NotFoundException 预加载数据不存在时抛出异常
    */
   @Get('file/:nodeId/preloading')
+  @UseGuards(JwtAuthGuard, NodePermissionGuard)
+  @NodePermission(ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER)
   @ApiResponse({
     status: 200,
     description: '成功获取预加载数据',

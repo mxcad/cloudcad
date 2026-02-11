@@ -11,6 +11,7 @@ import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useProjectManagement } from '../hooks/useProjectManagement';
 import { usePermission } from '../hooks/usePermission';
+import { useProjectPermission } from '../hooks/useProjectPermission';
 import { useAuth } from '../contexts/AuthContext';
 import { projectsApi } from '../services/apiService';
 import {
@@ -32,6 +33,7 @@ import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '../components/modals/VersionHistoryModal';
 import { versionControlApi } from '../services/versionControlApi';
+import { ProjectPermission } from '../constants/permissions';
 
 export const FileSystemManager: React.FC = () => {
   const navigate = useNavigate();
@@ -137,7 +139,8 @@ export const FileSystemManager: React.FC = () => {
   });
 
   // 权限管理 hook
-  const { isAdmin, hasPermission } = usePermission();
+  const { hasPermission } = usePermission();
+  const { checkPermission } = useProjectPermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isProjectRolesModalOpen, setIsProjectRolesModalOpen] = useState(false);
 
@@ -159,6 +162,47 @@ export const FileSystemManager: React.FC = () => {
 
   // 权限加载状态
   const [permissionsLoading, setPermissionsLoading] = useState(false);
+
+  // 项目权限状态
+  const [projectPermissions, setProjectPermissions] = useState<Record<string, boolean>>({});
+
+  // 加载项目权限
+  useEffect(() => {
+    if (!user || !urlProjectId) return;
+
+    const loadProjectPermissions = async () => {
+      try {
+        const permissions = [
+          ProjectPermission.FILE_CREATE,
+          ProjectPermission.FILE_UPLOAD,
+          ProjectPermission.FILE_OPEN,
+          ProjectPermission.FILE_EDIT,
+          ProjectPermission.FILE_DELETE,
+          ProjectPermission.FILE_TRASH_MANAGE,
+          ProjectPermission.FILE_DOWNLOAD,
+          ProjectPermission.CAD_SAVE,
+          ProjectPermission.CAD_EXPORT,
+          ProjectPermission.CAD_EXTERNAL_REFERENCE,
+          ProjectPermission.GALLERY_ADD,
+          ProjectPermission.VERSION_READ,
+        ];
+
+        const permissionResults = await Promise.all(
+          permissions.map(perm => checkPermission(urlProjectId, perm))
+        );
+
+        const newPermissions: Record<string, boolean> = {};
+        permissions.forEach((perm, index) => {
+          newPermissions[perm] = permissionResults[index];
+        });
+        setProjectPermissions(newPermissions);
+      } catch (error) {
+        console.error('加载项目权限失败:', error);
+      }
+    };
+
+    loadProjectPermissions();
+  }, [user, urlProjectId, checkPermission]);
 
   // 移动/拷贝状态
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
@@ -316,6 +360,8 @@ export const FileSystemManager: React.FC = () => {
 
           const permissionsPromises = nodesToLoad.map(async (nodeId) => {
 
+            console.log('[FileSystemManager] 正在加载节点权限:', nodeId);
+
             const [canEdit, canDelete, canManageMembers, canManageRoles] = await Promise.all([
 
               canEditNode(user, nodeId),
@@ -329,6 +375,8 @@ export const FileSystemManager: React.FC = () => {
             ]);
 
   
+
+            console.log('[FileSystemManager] 节点权限加载完成:', nodeId, { canEdit, canDelete, canManageMembers, canManageRoles });
 
             return {
 
@@ -349,6 +397,8 @@ export const FileSystemManager: React.FC = () => {
   
 
           const permissionsResults = await Promise.all(permissionsPromises);
+
+          console.log('[FileSystemManager] 所有权限加载完成:', permissionsResults);
 
           setNodePermissions((prev) => {
 
@@ -376,7 +426,7 @@ export const FileSystemManager: React.FC = () => {
 
         } catch (error) {
 
-          console.error('加载权限信息失败:', error);
+          console.error('[FileSystemManager] 加载权限信息失败:', error);
 
         } finally {
 
@@ -461,16 +511,25 @@ export const FileSystemManager: React.FC = () => {
    */
   const handleAddToGallery = useCallback(
     (node: FileSystemNode) => {
+      if (!projectPermissions[ProjectPermission.GALLERY_ADD]) {
+        alert('您没有权限添加到图库');
+        return;
+      }
       setSelectedNodeForGallery(node);
       setShowAddToGalleryModal(true);
     },
-    [setSelectedNodeForGallery, setShowAddToGalleryModal]
+    [setSelectedNodeForGallery, setShowAddToGalleryModal, projectPermissions]
   );
 
   /**
    * 显示版本历史
    */
   const handleShowVersionHistory = useCallback(async (node: FileSystemNode) => {
+    if (!projectPermissions[ProjectPermission.VERSION_READ]) {
+      alert('您没有权限查看版本历史');
+      return;
+    }
+
     if (!node.path) {
       console.error('[FileSystemManager] 节点没有 path', node);
       return;
@@ -496,7 +555,7 @@ export const FileSystemManager: React.FC = () => {
     } finally {
       setVersionHistoryLoading(false);
     }
-  }, [urlProjectId]);
+  }, [urlProjectId, projectPermissions]);
 
   /**
    * 打开历史版本编辑器
@@ -1055,17 +1114,22 @@ export const FileSystemManager: React.FC = () => {
         >
           {displayNodes.map((node) => {
             // 获取节点权限信息
-            // 在项目列表页面（isAtRoot），默认给管理员显示操作按钮
-            // 在项目内部页面，使用加载的权限信息
             const cachedPermissions = nodePermissions.get(node.id);
-            const isAdminUser = isAdmin();
-            const defaultPermissions = isAdminUser
-              ? { canEdit: true, canDelete: true, canManageMembers: true, canManageRoles: true }
-              : { canEdit: false, canDelete: false, canManageMembers: false, canManageRoles: false };
+            const defaultPermissions = {
+              canEdit: false,
+              canDelete: false,
+              canManageMembers: false,
+              canManageRoles: false,
+            };
 
             const permissions = node.isRoot
               ? cachedPermissions || defaultPermissions
               : { canEdit: true, canDelete: true, canManageMembers: false, canManageRoles: false };
+
+            // 调试信息：检查项目节点的权限
+            if (node.isRoot) {
+              console.log('[FileSystemManager] 渲染项目节点:', node.id, node.name, '权限:', permissions, '缓存权限:', cachedPermissions);
+            }
 
             return (
               <FileItem
@@ -1132,6 +1196,12 @@ export const FileSystemManager: React.FC = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 isDropTarget={dropTargetId === node.id}
+                canUpload={projectPermissions[ProjectPermission.FILE_UPLOAD]}
+                canEdit={node.isRoot ? (permissions.canEdit ?? false) : projectPermissions[ProjectPermission.FILE_EDIT]}
+                canDelete={node.isRoot ? (permissions.canDelete ?? false) : projectPermissions[ProjectPermission.FILE_DELETE]}
+                canDownload={projectPermissions[ProjectPermission.FILE_DOWNLOAD]}
+                canAddToGallery={projectPermissions[ProjectPermission.GALLERY_ADD]}
+                canViewVersionHistory={projectPermissions[ProjectPermission.VERSION_READ]}
               />
             );
           })}

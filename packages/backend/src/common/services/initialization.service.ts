@@ -140,13 +140,12 @@ export class InitializationService implements OnModuleInit {
           description: '项目所有者，拥有项目的完整管理权限',
           permissions: [
             'PROJECT_UPDATE', 'PROJECT_DELETE', 'PROJECT_MEMBER_MANAGE',
-            'PROJECT_MEMBER_ASSIGN', 'PROJECT_ROLE_MANAGE', 'PROJECT_ROLE_PERMISSION_MANAGE',
-            'PROJECT_TRANSFER', 'PROJECT_SETTINGS_MANAGE', 'FILE_CREATE',
-            'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT', 'FILE_DELETE',
-            'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD', 'FILE_SHARE', 'FILE_COMMENT',
-            'FILE_PRINT', 'FILE_COMPARE', 'CAD_SAVE', 'CAD_EXPORT',
-            'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD', 'VERSION_READ',
-            'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
+            'PROJECT_MEMBER_ASSIGN', 'PROJECT_TRANSFER', 'PROJECT_ROLE_MANAGE',
+            'PROJECT_ROLE_PERMISSION_MANAGE', 'FILE_CREATE', 'FILE_UPLOAD',
+            'FILE_OPEN', 'FILE_EDIT', 'FILE_DELETE', 'FILE_TRASH_MANAGE',
+            'FILE_DOWNLOAD',
+            'CAD_SAVE', 'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD',
+            'VERSION_READ',
           ],
         },
         {
@@ -154,12 +153,11 @@ export class InitializationService implements OnModuleInit {
           description: '项目管理员，管理项目和团队成员',
           permissions: [
             'PROJECT_UPDATE', 'PROJECT_MEMBER_MANAGE', 'PROJECT_MEMBER_ASSIGN',
-            'PROJECT_ROLE_MANAGE', 'PROJECT_ROLE_PERMISSION_MANAGE', 'PROJECT_SETTINGS_MANAGE',
+            'PROJECT_ROLE_MANAGE', 'PROJECT_ROLE_PERMISSION_MANAGE',
             'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD', 'FILE_SHARE',
-            'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE', 'CAD_SAVE',
+            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
+            'CAD_SAVE',
             'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD', 'VERSION_READ',
-            'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
           ],
         },
         {
@@ -167,18 +165,17 @@ export class InitializationService implements OnModuleInit {
           description: '项目编辑者，可以编辑和管理项目文件',
           permissions: [
             'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD', 'FILE_SHARE',
-            'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE', 'CAD_SAVE',
+            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
+            'CAD_SAVE',
             'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'VERSION_READ',
-            'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
           ],
         },
         {
           name: 'PROJECT_MEMBER',
           description: '项目成员，可以查看和编辑项目内容',
           permissions: [
-            'FILE_OPEN', 'FILE_EDIT', 'FILE_DOWNLOAD', 'FILE_COMMENT',
-            'FILE_PRINT', 'CAD_SAVE', 'VERSION_READ', 'VERSION_CREATE',
+            'FILE_OPEN', 'FILE_EDIT', 'FILE_DOWNLOAD',
+            'CAD_SAVE', 'VERSION_READ',
           ],
         },
         {

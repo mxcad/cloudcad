@@ -46,7 +46,23 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
   disabled = false,
   className = '',
 }) => {
+  // 调试信息
+  console.log('[PermissionAssignment] 组件渲染:', { permissionType, PERMISSION_GROUPS, allKeys: Object.keys(PERMISSION_GROUPS) });
+
   const groups = PERMISSION_GROUPS[permissionType];
+
+  // 防御性检查：如果 groups 为 undefined，显示错误信息
+  if (!groups) {
+    console.error('[PermissionAssignment] 无效的 permissionType:', permissionType);
+    console.error('[PermissionAssignment] PERMISSION_GROUPS:', PERMISSION_GROUPS);
+    console.error('[PermissionAssignment] PERMISSION_GROUPS.keys:', Object.keys(PERMISSION_GROUPS));
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+        权限类型错误: {permissionType}。请检查配置。
+      </div>
+    );
+  }
+
   const allPermissions = groups.flatMap((group) => group.items);
 
   return (

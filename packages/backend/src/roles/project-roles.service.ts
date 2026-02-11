@@ -38,33 +38,6 @@ export class ProjectRolesService {
   constructor(private readonly prisma: DatabaseService) {}
 
   /**
-   * 检查用户是否为管理员
-   */
-  private async checkIsAdmin(userId: string): Promise<boolean> {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { roleId: true },
-      });
-
-      if (!user) {
-        return false;
-      }
-
-      // 检查用户角色是否为 ADMIN
-      const role = await this.prisma.role.findUnique({
-        where: { id: user.roleId },
-        select: { name: true },
-      });
-
-      return role?.name === 'ADMIN';
-    } catch (error) {
-      this.logger.error(`检查管理员权限失败: ${error.message}`, error.stack);
-      return false;
-    }
-  }
-
-  /**
    * 创建系统默认角色（仅在系统初始化时调用一次）
    */
   async createSystemDefaultRoles(): Promise<void> {
@@ -106,14 +79,7 @@ export class ProjectRolesService {
    */
   async create(dto: CreateProjectRoleDto, userId?: string): Promise<any> {
     try {
-      // 权限检查：系统角色和全局角色需要管理员权限
-      const isSystemOrGlobal = !dto.projectId;
-      if (isSystemOrGlobal && userId) {
-        const isAdmin = await this.checkIsAdmin(userId);
-        if (!isAdmin) {
-          throw new ForbiddenException('只有管理员才能创建系统角色或全局共享的角色');
-        }
-      }
+      // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
       // 检查角色名称是否已存在（项目内唯一）
       const existingRole = await this.prisma.projectRole.findFirst({
@@ -168,14 +134,7 @@ export class ProjectRolesService {
         throw new NotFoundException('项目角色不存在');
       }
 
-      // 权限检查：系统角色和全局角色需要管理员权限
-      const isSystemOrGlobal = role.isSystem || !role.projectId;
-      if (isSystemOrGlobal && userId) {
-        const isAdmin = await this.checkIsAdmin(userId);
-        if (!isAdmin) {
-          throw new ForbiddenException('只有管理员才能修改系统角色或全局共享的角色');
-        }
-      }
+      // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
       // 系统默认角色不能修改名称
       if (role.isSystem && dto.name && dto.name !== role.name) {
@@ -226,14 +185,7 @@ export class ProjectRolesService {
         throw new NotFoundException('项目角色不存在');
       }
 
-      // 权限检查：系统角色和全局角色需要管理员权限
-      const isSystemOrGlobal = role.isSystem || !role.projectId;
-      if (isSystemOrGlobal && userId) {
-        const isAdmin = await this.checkIsAdmin(userId);
-        if (!isAdmin) {
-          throw new ForbiddenException('只有管理员才能删除系统角色或全局共享的角色');
-        }
-      }
+      // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
       // 系统默认角色不能删除
       if (role.isSystem) {
@@ -408,14 +360,7 @@ export class ProjectRolesService {
         throw new NotFoundException('项目角色不存在');
       }
 
-      // 权限检查：系统角色和全局角色需要管理员权限
-      const isSystemOrGlobal = role.isSystem || !role.projectId;
-      if (isSystemOrGlobal && userId) {
-        const isAdmin = await this.checkIsAdmin(userId);
-        if (!isAdmin) {
-          throw new ForbiddenException('只有管理员才能修改系统角色或全局共享的角色权限');
-        }
-      }
+      // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
       // 创建权限关联（直接使用枚举值）
       const data = permissions.map((permission) => ({
@@ -456,14 +401,7 @@ export class ProjectRolesService {
         throw new NotFoundException('项目角色不存在');
       }
 
-      // 权限检查：系统角色和全局角色需要管理员权限
-      const isSystemOrGlobal = role.isSystem || !role.projectId;
-      if (isSystemOrGlobal && userId) {
-        const isAdmin = await this.checkIsAdmin(userId);
-        if (!isAdmin) {
-          throw new ForbiddenException('只有管理员才能修改系统角色或全局共享的角色权限');
-        }
-      }
+      // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
       await this.prisma.projectRolePermission.deleteMany({
         where: {
