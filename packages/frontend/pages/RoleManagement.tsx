@@ -1,4 +1,4 @@
-import { Plus, Trash2, CheckSquare, Square, Check, X } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
@@ -33,10 +33,6 @@ type ProjectRole = {
 export const RoleManagement = () => {
   const { hasPermission, hasRole } = usePermission();
   const [activeTab, setActiveTab] = useState<'system' | 'project'>('project');
-
-  // 批量选择状态
-  const [selectedSystemRoles, setSelectedSystemRoles] = useState<string[]>([]);
-  const [selectedProjectRoles, setSelectedProjectRoles] = useState<string[]>([]);
 
   // 搜索和过滤状态
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,104 +236,6 @@ export const RoleManagement = () => {
     alert('系统默认项目角色不允许删除');
   };
 
-  // 批量操作 - 全选系统角色
-  const handleSelectAllSystemRoles = () => {
-    if (selectedSystemRoles.length === systemRoles.length) {
-      setSelectedSystemRoles([]);
-    } else {
-      setSelectedSystemRoles(systemRoles.map(role => role.id));
-    }
-  };
-
-  // 批量操作 - 全选项目角色
-  const handleSelectAllProjectRoles = () => {
-    if (selectedProjectRoles.length === projectRoles.length) {
-      setSelectedProjectRoles([]);
-    } else {
-      setSelectedProjectRoles(projectRoles.map(role => role.id));
-    }
-  };
-
-  // 批量操作 - 切换系统角色选择
-  const handleToggleSystemRole = (roleId: string) => {
-    setSelectedSystemRoles(prev =>
-      prev.includes(roleId)
-        ? prev.filter(id => id !== roleId)
-        : [...prev, roleId]
-    );
-  };
-
-  // 批量操作 - 切换项目角色选择
-  const handleToggleProjectRole = (roleId: string) => {
-    setSelectedProjectRoles(prev =>
-      prev.includes(roleId)
-        ? prev.filter(id => id !== roleId)
-        : [...prev, roleId]
-    );
-  };
-
-  // 批量操作 - 批量授权
-  const handleBulkGrant = async (permissions: string[]) => {
-    if (activeTab === 'system') {
-      for (const roleId of selectedSystemRoles) {
-        const role = systemRoles.find(r => r.id === roleId);
-        if (role) {
-          const currentPerms = role.permissions.map((p: any) =>
-            typeof p === 'string' ? p : (p?.permission || '')
-          );
-          const newPerms = Array.from(new Set([...currentPerms, ...permissions]));
-          await rolesApi.update(roleId, { permissions: newPerms });
-        }
-      }
-      loadSystemRoles();
-    } else {
-      for (const roleId of selectedProjectRoles) {
-        const role = projectRoles.find(r => r.id === roleId);
-        if (role) {
-          const currentPerms = role.permissions.map((p: any) =>
-            typeof p === 'string' ? p : (p?.permission || '')
-          );
-          const newPerms = Array.from(new Set([...currentPerms, ...permissions]));
-          await projectRolesApi.update(roleId, { permissions: newPerms });
-        }
-      }
-      loadProjectRoles();
-    }
-    setSelectedSystemRoles([]);
-    setSelectedProjectRoles([]);
-  };
-
-  // 批量操作 - 批量撤销
-  const handleBulkRevoke = async (permissions: string[]) => {
-    if (activeTab === 'system') {
-      for (const roleId of selectedSystemRoles) {
-        const role = systemRoles.find(r => r.id === roleId);
-        if (role) {
-          const currentPerms = role.permissions.map((p: any) =>
-            typeof p === 'string' ? p : (p?.permission || '')
-          );
-          const newPerms = currentPerms.filter(p => !permissions.includes(p));
-          await rolesApi.update(roleId, { permissions: newPerms });
-        }
-      }
-      loadSystemRoles();
-    } else {
-      for (const roleId of selectedProjectRoles) {
-        const role = projectRoles.find(r => r.id === roleId);
-        if (role) {
-          const currentPerms = role.permissions.map((p: any) =>
-            typeof p === 'string' ? p : (p?.permission || '')
-          );
-          const newPerms = currentPerms.filter(p => !permissions.includes(p));
-          await projectRolesApi.update(roleId, { permissions: newPerms });
-        }
-      }
-      loadProjectRoles();
-    }
-    setSelectedSystemRoles([]);
-    setSelectedProjectRoles([]);
-  };
-
   // 过滤后的系统角色
   const filteredSystemRoles = systemRoles.filter(role =>
     role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -401,49 +299,16 @@ export const RoleManagement = () => {
       {activeTab === 'project' && (
         <>
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSelectAllProjectRoles}
-                className="p-1 hover:bg-slate-100 rounded transition-colors"
-                title={selectedProjectRoles.length === projectRoles.length ? '取消全选' : '全选'}
-              >
-                {selectedProjectRoles.length === projectRoles.length && projectRoles.length > 0 ? (
-                  <CheckSquare size={20} className="text-indigo-600" />
-                ) : (
-                  <Square size={20} className="text-slate-400" />
-                )}
-              </button>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">项目角色</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  系统默认项目角色，所有项目共享使用
-                </p>
-              </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">项目角色</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                系统默认项目角色，所有项目共享使用
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button icon={Plus} onClick={handleCreateProjectRole}>
                 新建角色
               </Button>
-              {selectedProjectRoles.length > 0 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={Check}
-                    onClick={() => handleBulkGrant(['FILE_READ', 'FILE_OPEN'])}
-                  >
-                    批量授权查看权限
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={X}
-                    onClick={() => handleBulkRevoke(['FILE_DELETE', 'FILE_EDIT'])}
-                  >
-                    批量撤销编辑权限
-                  </Button>
-                </>
-              )}
             </div>
           </div>
 
@@ -453,7 +318,7 @@ export const RoleManagement = () => {
                 key={role.id}
                 className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
                   role.isSystem ? 'border-slate-200' : 'border-2 border-emerald-200'
-                } ${selectedProjectRoles.includes(role.id) ? 'ring-2 ring-indigo-500' : ''}`}
+                }`}
               >
                 <div
                   className={`p-6 border-b border-slate-100 flex items-start justify-between ${
@@ -461,16 +326,6 @@ export const RoleManagement = () => {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <button
-                      onClick={() => handleToggleProjectRole(role.id)}
-                      className="mt-1 p-1 hover:bg-slate-100 rounded transition-colors"
-                    >
-                      {selectedProjectRoles.includes(role.id) ? (
-                        <CheckSquare size={18} className="text-indigo-600" />
-                      ) : (
-                        <Square size={18} className="text-slate-400" />
-                      )}
-                    </button>
                     <div>
                       <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         {getRoleDisplayName(role.name, role.isSystem)}
@@ -548,49 +403,16 @@ export const RoleManagement = () => {
       {activeTab === 'system' && isAdmin && (
         <>
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSelectAllSystemRoles}
-                className="p-1 hover:bg-slate-100 rounded transition-colors"
-                title={selectedSystemRoles.length === systemRoles.length ? '取消全选' : '全选'}
-              >
-                {selectedSystemRoles.length === systemRoles.length && systemRoles.length > 0 ? (
-                  <CheckSquare size={20} className="text-indigo-600" />
-                ) : (
-                  <Square size={20} className="text-slate-400" />
-                )}
-              </button>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">系统角色</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  管理系统用户的角色和权限，系统默认角色不可删除
-                </p>
-              </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">系统角色</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                管理系统用户的角色和权限，系统默认角色不可删除
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button icon={Plus} onClick={handleCreateSystemRole}>
                 新建角色
               </Button>
-              {selectedSystemRoles.length > 0 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={Check}
-                    onClick={() => handleBulkGrant(['SYSTEM_USER_READ', 'SYSTEM_ROLE_READ'])}
-                  >
-                    批量授权基础权限
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={X}
-                    onClick={() => handleBulkRevoke(['SYSTEM_ADMIN', 'SYSTEM_MONITOR'])}
-                  >
-                    批量撤销高级权限
-                  </Button>
-                </>
-              )}
             </div>
           </div>
 
@@ -600,7 +422,7 @@ export const RoleManagement = () => {
                 key={role.id}
                 className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
                   role.isSystem ? 'border-slate-200' : 'border-2 border-emerald-200'
-                } ${selectedSystemRoles.includes(role.id) ? 'ring-2 ring-indigo-500' : ''}`}
+                }`}
               >
                 <div
                   className={`p-6 border-b border-slate-100 flex items-start justify-between ${
@@ -608,16 +430,6 @@ export const RoleManagement = () => {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <button
-                      onClick={() => handleToggleSystemRole(role.id)}
-                      className="mt-1 p-1 hover:bg-slate-100 rounded transition-colors"
-                    >
-                      {selectedSystemRoles.includes(role.id) ? (
-                        <CheckSquare size={18} className="text-indigo-600" />
-                      ) : (
-                        <Square size={18} className="text-slate-400" />
-                      )}
-                    </button>
                     <div>
                       <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         {getRoleDisplayName(role.name, role.isSystem)}
