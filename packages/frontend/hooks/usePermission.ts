@@ -23,7 +23,8 @@ export const usePermission = () => {
       return [];
     }
 
-    return user.role.permissions.map((p) => p.permission as Permission);
+    // 后端已经返回了 permission 字符串数组，直接使用即可
+    return user.role.permissions.map((p) => p as Permission);
   };
 
   /**
