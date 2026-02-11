@@ -208,7 +208,7 @@ CloudCAD 文件系统
     ↓
   自动转换（mxcadassembly.exe）
     ↓
-  存储到 MinIO
+  存储到本地文件系统
     ↓
   更新 FileSystemNode 记录
 ```
@@ -229,7 +229,7 @@ CloudCAD 文件系统
 
 **Storage 模块**（现有）：
 
-- MinIO 存储
+- 本地文件存储
 - 文件访问
 
 ### 5.3 数据流
@@ -242,8 +242,8 @@ CloudCAD 文件系统
 临时存储（分片合并）
     ↓ child_process.exec
 MxCAD 转换（.dwg → .mxweb）
-    ↓ MinIO SDK
-MinIO 对象存储
+    ↓ 文件系统
+本地文件存储
     ↓ Prisma
 数据库（FileSystemNode）
 ```
@@ -272,7 +272,7 @@ MinIO 对象存储
 **任务**：
 
 - [ ] FileSystem 调用 MxCAD 上传服务
-- [ ] 转换完成后存储到 MinIO
+- [ ] 转换完成后存储到本地文件系统
 - [ ] 更新 FileSystemNode 记录
 - [ ] 权限验证
 - [ ] 集成测试

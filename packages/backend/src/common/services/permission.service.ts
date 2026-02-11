@@ -5,7 +5,7 @@ import { SystemPermission, SystemRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
 import { RoleInheritanceService } from './role-inheritance.service';
 import { PermissionContext } from '../utils/permission.util';
-import { AuditAction, ResourceType, Permission as PrismaPermission } from '@prisma/client';
+import { ResourceType, Permission as PrismaPermission } from '@prisma/client';
 import { PolicyConfigService } from '../../policy-engine/services/policy-config.service';
 import { PolicyEngineService } from '../../policy-engine/services/policy-engine.service';
 import { PolicyType } from '../../policy-engine/enums/policy-type.enum';
@@ -94,64 +94,13 @@ export class PermissionService {
         }
       }
 
-      // 记录权限决策日志
-      const duration = Date.now() - startTime;
-      await this.logPermissionDecision(
-        userId,
-        permission,
-        hasPermission,
-        decisionReason,
-        duration
-      );
-
+      // 权限检查不记录审计日志（避免日志过多）
       return hasPermission;
     } catch (error) {
       this.logger.error(`系统权限检查失败: ${error.message}`, error.stack);
 
-      // 记录错误日志
-      const duration = Date.now() - startTime;
-      await this.logPermissionDecision(
-        userId,
-        permission,
-        false,
-        `权限检查异常: ${error.message}`,
-        duration
-      );
-
+      // 权限检查不记录审计日志（避免日志过多）
       return false;
-    }
-  }
-
-  /**
-   * 记录权限决策日志
-   */
-  private async logPermissionDecision(
-    userId: string,
-    permission: SystemPermission,
-    granted: boolean,
-    reason: string,
-    duration: number
-  ): Promise<void> {
-    try {
-      const details = JSON.stringify({
-        permission,
-        reason,
-        duration,
-        timestamp: new Date().toISOString(),
-      });
-
-      await this.auditLogService.log(
-        granted ? AuditAction.PERMISSION_CHECK : AuditAction.PERMISSION_DENIED,
-        ResourceType.SYSTEM,
-        undefined, // resourceId
-        userId,
-        granted,
-        undefined, // errorMessage
-        details
-      );
-    } catch (error) {
-      this.logger.error(`记录权限决策日志失败: ${error.message}`, error.stack);
-      // 不抛出异常，避免影响主业务流程
     }
   }
 
@@ -264,14 +213,7 @@ export class PermissionService {
       );
 
       if (!contextGranted) {
-        // 记录上下文拒绝日志
-        await this.logPermissionDecision(
-          userId,
-          permission,
-          false,
-          '上下文规则拒绝',
-          Date.now() - startTime
-        );
+        // 权限检查不记录审计日志（避免日志过多）
         return false;
       }
 

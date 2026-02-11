@@ -368,7 +368,7 @@ GET /health
     },
     "storage": {
       "status": "up",
-      "message": "MinIO连接正常"
+      "message": "本地文件存储正常"
     }
   },
   "timestamp": "2024-01-01T00:00:00.000Z"

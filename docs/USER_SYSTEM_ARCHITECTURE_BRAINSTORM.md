@@ -35,7 +35,7 @@
 
 - **后端**: NestJS + TypeScript + PostgreSQL + Prisma ORM
 - **认证**: JWT 双Token机制（Access Token + Refresh Token）
-- **文件存储**: MinIO (S3兼容)
+- **文件存储**: 本地文件系统
 - **缓存**: Redis
 - **容器化**: Docker + Docker Compose
 

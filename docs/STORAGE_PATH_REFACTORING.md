@@ -22,7 +22,7 @@
 const storageKey = `files/${context.userId}/${Date.now()}-${name}`;
 
 // 修改后
-const storageKey = `mxcad/file/${hash}/${name}`;
+const storageKey = `uploads/${hash}/${name}`;
 ```
 
 ### 2. 更新图片预览接口
@@ -41,9 +41,9 @@ const storageKey = `mxcad/file/${hash}/${name}`;
 let storagePath = node.path;
 if (node.path.startsWith('files/')) {
   // 旧路径格式：files/{userId}/{timestamp}-{filename}
-  // 转换为新路径格式：mxcad/file/{fileHash}/{filename}
+  // 转换为新路径格式：uploads/{fileHash}/{filename}
   if (node.fileHash) {
-    storagePath = `mxcad/file/${node.fileHash}/${node.name}`;
+    storagePath = `uploads/${node.fileHash}/${node.name}`;
     this.logger.log(`路径转换: ${node.path} -> ${storagePath}`);
   }
 }
@@ -71,7 +71,7 @@ if (storageKey.startsWith('files/')) {
   try {
     const node = await this.mxCadService.getFileSystemNodeByPath(storageKey);
     if (node && node.fileHash) {
-      actualStorageKey = `mxcad/file/${node.fileHash}/${node.name}`;
+      actualStorageKey = `uploads/${node.fileHash}/${node.name}`;
       this.logger.log(
         `[getNonCadFile] 路径转换: ${storageKey} -> ${actualStorageKey}`
       );
@@ -83,31 +83,42 @@ if (storageKey.startsWith('files/')) {
   }
 }
 
-const fileStream = await this.minioSyncService.getFileStream(actualStorageKey);
+const fileStream = await this.storageService.getFileStream(actualStorageKey);
 ```
 
-### 4. 添加 MinIO 文件拷贝方法
+### 4. 添加本地文件系统文件拷贝方法
 
-**修改文件**: `packages/backend/src/storage/minio-storage.provider.ts`
+**修改文件**: `packages/backend/src/storage/local-storage.provider.ts`
 
 **变更**:
 
-- 添加 `copyFile()` 方法，用于在 MinIO 内部拷贝文件
+- 添加 `copyFile()` 方法，用于在本地文件系统内部拷贝文件
 
 **代码变更**:
 
 ```typescript
 /**
- * 在 MinIO 内部拷贝文件
+ * 在本地文件系统内部拷贝文件
  * @param sourceKey 源文件键名
  * @param destKey 目标文件键名
  * @returns 是否拷贝成功
  */
 async copyFile(sourceKey: string, destKey: string): Promise<boolean> {
   try {
-    // MinIO 不支持直接拷贝，需要先下载再上传
-    const data = await this.downloadFile(sourceKey);
-    await this.uploadFile(destKey, data);
+    const fs = require('fs');
+    const path = require('path');
+    const basePath = this.configService.get('FILES_DATA_PATH');
+    const sourcePath = path.join(basePath, sourceKey);
+    const destPath = path.join(basePath, destKey);
+    
+    // 确保目标目录存在
+    const destDir = path.dirname(destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+    
+    // 拷贝文件
+    fs.copyFileSync(sourcePath, destPath);
     this.logger.log(`文件拷贝成功: ${sourceKey} -> ${destKey}`);
     return true;
   } catch (error) {
@@ -209,16 +220,16 @@ pnpm migrate:storage-paths
 
 | 文件类型     | 旧路径格式                                                                         | 新路径格式                                                                    |
 | ------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 非CAD文件    | `files/{userId}/{timestamp}-{filename}`                                            | `mxcad/file/{fileHash}/{filename}`                                            |
-| CAD文件      | `mxcad/file/{fileHash}.mxweb`                                                      | `mxcad/file/{fileHash}.mxweb` (不变)                                          |
-| 外部参照 DWG | `mxcad/file/{srcDwgFileHash}/{filename}.mxweb`                                     | `mxcad/file/{srcDwgFileHash}/{filename}.mxweb` (不变)                         |
-| 外部参照图片 | `files/{userId}/{timestamp}-{filename}` + `mxcad/file/{srcDwgFileHash}/{filename}` | `mxcad/file/{fileHash}/{filename}` + `mxcad/file/{srcDwgFileHash}/{filename}` |
+| 非CAD文件    | `files/{userId}/{timestamp}-{filename}`                                            | `uploads/{fileHash}/{filename}`                                               |
+| CAD文件      | `uploads/{fileHash}.mxweb`                                                         | `uploads/{fileHash}.mxweb` (不变)                                             |
+| 外部参照 DWG | `uploads/{srcDwgFileHash}/{filename}.mxweb`                                        | `uploads/{srcDwgFileHash}/{filename}.mxweb` (不变)                            |
+| 外部参照图片 | `files/{userId}/{timestamp}-{filename}` + `uploads/{srcDwgFileHash}/{filename}`    | `uploads/{fileHash}/{filename}` + `uploads/{srcDwgFileHash}/{filename}`       |
 
 ## 向后兼容性
 
 重构后的代码完全向后兼容：
 
-1. **新上传的文件**: 使用新路径格式 `mxcad/file/{fileHash}/{filename}`
+1. **新上传的文件**: 使用新路径格式 `uploads/{fileHash}/{filename}`
 2. **旧文件**: 数据库中仍保存旧路径，访问时自动转换
 3. **迁移后**: 所有文件使用统一的新路径格式
 
@@ -247,7 +258,7 @@ pnpm migrate:storage-paths
 ### 阶段 4：清理旧文件（可选）
 
 - 确认所有功能正常后
-- 删除 MinIO 中的旧路径文件
+- 删除本地文件系统中的旧路径文件
 - 节省存储空间
 
 ## 代码质量验证
@@ -270,7 +281,7 @@ pnpm migrate:storage-paths
 
 ## 注意事项
 
-1. **迁移前备份**: 执行迁移脚本前，建议备份数据库和 MinIO 数据
+1. **迁移前备份**: 执行迁移脚本前，建议备份数据库和本地文件存储数据
 2. **分批迁移**: 如果文件数量很大，可以考虑分批迁移
 3. **监控日志**: 密切关注迁移过程中的日志输出
 4. **功能验证**: 迁移完成后，务必验证所有相关功能

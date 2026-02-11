@@ -24,7 +24,6 @@ const AuditAction = {
   UPDATE_MEMBER: 'UPDATE_MEMBER',
   REMOVE_MEMBER: 'REMOVE_MEMBER',
   TRANSFER_OWNERSHIP: 'TRANSFER_OWNERSHIP',
-  ACCESS_DENIED: 'ACCESS_DENIED',
 } as const;
 
 type AuditActionType = (typeof AuditAction)[keyof typeof AuditAction];
@@ -80,7 +79,6 @@ const ACTION_NAME_MAP: Record<string, string> = {
   UPDATE_MEMBER: '更新成员',
   REMOVE_MEMBER: '移除成员',
   TRANSFER_OWNERSHIP: '转让所有权',
-  ACCESS_DENIED: '访问拒绝',
 };
 
 // 资源类型中文映射

@@ -68,13 +68,10 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=your-redis-password
 
-# MinIO配置
-MINIO_ENDPOINT=minio
-MINIO_PORT=9000
-MINIO_ACCESS_KEY=your-minio-access-key
-MINIO_SECRET_KEY=your-minio-secret-key
-MINIO_REGION=us-east-1
-MINIO_BUCKET=cloucad
+# 本地文件存储配置
+FILES_DATA_PATH=./filesData
+FILES_NODE_LIMIT=1000
+STORAGE_CLEANUP_DELAY_DAYS=30
 
 # 文件上传配置
 UPLOAD_MAX_SIZE=104857600
@@ -100,8 +97,8 @@ UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
             ┌─────────────────┼─────────────────┐
             │                 │                 │
     ┌───────▼──────┐  ┌───────▼──────┐  ┌──────▼──────┐
-    │  PostgreSQL  │  │    Redis     │  │    MinIO    │
-    │   (5432)     │  │   (6379)     │  │  (9000)     │
+    │  PostgreSQL  │  │    Redis     │  │  本地文件系统 │
+    │   (5432)     │  │   (6379)     │  │  ./filesData│
     └──────────────┘  └──────────────┘  └─────────────┘
 ```
 
@@ -310,12 +307,12 @@ mkdir -p $BACKUP_DIR
 # 备份数据库
 docker exec cloucad-postgres pg_dump -U postgres cloucad > $BACKUP_DIR/postgres_$DATE.sql
 
-# 备份MinIO数据
-docker run --rm -v cloucad_minio_data:/data -v $BACKUP_DIR:/backup minio/mc cp /data/cloucad /backup/minio_$DATE -r
+# 备份本地文件存储
+tar -czf $BACKUP_DIR/filesData_$DATE.tar.gz ./filesData
 
 # 清理旧备份 (保留7天)
 find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
-find $BACKUP_DIR -name "minio_*" -mtime +7 -delete
+find $BACKUP_DIR -name "filesData_*" -mtime +7 -delete
 ```
 
 ### 2. 自动备份
@@ -331,8 +328,8 @@ find $BACKUP_DIR -name "minio_*" -mtime +7 -delete
 # 恢复数据库
 docker exec -i cloucad-postgres psql -U postgres cloucad < backup/postgres_20240101_020000.sql
 
-# 恢复MinIO数据
-docker run --rm -v cloucad_minio_data:/data -v /backup:/backup minio/mc cp /backup/minio_20240101_020000/cloucad /data -r
+# 恢复本地文件存储
+tar -xzf backup/filesData_20240101_020000.tar.gz
 ```
 
 ## 🚀 CI/CD 部署
@@ -412,11 +409,11 @@ jobs:
 3. **文件上传失败**
 
    ```bash
-   # 检查MinIO状态
-   curl http://localhost:9000/minio/health/live
+   # 检查本地文件系统
+   ls -la filesData
 
    # 检查存储空间
-   docker-compose exec minio df -h
+   df -h filesData
    ```
 
 ### 性能优化

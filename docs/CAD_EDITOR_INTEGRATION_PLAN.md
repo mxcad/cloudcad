@@ -38,7 +38,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                 CloudCAD 核心服务层                          │
 │  - FileSystemService: 文件系统管理                           │
-│  - StorageService: MinIO 存储                                │
+│  - StorageService: 本地文件存储                              │
 │  - AuthService: 用户认证                                     │
 │  - PermissionService: 权限管理                               │
 └─────────────────────────────────────────────────────────────┘
@@ -47,7 +47,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                      数据层                                  │
 │  - PostgreSQL: 文件元数据、用户、权限                        │
-│  - MinIO: 文件存储 (DWG, MXWEB, PDF)                        │
+│  - 本地文件系统: 文件存储 (DWG, MXWEB, PDF)                 │
 │  - Redis: 会话、缓存、上传状态                               │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -166,13 +166,13 @@ Content-Type: multipart/form-data
 2. 分片上传处理
    if (chunk !== undefined) {
      a. 创建/更新 UploadSession 记录
-     b. 上传分片到 MinIO: `temp/${fileHash}/chunk_${chunk}`
+     b. 上传分片到本地临时目录: `temp/${fileHash}/chunk_${chunk}`
      c. 更新 Redis: `upload:chunk:${fileHash}:${chunk}` = size
      d. 更新上传进度: uploadedParts++
 
      if (uploadedParts === chunks) {
        // 所有分片上传完成，触发合并
-       e. 调用 MinIO ComposeObject API 合并分片
+       e. 合并分片到本地文件
        f. 生成最终存储路径: `${projectId}/${Date.now()}-${filename}`
        g. 调用转换服务转换为 MXWEB 格式
        h. 创建 FileSystemNode 记录
@@ -183,7 +183,7 @@ Content-Type: multipart/form-data
 
 3. 完整文件上传处理
    else {
-     a. 直接上传到 MinIO: `${projectId}/${Date.now()}-${filename}`
+     a. 直接上传到本地文件系统: `${projectId}/${Date.now()}-${filename}`
      b. 调用转换服务转换为 MXWEB 格式
      c. 创建 FileSystemNode 记录
    }
@@ -264,7 +264,7 @@ Content-Type: multipart/form-data
 // 内部实现
 1. 验证源文件权限
 2. 创建外部参照目录: `${projectId}/${src_dwgfile_hash}/`
-3. 上传文件到 MinIO
+3. 上传文件到本地文件系统
 4. 创建 FileSystemNode 记录（关联到源文件）
 5. 返回 { code: 0, message: "ok" }
 ```
@@ -282,7 +282,7 @@ Content-Type: multipart/form-data
 ```typescript
 // 内部实现
 1. 权限验证
-2. 上传文件到 MinIO
+2. 上传文件到本地文件系统
 3. 必要时调用转换服务
 4. 创建/更新 FileSystemNode 记录
 5. 返回 { code: 0, file: filename, ret: "ok" }
@@ -309,7 +309,7 @@ uploadPath/
     └── ...
 
 // 映射到 CloudCAD 存储结构
-MinIO Bucket: cloudcad
+本地文件系统:
 ├── projects/
 │   └── {projectId}/
 │       ├── {timestamp}-{filename}.dwg
@@ -345,7 +345,7 @@ MinIO Bucket: cloudcad
 ```typescript
 // Redis 存储结构
 upload:session:{fileHash} = {
-  uploadId: "minio-upload-id",
+  uploadId: "upload-id",
   fileName: "drawing.dwg",
   fileSize: 10485760,
   chunks: 10,
@@ -365,7 +365,7 @@ upload:chunk:{fileHash}:{chunk} = {
 // PostgreSQL UploadSession 表（持久化）
 {
   id: "cuid",
-  uploadId: "minio-upload-id",
+  uploadId: "upload-id",
   storageKey: "temp/{fileHash}",
   fileName: "drawing.dwg",
   fileSize: 10485760,
@@ -508,9 +508,9 @@ async checkFilePermission(fileId: string, userId: string, action: string) {
    - 分片状态跟踪
    - 自动清理过期会话
 
-4. **MinIO 集成**
+4. **本地文件系统集成**
    - 分片上传到临时目录
-   - 合并分片（ComposeObject）
+   - 合并分片
    - 移动到正式目录
 
 ### 6.3 Phase 3: 转换功能（第3周）
@@ -767,7 +767,7 @@ export class MxcadAdapterService {
 
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { MinioStorageProvider } from '../storage/minio-storage.provider';
+import { LocalStorageProvider } from '../storage/local-storage.provider';
 import { SessionService } from '../common/services/session.service';
 import { FileHashService } from '../file-system/file-hash.service';
 import { MxcadConvertService } from './mxcad-convert.service';
@@ -778,7 +778,7 @@ export class MxcadUploadService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly storage: MinioStorageProvider,
+    private readonly storage: LocalStorageProvider,
     private readonly sessionService: SessionService,
     private readonly fileHashService: FileHashService,
     private readonly convertService: MxcadConvertService
@@ -798,7 +798,7 @@ export class MxcadUploadService {
     parentId: string
   ): Promise<{ ret: string; tz?: boolean }> {
     try {
-      // 1. 上传分片到 MinIO 临时目录
+      // 1. 上传分片到本地临时目录
       const chunkKey = `temp/${fileHash}/chunk_${chunk}`;
       await this.storage.uploadFile(chunkKey, file.buffer);
 
@@ -856,7 +856,7 @@ export class MxcadUploadService {
         chunkKeys.push(`temp/${fileHash}/chunk_${i}`);
       }
 
-      // 3. 使用 MinIO ComposeObject 合并分片
+      // 3. 合并分片
       const extension = fileName.split('.').pop()?.toLowerCase() || '';
       const finalKey = `projects/${session.parentId}/${Date.now()}-${fileName}`;
 
@@ -984,7 +984,7 @@ export class MxcadUploadService {
     userId: string
   ): Promise<void> {
     try {
-      // 1. 删除 MinIO 临时分片
+      // 1. 删除本地临时分片
       for (const key of chunkKeys) {
         try {
           await this.storage.deleteFile(key);

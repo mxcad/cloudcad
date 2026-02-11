@@ -184,7 +184,7 @@ export const SystemMonitorPage: React.FC = () => {
                   <HardDrive size={32} className="text-purple-600" />
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">存储服务</h3>
-                    <p className="text-sm text-gray-500">MinIO 对象存储</p>
+                    <p className="text-sm text-gray-500">本地文件存储</p>
                   </div>
                 </div>
                 {getStatusIcon(systemHealth.storage.status)}

@@ -41,7 +41,7 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "deploy:prod": "docker-compose up -d postgres redis minio && docker build -t cloucad-backend . && docker-compose up -d backend",
+    "deploy:prod": "docker-compose up -d postgres redis && docker build -t cloucad-backend . && docker-compose up -d backend",
     "deploy:stop": "docker-compose down",
     "type-check": "tsc --noEmit --project tsconfig.build.json",
     "verify": "pnpm check:fix && pnpm test && pnpm build"

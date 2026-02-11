@@ -704,7 +704,7 @@ export class FileSystemNodeService {
 
   /**
    * 根据存储路径查找节点（用于路径转换）
-   * @param storagePath MinIO 存储路径
+   * @param storagePath 本地存储路径
    * @returns 节点或 null
    */
   async findByPath(storagePath: string): Promise<any | null> {

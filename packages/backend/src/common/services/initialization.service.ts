@@ -9,8 +9,9 @@ import * as bcrypt from 'bcrypt';
  *
  * 功能：
  * 1. 检查是否为首次启动（无任何用户）
- * 2. 首次启动时自动创建管理员账户
- * 3. 后续访问禁止注册
+ * 2. 首次启动时自动创建所有系统默认角色和项目默认角色
+ * 3. 首次启动时自动创建管理员账户
+ * 4. 后续访问禁止注册
  */
 @Injectable()
 export class InitializationService implements OnModuleInit {
@@ -25,7 +26,235 @@ export class InitializationService implements OnModuleInit {
    * 模块初始化时执行
    */
   async onModuleInit() {
+    await this.createSystemDefaultRoles();
+    await this.createProjectDefaultRoles();
     await this.checkAndCreateInitialAdmin();
+  }
+
+  /**
+   * 创建系统默认角色
+   */
+  private async createSystemDefaultRoles(): Promise<void> {
+    try {
+      const defaultRoles = [
+        {
+          name: SystemRole.ADMIN,
+          description: '系统管理员，拥有所有权限',
+          permissions: [
+            'SYSTEM_USER_READ',
+            'SYSTEM_USER_CREATE',
+            'SYSTEM_USER_UPDATE',
+            'SYSTEM_USER_DELETE',
+            'SYSTEM_ROLE_READ',
+            'SYSTEM_ROLE_CREATE',
+            'SYSTEM_ROLE_UPDATE',
+            'SYSTEM_ROLE_DELETE',
+            'SYSTEM_ROLE_PERMISSION_MANAGE',
+            'SYSTEM_FONT_READ',
+            'SYSTEM_FONT_UPLOAD',
+            'SYSTEM_FONT_DELETE',
+            'SYSTEM_FONT_DOWNLOAD',
+            'SYSTEM_ADMIN',
+            'SYSTEM_MONITOR',
+          ],
+        },
+        {
+          name: SystemRole.USER_MANAGER,
+          description: '用户管理员，管理系统用户和角色',
+          permissions: [
+            'SYSTEM_USER_READ',
+            'SYSTEM_USER_CREATE',
+            'SYSTEM_USER_UPDATE',
+            'SYSTEM_USER_DELETE',
+            'SYSTEM_ROLE_READ',
+            'SYSTEM_ROLE_CREATE',
+            'SYSTEM_ROLE_UPDATE',
+            'SYSTEM_ROLE_DELETE',
+            'SYSTEM_ROLE_PERMISSION_MANAGE',
+          ],
+        },
+        {
+          name: SystemRole.FONT_MANAGER,
+          description: '字体管理员，管理系统字体库',
+          permissions: [
+            'SYSTEM_FONT_READ',
+            'SYSTEM_FONT_UPLOAD',
+            'SYSTEM_FONT_DELETE',
+            'SYSTEM_FONT_DOWNLOAD',
+          ],
+        },
+        {
+          name: SystemRole.USER,
+          description: '普通用户，基本访问权限',
+          permissions: [
+            'SYSTEM_USER_READ',
+          ],
+        },
+      ];
+
+      for (const roleConfig of defaultRoles) {
+        const existingRole = await this.prisma.role.findFirst({
+          where: { name: roleConfig.name },
+        });
+
+        if (existingRole) {
+          continue;
+        }
+
+        this.logger.log(`创建系统角色: ${roleConfig.name}`);
+
+        const role = await this.prisma.role.create({
+          data: {
+            name: roleConfig.name,
+            description: roleConfig.description,
+            category: 'SYSTEM',
+            isSystem: true,
+            level: roleConfig.name === SystemRole.ADMIN ? 100 : 0,
+          },
+        });
+
+        await this.prisma.rolePermission.createMany({
+          data: roleConfig.permissions.map((permission) => ({
+            roleId: role.id,
+            permission: permission as any,
+          })),
+          skipDuplicates: true,
+        });
+
+        this.logger.log(`✅ 系统角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`);
+      }
+    } catch (error) {
+      this.logger.error('创建系统默认角色失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建项目默认角色
+   */
+  private async createProjectDefaultRoles(): Promise<void> {
+    try {
+      const defaultRoles = [
+        {
+          name: 'PROJECT_OWNER',
+          description: '项目所有者，拥有项目的完整管理权限',
+          permissions: [
+            'PROJECT_UPDATE', 'PROJECT_DELETE', 'PROJECT_MEMBER_MANAGE',
+            'PROJECT_MEMBER_ASSIGN', 'PROJECT_ROLE_MANAGE', 'PROJECT_ROLE_PERMISSION_MANAGE',
+            'PROJECT_TRANSFER', 'PROJECT_SETTINGS_MANAGE', 'FILE_CREATE',
+            'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT', 'FILE_DELETE',
+            'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD', 'FILE_SHARE', 'FILE_COMMENT',
+            'FILE_PRINT', 'FILE_COMPARE', 'CAD_SAVE', 'CAD_EXPORT',
+            'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD', 'VERSION_READ',
+            'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
+          ],
+        },
+        {
+          name: 'PROJECT_ADMIN',
+          description: '项目管理员，管理项目和团队成员',
+          permissions: [
+            'PROJECT_UPDATE', 'PROJECT_MEMBER_MANAGE', 'PROJECT_MEMBER_ASSIGN',
+            'PROJECT_ROLE_MANAGE', 'PROJECT_ROLE_PERMISSION_MANAGE', 'PROJECT_SETTINGS_MANAGE',
+            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
+            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD', 'FILE_SHARE',
+            'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE', 'CAD_SAVE',
+            'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD', 'VERSION_READ',
+            'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
+          ],
+        },
+        {
+          name: 'PROJECT_EDITOR',
+          description: '项目编辑者，可以编辑和管理项目文件',
+          permissions: [
+            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
+            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD', 'FILE_SHARE',
+            'FILE_COMMENT', 'FILE_PRINT', 'FILE_COMPARE', 'CAD_SAVE',
+            'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'VERSION_READ',
+            'VERSION_CREATE', 'VERSION_DELETE', 'VERSION_RESTORE',
+          ],
+        },
+        {
+          name: 'PROJECT_MEMBER',
+          description: '项目成员，可以查看和编辑项目内容',
+          permissions: [
+            'FILE_OPEN', 'FILE_EDIT', 'FILE_DOWNLOAD', 'FILE_COMMENT',
+            'FILE_PRINT', 'CAD_SAVE', 'VERSION_READ', 'VERSION_CREATE',
+          ],
+        },
+        {
+          name: 'PROJECT_VIEWER',
+          description: '项目查看者，仅能查看项目内容',
+          permissions: [
+            'FILE_OPEN', 'FILE_DOWNLOAD', 'VERSION_READ',
+          ],
+        },
+      ];
+
+      for (const roleConfig of defaultRoles) {
+        const existingRole = await this.prisma.projectRole.findFirst({
+          where: {
+            name: roleConfig.name,
+            isSystem: true,
+          },
+          include: {
+            permissions: true,
+          },
+        });
+
+        if (existingRole) {
+          // 检查权限是否完整
+          const existingPermissionCount = existingRole.permissions.length;
+          const expectedPermissionCount = roleConfig.permissions.length;
+
+          if (existingPermissionCount !== expectedPermissionCount) {
+            this.logger.warn(
+              `项目角色 ${roleConfig.name} 权限不完整（${existingPermissionCount}/${expectedPermissionCount}），正在更新...`
+            );
+
+            // 删除所有现有权限
+            await this.prisma.projectRolePermission.deleteMany({
+              where: { projectRoleId: existingRole.id },
+            });
+
+            // 重新分配权限
+            await this.prisma.projectRolePermission.createMany({
+              data: roleConfig.permissions.map((permission) => ({
+                projectRoleId: existingRole.id,
+                permission: permission as any,
+              })),
+              skipDuplicates: true,
+            });
+
+            this.logger.log(`✅ 项目角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`);
+          }
+
+          continue;
+        }
+
+        this.logger.log(`创建项目角色: ${roleConfig.name}`);
+
+        const role = await this.prisma.projectRole.create({
+          data: {
+            name: roleConfig.name,
+            description: roleConfig.description,
+            isSystem: true,
+          },
+        });
+
+        await this.prisma.projectRolePermission.createMany({
+          data: roleConfig.permissions.map((permission) => ({
+            projectRoleId: role.id,
+            permission: permission as any,
+          })),
+          skipDuplicates: true,
+        });
+
+        this.logger.log(`✅ 项目角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`);
+      }
+    } catch (error) {
+      this.logger.error('创建项目默认角色失败', error);
+      throw error;
+    }
   }
 
   /**
@@ -44,53 +273,12 @@ export class InitializationService implements OnModuleInit {
       this.logger.log('首次启动系统，开始创建初始管理员账户...');
 
       // 检查是否有 ADMIN 角色
-      let adminRole = await this.prisma.role.findUnique({
+      const adminRole = await this.prisma.role.findFirst({
         where: { name: SystemRole.ADMIN },
       });
 
-      // 如果没有 ADMIN 角色，创建它
       if (!adminRole) {
-        this.logger.warn('未找到 ADMIN 角色，正在创建...');
-        adminRole = await this.prisma.role.create({
-          data: {
-            name: SystemRole.ADMIN,
-            description: '系统管理员，拥有所有权限',
-            category: 'SYSTEM',
-            isSystem: true,
-          },
-        });
-
-        // 为 ADMIN 角色分配所有系统权限
-        // Permission 是枚举，直接使用所有系统权限
-        const systemPermissions = [
-          'SYSTEM_USER_READ',
-          'SYSTEM_USER_CREATE',
-          'SYSTEM_USER_UPDATE',
-          'SYSTEM_USER_DELETE',
-          'SYSTEM_ROLE_READ',
-          'SYSTEM_ROLE_CREATE',
-          'SYSTEM_ROLE_UPDATE',
-          'SYSTEM_ROLE_DELETE',
-          'SYSTEM_ROLE_PERMISSION_MANAGE',
-          'SYSTEM_FONT_READ',
-          'SYSTEM_FONT_UPLOAD',
-          'SYSTEM_FONT_DELETE',
-          'SYSTEM_FONT_DOWNLOAD',
-          'SYSTEM_ADMIN',
-          'SYSTEM_MONITOR',
-        ];
-
-        if (systemPermissions.length > 0) {
-          await this.prisma.rolePermission.createMany({
-            data: systemPermissions.map((permission) => ({
-              roleId: adminRole!.id,
-              permission: permission as any,
-            })),
-            skipDuplicates: true,
-          });
-
-          this.logger.log(`为 ADMIN 角色分配了 ${systemPermissions.length} 个系统权限`);
-        }
+        throw new Error('ADMIN 角色不存在，请检查系统默认角色创建逻辑');
       }
 
       // 创建初始管理员账户

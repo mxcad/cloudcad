@@ -97,15 +97,6 @@ export class RolesService {
    * 创建角色
    */
   async create(createRoleDto: CreateRoleDto): Promise<RoleDto> {
-    // 检查角色名称是否已存在
-    const existingRole = await this.prisma.role.findUnique({
-      where: { name: createRoleDto.name },
-    });
-
-    if (existingRole) {
-      throw new ConflictException(`角色名称 "${createRoleDto.name}" 已存在`);
-    }
-
     // 验证权限是否有效
     this.validatePermissions(createRoleDto.permissions);
 
@@ -153,28 +144,17 @@ export class RolesService {
       throw new NotFoundException(`角色 ID ${id} 不存在`);
     }
 
-    // 系统角色不允许修改名称、描述、类别和级别
+    // 系统角色不允许修改名称、描述、类别和级别（仅当值真正改变时才阻止）
     if (role.isSystem) {
       if (
-        updateRoleDto.name ||
-        updateRoleDto.description ||
-        updateRoleDto.category ||
-        updateRoleDto.level !== undefined
+        (updateRoleDto.name !== undefined && updateRoleDto.name !== role.name) ||
+        (updateRoleDto.description !== undefined && updateRoleDto.description !== role.description) ||
+        (updateRoleDto.category !== undefined && updateRoleDto.category !== role.category) ||
+        (updateRoleDto.level !== undefined && updateRoleDto.level !== role.level)
       ) {
         throw new BadRequestException(
           '系统角色不允许修改名称、描述、类别和级别'
         );
-      }
-    }
-
-    // 如果修改名称，检查是否与其他角色冲突
-    if (updateRoleDto.name && updateRoleDto.name !== role.name) {
-      const existingRole = await this.prisma.role.findUnique({
-        where: { name: updateRoleDto.name },
-      });
-
-      if (existingRole) {
-        throw new ConflictException(`角色名称 "${updateRoleDto.name}" 已存在`);
       }
     }
 
@@ -284,11 +264,6 @@ export class RolesService {
       throw new NotFoundException(`角色 ID ${roleId} 不存在`);
     }
 
-    // 系统角色不允许修改权限
-    if (role.isSystem) {
-      throw new BadRequestException('系统角色不允许修改权限');
-    }
-
     // 验证权限是否有效
     this.validatePermissions(permissions);
 
@@ -331,11 +306,6 @@ export class RolesService {
 
     if (!role) {
       throw new NotFoundException(`角色 ID ${roleId} 不存在`);
-    }
-
-    // 系统角色不允许修改权限
-    if (role.isSystem) {
-      throw new BadRequestException('系统角色不允许修改权限');
     }
 
     // 移除权限

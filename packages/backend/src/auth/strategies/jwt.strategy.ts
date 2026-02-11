@@ -63,6 +63,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         nickname: true,
         avatar: true,
         status: true,
+        roleId: true,
       },
     });
 
@@ -82,7 +83,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // 查询用户的角色和权限信息
     const role = await this.prisma.role.findUnique({
-      where: { name: payload.role },
+      where: { id: user.roleId },
       include: {
         permissions: {
           select: {
@@ -94,7 +95,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!role) {
       if (this.isDevelopment) {
-        this.logger.warn(`角色不存在: ${payload.role}`);
+        this.logger.warn(`角色不存在: ${user.roleId}`);
       }
       throw new Error('角色不存在');
     }
@@ -105,7 +106,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: {
         name: role.name,
         description: role.description,
-        permissions: role.permissions,
+        permissions: role.permissions.map((p) => p.permission),
       },
     };
   }

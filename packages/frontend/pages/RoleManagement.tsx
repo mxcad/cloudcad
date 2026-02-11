@@ -5,7 +5,7 @@ import { DescriptionText } from '../components/ui/TruncateText';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
 import { rolesApi, projectRolesApi } from '../services/rolesApi';
 import { usePermission } from '../hooks/usePermission';
-import { PERMISSION_GROUPS } from '../constants/permissions';
+import { PERMISSION_GROUPS, getRoleDisplayName } from '../constants/permissions';
 
 type SystemRole = {
   id: string;
@@ -420,26 +420,31 @@ export const RoleManagement = () => {
                 </p>
               </div>
             </div>
-            {selectedProjectRoles.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={Check}
-                  onClick={() => handleBulkGrant(['FILE_READ', 'FILE_OPEN'])}
-                >
-                  批量授权查看权限
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={X}
-                  onClick={() => handleBulkRevoke(['FILE_DELETE', 'FILE_EDIT'])}
-                >
-                  批量撤销编辑权限
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Button icon={Plus} onClick={handleCreateProjectRole}>
+                新建角色
+              </Button>
+              {selectedProjectRoles.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={Check}
+                    onClick={() => handleBulkGrant(['FILE_READ', 'FILE_OPEN'])}
+                  >
+                    批量授权查看权限
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={X}
+                    onClick={() => handleBulkRevoke(['FILE_DELETE', 'FILE_EDIT'])}
+                  >
+                    批量撤销编辑权限
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -468,7 +473,7 @@ export const RoleManagement = () => {
                     </button>
                     <div>
                       <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        {role.name}
+                        {getRoleDisplayName(role.name, role.isSystem)}
                         {role.isSystem && (
                           <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                             系统
@@ -478,9 +483,11 @@ export const RoleManagement = () => {
                     <p className="text-sm text-slate-500 mt-1">
                       <DescriptionText>{role.description}</DescriptionText>
                     </p>
-                    <p className="text-xs text-slate-400 mt-2">
-                      {role._count.members} 个成员
-                    </p>
+                    {!role.isSystem && (
+                      <p className="text-xs text-slate-400 mt-2">
+                        {role._count.members} 个成员
+                      </p>
+                    )}
                   </div>
                   </div>
                   {!role.isSystem && (
@@ -508,7 +515,7 @@ export const RoleManagement = () => {
 
                       return (
                         <span
-                          key={p.id || p}
+                          key={p.id || permKey}
                           className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
                         >
                           {label}
@@ -613,7 +620,7 @@ export const RoleManagement = () => {
                     </button>
                     <div>
                       <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        {role.name}
+                        {getRoleDisplayName(role.name, role.isSystem)}
                         {role.isSystem && (
                           <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                             系统

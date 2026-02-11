@@ -190,7 +190,7 @@ open coverage/lcov-report/index.html
 
 - JWT_SECRET 使用默认值
 - 数据库连接参数错误
-- MinIO 配置不匹配
+- 本地文件存储路径配置错误
 
 **解决**:
 
@@ -201,7 +201,7 @@ cp .env.example .env
 # 修改关键配置
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 DB_HOST=localhost
-MINIO_ACCESS_KEY=minioadmin
+FILES_DATA_PATH=./filesData
 ```
 
 ## 性能问题

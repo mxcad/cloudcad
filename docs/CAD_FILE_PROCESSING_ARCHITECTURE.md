@@ -17,7 +17,7 @@ CloudCAD 当前已实现基础文件管理系统：
 - **统一文件模型**：基于 `FileSystemNode` 的树形结构
 - **基础操作**：文件上传、下载、文件夹管理
 - **权限系统**：三层权限控制（用户角色、项目成员、文件访问）
-- **存储后端**：MinIO 对象存储
+- **存储后端**：本地文件存储
 - **API 接口**：RESTful API，路径为 `/file-system/*`
 
 ## 未来技术规划
@@ -28,7 +28,7 @@ CloudCAD 当前已实现基础文件管理系统：
 2. **高级存储功能**：文件去重、分片上传、断点续传
 3. **预览生成**：缩略图、Web 预览、性能优化
 4. **智能缓存**：多级缓存策略，提升响应速度
-5. **多存储后端**：支持 MinIO、AWS S3、阿里云 OSS 等
+5. **多存储后端**：支持本地文件系统、AWS S3、阿里云 OSS 等
 
 ## 实施原则
 
@@ -111,7 +111,7 @@ GET    /file-system/storage           // 存储空间信息
 - 无格式转换功能
 - 无预览生成
 - 无文件去重机制
-- 存储仅支持 MinIO
+- 存储仅支持本地文件系统
 
 ---
 
@@ -169,10 +169,9 @@ async checkDuplicate(fileHash: string): Promise<FileMetadata | null> {
 
 #### 多存储后端支持
 
-- MinIO（默认）
+- 本地文件系统（默认）
 - AWS S3
 - 阿里云 OSS
-- 本地文件系统（开发环境）
 
 ### 2.3 预览生成系统 📋
 
@@ -294,11 +293,11 @@ interface StorageProvider {
 #### 多存储后端实现
 
 ```typescript
-// MinIO 提供商
+// 本地存储提供商
 @Injectable()
-export class MinioStorageProvider implements StorageProvider {
-  constructor(private config: MinioConfig) {}
-  // 实现 MinIO 特定的存储逻辑
+export class LocalStorageProvider implements StorageProvider {
+  constructor(private config: LocalStorageConfig) {}
+  // 实现本地文件系统特定的存储逻辑
 }
 
 // S3 提供商
@@ -450,18 +449,6 @@ services:
     volumes:
       - redis_data:/data
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio_data:/data
-    ports:
-      - '9000:9000'
-      - '9001:9001'
-
   # 转换服务（新增）
   converter:
     build:
@@ -572,13 +559,13 @@ export class AliyunOSSProvider implements StorageProvider {
   // 实现所有接口方法
 }
 
-// 2. 注册到存储工厂
+// 注册到存储工厂
 @Module({
   providers: [
     {
       provide: 'STORAGE_PROVIDERS',
       useFactory: () => [
-        new MinioStorageProvider(minioConfig),
+        new LocalStorageProvider(localConfig),
         new S3StorageProvider(s3Config),
         new AliyunOSSProvider(ossConfig), // 新增
       ],
@@ -739,7 +726,7 @@ export class FileLogger {
 
 | 技术领域 | 当前方案 | 规划方案         | 优势           | 劣势       |
 | -------- | -------- | ---------------- | -------------- | ---------- |
-| 文件存储 | MinIO    | MinIO + 多云支持 | 开源、高性能   | 运维复杂度 |
+| 文件存储 | 本地文件系统 | 本地文件系统 + 云存储支持 | 简单、高性能 | 分布式扩展有限 |
 | 格式转换 | 无       | 专用转换服务     | 专业、准确     | 成本较高   |
 | 缓存系统 | Redis    | Redis + CDN      | 高性能、分布式 | 架构复杂   |
 | 队列系统 | 无       | Bull Queue       | 可靠、监控     | 学习成本   |
@@ -760,7 +747,7 @@ export class FileLogger {
 
 ### 8.3 参考资料
 
-- [MinIO 官方文档](https://docs.min.io/)
+- [NestJS 文档](https://docs.nestjs.com/)
 - [NestJS 文档](https://docs.nestjs.com/)
 - [Prisma 文档](https://www.prisma.io/docs/)
 - [MXWeb 技术规范](https://www.mxweb.com/docs)

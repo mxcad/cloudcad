@@ -458,7 +458,7 @@ export class PermissionTestRunner {
     const roleName = testCase.expectedRoles[0];
 
     // 获取角色
-    const role = await this.prisma.role.findUnique({
+    const role = await this.prisma.role.findFirst({
       where: { name: roleName },
     });
 

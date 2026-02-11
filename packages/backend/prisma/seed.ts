@@ -86,29 +86,37 @@ async function main() {
   console.log('开始种子数据初始化...');
 
   // 获取或创建默认角色
-  const adminRole = await prisma.role.upsert({
+  let adminRole = await prisma.role.findFirst({
     where: { name: 'ADMIN' },
-    update: {},
-    create: {
-      name: 'ADMIN',
-      description: '系统管理员，拥有所有权限',
-      category: 'SYSTEM',
-      level: 100,
-      isSystem: true,
-    },
   });
 
-  const userRole = await prisma.role.upsert({
+  if (!adminRole) {
+    adminRole = await prisma.role.create({
+      data: {
+        name: 'ADMIN',
+        description: '系统管理员，拥有所有权限',
+        category: 'SYSTEM',
+        level: 100,
+        isSystem: true,
+      },
+    });
+  }
+
+  let userRole = await prisma.role.findFirst({
     where: { name: 'USER' },
-    update: {},
-    create: {
-      name: 'USER',
-      description: '普通用户，基础权限',
-      category: 'SYSTEM',
-      level: 0,
-      isSystem: true,
-    },
   });
+
+  if (!userRole) {
+    userRole = await prisma.role.create({
+      data: {
+        name: 'USER',
+        description: '普通用户，基础权限',
+        category: 'SYSTEM',
+        level: 0,
+        isSystem: true,
+      },
+    });
+  }
 
   console.log(
     '系统角色已准备:',

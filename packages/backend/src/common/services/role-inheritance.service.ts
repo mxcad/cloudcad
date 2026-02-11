@@ -270,7 +270,7 @@ export class RoleInheritanceService implements OnModuleInit {
 
     try {
       // 查找所有子角色
-      const currentRole = await this.prisma.role.findUnique({
+      const currentRole = await this.prisma.role.findFirst({
         where: { name: roleName },
         select: { id: true },
       });

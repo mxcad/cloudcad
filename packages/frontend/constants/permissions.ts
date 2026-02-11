@@ -290,3 +290,34 @@ export const togglePermission = (
     setSelected([...selected, perm]);
   }
 };
+
+/**
+ * 系统角色名称映射
+ */
+export const SYSTEM_ROLE_NAMES: Record<string, string> = {
+  ADMIN: '系统管理员',
+  USER_MANAGER: '用户管理员',
+  FONT_MANAGER: '字体管理员',
+  USER: '普通用户',
+};
+
+/**
+ * 项目角色名称映射
+ */
+export const PROJECT_ROLE_NAMES: Record<string, string> = {
+  PROJECT_OWNER: '项目所有者',
+  PROJECT_ADMIN: '项目管理员',
+  PROJECT_EDITOR: '项目编辑者',
+  PROJECT_MEMBER: '项目成员',
+  PROJECT_VIEWER: '项目查看者',
+};
+
+/**
+ * 获取角色显示名称
+ */
+export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): string => {
+  // 根据角色名称前缀判断是否为项目角色
+  const isProjectRole = roleName.startsWith('PROJECT_');
+  const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
+  return mapping[roleName] || roleName;
+};

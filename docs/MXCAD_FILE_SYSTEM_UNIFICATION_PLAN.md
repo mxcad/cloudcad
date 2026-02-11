@@ -17,7 +17,7 @@
 文件上传 → 本地存储 → 图纸转换 → 本地存储结果
 
 目标流程：
-文件上传 → 本地存储 → 图纸转换 → MinIO 同步 → 保留本地备份
+文件上传 → 本地存储 → 图纸转换 → 保留本地备份
 ```
 
 ### 2. 数据库设计
@@ -30,7 +30,7 @@
 
 - 保持现有 `{ ret: 'ok' }` 返回格式
 - mxcad 接口保持公开（无认证），兼容 mxcad-app
-- 本地路径 `uploads/{hash}/` 映射到 MinIO `mxcad/{hash}/`
+- 本地路径 `uploads/{hash}/` 保持不变
 
 ### 4. 项目集成方案
 
@@ -58,7 +58,7 @@
 
 ## 技术实现细节
 
-### MinIO 路径映射
+### 本地文件系统结构
 
 ```
 本地结构：
@@ -69,16 +69,6 @@ uploads/
 ├── {hash}.dwg_12345.dwg
 ├── {hash}.dwg.mxweb
 ├── {hash}.dwg.mxweb_preloading.json
-└── {hash}.json
-
-MinIO 结构：
-mxcad/
-├── {hash}/
-│   ├── {hash}.dwg1__mxole__.jpg
-│   └── {hash}.dwg2__mxole__.jpg
-├── {hash}.dwg
-├── {hash}.mxweb
-├── {hash}.mxweb_preloading.json
 └── {hash}.json
 ```
 
@@ -140,7 +130,7 @@ const fileNode = await this.prisma.fileSystemNode.create({
     isRoot: false,
     parentId: mxcadContext.parentId, // 从 Referer 解析
     originalName: originalName,
-    path: `mxcad/${fileHash}`, // MinIO 路径
+    path: `uploads/${fileHash}`, // 本地文件路径
     size: fileSize,
     mimeType: 'application/dwg',
     extension: '.dwg',
@@ -212,10 +202,10 @@ async validateUploadPermission(context: MxCadContext) {
 
 ### 3. 存储改造策略
 
-- **转换时机**：先本地转换完成，再同步到 MinIO
-- **文件同步**：转换后的所有文件（包括子文件）都同步到 MinIO
+- **转换时机**：先本地转换完成
+- **文件存储**：转换后的所有文件（包括子文件）都存储到本地文件系统
 - **性能策略**：接受性能影响，转换消耗大是客观情况
-- **错误处理**：MinIO 上传失败时保留本地文件，支持重试和降级读取
+- **错误处理**：本地文件存储失败时保留临时文件，支持重试
 
 ### 4. 项目上下文
 
@@ -224,9 +214,8 @@ async validateUploadPermission(context: MxCadContext) {
 
 ### 5. 文件处理细节
 
-- **转换流程**：本地转换 → 生成多个文件 → 批量上传 MinIO → 保留本地备份
-- **降级策略**：MinIO 读取失败时，自动降级到本地文件读取
-- **重试机制**：上传失败支持自动重试，确保数据可靠性
+- **转换流程**：本地转换 → 生成多个文件 → 存储到本地文件系统
+- **重试机制**：存储失败支持自动重试，确保数据可靠性
 
 ## 调整后实施步骤
 
@@ -247,18 +236,11 @@ async validateUploadPermission(context: MxCadContext) {
    - 保持现有上传和转换逻辑不变
    - 添加权限验证逻辑
    - 转换完成后创建 FileSystemNode 记录
-   - 同步所有文件到 MinIO
-   - 保留本地备份
+   - 存储到本地文件系统
 
 5. **修改文件获取流程**
-   - 优先从 MinIO 读取文件
-   - MinIO 失败时降级到本地文件读取
-   - 保持路径映射和返回格式透明
-
-6. **实现文件同步服务**
-   - 创建专门的文件同步服务
-   - 支持批量上传和重试机制
-   - 确保本地和 MinIO 数据一致性
+   - 从本地文件系统读取文件
+   - 保持路径和返回格式透明
 
 7. **测试验证**
    - Session 和权限验证测试

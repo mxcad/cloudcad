@@ -9,10 +9,6 @@ beforeAll(async () => {
   process.env.DATABASE_URL =
     'postgresql://postgres:password@localhost:5432/cloucad_test';
   process.env.REDIS_URL = 'redis://localhost:6379/1';
-  process.env.MINIO_ENDPOINT = 'localhost';
-  process.env.MINIO_PORT = '9000';
-  process.env.MINIO_ACCESS_KEY = 'minioadmin';
-  process.env.MINIO_SECRET_KEY = 'minioadmin';
 
   // Mock console methods to reduce noise in tests
   jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -168,17 +164,6 @@ declare global {
 jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
   compare: jest.fn().mockResolvedValue(true),
-}));
-
-jest.mock('minio', () => ({
-  Client: jest.fn().mockImplementation(() => ({
-    bucketExists: jest.fn().mockResolvedValue(false),
-    makeBucket: jest.fn().mockResolvedValue(undefined),
-    putObject: jest.fn().mockResolvedValue(undefined),
-    getObject: jest.fn().mockResolvedValue(undefined),
-    removeObject: jest.fn().mockResolvedValue(undefined),
-    listObjects: jest.fn().mockReturnValue([]),
-  })),
 }));
 
 // Mock Redis

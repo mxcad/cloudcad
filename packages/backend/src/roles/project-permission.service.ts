@@ -7,7 +7,7 @@ import {
 import { ProjectRolesService } from './project-roles.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import { AuditAction, ResourceType } from '@prisma/client';
+import { ResourceType } from '@prisma/client';
 
 /**
  * 项目权限检查服务
@@ -38,19 +38,11 @@ export class ProjectPermissionService {
     projectId: string,
     permission: ProjectPermission
   ): Promise<boolean> {
-    const startTime = Date.now();
     try {
       // 1. 检查用户是否为项目所有者
       const isOwner = await this.isProjectOwner(userId, projectId);
       if (isOwner) {
-        await this.logPermissionCheck(
-          userId,
-          projectId,
-          permission,
-          true,
-          '项目所有者',
-          Date.now() - startTime
-        );
+        // 权限检查不记录审计日志（避免日志过多）
         return true; // 项目所有者拥有所有权限
       }
 
@@ -71,65 +63,11 @@ export class ProjectPermissionService {
       // 4. 缓存结果
       this.cacheService.set(cacheKey, hasPermission, 300000); // 5分钟
 
-      // 5. 记录审计日志
-      await this.logPermissionCheck(
-        userId,
-        projectId,
-        permission,
-        hasPermission,
-        hasPermission ? '角色权限' : '权限不足',
-        Date.now() - startTime
-      );
-
+      // 权限检查不记录审计日志（避免日志过多）
       return hasPermission;
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
-      await this.logPermissionCheck(
-        userId,
-        projectId,
-        permission,
-        false,
-        `检查失败: ${error.message}`,
-        Date.now() - startTime
-      );
       return false;
-    }
-  }
-
-  /**
-   * 记录权限检查审计日志
-   */
-  private async logPermissionCheck(
-    userId: string,
-    projectId: string,
-    permission: ProjectPermission,
-    success: boolean,
-    reason: string,
-    duration: number
-  ): Promise<void> {
-    try {
-      const details = JSON.stringify({
-        permission,
-        reason,
-        duration: `${duration}ms`,
-      });
-
-      // 根据权限检查结果选择适当的操作类型
-      const action = success
-        ? AuditAction.PERMISSION_CHECK
-        : AuditAction.PERMISSION_DENIED;
-
-      await this.auditLogService.log(
-        action,
-        ResourceType.PROJECT,
-        projectId,
-        userId,
-        success,
-        success ? undefined : reason,
-        details
-      );
-    } catch (error) {
-      this.logger.error(`记录权限检查审计日志失败: ${error.message}`);
     }
   }
 

@@ -44,15 +44,19 @@ async function seedTestData() {
 
   try {
     // 获取或创建 ADMIN 角色
-    const adminRole = await prisma.role.upsert({
+    let adminRole = await prisma.role.findFirst({
       where: { name: 'ADMIN' },
-      update: {},
-      create: {
-        name: 'ADMIN',
-        description: '系统管理员，拥有所有权限',
-        isSystem: true,
-      },
     });
+
+    if (!adminRole) {
+      adminRole = await prisma.role.create({
+        data: {
+          name: 'ADMIN',
+          description: '系统管理员，拥有所有权限',
+          isSystem: true,
+        },
+      });
+    }
 
     await prisma.user.create({
       data: {
@@ -72,15 +76,19 @@ async function seedTestData() {
   // Create default regular user if it doesn't exist
   try {
     // 获取或创建 USER 角色
-    const userRole = await prisma.role.upsert({
+    let userRole = await prisma.role.findFirst({
       where: { name: 'USER' },
-      update: {},
-      create: {
-        name: 'USER',
-        description: '普通用户，基础权限',
-        isSystem: true,
-      },
     });
+
+    if (!userRole) {
+      userRole = await prisma.role.create({
+        data: {
+          name: 'USER',
+          description: '普通用户，基础权限',
+          isSystem: true,
+        },
+      });
+    }
 
     await prisma.user.create({
       data: {

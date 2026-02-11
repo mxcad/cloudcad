@@ -33,7 +33,7 @@ model User {
 
 model Role {
   id          String       @id @default(cuid())
-  name        String       @unique
+  name        String       // 角色名称，用于显示
   description String?
   parentId    String?      // 父角色ID（支持角色层级继承）
   parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
@@ -48,7 +48,6 @@ model Role {
   users       User[]
   permissions RolePermission[]
 
-  @@unique([name, parentId]) // 允许同名角色存在于不同层级
   @@index([parentId])
   @@index([category])
   @@index([level])
@@ -246,7 +245,7 @@ model AuditLog {
 
 model UploadSession {
   id          String   @id @default(cuid())
-  uploadId    String   @unique  // MinIO返回的上传ID
+  uploadId    String   @unique  // 上传会话唯一标识符
   storageKey  String   // 存储键名
   fileName    String   // 原始文件名
   fileSize    Int      // 文件总大小
@@ -423,9 +422,6 @@ enum AuditAction {
   UPDATE_MEMBER
   REMOVE_MEMBER
   TRANSFER_OWNERSHIP
-  ACCESS_DENIED
-  PERMISSION_CHECK // 权限检查（通过）
-  PERMISSION_DENIED // 权限检查（拒绝）
 }
 
 // 资源类型
