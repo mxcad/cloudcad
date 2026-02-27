@@ -1,5 +1,20 @@
 import { apiClient } from './apiClient';
 import { calculateFileHash } from '../utils/hashUtils';
+import type { AxiosProgressEvent } from 'axios';
+
+/** 外部引用刷新统计 */
+interface RefreshExternalReferencesStats {
+  added?: number;
+  updated?: number;
+  removed?: number;
+}
+
+/** 外部引用刷新响应 */
+interface RefreshExternalReferencesResponse {
+  code: number;
+  message: string;
+  stats?: RefreshExternalReferencesStats;
+}
 
 export const mxcadApi = {
   getPreloadingData: (nodeId: string) =>
@@ -28,7 +43,7 @@ export const mxcadApi = {
     ),
 
   refreshExternalReferences: (nodeId: string) =>
-    apiClient.post<{ code: number; message: string; stats?: any }>(
+    apiClient.post<RefreshExternalReferencesResponse>(
       `/mxcad/file/${nodeId}/refresh-external-references`
     ),
 
@@ -36,7 +51,7 @@ export const mxcadApi = {
     file: File,
     nodeId: string,
     extRefFile: string,
-    onProgress?: (progressEvent: any) => void
+    onProgress?: (progressEvent: AxiosProgressEvent) => void
   ) => {
     return new Promise((resolve, reject) => {
       (async () => {
@@ -74,7 +89,7 @@ export const mxcadApi = {
     file: File,
     nodeId: string,
     extRefFile: string,
-    onProgress?: (progressEvent: any) => void
+    onProgress?: (progressEvent: AxiosProgressEvent) => void
   ) => {
     return new Promise((resolve, reject) => {
       (async () => {
@@ -113,12 +128,14 @@ export const mxcadApi = {
    * @param blob mxweb 文件的 Blob 对象
    * @param nodeId 节点 ID
    * @param onProgress 上传进度回调
+   * @param commitMessage 提交信息（可选）
    * @returns Promise
    */
   saveMxwebFile: (
     blob: Blob,
     nodeId: string,
-    onProgress?: (percentage: number) => void
+    onProgress?: (percentage: number) => void,
+    commitMessage?: string
   ) => {
     return new Promise((resolve, reject) => {
       (async () => {
@@ -128,13 +145,16 @@ export const mxcadApi = {
 
           const formData = new FormData();
           formData.append('file', file);
+          if (commitMessage) {
+            formData.append('commitMessage', commitMessage);
+          }
 
           const response = await apiClient.post(
             `/mxcad/savemxweb/${nodeId}`,
             formData,
             {
               headers: { 'Content-Type': 'multipart/form-data' },
-              onUploadProgress: (progressEvent) => {
+              onUploadProgress: (progressEvent: AxiosProgressEvent) => {
                 if (onProgress && progressEvent.total) {
                   const percentage = (progressEvent.loaded / progressEvent.total) * 100;
                   onProgress(percentage);

@@ -1,4 +1,3 @@
-import { SetMetadata } from '@nestjs/common';
 import { Permission } from '../enums/permissions.enum';
 
 /**
@@ -52,9 +51,9 @@ export const RequirePermissions = (
       return target;
     }
 
-    // 支持方法装饰器
-    SetMetadata(PERMISSIONS_KEY, permissions);
-    SetMetadata(PERMISSIONS_MODE_KEY, mode);
+    // 支持方法装饰器 - 使用 Reflect.defineMetadata 正确设置元数据
+    Reflect.defineMetadata(PERMISSIONS_KEY, permissions, target, propertyKey);
+    Reflect.defineMetadata(PERMISSIONS_MODE_KEY, mode, target, propertyKey);
     return descriptor;
   };
 };

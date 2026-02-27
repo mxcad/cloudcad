@@ -66,10 +66,12 @@ export class NodeUtils {
   // Windows 保留文件名
   private static readonly RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
 
-  // 非法字符（Windows 和 Linux 都不允许）
+  // 非法字符（Windows 和 Linux 都不允许，包含控制字符是故意的用于安全验证）
+  // eslint-disable-next-line no-control-regex
   private static readonly INVALID_CHARS = /[<>:"|?*\x00-\x1F]/;
 
-  // 控制字符
+  // 控制字符（故意匹配控制字符用于安全清理）
+  // eslint-disable-next-line no-control-regex
   private static readonly CONTROL_CHARS = /[\x00-\x1F\x7F]/;
 
   // 最大文件名长度
@@ -188,7 +190,7 @@ export class NodeUtils {
    */
   static sanitizeFileName(filename: string): string {
     // 移除路径遍历字符
-    let sanitized = filename.replace(/[\/\\]/g, '_');
+    let sanitized = filename.replace(/[/\\]/g, '_');
 
     // 移除控制字符
     sanitized = sanitized.replace(this.CONTROL_CHARS, '_');

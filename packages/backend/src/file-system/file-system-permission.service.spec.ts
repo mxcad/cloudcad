@@ -3,7 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { DatabaseService } from '../database/database.service';
 import { ProjectPermissionService } from '../roles/project-permission.service';
-import { ProjectPermission } from '../common/enums/permissions.enum';
+import { ProjectPermission, ProjectRole } from '../common/enums/permissions.enum';
 
 describe('FileSystemPermissionService', () => {
   let service: FileSystemPermissionService;
@@ -159,14 +159,14 @@ describe('FileSystemPermissionService', () => {
       const userId = 'user-123';
       const nodeId = 'node-123';
       const mockMember = {
-        projectRole: { name: 'EDITOR' },
+        projectRole: { name: ProjectRole.EDITOR },
       };
 
       mockPrisma.projectMember.findUnique.mockResolvedValue(mockMember);
 
       const result = await service.getNodeAccessRole(userId, nodeId);
 
-      expect(result).toBe('EDITOR');
+      expect(result).toBe(ProjectRole.EDITOR);
     });
 
     it('应该在用户不是成员时返回 null', async () => {
@@ -200,14 +200,14 @@ describe('FileSystemPermissionService', () => {
       const userId = 'user-123';
       const nodeId = 'node-123';
       const mockMember = {
-        projectRole: { name: 'EDITOR' },
+        projectRole: { name: ProjectRole.EDITOR },
       };
 
       mockPrisma.projectMember.findUnique.mockResolvedValue(mockMember);
 
       const result = await service.hasNodeAccessRole(userId, nodeId, [
-        'EDITOR',
-        'VIEWER',
+        ProjectRole.EDITOR,
+        ProjectRole.VIEWER,
       ]);
 
       expect(result).toBe(true);
@@ -217,14 +217,14 @@ describe('FileSystemPermissionService', () => {
       const userId = 'user-123';
       const nodeId = 'node-123';
       const mockMember = {
-        projectRole: { name: 'VIEWER' },
+        projectRole: { name: ProjectRole.VIEWER },
       };
 
       mockPrisma.projectMember.findUnique.mockResolvedValue(mockMember);
 
       const result = await service.hasNodeAccessRole(userId, nodeId, [
-        'EDITOR',
-        'OWNER',
+        ProjectRole.EDITOR,
+        ProjectRole.OWNER,
       ]);
 
       expect(result).toBe(false);
@@ -237,7 +237,7 @@ describe('FileSystemPermissionService', () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue(null);
 
       const result = await service.hasNodeAccessRole(userId, nodeId, [
-        'EDITOR',
+        ProjectRole.EDITOR,
       ]);
 
       expect(result).toBe(false);
@@ -313,7 +313,7 @@ describe('FileSystemPermissionService', () => {
           },
           projectRole: {
             id: 'role-1',
-            name: 'EDITOR',
+            name: ProjectRole.EDITOR,
             description: 'Editor role',
           },
         },

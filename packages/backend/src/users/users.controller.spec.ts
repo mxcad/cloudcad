@@ -6,6 +6,7 @@
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SystemRole } from '../common/enums/permissions.enum';
+import { UserStatus } from '../common/enums/user-status.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -22,13 +23,23 @@ describe('UsersController', () => {
     id: 'user-id',
     email: 'test@example.com',
     username: 'testuser',
+    password: 'hashedpassword',
     nickname: 'Test User',
-    avatar: undefined,
-    role: SystemRole.USER,
-    status: 'ACTIVE',
+    avatar: null,
+    roleId: 'role-id',
+    role: {
+      id: 'role-id',
+      name: 'USER',
+      description: '普通用户',
+      isSystem: true,
+      permissions: [],
+    },
+    status: UserStatus.ACTIVE,
+    emailVerified: true,
+    emailVerifiedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
+  } as any;
 
   const mockPaginatedResponse = {
     data: [mockUser],
@@ -38,7 +49,7 @@ describe('UsersController', () => {
       total: 1,
       totalPages: 1,
     },
-  };
+  } as any;
 
   beforeEach(async () => {
     const mockUsersService = {

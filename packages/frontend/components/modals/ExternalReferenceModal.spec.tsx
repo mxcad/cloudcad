@@ -23,8 +23,7 @@ describe('ExternalReferenceModal', () => {
     isOpen: true,
     files: mockFiles,
     loading: false,
-    onSelectFiles: vi.fn(),
-    onUpload: vi.fn(),
+    onSelectAndUpload: vi.fn(),
     onComplete: vi.fn(),
     onSkip: vi.fn(),
     onClose: vi.fn(),
@@ -33,17 +32,14 @@ describe('ExternalReferenceModal', () => {
   it('应该在 isOpen 为 true 时渲染模态框', () => {
     render(<ExternalReferenceModal {...defaultProps} />);
 
-    const title = screen.getByText('上传外部参照文件');
+    const title = screen.getByText('管理外部参照文件');
     expect(title).not.toBeNull();
-
-    const warningText = screen.getByText(/检测到 2 个缺失的外部参照文件/);
-    expect(warningText).not.toBeNull();
   });
 
   it('应该在 isOpen 为 false 时不渲染模态框', () => {
     render(<ExternalReferenceModal {...defaultProps} isOpen={false} />);
 
-    const title = screen.queryByText('上传外部参照文件');
+    const title = screen.queryByText('管理外部参照文件');
     expect(title).toBeNull();
   });
 
@@ -67,14 +63,12 @@ describe('ExternalReferenceModal', () => {
     expect(imgType).not.toBeNull();
   });
 
-  it('应该显示所有按钮', () => {
+  it('应该显示操作按钮', () => {
     render(<ExternalReferenceModal {...defaultProps} />);
 
-    expect(screen.getByText('选择文件')).not.toBeNull();
-    expect(screen.getByText('上传')).not.toBeNull();
-    expect(screen.getByText('稍后上传')).not.toBeNull();
-    expect(screen.getByText('完成')).not.toBeNull();
+    expect(screen.getByText('选择并上传')).not.toBeNull();
     expect(screen.getByText('取消')).not.toBeNull();
+    expect(screen.getByText('关闭')).not.toBeNull();
   });
 
   it('应该在所有文件上传成功时显示成功提示', () => {
@@ -137,21 +131,6 @@ describe('ExternalReferenceModal', () => {
     expect(progressText).not.toBeNull();
   });
 
-  it('应该在上传成功时禁用选择按钮', () => {
-    const successFiles: ExternalReferenceFile[] = [
-      {
-        ...mockFiles[0],
-        uploadState: 'success',
-        progress: 100,
-      },
-    ];
-
-    render(<ExternalReferenceModal {...defaultProps} files={successFiles} />);
-
-    const selectButton = screen.getByText('选择文件');
-    expect(selectButton.getAttribute('disabled')).toBe('');
-  });
-
   it('应该在上传中时禁用选择按钮', () => {
     const uploadingFiles: ExternalReferenceFile[] = [
       {
@@ -163,7 +142,7 @@ describe('ExternalReferenceModal', () => {
 
     render(<ExternalReferenceModal {...defaultProps} files={uploadingFiles} />);
 
-    const selectButton = screen.getByText('选择文件');
+    const selectButton = screen.getByText('选择并上传');
     expect(selectButton.getAttribute('disabled')).toBe('');
   });
 
@@ -203,17 +182,14 @@ describe('ExternalReferenceModal', () => {
     expect(progressText).not.toBeNull();
   });
 
-  it('应该在 loading 时禁用取消和稍后上传按钮', () => {
+  it('应该在 loading 时禁用取消按钮', () => {
     render(<ExternalReferenceModal {...defaultProps} loading={true} />);
 
     const cancelButton = screen.getByRole('button', { name: /取消/ });
     expect(cancelButton.getAttribute('disabled')).toBe('');
-
-    const skipButton = screen.getByText('稍后上传');
-    expect(skipButton.getAttribute('disabled')).toBe('');
   });
 
-  it('应该显示上传进度条', () => {
+  it('应该显示上传进度信息', () => {
     const uploadingFiles: ExternalReferenceFile[] = [
       {
         ...mockFiles[0],
@@ -248,25 +224,28 @@ describe('ExternalReferenceModal', () => {
     expect(failMessage).not.toBeNull();
   });
 
-  it('应该正确显示文件数量', () => {
+  it('应该正确显示缺失文件数量', () => {
     const files: ExternalReferenceFile[] = [
       {
         name: 'test1.dwg',
         type: 'ref',
         uploadState: 'notSelected',
         progress: 0,
+        exists: false,
       },
       {
         name: 'test2.dwg',
         type: 'ref',
         uploadState: 'notSelected',
         progress: 0,
+        exists: false,
       },
       {
         name: 'test3.dwg',
         type: 'ref',
         uploadState: 'notSelected',
         progress: 0,
+        exists: false,
       },
     ];
 
@@ -276,11 +255,21 @@ describe('ExternalReferenceModal', () => {
     expect(warningText).not.toBeNull();
   });
 
-  it('应该在无文件时正确显示', () => {
-    render(<ExternalReferenceModal {...defaultProps} files={[]} />);
+  it('应该在无缺失文件时显示正常提示', () => {
+    const existingFiles: ExternalReferenceFile[] = [
+      {
+        name: 'test1.dwg',
+        type: 'ref',
+        uploadState: 'notSelected',
+        progress: 0,
+        exists: true,
+      },
+    ];
 
-    const warningText = screen.getByText(/检测到 0 个缺失的外部参照文件/);
-    expect(warningText).not.toBeNull();
+    render(<ExternalReferenceModal {...defaultProps} files={existingFiles} />);
+
+    const infoText = screen.getByText(/所有外部参照文件已存在/);
+    expect(infoText).not.toBeNull();
   });
 
   it('应该显示文件列表表格', () => {
@@ -290,20 +279,6 @@ describe('ExternalReferenceModal', () => {
     expect(screen.getByText('文件名')).not.toBeNull();
     expect(screen.getByText('类型')).not.toBeNull();
     expect(screen.getByText('进度')).not.toBeNull();
-  });
-
-  it('应该显示成功图标', () => {
-    const successFiles: ExternalReferenceFile[] = [
-      {
-        ...mockFiles[0],
-        uploadState: 'success',
-        progress: 100,
-      },
-    ];
-
-    render(<ExternalReferenceModal {...defaultProps} files={successFiles} />);
-
-    expect(document.querySelector('.text-green-500')).not.toBeNull();
   });
 
   it('应该显示警告图标', () => {

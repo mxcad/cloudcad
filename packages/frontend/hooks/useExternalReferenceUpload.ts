@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { mxcadApi } from '../services/apiService';
 import type {
   PreloadingData,
@@ -27,14 +27,14 @@ export const useExternalReferenceUpload = (
   const [isOpen, setIsOpen] = useState(false);
 
   // 使用 ref 存储 nodeId，确保闭包中始终使用最新值
+  const nodeIdRef = useRef(config.nodeId);
 
-    const nodeIdRef = useRef(config.nodeId);
-
+  // 在 useEffect 中更新 ref，遵循 React 最佳实践
+  useEffect(() => {
     nodeIdRef.current = config.nodeId;
+  }, [config.nodeId]);
 
-  
-
-    // 使用 ref 存储正在进行的请求，避免重复请求
+  // 使用 ref 存储正在进行的请求，避免重复请求
 
     const pendingRequestsRef = useRef<Set<string>>(new Set());
 

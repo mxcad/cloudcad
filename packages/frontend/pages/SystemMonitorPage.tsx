@@ -3,6 +3,7 @@ import { Activity, Database, HardDrive, RefreshCw, CheckCircle, XCircle, AlertTr
 import { apiService } from '../services/api';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // 健康状态接口
 interface HealthStatus {
@@ -18,6 +19,7 @@ interface SystemHealth {
 }
 
 export const SystemMonitorPage: React.FC = () => {
+  useDocumentTitle('系统监控');
   const { hasPermission } = usePermission();
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,30 +34,14 @@ export const SystemMonitorPage: React.FC = () => {
     setPermissionChecked(true);
   }, [hasPermission]);
 
-  // 如果没有权限，显示无权限提示
-  if (permissionChecked && !hasAccess) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md text-center">
-          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">无权限访问</h2>
-          <p className="text-gray-600">您需要系统监控权限才能访问此页面</p>
-        </div>
-      </div>
-    );
-  }
-
   // 获取系统健康状态
   const fetchSystemHealth = async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await apiService.get('/health');
-      // 后端返回的是 NestJS Terminus 的 HealthCheckResult 格式
-      // { status: 'ok', info: { database: {...}, storage: {...} } }
       const healthData = response.data;
       if (healthData && healthData.info) {
-        // 添加 timestamp
         const timestamp = new Date().toISOString();
         setSystemHealth({
           database: {
@@ -78,16 +64,16 @@ export const SystemMonitorPage: React.FC = () => {
     }
   };
 
-  // 仅在有权限时才执行健康状态检查
+  // 获取系统健康状态（仅在有权限时执行）
   useEffect(() => {
-    if (!permissionChecked || !hasPermission(SystemPermission.SYSTEM_MONITOR)) {
+    if (!permissionChecked || !hasAccess) {
       return;
     }
     fetchSystemHealth();
     // 每 30 秒自动刷新
     const interval = setInterval(fetchSystemHealth, 30000);
     return () => clearInterval(interval);
-  }, [permissionChecked]);
+  }, [permissionChecked, hasAccess]);
 
   // 等待权限检查完成
   if (!permissionChecked) {
@@ -100,12 +86,14 @@ export const SystemMonitorPage: React.FC = () => {
     );
   }
 
-  // 检查是否有系统监控权限
-  if (!hasPermission(SystemPermission.SYSTEM_MONITOR)) {
+  // 如果没有权限，显示无权限提示
+  if (!hasAccess) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-gray-500">您没有访问系统监控的权限</p>
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md text-center">
+          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">无权限访问</h2>
+          <p className="text-gray-600">您需要系统监控权限才能访问此页面</p>
         </div>
       </div>
     );

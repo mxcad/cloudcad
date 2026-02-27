@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -77,7 +77,7 @@ import { CacheArchitectureModule } from './cache-architecture/cache-architecture
   ],
 })
 export class AppModule {
-  static configureSwagger(app: any) {
+  static configureSwagger(app: INestApplication): void {
     const config = new DocumentBuilder()
       .setTitle('CloudCAD API')
       .setDescription('图纸管理平台API文档')

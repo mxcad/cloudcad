@@ -128,7 +128,11 @@ export class UserDto {
     type: 'object',
     properties: {
       id: { type: 'string', example: 'clxxxxxxx' },
-      name: { type: 'string', enum: ['ADMIN', 'USER'], example: 'USER' },
+      name: {
+        type: 'string',
+        enum: ['ADMIN', 'USER_MANAGER', 'FONT_MANAGER', 'USER'],
+        example: 'USER',
+      },
       description: {
         type: 'string',
         example: '普通用户，基础权限',

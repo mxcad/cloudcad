@@ -1,9 +1,10 @@
-import { BookOpen, Box, FileText, Loader2, Search, Settings, Trash2, X } from 'lucide-react';
+import { BookOpen, Box, FileText, Loader2, Search, Trash2 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { galleryApi } from '../services/galleryApi';
 import { mxcadManager } from '../services/mxcadManager';
 import { MxFun } from 'mxdraw';
+import { useSidebar } from '../contexts/SidebarContext';
 
 // 图库类型
 type GalleryType = 'drawings' | 'blocks';
@@ -48,10 +49,12 @@ interface CADEditorSidebarProps {
 export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   onInsertFile,
 }) => {
+  // 使用 SidebarContext 管理侧边栏状态
+  const { isActive, close } = useSidebar('gallery');
+
   // 侧边栏宽度状态
   const [width, setWidth] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
 
@@ -85,22 +88,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
 
   // 当侧边栏宽度变化时，调整CAD编辑器容器位置
   useEffect(() => {
-    mxcadManager.adjustContainerPosition(isCollapsed ? 0 : width);
-  }, [width, isCollapsed]);
-
-  // 监听侧边栏切换命令
-  useEffect(() => {
-    const handleToggleSidebar = () => {
-      setIsCollapsed((prev) => !prev);
-      Logger.info(`侧边栏${isCollapsed ? '展开' : '折叠'}`);
-    };
-
-    window.addEventListener('mxcad-toggle-sidebar', handleToggleSidebar);
-
-    return () => {
-      window.removeEventListener('mxcad-toggle-sidebar', handleToggleSidebar);
-    };
-  }, [isCollapsed]);
+    mxcadManager.adjustContainerPosition(isActive ? width : 0);
+  }, [width, isActive]);
 
   const handleMouseUp = () => {
     setIsResizing(false);
@@ -109,7 +98,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   };
 
   // 获取分类列表
-  const fetchTypes = async () => {
+  const fetchTypes = useCallback(async () => {
     try {
       setLoading(true);
       const response =
@@ -119,44 +108,70 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       if (response.data?.code === 'success') {
         const newTypes = response.data.result?.allblocks || [];
         setTypes(newTypes);
-        fetchFiles(0);
       }
     } catch (error) {
       console.error('获取分类列表失败:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [galleryType]);
 
   // 获取文件列表
-  const fetchFiles = async (index: number = pageIndex) => {
-    try {
-      setLoading(true);
-      const queryParams = {
-        keywords: searchKeyword || undefined,
-        firstType: selectedFirstType === -1 ? undefined : selectedFirstType,
-        secondType: selectedSecondType === -1 ? undefined : selectedSecondType,
-        thirdType: selectedThirdType === -1 ? undefined : selectedThirdType,
-        pageIndex: index,
-        pageSize: 20,
-      };
+  const fetchFiles = useCallback(
+    async (index: number = pageIndex) => {
+      try {
+        setLoading(true);
+        const queryParams = {
+          keywords: searchKeyword || undefined,
+          firstType: selectedFirstType === -1 ? undefined : selectedFirstType,
+          secondType: selectedSecondType === -1 ? undefined : selectedSecondType,
+          thirdType: selectedThirdType === -1 ? undefined : selectedThirdType,
+          pageIndex: index,
+          pageSize: 20,
+        };
 
-      const response =
-        galleryType === 'drawings'
-          ? await galleryApi.getDrawingsFileList(queryParams)
-          : await galleryApi.getBlocksFileList(queryParams);
+        const response =
+          galleryType === 'drawings'
+            ? await galleryApi.getDrawingsFileList(queryParams)
+            : await galleryApi.getBlocksFileList(queryParams);
 
-      if (response.data) {
-        setFiles(response.data.sharedwgs || []);
-        setPagination(response.data.page);
-        setPageIndex(index);
+        if (response.data) {
+          setFiles(response.data.sharedwgs || []);
+          setPagination(response.data.page);
+          setPageIndex(index);
+        }
+      } catch (error) {
+        console.error('获取文件列表失败:', error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('获取文件列表失败:', error);
-    } finally {
-      setLoading(false);
+    },
+    [
+      galleryType,
+      pageIndex,
+      searchKeyword,
+      selectedFirstType,
+      selectedSecondType,
+      selectedThirdType,
+    ]
+  );
+
+  // 处理分类切换
+  useEffect(() => {
+    setTypes([]);
+    setFiles([]);
+    setSelectedFirstType(-1);
+    setSelectedSecondType(-1);
+    setPageIndex(0);
+    if (isActive) {
+      fetchTypes();
     }
-  };
+  }, [galleryType, isActive, fetchTypes]);
+
+  // 当分类或搜索关键词变化时，重新获取文件列表
+  useEffect(() => {
+    fetchFiles(0);
+  }, [fetchFiles]);
 
   // 处理搜索
   const handleSearch = () => {
@@ -171,14 +186,15 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
     setSelectedFirstType(-1);
     setSelectedSecondType(-1);
     setPageIndex(0);
-    if (!isCollapsed) {
+    if (isActive) {
       fetchTypes();
     }
-  }, [galleryType, isCollapsed]);
+  }, [galleryType, isActive, fetchTypes]);
 
   // 当分类或搜索关键词变化时，重新获取文件列表
   useEffect(() => {
     fetchFiles(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFirstType, selectedSecondType, selectedThirdType, searchKeyword]);
 
   // 获取一级分类列表
@@ -308,15 +324,18 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
     }
   };
 
+  // 未激活时不渲染
+  if (!isActive) {
+    return null;
+  }
+
   return (
     <>
       {/* 侧边栏 */}
       <div
         ref={sidebarRef}
-        className={`bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out ${
-          isCollapsed ? 'w-0 overflow-hidden' : ''
-        }`}
-        style={{ width: isCollapsed ? 0 : width }}
+        className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out"
+        style={{ width }}
       >
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#4A5568]">
@@ -564,16 +583,14 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       </div>
 
       {/* 调整宽度手柄 */}
-      {!isCollapsed && (
-        <div
-          ref={resizerRef}
-          onMouseDown={handleMouseDown}
-          className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${
-            isResizing ? 'bg-[#4F46E5]' : ''
-          }`}
-          style={{ left: width }}
-        />
-      )}
+      <div
+        ref={resizerRef}
+        onMouseDown={handleMouseDown}
+        className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${
+          isResizing ? 'bg-[#4F46E5]' : ''
+        }`}
+        style={{ left: width }}
+      />
     </>
   );
 };

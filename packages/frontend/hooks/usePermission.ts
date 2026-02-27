@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import type { Permission } from '../constants/permissions';
 import { SystemPermission } from '../constants/permissions';
@@ -12,6 +12,7 @@ import { SystemPermission } from '../constants/permissions';
  * 2. 用户登录时获取权限列表并缓存
  * 3. 权限检查使用类型安全的权限常量
  * 4. 权限变更只修改后端，运行 `pnpm generate:types` 重新生成前端类型
+ * 5. 使用 Set 数据结构优化权限搜索，将 O(n) 复杂度降为 O(1)
  */
 export const usePermission = () => {
   const { user } = useAuth();
@@ -19,7 +20,7 @@ export const usePermission = () => {
   /**
    * 获取用户的权限列表（从缓存）
    */
-  const getUserPermissions = (): Permission[] => {
+  const getUserPermissions = useCallback((): Permission[] => {
     if (!user?.role?.permissions || !Array.isArray(user.role.permissions)) {
       return [];
     }
@@ -39,7 +40,15 @@ export const usePermission = () => {
     }
 
     return permissions;
-  };
+  }, [user?.role?.permissions]);
+
+  /**
+   * 获取用户权限的 Set（用于高效查找）
+   * 使用 useMemo 缓存 Set，避免每次检查都重新创建
+   */
+  const permissionSet = useMemo(() => {
+    return new Set(getUserPermissions());
+  }, [getUserPermissions]);
 
   /**
    * 检查用户是否具有指定权限
@@ -47,57 +56,68 @@ export const usePermission = () => {
    * @example hasPermission(SystemPermission.USER_READ)
    * @example hasPermission(ProjectPermission.FILE_UPLOAD)
    */
-  const hasPermission = (permission: Permission): boolean => {
-    const permissions = getUserPermissions();
-    return permissions.includes(permission);
-  };
+  const hasPermission = useCallback(
+    (permission: Permission): boolean => {
+      return permissionSet.has(permission);
+    },
+    [permissionSet]
+  );
 
   /**
    * 检查用户是否具有任意一个指定权限
    * @param permissions 权限数组
    * @example hasAnyPermission([SystemPermission.USER_READ, SystemPermission.USER_WRITE])
    */
-  const hasAnyPermission = (permissions: Permission[]): boolean => {
-    return permissions.some((perm) => hasPermission(perm));
-  };
+  const hasAnyPermission = useCallback(
+    (permissions: Permission[]): boolean => {
+      return permissions.some((perm) => permissionSet.has(perm));
+    },
+    [permissionSet]
+  );
 
   /**
    * 检查用户是否具有所有指定权限
    * @param permissions 权限数组
    * @example hasAllPermissions([SystemPermission.USER_READ, SystemPermission.USER_WRITE])
    */
-  const hasAllPermissions = (permissions: Permission[]): boolean => {
-    return permissions.every((perm) => hasPermission(perm));
-  };
+  const hasAllPermissions = useCallback(
+    (permissions: Permission[]): boolean => {
+      return permissions.every((perm) => permissionSet.has(perm));
+    },
+    [permissionSet]
+  );
 
   /**
    * 获取用户角色
    */
-  const getUserRole = (): string | null => {
+  const getUserRole = useCallback((): string | null => {
     return user?.role?.name || null;
-  };
+  }, [user?.role?.name]);
 
   /**
    * 检查用户是否具有指定角色
    * @param roles 角色字符串或数组（如 'ADMIN' 或 ['ADMIN', 'USER']）
    */
-  const hasRole = (roles: string | string[]): boolean => {
-    const userRole = getUserRole();
-    if (!userRole) {
-      return false;
-    }
+  const hasRole = useCallback(
+    (roles: string | string[]): boolean => {
+      const userRole = getUserRole();
+      if (!userRole) {
+        return false;
+      }
 
-    const roleArray = Array.isArray(roles) ? roles : [roles];
-    return roleArray.includes(userRole);
-  };
+      const roleArray = Array.isArray(roles) ? roles : [roles];
+      return roleArray.includes(userRole);
+    },
+    [getUserRole]
+  );
 
   /**
    * 检查是否为系统管理员
    * 注意：此方法仅用于 UI 展示，权限控制应该使用 hasPermission
    */
-  const isAdmin = (): boolean => {
-    return hasPermission(SystemPermission.SYSTEM_ADMIN);
-  };
+  const isAdmin = useCallback((): boolean => {
+    return permissionSet.has(SystemPermission.SYSTEM_ADMIN);
+  }, [permissionSet]);
 
   return useMemo(
     () => ({
@@ -109,6 +129,14 @@ export const usePermission = () => {
       hasRole,
       isAdmin,
     }),
-    [user]
+    [
+      getUserPermissions,
+      hasPermission,
+      hasAnyPermission,
+      hasAllPermissions,
+      getUserRole,
+      hasRole,
+      isAdmin,
+    ]
   );
 };

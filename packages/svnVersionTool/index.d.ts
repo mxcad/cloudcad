@@ -75,6 +75,7 @@ export function svnDelete(
  * 列出 SVN 仓库内容
  * @param repoUrl - 仓库 URL
  * @param isRecursive - 是否递归
+ * @param revision - 修订版本号（可选）
  * @param username - 用户名（可选）
  * @param password - 密码（可选）
  * @param callback - 回调函数
@@ -82,6 +83,7 @@ export function svnDelete(
 export function svnList(
   repoUrl: string,
   isRecursive: boolean,
+  revision: number | null,
   username: string | null,
   password: string | null,
   callback: SvnCallback

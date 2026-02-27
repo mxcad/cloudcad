@@ -372,4 +372,82 @@ describe('RolesGuard', () => {
       expect(result).toBe(true);
     });
   });
+
+  describe('缓存机制', () => {
+    it('应该从缓存中读取用户角色', async () => {
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
+      cacheService.getUserRole.mockResolvedValue(SystemRole.USER);
+
+      const result = await guard.canActivate(mockContext);
+
+      expect(result).toBe(true);
+      expect(cacheService.getUserRole).toHaveBeenCalledWith(mockUser.id);
+      // 缓存命中时不应该调用 permissionService.hasRole
+      expect(permissionService.hasRole).not.toHaveBeenCalled();
+    });
+
+    it('缓存命中时应该返回正确的角色检查结果', async () => {
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
+      cacheService.getUserRole.mockResolvedValue(SystemRole.USER);
+
+      const result = await guard.canActivate(mockContext);
+
+      expect(result).toBe(false);
+    });
+
+    it('缓存未命中时应该调用 permissionService.hasRole', async () => {
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
+      cacheService.getUserRole.mockResolvedValue(null);
+      permissionService.hasRole.mockReturnValue(true);
+
+      await guard.canActivate(mockContext);
+
+      expect(permissionService.hasRole).toHaveBeenCalledWith(mockUser, [
+        SystemRole.USER,
+      ]);
+    });
+
+    it('修复：无论是否有角色都应该缓存结果（避免缓存穿透）', async () => {
+      // 这是一个回归测试，确保无论 hasRole 返回 true 还是 false，都会缓存结果
+      // 之前的 bug 是只有 hasRole = true 时才缓存，导致拒绝路径的缓存穿透
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
+      cacheService.getUserRole.mockResolvedValue(null);
+      permissionService.hasRole.mockReturnValue(false);
+
+      await guard.canActivate(mockContext);
+
+      // 关键验证：即使 hasRole 返回 false，也应该缓存用户角色
+      expect(cacheService.cacheUserRole).toHaveBeenCalledWith(
+        mockUser.id,
+        mockUser.role.name
+      );
+    });
+
+    it('用户有角色时应该缓存', async () => {
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.USER]);
+      cacheService.getUserRole.mockResolvedValue(null);
+      permissionService.hasRole.mockReturnValue(true);
+
+      await guard.canActivate(mockContext);
+
+      expect(cacheService.cacheUserRole).toHaveBeenCalledWith(
+        mockUser.id,
+        mockUser.role.name
+      );
+    });
+
+    it('缓存应该使用用户的角色名称', async () => {
+      mockContext.switchToHttp().getRequest().user = mockAdminUser;
+      reflector.getAllAndOverride.mockReturnValue([SystemRole.ADMIN]);
+      cacheService.getUserRole.mockResolvedValue(null);
+      permissionService.hasRole.mockReturnValue(true);
+
+      await guard.canActivate(mockContext);
+
+      expect(cacheService.cacheUserRole).toHaveBeenCalledWith(
+        mockAdminUser.id,
+        SystemRole.ADMIN
+      );
+    });
+  });
 });

@@ -94,25 +94,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = useCallback(async (account: string, password: string) => {
     console.log('[AuthContext] 开始登录:', account);
-    const response = await authApi.login({ account, password });
-    console.log('[AuthContext] 登录响应:', response);
+    try {
+      const response = await authApi.login({ account, password });
+      console.log('[AuthContext] 登录响应:', response);
 
-    const { accessToken, refreshToken, user: userData } = response.data;
-    console.log('[AuthContext] Access Token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'missing');
-    console.log('[AuthContext] Refresh Token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing');
+      const { accessToken, refreshToken, user: userData } = response.data;
+      console.log('[AuthContext] Access Token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'missing');
+      console.log('[AuthContext] Refresh Token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing');
 
-    // 存储到本地存储
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+      // 存储到本地存储
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(userData));
 
-    console.log('[AuthContext] Token 已存储到 localStorage');
+      console.log('[AuthContext] Token 已存储到 localStorage');
 
-    // 更新状态
-    setToken(accessToken);
-    setUser(userData);
+      // 更新状态
+      setToken(accessToken);
+      setUser(userData);
 
-    console.log('[AuthContext] 登录完成');
+      console.log('[AuthContext] 登录完成');
+    } catch (error) {
+      console.log('[AuthContext] 登录失败:', error);
+      // 重新抛出错误，让调用方处理
+      throw error;
+    }
   }, []);
 
   const register = useCallback(

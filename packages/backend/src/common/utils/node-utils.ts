@@ -119,7 +119,8 @@ export class NodeUtils {
       return false;
     }
 
-    // 检查是否包含非法字符
+    // 检查是否包含非法字符（包含控制字符是故意的，用于安全验证）
+    // eslint-disable-next-line no-control-regex
     const invalidChars = /[<>:"|?*\x00-\x1F]/;
     if (invalidChars.test(fileName)) {
       return false;

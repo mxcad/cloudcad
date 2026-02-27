@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
 import { HealthController } from './health.controller';
 import { HealthCheckService } from '@nestjs/terminus';
 import { DatabaseService } from '../database/database.service';
 import { StorageService } from '../storage/storage.service';
+import { PermissionService } from '../common/services/permission.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -15,11 +17,16 @@ describe('HealthController', () => {
   };
 
   const mockDatabaseService = {
-    healthCheck: jest.fn(),
+    healthCheck: jest.fn().mockResolvedValue({ status: 'healthy', message: 'OK' }),
   };
 
   const mockStorageService = {
-    healthCheck: jest.fn(),
+    healthCheck: jest.fn().mockResolvedValue({ status: 'healthy', message: 'OK' }),
+  };
+
+  const mockPermissionService = {
+    checkSystemPermission: jest.fn().mockResolvedValue(true),
+    checkSystemPermissionWithContext: jest.fn().mockResolvedValue(true),
   };
 
   beforeEach(async () => {
@@ -38,6 +45,11 @@ describe('HealthController', () => {
           provide: StorageService,
           useValue: mockStorageService,
         },
+        {
+          provide: PermissionService,
+          useValue: mockPermissionService,
+        },
+        Reflector,
       ],
     })
       .setLogger({
@@ -61,5 +73,17 @@ describe('HealthController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('should have health check service', () => {
+    expect(healthCheckService).toBeDefined();
+  });
+
+  it('should have database service', () => {
+    expect(databaseService).toBeDefined();
+  });
+
+  it('should have storage service', () => {
+    expect(storageService).toBeDefined();
   });
 });

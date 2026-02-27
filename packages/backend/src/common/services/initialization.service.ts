@@ -86,18 +86,42 @@ export class InitializationService implements OnModuleInit {
         {
           name: SystemRole.USER,
           description: '普通用户，基本访问权限',
-          permissions: [
-            'SYSTEM_USER_READ',
-          ],
+          permissions: [], // 普通用户无系统权限，仅用于登录
         },
       ];
 
       for (const roleConfig of defaultRoles) {
         const existingRole = await this.prisma.role.findFirst({
           where: { name: roleConfig.name },
+          include: { permissions: true },
         });
 
         if (existingRole) {
+          // 检查权限是否完整
+          const existingPermissionCount = existingRole.permissions.length;
+          const expectedPermissionCount = roleConfig.permissions.length;
+
+          if (existingPermissionCount !== expectedPermissionCount) {
+            this.logger.warn(
+              `系统角色 ${roleConfig.name} 权限不完整（${existingPermissionCount}/${expectedPermissionCount}），正在更新...`
+            );
+
+            // 删除所有现有权限
+            await this.prisma.rolePermission.deleteMany({
+              where: { roleId: existingRole.id },
+            });
+
+            // 重新分配权限
+            await this.prisma.rolePermission.createMany({
+              data: roleConfig.permissions.map((permission) => ({
+                roleId: existingRole.id,
+                permission: permission as any,
+              })),
+              skipDuplicates: true,
+            });
+
+            this.logger.log(`✅ 系统角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`);
+          }
           continue;
         }
 
@@ -134,17 +158,24 @@ export class InitializationService implements OnModuleInit {
    */
   private async createProjectDefaultRoles(): Promise<void> {
     try {
+      // 项目角色权限定义 - 必须与 DEFAULT_PROJECT_ROLE_PERMISSIONS 保持一致
       const defaultRoles = [
         {
           name: 'PROJECT_OWNER',
           description: '项目所有者，拥有项目的完整管理权限',
           permissions: [
+            // 项目管理权限
             'PROJECT_UPDATE', 'PROJECT_DELETE', 'PROJECT_MEMBER_MANAGE',
             'PROJECT_MEMBER_ASSIGN', 'PROJECT_TRANSFER', 'PROJECT_ROLE_MANAGE',
-            'PROJECT_ROLE_PERMISSION_MANAGE', 'FILE_CREATE', 'FILE_UPLOAD',
-            'FILE_OPEN', 'FILE_EDIT', 'FILE_DELETE', 'FILE_TRASH_MANAGE',
-            'FILE_DOWNLOAD',
-            'CAD_SAVE', 'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD',
+            'PROJECT_ROLE_PERMISSION_MANAGE',
+            // 文件操作权限
+            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
+            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
+            // CAD 图纸权限
+            'CAD_SAVE', 'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE',
+            // 图库权限
+            'GALLERY_ADD',
+            // 版本管理权限
             'VERSION_READ',
           ],
         },
@@ -152,37 +183,57 @@ export class InitializationService implements OnModuleInit {
           name: 'PROJECT_ADMIN',
           description: '项目管理员，管理项目和团队成员',
           permissions: [
+            // 项目管理权限（无删除和转让）
             'PROJECT_UPDATE', 'PROJECT_MEMBER_MANAGE', 'PROJECT_MEMBER_ASSIGN',
-            'PROJECT_ROLE_MANAGE', 'PROJECT_ROLE_PERMISSION_MANAGE',
+            // 文件操作权限
             'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
             'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
-            'CAD_SAVE',
-            'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'GALLERY_ADD', 'VERSION_READ',
-          ],
-        },
-        {
-          name: 'PROJECT_EDITOR',
-          description: '项目编辑者，可以编辑和管理项目文件',
-          permissions: [
-            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
-            'CAD_SAVE',
-            'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE', 'VERSION_READ',
+            // CAD 图纸权限
+            'CAD_SAVE', 'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE',
+            // 图库权限
+            'GALLERY_ADD',
+            // 版本管理权限
+            'VERSION_READ',
           ],
         },
         {
           name: 'PROJECT_MEMBER',
           description: '项目成员，可以查看和编辑项目内容',
           permissions: [
-            'FILE_OPEN', 'FILE_EDIT', 'FILE_DOWNLOAD',
-            'CAD_SAVE', 'VERSION_READ',
+            // 文件操作权限（无回收站管理）
+            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
+            'FILE_DELETE', 'FILE_DOWNLOAD',
+            // CAD 图纸权限（无外部参照管理）
+            'CAD_SAVE', 'CAD_EXPORT',
+            // 图库权限
+            'GALLERY_ADD',
+            // 版本管理权限
+            'VERSION_READ',
+          ],
+        },
+        {
+          name: 'PROJECT_EDITOR',
+          description: '项目编辑者，可以编辑项目文件',
+          permissions: [
+            // 文件操作权限（无创建和回收站管理）
+            'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
+            'FILE_DELETE', 'FILE_DOWNLOAD',
+            // CAD 图纸权限（无外部参照管理）
+            'CAD_SAVE', 'CAD_EXPORT',
+            // 版本管理权限
+            'VERSION_READ',
           ],
         },
         {
           name: 'PROJECT_VIEWER',
           description: '项目查看者，仅能查看项目内容',
           permissions: [
-            'FILE_OPEN', 'FILE_DOWNLOAD', 'VERSION_READ',
+            // 只读权限
+            'FILE_OPEN', 'FILE_DOWNLOAD',
+            // CAD 导出权限
+            'CAD_EXPORT',
+            // 版本管理权限
+            'VERSION_READ',
           ],
         },
       ];

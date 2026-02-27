@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsNumber, IsBoolean, IsDateString } from 'class-validator';
 
 /**
  * 缓存统计 DTO

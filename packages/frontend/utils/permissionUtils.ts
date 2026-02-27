@@ -4,7 +4,6 @@
  */
 
 import { logger } from './logger';
-import { SystemPermission } from '../constants/permissions';
 
 export type Role = 'ADMIN' | 'USER' | 'VIEWER';
 
@@ -17,9 +16,9 @@ export interface User {
 }
 
 /**
- * 节点访问角色
+ * 节点访问角色 - 与后端 ProjectRole 枚举保持一致
  */
-export type NodeAccessRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'EDITOR' | 'VIEWER';
+export type NodeAccessRole = 'PROJECT_OWNER' | 'PROJECT_ADMIN' | 'PROJECT_MEMBER' | 'PROJECT_EDITOR' | 'PROJECT_VIEWER';
 
 /**
  * 节点权限缓存
@@ -35,57 +34,6 @@ export const clearNodePermissionCache = (nodeId?: string) => {
   } else {
     nodePermissionCache.clear();
   }
-};
-
-/**
- * 检查用户是否具有指定角色
- * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission 方法。
- * @param user - 用户对象
- * @param requiredRole - 需要的角色
- * @returns boolean - 是否具有该角色
- */
-export const hasRole = (user: User | null, requiredRole: Role): boolean => {
-  if (!user?.role) {
-    return false;
-  }
-
-  // 不再自动赋予 ADMIN 所有权限，权限检查应该使用 hasPermission 方法
-  return user.role.name === requiredRole;
-};
-
-/**
- * 检查用户是否是管理员
- * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission(SystemPermission.SYSTEM_ADMIN) 方法。
- * @param user - 用户对象
- * @returns boolean - 是否是管理员
- */
-export const isAdmin = (user: User | null): boolean => {
-  return hasRole(user, 'ADMIN');
-};
-
-/**
- * 检查用户是否可以执行管理操作
- * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission 方法。
- * @param user - 用户对象
- * @returns boolean - 是否可以执行管理操作
- */
-export const canManage = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * 检查用户是否可以编辑
- * @deprecated 此方法已弃用，请使用权限检查替代。权限检查应该使用 usePermission hook 中的 hasPermission 方法。
- * @param user - 用户对象
- * @returns boolean - 是否可以编辑
- */
-export const canEdit = (user: User | null): boolean => {
-  if (!user) {
-    return false;
-  }
-
-  // 不再使用角色检查，权限检查应该使用 hasPermission 方法
-  return user.role?.name === 'ADMIN' || user.role?.name === 'USER';
 };
 
 /**
@@ -113,8 +61,6 @@ export const hasNodePermission = async (
     return false;
   }
 
-  // 不再自动赋予 ADMIN 所有权限，权限检查应该通过权限服务进行
-
   // 检查缓存
   if (nodePermissionCache.has(nodeId)) {
     const role = nodePermissionCache.get(nodeId);
@@ -138,24 +84,8 @@ export const hasNodePermission = async (
     const currentMember = members.find((m) => m.userId === user.id);
     const roleName = currentMember?.role.name;
 
-    // 将系统角色名称映射到 NodeAccessRole
-    const roleMap: Record<string, NodeAccessRole> = {
-      PROJECT_OWNER: 'OWNER',
-      PROJECT_ADMIN: 'ADMIN',
-      PROJECT_MEMBER: 'MEMBER',
-      PROJECT_EDITOR: 'EDITOR',
-      PROJECT_VIEWER: 'VIEWER',
-      // 向后兼容：旧系统的角色名称
-      OWNER: 'OWNER',
-      ADMIN: 'ADMIN',
-      MEMBER: 'MEMBER',
-      EDITOR: 'EDITOR',
-      VIEWER: 'VIEWER',
-    };
-
-    const userRole = roleName
-      ? ((roleMap[roleName] || roleName) as NodeAccessRole)
-      : undefined;
+    // 将后端角色名称映射到 NodeAccessRole（现在应该直接匹配）
+    const userRole = roleName ? (roleName as NodeAccessRole) : undefined;
 
     // 缓存用户的角色
     if (userRole) {
@@ -274,11 +204,11 @@ export const canViewNode = async (
   nodeId: string
 ): Promise<boolean> => {
   return hasNodePermission(user, nodeId, [
-    'OWNER',
-    'ADMIN',
-    'MEMBER',
-    'EDITOR',
-    'VIEWER',
+    'PROJECT_OWNER',
+    'PROJECT_ADMIN',
+    'PROJECT_MEMBER',
+    'PROJECT_EDITOR',
+    'PROJECT_VIEWER',
   ]);
 };
 

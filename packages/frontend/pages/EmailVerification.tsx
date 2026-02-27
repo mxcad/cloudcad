@@ -1,8 +1,14 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../services/authApi';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { APP_NAME, APP_LOGO } from '../constants/appConfig';
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export const EmailVerification: React.FC = () => {
+  useDocumentTitle('邮箱验证');
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyEmailAndLogin, isAuthenticated } = useAuth();
@@ -11,6 +17,11 @@ export const EmailVerification: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState<string>('');
   const [verificationCode, setVerificationCode] = useState<string>('');
+  
+  // 重发验证码相关状态
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     // 如果已经登录，跳转到首页
@@ -25,6 +36,22 @@ export const EmailVerification: React.FC = () => {
       setEmail(stateEmail);
     }
   }, [location, navigate, isAuthenticated]);
+
+  // 倒计时处理
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleVerifyEmail = async (code: string) => {
     if (!email) {
@@ -65,11 +92,37 @@ export const EmailVerification: React.FC = () => {
     await handleVerifyEmail(verificationCode.trim());
   };
 
-  const handleResendEmail = async () => {
-    // 这里可以添加重发邮件的逻辑
-    // 暂时提示用户联系客服
-    alert('如需重新发送验证邮件，请联系客服或重新注册');
-  };
+  const handleResendEmail = useCallback(async () => {
+    if (!email) {
+      setError('邮箱地址缺失，请重新注册');
+      return;
+    }
+
+    if (resendCooldown > 0 || resendLoading) {
+      return;
+    }
+
+    setResendLoading(true);
+    setError(null);
+    setResendSuccess(false);
+
+    try {
+      await authApi.resendVerification(email);
+      setResendSuccess(true);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      // 5秒后隐藏成功提示
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (err) {
+      const errorMessage =
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+        (err as Error).message ||
+        '发送失败，请稍后重试';
+      setError(errorMessage);
+    } finally {
+      setResendLoading(false);
+    }
+  }, [email, resendCooldown, resendLoading]);
 
   if (success) {
     return (
@@ -151,9 +204,19 @@ export const EmailVerification: React.FC = () => {
       <div className="max-w-md w-full relative z-10 animate-scale-in">
         {/* Logo 和标题 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float overflow-hidden">
+            <img
+              src={APP_LOGO}
+              alt={APP_NAME}
+              className="w-full h-full object-contain p-2"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as SVGElement;
+                if (fallback) fallback.style.display = 'block';
+              }}
+            />
             <svg
-              className="w-10 h-10 text-white"
+              className="w-10 h-10 text-white hidden"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -163,7 +226,7 @@ export const EmailVerification: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-4xl font-bold text-slate-900 mb-2">
-            <span className="text-gradient-primary">CloudCAD</span>
+            <span className="text-gradient-primary">{APP_NAME}</span>
           </h2>
           <p className="text-slate-600">验证您的邮箱地址</p>
         </div>
@@ -292,11 +355,41 @@ export const EmailVerification: React.FC = () => {
             </div>
 
             <div className="space-y-3">
+              {/* 重发成功提示 */}
+              {resendSuccess && (
+                <div className="rounded-xl bg-success-50 border border-success-200 p-4 animate-slide-up">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-success-600 flex-shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span className="text-sm text-success-800">
+                      验证邮件已重新发送，请查收
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleResendEmail}
-                className="w-full flex justify-center py-3 px-4 border border-slate-200 text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition-all"
+                disabled={resendCooldown > 0 || resendLoading || !email}
+                className="w-full flex justify-center py-3 px-4 border border-slate-200 text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                重新发送验证邮件
+                {resendLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                    发送中...
+                  </span>
+                ) : resendCooldown > 0 ? (
+                  `${resendCooldown}秒后可重新发送`
+                ) : (
+                  '重新发送验证邮件'
+                )}
               </button>
 
               <button

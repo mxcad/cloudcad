@@ -231,6 +231,8 @@ export class PermissionCacheService implements OnModuleDestroy {
     const keysToDelete = [
       CacheKeyUtil.userPermissions(userIdNum),
       CacheKeyUtil.user(userIdNum),
+      // 删除 is_admin 缓存
+      `is_admin:${userId}`,
       // 删除所有单个权限缓存
       ...Object.values(SystemPermission).map((perm) => `system_perm:${userId}:${perm}`),
     ];

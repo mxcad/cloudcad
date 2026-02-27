@@ -98,7 +98,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
             取消
           </Button>
           <Button onClick={handleSubmit} disabled={!value.trim() || loading}>
-            {loading ? '提交�?..' : '确定'}
+            {loading ? '提交中...' : '确定'}
           </Button>
         </>
       }

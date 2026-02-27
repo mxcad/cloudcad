@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
   ExpressAdapter,
@@ -8,6 +9,8 @@ import session from 'express-session';
 import { createClient } from 'redis';
 import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
+
+const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   // 设置控制台编码为 UTF-8，解决 Windows 中文乱码问题
@@ -20,6 +23,9 @@ async function bootstrap() {
   server.use(express.json({ limit: '50mb' }));
   server.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+  // 禁用 Express 的默认错误处理器，让 NestJS 的异常过滤器处理所有异常
+  server.disable('x-powered-by');
+
   // 创建 Redis 客户端
   const redisClient = createClient({
     socket: {
@@ -30,8 +36,8 @@ async function bootstrap() {
     database: parseInt(process.env.REDIS_DB || '0'),
   });
 
-  await redisClient.connect().catch((err) => {
-    console.error('Redis 连接失败:', err);
+  await redisClient.connect().catch((err: Error) => {
+    logger.error('Redis 连接失败:', err.message);
   });
 
   // 配置 Redis Session 存储
@@ -68,6 +74,9 @@ async function bootstrap() {
     }
   );
 
+  // 全局前缀
+  app.setGlobalPrefix('api');
+
   // 启用CORS
   app.enableCors({
     origin: true,
@@ -81,12 +90,6 @@ async function bootstrap() {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   });
-
-  // 全局前缀
-  app.setGlobalPrefix('api');
-
-  // 全局前缀
-  app.setGlobalPrefix('api');
 
   // 配置Swagger文档
   AppModule.configureSwagger(app);

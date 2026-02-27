@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { UserStatus } from '../common/enums/user-status.enum';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -18,9 +19,9 @@ describe('AuthController', () => {
       email: 'test@example.com',
       username: 'testuser',
       nickname: 'Test User',
-      avatar: undefined,
+      avatar: null,
       role: 'USER',
-      status: 'ACTIVE',
+      status: UserStatus.ACTIVE,
     },
   };
 
@@ -30,9 +31,10 @@ describe('AuthController', () => {
     username: 'testuser',
     password: 'hashed-password',
     nickname: 'Test User',
-    avatar: undefined,
+    avatar: null,
+    roleId: 'role-id',
     role: 'USER' as const,
-    status: 'ACTIVE' as const,
+    status: UserStatus.ACTIVE,
     emailVerified: true,
     emailVerifiedAt: new Date(),
     createdAt: new Date(),

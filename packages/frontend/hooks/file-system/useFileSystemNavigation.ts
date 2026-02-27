@@ -1,7 +1,7 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileSystemNode } from '../../types/filesystem';
 import { filesApi } from '../../services/apiService';
+import { FileSystemNode } from '../../types/filesystem';
 import { logger } from '../../utils/logger';
 import { handleError } from '../../utils/errorHandler';
 
@@ -33,6 +33,10 @@ export const useFileSystemNavigation = ({
   showToast,
 }: UseFileSystemNavigationProps) => {
   const navigate = useNavigate();
+
+  // 下载格式模态框状态
+  const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
+  const [downloadingNode, setDownloadingNode] = useState<FileSystemNode | null>(null);
 
   const handleGoBack = useCallback(() => {
     if (currentNode?.parentId) {
@@ -87,6 +91,18 @@ export const useFileSystemNavigation = ({
 
   const handleDownload = useCallback(
     async (node: FileSystemNode) => {
+      // 判断是否为 CAD 文件
+      const isCadFile = ['.dwg', '.dxf'].some((ext) =>
+        node.name.toLowerCase().endsWith(ext)
+      );
+
+      // 如果是 CAD 文件，显示格式选择模态框
+      if (isCadFile && !node.isFolder) {
+        setDownloadingNode(node);
+        setShowDownloadFormatModal(true);
+        return;
+      }
+
       // 检查节点是否在回收站中
       if (node.deletedAt) {
         return;
@@ -96,6 +112,7 @@ export const useFileSystemNavigation = ({
         logger.info('开始下载文件', 'useFileSystemNavigation', {
           nodeId: node.id,
           fileName: node.name,
+          isFolder: node.isFolder,
         });
 
         const response = await filesApi.download(node.id);
@@ -136,7 +153,64 @@ export const useFileSystemNavigation = ({
         showToast(errorMessage, 'error');
       }
     },
-    [showToast, filesApi, handleError]
+    [showToast]
+  );
+
+  const handleDownloadWithFormat = useCallback(
+    async (
+      format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
+      pdfOptions?: {
+        width?: string;
+        height?: string;
+        colorPolicy?: string;
+      }
+    ) => {
+      if (!downloadingNode) return;
+
+      try {
+        logger.info('开始下载文件（多格式）', 'useFileSystemNavigation', {
+          nodeId: downloadingNode.id,
+          fileName: downloadingNode.name,
+          format,
+        });
+
+        const response = await filesApi.downloadWithFormat(
+          downloadingNode.id,
+          format,
+          pdfOptions
+        );
+
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        const fileName = downloadingNode.originalName || downloadingNode.name;
+        const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+        const finalFileName = `${sanitizeFileName(nameWithoutExt)}.${format}`;
+
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast(`文件下载成功（${format.toUpperCase()} 格式）`, 'success');
+
+        setShowDownloadFormatModal(false);
+        setDownloadingNode(null);
+      } catch (error) {
+        let errorMessage = '文件下载失败';
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        handleError(error, '文件下载失败');
+        showToast(errorMessage, 'error');
+      }
+    },
+    [downloadingNode, showToast]
   );
 
   return {
@@ -145,5 +219,10 @@ export const useFileSystemNavigation = ({
     handleEnterProject,
     handleFileOpen,
     handleDownload,
+    handleDownloadWithFormat,
+    showDownloadFormatModal,
+    setShowDownloadFormatModal,
+    downloadingNode,
+    setDownloadingNode,
   };
 };

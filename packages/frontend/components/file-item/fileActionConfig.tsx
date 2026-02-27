@@ -294,6 +294,16 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
  * 获取节点的可用操作列表
  */
 export const getAvailableActions = (props: FileActionCheckProps): FileAction[] => {
+  // 回收站视图中只显示恢复和彻底删除操作
+  if (props.isTrash) {
+    return Object.values(FILE_ACTIONS).filter(
+      (action) =>
+        (action.type === 'restore' || action.type === 'permanently_delete') &&
+        action.visibilityCheck?.(props) !== false &&
+        action.permissionCheck?.(props) !== false
+    );
+  }
+
   return Object.values(FILE_ACTIONS).filter((action) => {
     // 检查可见性
     if (action.visibilityCheck && !action.visibilityCheck(props)) {

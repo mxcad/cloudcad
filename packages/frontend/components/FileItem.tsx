@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload } from 'lucide-react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errorHandler';
-import { mxcadApi } from '../services/mxcadApi';
 import { getOriginalFileUrl } from '../utils/fileUtils';
 import {
   Thumbnail,
@@ -270,7 +268,8 @@ export const FileItem: React.FC<FileItemProps> = ({
     onCopy: !!onCopy,
     onRestore: !!onRestore,
     onPermanentlyDelete: !!onPermanentlyDelete,
-    onDeleteNode: !!onDeleteNode,
+    // 对于项目根节点，使用 onDeleteNode；对于普通节点，使用 onDelete
+    onDeleteNode: !!onDeleteNode || !!onDelete,
   };
 
   // 调试信息：检查项目节点的操作参数

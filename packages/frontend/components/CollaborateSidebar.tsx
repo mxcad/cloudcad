@@ -1,0 +1,329 @@
+import { Users, UserPlus, LogOut, RefreshCw, Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MxCpp } from 'mxcad';
+import { useSidebar } from '../contexts/SidebarContext';
+import { mxcadManager } from '../services/mxcadManager';
+import { APP_COOPERATE_URL } from '@/constants/appConfig';
+
+/**
+ * 协同侧边栏组件
+ * 提供协同功能的创建、加入、退出和列表展示
+ */
+export const CollaborateSidebar: React.FC = () => {
+  const { isActive, close } = useSidebar('collaborate');
+  const getCooperate = () => {
+    const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
+    cooperate.init({
+      server_addres: APP_COOPERATE_URL
+    })
+    return cooperate;
+  }
+  // 侧边栏宽度状态
+  const [width, setWidth] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // 协同数据状态
+  const [works, setWorks] = useState<number[]>([]);
+  const [currentWorkId, setCurrentWorkId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [joiningWorkId, setJoiningWorkId] = useState<number | null>(null);
+
+  // 当侧边栏宽度变化时，调整CAD编辑器容器位置
+  useEffect(() => {
+    mxcadManager.adjustContainerPosition(isActive ? width : 0);
+  }, [width, isActive]);
+
+  // 获取协同列表
+  const fetchWorks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const cooperate = getCooperate()
+      if (!cooperate) {
+        console.warn('协同对象未初始化');
+        return;
+      }
+
+      cooperate.getWorks((workList: number[]) => {
+        console.log('获取协同列表成功:', workList);
+        setWorks(workList);
+        setLoading(false);
+      });
+    } catch (error) {
+      console.error('获取协同列表失败:', error);
+      setLoading(false);
+    }
+  }, []);
+  // 当侧边栏打开时，获取协同列表
+  useEffect(() => {
+    if (isActive) {
+      fetchWorks();
+    } else {
+      // 关闭时重置状态
+      setWorks([]);
+      setCurrentWorkId(null);
+    }
+  }, [isActive, fetchWorks]);
+
+  // 创建协同
+  const handleCreateWork = useCallback(async () => {
+    try {
+      setCreating(true);
+      const cooperate = getCooperate()
+      if (!cooperate) {
+        alert('协同对象未初始化');
+        setCreating(false);
+        return;
+      }
+
+      cooperate.createWrok((workid: number) => {
+        setCreating(false);
+        if (workid > 0) {
+          console.log('创建协同成功, workId:', workid);
+          fetchWorks();
+          alert(`协同创建成功！协同ID: ${workid}`);
+        } else {
+          const errorCode = -workid;
+          console.log('创建协同失败, error code:', errorCode);
+          if (errorCode === 4) {
+            alert('协同已存在，您已在协同中');
+          } else {
+            alert(`创建协同失败，错误码: ${errorCode}`);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('创建协同失败:', error);
+      setCreating(false);
+      alert('创建协同失败');
+    }
+  }, [fetchWorks]);
+
+  // 加入协同
+  const handleJoinWork = useCallback(
+    async (workId: number) => {
+      try {
+        setJoiningWorkId(workId);
+        const cooperate = getCooperate()
+        if (!cooperate) {
+          alert('协同对象未初始化');
+          setJoiningWorkId(null);
+          return;
+        }
+
+        cooperate.joinWork(workId, async (iRet: number) => {
+          setJoiningWorkId(null);
+          if (iRet === 0) {
+            console.log('加入协同成功, workId:', workId);
+            setCurrentWorkId(workId);
+          } else {
+            console.log('加入协同失败, error code:', iRet);
+            if (iRet === 17) {
+              setCurrentWorkId(workId);
+            } else {
+              alert(`加入协同失败，错误码: ${iRet}`);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('加入协同失败:', error);
+        setJoiningWorkId(null);
+        alert('加入协同失败');
+      }
+    },
+    []
+  );
+
+  // 退出协同
+  const handleExitWork = useCallback(async () => {
+    try {
+      const cooperate = getCooperate()
+      if (!cooperate) {
+        alert('协同对象未初始化');
+        return;
+      }
+
+      const ret = cooperate.exitWrok();
+      if (ret === 0) {
+        console.log('退出协同成功');
+        setCurrentWorkId(null);
+        fetchWorks();
+        alert('已退出协同');
+      } else {
+        console.log('退出协同失败, error code:', ret);
+        alert(`退出协同失败，错误码: ${ret}`);
+      }
+    } catch (error) {
+      console.error('退出协同失败:', error);
+      alert('退出协同失败');
+    }
+  }, [fetchWorks]);
+
+  // 调整宽度处理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!sidebarRef.current) return;
+    const newWidth = e.clientX - sidebarRef.current.getBoundingClientRect().left;
+    if (newWidth >= 200 && newWidth <= 600) {
+      setWidth(newWidth);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  // 未激活时不渲染
+  if (!isActive) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* 侧边栏 */}
+      <div
+        ref={sidebarRef}
+        className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out"
+        style={{ width }}
+      >
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#4A5568]">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-[#4F46E5]" />
+            <span className="font-semibold text-sm text-[#E2E8F0]">协同</span>
+          </div>
+          <button
+            onClick={close}
+            className="p-1 hover:bg-[#333A47] rounded transition-colors"
+            title="关闭"
+          >
+            <LogOut className="w-4 h-4 text-[#94A3B8]" />
+          </button>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="flex gap-2 p-3 border-b border-[#4A5568]">
+          <button
+            onClick={handleCreateWork}
+            disabled={creating || currentWorkId !== null}
+            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-colors ${creating || currentWorkId !== null
+              ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
+              : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+              }`}
+          >
+            {creating ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <UserPlus className="w-4 h-4" />
+            )}
+            {creating ? '创建中...' : '创建协同'}
+          </button>
+
+          <button
+            onClick={fetchWorks}
+            disabled={loading}
+            className="p-2 bg-[#252B3A] hover:bg-[#333A47] rounded transition-colors"
+            title="刷新列表"
+          >
+            <RefreshCw
+              className={`w-4 h-4 text-[#94A3B8] ${loading ? 'animate-spin' : ''}`}
+            />
+          </button>
+        </div>
+
+        {/* 当前协同状态 */}
+        {currentWorkId !== null && (
+          <div className="px-3 py-2 border-b border-[#4A5568] bg-[#252B3A]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm text-[#E2E8F0]">
+                  当前协同: <strong>{currentWorkId}</strong>
+                </span>
+              </div>
+              <button
+                onClick={handleExitWork}
+                className="px-2 py-1 text-xs bg-[#EF4444] hover:bg-[#DC2626] text-white rounded transition-colors"
+              >
+                退出
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 协同列表 */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-[#4F46E5] animate-spin" />
+            </div>
+          ) : works.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-[#94A3B8]">
+              <Users className="w-10 h-10 mb-2 opacity-50" />
+              <p className="text-xs text-center px-4">暂无协同会话</p>
+              <p className="text-xs text-center px-4 mt-1">
+                点击「创建协同」开始协作
+              </p>
+            </div>
+          ) : (
+            <div className="p-2 space-y-2">
+              {works.map((workId) => (
+                <div
+                  key={workId}
+                  className={`flex items-center justify-between p-3 rounded transition-colors ${currentWorkId === workId
+                    ? 'bg-[#4F46E5]/20 border border-[#4F46E5]'
+                    : 'bg-[#252B3A] hover:bg-[#333A47]'
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#94A3B8]" />
+                    <span className="text-sm text-[#E2E8F0]">协同 {workId}</span>
+                  </div>
+                  {currentWorkId === workId ? (
+                    <span className="text-xs text-green-400">已加入</span>
+                  ) : (
+                    <button
+                      onClick={() => handleJoinWork(workId)}
+                      disabled={joiningWorkId !== null || currentWorkId !== null}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${joiningWorkId === workId
+                        ? 'bg-[#4F46E5] text-white'
+                        : joiningWorkId !== null || currentWorkId !== null
+                          ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
+                          : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+                        }`}
+                    >
+                      {joiningWorkId === workId ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        '加入'
+                      )}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 调整宽度手柄 */}
+      <div
+        onMouseDown={handleMouseDown}
+        className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${isResizing ? 'bg-[#4F46E5]' : ''
+          }`}
+        style={{ left: width }}
+      />
+    </>
+  );
+};
+
+export default CollaborateSidebar;

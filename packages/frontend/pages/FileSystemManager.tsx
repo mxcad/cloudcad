@@ -8,12 +8,13 @@ import { Pagination } from '../components/ui/Pagination';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
-import { useFileSystem } from '../hooks/useFileSystem';
+import { useFileSystem } from '../hooks/file-system';
 import { useProjectManagement } from '../hooks/useProjectManagement';
 import { usePermission } from '../hooks/usePermission';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import { useAuth } from '../contexts/AuthContext';
 import { projectsApi } from '../services/apiService';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
   EmptyFolderIcon,
   RefreshIcon,
@@ -36,6 +37,7 @@ import { versionControlApi } from '../services/versionControlApi';
 import { ProjectPermission } from '../constants/permissions';
 
 export const FileSystemManager: React.FC = () => {
+  useDocumentTitle('项目管理');
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; nodeId?: string }>();
   const location = useLocation();
@@ -75,6 +77,7 @@ export const FileSystemManager: React.FC = () => {
     setIsMultiSelectMode,
     toasts,
     confirmDialog,
+    showToast,
     showCreateFolderModal,
     showRenameModal,
     showDownloadFormatModal,
@@ -136,6 +139,7 @@ export const FileSystemManager: React.FC = () => {
     onProjectCreated: handleRefresh,
     onProjectUpdated: handleRefresh,
     onProjectDeleted: handleRefresh,
+    showToast,
   });
 
   // 权限管理 hook
@@ -180,6 +184,8 @@ export const FileSystemManager: React.FC = () => {
           ProjectPermission.FILE_DELETE,
           ProjectPermission.FILE_TRASH_MANAGE,
           ProjectPermission.FILE_DOWNLOAD,
+          ProjectPermission.FILE_MOVE,
+          ProjectPermission.FILE_COPY,
           ProjectPermission.CAD_SAVE,
           ProjectPermission.CAD_EXPORT,
           ProjectPermission.CAD_EXTERNAL_REFERENCE,
@@ -204,12 +210,12 @@ export const FileSystemManager: React.FC = () => {
     loadProjectPermissions();
   }, [user, urlProjectId, checkPermission]);
 
-  // 移动/拷贝状态
+  // 移动/拷贝状态（支持批量操作标记）
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
-  const [moveSourceNode, setMoveSourceNode] = useState<FileSystemNode | null>(
+  const [moveSourceNode, setMoveSourceNode] = useState<FileSystemNode | { id: 'batch' } | null>(
     null
   );
-  const [copySourceNode, setCopySourceNode] = useState<FileSystemNode | null>(
+  const [copySourceNode, setCopySourceNode] = useState<FileSystemNode | { id: 'batch' } | null>(
     null
   );
 
@@ -221,7 +227,7 @@ export const FileSystemManager: React.FC = () => {
   // 版本历史相关状态
   const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
   const [versionHistoryNode, setVersionHistoryNode] = useState<FileSystemNode | null>(null);
-  const [versionHistoryEntries, setVersionHistoryEntries] = useState<any[]>([]);
+  const [versionHistoryEntries, setVersionHistoryEntries] = useState<{ revision: number; author: string; date: string; message: string }[]>([]);
   const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
   const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
 
@@ -600,7 +606,8 @@ export const FileSystemManager: React.FC = () => {
         setMoveSourceNode(null);
         setCopySourceNode(null);
       } catch (error) {
-        alert('操作失败，请重试');
+        const errorMessage = (error as Error).message || '操作失败，请重试';
+        showToast(errorMessage, 'error');
       }
     },
     [
@@ -675,7 +682,8 @@ export const FileSystemManager: React.FC = () => {
         }
         handleRefresh();
       } catch (error) {
-        alert('操作失败，请重试');
+        const errorMessage = (error as Error).message || '操作失败，请重试';
+        showToast(errorMessage, 'error');
       } finally {
         setDraggedNodes([]);
       }
@@ -1175,8 +1183,8 @@ export const FileSystemManager: React.FC = () => {
                     ? () => handleShowRoles(node)
                     : undefined
                 }
-                onMove={!node.isRoot && handleMove}
-                onCopy={!node.isRoot ? handleCopy : undefined}
+                onMove={!node.isRoot && projectPermissions[ProjectPermission.FILE_MOVE] ? handleMove : undefined}
+                onCopy={!node.isRoot && projectPermissions[ProjectPermission.FILE_COPY] ? handleCopy : undefined}
                 onAddToGallery={
                   !node.isFolder &&
                   !isTrashView &&
@@ -1288,7 +1296,7 @@ export const FileSystemManager: React.FC = () => {
               <>
                 <button
                   onClick={() => {
-                    setMoveSourceNode({ id: 'batch' } as any);
+                    setMoveSourceNode({ id: 'batch' });
                     setCopySourceNode(null);
                     setShowSelectFolderModal(true);
                   }}
@@ -1299,7 +1307,7 @@ export const FileSystemManager: React.FC = () => {
                 <button
                   onClick={() => {
                     setMoveSourceNode(null);
-                    setCopySourceNode({ id: 'batch' } as any);
+                    setCopySourceNode({ id: 'batch' });
                     setShowSelectFolderModal(true);
                   }}
                   className="text-slate-300 hover:text-white text-sm font-medium transition-colors"

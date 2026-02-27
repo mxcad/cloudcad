@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { SvnLogEntry } from '../../services/versionControlApi';
 import { FileSystemNode } from '../../types/filesystem';
+import { History } from 'lucide-react';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;
@@ -26,33 +27,38 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
   const formatDate = (date: Date) => {
     const d = new Date(date);
-    return d.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      if (hours === 0) {
+        const minutes = Math.floor(diff / (1000 * 60));
+        return minutes <= 1 ? '刚刚' : `${minutes}分钟前`;
+      }
+      return `${hours}小时前`;
+    } else if (days === 1) {
+      return '昨天';
+    } else if (days < 7) {
+      return `${days}天前`;
+    }
+    
+    return d.toLocaleDateString('zh-CN', {
+      month: 'numeric',
+      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  const getActionLabel = (action: string) => {
-    const labels: Record<string, string> = {
-      A: '添加',
-      M: '修改',
-      D: '删除',
-      R: '替换',
-    };
-    return labels[action] || action;
-  };
-
-  const getActionColor = (action: string) => {
-    const colors: Record<string, string> = {
-      A: 'text-green-600',
-      M: 'text-blue-600',
-      D: 'text-red-600',
-      R: 'text-orange-600',
-    };
-    return colors[action] || 'text-slate-600';
+  // 从消息中提取用户说明
+  const extractUserNote = (message: string): string | null => {
+    const saveMatch = message.match(/^Save:\s*.+?\s*-\s*(.+)$/i);
+    if (saveMatch) {
+      return saveMatch[1].trim();
+    }
+    return null;
   };
 
   return (
@@ -60,70 +66,81 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`版本历史 - ${node?.name || '文件'}`}
-      size="lg"
+      size="md"
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            关闭
-          </Button>
-        </>
+        <Button variant="ghost" onClick={onClose}>
+          关闭
+        </Button>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-2">
         {loading && (
-          <div className="text-center py-8 text-slate-500">加载中...</div>
+          <div className="flex items-center justify-center py-8 text-slate-500">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2" />
+            加载中...
+          </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded text-sm">
             {error}
           </div>
         )}
 
         {!loading && !error && entries.length === 0 && (
-          <div className="text-center py-8 text-slate-500">暂无版本历史</div>
+          <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+            <History className="w-10 h-10 mb-2 opacity-50" />
+            <p className="text-sm">暂无版本历史</p>
+          </div>
         )}
 
         {!loading && !error && entries.length > 0 && (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {entries.map((entry) => (
-              <div
-                key={entry.revision}
-                className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+          <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-72 overflow-y-auto">
+            {entries.map((entry) => {
+              const displayName = entry.userName || entry.author || '系统';
+              const userNote = extractUserNote(entry.message);
+              
+              return (
+                <div
+                  key={entry.revision}
+                  className="flex items-center justify-between px-3 py-2.5 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* 版本号 */}
+                    <span className="font-mono text-sm font-medium text-slate-700 flex-shrink-0">
                       r{entry.revision}
                     </span>
-                    <span className="text-sm text-slate-600">
-                      {entry.userName || entry.author || '未知用户'}
+                    
+                    {/* 操作人 */}
+                    <span className="text-sm text-slate-600 truncate max-w-[100px]" title={displayName}>
+                      {displayName}
                     </span>
+                    
+                    {/* 时间 */}
+                    <span className="text-xs text-slate-400 flex-shrink-0">
+                      {formatDate(entry.date)}
+                    </span>
+                    
+                    {/* 用户说明 */}
+                    {userNote && (
+                      <span className="text-sm text-slate-500 truncate flex-1" title={userNote}>
+                        · {userNote}
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs text-slate-500">
-                    {formatDate(entry.date)}
-                  </span>
-                </div>
-
-                {entry.message && (
-                  <div className="text-sm text-slate-700 mb-2">
-                    {entry.message}
-                  </div>
-                )}
-
-                {/* 不显示 paths 列表，对单个文件版本历史来说意义不大 */}
-
-                <div className="mt-3 pt-3 border-t border-slate-100">
+                  
+                  {/* 查看按钮 */}
                   <Button
-                    variant="primary"
+                    variant="ghost"
                     size="sm"
                     onClick={() => onOpenVersion(entry.revision)}
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 ml-2"
                   >
-                    在编辑器中打开
+                    查看
                   </Button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

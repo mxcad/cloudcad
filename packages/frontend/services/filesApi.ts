@@ -1,5 +1,20 @@
 import { apiClient } from './apiClient';
 
+/** 下载格式参数 */
+interface DownloadParams {
+  format: 'dwg' | 'dxf' | 'mxweb' | 'pdf';
+  width?: string;
+  height?: string;
+  colorPolicy?: string;
+}
+
+/** PDF 导出选项 */
+interface PdfOptions {
+  width?: string;
+  height?: string;
+  colorPolicy?: string;
+}
+
 export const filesApi = {
   list: () => apiClient.get('/files'),
 
@@ -32,13 +47,9 @@ export const filesApi = {
   downloadWithFormat: (
     id: string,
     format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
-    pdfOptions?: {
-      width?: string;
-      height?: string;
-      colorPolicy?: string;
-    }
+    pdfOptions?: PdfOptions
   ) => {
-    const params: any = { format };
+    const params: DownloadParams = { format };
     if (format === 'pdf' && pdfOptions) {
       if (pdfOptions.width) params.width = pdfOptions.width;
       if (pdfOptions.height) params.height = pdfOptions.height;

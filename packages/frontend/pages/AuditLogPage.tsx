@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Filter, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { apiService } from '../services/apiService';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // 审计操作类型
 const AuditAction = {
@@ -92,19 +93,10 @@ const RESOURCE_TYPE_MAP: Record<string, string> = {
 };
 
 export const AuditLogPage: React.FC = () => {
+  useDocumentTitle('审计日志');
   const { hasPermission } = usePermission();
 
-  // 检查是否有系统管理员权限
-  if (!hasPermission(SystemPermission.SYSTEM_ADMIN)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-gray-500">您没有访问审计日志的权限</p>
-        </div>
-      </div>
-    );
-  }
-
+  // 所有 Hooks 必须在条件返回之前调用
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -130,10 +122,14 @@ export const AuditLogPage: React.FC = () => {
     successRate: 0,
   });
 
-  const loadLogs = async () => {
+  // 检查是否有系统管理员权限
+  const hasAdminPermission = hasPermission(SystemPermission.SYSTEM_ADMIN);
+
+  const loadLogs = useCallback(async () => {
+    if (!hasAdminPermission) return;
     setLoading(true);
     try {
-      const params: any = {
+      const params: Record<string, unknown> = {
         page,
         limit,
       };
@@ -155,11 +151,12 @@ export const AuditLogPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, filters, hasAdminPermission]);
 
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
+    if (!hasAdminPermission) return;
     try {
-      const params: any = {};
+      const params: Record<string, unknown> = {};
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
       if (filters.userId) params.userId = filters.userId;
@@ -174,12 +171,23 @@ export const AuditLogPage: React.FC = () => {
     } catch (error) {
       console.error('加载统计信息失败:', error);
     }
-  };
+  }, [filters, hasAdminPermission]);
 
   useEffect(() => {
     loadLogs();
     loadStatistics();
-  }, [page, filters]);
+  }, [loadLogs, loadStatistics]);
+
+  // 如果没有权限，在所有 Hooks 调用之后再返回
+  if (!hasAdminPermission) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-500">您没有访问审计日志的权限</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));

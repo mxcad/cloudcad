@@ -68,7 +68,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   onClose,
 }) => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [projectRoles, setProjectRoles] = useState<any[]>([]);
+  const [projectRoles, setProjectRoles] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -106,7 +106,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadProjectRoles = useCallback(async () => {
     try {
       const response = await projectRolesApi.getByProject(projectId);
-      const allRoles = (response.data as any[]) || [];
+      const allRoles = (response.data as { id: string; name: string }[]) || [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
       const addMemberRoles = allRoles.filter((role) => role.name !== 'PROJECT_OWNER');
@@ -561,26 +561,30 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         </TruncateText>
                       </p>
                     </div>
-                    <select
-                      value={member.projectRoleId}
-                      onChange={(e) =>
-                        handleUpdateRole(member.userId, e.target.value)
-                      }
-                      disabled={isOwner || !canAssignRoles}
-                      className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
-                        isOwner || !canAssignRoles
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      }`}
-                    >
-                      {projectRoles
-                        .filter((role) => role.name !== 'PROJECT_OWNER')
-                        .map((role) => (
-                          <option key={role.id} value={role.id}>
-                            {getRoleDisplayName(role.name, false)}
-                          </option>
-                        ))}
-                    </select>
+                    {isOwner ? (
+                      <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded flex-shrink-0 font-medium">
+                        项目所有者
+                      </span>
+                    ) : (
+                      <select
+                        value={member.projectRoleId}
+                        onChange={(e) =>
+                          handleUpdateRole(member.userId, e.target.value)
+                        }
+                        disabled={!canAssignRoles}
+                        className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
+                          !canAssignRoles ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {projectRoles
+                          .filter((role) => role.name !== 'PROJECT_OWNER')
+                          .map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {getRoleDisplayName(role.name, false)}
+                            </option>
+                          ))}
+                      </select>
+                    )}
                     {!isOwner && canManageMembers && (
                       <button
                         onClick={() => {

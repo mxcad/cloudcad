@@ -1,10 +1,22 @@
 ﻿import { MxCADView } from 'mxcad-app';
-import { Logger, UrlHelper } from '../utils/mxcadUtils';
+import { logger as Logger, UrlHelper } from '../utils/mxcadUtils';
 import { mxcadApi, apiService } from './apiService';
 import { MxFun } from 'mxdraw';
 import { McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../utils/hashUtils';
 import { uploadMxCadFile, MxCadUploadError } from '../utils/mxcadUploadUtils';
+
+// ==================== 类型定义 ====================
+
+interface ViewOptions {
+  rootContainer: HTMLElement;
+  openFile?: string;
+}
+
+interface FileInfo {
+  parentId?: string;
+  projectId?: string;
+}
 
 // ==================== 常量定义 ====================
 
@@ -61,6 +73,9 @@ let currentFileInfo: {
   projectId: string | null;
   name: string;
 } | null = null;
+
+// 当前打开的 mxweb 文件 URL（用于重新加载）
+let currentMxwebUrl: string | null = null;
 
 // 是否处于只读模式（历史版本访问）
 let isBrowseMode = false;
@@ -269,6 +284,186 @@ const updateLoadingMessage = (message: string): void => {
   }
 };
 
+// ==================== 保存确认弹框 ====================
+
+/**
+ * 显示保存确认弹框，获取用户输入的提交信息
+ * @returns Promise<string | null> 用户输入的提交信息，取消返回 null
+ */
+const showSaveConfirmDialog = (): Promise<string | null> => {
+  return new Promise((resolve) => {
+    // 创建弹框容器
+    const dialogId = 'mxcad-save-confirm-dialog';
+    let dialog = document.getElementById(dialogId) as HTMLElement;
+
+    if (dialog) {
+      document.body.removeChild(dialog);
+    }
+
+    dialog = document.createElement('div');
+    dialog.id = dialogId;
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    dialog.innerHTML = `
+      <div style="
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 450px;
+        overflow: hidden;
+      ">
+        <div style="
+          padding: 16px 20px;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        ">
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">保存文件</h3>
+          <button id="mxcad-save-dialog-close" style="
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: #9ca3af;
+          ">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div style="padding: 20px;">
+          <label style="
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+          ">
+            修改说明（可选）
+          </label>
+          <textarea id="mxcad-save-dialog-input" placeholder="请输入本次修改的内容说明..." style="
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+            font-family: inherit;
+          "></textarea>
+          <p style="
+            margin: 8px 0 0 0;
+            font-size: 12px;
+            color: #6b7280;
+          ">
+            此说明将记录在版本历史中，方便后续查看修改内容。
+          </p>
+        </div>
+        <div style="
+          padding: 16px 20px;
+          background: #f9fafb;
+          border-top: 1px solid #e5e7eb;
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+        ">
+          <button id="mxcad-save-dialog-cancel" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            取消
+          </button>
+          <button id="mxcad-save-dialog-confirm" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #4f46e5;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            保存
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const inputEl = dialog.querySelector('#mxcad-save-dialog-input') as HTMLTextAreaElement;
+    const closeBtn = dialog.querySelector('#mxcad-save-dialog-close') as HTMLElement;
+    const cancelBtn = dialog.querySelector('#mxcad-save-dialog-cancel') as HTMLElement;
+    const confirmBtn = dialog.querySelector('#mxcad-save-dialog-confirm') as HTMLElement;
+
+    const cleanup = () => {
+      if (dialog && dialog.parentNode) {
+        dialog.parentNode.removeChild(dialog);
+      }
+    };
+
+    const handleConfirm = () => {
+      const message = inputEl.value.trim();
+      cleanup();
+      resolve(message || '');
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    closeBtn.addEventListener('click', handleCancel);
+    cancelBtn.addEventListener('click', handleCancel);
+    confirmBtn.addEventListener('click', handleConfirm);
+
+    // 点击背景关闭
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) {
+        handleCancel();
+      }
+    });
+
+    // ESC 键关闭
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        document.removeEventListener('keydown', handleKeyDown);
+        handleCancel();
+      }
+      if (e.key === 'Enter' && e.ctrlKey) {
+        document.removeEventListener('keydown', handleKeyDown);
+        handleConfirm();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    // 自动聚焦输入框
+    setTimeout(() => inputEl.focus(), 100);
+  });
+};
+
 // ==================== openFile 命令辅助函数 ====================
 
 /**
@@ -291,7 +486,7 @@ function getUploadTargetNodeId(): string {
  */
 async function getProjectId(
   uploadTargetNodeId: string,
-  fileInfo: any,
+  fileInfo: FileInfo,
   newNodeId: string
 ): Promise<string> {
   let projectId = uploadTargetNodeId;
@@ -462,16 +657,33 @@ MxFun.addCommand('exportFile', () => {
 // ==================== Mx_ShowSidebar 命令 ====================
 
 /**
- * Mx_ShowSidebar 命令：显示/隐藏侧边栏
+ * Mx_ShowSidebar 命令：显示图库侧边栏
  */
 MxFun.addCommand('Mx_ShowSidebar', () => {
   Logger.info('========== 执行 Mx_ShowSidebar 命令 ==========');
 
-  // 触发自定义事件，通知侧边栏组件切换显示/隐藏状态
-  const event = new CustomEvent('mxcad-toggle-sidebar');
-
+  // 触发自定义事件，通知侧边栏管理器打开图库侧边栏
+  const event = new CustomEvent('mxcad-open-sidebar', {
+    detail: { type: 'gallery' },
+  });
   window.dispatchEvent(event);
-  Logger.info('已触发侧边栏切换事件');
+  Logger.info('已触发打开图库侧边栏事件');
+});
+
+// ==================== Mx_ShowCollaborate 命令 ====================
+
+/**
+ * Mx_ShowCollaborate 命令：显示协同侧边栏
+ */
+MxFun.addCommand('Mx_ShowCollaborate', () => {
+  Logger.info('========== 执行 Mx_ShowCollaborate 命令 ==========');
+
+  // 触发自定义事件，通知侧边栏管理器打开协同侧边栏
+  const event = new CustomEvent('mxcad-open-sidebar', {
+    detail: { type: 'collaborate' },
+  });
+  window.dispatchEvent(event);
+  Logger.info('已触发打开协同侧边栏事件');
 });
 
 // ==================== Mx_Save 命令 ====================
@@ -517,11 +729,18 @@ MxFun.addCommand('Mx_Save', async () => {
     const { fileId, name } = currentFileInfo;
     Logger.info(`准备保存文件: fileId=${fileId}, name=${name}`);
 
+    // 显示保存确认弹框，获取提交信息
+    const commitMessage = await showSaveConfirmDialog();
+    if (commitMessage === null) {
+      Logger.info('用户取消保存');
+      return;
+    }
+
     // 显示加载动画
     showLoadingOverlay('正在保存文件...');
 
     // 保存文件为 mxweb 格式
-    const savedFile = await new Promise<any>((resolve, reject) => {
+    const savedFile = await new Promise<{ blob: Blob; data: ArrayBuffer; filename: string }>((resolve, reject) => {
       MxCpp.App.getCurrentMxCAD().saveFile(
         name,
         (data) => {
@@ -558,7 +777,8 @@ MxFun.addCommand('Mx_Save', async () => {
       fileId,
       (percentage) => {
         updateLoadingMessage(`正在上传到服务器... ${percentage.toFixed(1)}%`);
-      }
+      },
+      commitMessage
     );
 
     Logger.info('服务器上传成功，开始更新本地缓存');
@@ -852,10 +1072,13 @@ private setupFileOpenListener(): void {
       }
     }
 
-    // 如果处于只读模式（历史版本访问），设置只读模式
+    // 根据只读模式标志设置或取消只读模式
     if (isBrowseMode) {
       Logger.info('文件打开完成，设置只读模式');
       this.mxcadView?.mxcad.setBrowse(true);
+    } else {
+      Logger.info('文件打开完成，取消只读模式');
+      this.mxcadView?.mxcad.setBrowse(false);
     }
     
     // 注意：不移除监听器，让监听器持续存在以支持多次打开文件
@@ -863,14 +1086,15 @@ private setupFileOpenListener(): void {
 
   this.mxcadView?.mxcad.on('openFileComplete', onOpen);
 }
-  /**
+
+/**
  * 构建视图选项
  * @param openFile 初始文件 URL
  * @returns 视图选项对象
  */
-private buildViewOptions(openFile?: string): any {
+private buildViewOptions(openFile?: string): ViewOptions {
   const containerManager = MxCADContainerManager.getInstance();
-  const viewOptions: any = {
+  const viewOptions: ViewOptions = {
     rootContainer: containerManager.getContainer(),
   };
 
@@ -923,15 +1147,19 @@ private async createInstance(openFile?: string): Promise<void> {
       throw new Error('MxCADView 实例未初始化');
     }
     try {
+      // 始终记录当前 mxweb URL（即使是相同文件也需要记录）
+      currentMxwebUrl = fileUrl;
+
       // 检查当前是否已有打开的文件
       const currentFileName = this.getCurrentFileName();
       const targetFileName = fileUrl.split('/').pop();
 
       // 如果目标文件已经打开，则跳过
+      // 注意：使用精确匹配，因为历史版本文件名（xxx_v78.mxweb）和当前版本（xxx.mxweb）可能被 includes 误匹配
       if (
         currentFileName &&
         targetFileName &&
-        currentFileName.includes(targetFileName)
+        currentFileName === targetFileName
       ) {
         Logger.info('目标文件已打开，跳过重复操作', {
           currentFileName,
@@ -957,8 +1185,9 @@ private async createInstance(openFile?: string): Promise<void> {
 
           Logger.success('使用 openWebFile 方法打开文件成功', { fileUrl });
           return;
-        } catch (error: any) {
-          if (error.message && error.message.includes('mxdrawObject')) {
+        } catch (error) {
+          const err = error as Error;
+          if (err.message && err.message.includes('mxdrawObject')) {
             Logger.warn(`mxdrawObject 未准备好，重试 ${attempt + 1}/${FILE_OPEN_RETRY_CONFIG.MAX_RETRIES}`, error);
 
             if (attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1) {
@@ -1001,6 +1230,51 @@ private async createInstance(openFile?: string): Promise<void> {
       return false;
     }
     return currentFileName.includes(targetFileName);
+  }
+
+  /**
+   * 重新加载当前文件
+   * 用于需要强制刷新文件状态的场景（如加入协同后）
+   * @returns 是否成功重新加载
+   */
+  async reloadCurrentFile(): Promise<boolean> {
+    if (!currentMxwebUrl) {
+      Logger.warn('没有记录的 mxweb URL，无法重新加载');
+      return false;
+    }
+
+    try {
+      Logger.info('重新加载当前文件:', currentMxwebUrl);
+
+      // 直接使用 openWebFile 打开，跳过重复文件检查
+      if (!this.mxcadView?.mxcad) {
+        Logger.error('mxcad 对象不可用，无法重新加载文件');
+        return false;
+      }
+
+      // 使用重试机制打开文件
+      for (let attempt = 0; attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES; attempt++) {
+        try {
+          this.mxcadView.mxcad.openWebFile(currentMxwebUrl);
+          Logger.success('重新加载文件成功:', currentMxwebUrl);
+          return true;
+        } catch (error) {
+          const err = error as Error;
+          if (err.message && err.message.includes('mxdrawObject')) {
+            Logger.warn(`mxdrawObject 未准备好，重试 ${attempt + 1}/${FILE_OPEN_RETRY_CONFIG.MAX_RETRIES}`, error);
+            if (attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1) {
+              await new Promise((resolve) => setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS));
+              continue;
+            }
+          }
+          throw error;
+        }
+      }
+      return false;
+    } catch (error) {
+      Logger.error('重新加载文件失败:', error);
+      return false;
+    }
   }
 
   isCreated(): boolean {
@@ -1075,6 +1349,15 @@ export class MxCADManager {
     return this.instanceManager.isFileOpen(targetFileName);
   }
 
+  /**
+   * 重新加载当前文件
+   * 用于需要强制刷新文件状态的场景（如加入协同后）
+   * @returns 是否成功重新加载
+   */
+  async reloadCurrentFile(): Promise<boolean> {
+    return this.instanceManager.reloadCurrentFile();
+  }
+
   reset(): void {
     this.instanceManager.reset();
   }
@@ -1083,6 +1366,14 @@ export class MxCADManager {
     isBrowseMode = is;
     Logger.info(`设置只读模式标志: ${is}`);
     // 实际的 setBrowse 调用会在文件打开完成事件 (openFileComplete) 中执行
+  }
+
+  /**
+   * 获取当前打开的文件信息
+   * @returns 当前文件信息，如果没有打开的文件则返回 null
+   */
+  getCurrentFileInfo(): { fileId: string; parentId: string | null; projectId: string | null; name: string } | null {
+    return currentFileInfo;
   }
 
   /**

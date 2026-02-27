@@ -10,6 +10,7 @@ import {
   svnImport,
   svnLog,
   svnCat,
+  svnList,
 } from '@cloudcad/svn-version-tool';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -23,6 +24,7 @@ const svnadminCreateAsync = promisify(svnadminCreate);
 const svnImportAsync = promisify(svnImport);
 const svnLogAsync = promisify(svnLog);
 const svnCatAsync: (filePath: string, revision: number, username: string | null, password: string | null) => Promise<Buffer> = promisify(svnCat) as any;
+const svnListAsync = promisify(svnList) as (repoUrl: string, isRecursive: boolean, revision: number | null, username: string | null, password: string | null) => Promise<string>;
 
 /**
  * SVN 操作结果
@@ -232,7 +234,27 @@ export class VersionControlService implements OnModuleInit {
         }
       }
 
-      // 最后提交目标目录（递归提交所有内容）
+      // 最后提交目标目录（排除 .mxweb 文件）
+      // 查找目录下所有非 .mxweb 文件
+      const files = this.findFilesExcludeMxweb(nodeDirectory);
+
+      if (files.length === 0) {
+        this.logger.log(`目录下没有文件需要提交: ${nodeDirectory}`);
+        return { success: true, message: '没有文件需要提交' };
+      }
+
+      this.logger.log(`[SVN] 准备提交 - 目录: ${nodeDirectory}, 文件数: ${files.length}`);
+
+      // 添加文件到 SVN
+      try {
+        await svnAddAsync(files, false);
+      } catch (error) {
+        // 忽略已存在的错误
+        if (!error.message.includes('already under version control')) {
+          this.logger.warn(`添加文件失败: ${error.message}`);
+        }
+      }
+
       // 构造 JSON 格式的提交消息
       const commitData = {
         type: 'file_operation',
@@ -243,10 +265,11 @@ export class VersionControlService implements OnModuleInit {
       };
       const fullMessage = JSON.stringify(commitData);
 
-      this.logger.log(`[SVN] 准备提交 - 目录: ${nodeDirectory}, 消息: ${fullMessage}`);
-      const result = await svnCommitAsync([nodeDirectory], fullMessage, true, null, null);
+      // 提交时包含目录本身和文件，确保父目录被正确添加到版本控制
+      const commitPaths = [nodeDirectory, ...files];
+      const result = await svnCommitAsync(commitPaths, fullMessage, false, null, null);
 
-      this.logger.log(`目录提交成功: ${nodeDirectory}`);
+      this.logger.log(`目录提交成功: ${nodeDirectory}, 共 ${files.length} 个文件`);
       return {
         success: true,
         message: '提交成功',
@@ -293,7 +316,41 @@ export class VersionControlService implements OnModuleInit {
         success: false,
         message: `提交失败: ${error.message}`,
       };
-    }
+        }
+      }
+    
+      /**
+       * 递归查找目录下所有非 .mxweb 文件
+   * @param directory 目录路径
+   * @returns 文件路径数组
+   */
+  private findFilesExcludeMxweb(directory: string): string[] {
+    const files: string[] = [];
+
+    const scanDir = (dir: string) => {
+      if (!fs.existsSync(dir)) {
+        return;
+      }
+
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+
+        if (stat.isDirectory()) {
+          // 跳过 .svn 目录
+          if (item === '.svn') {
+            continue;
+          }
+          scanDir(fullPath);
+        } else if (stat.isFile() && !item.endsWith('.mxweb')) {
+          files.push(fullPath);
+        }
+      }
+    };
+
+    scanDir(directory);
+    return files;
   }
 
   /**
@@ -373,7 +430,7 @@ export class VersionControlService implements OnModuleInit {
   }
 
   /**
-   * 获取文件的 SVN 提交历史
+   * 获取节点的 SVN 提交历史（获取目录历史而非具体文件历史）
    */
   async getFileHistory(
     filePath: string,
@@ -385,19 +442,40 @@ export class VersionControlService implements OnModuleInit {
     }
 
     try {
-      // filePath 是相对于 filesData 的相对路径（如 filesData/202602/nodeId/file.dwg.mxweb）
-      // 需要去掉前缀 'filesData/' 然后与 filesDataPath 拼接
+      // filePath 是相对于 filesData 的相对路径（如 filesData/202602/nodeId/file.dwg.mxweb 或 202602/nodeId/file.dwg.mxweb）
+      // 需要去掉前缀 'filesData/' 然后提取目录路径
       let relativePath = filePath;
       if (filePath.startsWith('filesData/')) {
         relativePath = filePath.slice('filesData/'.length);
       }
-      const targetPath = path.join(this.filesDataPath, relativePath);
 
-      this.logger.log(`[SVN] 获取文件历史 - 原始路径: ${filePath}, 相对路径: ${relativePath}, 完整路径: ${targetPath}`);
+      // 从文件路径中提取目录路径
+      // 例如：202602/nodeId/file.dwg.mxweb -> 202602/nodeId
+      // 如果传入的已经是目录路径（不以文件结尾），则直接使用
+      const pathParts = relativePath.split('/').filter(Boolean);
+      let directoryPath: string;
 
-      // 调用 svn log 命令获取提交历史
+      // 判断最后一个部分是否是文件（有扩展名）
+      const lastPart = pathParts[pathParts.length - 1] || '';
+      const hasExtension = lastPart.includes('.') && !lastPart.startsWith('.');
+
+      if (hasExtension && pathParts.length > 1) {
+        // 是文件路径，提取目录部分
+        directoryPath = pathParts.slice(0, -1).join('/');
+      } else {
+        // 已经是目录路径
+        directoryPath = relativePath;
+      }
+
+      // 使用仓库 URL 而非工作副本路径，确保能获取到所有版本
+      // 工作副本可能没有更新到最新版本，导致查询不到最新的提交历史
+      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${directoryPath.replace(/\\/g, '/')}`;
+
+      this.logger.log(`[SVN] 获取目录历史 - 原始路径: ${filePath}, 目录路径: ${directoryPath}, 仓库URL: ${repoUrl}`);
+
+      // 调用 svn log 命令获取目录的提交历史
       const xmlResult = await svnLogAsync(
-        targetPath,
+        repoUrl,
         limit || 50, // 默认返回 50 条记录
         true, // 详细模式，显示变更的文件列表
         null,
@@ -407,14 +485,14 @@ export class VersionControlService implements OnModuleInit {
       // 解析 XML 结果
       const entries = this.parseSvnLogXml(xmlResult || '');
 
-      this.logger.log(`获取文件历史成功: ${filePath}, 共 ${entries.length} 条记录`);
+      this.logger.log(`获取目录历史成功: ${directoryPath}, 共 ${entries.length} 条记录`);
       return {
         success: true,
         message: '获取成功',
         entries,
       };
     } catch (error) {
-      this.logger.error(`获取文件历史失败: ${filePath}, 错误: ${error.message}`);
+      this.logger.error(`获取目录历史失败: ${filePath}, 错误: ${error.message}`);
       return {
         success: false,
         message: `获取失败: ${error.message}`,
@@ -449,22 +527,17 @@ export class VersionControlService implements OnModuleInit {
       const msgMatch = /<msg>(.*?)<\/msg>/s.exec(content);
       const rawMessage = msgMatch?.[1] ? this.decodeXmlEntities(msgMatch[1]) : '';
 
-      // 解析 JSON 格式的提交消息
+      // 解析 JSON 格式的提交消息 - 简化逻辑，直接提取字段，不区分类型
       let message = rawMessage;
       let userName: string | undefined;
-      let userId: string | undefined;
 
       if (rawMessage) {
         try {
           const commitData = JSON.parse(rawMessage);
-          if (commitData.type === 'file_operation') {
-            message = commitData.message || '';
-            userName = commitData.userName;
-            userId = commitData.userId;
-          } else if (commitData.type === 'add_directory') {
-            message = commitData.message || '';
-          }
-        } catch (e) {
+          // 直接提取 message 和 userName，不区分 type
+          message = commitData.message || rawMessage;
+          userName = commitData.userName;
+        } catch {
           // JSON 解析失败，使用原始消息
         }
       }
@@ -533,6 +606,55 @@ export class VersionControlService implements OnModuleInit {
     }
 
     return decoded;
+  }
+
+  /**
+   * 列出指定版本的目录内容
+   * @param directoryPath 目录路径
+   * @param revision 版本号
+   * @returns 文件列表
+   */
+  async listDirectoryAtRevision(
+    directoryPath: string,
+    revision: number
+  ): Promise<{ success: boolean; message: string; files?: string[] }> {
+    if (!this.isInitialized) {
+      this.logger.warn('SVN 未初始化');
+      return { success: false, message: 'SVN 未初始化' };
+    }
+
+    try {
+      // 获取目录相对于 filesData 的路径
+      const relativePath = path.relative(this.filesDataPath, directoryPath) || directoryPath;
+      
+      // 使用仓库 URL（确保路径使用正斜杠）
+      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
+
+      this.logger.log(`[SVN] 列出目录内容 - 目录: ${relativePath}, 版本: r${revision}, URL: ${repoUrl}`);
+
+      // 调用 svn list 命令
+      const result = await svnListAsync(repoUrl, false, revision, null, null);
+
+      // 解析结果，每行一个文件名
+      const files = result
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      this.logger.log(`列出目录内容成功: ${relativePath} @ r${revision}, 文件数: ${files.length}`);
+      return {
+        success: true,
+        message: '获取成功',
+        files,
+      };
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.logger.error(`列出目录内容失败: ${directoryPath} @ r${revision}, 错误: ${err.message}`);
+      return {
+        success: false,
+        message: `获取失败: ${err.message}`,
+      };
+    }
   }
 
   /**

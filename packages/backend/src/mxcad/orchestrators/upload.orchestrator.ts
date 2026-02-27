@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import path from 'path';
 import { ChunkUploadService } from '../services/chunk-upload.service';
 import { FileCheckService } from '../services/file-check.service';
 import { NodeCreationService, CreateNodeOptions, NodeCreationContext } from '../services/node-creation.service';
@@ -328,7 +329,6 @@ export class UploadOrchestrator {
    */
   private async performMerge(options: HandleMergeRequestOptions): Promise<UploadResult> {
     const { hash, name, size, chunks, context } = options;
-    const path = require('path');
 
     try {
       // 生成临时文件路径
@@ -460,7 +460,7 @@ export class UploadOrchestrator {
    * @returns 文件扩展名（包含点）
    */
   private getFileExtension(filename: string): string {
-    const ext = require('path').extname(filename);
+    const ext = path.extname(filename);
     return ext || '';
   }
 

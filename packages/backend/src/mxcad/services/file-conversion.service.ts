@@ -185,11 +185,6 @@ export class FileConversionService implements IFileConversionService {
         };
       }
     } catch (error: any) {
-      // 输出详细错误信息
-      this.logger.error(`文件转换异常: ${error.message}`);
-      this.logger.error(`命令: ${error.cmd}`);
-      this.logger.error(`退出码: ${error.code}`);
-
       // 确保 stdout 和 stderr 是字符串
       const errorStdout = error.stdout
         ? Buffer.isBuffer(error.stdout)
@@ -202,13 +197,6 @@ export class FileConversionService implements IFileConversionService {
           : error.stderr
         : stderr || '';
 
-      this.logger.error(`stdout: [${errorStdout}]`);
-      this.logger.error(`stdout length: ${errorStdout.length}`);
-      this.logger.error(
-        `stdout bytes: ${Buffer.from(errorStdout).toString('hex')}`
-      );
-      this.logger.error(`stderr: [${errorStderr}]`);
-
       // 检查 stdout 或 stderr 是否包含成功的结果（mxcadassembly 可能退出码非0但实际成功）
       const outputToCheck = errorStdout || errorStderr;
 
@@ -216,28 +204,27 @@ export class FileConversionService implements IFileConversionService {
         try {
           // 查找 JSON 位置
           const iPos = outputToCheck.lastIndexOf('{"code"');
-          this.logger.log(`JSON start position: ${iPos}`);
 
           if (iPos !== -1) {
             const strOutput = outputToCheck.substring(iPos);
-            this.logger.log(`Extracted JSON string: [${strOutput}]`);
-
             const ret = JSON.parse(strOutput);
-            this.logger.log(`Parsed JSON: ${JSON.stringify(ret)}`);
 
             // 如果输出包含成功的结果，视为转换成功
             if (ret.code === 0) {
-              this.logger.log(`检测到转换成功，返回成功状态`);
-              this.logger.log(`文件转换成功 (从输出解析): ${options.srcPath}`);
+              this.logger.log(`文件转换成功: ${options.srcPath}`);
               return { isOk: true, ret };
             }
-          } else {
-            this.logger.log(`未找到 JSON 格式的输出`);
           }
         } catch (parseError) {
-          this.logger.log(`解析输出失败: ${parseError.message}`);
+          // JSON 解析失败，继续错误处理
         }
       }
+
+      // 只有在真正失败时才输出错误日志
+      this.logger.error(`文件转换异常: ${error.message}`);
+      this.logger.error(`退出码: ${error.code}`);
+      this.logger.error(`stdout: [${errorStdout}]`);
+      this.logger.error(`stderr: [${errorStderr}]`);
 
       return {
         isOk: false,
@@ -291,5 +278,150 @@ export class FileConversionService implements IFileConversionService {
 
   needsConversion(filename: string): boolean {
     return FileTypeDetector.needsConversion(filename);
+  }
+
+  /**
+   * 将 .bin 文件转换成 .mxweb 文件
+   * 用于历史版本访问时从 SVN 中的 bin 文件恢复 mxweb 文件
+   * @param binPath bin 文件的完整路径
+   * @param outputPath 输出目录
+   * @param outName 输出文件名（如 test2.mxweb）
+   * @returns 转换结果，包含输出文件路径
+   */
+  async convertBinToMxweb(
+    binPath: string,
+    outputPath: string,
+    outName: string
+  ): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+    let stdout = '';
+    let stderr = '';
+    const originalDir = process.cwd();
+    let changedDir = false;
+
+    try {
+      this.logger.log(`[convertBinToMxweb] 开始转换: ${binPath} -> ${outName}`);
+
+      // 构建参数：bin 转 mxweb 需要 srcpath, outpath, outname
+      const param: Record<string, string> = {
+        srcpath: binPath.replace(/\\/g, '/'),
+        outpath: outputPath.replace(/\\/g, '/'),
+        outname: outName,
+      };
+
+      // Linux 平台特殊处理
+      if (this.isLinux()) {
+        // 切换工作目录到 mxcadassembly/bin
+        if (this.mxCadBinPath) {
+          process.chdir(this.mxCadBinPath);
+          changedDir = true;
+          this.logger.log(`[Linux] 切换工作目录: ${this.mxCadBinPath}`);
+        }
+
+        // 将参数中的双引号替换为单引号
+        const paramStr = JSON.stringify(param).replace(/"/g, "'");
+        const cmd = `"${this.mxCadAssemblyPath}" "${paramStr}"`;
+        this.logger.log(`执行 bin→mxweb 转换命令 (Linux): ${cmd}`);
+
+        const execResult = await execAsync(cmd, {
+          encoding: 'utf8',
+          timeout: 60000,
+          maxBuffer: 50 * 1024 * 1024,
+        });
+
+        stdout = execResult.stdout;
+        stderr = execResult.stderr;
+      } else {
+        // Windows 平台
+        const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
+        this.logger.log(`执行 bin→mxweb 转换命令: ${cmd}`);
+
+        const execResult = await execAsync(cmd, {
+          encoding: 'utf8',
+          timeout: 60000,
+          maxBuffer: 50 * 1024 * 1024,
+        });
+
+        stdout = execResult.stdout;
+        stderr = execResult.stderr;
+      }
+
+      // 尝试从输出解析结果
+      const output = Buffer.isBuffer(stdout)
+        ? stdout.toString()
+        : stdout ||
+          (Buffer.isBuffer(stderr) ? stderr.toString() : stderr) ||
+          '';
+
+      try {
+        let strOutput = output.toString();
+        const iPos = strOutput.lastIndexOf('{"code"');
+        if (iPos !== -1) {
+          strOutput = strOutput.substring(iPos);
+        }
+        const ret = JSON.parse(strOutput);
+
+        if (ret.code === 0) {
+          const resultPath = path.join(outputPath, outName);
+          this.logger.log(`[convertBinToMxweb] 转换成功: ${resultPath}`);
+          return { success: true, outputPath: resultPath };
+        } else {
+          this.logger.error(`[convertBinToMxweb] 转换失败: ${ret.message}`);
+          return { success: false, error: ret.message };
+        }
+      } catch (e) {
+        this.logger.error(`[convertBinToMxweb] 解析输出失败: ${e.message}`);
+        this.logger.error(`原始输出: ${output}`);
+        return { success: false, error: `解析输出失败: ${e.message}` };
+      }
+    } catch (error: unknown) {
+      const err = error as Error & { code?: number; stdout?: string | Buffer; stderr?: string | Buffer };
+      
+      // 确保 stdout 和 stderr 是字符串
+      const errorStdout = err.stdout
+        ? Buffer.isBuffer(err.stdout)
+          ? err.stdout.toString()
+          : err.stdout
+        : stdout || '';
+      const errorStderr = err.stderr
+        ? Buffer.isBuffer(err.stderr)
+          ? err.stderr.toString()
+          : err.stderr
+        : stderr || '';
+
+      // 检查输出是否包含成功的结果
+      const outputToCheck = errorStdout || errorStderr;
+
+      if (outputToCheck) {
+        try {
+          const iPos = outputToCheck.lastIndexOf('{"code"');
+
+          if (iPos !== -1) {
+            const strOutput = outputToCheck.substring(iPos);
+            const ret = JSON.parse(strOutput);
+
+            if (ret.code === 0) {
+              const resultPath = path.join(outputPath, outName);
+              this.logger.log(`[convertBinToMxweb] 转换成功: ${resultPath}`);
+              return { success: true, outputPath: resultPath };
+            }
+          }
+        } catch {
+          // JSON 解析失败，继续错误处理
+        }
+      }
+
+      this.logger.error(`[convertBinToMxweb] 转换异常: ${err.message}`);
+      this.logger.error(`退出码: ${err.code}`);
+      this.logger.error(`stdout: [${errorStdout}]`);
+      this.logger.error(`stderr: [${errorStderr}]`);
+
+      return { success: false, error: err.message };
+    } finally {
+      // 恢复原始工作目录
+      if (changedDir) {
+        process.chdir(originalDir);
+        this.logger.log(`[Linux] 恢复工作目录: ${originalDir}`);
+      }
+    }
   }
 }

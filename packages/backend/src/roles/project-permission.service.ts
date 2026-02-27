@@ -7,7 +7,6 @@ import {
 import { ProjectRolesService } from './project-roles.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import { ResourceType } from '@prisma/client';
 import { CACHE_TTL } from '../common/constants/cache.constants';
 
 /**
@@ -188,7 +187,7 @@ export class ProjectPermissionService {
   ): Promise<ProjectRole | null> {
     try {
       const cacheKey = `project:role:${userId}:${projectId}`;
-      const cached = this.cacheService.get<ProjectRole>(cacheKey);
+      const cached = await this.cacheService.get<ProjectRole>(cacheKey);
       if (cached !== null) {
         return cached;
       }

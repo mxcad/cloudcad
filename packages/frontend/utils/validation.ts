@@ -3,7 +3,15 @@
  * 🚫 请勿手动编辑此文件，运行 pnpm generate:types 重新生成
  */
 
-export const ValidationRules = {
+interface ValidationRule {
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: RegExp;
+  isEmail?: boolean;
+}
+
+export const ValidationRules: Record<string, ValidationRule> = {
   email: {
     required: true,
     isEmail: true
@@ -22,7 +30,7 @@ export const ValidationRules = {
   nickname: {
     maxLength: 50
   }
-} as const;
+};
 
 /**
  * 字段验证规则错误消息映射
@@ -53,7 +61,7 @@ const ERROR_MESSAGES: Record<string, Record<string, string>> = {
  * 验证字段
  */
 export function validateField(field: keyof typeof ValidationRules, value: string): string | null {
-  const rules = ValidationRules[field] as any;
+  const rules = ValidationRules[field];
   if (!rules) return null;
 
   const messages = ERROR_MESSAGES[field] || {};

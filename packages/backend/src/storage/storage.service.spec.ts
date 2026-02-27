@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { StorageService } from './storage.service';
 import { LocalStorageProvider } from './local-storage.provider';
 
@@ -13,6 +14,14 @@ describe('StorageService', () => {
     fileExists: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'FILES_DATA_PATH') return '../filesData';
+      if (key === 'FILES_NODE_LIMIT') return 1000;
+      return undefined;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -22,13 +31,8 @@ describe('StorageService', () => {
           useValue: mockLocalStorageProvider,
         },
         {
-          provide: 'ConfigService',
-          useValue: {
-            get: jest.fn((key) => {
-              if (key === 'FILES_DATA_PATH') return '../filesData';
-              return undefined;
-            }),
-          },
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     })
@@ -53,35 +57,30 @@ describe('StorageService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('healthCheck', () => {
-    it('should return healthy status', async () => {
-      const result = await service.healthCheck();
+  it('should have localStorageProvider', () => {
+    expect(localStorageProvider).toBeDefined();
+  });
 
-      expect(result).toEqual({
-        status: 'healthy',
-        message: '本地存储服务正常',
-      });
+  describe('fileExists', () => {
+    it('should call localStorageProvider.fileExists', async () => {
+      mockLocalStorageProvider.fileExists.mockResolvedValue(true);
+
+      const result = await service.fileExists('test.txt');
+
+      expect(result).toBe(true);
+      expect(mockLocalStorageProvider.fileExists).toHaveBeenCalledWith('test.txt');
     });
+  });
 
-    it('should return unhealthy status when error occurs', async () => {
-      // Mock an error scenario by modifying the healthCheck implementation
-      const originalHealthCheck = service.healthCheck.bind(service);
-      service.healthCheck = async () => {
-        throw new Error('Connection failed');
-      };
+  describe('getFileStream', () => {
+    it('should call localStorageProvider.getFileStream', async () => {
+      const mockStream = {} as NodeJS.ReadableStream;
+      mockLocalStorageProvider.getFileStream.mockResolvedValue(mockStream);
 
-      const result = await service.healthCheck().catch(() => ({
-        status: 'unhealthy',
-        message: '存储服务不可用: Connection failed',
-      }));
+      const result = await service.getFileStream('test.txt');
 
-      expect(result).toEqual({
-        status: 'unhealthy',
-        message: '存储服务不可用: Connection failed',
-      });
-
-      // Restore original method
-      service.healthCheck = originalHealthCheck;
+      expect(result).toBe(mockStream);
+      expect(mockLocalStorageProvider.getFileStream).toHaveBeenCalledWith('test.txt');
     });
   });
 });

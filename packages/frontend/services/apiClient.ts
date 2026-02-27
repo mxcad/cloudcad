@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { Logger } from '../utils/mxcadUtils';
+import { logger as Logger } from '../utils/mxcadUtils';
 import { API_BASE_URL, API_TIMEOUT } from '../config/apiConfig';
 
 class ApiClient {
@@ -99,7 +99,10 @@ class ApiClient {
           });
         }
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // 排除登录接口本身的 401 错误（密码错误等）
+        const isLoginEndpoint = originalRequest.url?.includes('/auth/login');
+
+        if (error.response?.status === 401 && !originalRequest._retry && !isLoginEndpoint) {
           originalRequest._retry = true;
 
           const refreshToken = localStorage.getItem('refreshToken');
@@ -122,8 +125,12 @@ class ApiClient {
             );
 
             const responseData = response.data.data || response.data;
-            const { accessToken } = responseData;
+            const { accessToken, refreshToken: newRefreshToken } = responseData;
             localStorage.setItem('accessToken', accessToken);
+            // 保存新的 refreshToken（后端采用 Token 轮换机制）
+            if (newRefreshToken) {
+              localStorage.setItem('refreshToken', newRefreshToken);
+            }
 
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return this.client(originalRequest);
@@ -143,15 +150,48 @@ class ApiClient {
             error.response?.data?.message || '权限不足，您没有执行此操作的权限';
           Logger.error('[apiClient] 权限错误:', errorMessage);
 
-          // 创建增强的错误对象，包含更详细的错误信息
-          const enhancedError = {
-            ...error,
-            message: errorMessage,
-            isPermissionError: true,
-            statusCode: 403,
-          };
+          // 直接修改错误对象的属性
+          error.message = errorMessage;
+          (error as Error & { isPermissionError: boolean; statusCode: number }).isPermissionError = true;
+          (error as Error & { isPermissionError: boolean; statusCode: number }).statusCode = 403;
 
-          return Promise.reject(enhancedError);
+          return Promise.reject(error);
+        }
+
+        // 统一处理其他 HTTP 错误，提取后端返回的错误消息
+        const responseData = error.response?.data;
+        const backendMessage = responseData?.message;
+
+        console.log('[apiClient] HTTP 错误处理:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: responseData,
+          backendMessage,
+          errorType: typeof responseData,
+          headers: error.response?.headers,
+        });
+
+        if (backendMessage) {
+          // 直接修改错误对象的 message 属性
+          error.message = backendMessage;
+          console.log('[apiClient] 已设置 error.message =', error.message);
+          return Promise.reject(error);
+        }
+
+        // 如果后端返回了数据但没有 message 字段，尝试使用其他字段
+        if (responseData) {
+          if (typeof responseData === 'string') {
+            error.message = responseData;
+          } else if (responseData.error) {
+            error.message = responseData.error;
+          } else if (responseData.msg) {
+            error.message = responseData.msg;
+          }
+        }
+
+        // 网络错误或其他错误，确保有 message
+        if (!error.message) {
+          error.message = '网络错误，请检查网络连接';
         }
 
         return Promise.reject(error);

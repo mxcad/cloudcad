@@ -20,10 +20,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const request = context.switchToHttp().getRequest();
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
-    this.logger.debug(`[JwtAuthGuard] URL: ${request.url}`);
-    this.logger.debug(`[JwtAuthGuard] Token: ${token ? `present (${token.substring(0, 20)}...)` : 'missing'}`);
+    this.logger.debug(`URL: ${request.url}`);
+    this.logger.debug(`Token: ${token ? `present (${token.substring(0, 20)}...)` : 'missing'}`);
     this.logger.debug(
-      `[JwtAuthGuard] Session: ${request.session?.userId ? 'present' : 'missing'}`
+      `Session: ${request.session?.userId ? 'present' : 'missing'}`
     );
 
     // 如果没有Token，检查 Session
@@ -64,15 +64,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       }
       return result;
     } catch (error) {
-      console.error('[JwtAuthGuard] JWT验证失败:', error);
-      console.error('[JwtAuthGuard] 错误名称:', error.name);
-      console.error('[JwtAuthGuard] 错误消息:', error.message);
-      console.error('[JwtAuthGuard] 错误堆栈:', error.stack);
-
+      const err = error as Error;
+      
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      this.logger.error(`JWT验证失败: ${error.message}`, error.stack);
+      this.logger.error(`JWT验证失败: ${err.message}`, err.stack);
       throw new UnauthorizedException('Token验证失败');
     }
   }

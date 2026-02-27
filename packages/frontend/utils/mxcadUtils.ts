@@ -1,36 +1,8 @@
 ﻿import { StoragePathConstants } from '../constants/storage.constants';
 import { ValidationHelper as StorageValidationHelper } from '../constants/storage.constants';
 
-/**
- * 日志工具
- */
-export class Logger {
-  static info(message: string, ...args: any[]): void {
-    console.log(message, ...args);
-  }
-
-  static error(message: string, ...args: any[]): void {
-    console.error(message, ...args);
-  }
-
-  static warn(message: string, ...args: any[]): void {
-    console.warn(message, ...args);
-  }
-
-  static success(message: string, ...args: any[]): void {}
-
-  /**
-   * 强制输出日志（仅在调试时启用）
-   */
-  static force(message: string, ...args: any[]): void {}
-
-  /**
-   * 静默所有日志输出
-   */
-  static setSilent(silent: boolean): void {
-    // 可以在这里实现静默逻辑
-  }
-}
+// 重新导出 logger.ts 中的统一日志工具
+export { logger as Logger, logger, LogLevel } from './logger';
 
 /**
  * 错误处理工具
@@ -57,7 +29,7 @@ export class ErrorHandler {
     // 目前静默处理
   }
 
-  static createSafeAsync<T extends any[], R>(
+  static createSafeAsync<T extends unknown[], R>(
     fn: (...args: T) => Promise<R>,
     context: string
   ) {

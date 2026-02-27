@@ -30,7 +30,7 @@ function svnImport(importPath, repoUrl, message, callback) {
         command += ` -m ""`;
     }
 
-    exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
+    exec(command, { encoding: 'utf8' }, (error, stdout, _stderr) => {
         // 清理临时文件
         if (tempFile && fs.existsSync(tempFile)) {
             try {

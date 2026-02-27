@@ -143,42 +143,118 @@ export class FileSystemService {
     return this.storageManager;
   }
 
-  async createProject(userId: string, dto: CreateProjectDto) {
-    try {
-      // 获取 PROJECT_OWNER 角色
-      const ownerRole = await this.prisma.projectRole.findFirst({
-        where: { name: 'PROJECT_OWNER', isSystem: true },
-      });
+  /**
+   * 统一创建节点方法（项目和文件夹统一处理）
+   * 
+   * 规则：
+   * - parentId 为空 → 创建项目（isRoot=true，自动添加成员关系）
+   * - parentId 有值 → 创建文件夹（isRoot=false，继承父节点权限）
+   * 
+   * 项目 = 特殊的文件夹（有成员管理）
+   */
+  async createNode(
+    userId: string,
+    name: string,
+    options?: {
+      parentId?: string;
+      description?: string;
+    }
+  ) {
+    const { parentId, description } = options || {};
+    const isProject = !parentId;
 
-      if (!ownerRole) {
-        throw new Error('PROJECT_OWNER 角色不存在，请检查系统初始化');
+    try {
+      // 项目创建：需要获取 PROJECT_OWNER 角色
+      if (isProject) {
+        // 检查用户是否已有同名项目
+        await this.checkNameUniqueness(name, userId, null);
+
+        const ownerRole = await this.prisma.projectRole.findFirst({
+          where: { name: 'PROJECT_OWNER', isSystem: true },
+        });
+
+        if (!ownerRole) {
+          throw new Error('PROJECT_OWNER 角色不存在，请检查系统初始化');
+        }
+
+        const node = await this.prisma.fileSystemNode.create({
+          data: {
+            name,
+            description,
+            isFolder: true,
+            isRoot: true,
+            projectStatus: ProjectStatus.ACTIVE,
+            ownerId: userId,
+            projectMembers: {
+              create: {
+                userId,
+                projectRoleId: ownerRole.id,
+              },
+            },
+          },
+        });
+
+        this.logger.log(`项目创建成功: ${node.name} by user ${userId}`);
+        return node;
       }
 
-      // 创建项目节点（ownerId 字段标识了项目所有者）
-      const rootNode = await this.prisma.fileSystemNode.create({
+      // 文件夹创建：需要验证父节点
+      const parent = await this.prisma.fileSystemNode.findUnique({
+        where: { id: parentId },
+        select: { isFolder: true, isRoot: true },
+      });
+
+      if (!parent) {
+        throw new NotFoundException('父节点不存在');
+      }
+
+      if (!parent.isFolder) {
+        throw new BadRequestException('只能在文件夹下创建子文件夹');
+      }
+
+      // 检查父节点下是否存在同名节点
+      await this.checkNameUniqueness(name, userId, parentId);
+
+      const node = await this.prisma.fileSystemNode.create({
         data: {
-          name: dto.name,
-          description: dto.description,
+          name,
+          description,
           isFolder: true,
-          isRoot: true,
-          projectStatus: ProjectStatus.ACTIVE,
+          isRoot: false,
+          parentId,
           ownerId: userId,
-          // 为创建者自动分配 PROJECT_OWNER 角色
-          projectMembers: {
-            create: {
-              userId,
-              projectRoleId: ownerRole.id,
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              username: true,
+              nickname: true,
             },
           },
         },
       });
 
-      this.logger.log(`项目创建成功: ${rootNode.name} by user ${userId}`);
-      return rootNode;
+      this.logger.log(`文件夹创建成功: ${node.name} by user ${userId}`);
+      return node;
     } catch (error) {
-      this.logger.error(`项目创建失败: ${error.message}`, error.stack);
+      this.logger.error(`节点创建失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 创建项目（兼容旧 API，内部调用 createNode）
+   */
+  async createProject(userId: string, dto: CreateProjectDto) {
+    return this.createNode(userId, dto.name, { description: dto.description });
+  }
+
+  /**
+   * 创建文件夹（兼容旧 API，内部调用 createNode）
+   */
+  async createFolder(userId: string, parentId: string, dto: CreateFolderDto) {
+    return this.createNode(userId, dto.name, { parentId });
   }
 
   async getUserProjects(userId: string, query?: QueryProjectsDto) {
@@ -444,6 +520,31 @@ export class FileSystemService {
 
   async updateProject(projectId: string, dto: UpdateNodeDto) {
     try {
+      // 获取当前项目信息
+      const currentProject = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          isRoot: true,
+        },
+      });
+
+      if (!currentProject) {
+        throw new NotFoundException('项目不存在');
+      }
+
+      // 如果要修改名称，进行名称唯一性检查
+      if (dto.name && dto.name !== currentProject.name) {
+        await this.checkNameUniqueness(
+          dto.name,
+          currentProject.ownerId,
+          null,
+          projectId,
+        );
+      }
+
       const project = await this.prisma.fileSystemNode.update({
         where: { id: projectId, isRoot: true },
         data: {
@@ -480,54 +581,6 @@ export class FileSystemService {
       return project;
     } catch (error) {
       this.logger.error(`项目更新失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
-  async deleteProject(projectId: string, permanently: boolean = false) {
-    try {
-      this.logger.log(`开始删除项目: ${projectId}, permanently=${permanently}`);
-
-      // 先检查项目是否存在
-      const project = await this.prisma.fileSystemNode.findUnique({
-        where: { id: projectId, isRoot: true },
-      });
-
-      if (!project) {
-        this.logger.warn(`项目不存在: ${projectId}`);
-        throw new NotFoundException('项目不存在');
-      }
-
-      this.logger.log(`项目状态检查: ${projectId}, deletedAt=${project.deletedAt}, projectStatus=${project.projectStatus}`);
-
-      if (permanently) {
-        // 彻底删除：递归删除所有子节点和文件
-        this.logger.log(`开始彻底删除项目: ${projectId}`);
-        await this.prisma.$transaction(async (tx) => {
-          await this.deleteDescendantsWithFiles(tx, projectId);
-          await tx.fileSystemNode.delete({
-            where: { id: projectId, isRoot: true },
-          });
-        });
-        this.logger.log(`项目彻底删除成功: ${projectId}`);
-      } else {
-        // 软删除到回收站：只删除项目根节点，不递归删除子节点
-        this.logger.log(`开始移至回收站: ${projectId}, permanently=${permanently}`);
-
-        const updatedNode = await this.prisma.fileSystemNode.update({
-          where: { id: projectId, isRoot: true },
-          data: {
-            deletedAt: new Date(),
-            projectStatus: ProjectStatus.DELETED,
-            deletedByCascade: false, // 主动删除标记
-          },
-        });
-
-        this.logger.log(`项目已移至回收站: ${projectId}, deletedAt=${updatedNode.deletedAt}`);
-      }
-      return { message: permanently ? '项目已彻底删除' : '项目已移至回收站' };
-    } catch (error) {
-      this.logger.error(`项目删除失败: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -663,48 +716,6 @@ export class FileSystemService {
         error.stack
       );
       // 删除物理文件失败不影响数据库删除，只记录错误
-    }
-  }
-
-  async createFolder(userId: string, parentId: string, dto: CreateFolderDto) {
-    try {
-      const parent = await this.prisma.fileSystemNode.findUnique({
-        where: { id: parentId },
-        select: { isFolder: true, isRoot: true },
-      });
-
-      if (!parent) {
-        throw new NotFoundException('父节点不存在');
-      }
-
-      if (!parent.isFolder) {
-        throw new BadRequestException('只能在文件夹下创建子文件夹');
-      }
-
-      const folder = await this.prisma.fileSystemNode.create({
-        data: {
-          name: dto.name,
-          isFolder: true,
-          isRoot: false,
-          parentId,
-          ownerId: userId,
-        },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              username: true,
-              nickname: true,
-            },
-          },
-        },
-      });
-
-      this.logger.log(`文件夹创建成功: ${folder.name} by user ${userId}`);
-      return folder;
-    } catch (error) {
-      this.logger.error(`文件夹创建失败: ${error.message}`, error.stack);
-      throw error;
     }
   }
 
@@ -1054,29 +1065,47 @@ export class FileSystemService {
       // 获取当前节点信息
       const currentNode = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { name: true, isFolder: true, extension: true },
+        select: {
+          name: true,
+          isFolder: true,
+          extension: true,
+          isRoot: true,
+          parentId: true,
+          ownerId: true,
+        },
       });
 
       if (!currentNode) {
         throw new NotFoundException('节点不存在');
       }
 
-      // 对于文件节点，验证扩展名是否被修改
-      if (!currentNode.isFolder && dto.name && currentNode.extension) {
-        const newExtension = path.extname(dto.name).toLowerCase();
-        const currentExtension = currentNode.extension.toLowerCase();
+      // 如果要修改名称，进行名称唯一性检查
+      if (dto.name && dto.name !== currentNode.name) {
+        // 对于文件节点，验证扩展名是否被修改
+        if (!currentNode.isFolder && currentNode.extension) {
+          const newExtension = path.extname(dto.name).toLowerCase();
+          const currentExtension = currentNode.extension.toLowerCase();
 
-        // 如果新名称的扩展名与原扩展名不同，抛出异常
-        if (newExtension && newExtension !== currentExtension) {
-          throw new BadRequestException(
-            `不允许修改文件扩展名。文件扩展名必须保持为 ${currentExtension}`
-          );
+          // 如果新名称的扩展名与原扩展名不同，抛出异常
+          if (newExtension && newExtension !== currentExtension) {
+            throw new BadRequestException(
+              `不允许修改文件扩展名。文件扩展名必须保持为 ${currentExtension}`,
+            );
+          }
+
+          // 如果用户没有输入扩展名，自动添加原扩展名
+          if (!newExtension && currentExtension) {
+            dto.name = `${dto.name}${currentExtension}`;
+          }
         }
 
-        // 如果用户没有输入扩展名，自动添加原扩展名
-        if (!newExtension && currentExtension) {
-          dto.name = `${dto.name}${currentExtension}`;
-        }
+        // 检查同级目录是否存在同名节点（排除自身）
+        await this.checkNameUniqueness(
+          dto.name,
+          currentNode.ownerId,
+          currentNode.isRoot ? null : currentNode.parentId,
+          nodeId,
+        );
       }
 
       const node = await this.prisma.fileSystemNode.update({
@@ -1125,20 +1154,27 @@ export class FileSystemService {
     }
   }
 
+  /**
+   * 统一删除节点方法（项目和普通节点统一处理）
+   * 
+   * 规则：
+   * - isRoot=true → 项目删除，更新 projectStatus
+   * - isRoot=false → 普通节点删除，更新 fileStatus
+   * - 彻底删除时递归删除所有子节点和文件
+   */
   async deleteNode(nodeId: string, permanently: boolean = false) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { isRoot: true, isFolder: true, path: true, fileHash: true },
+        select: { isRoot: true, isFolder: true, path: true, fileHash: true, deletedAt: true },
       });
 
       if (!node) {
         throw new NotFoundException('节点不存在');
       }
 
-      if (node.isRoot) {
-        throw new BadRequestException('请使用删除项目接口删除根节点');
-      }
+      const nodeType = node.isRoot ? '项目' : '节点';
+      this.logger.log(`开始删除${nodeType}: ${nodeId}, permanently=${permanently}`);
 
       if (permanently) {
         // 彻底删除：递归删除所有子节点和文件
@@ -1152,20 +1188,30 @@ export class FileSystemService {
           // 删除当前节点的数据库记录
           await tx.fileSystemNode.delete({ where: { id: nodeId } });
         });
-        this.logger.log(`节点彻底删除成功: ${nodeId}`);
-      } else {
-        // 软删除到回收站：只删除当前节点，不递归删除子节点
-        await this.prisma.fileSystemNode.update({
-          where: { id: nodeId },
-          data: {
-            deletedAt: new Date(),
-            fileStatus: FileStatus.DELETED,
-            deletedByCascade: false, // 主动删除标记
-          },
-        });
-        this.logger.log(`节点已移至回收站: ${nodeId}`);
+        this.logger.log(`${nodeType}彻底删除成功: ${nodeId}`);
+        return { message: `${nodeType}已彻底删除` };
       }
-      return { message: permanently ? '节点已彻底删除' : '节点已移至回收站' };
+
+      // 软删除到回收站：只删除当前节点，不递归删除子节点
+      const updateData: any = {
+        deletedAt: new Date(),
+        deletedByCascade: false,
+      };
+
+      // 根据节点类型设置不同的状态字段
+      if (node.isRoot) {
+        updateData.projectStatus = ProjectStatus.DELETED;
+      } else {
+        updateData.fileStatus = FileStatus.DELETED;
+      }
+
+      await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: updateData,
+      });
+
+      this.logger.log(`${nodeType}已移至回收站: ${nodeId}`);
+      return { message: `${nodeType}已移至回收站` };
     } catch (error) {
       this.logger.error(`节点删除失败: ${error.message}`, error.stack);
       throw error;
@@ -1173,9 +1219,28 @@ export class FileSystemService {
   }
 
   /**
-   * 恢复已删除的节点
-   * @param nodeId 节点 ID
-   * @returns 恢复后的节点
+   * 删除项目（兼容旧 API，内部调用 deleteNode）
+   */
+  async deleteProject(projectId: string, permanently: boolean = false) {
+    // 验证是项目节点
+    const project = await this.prisma.fileSystemNode.findUnique({
+      where: { id: projectId, isRoot: true },
+    });
+
+    if (!project) {
+      throw new NotFoundException('项目不存在');
+    }
+
+    return this.deleteNode(projectId, permanently);
+  }
+
+  /**
+   * 统一恢复节点方法（项目和普通节点统一处理）
+   * 
+   * 规则：
+   * - isRoot=true → 项目恢复，更新 projectStatus 为 ACTIVE
+   * - isRoot=false → 普通节点恢复，更新 fileStatus 为 COMPLETED
+   * - 非项目节点恢复时需要检查父节点是否存在
    */
   async restoreNode(nodeId: string) {
     try {
@@ -1198,12 +1263,10 @@ export class FileSystemService {
         throw new BadRequestException('节点未被删除，无需恢复');
       }
 
-      if (node.isRoot) {
-        throw new BadRequestException('请使用恢复项目接口恢复根节点');
-      }
+      const nodeType = node.isRoot ? '项目' : '节点';
 
-      // 检查父节点是否存在
-      if (node.parentId) {
+      // 非项目节点需要检查父节点是否存在
+      if (!node.isRoot && node.parentId) {
         const parentNode = await this.prisma.fileSystemNode.findUnique({
           where: { id: node.parentId },
           select: { deletedAt: true },
@@ -1218,14 +1281,21 @@ export class FileSystemService {
         }
       }
 
-      // 恢复节点
+      // 根据节点类型设置不同的恢复数据
+      const updateData: any = {
+        deletedAt: null,
+        deletedByCascade: false,
+      };
+
+      if (node.isRoot) {
+        updateData.projectStatus = ProjectStatus.ACTIVE;
+      } else {
+        updateData.fileStatus = FileStatus.COMPLETED;
+      }
+
       const restoredNode = await this.prisma.fileSystemNode.update({
         where: { id: nodeId },
-        data: {
-          deletedAt: null,
-          fileStatus: FileStatus.COMPLETED,
-          deletedByCascade: false,
-        },
+        data: updateData,
         include: {
           owner: {
             select: {
@@ -1237,12 +1307,29 @@ export class FileSystemService {
         },
       });
 
-      this.logger.log(`节点恢复成功: ${nodeId}`);
+      this.logger.log(`${nodeType}恢复成功: ${nodeId}`);
       return restoredNode;
     } catch (error) {
       this.logger.error(`节点恢复失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 恢复项目（兼容旧 API，内部调用 restoreNode）
+   */
+  async restoreProject(projectId: string) {
+    // 验证是项目节点
+    const project = await this.prisma.fileSystemNode.findFirst({
+      where: { id: projectId, isRoot: true, deletedAt: { not: null } },
+    });
+
+    if (!project) {
+      throw new NotFoundException('回收站中不存在该项目');
+    }
+
+    await this.restoreNode(projectId);
+    return { message: '项目已从回收站恢复' };
   }
 
   /**
@@ -1398,7 +1485,7 @@ export class FileSystemService {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { isRoot: true, parentId: true },
+        select: { isRoot: true, parentId: true, name: true, ownerId: true },
       });
 
       if (!node) {
@@ -1426,6 +1513,14 @@ export class FileSystemService {
         throw new BadRequestException('不能将节点移动到自身');
       }
 
+      // 检查目标目录是否存在同名节点（排除自身）
+      await this.checkNameUniqueness(
+        node.name,
+        node.ownerId,
+        targetParentId,
+        nodeId,
+      );
+
       const movedNode = await this.prisma.fileSystemNode.update({
         where: { id: nodeId },
         data: { parentId: targetParentId },
@@ -1445,6 +1540,65 @@ export class FileSystemService {
     } catch (error) {
       this.logger.error(`节点移动失败: ${error.message}`, error.stack);
       throw error;
+    }
+  }
+
+  /**
+   * 检查节点名称在同级目录中是否唯一
+   * @param name 节点名称
+   * @param userId 用户 ID（用于项目级别检查）
+   * @param parentId 父节点 ID（null 表示项目级别）
+   * @param excludeNodeId 排除的节点 ID（用于重命名场景）
+   * @throws BadRequestException 如果存在同名节点
+   */
+  private async checkNameUniqueness(
+    name: string,
+    userId: string,
+    parentId: string | null,
+    excludeNodeId?: string,
+  ): Promise<void> {
+    // 项目级别检查：检查用户是否已有同名项目（大小写不敏感）
+    if (!parentId) {
+      const existingProject = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          name: {
+            equals: name,
+            mode: 'insensitive',
+          },
+          ownerId: userId,
+          isRoot: true,
+          deletedAt: null,
+          ...(excludeNodeId && { id: { not: excludeNodeId } }),
+        },
+        select: { id: true },
+      });
+
+      if (existingProject) {
+        throw new BadRequestException('已存在同名项目，请使用其他名称');
+      }
+      return;
+    }
+
+    // 文件夹级别检查：检查同级目录是否存在同名节点（大小写不敏感）
+    const existingNode = await this.prisma.fileSystemNode.findFirst({
+      where: {
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+        parentId,
+        deletedAt: null,
+        ...(excludeNodeId && { id: { not: excludeNodeId } }),
+      },
+      select: { id: true, isFolder: true },
+    });
+
+    if (existingNode) {
+      throw new BadRequestException(
+        existingNode.isFolder
+          ? '同级目录已存在同名文件夹'
+          : '同级目录已存在同名文件',
+      );
     }
   }
 
@@ -1809,7 +1963,7 @@ export class FileSystemService {
   async checkProjectPermission(
     projectId: string,
     userId: string,
-    roles: string[]
+    roles: ProjectRole[]
   ): Promise<boolean> {
     try {
       // 1. 如果检查的角色包含 OWNER，先检查是否是项目所有者
@@ -1828,7 +1982,7 @@ export class FileSystemService {
       return await this.permissionService.hasNodeAccessRole(
         userId,
         projectId,
-        roles as any
+        roles
       );
     } catch (error) {
       this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
@@ -1844,17 +1998,6 @@ export class FileSystemService {
    */
   async checkFileAccess(nodeId: string, userId: string): Promise<boolean> {
     try {
-      // 1. 先检查是否是项目所有者
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { ownerId: true },
-      });
-
-      if (node?.ownerId === userId) {
-        return true;
-      }
-
-      // 2. 检查是否是项目成员
       const role = await this.permissionService.getNodeAccessRole(
         userId,
         nodeId
@@ -1962,38 +2105,6 @@ export class FileSystemService {
       return allItems;
     } catch (error) {
       this.logger.error(`获取回收站列表失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
-  /**
-   * 从回收站恢复项目
-   * 递归恢复项目的所有后代节点
-   */
-  async restoreProject(projectId: string) {
-    try {
-      const project = await this.prisma.fileSystemNode.findFirst({
-        where: { id: projectId, isRoot: true, deletedAt: { not: null } },
-      });
-
-      if (!project) {
-        throw new NotFoundException('回收站中不存在该项目');
-      }
-
-      // 只恢复项目根节点，不递归恢复子节点
-      await this.prisma.fileSystemNode.update({
-        where: { id: projectId },
-        data: {
-          deletedAt: null,
-          projectStatus: ProjectStatus.ACTIVE,
-          deletedByCascade: false, // 重置级联删除标记
-        },
-      });
-
-      this.logger.log(`项目恢复成功: ${projectId}`);
-      return { message: '项目已从回收站恢复' };
-    } catch (error) {
-      this.logger.error(`项目恢复失败: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -2579,7 +2690,7 @@ export class FileSystemService {
 
         operatorId,
 
-        ['OWNER', 'ADMIN']
+        [ProjectRole.OWNER, ProjectRole.ADMIN]
       );
 
       if (!hasPermission) {
@@ -2657,8 +2768,7 @@ export class FileSystemService {
       });
 
       // 清除权限缓存
-
-      this.permissionService.clearNodeCache(projectId);
+      await this.permissionService.clearNodeCache(projectId);
 
       // 记录审计日志
 
@@ -2749,7 +2859,7 @@ export class FileSystemService {
       const hasPermission = await this.checkProjectPermission(
         projectId,
         operatorId,
-        ['OWNER', 'ADMIN']
+        [ProjectRole.OWNER, ProjectRole.ADMIN]
       );
 
       if (!hasPermission) {
@@ -2815,7 +2925,7 @@ export class FileSystemService {
         });
 
         // 清除权限缓存
-        this.permissionService.clearNodeCache(projectId);
+        await this.permissionService.clearNodeCache(projectId);
 
         // 记录审计日志
         await this.auditLogService.log(
@@ -2884,7 +2994,7 @@ export class FileSystemService {
       const hasPermission = await this.checkProjectPermission(
         projectId,
         operatorId,
-        ['OWNER', 'ADMIN']
+        [ProjectRole.OWNER, ProjectRole.ADMIN]
       );
 
       if (!hasPermission) {
@@ -2910,7 +3020,7 @@ export class FileSystemService {
       }
 
       // 清除权限缓存
-      this.permissionService.clearNodeCache(projectId);
+      await this.permissionService.clearNodeCache(projectId);
 
       // 记录审计日志
       await this.auditLogService.log(
@@ -3046,7 +3156,7 @@ export class FileSystemService {
       });
 
       // 清除权限缓存
-      this.permissionService.clearNodeCache(projectId);
+      await this.permissionService.clearNodeCache(projectId);
 
       // 记录审计日志
       await this.auditLogService.log(

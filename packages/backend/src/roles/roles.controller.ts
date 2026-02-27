@@ -159,6 +159,7 @@ export class RolesController {
   }
 
   @Get('project-roles/all')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
   @ApiOperation({ summary: '获取所有项目角色' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -169,6 +170,7 @@ export class RolesController {
   }
 
   @Get('project-roles/system')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
   @ApiOperation({ summary: '获取系统默认项目角色' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -189,6 +191,7 @@ export class RolesController {
   }
 
   @Get('project-roles/:id')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
   @ApiOperation({ summary: '获取项目角色详情' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -199,6 +202,7 @@ export class RolesController {
   }
 
   @Get('project-roles/:id/permissions')
+  @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
   @ApiOperation({ summary: '获取项目角色的所有权限' })
   @ApiResponse({
     status: HttpStatus.OK,

@@ -52,7 +52,7 @@ export class RoleInheritanceService implements OnModuleInit {
 
   /**
    * 获取角色的所有权限（包括继承的权限）
-   * 使用 CTE 批量查询优化递归查询
+   * 使用 Prisma ORM 递归查询
    *
    * @param roleName 角色名称
    * @returns 角色拥有的所有权限（包括从父角色继承的权限）
@@ -63,31 +63,39 @@ export class RoleInheritanceService implements OnModuleInit {
     const cacheKey = `role:permissions:${roleName}`;
     const cached = await this.cacheService.get<SystemPermission[] | 'null'>(cacheKey);
 
-    if (cached !== undefined) {
+    if (cached !== null) {
+      this.logger.log(`角色 ${roleName} 权限缓存命中: ${cached === 'null' ? '空' : `${(cached as SystemPermission[]).length} 个权限`}`);
       return cached === 'null' ? [] : (cached as SystemPermission[]);
     }
 
     try {
-      // 使用 CTE 批量查询角色及其所有祖先角色的权限
-      const result = await this.prisma.$queryRaw<Array<{ permission: string }>>`
-        WITH RECURSIVE role_hierarchy AS (
-          SELECT id, name, parent_id, 0 AS depth
-          FROM roles
-          WHERE name = ${roleName}
-          UNION ALL
-          SELECT r.id, r.name, r.parent_id, rh.depth + 1
-          FROM roles r
-          JOIN role_hierarchy rh ON r.id = rh.parent_id
-          WHERE r.parent_id IS NOT NULL AND rh.depth < ${RoleInheritanceService.MAX_HIERARCHY_DEPTH}
-        )
-        SELECT DISTINCT rp.permission
-        FROM role_hierarchy rh
-        JOIN role_permissions rp ON rh.id = rp.role_id
-      `;
+      // 收集角色及其所有祖先角色的 ID
+      const roleIds = await this.collectRoleAncestors(roleName, 0);
+      this.logger.log(`角色 ${roleName} 及其祖先角色的 ID: ${JSON.stringify(roleIds)}`);
 
-      const allPermissions = result.map((r) => r.permission as SystemPermission);
+      if (roleIds.length === 0) {
+        this.logger.warn(`角色 ${roleName} 没有找到角色 ID`);
+        this.cacheService.set(cacheKey, 'null', CACHE_TTL.ROLE_PERMISSION);
+        return [];
+      }
 
-      // 缓存结果（支持空结果）
+      // 查询所有相关角色的权限
+      const permissions = await this.prisma.rolePermission.findMany({
+        where: {
+          roleId: { in: roleIds },
+        },
+        select: {
+          permission: true,
+        },
+      });
+      
+      this.logger.log(`角色 ${roleName} 查询到 ${permissions.length} 条权限记录`);
+
+      const allPermissions = [
+        ...new Set(permissions.map((p) => p.permission as SystemPermission)),
+      ];
+
+      // 缓存结果
       if (allPermissions.length === 0) {
         this.cacheService.set(cacheKey, 'null', CACHE_TTL.ROLE_PERMISSION);
       } else {
@@ -96,13 +104,64 @@ export class RoleInheritanceService implements OnModuleInit {
 
       return allPermissions;
     } catch (error) {
-      this.logger.error(`获取角色权限失败: ${error.message}`, error.stack);
+      this.logger.error(`获取角色权限失败: ${(error as Error).message}`, (error as Error).stack);
+      // 出错时不缓存空结果，让下次请求可以重新尝试
       return [];
     }
   }
 
   /**
-   * 检查角色是否继承自另一个角色（使用 CTE 批量查询优化）
+   * 强制刷新角色权限缓存（清除缓存后重新获取）
+   */
+  async forceRefreshRolePermissions(roleName: SystemRole): Promise<SystemPermission[]> {
+    // 先清除缓存
+    const cacheKey = `role:permissions:${roleName}`;
+    this.cacheService.delete(cacheKey);
+    
+    // 重新获取权限
+    return this.getRolePermissions(roleName);
+  }
+
+  /**
+   * 递归收集角色及其所有祖先角色的 ID
+   */
+  private async collectRoleAncestors(
+    roleName: string,
+    depth: number
+  ): Promise<string[]> {
+    if (depth >= RoleInheritanceService.MAX_HIERARCHY_DEPTH) {
+      return [];
+    }
+
+    const role = await this.prisma.role.findFirst({
+      where: { name: roleName },
+      select: { id: true, parentId: true },
+    });
+
+    if (!role) {
+      return [];
+    }
+
+    const ids = [role.id];
+
+    // 递归获取父角色
+    if (role.parentId) {
+      const parentRole = await this.prisma.role.findUnique({
+        where: { id: role.parentId },
+        select: { name: true },
+      });
+
+      if (parentRole) {
+        const parentIds = await this.collectRoleAncestors(parentRole.name, depth + 1);
+        ids.push(...parentIds);
+      }
+    }
+
+    return ids;
+  }
+
+  /**
+   * 检查角色是否继承自另一个角色
    *
    * @param childRoleName 子角色名称
    * @param parentRoleName 父角色名称
@@ -120,34 +179,18 @@ export class RoleInheritanceService implements OnModuleInit {
     }
 
     try {
-      // 使用 CTE 批量查询获取完整继承路径
-      const result = await this.prisma.$queryRaw<Array<{ ancestors: string[] | null }>>`
-        WITH RECURSIVE role_path AS (
-          SELECT id, name, parent_id, ARRAY[name] AS ancestors, 0 AS depth
-          FROM roles WHERE name = ${childRoleName}
-          UNION ALL
-          SELECT r.id, r.name, r.parent_id, rp.ancestors || r.name, rp.depth + 1
-          FROM roles r
-          JOIN role_path rp ON r.id = rp.parent_id
-          WHERE r.parent_id IS NOT NULL AND rp.depth < ${RoleInheritanceService.MAX_HIERARCHY_DEPTH}
-        )
-        SELECT ancestors FROM role_path
-      `;
-
-      if (result.length === 0 || result[0]?.ancestors === null) {
-        this.cacheService.set(cacheKey, false, CACHE_TTL.ROLE_INHERITANCE);
-        return false;
-      }
+      // 获取继承路径
+      const ancestors = await this.collectAncestorNames(childRoleName, 0);
 
       // 检查父角色是否在继承路径中
-      const hasInheritance = result[0].ancestors.includes(parentRoleName);
+      const hasInheritance = ancestors.includes(parentRoleName);
 
       this.cacheService.set(cacheKey, hasInheritance, CACHE_TTL.ROLE_INHERITANCE);
       return hasInheritance;
     } catch (error) {
       this.logger.error(
-        `检查角色继承关系失败: ${error.message}`,
-        error.stack
+        `检查角色继承关系失败: ${(error as Error).message}`,
+        (error as Error).stack
       );
       // 出错时回退到安全策略
       return false;
@@ -155,7 +198,45 @@ export class RoleInheritanceService implements OnModuleInit {
   }
 
   /**
-   * 获取角色层级路径（使用 CTE 批量查询优化）
+   * 递归收集角色及其所有祖先角色的名称
+   */
+  private async collectAncestorNames(
+    roleName: string,
+    depth: number
+  ): Promise<string[]> {
+    if (depth >= RoleInheritanceService.MAX_HIERARCHY_DEPTH) {
+      return [];
+    }
+
+    const role = await this.prisma.role.findFirst({
+      where: { name: roleName },
+      select: { name: true, parentId: true },
+    });
+
+    if (!role) {
+      return [];
+    }
+
+    const names = [role.name];
+
+    // 递归获取父角色
+    if (role.parentId) {
+      const parentRole = await this.prisma.role.findUnique({
+        where: { id: role.parentId },
+        select: { name: true },
+      });
+
+      if (parentRole) {
+        const parentNames = await this.collectAncestorNames(parentRole.name, depth + 1);
+        names.push(...parentNames);
+      }
+    }
+
+    return names;
+  }
+
+  /**
+   * 获取角色层级路径
    *
    * @param roleName 角色名称
    * @returns 从根角色到当前角色的路径（数组）
@@ -169,27 +250,16 @@ export class RoleInheritanceService implements OnModuleInit {
     }
 
     try {
-      // 使用 CTE 批量查询获取完整路径
-      const result = await this.prisma.$queryRaw<Array<{ ancestors: string[] | null }>>`
-        WITH RECURSIVE role_path AS (
-          SELECT id, name, parent_id, ARRAY[name] AS ancestors, 0 AS depth
-          FROM roles WHERE name = ${roleName}
-          UNION ALL
-          SELECT r.id, r.name, r.parent_id, r.name || rp.ancestors, rp.depth + 1
-          FROM roles r
-          JOIN role_path rp ON r.id = rp.parent_id
-          WHERE r.parent_id IS NOT NULL AND rp.depth < ${RoleInheritanceService.MAX_HIERARCHY_DEPTH}
-        )
-        SELECT ancestors FROM role_path WHERE parent_id IS NULL
-      `;
+      // 获取继承路径并反转（从根角色到当前角色）
+      const ancestors = await this.collectAncestorNames(roleName, 0);
+      const path = ancestors.reverse();
 
-      const path = result[0]?.ancestors || [];
       this.cacheService.set(cacheKey, path, CACHE_TTL.ROLE_HIERARCHY_PATH);
       return path;
     } catch (error) {
       this.logger.error(
-        `获取角色层级路径失败: ${error.message}`,
-        error.stack
+        `获取角色层级路径失败: ${(error as Error).message}`,
+        (error as Error).stack
       );
       return [];
     }
@@ -219,17 +289,23 @@ export class RoleInheritanceService implements OnModuleInit {
       });
 
       if (!user?.role) {
+        this.logger.warn(`用户 ${userId} 没有关联角色`);
         return false;
       }
 
       const roleName = user.role.name as SystemRole;
       const rolePermissions = await this.getRolePermissions(roleName);
-
-      return rolePermissions.includes(permission);
+      
+      this.logger.log(`角色 ${roleName} 的权限数量: ${rolePermissions.length}`);
+      
+      const hasPermission = rolePermissions.includes(permission);
+      this.logger.log(`权限检查: 用户=${userId.substring(0, 8)}..., 角色=${roleName}, 权限=${permission}, 结果=${hasPermission}`);
+      
+      return hasPermission;
     } catch (error) {
       this.logger.error(
-        `检查用户权限（考虑继承）失败: ${error.message}`,
-        error.stack
+        `检查用户权限（考虑继承）失败: ${(error as Error).message}`,
+        (error as Error).stack
       );
       return false;
     }
@@ -414,7 +490,7 @@ export class RoleInheritanceService implements OnModuleInit {
   }
 
   /**
-   * 模块初始化时预热缓存
+   * 模块初始化时预热缓存（强制刷新）
    */
   async onModuleInit(): Promise<void> {
     try {
@@ -428,11 +504,12 @@ export class RoleInheritanceService implements OnModuleInit {
       let warmedCount = 0;
       for (const role of systemRoles) {
         try {
-          await this.getRolePermissions(role.name as SystemRole);
+          // 强制刷新缓存，确保使用最新数据
+          await this.forceRefreshRolePermissions(role.name as SystemRole);
           warmedCount++;
         } catch (error) {
           this.logger.warn(
-            `预热角色 ${role.name} 权限缓存失败: ${error.message}`
+            `预热角色 ${role.name} 权限缓存失败: ${(error as Error).message}`
           );
         }
       }
@@ -440,12 +517,50 @@ export class RoleInheritanceService implements OnModuleInit {
       this.logger.log(
         `角色权限缓存预热完成: ${warmedCount}/${systemRoles.length} 个角色`
       );
+
+      // 清除所有活跃用户的权限缓存，确保使用新的角色权限数据
+      await this.clearAllActiveUsersCache();
     } catch (error) {
       this.logger.error(
-        `预热角色权限缓存失败: ${error.message}`,
-        error.stack
+        `预热角色权限缓存失败: ${(error as Error).message}`,
+        (error as Error).stack
       );
       // 不抛出异常，避免影响模块启动
+    }
+  }
+
+  /**
+   * 清除所有活跃用户的权限缓存
+   */
+  private async clearAllActiveUsersCache(): Promise<void> {
+    try {
+      const activeUsers = await this.prisma.user.findMany({
+        where: { status: 'ACTIVE' },
+        select: { id: true },
+      });
+
+      this.logger.log(`清除 ${activeUsers.length} 个活跃用户的权限缓存...`);
+
+      for (const user of activeUsers) {
+        // 清除用户级别的权限缓存
+        const keysToDelete = [
+          `is_admin:${user.id}`,
+          ...Object.values(SystemPermission).map(
+            (perm) => `system_perm:${user.id}:${perm}`
+          ),
+        ];
+
+        for (const key of keysToDelete) {
+          this.cacheService.delete(key);
+        }
+      }
+
+      this.logger.log(`活跃用户权限缓存清除完成`);
+    } catch (error) {
+      this.logger.error(
+        `清除活跃用户缓存失败: ${(error as Error).message}`,
+        (error as Error).stack
+      );
     }
   }
 }

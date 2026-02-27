@@ -1,13 +1,41 @@
 import { apiClient } from './apiClient';
 import type { AxiosRequestConfig } from 'axios';
 
+/**
+ * 统一节点创建参数
+ * - parentId 为空时创建项目
+ * - parentId 有值时创建文件夹
+ */
+interface CreateNodeParams {
+  name: string;
+  description?: string;
+  parentId?: string;
+}
+
 export const projectsApi = {
+  // ========== 统一节点操作 ==========
+
+  /**
+   * 统一创建节点接口
+   * 
+   * 规则：
+   * - parentId 为空 → 创建项目
+   * - parentId 有值 → 创建文件夹
+   */
+  createNode: (data: CreateNodeParams) =>
+    apiClient.post('/file-system/nodes', data),
+
+  // ========== 项目操作（兼容旧 API） ==========
+
   list: (config?: AxiosRequestConfig) =>
     apiClient.get('/file-system/projects', config),
 
   getDeletedProjects: (config?: AxiosRequestConfig) =>
     apiClient.get('/file-system/projects/trash', config),
 
+  /**
+   * 创建项目（兼容旧 API，内部调用 createNode）
+   */
   create: (data: { name: string; description?: string }) =>
     apiClient.post('/file-system/projects', data),
 
@@ -24,6 +52,11 @@ export const projectsApi = {
       params: { permanently },
     }),
 
+  // ========== 节点操作（兼容旧 API） ==========
+
+  /**
+   * 创建文件夹（兼容旧 API，内部调用 createNode）
+   */
   createFolder: (parentId: string, data: { name: string }) =>
     apiClient.post(`/file-system/nodes/${parentId}/folders`, data),
 

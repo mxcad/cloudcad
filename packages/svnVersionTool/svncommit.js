@@ -1,4 +1,4 @@
-const {exec} = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -14,56 +14,63 @@ const svnPath = require('./svnpath');
  * @param {function} callback 回调函数
  */
 function svnCommit(targetPaths, message, isRecursive, username, password, callback) {
-    let command = `${svnPath} commit`;
+    const args = ['commit'];
+
     targetPaths.forEach(p => {
-        command += ` "${p}"`;
+        args.push(p);
     });
 
-    // 使用临时文件传递提交消息，避免命令行参数中的引号和空格问题
     let tempFile = null;
     if (message) {
-        try {
-            tempFile = path.join(os.tmpdir(), `svn-commit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`);
-            fs.writeFileSync(tempFile, message, 'utf8');
-            console.log('[svnCommit] 临时文件创建成功:', tempFile);
-            console.log('[svnCommit] 写入内容:', message);
-            console.log('[svnCommit] 写入内容长度:', message.length);
-            command += ` -F "${tempFile}"`;
-        } catch (error) {
-            // 如果创建临时文件失败，回退到使用 -m 参数
-            console.error('[svnCommit] 创建临时文件失败:', error);
-            command += ` -m "${message}"`;
-            tempFile = null;
-        }
+        tempFile = path.join(os.tmpdir(), `svn-commit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`);
+        // 写入 UTF-8 编码
+        fs.writeFileSync(tempFile, message, 'utf8');
+        // 关键：添加 --encoding UTF-8 参数
+        args.push('-F', tempFile, '--encoding', 'UTF-8');
     } else {
-        command += ` -m ""`;
+        args.push('-m', '');
     }
 
     if (!isRecursive) {
-        command += " --non-recursive";
+        args.push('--non-recursive');
     }
     if (username) {
-        command += ` --username ${username}`;
+        args.push('--username', username);
     }
     if (password) {
-        command += ` --password ${password}`;
+        args.push('--password', password);
     }
 
-    exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
-        // 清理临时文件
+    const child = spawn(svnPath, args, { windowsHide: true });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+        stdout += data.toString('utf8');
+    });
+
+    child.stderr.on('data', (data) => {
+        stderr += data.toString('utf8');
+    });
+
+    child.on('close', (code) => {
         if (tempFile && fs.existsSync(tempFile)) {
-            try {
-                fs.unlinkSync(tempFile);
-            } catch (cleanupError) {
-                // 忽略清理错误
-            }
+            try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
         }
 
-        if (error) {
-            callback(error);
+        if (code !== 0) {
+            callback(new Error(stderr || `SVN commit failed with code ${code}`));
         } else {
             callback(null, stdout);
         }
+    });
+
+    child.on('error', (err) => {
+        if (tempFile && fs.existsSync(tempFile)) {
+            try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
+        }
+        callback(err);
     });
 }
 

@@ -28,7 +28,7 @@ function svnDelete(targetPaths, isRecursive, keepLocal, username, password, call
         command += ` --password ${password}`;
     }
 
-    exec(command, (error, stdout, stderr) => {
+    exec(command, (error, stdout, _stderr) => {
         if (error) {
             callback(error);
         } else {

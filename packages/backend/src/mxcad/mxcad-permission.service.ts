@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
@@ -14,6 +15,8 @@ export interface MxCadContext {
 
 @Injectable()
 export class MxCadPermissionService {
+  private readonly logger = new Logger(MxCadPermissionService.name);
+
   constructor(private readonly prisma: DatabaseService) {}
 
   /**
@@ -30,8 +33,8 @@ export class MxCadPermissionService {
       throw new BadRequestException('缺少节点信息');
     }
 
-    console.log(
-      `[validateUploadPermission] 开始检查权限: userId=${context.userId}, nodeId=${context.nodeId}`
+    this.logger.debug(
+      `开始检查权限: userId=${context.userId}, nodeId=${context.nodeId}`
     );
 
     // 获取 nodeId 对应的节点信息（包括已删除的）
@@ -47,7 +50,7 @@ export class MxCadPermissionService {
       },
     });
 
-    console.log(`[validateUploadPermission] 节点信息:`, node);
+    this.logger.debug(`节点信息: ${JSON.stringify(node)}`);
 
     if (!node) {
       throw new BadRequestException(`节点不存在: ${context.nodeId}`);
@@ -63,8 +66,8 @@ export class MxCadPermissionService {
     // 如果当前节点是项目根目录（没有父节点），则使用当前节点本身
     const targetNodeId = node.parentId || node.id;
 
-    console.log(
-      `[validateUploadPermission] 目标节点: ${targetNodeId} (节点: ${node.name})`
+    this.logger.debug(
+      `目标节点: ${targetNodeId} (节点: ${node.name})`
     );
 
     // 1. 检查用户是否是目标节点所有者
@@ -74,7 +77,7 @@ export class MxCadPermissionService {
     });
 
     if (targetNode?.ownerId === context.userId) {
-      console.log(`[validateUploadPermission] 用户是目标节点所有者，允许上传`);
+      this.logger.debug('用户是目标节点所有者，允许上传');
       return true;
     }
 
@@ -85,15 +88,15 @@ export class MxCadPermissionService {
     if (projectRootId) {
       const isProjectMember = await this.checkProjectMember(context.userId, projectRootId);
       if (isProjectMember) {
-        console.log(`[validateUploadPermission] 用户是项目成员，允许上传`);
+        this.logger.debug('用户是项目成员，允许上传');
         return true;
       }
     }
 
     // 3. 检查用户是否有项目根目录的访问权限（递归向上查找）
     if (targetNode && !targetNode.isRoot && targetNode.parentId) {
-      console.log(
-        `[validateUploadPermission] 目标节点不是根目录，检查父节点权限: parentId=${targetNode.parentId}`
+      this.logger.debug(
+        `目标节点不是根目录，检查父节点权限: parentId=${targetNode.parentId}`
       );
 
       // 递归查找项目根目录
@@ -119,18 +122,15 @@ export class MxCadPermissionService {
           },
         });
 
-        console.log(
-          `[validateUploadPermission] 检查父节点 (深度${depth}):`,
-          parentNode
+        this.logger.debug(
+          `检查父节点 (深度${depth}): ${JSON.stringify(parentNode)}`
         );
 
         if (!parentNode) break;
 
         // 检查用户是否是该节点的所有者
         if (parentNode.ownerId === context.userId) {
-          console.log(
-            `[validateUploadPermission] 用户是父节点所有者，允许上传`
-          );
+          this.logger.debug('用户是父节点所有者，允许上传');
           return true;
         }
 
@@ -139,15 +139,15 @@ export class MxCadPermissionService {
 
       // 递归深度达到限制时，拒绝访问
       if (depth >= maxDepth) {
-        console.error(
-          `[validateUploadPermission] 达到最大递归深度 (${maxDepth})，拒绝访问以防止绕过权限检查`
+        this.logger.error(
+          `达到最大递归深度 (${maxDepth})，拒绝访问以防止绕过权限检查`
         );
         throw new ForbiddenException('权限验证失败：目录层级过深，无法验证权限');
       }
     }
 
-    console.warn(
-      `[validateUploadPermission] 权限检查失败: 用户 ${context.userId} 没有任何访问权限`
+    this.logger.warn(
+      `权限检查失败: 用户 ${context.userId} 没有任何访问权限`
     );
     throw new ForbiddenException('您没有该节点的访问权限，无法上传文件');
   }
@@ -201,7 +201,8 @@ export class MxCadPermissionService {
 
       return !!member;
     } catch (error) {
-      console.error(`[checkProjectMember] 检查项目成员失败: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`检查项目成员失败: ${err.message}`);
       return false;
     }
   }

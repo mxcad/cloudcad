@@ -24,7 +24,7 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NodePermissionGuard } from '../common/guards/project-permission.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { ProjectRole, ProjectPermission } from '../common/enums/permissions.enum';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';

@@ -41,10 +41,9 @@ export class RolesGuard implements CanActivate {
     }
 
     // 缓存未命中，检查实际角色并缓存
+    // 注意：无论是否有角色都应该缓存，避免拒绝路径的缓存穿透
     const hasRole = this.permissionService.hasRole(user, requiredRoles);
-    if (hasRole) {
-      this.cacheService.cacheUserRole(user.id, user.role.name);
-    }
+    this.cacheService.cacheUserRole(user.id, user.role.name);
 
     return hasRole;
   }

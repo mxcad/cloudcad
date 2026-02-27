@@ -123,7 +123,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
       <AddToGalleryModal
         isOpen={showAddToGalleryModal}
         onClose={onCloseAddToGalleryModal}
-        onSuccess={() => {}} // �ɸ��������
+        onSuccess={() => {}} // 可根据需要添加回调
         nodeId={selectedNodeForGallery?.id || ''}
         fileName={selectedNodeForGallery?.name || ''}
       />

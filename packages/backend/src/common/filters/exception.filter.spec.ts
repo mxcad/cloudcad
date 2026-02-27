@@ -12,7 +12,7 @@ describe('GlobalExceptionFilter', () => {
 
     mockResponse = {
       status: jest.fn().mockReturnThis(),
-      send: jest.fn(),
+      json: jest.fn(),
     };
 
     mockRequest = {
@@ -39,7 +39,7 @@ describe('GlobalExceptionFilter', () => {
       filter.catch(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.send).toHaveBeenCalledWith({
+      expect(mockResponse.json).toHaveBeenCalledWith({
         code: 'INTERNAL_SERVER_ERROR', // 字符串消息时使用默认代码
         message: 'Test error',
         timestamp: expect.any(String),
@@ -57,7 +57,7 @@ describe('GlobalExceptionFilter', () => {
       filter.catch(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(422);
-      expect(mockResponse.send).toHaveBeenCalledWith({
+      expect(mockResponse.json).toHaveBeenCalledWith({
         code: 'VALIDATION_ERROR',
         message: 'Validation error',
         timestamp: expect.any(String),
@@ -72,7 +72,7 @@ describe('GlobalExceptionFilter', () => {
       filter.catch(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(mockResponse.send).toHaveBeenCalledWith({
+      expect(mockResponse.json).toHaveBeenCalledWith({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Standard error',
         timestamp: expect.any(String),
@@ -87,7 +87,7 @@ describe('GlobalExceptionFilter', () => {
       filter.catch(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(mockResponse.send).toHaveBeenCalledWith({
+      expect(mockResponse.json).toHaveBeenCalledWith({
         code: 'INTERNAL_SERVER_ERROR',
         message: '服务器内部错误',
         timestamp: expect.any(String),
@@ -113,7 +113,7 @@ describe('GlobalExceptionFilter', () => {
         const exception = new HttpException({ message: 'Test' }, status);
         filter.catch(exception, mockHost);
 
-        expect(mockResponse.send).toHaveBeenLastCalledWith(
+        expect(mockResponse.json).toHaveBeenLastCalledWith(
           expect.objectContaining({ code })
         );
       });
@@ -125,7 +125,7 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      expect(mockResponse.send).toHaveBeenLastCalledWith(
+      expect(mockResponse.json).toHaveBeenLastCalledWith(
         expect.objectContaining({ code: 'UNKNOWN_ERROR' })
       );
     });
@@ -137,7 +137,7 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      expect(mockResponse.send).toHaveBeenCalledWith(
+      expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           path: '/api/users',
           method: 'POST',
@@ -150,7 +150,7 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      expect(mockResponse.send).toHaveBeenCalledWith(
+      expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
         })

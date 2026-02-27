@@ -109,7 +109,7 @@ export const uploadMxCadFile = async (
   const totalChunks = Math.ceil(file.size / chunkSize);
 
   // 构建请求参数
-  const buildRequest = (extra?: Record<string, any>) => ({
+  const buildRequest = (extra?: Record<string, string | number | boolean>) => ({
     fileHash: hash,
     filename: file.name,
     nodeId,

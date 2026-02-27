@@ -166,7 +166,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     } catch (error) {
       console.error('保存角色失败:', error);
       alert(
-        (error as any).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
           (error as Error).message ||
           '保存失败'
       );
@@ -196,7 +196,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     } catch (error) {
       console.error('删除角色失败:', error);
       alert(
-        (error as any).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
           (error as Error).message ||
           '删除失败'
       );

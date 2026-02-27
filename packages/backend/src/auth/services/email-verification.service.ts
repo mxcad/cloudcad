@@ -24,8 +24,9 @@ export class EmailVerificationService {
   }
 
   async generateVerificationToken(email: string): Promise<string> {
-    // 生成6位数字验证码
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // 生成6位数字验证码（使用加密安全的随机数生成器）
+    const crypto = await import('crypto');
+    const code = (100000 + crypto.randomInt(900000)).toString();
 
     // 存储到 Redis，15分钟过期
     const key = this.getCodeKey(email);

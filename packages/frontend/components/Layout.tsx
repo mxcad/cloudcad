@@ -1,9 +1,6 @@
 import {
   Activity,
-  AlertTriangle,
-  Bell,
   Box,
-  CheckCircle,
   FileText,
   FolderOpen,
   LogOut,
@@ -24,6 +21,7 @@ import { projectsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
+import { APP_NAME, APP_LOGO } from '../constants/appConfig';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TruncateText } from './ui/TruncateText';
@@ -61,7 +59,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Interactions State
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -157,7 +154,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       to: '/roles',
       icon: ShieldCheck,
       label: '角色权限',
-      visible: true, // 所有用户都可以访问角色权限页面
+      visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
     },
     {
       to: '/audit-logs',
@@ -177,7 +174,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     <div
       className="flex h-screen bg-slate-50 overflow-hidden"
       onClick={() => {
-        if (showNotifications) setShowNotifications(false);
         if (showSettings) setShowSettings(false);
       }}
     >
@@ -199,12 +195,28 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         <div className="flex flex-col h-full">
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl gradient-primary shadow-primary-custom flex items-center justify-center">
-                <Box className="text-white" size={20} />
+              <div className="w-10 h-10 rounded-xl gradient-primary shadow-primary-custom flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img
+                  src={APP_LOGO}
+                  alt={APP_NAME}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // 图片加载失败时显示备用图标
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <Box
+                  className="text-white hidden"
+                  size={20}
+                  style={{ display: 'none' }}
+                />
               </div>
-              <span className="text-xl font-bold text-slate-900">
-                <span className="text-gradient-primary">CloudCAD</span>
-              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-base font-bold text-gradient-primary">梦想网页CAD实时</span>
+                <span className="text-sm font-semibold text-primary-600">协同平台</span>
+              </div>
             </div>
             <button
               className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -354,54 +366,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </span>
             </div>
 
-            {/* Notification Dropdown */}
-            <div className="relative">
-              <button
-                className={`p-2 hover:bg-slate-100 relative transition-all rounded-xl ${showNotifications ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowNotifications(!showNotifications);
-                  setShowSettings(false);
-                }}
-              >
-                <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error-500 rounded-full ring-2 ring-white"></span>
-              </button>
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-slide-in-right">
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-800">通知中心</h3>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    <div className="px-4 py-3 hover:bg-slate-50 cursor-pointer flex gap-3 transition-colors">
-                      <div className="mt-1">
-                        <CheckCircle size={16} className="text-success-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-800">
-                          项目《商业中心》已归档
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          10分钟前
-                        </p>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 hover:bg-slate-50 cursor-pointer flex gap-3 transition-colors">
-                      <div className="mt-1">
-                        <AlertTriangle size={16} className="text-warning-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-800">
-                          存储空间即将耗尽 (90%)
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">2小时前</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Settings Dropdown */}
             <div className="relative">
               <button
@@ -409,7 +373,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowSettings(!showSettings);
-                  setShowNotifications(false);
                 }}
               >
                 <Settings size={20} />

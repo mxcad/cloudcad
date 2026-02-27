@@ -16,6 +16,7 @@ import { usersApi, rolesApi } from '../services/apiService';
 import { components } from '../types/api';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '../constants/permissions';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // 使用API类型
 type UserDto = components['schemas']['UserDto'];
@@ -30,6 +31,7 @@ type RoleDto = {
 };
 
 export const UserManagement = () => {
+  useDocumentTitle('用户管理');
   const { hasPermission } = usePermission();
   const [canAccess, setCanAccess] = useState(false);
   const [users, setUsers] = useState<UserDto[]>([]);
@@ -150,7 +152,7 @@ export const UserManagement = () => {
       username: user.username,
       email: user.email,
       password: '', // 编辑时不显示密码
-      roleId: (user.role as any)?.id || '',
+      roleId: user.role?.id || '',
       nickname: user.nickname || '',
     });
     setFormErrors({ username: '', email: '', password: '' });
@@ -221,9 +223,9 @@ export const UserManagement = () => {
         };
         // 只有在输入密码时才更新密码
         if (formData.password) {
-          (updateData as any).password = formData.password;
+          updateData.password = formData.password;
         }
-        await usersApi.update(editingUser.id, updateData);
+        await usersApi.update(editingUser.id, updateData as { username: string; email: string; roleId: string; nickname: string; password?: string });
       } else {
         // 创建用户
         const createData = {

@@ -903,13 +903,15 @@ export class MxCadService {
    * @param file 上传的 mxweb 文件
    * @param userId 用户 ID（可选）
    * @param userName 用户名称（可选）
+   * @param commitMessage 提交信息（可选）
    * @returns 保存结果
    */
   async saveMxwebFile(
     nodeId: string,
     file: Express.Multer.File,
     userId?: string,
-    userName?: string
+    userName?: string,
+    commitMessage?: string
   ): Promise<{ success: boolean; message: string; path?: string }> {
     try {
       this.logger.log(`[saveMxwebFile] 开始保存: nodeId=${nodeId}, file=${file?.originalname}`);
@@ -959,8 +961,28 @@ export class MxCadService {
       await fsPromises.copyFile(file.path, targetPath);
       this.logger.log(`[saveMxwebFile] 文件保存成功: ${file.path} -> ${targetPath}`);
 
-      // 提交文件到 SVN 版本控制
-      await this.commitMxwebToSvn(node, userId, userName);
+      // 调用 mxcadassembly 生成 bin 文件
+      await this.generateBinFiles(targetPath, node.name);
+
+      // 提交节点目录到 SVN 版本控制（排除 .mxweb 文件）
+      const nodeDirectory = path.dirname(targetPath);
+      const message = commitMessage
+        ? `Save: ${node.name} - ${commitMessage}`
+        : `Save: ${node.name}`;
+
+      this.logger.log(`[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`);
+      const commitResult = await this.versionControlService.commitNodeDirectory(
+        nodeDirectory,
+        message,
+        userId,
+        userName
+      );
+
+      if (commitResult.success) {
+        this.logger.log(`节点目录已提交到 SVN: ${node.name}`);
+      } else {
+        this.logger.warn(`节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`);
+      }
 
       // 删除临时上传文件
       try {
@@ -988,39 +1010,37 @@ export class MxCadService {
   }
 
   /**
-   * 提交 mxweb 文件到 SVN 版本控制
-   * @param node 文件节点
-   * @param userId 用户 ID（可选）
-   * @param userName 用户名称（可选）
+   * 调用 mxcadassembly 生成 bin 文件
+   * @param mxwebPath mxweb 文件完整路径
+   * @param nodeName 节点名称（用于日志）
    */
-  private async commitMxwebToSvn(
-    node: any,
-    userId?: string,
-    userName?: string
-  ): Promise<void> {
+  private async generateBinFiles(mxwebPath: string, nodeName: string): Promise<void> {
     try {
-      // 获取文件的完整路径
-      const fullPath = this.storageManager.getFullPath(node.path);
-      // 获取 nodeId 目录路径（去掉文件名）
-      const nodeDirectory = path.dirname(fullPath);
+      this.logger.log(`[generateBinFiles] 开始生成 bin 文件: ${mxwebPath}`);
 
-      // 提交节点目录到 SVN
-      this.logger.log(`[commitMxwebToSvn] node.name=${node.name}, userId=${userId}, userName=${userName}`);
-      const commitResult = await this.versionControlService.commitNodeDirectory(
-        nodeDirectory,
-        `Save mxweb file: ${node.name}`,
-        userId,
-        userName
-      );
+      // 获取 mxweb 文件所在目录和文件名
+      const mxwebDir = path.dirname(mxwebPath);
+      const mxwebName = path.basename(mxwebPath);
 
-      if (commitResult.success) {
-        this.logger.log(`mxweb 节点目录已提交到 SVN: ${node.name} (${nodeDirectory})`);
+      // 构造 outname：原文件名 + .bin（例如：test2.mxweb.bin）
+      const outname = `${mxwebName}.bin`;
+
+      // 调用 fileConversionService 进行转换
+      const result = await this.fileConversionService.convertFile({
+        srcPath: mxwebPath,
+        fileHash: '', // bin 生成不需要 hash
+        createPreloadingData: true,
+        outname: outname,
+      });
+
+      if (result.isOk) {
+        this.logger.log(`[generateBinFiles] bin 文件生成成功: ${nodeName}`);
       } else {
-        this.logger.warn(`mxweb 节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`);
+        this.logger.error(`[generateBinFiles] bin 文件生成失败: ${result.error || '未知错误'}`);
       }
     } catch (error) {
-      // SVN 提交失败不应影响文件保存流程，仅记录日志
-      this.logger.error(`mxweb 节点目录 SVN 提交异常: ${node.name}`, error.stack);
+      // bin 生成失败不应影响文件保存流程，仅记录日志
+      this.logger.error(`[generateBinFiles] bin 文件生成异常: ${nodeName}`, error.stack);
     }
   }
 }

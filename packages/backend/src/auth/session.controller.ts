@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Req, Res, Body } from '@nestjs/common';
+import { Controller, Post, Get, Req, Res, Body, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Public } from './decorators/public.decorator';
 
@@ -17,14 +17,15 @@ declare module 'express-session' {
 @Public()
 @Controller('session')
 export class SessionController {
+  private readonly logger = new Logger(SessionController.name);
+
   /**
    * 设置用户 Session
    */
   @Post('create')
-  async createSession(@Req() req: Request, @Body() body: { user: any }) {
-    console.log('[SessionController] 创建 Session, 用户:', body.user?.id);
-    console.log('[SessionController] Session ID:', req.sessionID);
-    console.log('[SessionController] Cookies:', req.headers.cookie);
+  async createSession(@Req() req: Request, @Body() body: { user: { id: string; email: string; username: string; role: string } }) {
+    this.logger.debug(`创建 Session, 用户: ${body.user?.id}`);
+    this.logger.debug(`Session ID: ${req.sessionID}`);
 
     if (!body.user) {
       return { success: false, message: '用户信息不能为空' };
@@ -42,10 +43,10 @@ export class SessionController {
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => {
         if (err) {
-          console.error('[SessionController] Session 保存失败:', err);
+          this.logger.error(`Session 保存失败: ${err.message}`);
           reject(err);
         } else {
-          console.log('[SessionController] Session 保存成功');
+          this.logger.debug('Session 保存成功');
           resolve();
         }
       });
@@ -59,10 +60,8 @@ export class SessionController {
    */
   @Get('user')
   async getSessionUser(@Req() req: Request) {
-    console.log('[SessionController] 获取 Session 用户信息');
-    console.log('[SessionController] Session ID:', req.sessionID);
-    console.log('[SessionController] Session:', req.session);
-    console.log('[SessionController] Cookies:', req.headers.cookie);
+    this.logger.debug('获取 Session 用户信息');
+    this.logger.debug(`Session ID: ${req.sessionID}`);
 
     const user = req.session?.user;
     if (!user) {

@@ -9,6 +9,7 @@ import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailService } from './services/email.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { UserStatus } from '../common/enums/user-status.enum';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -26,28 +27,44 @@ describe('AuthService', () => {
     id: 'user-id',
     email: 'test@example.com',
     username: 'testuser',
-    nickname: 'Test User',
-    avatar: undefined,
-    role: 'USER',
-    status: 'ACTIVE',
-    emailVerified: true,
     password: 'hashedPassword',
+    nickname: 'Test User',
+    avatar: null,
+    roleId: 'role-id',
+    role: {
+      id: 'role-id',
+      name: 'USER',
+      description: '普通用户',
+      isSystem: true,
+      permissions: [],
+    },
+    status: UserStatus.ACTIVE,
+    emailVerified: true,
+    emailVerifiedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
+  } as any;
 
   const mockUserWithoutPassword = {
     id: 'user-id',
     email: 'test@example.com',
     username: 'testuser',
     nickname: 'Test User',
-    avatar: undefined,
-    role: 'USER',
-    status: 'ACTIVE',
+    avatar: null,
+    roleId: 'role-id',
+    role: {
+      id: 'role-id',
+      name: 'USER',
+      description: '普通用户',
+      isSystem: true,
+      permissions: [],
+    },
+    status: UserStatus.ACTIVE,
     emailVerified: true,
+    emailVerifiedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
+  } as any;
 
   beforeEach(async () => {
     const mockPrisma = {

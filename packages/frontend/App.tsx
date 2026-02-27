@@ -22,8 +22,10 @@ import FontLibrary from './pages/FontLibrary';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { SystemMonitorPage } from './pages/SystemMonitorPage';
 import { useAuth } from './contexts/AuthContext';
+import { usePermission } from './hooks/usePermission';
+import { SystemPermission } from './constants/permissions';
 
-// 受保护的路由组件
+// 受保护的路由组件（认证检查）
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
   ({ children }) => {
     const { isAuthenticated, loading, user, token } = useAuth();
@@ -54,6 +56,29 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
     return <>{children}</>;
   }
 );
+
+// 权限保护路由组件
+const PermissionRoute: React.FC<{
+  children: React.ReactNode;
+  permission: SystemPermission;
+}> = React.memo(({ children, permission }) => {
+  const { hasPermission } = usePermission();
+
+  if (!hasPermission(permission)) {
+    return <Navigate to="/projects" replace />;
+  }
+
+  return <>{children}</>;
+});
+
+// 无权限页面提示组件
+const NoPermissionPage: React.FC = React.memo(() => (
+  <div className="flex flex-col items-center justify-center min-h-[60vh]">
+    <div className="text-6xl mb-4">🔒</div>
+    <h2 className="text-xl font-semibold text-slate-700 mb-2">访问受限</h2>
+    <p className="text-slate-500">您没有权限访问此页面</p>
+  </div>
+));
 
 function AppContent() {
   return (
@@ -111,18 +136,57 @@ function AppContent() {
                     element={<Navigate to="/projects" replace />}
                   />
 
-                  <Route path="/users" element={<UserManagement />} />
-                  <Route path="/roles" element={<RoleManagement />} />
+                  {/* 用户管理 - 需要 SYSTEM_USER_READ 权限 */}
+                  <Route
+                    path="/users"
+                    element={
+                      <PermissionRoute permission={SystemPermission.SYSTEM_USER_READ}>
+                        <UserManagement />
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 角色管理 - 需要 SYSTEM_ROLE_READ 权限 */}
+                  <Route
+                    path="/roles"
+                    element={
+                      <PermissionRoute permission={SystemPermission.SYSTEM_ROLE_READ}>
+                        <RoleManagement />
+                      </PermissionRoute>
+                    }
+                  />
+
                   <Route path="/profile" element={<Profile />} />
 
-                  {/* 字体库 */}
-                  <Route path="/font-library" element={<FontLibrary />} />
+                  {/* 字体库 - 需要 SYSTEM_FONT_READ 权限 */}
+                  <Route
+                    path="/font-library"
+                    element={
+                      <PermissionRoute permission={SystemPermission.SYSTEM_FONT_READ}>
+                        <FontLibrary />
+                      </PermissionRoute>
+                    }
+                  />
 
-                  {/* 系统管理 */}
-                  <Route path="/audit-logs" element={<AuditLogPage />} />
+                  {/* 审计日志 - 需要 SYSTEM_ADMIN 权限 */}
+                  <Route
+                    path="/audit-logs"
+                    element={
+                      <PermissionRoute permission={SystemPermission.SYSTEM_ADMIN}>
+                        <AuditLogPage />
+                      </PermissionRoute>
+                    }
+                  />
 
-                  {/* 系统监控 */}
-                  <Route path="/system-monitor" element={<SystemMonitorPage />} />
+                  {/* 系统监控 - 需要 SYSTEM_MONITOR 权限 */}
+                  <Route
+                    path="/system-monitor"
+                    element={
+                      <PermissionRoute permission={SystemPermission.SYSTEM_MONITOR}>
+                        <SystemMonitorPage />
+                      </PermissionRoute>
+                    }
+                  />
                 </Routes>
               </Layout>
             </ProtectedRoute>

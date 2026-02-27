@@ -3,6 +3,12 @@
  * 统一管理 API 相关的配置和常量
  */
 
+// 扩展 globalThis 类型
+declare global {
+  // eslint-disable-next-line no-var
+  var __VITE_API_BASE_URL__: string | undefined;
+}
+
 /**
  * 获取 API 基础 URL
  * 优先使用环境变量，否则使用默认值
@@ -14,8 +20,8 @@ export const getApiBaseUrl = (): string => {
   }
 
   // 其次使用全局变量（兼容旧代码）
-  if ((globalThis as any).__VITE_API_BASE_URL__) {
-    return (globalThis as any).__VITE_API_BASE_URL__;
+  if (globalThis.__VITE_API_BASE_URL__) {
+    return globalThis.__VITE_API_BASE_URL__;
   }
 
   // 默认值

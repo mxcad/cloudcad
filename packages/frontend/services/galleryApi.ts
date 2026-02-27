@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const galleryApi = {
   getDrawingsTypes: () =>
@@ -127,9 +128,7 @@ export const galleryApi = {
     firstType: number,
     nodeId: string
   ) => {
-    const baseUrl =
-      (globalThis as any).__VITE_API_BASE_URL__ || 'http://localhost:3001/api';
-    return `${baseUrl}/gallery/${galleryType}/${secondType}/${firstType}/${nodeId}.jpg`;
+    return `${API_BASE_URL}/gallery/${galleryType}/${secondType}/${firstType}/${nodeId}.jpg`;
   },
 
   addToGallery: (

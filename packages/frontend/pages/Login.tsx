@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { APP_NAME, APP_LOGO } from '../constants/appConfig';
 
 type LoginDto = components['schemas']['LoginDto'];
 
+interface LocationState {
+  from?: string;
+}
+
 export const Login: React.FC = () => {
+  useDocumentTitle('登录');
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
@@ -21,7 +28,7 @@ export const Login: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       // 获取重定向路径，如果没有则跳转到首页
-      const from = (location.state as any)?.from || '/';
+      const from = (location.state as LocationState)?.from || '/';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate, location]);
@@ -75,9 +82,20 @@ export const Login: React.FC = () => {
       <div className="max-w-md w-full relative z-10 animate-scale-in">
         {/* Logo 和标题 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float overflow-hidden">
+            <img
+              src={APP_LOGO}
+              alt={APP_NAME}
+              className="w-full h-full object-contain p-2"
+              onError={(e) => {
+                // 图片加载失败时显示备用 SVG
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as SVGElement;
+                if (fallback) fallback.style.display = 'block';
+              }}
+            />
             <svg
-              className="w-10 h-10 text-white"
+              className="w-10 h-10 text-white hidden"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -87,7 +105,7 @@ export const Login: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-4xl font-bold text-slate-900 mb-2">
-            <span className="text-gradient-primary">CloudCAD</span>
+            <span className="text-gradient-primary">{APP_NAME}</span>
           </h2>
           <p className="text-slate-600">专业云端 CAD 图纸管理平台</p>
         </div>
@@ -223,7 +241,7 @@ export const Login: React.FC = () => {
 
         {/* 底部信息 */}
         <p className="mt-8 text-center text-xs text-slate-400">
-          © 2026 CloudCAD. 专业云端 CAD 图纸管理平台
+          © 2026 {APP_NAME}. 专业云端 CAD 图纸管理平台
         </p>
       </div>
     </div>

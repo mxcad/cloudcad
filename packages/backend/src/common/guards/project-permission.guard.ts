@@ -91,9 +91,13 @@ export class NodePermissionGuard implements CanActivate {
       return request.body.projectId;
     }
 
-    // 如果有 nodeId，从数据库查找其所属的项目根节点
-    // 注意：nodeId 可能来自 request.body（FormData）或 request.params
-    let nodeId = request.params?.nodeId || request.body?.nodeId;
+    // 如果有 nodeId 或 parentId，从数据库查找其所属的项目根节点
+    // 注意：nodeId/parentId 可能来自 request.body（FormData）或 request.params
+    // parentId 用于创建文件夹等操作（路由：nodes/:parentId/folders 或请求体中的 parentId）
+    const nodeId = request.params?.nodeId || 
+                   request.params?.parentId || 
+                   request.body?.nodeId ||
+                   request.body?.parentId;
 
     if (nodeId) {
       try {
@@ -129,11 +133,23 @@ export class NodePermissionGuard implements CanActivate {
   }
 
   /**
+   * 最大递归深度限制，防止循环引用导致的无限递归
+   */
+  private static readonly MAX_RECURSION_DEPTH = 50;
+
+  /**
    * 查找节点的项目根节点
    * @param nodeId 节点ID
+   * @param depth 当前递归深度（内部使用）
    * @returns 项目根节点ID
    */
-  private async findProjectRoot(nodeId: string): Promise<string | null> {
+  private async findProjectRoot(nodeId: string, depth: number = 0): Promise<string | null> {
+    // 检查递归深度，防止无限递归
+    if (depth > NodePermissionGuard.MAX_RECURSION_DEPTH) {
+      console.error('[findProjectRoot] 超过最大递归深度限制，可能存在循环引用:', nodeId);
+      return null;
+    }
+
     try {
       // 使用 getNodeTree 而不是 getNode，因为 getNode 会过滤已删除的节点（deletedAt: null）
       // 对于回收站中的节点，我们需要能够获取节点信息并向上查找项目根节点
@@ -150,7 +166,7 @@ export class NodePermissionGuard implements CanActivate {
 
       // 如果有父节点，递归查找
       if (node.parentId) {
-        return this.findProjectRoot(node.parentId);
+        return this.findProjectRoot(node.parentId, depth + 1);
       }
 
       return null;

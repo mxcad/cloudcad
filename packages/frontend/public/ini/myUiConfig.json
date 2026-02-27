@@ -97,6 +97,11 @@
     },
     {
       "icon": "class: iconfont  icon_shujuzhongtai",
+      "prompt": "协同",
+      "cmd": "Mx_ShowCollaborate"
+    },
+    {
+      "icon": "class: iconfont  icon_shujuzhongtai",
       "prompt": "数据库展示",
       "cmd": "Mx_DatabaseDisplay"
     },

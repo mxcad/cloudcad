@@ -169,7 +169,7 @@ export const useFileSystem = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // 存储所有定时器 ID，用于组件卸载时清理
-  const timerRefs = useRef<Set<NodeJS.Timeout>>(new Set());
+  const timerRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // 存储 AbortController，用于取消网络请求
   const abortControllerRef = useRef<AbortController | null>(null);

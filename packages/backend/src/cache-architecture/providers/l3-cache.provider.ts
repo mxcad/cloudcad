@@ -52,16 +52,20 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
         return null;
       }
 
-      // 更新访问信息
-      await this.prisma.cacheEntry.update({
+      // 解析并返回值（更新访问信息失败不影响读取）
+      this.hits++;
+      
+      // 异步更新访问信息（使用 updateMany 避免条目不存在时报错）
+      this.prisma.cacheEntry.updateMany({
         where: { id: entry.id },
         data: {
           lastAccessedAt: new Date(),
           accessCount: { increment: 1 },
         },
+      }).catch(() => {
+        // 忽略错误
       });
 
-      this.hits++;
       return JSON.parse(entry.value) as K;
     } catch (error) {
       this.logger.error(`获取 L3 缓存失败: ${key}`, error);
@@ -107,7 +111,8 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
    */
   async delete(key: string): Promise<void> {
     try {
-      await this.prisma.cacheEntry.delete({
+      // 使用 deleteMany 代替 delete，避免条目不存在时报错
+      await this.prisma.cacheEntry.deleteMany({
         where: { key },
       });
     } catch (error) {
@@ -229,8 +234,8 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
         result.set(entry.key, value);
         cachedKeys.add(entry.key);
 
-        // 更新访问信息
-        await this.prisma.cacheEntry.update({
+        // 更新访问信息（使用 updateMany 避免报错）
+        await this.prisma.cacheEntry.updateMany({
           where: { id: entry.id },
           data: {
             lastAccessedAt: new Date(),

@@ -5,18 +5,15 @@ import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/api';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface FontLibraryProps {}
 
 export default function FontLibrary(props: FontLibraryProps) {
+  useDocumentTitle('字体库');
   const { hasPermission } = usePermission();
 
-  // 权限检查
-  const canReadFonts = hasPermission(SystemPermission.SYSTEM_FONT_READ);
-  const canUploadFonts = hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD);
-  const canDeleteFonts = hasPermission(SystemPermission.SYSTEM_FONT_DELETE);
-  const canDownloadFonts = hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD);
-
+  // 所有 Hooks 必须在条件返回之前调用
   const [allFonts, setAllFonts] = useState<FontInfo[]>([]);
   const [fonts, setFonts] = useState<FontInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,21 +39,15 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 选中的字体
   const [selectedFonts, setSelectedFonts] = useState<Set<string>>(new Set());
 
-  // 如果没有查看权限，返回无权限提示
-  if (!canReadFonts) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <p className="text-gray-500">您没有查看字体库的权限</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // 权限检查
+  const canReadFonts = hasPermission(SystemPermission.SYSTEM_FONT_READ);
+  const canUploadFonts = hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD);
+  const canDeleteFonts = hasPermission(SystemPermission.SYSTEM_FONT_DELETE);
+  const canDownloadFonts = hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD);
 
   // 获取字体列表
   const fetchFonts = useCallback(async () => {
+    if (!canReadFonts) return;
     setLoading(true);
     try {
       const response = await fontsApi.getFonts(activeTab);
@@ -74,7 +65,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, canReadFonts]);
 
   // 处理筛选、排序
   useEffect(() => {
@@ -130,11 +121,24 @@ export default function FontLibrary(props: FontLibraryProps) {
     });
 
     setFonts(filtered);
-  }, [allFonts, filters, sortBy, sortOrder, activeTab]);
+  }, [allFonts, filters, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchFonts();
   }, [fetchFonts]);
+
+  // 如果没有查看权限，返回无权限提示（在所有 Hooks 调用之后）
+  if (!canReadFonts) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-gray-500">您没有查看字体库的权限</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 处理筛选条件变化
   const handleFilterChange = (key: string, value: string) => {
@@ -660,7 +664,7 @@ function UploadFontModal({
           </label>
           <select
             value={target}
-            onChange={(e) => setTarget(e.target.value as any)}
+            onChange={(e) => setTarget(e.target.value as 'backend' | 'frontend' | 'both')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
             <option value="both">后端和前端（同时上传）</option>

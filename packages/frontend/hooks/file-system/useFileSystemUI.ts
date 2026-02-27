@@ -7,12 +7,14 @@ export const useFileSystemUI = () => {
     isOpen: boolean;
     title: string;
     message: string;
+    confirmText?: string;
     onConfirm: () => void;
     type?: 'danger' | 'warning' | 'info';
   }>({
     isOpen: false,
     title: '',
     message: '',
+    confirmText: undefined,
     onConfirm: () => {},
     type: 'warning',
   });
@@ -49,12 +51,14 @@ export const useFileSystemUI = () => {
       title: string,
       message: string,
       onConfirm: () => void,
-      type: 'danger' | 'warning' | 'info' = 'warning'
+      type: 'danger' | 'warning' | 'info' = 'warning',
+      confirmText: string = '确定'
     ) => {
       setConfirmDialog({
         isOpen: true,
         title,
         message,
+        confirmText,
         onConfirm: () => {
           onConfirm();
           closeConfirm();

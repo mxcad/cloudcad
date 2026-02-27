@@ -3,7 +3,6 @@ import {
   Logger,
   UnauthorizedException,
   ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -34,12 +33,6 @@ export class AuthService {
     registerDto: RegisterDto
   ): Promise<{ message: string; email: string }> {
     const { email, username, password, nickname } = registerDto;
-
-    // 检查是否允许注册（仅在首次启动时允许）
-    const isRegistrationAllowed = await this.initializationService.isRegistrationAllowed();
-    if (!isRegistrationAllowed) {
-      throw new BadRequestException('系统已初始化，注册功能已关闭。请联系管理员创建账户。');
-    }
 
     const existingUserByEmail = await this.prisma.user.findUnique({
       where: { email },

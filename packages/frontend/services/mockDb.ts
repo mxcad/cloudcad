@@ -23,15 +23,18 @@ const MOCK_ROLES: Role[] = [
     name: '超级管理员',
     description: '拥有系统所有权限',
     isSystem: true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     permissions: Object.values(MockPermission) as any[],
   },
   {
     id: 'USER',
     name: '普通用户',
     description: '可以参与项目设计，上传资源',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     permissions: [
       MockPermission.VIEW_DASHBOARD,
       MockPermission.ASSET_UPLOAD,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any[],
   },
 ];
@@ -186,6 +189,7 @@ class MockDB {
     return stored ? JSON.parse(stored) : defaultValue;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private save(key: string, data: any) {
     localStorage.setItem(`cloudcad_${key}`, JSON.stringify(data));
   }
@@ -271,6 +275,7 @@ class MockDB {
     await delay(300);
     const userRole = this.roles.find((r) => r.id === this.currentUser.role);
     const hasViewAll = userRole?.permissions.includes(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       MockPermission.PROJECT_VIEW_ALL as any
     );
     return this.files.filter((f) => {
@@ -443,6 +448,7 @@ class MockDB {
     await delay(300);
     const userRole = this.roles.find((r) => r.id === this.currentUser.role);
     const canManage = userRole?.permissions.includes(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       MockPermission.LIBRARY_MANAGE as any
     );
     const updatedLibraries = this.libraries.map((lib) => ({

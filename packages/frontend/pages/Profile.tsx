@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import { apiService } from '../services/apiService';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const Profile: React.FC = () => {
+  useDocumentTitle('个人资料');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isAdmin } = usePermission();

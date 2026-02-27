@@ -275,7 +275,7 @@ export class CacheMonitorService {
           status = 'healthy';
           break;
 
-        case CacheLevel.L2:
+        case CacheLevel.L2: {
           // 检查 Redis 连接
           const l2Connected = (this.l2Cache as any).isReady?.() ?? true;
           if (!l2Connected) {
@@ -284,12 +284,14 @@ export class CacheMonitorService {
             error = 'Redis 连接断开';
           }
           break;
+        }
 
-        case CacheLevel.L3:
+        case CacheLevel.L3: {
           // 检查数据库连接
           await this.l3Cache.size();
           status = 'healthy';
           break;
+        }
       }
     } catch (err) {
       status = 'unhealthy';

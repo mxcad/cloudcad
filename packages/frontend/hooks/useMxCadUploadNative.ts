@@ -41,7 +41,7 @@ export interface LoadFileParam {
 }
 
 interface PickerElement extends HTMLInputElement {
-  onchange: ((this: GlobalEventHandlers, ev: Event) => any) | null;
+  onchange: ((this: GlobalEventHandlers, ev: Event) => void) | null;
 }
 
 /**

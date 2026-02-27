@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
 import { validateField, validateRegisterForm } from '../utils/validation';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { APP_NAME, APP_LOGO } from '../constants/appConfig';
 
 type RegisterDto = components['schemas']['RegisterDto'];
 
 export const Register: React.FC = () => {
+  useDocumentTitle('注册');
   const navigate = useNavigate();
   const {
     register: registerUser,
@@ -150,19 +153,42 @@ export const Register: React.FC = () => {
     setError(null);
 
     try {
+      console.log('[Register] 开始注册:', formData.email);
       await registerUser(formData);
+      console.log('[Register] 注册成功，跳转到验证页面');
       // 跳转到邮箱验证页面
       navigate('/verify-email', {
         state: { email: formData.email },
         replace: true,
       });
     } catch (err) {
-      setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response
-          ?.data?.message ||
-          (err as Error).message ||
-          '注册失败，请稍后重试'
-      );
+      console.error('[Register] 注册失败:', err);
+      const axiosError = err as Error & {
+        response?: {
+          data?: {
+            message?: string;
+            error?: string;
+            statusCode?: number;
+          };
+          status?: number;
+          statusText?: string;
+        };
+      };
+
+      console.error('[Register] 错误响应:', axiosError.response);
+
+      // 优先使用后端返回的错误信息
+      const errorMessage =
+        axiosError.response?.data?.message ||
+        axiosError.response?.data?.error ||
+        (axiosError.response?.status === 409
+          ? '用户名或邮箱已被使用'
+          : axiosError.response?.statusText) ||
+        axiosError.message ||
+        '注册失败，请稍后重试';
+
+      console.error('[Register] 错误消息:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -182,9 +208,19 @@ export const Register: React.FC = () => {
       <div className="max-w-md w-full relative z-10 animate-scale-in">
         {/* Logo 和标题 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-primary-custom mb-6 animate-float overflow-hidden">
+            <img
+              src={APP_LOGO}
+              alt={APP_NAME}
+              className="w-full h-full object-contain p-2"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as SVGElement;
+                if (fallback) fallback.style.display = 'block';
+              }}
+            />
             <svg
-              className="w-10 h-10 text-white"
+              className="w-10 h-10 text-white hidden"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -194,7 +230,7 @@ export const Register: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-4xl font-bold text-slate-900 mb-2">
-            <span className="text-gradient-primary">CloudCAD</span>
+            <span className="text-gradient-primary">{APP_NAME}</span>
           </h2>
           <p className="text-slate-600">创建您的账户，开启云端 CAD 之旅</p>
         </div>
@@ -472,7 +508,7 @@ export const Register: React.FC = () => {
 
         {/* 底部信息 */}
         <p className="mt-8 text-center text-xs text-slate-400">
-          © 2026 CloudCAD. 专业云端 CAD 图纸管理平台
+          © 2026 {APP_NAME}. 专业云端 CAD 图纸管理平台
         </p>
       </div>
     </div>

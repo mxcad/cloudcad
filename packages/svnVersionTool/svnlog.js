@@ -39,7 +39,7 @@ function svnLog(targetPath, limit, verbose, username, password, callback) {
   // 使用 XML 格式输出，便于解析
   command += ' --xml';
 
-  exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(command, { maxBuffer: 10 * 1024 * 1024, encoding: 'utf8' }, (error, stdout, _stderr) => {
     if (error) {
       callback(error);
     } else {

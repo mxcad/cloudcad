@@ -58,7 +58,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           <button
             onClick={isAtRoot ? () => navigate('/projects') : onGoBack}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
-            title={isAtRoot ? '������Ŀ�б�' : '������һ��'}
+            title={isAtRoot ? '返回项目列表' : '返回上一级'}
           >
             <svg
               width="18"
@@ -96,7 +96,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             onClick={onRefresh}
             disabled={loading}
             className="text-slate-600 hover:bg-slate-100"
-            title="ˢ��"
+            title="刷新"
           >
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
@@ -107,7 +107,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               size="sm"
               onClick={onCreateProject}
               className="text-slate-600 hover:bg-slate-100"
-              title="�½���Ŀ"
+              title="新建项目"
             >
               <FolderPlus size={16} />
             </Button>
@@ -119,7 +119,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                 onClick={onCreateFolder}
                 disabled={loading}
                 className="text-slate-600 hover:bg-slate-100"
-                title="�½��ļ���"
+                title="新建文件夹"
               >
                 <svg
                   width="16"
@@ -146,7 +146,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           />
           <input
             type="text"
-            placeholder="�����ļ�����Ŀ..."
+            placeholder="搜索文件或项目..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -161,7 +161,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               <button
                 onClick={() => setSearchQuery('')}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                title="�������"
+                title="清除搜索"
               >
                 <svg
                   width="12"
@@ -178,7 +178,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             <button
               onClick={handleSearchSubmit}
               className="text-primary-500 hover:text-primary-600 transition-colors p-1"
-              title="����"
+              title="搜索"
             >
               <svg
                 width="14"
@@ -205,7 +205,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             className={
               isMultiSelectMode ? '' : 'text-slate-600 hover:bg-slate-100'
             }
-            title="��ѡģʽ"
+            title="多选模式"
           >
             <svg
               width="14"
@@ -225,7 +225,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               size="sm"
               onClick={onSelectAll}
               className="text-slate-600 hover:bg-slate-100"
-              title={selectedNodes.size === nodesCount ? 'ȡ��ȫѡ' : 'ȫѡ'}
+              title={selectedNodes.size === nodesCount ? '取消全选' : '全选'}
             >
               {selectedNodes.size === nodesCount ? (
                 <svg

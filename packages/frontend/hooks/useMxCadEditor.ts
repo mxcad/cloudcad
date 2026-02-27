@@ -1,17 +1,46 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiService } from '../services/apiService';
-import { Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
+import { logger as Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
+
+/** MxPluginContext 类型声明 */
+declare global {
+  interface Window {
+    MxPluginContext?: {
+      getServerConfig: () => Promise<MxCadServerConfig>;
+    };
+  }
+}
+
+/** MxCAD 服务器配置 */
+interface MxCadServerConfig {
+  uploadFileConfig?: {
+    create?: {
+      formData?: Record<string, unknown>;
+    };
+  };
+}
+
+/** 项目上下文 */
+interface ProjectContext {
+  projectId?: string;
+  parentId?: string;
+}
+
+/** 用户信息 */
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+}
 
 /**
  * 项目上下文管理 Hook
  */
 export const useProjectContext = () => {
   const location = useLocation();
-  const [projectContext, setProjectContext] = useState<{
-    projectId?: string;
-    parentId?: string;
-  }>({});
+  const [projectContext, setProjectContext] = useState<ProjectContext>({});
 
   useEffect(() => {
     const context = UrlHelper.getProjectContext(location.search);
@@ -47,14 +76,18 @@ export const useFileInfo = () => {
  * MxCAD 服务器配置设置 Hook
  */
 export const useMxCadServerConfig = (
-  user: { id: string; name: string; email: string },
-  projectContext: { projectId?: string; parentId?: string }
+  user: UserInfo,
+  projectContext: ProjectContext
 ) => {
   const setupServerConfig = async () => {
     try {
-      const serverConfig = await (
-        window as any
-      ).MxPluginContext.getServerConfig();
+      const serverConfig = await window.MxPluginContext?.getServerConfig();
+      
+      if (!serverConfig) {
+        Logger.warn('MxPluginContext 或服务器配置不可用');
+        return;
+      }
+      
       Logger.info('当前 MxCAD 服务器配置', serverConfig);
 
       if (serverConfig?.uploadFileConfig?.create) {

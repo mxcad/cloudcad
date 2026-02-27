@@ -10,6 +10,7 @@ import { StorageModule } from '../storage/storage.module';
 import { AuditLogModule } from '../audit/audit-log.module';
 import { RolesModule } from '../roles/roles.module';
 import { VersionControlModule } from '../version-control/version-control.module';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { VersionControlModule } from '../version-control/version-control.module'
     FileHashService,
     FileValidationService,
     FileSystemPermissionService,
+    RequireProjectPermissionGuard,
   ],
   exports: [
     FileSystemService,

@@ -356,6 +356,8 @@ enum ProjectPermission {
   FILE_DELETE
   FILE_TRASH_MANAGE
   FILE_DOWNLOAD
+  FILE_MOVE
+  FILE_COPY
 
   // ========== CAD 图纸权限 ==========
   CAD_SAVE

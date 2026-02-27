@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
-import { projectsApi } from '../../services/apiService';
+import { useNavigate } from 'react-router-dom';
+import { projectsApi, trashApi } from '../../services/apiService';
 import { FileSystemNode } from '../../types/filesystem';
+import { handleError } from '../../utils/errorHandler';
 
 interface UseFileSystemCRUDProps {
   urlProjectId: string;
@@ -20,6 +22,7 @@ interface UseFileSystemCRUDProps {
   selectedNodes: Set<string>;
   nodes: FileSystemNode[];
   clearSelection: () => void;
+  isProjectTrashViewRef: React.MutableRefObject<boolean>;
 }
 
 const validateFolderName = (
@@ -66,11 +69,15 @@ export const useFileSystemCRUD = ({
   selectedNodes,
   nodes,
   clearSelection,
+  isProjectTrashViewRef,
 }: UseFileSystemCRUDProps) => {
+  const navigate = useNavigate();
+
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
   const [folderName, setFolderName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCreateFolder = useCallback(async () => {
     if (!urlProjectId) {
@@ -97,17 +104,7 @@ export const useFileSystemCRUD = ({
       loadData();
       return newFolder;
     } catch (error) {
-      let errorMessage = '创建文件夹失败';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error
-      ) {
-        const err = error as { response?: { data?: { message?: string } } };
-        errorMessage = err.response?.data?.message || errorMessage;
-      }
+      const errorMessage = (error as Error).message || '创建文件夹失败';
       showToast(errorMessage, 'error');
       return null;
     }
@@ -143,23 +140,17 @@ export const useFileSystemCRUD = ({
       setEditingNode(null);
       loadData();
     } catch (error) {
-      let errorMessage = '重命名失败';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error
-      ) {
-        const err = error as { response?: { data?: { message?: string } } };
-        errorMessage = err.response?.data?.message || errorMessage;
-      }
+      const errorMessage = (error as Error).message || '重命名失败';
       showToast(errorMessage, 'error');
     }
   }, [folderName, editingNode, urlProjectId, loadData, showToast]);
 
   const handleDelete = useCallback(
     (node: FileSystemNode, permanently: boolean = false) => {
+      if (isDeleting) {
+        return;
+      }
+
       let deleteMessage: string;
 
       if (permanently) {
@@ -185,27 +176,31 @@ export const useFileSystemCRUD = ({
         deleteMessage,
         async () => {
           try {
-            // 只在确认后才执行删除操作
+            setIsDeleting(true);
+
             if (permanently) {
               if (node.isRoot) {
                 await projectsApi.delete(node.id, true);
-              } else if (node.isFolder) {
-                await projectsApi.deleteNode(node.id, true);
               } else {
                 await projectsApi.deleteNode(node.id, true);
               }
             } else {
               if (node.isRoot) {
                 await projectsApi.delete(node.id, false);
-              } else if (node.isFolder) {
-                await projectsApi.deleteNode(node.id, false);
               } else {
                 await projectsApi.deleteNode(node.id, false);
               }
             }
 
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
-            loadData();
+
+            if (isProjectTrashViewRef.current && permanently) {
+              loadData();
+            } else if (permanently && node.isRoot) {
+              navigate('/projects');
+            } else {
+              loadData();
+            }
           } catch (error) {
             let errorMessage = '删除失败';
             if (error instanceof Error) {
@@ -221,13 +216,15 @@ export const useFileSystemCRUD = ({
               errorMessage = err.response?.data?.message || errorMessage;
             }
             showToast(errorMessage, 'error');
+          } finally {
+            setIsDeleting(false);
           }
         },
         permanently ? 'danger' : 'warning',
         permanently ? '彻底删除' : '删除'
       );
     },
-    [showConfirm, loadData, showToast]
+    [showConfirm, loadData, showToast, isDeleting, navigate, isProjectTrashViewRef]
   );
 
   const handleBatchDelete = useCallback(
@@ -252,12 +249,25 @@ export const useFileSystemCRUD = ({
                 if (node?.isRoot) {
                   return projectsApi.delete(node.id, permanently);
                 }
-                return projectsApi.deleteNode(node.id, permanently);
+                return projectsApi.deleteNode(nodeId, permanently);
               })
             );
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             clearSelection();
-            loadData();
+
+            if (isProjectTrashViewRef.current && permanently) {
+              loadData();
+            } else if (
+              permanently &&
+              Array.from(selectedNodes).some((nodeId) => {
+                const node = nodes.find((n) => n.id === nodeId);
+                return node?.isRoot;
+              })
+            ) {
+              navigate('/projects');
+            } else {
+              loadData();
+            }
           } catch (error) {
             let errorMessage = '批量删除失败';
             if (error instanceof Error) {
@@ -279,8 +289,45 @@ export const useFileSystemCRUD = ({
         permanently ? '彻底删除' : '删除'
       );
     },
-    [selectedNodes, nodes, showConfirm, loadData, showToast, clearSelection]
+    [selectedNodes, nodes, showConfirm, loadData, showToast, clearSelection, navigate, isProjectTrashViewRef]
   );
+
+  const handleBatchRestore = useCallback(() => {
+    if (selectedNodes.size === 0) {
+      showToast('请先选择要恢复的项目', 'error');
+      return;
+    }
+
+    showConfirm(
+      '批量恢复',
+      `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
+      async () => {
+        try {
+          await trashApi.restoreItems(Array.from(selectedNodes));
+          showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
+          clearSelection();
+          loadData();
+        } catch (error) {
+          let errorMessage = '批量恢复失败';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (
+            typeof error === 'object' &&
+            error !== null &&
+            'response' in error
+          ) {
+            const err = error as {
+              response?: { data?: { message?: string } };
+            };
+            errorMessage = err.response?.data?.message || errorMessage;
+          }
+          showToast(errorMessage, 'error');
+        }
+      },
+      'warning',
+      '恢复'
+    );
+  }, [selectedNodes, showConfirm, loadData, showToast, clearSelection]);
 
   const handleOpenRename = useCallback((node: FileSystemNode) => {
     setEditingNode(node);
@@ -297,6 +344,149 @@ export const useFileSystemCRUD = ({
     setShowRenameModal(true);
   }, []);
 
+  // 项目相关操作
+  const handleCreateProject = useCallback(
+    async (name: string, description?: string) => {
+      try {
+        await projectsApi.create({
+          name: name.trim(),
+          description: description?.trim(),
+        });
+        showToast('项目创建成功', 'success');
+        loadData();
+      } catch (error) {
+        let errorMessage = '创建项目失败';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (
+          typeof error === 'object' &&
+          error !== null &&
+          'response' in error
+        ) {
+          const err = error as { response?: { data?: { message?: string } } };
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
+        showToast(errorMessage, 'error');
+        throw error;
+      }
+    },
+    [loadData, showToast]
+  );
+
+  const handleUpdateProject = useCallback(
+    async (id: string, data: { name?: string; description?: string }) => {
+      try {
+        await projectsApi.update(id, data);
+        showToast('项目更新成功', 'success');
+        loadData();
+      } catch (error) {
+        let errorMessage = '更新项目失败';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (
+          typeof error === 'object' &&
+          error !== null &&
+          'response' in error
+        ) {
+          const err = error as { response?: { data?: { message?: string } } };
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
+        showToast(errorMessage, 'error');
+        throw error;
+      }
+    },
+    [loadData, showToast]
+  );
+
+  const handleDeleteProject = useCallback(
+    async (id: string, name: string) => {
+      const node: FileSystemNode = {
+        id,
+        name,
+        isRoot: true,
+        isFolder: true,
+        parentId: null,
+        ownerId: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      handleDelete(node, false);
+    },
+    [handleDelete]
+  );
+
+  const handlePermanentlyDeleteProject = useCallback(
+    async (id: string, name: string) => {
+      const node: FileSystemNode = {
+        id,
+        name,
+        isRoot: true,
+        isFolder: true,
+        parentId: null,
+        ownerId: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      handleDelete(node, true);
+    },
+    [handleDelete]
+  );
+
+  const handlePermanentlyDelete = useCallback(
+    (node: FileSystemNode) => {
+      handleDelete(node, true);
+    },
+    [handleDelete]
+  );
+
+  // 恢复节点
+  const handleRestoreNode = useCallback(
+    async (node: FileSystemNode) => {
+      showConfirm(
+        '确认恢复',
+        `确定要恢复 "${node.name}" 吗？`,
+        async () => {
+          try {
+            if (node.isRoot) {
+              await projectsApi.restoreProject(node.id);
+            } else {
+              await projectsApi.restoreNode(node.id);
+            }
+            showToast(`已恢复 "${node.name}"`, 'success');
+            loadData();
+          } catch (error) {
+            handleError(error, showToast, '恢复失败');
+          }
+        },
+        'warning'
+      );
+    },
+    [showConfirm, showToast, loadData]
+  );
+
+  // 清空项目回收站
+  const handleClearProjectTrash = useCallback(() => {
+    if (!urlProjectId) {
+      showToast('未选择项目', 'error');
+      return;
+    }
+
+    showConfirm(
+      '确认清空回收站',
+      '确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。',
+      async () => {
+        try {
+          await projectsApi.clearProjectTrash(urlProjectId);
+          showToast('项目回收站已清空', 'success');
+          loadData();
+        } catch (error) {
+          handleError(error, showToast, '清空回收站失败');
+        }
+      },
+      'danger'
+    );
+  }, [urlProjectId, showConfirm, showToast, loadData]);
+
   return {
     showCreateFolderModal,
     setShowCreateFolderModal,
@@ -309,7 +499,15 @@ export const useFileSystemCRUD = ({
     handleCreateFolder,
     handleRename,
     handleDelete,
+    handlePermanentlyDelete,
     handleBatchDelete,
+    handleBatchRestore,
     handleOpenRename,
+    handleCreateProject,
+    handleUpdateProject,
+    handleDeleteProject,
+    handlePermanentlyDeleteProject,
+    handleRestoreNode,
+    handleClearProjectTrash,
   };
 };

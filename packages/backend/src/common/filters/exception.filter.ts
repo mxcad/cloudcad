@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { Request, Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -25,7 +25,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // 环境变量
     /\$\{[^}]+\}/g,
     // 绝对路径（通用）
-    /[A-Z]:\/[^\/]+/gi,
+    /[A-Z]:\/[^/]+/gi,
     // 项目路径
     /packages\/(backend|frontend|[^/]+)\//g,
     // Node modules 路径
@@ -33,9 +33,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   ];
 
   catch(exception: unknown, host: ArgumentsHost) {
+    // 添加日志以确认过滤器是否被调用
+    console.log('[GlobalExceptionFilter] 异常过滤器被调用', {
+      exception,
+      exceptionType: typeof exception,
+      exceptionName: exception instanceof Error ? exception.name : 'unknown',
+    });
+
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<FastifyReply>();
-    const request = ctx.getRequest<FastifyRequest>();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = '服务器内部错误';
@@ -45,11 +52,26 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
+      // 调试日志
+      this.logger.debug(`HttpException response: ${JSON.stringify(exceptionResponse)}, type: ${typeof exceptionResponse}`);
+
       if (typeof exceptionResponse === 'string') {
+        // NestJS 传入字符串时，getResponse() 返回该字符串
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object') {
-        message = (exceptionResponse as any).message || exception.message;
-        code = (exceptionResponse as any).code || this.getErrorCode(status);
+        code = this.getErrorCode(status);
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        // NestJS 标准错误对象格式: { statusCode, message, error }
+        const responseObj = exceptionResponse as Record<string, unknown>;
+        // message 可能是字符串或字符串数组
+        const responseMessage = responseObj.message;
+        if (Array.isArray(responseMessage)) {
+          message = responseMessage.join(', ');
+        } else if (typeof responseMessage === 'string') {
+          message = responseMessage;
+        } else {
+          message = exception.message;
+        }
+        code = (typeof responseObj.code === 'string' ? responseObj.code : null) || this.getErrorCode(status);
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -79,7 +101,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).send(errorResponse);
+    // 确保响应头为 JSON 格式
+    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+    response.status(status).json(errorResponse);
   }
 
   /**

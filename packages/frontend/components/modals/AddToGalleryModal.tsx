@@ -4,6 +4,14 @@ import { galleryApi } from '../../services/api';
 
 type GalleryType = 'drawings' | 'blocks';
 
+// 扩展 window 类型
+declare global {
+  interface Window {
+    currentGalleryType?: GalleryType;
+    fetchTypes?: () => Promise<void>;
+  }
+}
+
 // 最大层级（支持三级分类）
 const MAX_LEVEL = 3;
 
@@ -104,11 +112,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     setIsSubmitting(true);
 
     try {
-      const galleryType = (window as any).currentGalleryType as GalleryType;
+      const galleryType = window.currentGalleryType as GalleryType;
       const response = await galleryApi.createType(galleryType, newTypeName.trim(), parentId);
 
       if (response.data?.code === 'success') {
-        await (window as any).fetchTypes();
+        await window.fetchTypes?.();
         setIsCreating(false);
         setNewTypeName('');
         setSearchQuery('');
@@ -146,11 +154,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     setIsSubmitting(true);
 
     try {
-      const galleryType = (window as any).currentGalleryType as GalleryType;
+      const galleryType = window.currentGalleryType as GalleryType;
       const response = await galleryApi.updateType(galleryType, editingType.id, editingName.trim());
 
       if (response.data?.code === 'success') {
-        await (window as any).fetchTypes();
+        await window.fetchTypes?.();
         setEditingType(null);
         setEditingName('');
       } else {
@@ -175,11 +183,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     }
 
     try {
-      const galleryType = (window as any).currentGalleryType as GalleryType;
+      const galleryType = window.currentGalleryType as GalleryType;
       const response = await galleryApi.deleteType(galleryType, type.id);
 
       if (response.data?.code === 'success') {
-        await (window as any).fetchTypes();
+        await window.fetchTypes?.();
         if (value === type.id) {
           onChange(-1);
         }
@@ -414,12 +422,12 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
   // 保存当前 galleryType 到 window，供子组件使用
   useEffect(() => {
-    (window as any).currentGalleryType = galleryType;
+    window.currentGalleryType = galleryType;
   }, [galleryType]);
 
   // 保存 fetchTypes 到 window，供子组件使用
   useEffect(() => {
-    (window as any).fetchTypes = fetchTypes;
+    window.fetchTypes = fetchTypes;
   }, [fetchTypes, galleryType]);
 
   // 初始化时获取分类列表
@@ -613,7 +621,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
           {/* 提示信息 */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-700">
-              💡 提示：点击分类名称选择，点击铅笔图标编辑，点击垃圾桶图标删除，点击"创建新分类"添加新分类。
+              💡 提示：点击分类名称选择，点击铅笔图标编辑，点击垃圾桶图标删除，点击「创建新分类」添加新分类。
             </p>
           </div>
         </div>

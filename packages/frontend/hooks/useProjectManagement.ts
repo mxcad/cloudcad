@@ -5,6 +5,7 @@ interface UseProjectManagementOptions {
   onProjectCreated?: () => void;
   onProjectUpdated?: () => void;
   onProjectDeleted?: () => void;
+  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
 interface ProjectFormData {
@@ -57,6 +58,9 @@ export function useProjectManagement(
         await createProject(formData.name.trim(), formData.description.trim());
         options.onProjectCreated?.();
         closeModal();
+      } catch (error) {
+        const errorMessage = (error as Error).message || '创建项目失败';
+        options.showToast?.(errorMessage, 'error');
       } finally {
         setLoading(false);
       }
@@ -81,6 +85,9 @@ export function useProjectManagement(
         });
         options.onProjectUpdated?.();
         closeModal();
+      } catch (error) {
+        const errorMessage = (error as Error).message || '更新项目失败';
+        options.showToast?.(errorMessage, 'error');
       } finally {
         setLoading(false);
       }
@@ -96,8 +103,13 @@ export function useProjectManagement(
       if (
         window.confirm(`确定要删除项目"${project.name}"吗？此操作不可恢复。`)
       ) {
-        await deleteProject(project.id, project.name);
-        options.onProjectDeleted?.();
+        try {
+          await deleteProject(project.id, project.name);
+          options.onProjectDeleted?.();
+        } catch (error) {
+          const errorMessage = (error as Error).message || '删除项目失败';
+          options.showToast?.(errorMessage, 'error');
+        }
       }
     },
     [options]

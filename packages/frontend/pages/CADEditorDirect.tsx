@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useProjectPermission } from '../hooks/useProjectPermission';
+import { SidebarProvider, useSidebarManager, SidebarType } from '../contexts/SidebarContext';
 import { ProjectPermission } from '../constants/permissions';
 import { apiService } from '../services/apiService';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { filesApi } from '../services/filesApi';
 import CADEditorSidebar from '../components/CADEditorSidebar';
+import CollaborateSidebar from '../components/CollaborateSidebar';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
@@ -31,6 +32,9 @@ export const CADEditorDirect: React.FC = () => {
 
   // 标记是否已初始化 MxCAD，避免重复初始化
   const isInitializedRef = useRef(false);
+
+  // 记录已加载的文件 URL（包含版本参数），用于检测 URL 变化
+  const loadedFileUrlRef = useRef<string | null>(null);
 
   // 下载格式弹窗状态
   const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
@@ -239,8 +243,37 @@ export const CADEditorDirect: React.FC = () => {
         });
         setNavigateFunction(navigate);
 
-        // 如果已经初始化过 MxCAD，只更新 currentFileInfo，不重新初始化
+        // 构造 mxweb 文件访问 URL
+        let mxcadFileUrl: string;
+        if (versionParam) {
+          mxcadFileUrl = `/mxcad/filesData/${file.path}?v=${versionParam}`;
+        } else {
+          mxcadFileUrl = `/mxcad/filesData/${file.path}`;
+        }
+
+        // 如果已经初始化过 MxCAD
         if (isInitializedRef.current) {
+          // 检查是否是同一个文件 URL（包括版本参数）
+          if (loadedFileUrlRef.current === mxcadFileUrl) {
+            // 同一个文件，无需重新加载
+            setLoading(false);
+            return;
+          }
+
+          // URL 变化了（可能是版本参数变化），需要重新加载文件
+          const { mxcadManager } = await loadMxCADDependencies();
+
+          console.log(`文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`);
+
+          // 重新加载 mxweb 文件
+          await mxcadManager.openFile(mxcadFileUrl);
+
+          // 根据是否有版本参数设置 browse 模式
+          mxcadManager.setBrowse(!!versionParam);
+
+          // 更新已加载的文件 URL
+          loadedFileUrlRef.current = mxcadFileUrl;
+
           setLoading(false);
           return;
         }
@@ -251,31 +284,19 @@ export const CADEditorDirect: React.FC = () => {
         // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
         await initMxCADConfig(file);
 
-        // 构造正确的 mxweb 文件访问 URL
-        // file.path 是存储路径（如：202602/cml96ilqt000ftsufa6h6q7v7/cml96ilqt000ftsufa6h6q7v7.dwg.mxweb）
-        // 需要通过后端接口访问：/mxcad/filesData/202602/cml96ilqt000ftsufa6h6q7v7/cml96ilqt000ftsufa6h6q7v7.dwg.mxweb
-        let mxcadFileUrl: string;
-
-        // 如果有版本参数，在 URL 中添加 v 参数访问历史版本
-        if (versionParam) {
-          mxcadFileUrl = `/mxcad/filesData/${file.path}?v=${versionParam}`;
-        } else {
-          mxcadFileUrl = `/mxcad/filesData/${file.path}`;
-        }
-
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);
         mxcadManager.showMxCAD(true);
 
         // 标记为已初始化
         isInitializedRef.current = true;
+        loadedFileUrlRef.current = mxcadFileUrl;
+
+        // 根据是否有版本参数设置 browse 模式
+        // 注意：必须设置，因为 isBrowseMode 是全局变量，可能在其他标签页被设置为 true
+        mxcadManager.setBrowse(!!versionParam);
 
         setLoading(false);
-
-        // 如果访问的是历史版本，设置只读模式标志（实际的 setBrowse 会在文件打开完成事件中执行）
-        if (versionParam) {
-          mxcadManager.setBrowse(true);
-        }
 
       } catch (err) {
         console.log(err);
@@ -471,9 +492,65 @@ export const CADEditorDirect: React.FC = () => {
   }
 
   return (
+    <SidebarProvider>
+      <CADEditorContent
+        onInsertFile={handleInsertFile}
+        showDownloadFormatModal={showDownloadFormatModal}
+        downloadingFileName={downloadingFileName}
+        downloading={downloading}
+        onCloseDownloadModal={() => setShowDownloadFormatModal(false)}
+        onDownloadWithFormat={handleDownloadWithFormat}
+      />
+    </SidebarProvider>
+  );
+};
+
+/**
+ * CAD 编辑器内容组件
+ * 在 SidebarProvider 内部，可以使用 useSidebarManager
+ */
+interface CADEditorContentProps {
+  onInsertFile: (file: { nodeId: string; filename: string }) => void;
+  showDownloadFormatModal: boolean;
+  downloadingFileName: string;
+  downloading: boolean;
+  onCloseDownloadModal: () => void;
+  onDownloadWithFormat: (format: DownloadFormat, pdfOptions?: PdfOptions) => void;
+}
+
+const CADEditorContent: React.FC<CADEditorContentProps> = ({
+  onInsertFile,
+  showDownloadFormatModal,
+  downloadingFileName,
+  downloading,
+  onCloseDownloadModal,
+  onDownloadWithFormat,
+}) => {
+  const { openSidebar } = useSidebarManager();
+
+  // 监听 MxCAD 命令触发的侧边栏事件
+  useEffect(() => {
+    const handleOpenSidebar = (event: Event) => {
+      const customEvent = event as CustomEvent<{ type: SidebarType }>;
+      if (customEvent.detail?.type) {
+        openSidebar(customEvent.detail.type);
+      }
+    };
+
+    window.addEventListener('mxcad-open-sidebar', handleOpenSidebar);
+
+    return () => {
+      window.removeEventListener('mxcad-open-sidebar', handleOpenSidebar);
+    };
+  }, [openSidebar]);
+
+  return (
     <div className="flex w-full h-screen relative">
-      {/* CAD编辑器侧边栏 */}
-      <CADEditorSidebar onInsertFile={handleInsertFile} />
+      {/* 图库侧边栏 */}
+      <CADEditorSidebar onInsertFile={onInsertFile} />
+
+      {/* 协同侧边栏 */}
+      <CollaborateSidebar />
 
       {/* CAD编辑器内容区域 */}
       <div className="flex-1 relative">
@@ -483,8 +560,8 @@ export const CADEditorDirect: React.FC = () => {
         <DownloadFormatModal
           isOpen={showDownloadFormatModal}
           fileName={downloadingFileName}
-          onClose={() => setShowDownloadFormatModal(false)}
-          onDownload={handleDownloadWithFormat}
+          onClose={onCloseDownloadModal}
+          onDownload={onDownloadWithFormat}
           loading={downloading}
         />
       </div>

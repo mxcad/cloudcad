@@ -101,6 +101,13 @@ class Logger {
     this.log(LogLevel.ERROR, message, context, data);
   }
 
+  /**
+   * 成功日志（info 级别的别名）
+   */
+  success(message: string, context?: string, data?: unknown): void {
+    this.log(LogLevel.INFO, message, context, data);
+  }
+
   getLogs(): LogEntry[] {
     return [...this.logs];
   }

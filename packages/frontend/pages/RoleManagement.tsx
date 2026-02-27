@@ -5,7 +5,11 @@ import { DescriptionText } from '../components/ui/TruncateText';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
 import { rolesApi, projectRolesApi } from '../services/rolesApi';
 import { usePermission } from '../hooks/usePermission';
-import { PERMISSION_GROUPS, getRoleDisplayName, ProjectPermission, SystemPermission } from '../constants/permissions';
+import { PERMISSION_GROUPS, getRoleDisplayName, SystemPermission } from '../constants/permissions';
+import { components } from '../types/api';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
+type UserDto = components['schemas']['UserDto'];
 
 type SystemRole = {
   id: string;
@@ -31,6 +35,7 @@ type ProjectRole = {
 };
 
 export const RoleManagement = () => {
+  useDocumentTitle('角色权限');
   const { hasPermission, hasRole } = usePermission();
   const [activeTab, setActiveTab] = useState<'system' | 'project'>('project');
 
@@ -54,7 +59,7 @@ export const RoleManagement = () => {
   const [selectedProjectPerms, setSelectedProjectPerms] = useState<string[]>([]);
 
   // 获取当前用户信息
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
 
   useEffect(() => {
     loadCurrentUser();
@@ -110,7 +115,7 @@ export const RoleManagement = () => {
     // 提取权限值（可能是字符串数组或对象数组）
     const permissions = Array.isArray(role.permissions)
       ? role.permissions
-          .map((p: any) => {
+          .map((p: string | { permission: string }) => {
             if (typeof p === 'string') return p;
             if (p && p.permission) return p.permission;
             return null;
@@ -148,7 +153,7 @@ export const RoleManagement = () => {
       loadSystemRoles();
     } catch (error) {
       alert(
-        (error as any).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
           (error as Error).message ||
           '保存失败'
       );
@@ -166,7 +171,7 @@ export const RoleManagement = () => {
         loadSystemRoles();
       } catch (error) {
         console.error('删除角色失败:', error);
-        alert((error as any).response?.data?.message || '删除失败');
+        alert((error as { response?: { data?: { message?: string } } }).response?.data?.message || '删除失败');
       }
     }
   };
@@ -187,7 +192,7 @@ export const RoleManagement = () => {
     // 提取权限值（可能是字符串数组或对象数组）
     const permissions = Array.isArray(role.permissions)
       ? role.permissions
-          .map((p: any) => {
+          .map((p: string | { permission: string }) => {
             if (typeof p === 'string') return p;
             if (p && p.permission) return p.permission;
             return null;
@@ -224,7 +229,7 @@ export const RoleManagement = () => {
       loadProjectRoles();
     } catch (error) {
       alert(
-        (error as any).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
           (error as Error).message ||
           '保存失败'
       );
@@ -292,8 +297,8 @@ export const RoleManagement = () => {
         </div>
       </div>
 
-      {/* 项目角色模块 */}
-      {activeTab === 'project' && (
+      {/* 项目角色模块（需要 SYSTEM_ROLE_READ 权限） */}
+      {activeTab === 'project' && hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
         <>
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -303,7 +308,7 @@ export const RoleManagement = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {hasPermission(ProjectPermission.PROJECT_ROLE_MANAGE) && (
+              {hasPermission(SystemPermission.SYSTEM_ROLE_CREATE) && (
                 <Button icon={Plus} onClick={handleCreateProjectRole}>
                   新建角色
                 </Button>
@@ -344,7 +349,7 @@ export const RoleManagement = () => {
                     )}
                   </div>
                   </div>
-                  {!role.isSystem && (
+                  {!role.isSystem && hasPermission(SystemPermission.SYSTEM_ROLE_DELETE) && (
                     <button
                       onClick={() => handleDeleteProjectRole(role.id)}
                       className="text-slate-400 hover:text-red-500"
@@ -358,7 +363,7 @@ export const RoleManagement = () => {
                     拥有权限
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p: any) => {
+                    {role.permissions.slice(0, 6).map((p: string | { permission: string; id?: string }) => {
                       const permKey = typeof p === 'string' ? p : (p?.permission || '');
                       const allPermissions = [
                         ...PERMISSION_GROUPS.system.flatMap(g => g.items),
@@ -369,7 +374,7 @@ export const RoleManagement = () => {
 
                       return (
                         <span
-                          key={p.id || permKey}
+                          key={typeof p === 'string' ? p : (p.id || permKey)}
                           className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
                         >
                           {label}
@@ -383,19 +388,28 @@ export const RoleManagement = () => {
                     )}
                   </div>
                 </div>
-                <div className="p-4 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleEditProjectRole(role)}
-                  >
-                    配置权限
-                  </Button>
-                </div>
+                {hasPermission(SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE) && (
+                  <div className="p-4 border-t border-slate-100">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleEditProjectRole(role)}
+                    >
+                      配置权限
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </>
+      )}
+
+      {/* 无权限提示 */}
+      {activeTab === 'project' && !hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
+        <div className="flex flex-col items-center justify-center py-16">
+          <p className="text-slate-500">您没有权限访问此页面</p>
+        </div>
       )}
 
       {/* 系统角色模块（仅管理员可见） */}
@@ -459,7 +473,7 @@ export const RoleManagement = () => {
                     拥有权限
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p: any) => {
+                    {role.permissions.slice(0, 6).map((p: string | { permission: string; id?: string }) => {
                       const permKey = typeof p === 'string' ? p : (p?.permission || '');
                       const allPermissions = [
                         ...PERMISSION_GROUPS.system.flatMap(g => g.items),
@@ -470,7 +484,7 @@ export const RoleManagement = () => {
 
                       return (
                         <span
-                          key={p.id || p}
+                          key={typeof p === 'string' ? p : (p.id || permKey)}
                           className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
                         >
                           {label}

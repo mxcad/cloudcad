@@ -66,7 +66,7 @@ export const useFileSystemDragDrop = ({
         }
         onRefresh();
       } catch (error) {
-        alert('����ʧ�ܣ�������');
+        alert('移动失败，请重试');
       } finally {
         setDraggedNodes([]);
       }

@@ -10,6 +10,7 @@
     "start:dev": "nest start --watch",
     "dev:infra": "docker-compose -f docker-compose.dev.yml up -d postgres redis pgadmin redis-commander",
     "dev:infra:stop": "docker-compose -f docker-compose.dev.yml down",
+    "cooperate": "node scripts/start-cooperate.js",
     "build": "nest build",
     "start": "node dist/src/main",
     "start:prod": "node dist/src/main",
