@@ -24,8 +24,10 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import * as os from 'os';
 
 import { ApiTags, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
 import { MxCadService } from './mxcad.service';
 import { DatabaseService } from '../database/database.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
