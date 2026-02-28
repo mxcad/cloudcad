@@ -1,6 +1,5 @@
 ﻿import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
@@ -22,7 +21,6 @@ export class MxCadService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly permissionService: MxCadPermissionService,
     @Inject(forwardRef(() => FileUploadManagerService))
     private readonly fileUploadManager: FileUploadManagerService,
     private readonly fileSystemNodeService: FileSystemNodeService,
@@ -415,7 +413,8 @@ export class MxCadService {
   }
 
   /**
-   * 修改后的上传分片文件方法，添加权限验证
+   * 上传分片文件方法
+   * 注意：权限验证已在 Controller 层通过 @RequireProjectPermission 装饰器处理
    */
   async uploadChunkWithPermission(
     hash: string,
@@ -425,8 +424,6 @@ export class MxCadService {
     chunks: number,
     context?: any
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    // 验证权限
-    await this.permissionService.validateUploadPermission(context);
     const result = await this.fileUploadManager.uploadChunk({
       hash,
       name,
@@ -440,6 +437,7 @@ export class MxCadService {
 
   /**
    * 合并分片文件方法（用于完成请求）
+   * 注意：权限验证已在 Controller 层通过 @RequireProjectPermission 装饰器处理
    */
   async mergeChunksWithPermission(
     hash: string,
@@ -449,9 +447,6 @@ export class MxCadService {
     context?: any,
     srcDwgNodeId?: string
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    // 验证权限
-    await this.permissionService.validateUploadPermission(context);
-
     const result = await this.fileUploadManager.mergeChunksWithPermission({
       hash,
       name,
@@ -464,7 +459,8 @@ export class MxCadService {
   }
 
   /**
-   * 修改后的上传完整文件方法，添加权限验证和文件节点创建
+   * 上传完整文件方法
+   * 注意：权限验证已在 Controller 层通过 @RequireProjectPermission 装饰器处理
    */
   async uploadAndConvertFileWithPermission(
     filePath: string,
@@ -473,9 +469,6 @@ export class MxCadService {
     size: number,
     context?: any
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    // 验证权限
-    await this.permissionService.validateUploadPermission(context);
-
     return this.fileUploadManager.uploadAndConvertFileWithPermission({
       filePath,
       hash,
