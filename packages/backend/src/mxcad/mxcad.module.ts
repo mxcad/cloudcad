@@ -13,7 +13,6 @@ import { NodeCreationService } from './services/node-creation.service';
 import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
 import { ConcurrencyManager } from '../common/concurrency/concurrency-manager';
 import { StorageCheckService } from '../storage/storage-check.service';
-import { MxCadExceptionFilter } from './filters/mxcad-exception.filter';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -111,11 +110,7 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
     },
     // 权限守卫
     RequireProjectPermissionGuard,
-    // 异常过滤器
-    {
-      provide: 'APP_FILTER',
-      useClass: MxCadExceptionFilter,
-    },
+    // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxCadExceptionFilter
   ],
   exports: [MxCadService, FileUploadManagerService, UploadOrchestrator],
 })
