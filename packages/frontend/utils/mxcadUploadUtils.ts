@@ -121,15 +121,15 @@ export const uploadMxCadFile = async (
   });
 
   // 1. 检查文件是否已存在（秒传）
-  // 注意：上传接口保持特殊返回格式 { ret: 'ok' | 'fileAlreadyExist' | ... }
+  // 标准格式返回 { exists: boolean; nodeId?: string }
   const existRequest = buildRequest({ fileSize: file.size });
   const existResponse = await apiService.post<
-    { ret: string; nodeId?: string }
+    { exists: boolean; nodeId?: string }
   >('/mxcad/files/fileisExist', existRequest);
 
-  // 不解包，直接访问 data（上传接口特殊处理）
-  const existData = existResponse.data as unknown as { ret: string; nodeId?: string };
-  if (existData.ret === 'fileAlreadyExist') {
+  // apiClient 自动解包，直接访问 data
+  const existData = existResponse.data;
+  if (existData.exists) {
     // 秒传成功
     const instantNodeId = existData.nodeId || nodeId;
     return {
@@ -157,17 +157,18 @@ export const uploadMxCadFile = async (
     const chunk = file.slice(start, end);
 
     // 检查分片是否存在
+    // 标准格式返回 { exists: boolean }
     const chunkRequest = buildRequest({
       chunk: chunkIndex,
       chunks: totalChunks,
       size: chunk.size,
     });
     const chunkResponse = await apiService.post<
-      { ret: string }
+      { exists: boolean }
     >('/mxcad/files/chunkisExist', chunkRequest);
 
-    const chunkData = chunkResponse.data as unknown as { ret: string };
-    if (chunkData.ret === 'chunkAlreadyExist') {
+    const chunkData = chunkResponse.data;
+    if (chunkData.exists) {
       // 分片已存在，跳过
       onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
       continue;
@@ -183,15 +184,16 @@ export const uploadMxCadFile = async (
     formData.append('nodeId', nodeId);
     formData.append('file', chunk);
 
+    // 标准格式返回 { nodeId?: string; tz?: boolean }
     const uploadResponse = await apiService.post<
-      { ret: string; nodeId?: string }
+      { nodeId?: string; tz?: boolean }
     >('/mxcad/files/uploadFiles', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
     hasUploadedAnyChunk = true; // 标记已上传至少一个分片
 
-    const uploadData = uploadResponse.data as unknown as { ret: string; nodeId?: string };
+    const uploadData = uploadResponse.data;
     // 最后一个分片上传完成后，检查响应中是否包含 nodeId
     if (isLastChunk(chunkIndex) && uploadData.nodeId) {
       newNodeId = uploadData.nodeId;
@@ -210,13 +212,14 @@ export const uploadMxCadFile = async (
     mergeFormData.append('size', file.size.toString());
     mergeFormData.append('nodeId', nodeId);
 
+    // 标准格式返回 { nodeId?: string; tz?: boolean }
     const mergeResponse = await apiService.post<
-      { ret: string; nodeId?: string }
+      { nodeId?: string; tz?: boolean }
     >('/mxcad/files/uploadFiles', mergeFormData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    const mergeData = mergeResponse.data as unknown as { ret: string; nodeId?: string };
+    const mergeData = mergeResponse.data;
     if (mergeData.nodeId) {
       newNodeId = mergeData.nodeId;
     }

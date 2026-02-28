@@ -16,6 +16,7 @@
   NotFoundException,
   UnauthorizedException,
   BadRequestException,
+  InternalServerErrorException,
   UseGuards,
 } from '@nestjs/common';
 import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
@@ -85,7 +86,7 @@ export class MxCadController {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
     // 构建上下文
     const context = await this.buildContextFromRequest(request);
-    return this.mxCadService.checkChunkExist(
+    const result = await this.mxCadService.checkChunkExist(
       body.chunk,
       body.fileHash,
       body.size,
@@ -93,6 +94,8 @@ export class MxCadController {
       body.filename,
       context
     );
+    // 转换为标准格式：ret === 'chunkAlreadyExist' 表示分片已存在
+    return { exists: result.ret === 'chunkAlreadyExist' };
   }
 
   /**
@@ -113,11 +116,16 @@ export class MxCadController {
     this.logger.log(
       `[checkFileExist] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, fileSize=${body.fileSize}, nodeId=${context.nodeId}`
     );
-    return this.mxCadService.checkFileExist(
+    const result = await this.mxCadService.checkFileExist(
       body.filename,
       body.fileHash,
       context
-    );
+    ) as { ret: string; nodeId?: string };
+    // 转换为标准格式：ret === 'fileAlreadyExist' 表示文件已存在（秒传）
+    return {
+      exists: result.ret === 'fileAlreadyExist',
+      nodeId: result.nodeId,
+    };
   }
 
   /**
@@ -319,8 +327,7 @@ export class MxCadController {
   async uploadFile(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() body: UploadFilesDto,
-    @Req() request: MxCadRequest,
-    @Res() res: Response
+    @Req() request: MxCadRequest
   ) {
     const file = files && files.length > 0 ? files[0] : null;
     this.logger.log(
@@ -332,15 +339,15 @@ export class MxCadController {
 
     // 合并请求不需要检查 file，但需要检查必要参数
     if (!isMergeRequest && !file) {
-      return res.json({ ret: 'errorparam' });
+      throw new BadRequestException('缺少上传文件');
     }
 
     if (!body.hash || !body.name || !body.size) {
-      return res.json({ ret: 'errorparam' });
+      throw new BadRequestException('缺少必要参数: hash, name 或 size');
     }
 
     if (body.chunk !== undefined && body.chunks === undefined) {
-      return res.json({ ret: 'errorparam' });
+      throw new BadRequestException('缺少必要参数: chunks');
     }
 
     // 构建上下文 - 从JWT token验证用户身份
@@ -351,7 +358,7 @@ export class MxCadController {
       try {
         // 验证 chunks 参数
         if (body.chunks === undefined) {
-          return res.json({ ret: 'errorparam' });
+          throw new BadRequestException('缺少必要参数: chunks');
         }
 
         const result = await this.mxCadService.mergeChunksWithPermission(
@@ -362,10 +369,11 @@ export class MxCadController {
           context,
           body.srcDwgNodeId // 外部参照上传时的源图纸节点 ID
         );
-        return res.json(result);
+        // 返回标准格式
+        return { nodeId: result.nodeId, tz: result.tz };
       } catch (error) {
         this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
-        return res.json({ ret: 'convertFileError' });
+        throw new InternalServerErrorException(`文件合并失败: ${error.message}`);
       }
     }
 
@@ -377,7 +385,7 @@ export class MxCadController {
       try {
         // 验证 chunks 参数
         if (body.chunks === undefined) {
-          return res.json({ ret: 'errorparam' });
+          throw new BadRequestException('缺少必要参数: chunks');
         }
 
         // 获取临时目录路径
@@ -401,7 +409,7 @@ export class MxCadController {
 
         // 移动文件
         if (!file || !fs.existsSync(file.path)) {
-          return res.json({ ret: 'errorparam' });
+          throw new BadRequestException('上传文件不存在');
         }
 
         fs.renameSync(file.path, chunkFilePath);
@@ -414,15 +422,16 @@ export class MxCadController {
           body.chunks,
           context
         );
-        return res.json(result);
+        // 返回标准格式
+        return { nodeId: result.nodeId, tz: result.tz };
       } catch (error) {
         this.mxCadService.logError(`分片文件处理失败: ${error.message}`, error);
-        return res.json({ ret: 'convertFileError' });
+        throw new InternalServerErrorException(`分片文件处理失败: ${error.message}`);
       }
     } else {
       // 完整文件上传（带权限验证）
       if (!file) {
-        return res.json({ ret: 'errorparam' });
+        throw new BadRequestException('缺少上传文件');
       }
 
       const result = await this.mxCadService.uploadAndConvertFileWithPermission(
@@ -432,7 +441,8 @@ export class MxCadController {
         body.size,
         context
       );
-      return res.json(result);
+      // 返回标准格式
+      return { nodeId: result.nodeId, tz: result.tz };
     }
   }
 
