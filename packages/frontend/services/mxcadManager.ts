@@ -119,7 +119,8 @@ export function clearCurrentFileInfo() {
 const NAVIGATION_PATHS = {
   PROJECTS_LIST: '/projects',
   PROJECT_FILES: (projectId: string) => `/projects/${projectId}/files`,
-  PROJECT_FOLDER: (projectId: string, parentId: string) => `/projects/${projectId}/files/${parentId}`,
+  PROJECT_FOLDER: (projectId: string, parentId: string) =>
+    `/projects/${projectId}/files/${parentId}`,
 } as const;
 
 // ==================== 导航辅助函数 ====================
@@ -151,7 +152,10 @@ function navigateToProjectsList(): void {
  * @param projectId 项目 ID
  * @returns 返回路径
  */
-function calculateReturnPath(parentId: string | null, projectId: string | null): string {
+function calculateReturnPath(
+  parentId: string | null,
+  projectId: string | null
+): string {
   if (parentId && projectId) {
     const path = NAVIGATION_PATHS.PROJECT_FOLDER(projectId, parentId);
     Logger.info(`路径A - 有 parentId 和 projectId: ${path}`);
@@ -188,7 +192,9 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
   }
 
   const { fileId, parentId, projectId } = currentFileInfo;
-  Logger.info(`解析结果: fileId=${fileId}, parentId=${parentId}, projectId=${projectId}`);
+  Logger.info(
+    `解析结果: fileId=${fileId}, parentId=${parentId}, projectId=${projectId}`
+  );
 
   const targetPath = calculateReturnPath(parentId, projectId);
   navigateTo(targetPath);
@@ -198,7 +204,9 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
 
 // 获取或创建文件选择器（复用 useMxCadUploadNative 的逻辑）
 const getFilePicker = (): HTMLInputElement => {
-  let picker = document.getElementById(FILE_UPLOAD_CONFIG.FILE_PICKER_ID) as HTMLInputElement;
+  let picker = document.getElementById(
+    FILE_UPLOAD_CONFIG.FILE_PICKER_ID
+  ) as HTMLInputElement;
   if (!picker) {
     picker = document.createElement('input');
     picker.id = FILE_UPLOAD_CONFIG.FILE_PICKER_ID;
@@ -211,8 +219,12 @@ const getFilePicker = (): HTMLInputElement => {
 };
 
 // 显示等待动画
-const showLoadingOverlay = (message: string = DEFAULT_MESSAGES.LOADING): HTMLElement => {
-  let overlay = document.getElementById(CSS_CLASSES.LOADING_OVERLAY) as HTMLElement;
+const showLoadingOverlay = (
+  message: string = DEFAULT_MESSAGES.LOADING
+): HTMLElement => {
+  let overlay = document.getElementById(
+    CSS_CLASSES.LOADING_OVERLAY
+  ) as HTMLElement;
 
   if (!overlay) {
     overlay = document.createElement('div');
@@ -258,7 +270,9 @@ const showLoadingOverlay = (message: string = DEFAULT_MESSAGES.LOADING): HTMLEle
     document.body.appendChild(overlay);
   }
 
-  const messageEl = overlay.querySelector(`.${CSS_CLASSES.LOADING_MESSAGE}`) as HTMLElement;
+  const messageEl = overlay.querySelector(
+    `.${CSS_CLASSES.LOADING_MESSAGE}`
+  ) as HTMLElement;
   if (messageEl) {
     messageEl.textContent = message;
   }
@@ -269,7 +283,9 @@ const showLoadingOverlay = (message: string = DEFAULT_MESSAGES.LOADING): HTMLEle
 
 // 隐藏等待动画
 const hideLoadingOverlay = (): void => {
-  const overlay = document.getElementById(CSS_CLASSES.LOADING_OVERLAY) as HTMLElement;
+  const overlay = document.getElementById(
+    CSS_CLASSES.LOADING_OVERLAY
+  ) as HTMLElement;
   if (overlay) {
     overlay.style.display = 'none';
   }
@@ -277,8 +293,12 @@ const hideLoadingOverlay = (): void => {
 
 // 更新等待动画的消息
 const updateLoadingMessage = (message: string): void => {
-  const overlay = document.getElementById(CSS_CLASSES.LOADING_OVERLAY) as HTMLElement;
-  const messageEl = overlay?.querySelector(`.${CSS_CLASSES.LOADING_MESSAGE}`) as HTMLElement;
+  const overlay = document.getElementById(
+    CSS_CLASSES.LOADING_OVERLAY
+  ) as HTMLElement;
+  const messageEl = overlay?.querySelector(
+    `.${CSS_CLASSES.LOADING_MESSAGE}`
+  ) as HTMLElement;
   if (messageEl) {
     messageEl.textContent = message;
   }
@@ -413,10 +433,18 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
 
     document.body.appendChild(dialog);
 
-    const inputEl = dialog.querySelector('#mxcad-save-dialog-input') as HTMLTextAreaElement;
-    const closeBtn = dialog.querySelector('#mxcad-save-dialog-close') as HTMLElement;
-    const cancelBtn = dialog.querySelector('#mxcad-save-dialog-cancel') as HTMLElement;
-    const confirmBtn = dialog.querySelector('#mxcad-save-dialog-confirm') as HTMLElement;
+    const inputEl = dialog.querySelector(
+      '#mxcad-save-dialog-input'
+    ) as HTMLTextAreaElement;
+    const closeBtn = dialog.querySelector(
+      '#mxcad-save-dialog-close'
+    ) as HTMLElement;
+    const cancelBtn = dialog.querySelector(
+      '#mxcad-save-dialog-cancel'
+    ) as HTMLElement;
+    const confirmBtn = dialog.querySelector(
+      '#mxcad-save-dialog-confirm'
+    ) as HTMLElement;
 
     const cleanup = () => {
       if (dialog && dialog.parentNode) {
@@ -471,7 +499,8 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
  * @throws {Error} 如果无法确定上传目标位置
  */
 function getUploadTargetNodeId(): string {
-  const uploadTargetNodeId = currentFileInfo?.parentId || currentFileInfo?.projectId;
+  const uploadTargetNodeId =
+    currentFileInfo?.parentId || currentFileInfo?.projectId;
   if (!uploadTargetNodeId) {
     throw new Error('无法确定上传目标位置，请通过文件管理页面访问编辑器');
   }
@@ -495,7 +524,9 @@ async function getProjectId(
     projectId = currentFileInfo.projectId;
   } else if (fileInfo.parentId) {
     try {
-      const rootResponse = await apiService.get(`/file-system/nodes/${newNodeId}/root`);
+      const rootResponse = await apiService.get(
+        `/file-system/nodes/${newNodeId}/root`
+      );
       if (rootResponse.data?.id) {
         projectId = rootResponse.data.id;
       }
@@ -526,7 +557,9 @@ async function uploadAndProcessFile(
     hash,
     nodeId: uploadTargetNodeId,
     onProgress: (percentage) => {
-      updateLoadingMessage(`${DEFAULT_MESSAGES.UPLOADING} ${percentage.toFixed(1)}%`);
+      updateLoadingMessage(
+        `${DEFAULT_MESSAGES.UPLOADING} ${percentage.toFixed(1)}%`
+      );
     },
   });
 
@@ -538,9 +571,14 @@ async function uploadAndProcessFile(
  * @param newNodeId 节点 ID
  * @param uploadTargetNodeId 上传目标节点 ID
  */
-export async function openUploadedFile(newNodeId: string, uploadTargetNodeId: string): Promise<void> {
+export async function openUploadedFile(
+  newNodeId: string,
+  uploadTargetNodeId: string
+): Promise<void> {
   updateLoadingMessage(DEFAULT_MESSAGES.OPENING_FILE);
-  const fileInfoResponse = await apiService.get(`/file-system/nodes/${newNodeId}`);
+  const fileInfoResponse = await apiService.get(
+    `/file-system/nodes/${newNodeId}`
+  );
   const fileInfo = fileInfoResponse.data;
 
   if (!fileInfo.fileHash || !fileInfo.path) {
@@ -570,7 +608,10 @@ export async function openUploadedFile(newNodeId: string, uploadTargetNodeId: st
  * @param file 选择的文件
  * @param uploadTargetNodeId 上传目标节点 ID
  */
-async function handleFileSelection(file: File, uploadTargetNodeId: string): Promise<void> {
+async function handleFileSelection(
+  file: File,
+  uploadTargetNodeId: string
+): Promise<void> {
   try {
     Logger.info('开始上传文件:', file.name);
     showLoadingOverlay(DEFAULT_MESSAGES.UPLOADING);
@@ -585,11 +626,12 @@ async function handleFileSelection(file: File, uploadTargetNodeId: string): Prom
   } catch (error) {
     Logger.error('openFile 命令执行失败', error);
     hideLoadingOverlay();
-    const errorMessage = error instanceof MxCadUploadError
-      ? error.message
-      : error instanceof Error
-      ? error.message
-      : '文件上传失败';
+    const errorMessage =
+      error instanceof MxCadUploadError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : '文件上传失败';
     alert(errorMessage);
   }
 }
@@ -706,7 +748,8 @@ MxFun.addCommand('Mx_Save', async () => {
     const projectId = currentFileInfo?.projectId;
     if (projectId) {
       try {
-        const { useProjectPermission } = await import('../hooks/useProjectPermission');
+        const { useProjectPermission } =
+          await import('../hooks/useProjectPermission');
         const { checkPermission } = useProjectPermission();
         const canSave = await checkPermission(projectId, 'CAD_SAVE');
         if (!canSave) {
@@ -740,17 +783,27 @@ MxFun.addCommand('Mx_Save', async () => {
     showLoadingOverlay('正在保存文件...');
 
     // 保存文件为 mxweb 格式
-    const savedFile = await new Promise<{ blob: Blob; data: ArrayBuffer; filename: string }>((resolve, reject) => {
+    const savedFile = await new Promise<{
+      blob: Blob;
+      data: ArrayBuffer;
+      filename: string;
+    }>((resolve, reject) => {
       MxCpp.App.getCurrentMxCAD().saveFile(
         name,
         (data) => {
           try {
             let blob: Blob;
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(
+              navigator.userAgent
+            );
             if (isSafari) {
-              blob = new Blob([data.buffer], { type: 'application/octet-stream' });
+              blob = new Blob([data.buffer], {
+                type: 'application/octet-stream',
+              });
             } else {
-              blob = new Blob([data.buffer], { type: 'application/octet-binary' });
+              blob = new Blob([data.buffer], {
+                type: 'application/octet-binary',
+              });
             }
             resolve({
               blob,
@@ -786,7 +839,9 @@ MxFun.addCommand('Mx_Save', async () => {
     // 更新 indexedDB 中的缓存
     try {
       // 获取当前文件的 URL
-      const fileInfoResponse = await apiService.get(`/file-system/nodes/${fileId}`);
+      const fileInfoResponse = await apiService.get(
+        `/file-system/nodes/${fileId}`
+      );
       const fileInfo = fileInfoResponse.data;
 
       if (fileInfo.path) {
@@ -824,7 +879,8 @@ MxFun.addCommand('Mx_Save', async () => {
   } catch (error) {
     Logger.error('保存文件失败', error);
     hideLoadingOverlay();
-    const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后重试';
+    const errorMessage =
+      error instanceof Error ? error.message : '保存失败，请稍后重试';
     alert(errorMessage);
   }
 });
@@ -899,8 +955,6 @@ class MxCADContainerManager {
   }
 }
 
-
-
 /**
  * MxCAD 实例管理器
  * 负责管理 MxCADView 实例的生命周期
@@ -968,13 +1022,19 @@ class MxCADInstanceManager {
       const w = Math.abs(minPt.x - maxPt.x);
       const h = Math.abs(minPt.y - maxPt.y);
 
-      if (w < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE || h < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE) {
+      if (
+        w < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE ||
+        h < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE
+      ) {
         Logger.warn('图纸范围太小，无法生成缩略图');
         return undefined;
       }
 
       // 计算缩放比例（取宽高中较大的，确保图纸完整显示）
-      const scale = Math.min(THUMBNAIL_CONFIG.TARGET_SIZE / w, THUMBNAIL_CONFIG.TARGET_SIZE / h);
+      const scale = Math.min(
+        THUMBNAIL_CONFIG.TARGET_SIZE / w,
+        THUMBNAIL_CONFIG.TARGET_SIZE / h
+      );
 
       // 调整边界框以居中显示
       const centerX = (minPt.x + maxPt.x) / 2;
@@ -1047,100 +1107,100 @@ class MxCADInstanceManager {
   }
 
   /**
- * 设置文件打开完成事件监听器
- */
-private setupFileOpenListener(): void {
-  const onOpen = async () => {
-    if (currentFileInfo) {
-      globalThis.MxPluginContext.useFileName().fileName.value =
-        ' - ' + currentFileInfo.name;
+   * 设置文件打开完成事件监听器
+   */
+  private setupFileOpenListener(): void {
+    const onOpen = async () => {
+      if (currentFileInfo) {
+        globalThis.MxPluginContext.useFileName().fileName.value =
+          ' - ' + currentFileInfo.name;
 
-      try {
-        const fileId = currentFileInfo.fileId;
-        const thumbnailResult = await mxcadApi.checkThumbnail(fileId);
+        try {
+          const fileId = currentFileInfo.fileId;
+          const thumbnailResult = await mxcadApi.checkThumbnail(fileId);
 
-        if (!thumbnailResult.data.exists) {
-          Logger.info('缩略图不存在，开始生成...');
-          const imageData = await this.generateThumbnail();
-          if (imageData) {
-            Logger.info('缩略图生成成功，开始上传...');
-            await this.uploadThumbnail(fileId, imageData);
+          if (!thumbnailResult.data.exists) {
+            Logger.info('缩略图不存在，开始生成...');
+            const imageData = await this.generateThumbnail();
+            if (imageData) {
+              Logger.info('缩略图生成成功，开始上传...');
+              await this.uploadThumbnail(fileId, imageData);
+            }
           }
+        } catch (error) {
+          Logger.error('缩略图处理失败', error);
         }
-      } catch (error) {
-        Logger.error('缩略图处理失败', error);
       }
-    }
 
-    // 根据只读模式标志设置或取消只读模式
-    if (isBrowseMode) {
-      Logger.info('文件打开完成，设置只读模式');
-      this.mxcadView?.mxcad.setBrowse(true);
+      // 根据只读模式标志设置或取消只读模式
+      if (isBrowseMode) {
+        Logger.info('文件打开完成，设置只读模式');
+        this.mxcadView?.mxcad.setBrowse(true);
+      } else {
+        Logger.info('文件打开完成，取消只读模式');
+        this.mxcadView?.mxcad.setBrowse(false);
+      }
+
+      // 注意：不移除监听器，让监听器持续存在以支持多次打开文件
+    };
+
+    this.mxcadView?.mxcad.on('openFileComplete', onOpen);
+  }
+
+  /**
+   * 构建视图选项
+   * @param openFile 初始文件 URL
+   * @returns 视图选项对象
+   */
+  private buildViewOptions(openFile?: string): ViewOptions {
+    const containerManager = MxCADContainerManager.getInstance();
+    const viewOptions: ViewOptions = {
+      rootContainer: containerManager.getContainer(),
+    };
+
+    if (openFile) {
+      viewOptions.openFile = openFile;
+      Logger.info('第一次初始化，设置初始文件', { openFile });
     } else {
-      Logger.info('文件打开完成，取消只读模式');
-      this.mxcadView?.mxcad.setBrowse(false);
+      Logger.info('第一次初始化，未设置初始文件');
     }
-    
-    // 注意：不移除监听器，让监听器持续存在以支持多次打开文件
-  };
 
-  this.mxcadView?.mxcad.on('openFileComplete', onOpen);
-}
-
-/**
- * 构建视图选项
- * @param openFile 初始文件 URL
- * @returns 视图选项对象
- */
-private buildViewOptions(openFile?: string): ViewOptions {
-  const containerManager = MxCADContainerManager.getInstance();
-  const viewOptions: ViewOptions = {
-    rootContainer: containerManager.getContainer(),
-  };
-
-  if (openFile) {
-    viewOptions.openFile = openFile;
-    Logger.info('第一次初始化，设置初始文件', { openFile });
-  } else {
-    Logger.info('第一次初始化，未设置初始文件');
+    return viewOptions;
   }
 
-  return viewOptions;
-}
-
-/**
- * 监听 MxCAD 应用创建完成事件
- */
-private setupInitializationListener(): void {
-  MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
-    this.isInitialized = true;
-    Logger.success('MxCADView 实例初始化完成');
-  });
-}
-
-/**
- * 创建新 MxCADView 实例
- * @param openFile 初始文件 URL
- */
-private async createInstance(openFile?: string): Promise<void> {
-  try {
-    Logger.info('创建新的 MxCADView 实例', { openFile });
-
-    const viewOptions = this.buildViewOptions(openFile);
-    this.mxcadView = new MxCADView(viewOptions);
-
-    this.mxcadView.create();
-    this.setupFileOpenListener();
-    this.setupInitializationListener();
-
-    Logger.info('MxCADView 实例创建完成，等待初始化事件');
-  } catch (error) {
-    Logger.error('MxCADView 实例创建失败', error);
-    this.mxcadView = null;
-    this.isInitialized = false;
-    throw error;
+  /**
+   * 监听 MxCAD 应用创建完成事件
+   */
+  private setupInitializationListener(): void {
+    MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
+      this.isInitialized = true;
+      Logger.success('MxCADView 实例初始化完成');
+    });
   }
-}
+
+  /**
+   * 创建新 MxCADView 实例
+   * @param openFile 初始文件 URL
+   */
+  private async createInstance(openFile?: string): Promise<void> {
+    try {
+      Logger.info('创建新的 MxCADView 实例', { openFile });
+
+      const viewOptions = this.buildViewOptions(openFile);
+      this.mxcadView = new MxCADView(viewOptions);
+
+      this.mxcadView.create();
+      this.setupFileOpenListener();
+      this.setupInitializationListener();
+
+      Logger.info('MxCADView 实例创建完成，等待初始化事件');
+    } catch (error) {
+      Logger.error('MxCADView 实例创建失败', error);
+      this.mxcadView = null;
+      this.isInitialized = false;
+      throw error;
+    }
+  }
 
   async openFile(fileUrl: string): Promise<void> {
     if (!this.mxcadView || !this.isInitialized) {
@@ -1177,7 +1237,11 @@ private async createInstance(openFile?: string): Promise<void> {
       }
 
       // 使用重试机制打开文件，防止 mxdrawObject 未初始化的问题
-      for (let attempt = 0; attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      for (
+        let attempt = 0;
+        attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
+        attempt++
+      ) {
         try {
           // 使用 openWebFile 方法打开文件
           // 这是 MxCADView 实例创建后打开文件的正确方式
@@ -1188,14 +1252,19 @@ private async createInstance(openFile?: string): Promise<void> {
         } catch (error) {
           const err = error as Error;
           if (err.message && err.message.includes('mxdrawObject')) {
-            Logger.warn(`mxdrawObject 未准备好，重试 ${attempt + 1}/${FILE_OPEN_RETRY_CONFIG.MAX_RETRIES}`, error);
+            Logger.warn(
+              `mxdrawObject 未准备好，重试 ${attempt + 1}/${FILE_OPEN_RETRY_CONFIG.MAX_RETRIES}`,
+              error
+            );
 
             if (attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1) {
-              await new Promise((resolve) => setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS));
+              await new Promise((resolve) =>
+                setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
+              );
               continue;
             }
           }
-          
+
           // 如果不是 mxdrawObject 相关错误，或者是最后一次重试，抛出错误
           Logger.error('打开文件时发生错误', error);
           throw error;
@@ -1253,7 +1322,11 @@ private async createInstance(openFile?: string): Promise<void> {
       }
 
       // 使用重试机制打开文件
-      for (let attempt = 0; attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      for (
+        let attempt = 0;
+        attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
+        attempt++
+      ) {
         try {
           this.mxcadView.mxcad.openWebFile(currentMxwebUrl);
           Logger.success('重新加载文件成功:', currentMxwebUrl);
@@ -1261,9 +1334,14 @@ private async createInstance(openFile?: string): Promise<void> {
         } catch (error) {
           const err = error as Error;
           if (err.message && err.message.includes('mxdrawObject')) {
-            Logger.warn(`mxdrawObject 未准备好，重试 ${attempt + 1}/${FILE_OPEN_RETRY_CONFIG.MAX_RETRIES}`, error);
+            Logger.warn(
+              `mxdrawObject 未准备好，重试 ${attempt + 1}/${FILE_OPEN_RETRY_CONFIG.MAX_RETRIES}`,
+              error
+            );
             if (attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1) {
-              await new Promise((resolve) => setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS));
+              await new Promise((resolve) =>
+                setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
+              );
               continue;
             }
           }
@@ -1372,7 +1450,12 @@ export class MxCADManager {
    * 获取当前打开的文件信息
    * @returns 当前文件信息，如果没有打开的文件则返回 null
    */
-  getCurrentFileInfo(): { fileId: string; parentId: string | null; projectId: string | null; name: string } | null {
+  getCurrentFileInfo(): {
+    fileId: string;
+    parentId: string | null;
+    projectId: string | null;
+    name: string;
+  } | null {
     return currentFileInfo;
   }
 

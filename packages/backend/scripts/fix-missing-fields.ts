@@ -73,7 +73,8 @@ async function main() {
     }
 
     // 4. 检查并创建 ADMIN 和 USER 角色
-    const adminRole = await prisma.$queryRaw`SELECT id FROM "roles" WHERE name = 'ADMIN'`;
+    const adminRole =
+      await prisma.$queryRaw`SELECT id FROM "roles" WHERE name = 'ADMIN'`;
     if (!adminRole || (adminRole as any[]).length === 0) {
       console.log('\n创建 ADMIN 角色...');
       await prisma.$executeRaw`
@@ -83,7 +84,8 @@ async function main() {
       console.log('✓ ADMIN 角色已创建');
     }
 
-    const userRole = await prisma.$queryRaw`SELECT id FROM "roles" WHERE name = 'USER'`;
+    const userRole =
+      await prisma.$queryRaw`SELECT id FROM "roles" WHERE name = 'USER'`;
     if (!userRole || (userRole as any[]).length === 0) {
       console.log('\n创建 USER 角色...');
       await prisma.$executeRaw`

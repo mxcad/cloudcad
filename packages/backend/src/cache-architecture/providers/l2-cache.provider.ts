@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, RedisClientType } from 'redis';
 import { IL2CacheManager } from '../interfaces/cache-manager.interface';
@@ -10,7 +15,9 @@ import { CacheStrategy } from '../enums/cache-strategy.enum';
  * 分布式缓存，TTL 30 分钟，支持批量操作
  */
 @Injectable()
-export class L2CacheProvider<T = unknown> implements IL2CacheManager<T>, OnModuleInit, OnModuleDestroy {
+export class L2CacheProvider<T = unknown>
+  implements IL2CacheManager<T>, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(L2CacheProvider.name);
   private client: RedisClientType;
   private isConnected = false;
@@ -286,8 +293,12 @@ export class L2CacheProvider<T = unknown> implements IL2CacheManager<T>, OnModul
       if (keys.length > 0) {
         // Redis 的 del 方法支持数组形式
         // 使用 any 来避免 TypeScript 类型检查问题
-        await (this.client.del as unknown as (keys: string[]) => Promise<number>)(keys);
-        this.logger.debug(`根据模式删除了 ${keys.length} 条 L2 缓存: ${pattern}`);
+        await (
+          this.client.del as unknown as (keys: string[]) => Promise<number>
+        )(keys);
+        this.logger.debug(
+          `根据模式删除了 ${keys.length} 条 L2 缓存: ${pattern}`
+        );
       }
 
       return keys.length;

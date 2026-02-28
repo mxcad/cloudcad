@@ -28,7 +28,11 @@ export class UploadError extends Error {
    */
   public readonly details?: Record<string, unknown>;
 
-  constructor(code: UploadErrorCode, message: string, details?: Record<string, unknown>) {
+  constructor(
+    code: UploadErrorCode,
+    message: string,
+    details?: Record<string, unknown>
+  ) {
     super(message);
     this.name = 'UploadError';
     this.code = code;
@@ -45,7 +49,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.FILE_NOT_FOUND,
       '文件不存在',
-      details,
+      details
     );
   }
 
@@ -56,7 +60,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.CHUNK_ALREADY_EXISTS,
       '分片已存在',
-      details,
+      details
     );
   }
 
@@ -67,7 +71,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.CHUNK_NOT_FOUND,
       '分片不存在',
-      details,
+      details
     );
   }
 
@@ -78,7 +82,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.CONVERSION_FAILED,
       '文件转换失败',
-      details,
+      details
     );
   }
 
@@ -89,7 +93,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.NODE_CREATION_FAILED,
       '节点创建失败',
-      details,
+      details
     );
   }
 
@@ -100,7 +104,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.PERMISSION_DENIED,
       '权限不足',
-      details,
+      details
     );
   }
 
@@ -111,7 +115,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.CONCURRENT_OPERATION,
       '并发操作冲突',
-      details,
+      details
     );
   }
 
@@ -119,11 +123,7 @@ export class UploadError extends Error {
    * 创建无效文件错误
    */
   static invalidFile(details?: Record<string, unknown>): UploadError {
-    return new UploadError(
-      UploadErrorCode.INVALID_FILE,
-      '无效的文件',
-      details,
-    );
+    return new UploadError(UploadErrorCode.INVALID_FILE, '无效的文件', details);
   }
 
   /**
@@ -133,7 +133,7 @@ export class UploadError extends Error {
     return new UploadError(
       UploadErrorCode.STORAGE_ERROR,
       '存储操作失败',
-      details,
+      details
     );
   }
 
@@ -141,10 +141,6 @@ export class UploadError extends Error {
    * 创建未知错误
    */
   static unknown(details?: Record<string, unknown>): UploadError {
-    return new UploadError(
-      UploadErrorCode.UNKNOWN_ERROR,
-      '未知错误',
-      details,
-    );
+    return new UploadError(UploadErrorCode.UNKNOWN_ERROR, '未知错误', details);
   }
 }

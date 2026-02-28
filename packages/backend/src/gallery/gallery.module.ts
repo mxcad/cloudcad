@@ -8,6 +8,7 @@ import { MxCadModule } from '../mxcad/mxcad.module';
 import { CommonModule } from '../common/common.module';
 import { FileSystemModule } from '../file-system/file-system.module';
 import { RolesModule } from '../roles/roles.module';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 
 /**
  * 图库模块
@@ -31,7 +32,7 @@ import { RolesModule } from '../roles/roles.module';
     }),
   ],
   controllers: [GalleryController],
-  providers: [GalleryService],
+  providers: [GalleryService, RequireProjectPermissionGuard],
   exports: [GalleryService],
 })
 export class GalleryModule {}

@@ -67,12 +67,18 @@ export class ConcurrencyManager {
    * @param timeout 超时时间（毫秒）
    * @returns 任务执行结果，成功返回结果，超时或失败返回 null
    */
-  async withTimeout<T>(task: () => Promise<T>, timeout: number): Promise<T | null> {
+  async withTimeout<T>(
+    task: () => Promise<T>,
+    timeout: number
+  ): Promise<T | null> {
     try {
       const result = await Promise.race([
         task(),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`任务超时 (${timeout}ms)`)), timeout)
+          setTimeout(
+            () => reject(new Error(`任务超时 (${timeout}ms)`)),
+            timeout
+          )
         ),
       ]);
       return result;

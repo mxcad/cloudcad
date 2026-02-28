@@ -76,6 +76,16 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3091',
           changeOrigin: true,
           secure: false,
+        },
+        '/push_open_file': {
+          target: 'http://localhost:3091',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/files': {
+          target: 'http://localhost:3091',
+          changeOrigin: true,
+          secure: false,
         }
       },
     },

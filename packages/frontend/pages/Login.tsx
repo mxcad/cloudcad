@@ -90,7 +90,8 @@ export const Login: React.FC = () => {
               onError={(e) => {
                 // 图片加载失败时显示备用 SVG
                 e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling as SVGElement;
+                const fallback = e.currentTarget
+                  .nextElementSibling as SVGElement;
                 if (fallback) fallback.style.display = 'block';
               }}
             />

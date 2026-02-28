@@ -3,7 +3,11 @@ import { MultiLevelCacheService } from './multi-level-cache.service';
 import { L1CacheProvider } from '../providers/l1-cache.provider';
 import { L2CacheProvider } from '../providers/l2-cache.provider';
 import { L3CacheProvider } from '../providers/l3-cache.provider';
-import { ICachePerformanceMetrics, ICacheHealthStatus, IHotData } from '../interfaces/cache-stats.interface';
+import {
+  ICachePerformanceMetrics,
+  ICacheHealthStatus,
+  IHotData,
+} from '../interfaces/cache-stats.interface';
 import { CacheLevel } from '../enums/cache-level.enum';
 
 /**
@@ -22,7 +26,8 @@ interface PerformanceDataPoint {
 @Injectable()
 export class CacheMonitorService {
   private readonly logger = new Logger(CacheMonitorService.name);
-  private readonly performanceData: Map<string, PerformanceDataPoint[]> = new Map();
+  private readonly performanceData: Map<string, PerformanceDataPoint[]> =
+    new Map();
   private readonly maxDataPoints = 1000;
   private readonly monitoringInterval = 60000; // 1 分钟
 
@@ -30,7 +35,7 @@ export class CacheMonitorService {
     private readonly cacheService: MultiLevelCacheService,
     private readonly l1Cache: L1CacheProvider,
     private readonly l2Cache: L2CacheProvider,
-    private readonly l3Cache: L3CacheProvider,
+    private readonly l3Cache: L3CacheProvider
   ) {
     // 定期清理过期的性能数据
     setInterval(() => this.cleanOldPerformanceData(), this.monitoringInterval);
@@ -61,9 +66,17 @@ export class CacheMonitorService {
     // 确定整体健康状态
     let overall: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
 
-    if (l1Status.status === 'unhealthy' || l2Status.status === 'unhealthy' || l3Status.status === 'unhealthy') {
+    if (
+      l1Status.status === 'unhealthy' ||
+      l2Status.status === 'unhealthy' ||
+      l3Status.status === 'unhealthy'
+    ) {
       overall = 'unhealthy';
-    } else if (l1Status.status === 'degraded' || l2Status.status === 'degraded' || l3Status.status === 'degraded') {
+    } else if (
+      l1Status.status === 'degraded' ||
+      l2Status.status === 'degraded' ||
+      l3Status.status === 'degraded'
+    ) {
       overall = 'degraded';
     }
 
@@ -78,7 +91,9 @@ export class CacheMonitorService {
   /**
    * 获取性能指标
    */
-  async getPerformanceMetrics(): Promise<Map<CacheLevel, ICachePerformanceMetrics>> {
+  async getPerformanceMetrics(): Promise<
+    Map<CacheLevel, ICachePerformanceMetrics>
+  > {
     const metrics = new Map<CacheLevel, ICachePerformanceMetrics>();
 
     for (const level of [CacheLevel.L1, CacheLevel.L2, CacheLevel.L3]) {
@@ -96,8 +111,10 @@ export class CacheMonitorService {
     const l3HotData = await this.l3Cache.getHotData(limit);
 
     return l3HotData.map((data) => {
-      const minutesSinceLastAccess = (Date.now() - data.lastAccessedAt.getTime()) / 60000;
-      const accessFrequency = data.accessCount / Math.max(minutesSinceLastAccess, 1);
+      const minutesSinceLastAccess =
+        (Date.now() - data.lastAccessedAt.getTime()) / 60000;
+      const accessFrequency =
+        data.accessCount / Math.max(minutesSinceLastAccess, 1);
 
       return {
         key: data.key,
@@ -111,7 +128,11 @@ export class CacheMonitorService {
   /**
    * 记录性能数据
    */
-  recordPerformance(level: CacheLevel, responseTime: number, success: boolean): void {
+  recordPerformance(
+    level: CacheLevel,
+    responseTime: number,
+    success: boolean
+  ): void {
     const levelKey = level.toString();
     const data = this.performanceData.get(levelKey) || [];
 
@@ -132,7 +153,10 @@ export class CacheMonitorService {
   /**
    * 获取性能趋势
    */
-  getPerformanceTrend(level: CacheLevel, minutes: number = 60): {
+  getPerformanceTrend(
+    level: CacheLevel,
+    minutes: number = 60
+  ): {
     timestamps: number[];
     avgResponseTimes: number[];
     errorRates: number[];
@@ -144,11 +168,17 @@ export class CacheMonitorService {
     const recentData = data.filter((point) => point.timestamp >= cutoffTime);
 
     // 按分钟聚合数据
-    const aggregated = new Map<number, { responseTimes: number[]; errors: number }>();
+    const aggregated = new Map<
+      number,
+      { responseTimes: number[]; errors: number }
+    >();
 
     for (const point of recentData) {
       const minute = Math.floor(point.timestamp / 60000) * 60000;
-      const aggregatedPoint = aggregated.get(minute) || { responseTimes: [], errors: 0 };
+      const aggregatedPoint = aggregated.get(minute) || {
+        responseTimes: [],
+        errors: 0,
+      };
 
       aggregatedPoint.responseTimes.push(point.responseTime);
       if (!point.success) {
@@ -162,7 +192,10 @@ export class CacheMonitorService {
     const timestamps = sortedMinutes;
     const avgResponseTimes = sortedMinutes.map((minute) => {
       const point = aggregated.get(minute)!;
-      return point.responseTimes.reduce((sum, time) => sum + time, 0) / point.responseTimes.length;
+      return (
+        point.responseTimes.reduce((sum, time) => sum + time, 0) /
+        point.responseTimes.length
+      );
     });
     const errorRates = sortedMinutes.map((minute) => {
       const point = aggregated.get(minute)!;
@@ -199,7 +232,9 @@ export class CacheMonitorService {
     const trend = new Map<CacheLevel, number[]>();
 
     for (const level of [CacheLevel.L1, CacheLevel.L2, CacheLevel.L3]) {
-      const levelStats = stats.levels[level as keyof typeof stats.levels] as { size: number };
+      const levelStats = stats.levels[level as keyof typeof stats.levels] as {
+        size: number;
+      };
       trend.set(level, [levelStats.size]);
     }
 
@@ -210,12 +245,13 @@ export class CacheMonitorService {
    * 获取监控摘要
    */
   async getMonitoringSummary() {
-    const [stats, healthStatus, performanceMetrics, hotData] = await Promise.all([
-      this.getStats(),
-      this.getHealthStatus(),
-      this.getPerformanceMetrics(),
-      this.getHotData(10),
-    ]);
+    const [stats, healthStatus, performanceMetrics, hotData] =
+      await Promise.all([
+        this.getStats(),
+        this.getHealthStatus(),
+        this.getPerformanceMetrics(),
+        this.getHotData(10),
+      ]);
 
     return {
       stats,
@@ -236,12 +272,16 @@ export class CacheMonitorService {
     // 检查 L1 缓存容量
     const l1Stats = stats.levels.L1 as { size: number; maxCapacity: number };
     if (l1Stats.size > l1Stats.maxCapacity * 0.9) {
-      warnings.push(`L1 缓存容量使用率超过 90% (${l1Stats.size}/${l1Stats.maxCapacity})`);
+      warnings.push(
+        `L1 缓存容量使用率超过 90% (${l1Stats.size}/${l1Stats.maxCapacity})`
+      );
     }
 
     // 检查命中率
     if (stats.summary.overallHitRate < 70) {
-      warnings.push(`整体缓存命中率低于 70% (${stats.summary.overallHitRate.toFixed(2)}%)`);
+      warnings.push(
+        `整体缓存命中率低于 70% (${stats.summary.overallHitRate.toFixed(2)}%)`
+      );
     }
 
     // 检查 L2 连接状态
@@ -262,7 +302,9 @@ export class CacheMonitorService {
   /**
    * 获取级别健康状态
    */
-  private async getLevelHealthStatus(level: CacheLevel): Promise<ICacheHealthStatus> {
+  private async getLevelHealthStatus(
+    level: CacheLevel
+  ): Promise<ICacheHealthStatus> {
     const now = new Date();
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     let availability = 100;
@@ -311,7 +353,9 @@ export class CacheMonitorService {
   /**
    * 计算性能指标
    */
-  private calculatePerformanceMetrics(level: CacheLevel): ICachePerformanceMetrics {
+  private calculatePerformanceMetrics(
+    level: CacheLevel
+  ): ICachePerformanceMetrics {
     const levelKey = level.toString();
     const data = this.performanceData.get(levelKey) || [];
 
@@ -326,7 +370,9 @@ export class CacheMonitorService {
       };
     }
 
-    const responseTimes = data.map((point) => point.responseTime).sort((a, b) => a - b);
+    const responseTimes = data
+      .map((point) => point.responseTime)
+      .sort((a, b) => a - b);
     const errors = data.filter((point) => !point.success).length;
 
     // 计算百分位数
@@ -335,11 +381,14 @@ export class CacheMonitorService {
     const p99Index = Math.floor(responseTimes.length * 0.99);
 
     // 计算吞吐量（请求/秒）
-    const timeSpan = (data[data.length - 1].timestamp - data[0].timestamp) / 1000;
+    const timeSpan =
+      (data[data.length - 1].timestamp - data[0].timestamp) / 1000;
     const throughput = timeSpan > 0 ? data.length / timeSpan : 0;
 
     return {
-      avgResponseTime: responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length,
+      avgResponseTime:
+        responseTimes.reduce((sum, time) => sum + time, 0) /
+        responseTimes.length,
       p50ResponseTime: responseTimes[p50Index],
       p95ResponseTime: responseTimes[p95Index],
       p99ResponseTime: responseTimes[p99Index],
@@ -355,7 +404,9 @@ export class CacheMonitorService {
     const cutoffTime = Date.now() - 24 * 60 * 60 * 1000; // 保留 24 小时的数据
 
     for (const [levelKey, data] of this.performanceData.entries()) {
-      const filteredData = data.filter((point) => point.timestamp >= cutoffTime);
+      const filteredData = data.filter(
+        (point) => point.timestamp >= cutoffTime
+      );
       this.performanceData.set(levelKey, filteredData);
     }
 

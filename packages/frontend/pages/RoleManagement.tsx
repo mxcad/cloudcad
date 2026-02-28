@@ -5,7 +5,11 @@ import { DescriptionText } from '../components/ui/TruncateText';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
 import { rolesApi, projectRolesApi } from '../services/rolesApi';
 import { usePermission } from '../hooks/usePermission';
-import { PERMISSION_GROUPS, getRoleDisplayName, SystemPermission } from '../constants/permissions';
+import {
+  PERMISSION_GROUPS,
+  getRoleDisplayName,
+  SystemPermission,
+} from '../constants/permissions';
 import { components } from '../types/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -45,7 +49,9 @@ export const RoleManagement = () => {
   // 系统角色状态
   const [systemRoles, setSystemRoles] = useState<SystemRole[]>([]);
   const [systemModalOpen, setSystemModalOpen] = useState(false);
-  const [editingSystemRole, setEditingSystemRole] = useState<SystemRole | null>(null);
+  const [editingSystemRole, setEditingSystemRole] = useState<SystemRole | null>(
+    null
+  );
   const [systemRoleName, setSystemRoleName] = useState('');
   const [systemRoleDesc, setSystemRoleDesc] = useState('');
   const [selectedSystemPerms, setSelectedSystemPerms] = useState<string[]>([]);
@@ -53,10 +59,13 @@ export const RoleManagement = () => {
   // 项目角色状态
   const [projectRoles, setProjectRoles] = useState<ProjectRole[]>([]);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
-  const [editingProjectRole, setEditingProjectRole] = useState<ProjectRole | null>(null);
+  const [editingProjectRole, setEditingProjectRole] =
+    useState<ProjectRole | null>(null);
   const [projectRoleName, setProjectRoleName] = useState('');
   const [projectRoleDesc, setProjectRoleDesc] = useState('');
-  const [selectedProjectPerms, setSelectedProjectPerms] = useState<string[]>([]);
+  const [selectedProjectPerms, setSelectedProjectPerms] = useState<string[]>(
+    []
+  );
 
   // 获取当前用户信息
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
@@ -153,7 +162,8 @@ export const RoleManagement = () => {
       loadSystemRoles();
     } catch (error) {
       alert(
-        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ||
           (error as Error).message ||
           '保存失败'
       );
@@ -171,7 +181,10 @@ export const RoleManagement = () => {
         loadSystemRoles();
       } catch (error) {
         console.error('删除角色失败:', error);
-        alert((error as { response?: { data?: { message?: string } } }).response?.data?.message || '删除失败');
+        alert(
+          (error as { response?: { data?: { message?: string } } }).response
+            ?.data?.message || '删除失败'
+        );
       }
     }
   };
@@ -229,7 +242,8 @@ export const RoleManagement = () => {
       loadProjectRoles();
     } catch (error) {
       alert(
-        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ||
           (error as Error).message ||
           '保存失败'
       );
@@ -242,15 +256,19 @@ export const RoleManagement = () => {
   };
 
   // 过滤后的系统角色
-  const filteredSystemRoles = systemRoles.filter(role =>
-    role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (role.description && role.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredSystemRoles = systemRoles.filter(
+    (role) =>
+      role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (role.description &&
+        role.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // 过滤后的项目角色
-  const filteredProjectRoles = projectRoles.filter(role =>
-    role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (role.description && role.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredProjectRoles = projectRoles.filter(
+    (role) =>
+      role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (role.description &&
+        role.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -258,7 +276,9 @@ export const RoleManagement = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">角色与权限</h1>
-          <p className="text-slate-500 mt-1">管理系统角色和项目角色及其操作权限</p>
+          <p className="text-slate-500 mt-1">
+            管理系统角色和项目角色及其操作权限
+          </p>
         </div>
         <input
           type="text"
@@ -298,220 +318,260 @@ export const RoleManagement = () => {
       </div>
 
       {/* 项目角色模块（需要 SYSTEM_ROLE_READ 权限） */}
-      {activeTab === 'project' && hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
-        <>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">项目角色</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                系统默认项目角色，所有项目共享使用
-              </p>
+      {activeTab === 'project' &&
+        hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">项目角色</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  系统默认项目角色，所有项目共享使用
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasPermission(SystemPermission.SYSTEM_ROLE_CREATE) && (
+                  <Button icon={Plus} onClick={handleCreateProjectRole}>
+                    新建角色
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {hasPermission(SystemPermission.SYSTEM_ROLE_CREATE) && (
-                <Button icon={Plus} onClick={handleCreateProjectRole}>
-                  新建角色
-                </Button>
-              )}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjectRoles.map((role) => (
-              <div
-                key={role.id}
-                className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
-                  role.isSystem ? 'border-slate-200' : 'border-2 border-emerald-200'
-                }`}
-              >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProjectRoles.map((role) => (
                 <div
-                  className={`p-6 border-b border-slate-100 flex items-start justify-between ${
-                    role.isSystem ? '' : 'bg-emerald-50/30'
+                  key={role.id}
+                  className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
+                    role.isSystem
+                      ? 'border-slate-200'
+                      : 'border-2 border-emerald-200'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        {getRoleDisplayName(role.name, role.isSystem)}
-                        {role.isSystem && (
-                          <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                            系统
-                          </span>
+                  <div
+                    className={`p-6 border-b border-slate-100 flex items-start justify-between ${
+                      role.isSystem ? '' : 'bg-emerald-50/30'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                          {getRoleDisplayName(role.name, role.isSystem)}
+                          {role.isSystem && (
+                            <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                              系统
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                          <DescriptionText>{role.description}</DescriptionText>
+                        </p>
+                        {!role.isSystem && (
+                          <p className="text-xs text-slate-400 mt-2">
+                            {role._count.members} 个成员
+                          </p>
                         )}
-                      </h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      <DescriptionText>{role.description}</DescriptionText>
-                    </p>
-                    {!role.isSystem && (
-                      <p className="text-xs text-slate-400 mt-2">
-                        {role._count.members} 个成员
-                      </p>
-                    )}
+                      </div>
+                    </div>
+                    {!role.isSystem &&
+                      hasPermission(SystemPermission.SYSTEM_ROLE_DELETE) && (
+                        <button
+                          onClick={() => handleDeleteProjectRole(role.id)}
+                          className="text-slate-400 hover:text-red-500"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                   </div>
+                  <div className="p-6 flex-1 bg-slate-50/50">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                      拥有权限
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {role.permissions
+                        .slice(0, 6)
+                        .map(
+                          (p: string | { permission: string; id?: string }) => {
+                            const permKey =
+                              typeof p === 'string' ? p : p?.permission || '';
+                            const allPermissions = [
+                              ...PERMISSION_GROUPS.system.flatMap(
+                                (g) => g.items
+                              ),
+                              ...PERMISSION_GROUPS.project.flatMap(
+                                (g) => g.items
+                              ),
+                            ];
+                            const permItem = allPermissions.find(
+                              (item) => item.key === permKey
+                            );
+                            const label = permItem
+                              ? permItem.label
+                              : permKey.split('_').slice(1).join('_');
+
+                            return (
+                              <span
+                                key={
+                                  typeof p === 'string' ? p : p.id || permKey
+                                }
+                                className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                              >
+                                {label}
+                              </span>
+                            );
+                          }
+                        )}
+                      {role.permissions.length > 6 && (
+                        <span className="text-xs px-2 py-1 text-slate-400">
+                          +{role.permissions.length - 6}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {!role.isSystem && hasPermission(SystemPermission.SYSTEM_ROLE_DELETE) && (
-                    <button
-                      onClick={() => handleDeleteProjectRole(role.id)}
-                      className="text-slate-400 hover:text-red-500"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                  {hasPermission(
+                    SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE
+                  ) && (
+                    <div className="p-4 border-t border-slate-100">
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => handleEditProjectRole(role)}
+                      >
+                        配置权限
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <div className="p-6 flex-1 bg-slate-50/50">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                    拥有权限
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p: string | { permission: string; id?: string }) => {
-                      const permKey = typeof p === 'string' ? p : (p?.permission || '');
-                      const allPermissions = [
-                        ...PERMISSION_GROUPS.system.flatMap(g => g.items),
-                        ...PERMISSION_GROUPS.project.flatMap(g => g.items)
-                      ];
-                      const permItem = allPermissions.find(item => item.key === permKey);
-                      const label = permItem ? permItem.label : permKey.split('_').slice(1).join('_');
+              ))}
+            </div>
+          </>
+        )}
 
-                      return (
-                        <span
-                          key={typeof p === 'string' ? p : (p.id || permKey)}
-                          className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
-                        >
-                          {label}
-                        </span>
-                      );
-                    })}
-                    {role.permissions.length > 6 && (
-                      <span className="text-xs px-2 py-1 text-slate-400">
-                        +{role.permissions.length - 6}
-                      </span>
+      {/* 无权限提示 */}
+      {activeTab === 'project' &&
+        !hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
+          <div className="flex flex-col items-center justify-center py-16">
+            <p className="text-slate-500">您没有权限访问此页面</p>
+          </div>
+        )}
+
+      {/* 系统角色模块（仅管理员可见） */}
+      {activeTab === 'system' &&
+        hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">系统角色</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  管理系统用户的角色和权限，系统默认角色不可删除
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasPermission(SystemPermission.SYSTEM_ROLE_CREATE) && (
+                  <Button icon={Plus} onClick={handleCreateSystemRole}>
+                    新建角色
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredSystemRoles.map((role) => (
+                <div
+                  key={role.id}
+                  className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
+                    role.isSystem
+                      ? 'border-slate-200'
+                      : 'border-2 border-emerald-200'
+                  }`}
+                >
+                  <div
+                    className={`p-6 border-b border-slate-100 flex items-start justify-between ${
+                      role.isSystem ? '' : 'bg-emerald-50/30'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                          {getRoleDisplayName(role.name, role.isSystem)}
+                          {role.isSystem && (
+                            <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                              系统
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                          <DescriptionText>{role.description}</DescriptionText>
+                        </p>
+                      </div>
+                    </div>
+                    {!role.isSystem && (
+                      <button
+                        onClick={() => handleDeleteSystemRole(role.id)}
+                        className="text-slate-400 hover:text-red-500"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     )}
                   </div>
-                </div>
-                {hasPermission(SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE) && (
+                  <div className="p-6 flex-1 bg-slate-50/50">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                      拥有权限
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {role.permissions
+                        .slice(0, 6)
+                        .map(
+                          (p: string | { permission: string; id?: string }) => {
+                            const permKey =
+                              typeof p === 'string' ? p : p?.permission || '';
+                            const allPermissions = [
+                              ...PERMISSION_GROUPS.system.flatMap(
+                                (g) => g.items
+                              ),
+                              ...PERMISSION_GROUPS.project.flatMap(
+                                (g) => g.items
+                              ),
+                            ];
+                            const permItem = allPermissions.find(
+                              (item) => item.key === permKey
+                            );
+                            const label = permItem
+                              ? permItem.label
+                              : permKey.split('_').slice(1).join('_');
+
+                            return (
+                              <span
+                                key={
+                                  typeof p === 'string' ? p : p.id || permKey
+                                }
+                                className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
+                              >
+                                {label}
+                              </span>
+                            );
+                          }
+                        )}
+                      {role.permissions.length > 6 && (
+                        <span className="text-xs px-2 py-1 text-slate-400">
+                          +{role.permissions.length - 6}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div className="p-4 border-t border-slate-100">
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => handleEditProjectRole(role)}
+                      onClick={() => handleEditSystemRole(role)}
                     >
                       配置权限
                     </Button>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* 无权限提示 */}
-      {activeTab === 'project' && !hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
-        <div className="flex flex-col items-center justify-center py-16">
-          <p className="text-slate-500">您没有权限访问此页面</p>
-        </div>
-      )}
-
-      {/* 系统角色模块（仅管理员可见） */}
-      {activeTab === 'system' && hasPermission(SystemPermission.SYSTEM_ROLE_READ) && (
-        <>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">系统角色</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                管理系统用户的角色和权限，系统默认角色不可删除
-              </p>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              {hasPermission(SystemPermission.SYSTEM_ROLE_CREATE) && (
-                <Button icon={Plus} onClick={handleCreateSystemRole}>
-                  新建角色
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSystemRoles.map((role) => (
-              <div
-                key={role.id}
-                className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow flex flex-col ${
-                  role.isSystem ? 'border-slate-200' : 'border-2 border-emerald-200'
-                }`}
-              >
-                <div
-                  className={`p-6 border-b border-slate-100 flex items-start justify-between ${
-                    role.isSystem ? '' : 'bg-emerald-50/30'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        {getRoleDisplayName(role.name, role.isSystem)}
-                        {role.isSystem && (
-                          <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                            系统
-                          </span>
-                        )}
-                      </h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      <DescriptionText>{role.description}</DescriptionText>
-                    </p>
-                  </div>
-                  </div>
-                  {!role.isSystem && (
-                    <button
-                      onClick={() => handleDeleteSystemRole(role.id)}
-                      className="text-slate-400 hover:text-red-500"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
-                <div className="p-6 flex-1 bg-slate-50/50">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                    拥有权限
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {role.permissions.slice(0, 6).map((p: string | { permission: string; id?: string }) => {
-                      const permKey = typeof p === 'string' ? p : (p?.permission || '');
-                      const allPermissions = [
-                        ...PERMISSION_GROUPS.system.flatMap(g => g.items),
-                        ...PERMISSION_GROUPS.project.flatMap(g => g.items)
-                      ];
-                      const permItem = allPermissions.find(item => item.key === permKey);
-                      const label = permItem ? permItem.label : permKey.split('_').slice(1).join('_');
-
-                      return (
-                        <span
-                          key={typeof p === 'string' ? p : (p.id || permKey)}
-                          className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600"
-                        >
-                          {label}
-                        </span>
-                      );
-                    })}
-                    {role.permissions.length > 6 && (
-                      <span className="text-xs px-2 py-1 text-slate-400">
-                        +{role.permissions.length - 6}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="p-4 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleEditSystemRole(role)}
-                  >
-                    配置权限
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+          </>
+        )}
 
       {/* 系统角色权限配置弹窗 */}
       <PermissionConfigModal
@@ -543,7 +603,9 @@ export const RoleManagement = () => {
         onPermissionsChange={setSelectedProjectPerms}
         onSave={handleSaveProjectRole}
         isSystemRole={editingProjectRole?.isSystem || false}
-        isEditingSystemRole={!!editingProjectRole && editingProjectRole.isSystem}
+        isEditingSystemRole={
+          !!editingProjectRole && editingProjectRole.isSystem
+        }
         permissionType="project"
       />
     </div>

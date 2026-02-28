@@ -19,11 +19,17 @@ export class FileLockService {
 
   constructor(private configService: ConfigService) {
     // 从 FILES_DATA_PATH 派生锁目录
-    const filesDataPath = this.configService.get('FILES_DATA_PATH', '../filesData');
+    const filesDataPath = this.configService.get(
+      'FILES_DATA_PATH',
+      '../filesData'
+    );
     this.lockDir = path.resolve(filesDataPath, '.lock');
     // 增加锁超时时间到 5 分钟，以支持大文件拷贝
     this.lockTimeout = this.configService.get('FILE_LOCK_TIMEOUT', 300000); // 5分钟
-    this.lockRetryInterval = this.configService.get('FILE_LOCK_RETRY_INTERVAL', 100); // 100ms
+    this.lockRetryInterval = this.configService.get(
+      'FILE_LOCK_RETRY_INTERVAL',
+      100
+    ); // 100ms
     this.maxRetries = this.configService.get('FILE_LOCK_MAX_RETRIES', 3);
     this.ensureLockDir();
   }
@@ -82,11 +88,16 @@ export class FileLockService {
             try {
               await fsPromises.unlink(lockPath);
             } catch (error) {
-              this.logger.warn(`删除过期锁文件失败: ${lockName}`, error.message);
+              this.logger.warn(
+                `删除过期锁文件失败: ${lockName}`,
+                error.message
+              );
             }
           } else {
             // 锁文件存在且未过期，等待重试
-            this.logger.debug(`锁已被占用: ${lockName}，等待重试 (${retryCount + 1}/${this.maxRetries})`);
+            this.logger.debug(
+              `锁已被占用: ${lockName}，等待重试 (${retryCount + 1}/${this.maxRetries})`
+            );
             await this.sleep(this.lockRetryInterval);
             retryCount++;
             continue;
@@ -99,7 +110,9 @@ export class FileLockService {
           timestamp: Date.now(),
         };
 
-        await fsPromises.writeFile(lockPath, JSON.stringify(lockContent), { flag: 'wx' });
+        await fsPromises.writeFile(lockPath, JSON.stringify(lockContent), {
+          flag: 'wx',
+        });
         this.logger.log(`获取锁成功: ${lockName}`);
 
         // 返回锁句柄
@@ -117,7 +130,9 @@ export class FileLockService {
       } catch (error) {
         if (error.code === 'EEXIST') {
           // 文件已存在，重试
-          this.logger.debug(`锁已被占用: ${lockName}，等待重试 (${retryCount + 1}/${this.maxRetries})`);
+          this.logger.debug(
+            `锁已被占用: ${lockName}，等待重试 (${retryCount + 1}/${this.maxRetries})`
+          );
           await this.sleep(this.lockRetryInterval);
           retryCount++;
           continue;
@@ -128,7 +143,9 @@ export class FileLockService {
       }
     }
 
-    throw new Error(`获取锁超时: ${lockName} (重试 ${this.maxRetries} 次后失败)`);
+    throw new Error(
+      `获取锁超时: ${lockName} (重试 ${this.maxRetries} 次后失败)`
+    );
   }
 
   /**
@@ -140,7 +157,7 @@ export class FileLockService {
   async withLock<T>(lockName: string, fn: () => Promise<T>): Promise<T> {
     const lock = await this.acquireLock(lockName);
     let lockReleased = false;
-    
+
     try {
       return await fn();
     } finally {
@@ -198,7 +215,9 @@ export class FileLockService {
    */
   async cleanupExpiredLocks(): Promise<number> {
     try {
-      const entries = await fsPromises.readdir(this.lockDir, { withFileTypes: true });
+      const entries = await fsPromises.readdir(this.lockDir, {
+        withFileTypes: true,
+      });
       let cleanedCount = 0;
 
       for (const entry of entries) {
@@ -228,6 +247,6 @@ export class FileLockService {
    * 等待指定时间
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

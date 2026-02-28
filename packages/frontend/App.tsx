@@ -140,7 +140,9 @@ function AppContent() {
                   <Route
                     path="/users"
                     element={
-                      <PermissionRoute permission={SystemPermission.SYSTEM_USER_READ}>
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_USER_READ}
+                      >
                         <UserManagement />
                       </PermissionRoute>
                     }
@@ -150,7 +152,9 @@ function AppContent() {
                   <Route
                     path="/roles"
                     element={
-                      <PermissionRoute permission={SystemPermission.SYSTEM_ROLE_READ}>
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_ROLE_READ}
+                      >
                         <RoleManagement />
                       </PermissionRoute>
                     }
@@ -162,7 +166,9 @@ function AppContent() {
                   <Route
                     path="/font-library"
                     element={
-                      <PermissionRoute permission={SystemPermission.SYSTEM_FONT_READ}>
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_FONT_READ}
+                      >
                         <FontLibrary />
                       </PermissionRoute>
                     }
@@ -172,7 +178,9 @@ function AppContent() {
                   <Route
                     path="/audit-logs"
                     element={
-                      <PermissionRoute permission={SystemPermission.SYSTEM_ADMIN}>
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_ADMIN}
+                      >
                         <AuditLogPage />
                       </PermissionRoute>
                     }
@@ -182,7 +190,9 @@ function AppContent() {
                   <Route
                     path="/system-monitor"
                     element={
-                      <PermissionRoute permission={SystemPermission.SYSTEM_MONITOR}>
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_MONITOR}
+                      >
                         <SystemMonitorPage />
                       </PermissionRoute>
                     }

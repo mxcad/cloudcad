@@ -1,4 +1,10 @@
-import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  forwardRef,
+  Optional,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { SystemPermission, SystemRole } from '../enums/permissions.enum';
@@ -76,12 +82,16 @@ export class PermissionService {
       if (cached !== null) {
         decisionReason = '缓存命中';
         hasPermission = cached;
-        this.logger.log(`权限检查缓存命中: 用户=${userId.substring(0, 8)}..., 权限=${permission}, 结果=${hasPermission}`);
+        this.logger.log(
+          `权限检查缓存命中: 用户=${userId.substring(0, 8)}..., 权限=${permission}, 结果=${hasPermission}`
+        );
       } else {
         // 2. 检查系统管理员权限
         const isAdmin = await this.isSystemAdmin(userId);
-        this.logger.log(`isSystemAdmin 检查结果: 用户=${userId.substring(0, 8)}..., isAdmin=${isAdmin}`);
-        
+        this.logger.log(
+          `isSystemAdmin 检查结果: 用户=${userId.substring(0, 8)}..., isAdmin=${isAdmin}`
+        );
+
         if (isAdmin) {
           decisionReason = '系统管理员权限';
           hasPermission = true;
@@ -93,15 +103,24 @@ export class PermissionService {
             userId,
             permission
           );
-          this.cacheService.set(cacheKey, hasPermission, CACHE_TTL.SYSTEM_PERMISSION); // 5 分钟
+          this.cacheService.set(
+            cacheKey,
+            hasPermission,
+            CACHE_TTL.SYSTEM_PERMISSION
+          ); // 5 分钟
         }
-        this.logger.log(`权限检查完成: 用户=${userId.substring(0, 8)}..., 权限=${permission}, 结果=${hasPermission}, 原因=${decisionReason}`);
+        this.logger.log(
+          `权限检查完成: 用户=${userId.substring(0, 8)}..., 权限=${permission}, 结果=${hasPermission}, 原因=${decisionReason}`
+        );
       }
 
       // 权限检查不记录审计日志（避免日志过多）
       return hasPermission;
     } catch (error) {
-      this.logger.error(`系统权限检查失败: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `系统权限检查失败: ${(error as Error).message}`,
+        (error as Error).stack
+      );
 
       // 权限检查不记录审计日志（避免日志过多）
       return false;
@@ -115,7 +134,9 @@ export class PermissionService {
     const cacheKey = `is_admin:${userId}`;
     const cached = await this.cacheService.get<boolean>(cacheKey);
     if (cached !== null) {
-      this.logger.log(`is_admin 缓存命中: 用户=${userId.substring(0, 8)}..., 结果=${cached}`);
+      this.logger.log(
+        `is_admin 缓存命中: 用户=${userId.substring(0, 8)}..., 结果=${cached}`
+      );
       return cached;
     }
 
@@ -125,7 +146,9 @@ export class PermissionService {
       SystemPermission.SYSTEM_ADMIN
     );
 
-    this.logger.log(`is_admin 计算完成: 用户=${userId.substring(0, 8)}..., 结果=${isAdmin}`);
+    this.logger.log(
+      `is_admin 计算完成: 用户=${userId.substring(0, 8)}..., 结果=${isAdmin}`
+    );
     this.cacheService.set(cacheKey, isAdmin, CACHE_TTL.USER_ROLE); // 10 分钟
     return isAdmin;
   }
@@ -243,9 +266,10 @@ export class PermissionService {
 
     try {
       // 获取该权限的所有启用的策略
-      const policyConfigs = await this.policyConfigService.getEnabledPoliciesForPermission(
-        permission as PrismaPermission
-      );
+      const policyConfigs =
+        await this.policyConfigService.getEnabledPoliciesForPermission(
+          permission as PrismaPermission
+        );
 
       // 如果没有配置策略，默认允许
       if (policyConfigs.length === 0) {
@@ -299,10 +323,7 @@ export class PermissionService {
 
       return summary.allowed;
     } catch (error) {
-      this.logger.error(
-        `策略引擎评估失败: ${error.message}`,
-        error.stack
-      );
+      this.logger.error(`策略引擎评估失败: ${error.message}`, error.stack);
       // 出错时默认拒绝（安全原则）
       return false;
     }
@@ -497,7 +518,11 @@ export class PermissionService {
 
           // 缓存结果
           const cacheKey = `system_perm:${userId}:${permission}`;
-          this.cacheService.set(cacheKey, hasPermission, CACHE_TTL.SYSTEM_PERMISSION); // 5 分钟
+          this.cacheService.set(
+            cacheKey,
+            hasPermission,
+            CACHE_TTL.SYSTEM_PERMISSION
+          ); // 5 分钟
         }
       } catch (error) {
         this.logger.error(

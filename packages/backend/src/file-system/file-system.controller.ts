@@ -19,6 +19,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
+import type { Response, Request as ExpressRequest } from 'express';
 
 import {
   ApiTags,
@@ -28,14 +29,10 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { NodePermissionGuard } from '../common/guards/project-permission.guard';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { NodePermission } from '../common/decorators/project-permission.decorator';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-import {
-  ProjectRole,
-  ProjectPermission,
-} from '../common/enums/permissions.enum';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 import { FileSystemService } from './file-system.service';
 import { ProjectPermissionService } from '../roles/project-permission.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -46,12 +43,16 @@ import { MoveNodeDto } from './dto/move-node.dto';
 import { CopyNodeDto } from './dto/copy-node.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
-import { DownloadNodeQueryDto, CadDownloadFormat } from './dto/download-node.dto';
+import {
+  DownloadNodeQueryDto,
+  CadDownloadFormat,
+} from './dto/download-node.dto';
+import { UpdateProjectMemberDto } from './dto/update-project-member.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Controller('file-system')
-@UseGuards(JwtAuthGuard, NodePermissionGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, RequireProjectPermissionGuard, PermissionsGuard)
 @ApiTags('文件系统')
 @ApiBearerAuth()
 export class FileSystemController {
@@ -63,6 +64,7 @@ export class FileSystemController {
   ) {}
 
   @Post('projects')
+  @RequireProjectPermission(ProjectPermission.FILE_CREATE)
   @ApiResponse({ status: 201, description: '项目创建成功' })
   async createProject(@Request() req, @Body() dto: CreateProjectDto) {
     return this.fileSystemService.createProject(req.user.id, dto);
@@ -77,7 +79,9 @@ export class FileSystemController {
   @Get('projects/trash')
   @ApiResponse({ status: 200, description: '获取已删除项目列表成功' })
   async getDeletedProjects(@Request() req, @Query() query?: QueryProjectsDto) {
-    this.logger.log(`获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`);
+    this.logger.log(
+      `获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`
+    );
     return this.fileSystemService.getUserDeletedProjects(req.user.id, query);
   }
 
@@ -106,19 +110,26 @@ export class FileSystemController {
     @Param('projectId') projectId: string,
     @Query('permanently') permanently?: boolean
   ) {
-    this.logger.log(`删除项目请求: projectId=${projectId}, permanently=${permanently}, userId=${this['request']?.user?.id}`);
-    const result = await this.fileSystemService.deleteProject(projectId, permanently);
+    this.logger.log(
+      `删除项目请求: projectId=${projectId}, permanently=${permanently}, userId=${this['request']?.user?.id}`
+    );
+    const result = await this.fileSystemService.deleteProject(
+      projectId,
+      permanently
+    );
     this.logger.log(`删除项目响应: ${JSON.stringify(result)}`);
     return result;
   }
 
   @Get('trash')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @ApiResponse({ status: 200, description: '获取回收站列表成功' })
   async getTrash(@Request() req) {
     return this.fileSystemService.getTrashItems(req.user.id);
   }
 
   @Post('trash/restore')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '恢复项目成功' })
   async restoreTrashItems(@Body() body: { itemIds: string[] }) {
@@ -126,6 +137,7 @@ export class FileSystemController {
   }
 
   @Delete('trash/items')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '永久删除项目成功' })
   async permanentlyDeleteTrashItems(@Body() body: { itemIds: string[] }) {
@@ -133,6 +145,7 @@ export class FileSystemController {
   }
 
   @Delete('trash')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: '清空回收站成功' })
   async clearTrash(@Request() req) {
@@ -153,7 +166,11 @@ export class FileSystemController {
     @Param('projectId') projectId: string,
     @Query() query?: QueryChildrenDto
   ) {
-    return this.fileSystemService.getProjectTrash(projectId, req.user.id, query);
+    return this.fileSystemService.getProjectTrash(
+      projectId,
+      req.user.id,
+      query
+    );
   }
 
   /**
@@ -176,7 +193,10 @@ export class FileSystemController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '清空项目回收站' })
   @ApiResponse({ status: 200, description: '项目回收站已清空' })
-  async clearProjectTrash(@Request() req, @Param('projectId') projectId: string) {
+  async clearProjectTrash(
+    @Request() req,
+    @Param('projectId') projectId: string
+  ) {
     return this.fileSystemService.clearProjectTrash(projectId, req.user.id);
   }
 
@@ -184,11 +204,11 @@ export class FileSystemController {
 
   /**
    * 统一创建节点接口
-   * 
+   *
    * 规则：
    * - parentId 为空 → 创建项目（isRoot=true）
    * - parentId 有值 → 创建文件夹（isRoot=false）
-   * 
+   *
    * 项目 = 特殊的文件夹（有成员管理）
    */
   @Post('nodes')
@@ -370,10 +390,14 @@ export class FileSystemController {
   async updateProjectMember(
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
-    @Body() body: { projectRoleId: string },
+    @Body() dto: UpdateProjectMemberDto & { roleId?: string },
     @Request() req
   ) {
-    const { projectRoleId } = body;
+    // 兼容处理：优先使用 projectRoleId，如果不存在则使用 roleId
+    const projectRoleId = dto.projectRoleId || dto.roleId;
+    if (!projectRoleId) {
+      throw new BadRequestException('projectRoleId 或 roleId 不能为空');
+    }
     return this.fileSystemService.updateProjectMember(
       projectId,
       userId,
@@ -487,10 +511,10 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '文件不存在' })
   async getThumbnail(
     @Param('nodeId') nodeId: string,
-    @Request() req: any,
-    @Res() res: any
+    @Request() req: ExpressRequest,
+    @Res() res: Response
   ) {
-    const userId = req.session?.userId;
+    const userId = (req.session as { userId?: string })?.userId;
 
     if (!userId) {
       throw new UnauthorizedException('未登录');
@@ -555,7 +579,10 @@ export class FileSystemController {
    */
   @Options('nodes/:nodeId/download')
   @ApiOperation({ summary: '下载接口 OPTIONS 预检' })
-  async downloadNodeOptions(@Request() req: any, @Res() res: any) {
+  async downloadNodeOptions(
+    @Request() req: ExpressRequest,
+    @Res() res: Response
+  ) {
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -579,10 +606,12 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '节点不存在' })
   async downloadNode(
     @Param('nodeId') nodeId: string,
-    @Request() req: any,
-    @Res() res: any
+    @Request() req: ExpressRequest,
+    @Res() res: Response
   ) {
-    const userId = req.user?.id || req.session?.userId;
+    const userId =
+      (req.user as { id?: string })?.id ||
+      (req.session as { userId?: string })?.userId;
     const clientIp = req.ip || req.connection.remoteAddress;
 
     if (!userId) {
@@ -702,13 +731,15 @@ export class FileSystemController {
   @Get('nodes/:nodeId/download-with-format')
   @ApiOperation({
     summary: '下载节点（支持多格式转换）',
-    description: '支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。',
+    description:
+      '支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。',
   })
   @ApiQuery({
     name: 'format',
     enum: CadDownloadFormat,
     required: false,
-    description: '下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）',
+    description:
+      '下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）',
   })
   @ApiQuery({
     name: 'width',
@@ -723,7 +754,8 @@ export class FileSystemController {
   @ApiQuery({
     name: 'colorPolicy',
     required: false,
-    description: 'PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono',
+    description:
+      'PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono',
   })
   @ApiResponse({ status: 200, description: '下载成功', type: 'stream' })
   @ApiResponse({ status: 400, description: '参数错误或转换失败' })
@@ -732,12 +764,15 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '节点不存在或文件不存在' })
   async downloadNodeWithFormat(
     @Param('nodeId') nodeId: string,
-    @Request() req: any,
-    @Res() res: any,
+    @Request() req: ExpressRequest,
+    @Res() res: Response,
     @Query() query: DownloadNodeQueryDto
   ) {
-    const userId = req.user?.id || req.session?.userId;
-    const clientIp = req.ip || req.connection.remoteAddress;
+    const userId =
+      (req.user as { id?: string })?.id ||
+      (req.session as { userId?: string })?.userId;
+    const clientIp =
+      req.ip || (req.connection as { remoteAddress?: string })?.remoteAddress;
 
     if (!userId) {
       throw new UnauthorizedException('未登录');
@@ -824,10 +859,7 @@ export class FileSystemController {
 
       // 错误处理
       stream.on('error', (error) => {
-        this.logger.error(
-          `文件流传输错误: ${error.message}`,
-          error.stack
-        );
+        this.logger.error(`文件流传输错误: ${error.message}`, error.stack);
 
         // 清理资源
         if (typeof (stream as any).destroy === 'function') {

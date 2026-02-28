@@ -25,7 +25,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法，默认 SHA256
    * @returns 哈希后的键
    */
-  static hash(key: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static hash(
+    key: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     const hash = createHash(algorithm);
     hash.update(key);
     return hash.digest('hex');
@@ -38,7 +41,11 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 带前缀的哈希键
    */
-  static hashWithPrefix(prefix: string, key: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static hashWithPrefix(
+    prefix: string,
+    key: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     const hashedKey = this.hash(key, algorithm);
     return `${prefix}:${hashedKey}`;
   }
@@ -49,7 +56,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 哈希键数组
    */
-  static hashMany(keys: string[], algorithm: HashAlgorithm = HashAlgorithm.SHA256): string[] {
+  static hashMany(
+    keys: string[],
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string[] {
     return keys.map((key) => this.hash(key, algorithm));
   }
 
@@ -60,7 +70,11 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 短哈希键
    */
-  static shortHash(key: string, length: number = 8, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static shortHash(
+    key: string,
+    length: number = 8,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     const hashedKey = this.hash(key, algorithm);
     return hashedKey.substring(0, length);
   }
@@ -75,7 +89,7 @@ export class CacheHashedKeyUtil {
   static hashWithVersion(
     key: string,
     version: string | number,
-    algorithm: HashAlgorithm = HashAlgorithm.SHA256,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
   ): string {
     const hashedKey = this.hash(key, algorithm);
     return `${hashedKey}:v${version}`;
@@ -91,7 +105,7 @@ export class CacheHashedKeyUtil {
   static hashWithNamespace(
     namespace: string,
     key: string,
-    algorithm: HashAlgorithm = HashAlgorithm.SHA256,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
   ): string {
     const hashedKey = this.hash(key, algorithm);
     return `${namespace}:${hashedKey}`;
@@ -103,7 +117,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 确定性哈希键
    */
-  static deterministicHash(key: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static deterministicHash(
+    key: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     return this.hash(key, algorithm);
   }
 
@@ -117,7 +134,7 @@ export class CacheHashedKeyUtil {
   static hashWithSalt(
     key: string,
     salt: string,
-    algorithm: HashAlgorithm = HashAlgorithm.SHA256,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
   ): string {
     const hash = createHash(algorithm);
     hash.update(key);
@@ -147,7 +164,7 @@ export class CacheHashedKeyUtil {
     key: string,
     prefix: string = '',
     maxLength: number = 250,
-    algorithm: HashAlgorithm = HashAlgorithm.SHA256,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
   ): string {
     if (this.needsHashing(key, maxLength)) {
       const hashedKey = this.hash(key, algorithm);
@@ -162,7 +179,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 键指纹
    */
-  static fingerprint(key: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static fingerprint(
+    key: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     return this.hash(key, algorithm);
   }
 
@@ -173,7 +193,11 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 是否匹配
    */
-  static verifyHash(key: string, hashedKey: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): boolean {
+  static verifyHash(
+    key: string,
+    hashedKey: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): boolean {
     const computedHash = this.hash(key, algorithm);
     return computedHash === hashedKey;
   }
@@ -188,7 +212,7 @@ export class CacheHashedKeyUtil {
   static multiLevelHash(
     parts: string[],
     separator: string = ':',
-    algorithm: HashAlgorithm = HashAlgorithm.SHA256,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
   ): string {
     const joinedKey = parts.join(separator);
     return this.hash(joinedKey, algorithm);
@@ -204,7 +228,7 @@ export class CacheHashedKeyUtil {
   static hashWithTimestamp(
     key: string,
     timestamp: number = Date.now(),
-    algorithm: HashAlgorithm = HashAlgorithm.SHA256,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
   ): string {
     const hash = createHash(algorithm);
     hash.update(key);
@@ -218,7 +242,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 唯一哈希键
    */
-  static uniqueHash(prefix: string = 'unique', algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static uniqueHash(
+    prefix: string = 'unique',
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     const randomKey = `${prefix}:${Date.now()}:${Math.random()}`;
     return this.hash(randomKey, algorithm);
   }
@@ -229,7 +256,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 压缩后的哈希键
    */
-  static compressedHash(key: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static compressedHash(
+    key: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     const hashedKey = this.hash(key, algorithm);
     return Buffer.from(hashedKey, 'hex').toString('base64').substring(0, 32);
   }
@@ -240,7 +270,10 @@ export class CacheHashedKeyUtil {
    * @param algorithm 哈希算法
    * @returns 可读的哈希键
    */
-  static readableHash(key: string, algorithm: HashAlgorithm = HashAlgorithm.SHA256): string {
+  static readableHash(
+    key: string,
+    algorithm: HashAlgorithm = HashAlgorithm.SHA256
+  ): string {
     const hashedKey = this.hash(key, algorithm);
     return parseInt(hashedKey.substring(0, 16), 16).toString(36);
   }

@@ -3,7 +3,10 @@ import { NotFoundException } from '@nestjs/common';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { DatabaseService } from '../database/database.service';
 import { ProjectPermissionService } from '../roles/project-permission.service';
-import { ProjectPermission, ProjectRole } from '../common/enums/permissions.enum';
+import {
+  ProjectPermission,
+  ProjectRole,
+} from '../common/enums/permissions.enum';
 
 describe('FileSystemPermissionService', () => {
   let service: FileSystemPermissionService;

@@ -47,15 +47,28 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
   className = '',
 }) => {
   // 调试信息
-  console.log('[PermissionAssignment] 组件渲染:', { permissionType, PERMISSION_GROUPS, allKeys: Object.keys(PERMISSION_GROUPS) });
+  console.log('[PermissionAssignment] 组件渲染:', {
+    permissionType,
+    PERMISSION_GROUPS,
+    allKeys: Object.keys(PERMISSION_GROUPS),
+  });
 
   const groups = PERMISSION_GROUPS[permissionType];
 
   // 防御性检查：如果 groups 为 undefined，显示错误信息
   if (!groups) {
-    console.error('[PermissionAssignment] 无效的 permissionType:', permissionType);
-    console.error('[PermissionAssignment] PERMISSION_GROUPS:', PERMISSION_GROUPS);
-    console.error('[PermissionAssignment] PERMISSION_GROUPS.keys:', Object.keys(PERMISSION_GROUPS));
+    console.error(
+      '[PermissionAssignment] 无效的 permissionType:',
+      permissionType
+    );
+    console.error(
+      '[PermissionAssignment] PERMISSION_GROUPS:',
+      PERMISSION_GROUPS
+    );
+    console.error(
+      '[PermissionAssignment] PERMISSION_GROUPS.keys:',
+      Object.keys(PERMISSION_GROUPS)
+    );
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
         权限类型错误: {permissionType}。请检查配置。
@@ -66,7 +79,9 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
   const allPermissions = groups.flatMap((group) => group.items);
 
   return (
-    <div className={`space-y-4 max-h-[600px] overflow-y-auto pr-2 ${className}`}>
+    <div
+      className={`space-y-4 max-h-[600px] overflow-y-auto pr-2 ${className}`}
+    >
       {groups.map((group) => (
         <div
           key={group.label}
@@ -77,7 +92,8 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
           </div>
           <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {group.items.map((perm) => {
-              const isEnabled = isPermissionEnabled(perm.key, permissions) && !disabled;
+              const isEnabled =
+                isPermissionEnabled(perm.key, permissions) && !disabled;
               const missingDeps = getMissingDependencies(perm.key, permissions);
 
               return (
@@ -92,7 +108,9 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
                     !isEnabled && missingDeps.length > 0
                       ? `⚠️ 此权限需要先勾选：${missingDeps
                           .map((dep) => {
-                            const depItem = allPermissions.find((i) => i.key === dep);
+                            const depItem = allPermissions.find(
+                              (i) => i.key === dep
+                            );
                             return depItem ? depItem.label : dep;
                           })
                           .join('、')}`
@@ -118,11 +136,17 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
                     checked={permissions.includes(perm.key)}
                     onChange={() =>
                       isEnabled &&
-                      togglePermission(perm.key, permissions, onPermissionsChange)
+                      togglePermission(
+                        perm.key,
+                        permissions,
+                        onPermissionsChange
+                      )
                     }
                     disabled={!isEnabled}
                   />
-                  <span className="text-sm text-slate-700 truncate">{perm.label}</span>
+                  <span className="text-sm text-slate-700 truncate">
+                    {perm.label}
+                  </span>
                   {!isEnabled && missingDeps.length > 0 && (
                     <Info size={14} className="text-amber-500 flex-shrink-0" />
                   )}

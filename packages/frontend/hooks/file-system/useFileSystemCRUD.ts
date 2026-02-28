@@ -224,7 +224,14 @@ export const useFileSystemCRUD = ({
         permanently ? '彻底删除' : '删除'
       );
     },
-    [showConfirm, loadData, showToast, isDeleting, navigate, isProjectTrashViewRef]
+    [
+      showConfirm,
+      loadData,
+      showToast,
+      isDeleting,
+      navigate,
+      isProjectTrashViewRef,
+    ]
   );
 
   const handleBatchDelete = useCallback(
@@ -289,7 +296,16 @@ export const useFileSystemCRUD = ({
         permanently ? '彻底删除' : '删除'
       );
     },
-    [selectedNodes, nodes, showConfirm, loadData, showToast, clearSelection, navigate, isProjectTrashViewRef]
+    [
+      selectedNodes,
+      nodes,
+      showConfirm,
+      loadData,
+      showToast,
+      clearSelection,
+      navigate,
+      isProjectTrashViewRef,
+    ]
   );
 
   const handleBatchRestore = useCallback(() => {

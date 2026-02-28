@@ -33,7 +33,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     this.configService = configService;
     this.prisma = prisma;
     this.tokenBlacklistService = tokenBlacklistService;
-    this.isDevelopment = configService.get<string>('node.env') === 'development';
+    this.isDevelopment =
+      configService.get<string>('node.env') === 'development';
   }
 
   async validate(payload: {

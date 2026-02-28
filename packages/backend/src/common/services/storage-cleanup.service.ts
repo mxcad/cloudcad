@@ -19,9 +19,12 @@ export class StorageCleanupService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storageManager: StorageManager,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService
   ) {
-    this.cleanupDelayDays = this.configService.get('STORAGE_CLEANUP_DELAY_DAYS', 30);
+    this.cleanupDelayDays = this.configService.get(
+      'STORAGE_CLEANUP_DELAY_DAYS',
+      30
+    );
   }
 
   /**
@@ -97,7 +100,9 @@ export class StorageCleanupService {
       const cleanedDirs = await this.storageManager.cleanupEmptyDirectories();
       result.deletedDirectories = cleanedDirs;
 
-      this.logger.log(`清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`);
+      this.logger.log(
+        `清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`
+      );
 
       if (result.errors.length > 0) {
         result.success = false;
@@ -181,7 +186,8 @@ export class StorageCleanupService {
    * @returns 清理结果
    */
   async manualCleanup(delayDays?: number): Promise<CleanupResult> {
-    const actualDelayDays = delayDays !== undefined ? delayDays : this.cleanupDelayDays;
+    const actualDelayDays =
+      delayDays !== undefined ? delayDays : this.cleanupDelayDays;
     if (delayDays !== undefined) {
       this.logger.log(`使用自定义延迟天数: ${delayDays}`);
     }
@@ -252,7 +258,9 @@ export class StorageCleanupService {
       const cleanedDirs = await this.storageManager.cleanupEmptyDirectories();
       result.deletedDirectories = cleanedDirs;
 
-      this.logger.log(`清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`);
+      this.logger.log(
+        `清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`
+      );
 
       if (result.errors.length > 0) {
         result.success = false;

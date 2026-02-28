@@ -13,7 +13,10 @@ import {
   FileItemTypeTag,
   FileItemMenu,
 } from './file-item';
-import { getAvailableActions, type ActionType } from './file-item/fileActionConfig';
+import {
+  getAvailableActions,
+  type ActionType,
+} from './file-item/fileActionConfig';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface FileItemProps {
@@ -230,18 +233,54 @@ export const FileItem: React.FC<FileItemProps> = ({
   // 操作处理函数映射
   const actionHandlers: Record<ActionType, (e: React.MouseEvent) => void> = {
     upload_external_reference: handleUploadExternalReference,
-    download: (e) => { e.stopPropagation(); onDownload(node); },
-    view_version_history: (e) => { e.stopPropagation(); onShowVersionHistory?.(node); },
-    add_to_gallery: (e) => { e.stopPropagation(); onAddToGallery?.(node); },
-    rename: (e) => { e.stopPropagation(); onRename(node); },
-    move: (e) => { e.stopPropagation(); onMove?.(node); },
-    copy: (e) => { e.stopPropagation(); onCopy?.(node); },
-    restore: (e) => { e.stopPropagation(); onRestore?.(node); },
-    delete: (e) => { e.stopPropagation(); onDelete(node); },
-    permanently_delete: (e) => { e.stopPropagation(); onPermanentlyDelete?.(node); },
-    edit: (e) => { e.stopPropagation(); onEdit?.(e); },
-    show_members: (e) => { e.stopPropagation(); onShowMembers?.(e); },
-    show_roles: (e) => { e.stopPropagation(); onShowRoles?.(e); },
+    download: (e) => {
+      e.stopPropagation();
+      onDownload(node);
+    },
+    view_version_history: (e) => {
+      e.stopPropagation();
+      onShowVersionHistory?.(node);
+    },
+    add_to_gallery: (e) => {
+      e.stopPropagation();
+      onAddToGallery?.(node);
+    },
+    rename: (e) => {
+      e.stopPropagation();
+      onRename(node);
+    },
+    move: (e) => {
+      e.stopPropagation();
+      onMove?.(node);
+    },
+    copy: (e) => {
+      e.stopPropagation();
+      onCopy?.(node);
+    },
+    restore: (e) => {
+      e.stopPropagation();
+      onRestore?.(node);
+    },
+    delete: (e) => {
+      e.stopPropagation();
+      onDelete(node);
+    },
+    permanently_delete: (e) => {
+      e.stopPropagation();
+      onPermanentlyDelete?.(node);
+    },
+    edit: (e) => {
+      e.stopPropagation();
+      onEdit?.(e);
+    },
+    show_members: (e) => {
+      e.stopPropagation();
+      onShowMembers?.(e);
+    },
+    show_roles: (e) => {
+      e.stopPropagation();
+      onShowRoles?.(e);
+    },
   };
 
   // 获取可用操作列表
@@ -274,14 +313,24 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   // 调试信息：检查项目节点的操作参数
   if (isRoot) {
-    console.log('[FileItem] 项目节点操作参数:', node.id, node.name, actionProps);
+    console.log(
+      '[FileItem] 项目节点操作参数:',
+      node.id,
+      node.name,
+      actionProps
+    );
   }
 
   const availableActions = getAvailableActions(actionProps);
 
   // 调试信息：检查可用操作
   if (isRoot) {
-    console.log('[FileItem] 项目节点可用操作:', node.id, node.name, availableActions.map(a => a.type));
+    console.log(
+      '[FileItem] 项目节点可用操作:',
+      node.id,
+      node.name,
+      availableActions.map((a) => a.type)
+    );
   }
 
   if (viewMode === 'grid') {

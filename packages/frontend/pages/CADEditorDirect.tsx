@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { SidebarProvider, useSidebarManager, SidebarType } from '../contexts/SidebarContext';
+import {
+  SidebarProvider,
+  useSidebarManager,
+  SidebarType,
+} from '../contexts/SidebarContext';
 import { ProjectPermission } from '../constants/permissions';
 import { apiService } from '../services/apiService';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
@@ -68,11 +72,15 @@ export const CADEditorDirect: React.FC = () => {
 
     const checkPermissions = async () => {
       try {
-        const { checkPermission } = await import('../hooks/useProjectPermission');
+        const { checkPermission } =
+          await import('../hooks/useProjectPermission');
         const [save, export_, externalRef] = await Promise.all([
           checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
           checkPermission(urlProjectId, ProjectPermission.CAD_EXPORT),
-          checkPermission(urlProjectId, ProjectPermission.CAD_EXTERNAL_REFERENCE),
+          checkPermission(
+            urlProjectId,
+            ProjectPermission.CAD_EXTERNAL_REFERENCE
+          ),
         ]);
         setCanSave(save);
         setCanExport(export_);
@@ -199,7 +207,15 @@ export const CADEditorDirect: React.FC = () => {
         const fileResponse = await apiService.get(
           `/file-system/nodes/${fileId}`
         );
-        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string; deletedAt?: string | null };
+        const file = fileResponse.data as {
+          fileHash?: string;
+          path?: string;
+          parentId?: string | null;
+          id?: string;
+          isRoot?: boolean;
+          name?: string;
+          deletedAt?: string | null;
+        };
 
         // 检查文件是否在回收站中
         if (file.deletedAt) {
@@ -263,7 +279,9 @@ export const CADEditorDirect: React.FC = () => {
           // URL 变化了（可能是版本参数变化），需要重新加载文件
           const { mxcadManager } = await loadMxCADDependencies();
 
-          console.log(`文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`);
+          console.log(
+            `文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`
+          );
 
           // 重新加载 mxweb 文件
           await mxcadManager.openFile(mxcadFileUrl);
@@ -297,7 +315,6 @@ export const CADEditorDirect: React.FC = () => {
         mxcadManager.setBrowse(!!versionParam);
 
         setLoading(false);
-
       } catch (err) {
         console.log(err);
         setError('CAD编辑器初始化失败');
@@ -332,11 +349,9 @@ export const CADEditorDirect: React.FC = () => {
       // MxCAD 是全局单例，会在组件卸载时自动清理
       // 只清理文件信息
       if (isInitializedRef.current) {
-        import('../services/mxcadManager').then(
-          ({ clearCurrentFileInfo }) => {
-            clearCurrentFileInfo(); // 清除文件信息
-          }
-        );
+        import('../services/mxcadManager').then(({ clearCurrentFileInfo }) => {
+          clearCurrentFileInfo(); // 清除文件信息
+        });
       }
     };
   }, [shouldLoadEditor, user, location.search]); // 移除 fileId 依赖
@@ -347,8 +362,18 @@ export const CADEditorDirect: React.FC = () => {
 
     const updateFileInfo = async () => {
       try {
-        const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
-        const file = fileResponse.data as { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string; deletedAt?: string | null };
+        const fileResponse = await apiService.get(
+          `/file-system/nodes/${fileId}`
+        );
+        const file = fileResponse.data as {
+          fileHash?: string;
+          path?: string;
+          parentId?: string | null;
+          id?: string;
+          isRoot?: boolean;
+          name?: string;
+          deletedAt?: string | null;
+        };
 
         // 检查文件是否在回收站中
         if (file.deletedAt) {
@@ -365,7 +390,9 @@ export const CADEditorDirect: React.FC = () => {
         let projectId = file.parentId || null;
         if (!file.isRoot && file.parentId) {
           try {
-            const rootResponse = await apiService.get(`/file-system/nodes/${file.id}/root`);
+            const rootResponse = await apiService.get(
+              `/file-system/nodes/${file.id}/root`
+            );
             if (rootResponse.data?.id) {
               projectId = rootResponse.data.id;
             }
@@ -397,8 +424,12 @@ export const CADEditorDirect: React.FC = () => {
   }) => {
     try {
       // 获取目标文件信息（要打开的文件）
-      const targetFileResponse = await apiService.get(`/file-system/nodes/${file.nodeId}`);
-      const targetFile = targetFileResponse.data as { deletedAt?: string | null };
+      const targetFileResponse = await apiService.get(
+        `/file-system/nodes/${file.nodeId}`
+      );
+      const targetFile = targetFileResponse.data as {
+        deletedAt?: string | null;
+      };
 
       // 检查目标文件是否在回收站中
       if (targetFile.deletedAt) {
@@ -407,7 +438,11 @@ export const CADEditorDirect: React.FC = () => {
 
       // 获取当前文件信息，确定 uploadTargetNodeId
       const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
-      const currentFile = fileResponse.data as { parentId?: string | null; id?: string; isRoot?: boolean };
+      const currentFile = fileResponse.data as {
+        parentId?: string | null;
+        id?: string;
+        isRoot?: boolean;
+      };
 
       // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
       let uploadTargetNodeId = currentFile.parentId || '';
@@ -421,7 +456,11 @@ export const CADEditorDirect: React.FC = () => {
       // 更新浏览器 URL（不触发 React Router）
       // 路径部分：新打开的文件 ID
       // nodeId 参数：保持不变（所在目录）
-      window.history.replaceState(null, '', `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}`);
+      window.history.replaceState(
+        null,
+        '',
+        `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}`
+      );
 
       // 调用 openUploadedFile 打开文件，保持与 openFile 命令完全一致的行为
       await openUploadedFile(file.nodeId, uploadTargetNodeId, true);
@@ -515,7 +554,10 @@ interface CADEditorContentProps {
   downloadingFileName: string;
   downloading: boolean;
   onCloseDownloadModal: () => void;
-  onDownloadWithFormat: (format: DownloadFormat, pdfOptions?: PdfOptions) => void;
+  onDownloadWithFormat: (
+    format: DownloadFormat,
+    pdfOptions?: PdfOptions
+  ) => void;
 }
 
 const CADEditorContent: React.FC<CADEditorContentProps> = ({

@@ -29,11 +29,11 @@ export class DiskMonitorService {
     // 阈值配置（字节）
     this.warningThreshold = this.configService.get(
       'DISK_WARNING_THRESHOLD',
-      20 * 1024 * 1024 * 1024, // 20GB
+      20 * 1024 * 1024 * 1024 // 20GB
     );
     this.criticalThreshold = this.configService.get(
       'DISK_CRITICAL_THRESHOLD',
-      10 * 1024 * 1024 * 1024, // 10GB
+      10 * 1024 * 1024 * 1024 // 10GB
     );
   }
 
@@ -43,7 +43,10 @@ export class DiskMonitorService {
    * @returns 磁盘统计信息
    */
   getDiskStats(filePath?: string): DiskStats {
-    const targetPath = filePath || this.configService.get('FILES_DATA_PATH', '../filesData') || '../filesData';
+    const targetPath =
+      filePath ||
+      this.configService.get('FILES_DATA_PATH', '../filesData') ||
+      '../filesData';
     const resolvedPath = path.resolve(targetPath);
 
     try {
@@ -62,7 +65,10 @@ export class DiskMonitorService {
         usagePercentage: diskInfo.usagePercentage,
       };
     } catch (error) {
-      this.logger.error(`Failed to get disk stats: ${resolvedPath}`, error.stack);
+      this.logger.error(
+        `Failed to get disk stats: ${resolvedPath}`,
+        error.stack
+      );
       return {
         path: resolvedPath,
         total: 0,
@@ -115,7 +121,9 @@ export class DiskMonitorService {
             return { total, free, used, usagePercentage };
           }
         } catch (execError) {
-          this.logger.warn(`Windows disk query failed, trying fallback method: ${execError.message}`);
+          this.logger.warn(
+            `Windows disk query failed, trying fallback method: ${execError.message}`
+          );
           // 尝试使用 PowerShell 备用方法
           try {
             const drive = path.parse(drivePath).root || drivePath;
@@ -132,13 +140,17 @@ export class DiskMonitorService {
 
             return { total, free, used, usagePercentage };
           } catch (psError) {
-            this.logger.error(`PowerShell query also failed: ${psError.message}`);
+            this.logger.error(
+              `PowerShell query also failed: ${psError.message}`
+            );
           }
         }
       } else if (platform === 'linux' || platform === 'darwin') {
         // Linux/macOS 平台：使用 statvfs 命令
         try {
-          const output = execSync(`df -k "${drivePath}"`, { encoding: 'utf-8' });
+          const output = execSync(`df -k "${drivePath}"`, {
+            encoding: 'utf-8',
+          });
           const lines = output.trim().split('\n');
           if (lines.length >= 2) {
             const parts = lines[1].split(/\s+/);
@@ -150,12 +162,16 @@ export class DiskMonitorService {
             return { total, free, used, usagePercentage };
           }
         } catch (execError) {
-          this.logger.error(`Linux/macOS disk query failed: ${execError.message}`);
+          this.logger.error(
+            `Linux/macOS disk query failed: ${execError.message}`
+          );
         }
       }
 
       // 所有方法都失败，返回默认值
-      this.logger.warn(`Unable to get disk info, returning default values: ${drivePath}`);
+      this.logger.warn(
+        `Unable to get disk info, returning default values: ${drivePath}`
+      );
       return {
         total: 0,
         free: 0,
@@ -239,9 +255,11 @@ export class DiskMonitorService {
     let recommendation = 'Disk status good, no action needed';
 
     if (status.critical) {
-      recommendation = 'Immediate action required: 1. Stop upload operations 2. Clean up expired files 3. Expand disk capacity';
+      recommendation =
+        'Immediate action required: 1. Stop upload operations 2. Clean up expired files 3. Expand disk capacity';
     } else if (status.warning) {
-      recommendation = 'Recommendation: 1. Check storage cleanup schedule 2. Evaluate disk expansion needs';
+      recommendation =
+        'Recommendation: 1. Check storage cleanup schedule 2. Evaluate disk expansion needs';
     }
 
     return {

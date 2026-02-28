@@ -1,4 +1,9 @@
-import React, { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, {
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react';
 import {
   useMxCadUploadNative,
   LoadFileParam,
@@ -35,11 +40,11 @@ export interface MxCadUploaderRef {
  */
 const escapeHtml = (unsafe: string): string => {
   return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 };
 
 /**

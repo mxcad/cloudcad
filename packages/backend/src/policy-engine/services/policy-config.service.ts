@@ -120,10 +120,13 @@ export class PolicyConfigService {
       // 更新策略记录
       const updateData: Record<string, unknown> = {};
       if (updates.name !== undefined) updateData.name = updates.name;
-      if (updates.description !== undefined) updateData.description = updates.description;
-      if (updates.config !== undefined) updateData.config = updates.config as never;
+      if (updates.description !== undefined)
+        updateData.description = updates.description;
+      if (updates.config !== undefined)
+        updateData.config = updates.config as never;
       if (updates.enabled !== undefined) updateData.enabled = updates.enabled;
-      if (updates.priority !== undefined) updateData.priority = updates.priority;
+      if (updates.priority !== undefined)
+        updateData.priority = updates.priority;
 
       const updatedPolicy = await this.prisma.permissionPolicy.update({
         where: { id: policyId },
@@ -151,9 +154,7 @@ export class PolicyConfigService {
       // 清除缓存
       this.clearCache();
 
-      this.logger.log(
-        `策略配置更新成功: ${policyId} by ${updatedBy}`
-      );
+      this.logger.log(`策略配置更新成功: ${policyId} by ${updatedBy}`);
 
       return this.formatPolicyConfig(
         updatedPolicy,
@@ -193,7 +194,9 @@ export class PolicyConfigService {
   /**
    * 获取策略配置
    */
-  async getPolicyConfig(policyId: string): Promise<PermissionPolicyConfig | null> {
+  async getPolicyConfig(
+    policyId: string
+  ): Promise<PermissionPolicyConfig | null> {
     try {
       const cacheKey = `${this.cachePrefix}${policyId}`;
       const cached = this.cacheService.get<PermissionPolicyConfig>(cacheKey);
@@ -234,7 +237,8 @@ export class PolicyConfigService {
   async getAllPolicyConfigs(): Promise<PermissionPolicyConfig[]> {
     try {
       const cacheKey = `${this.cachePrefix}all`;
-      const cached = await this.cacheService.get<PermissionPolicyConfig[]>(cacheKey);
+      const cached =
+        await this.cacheService.get<PermissionPolicyConfig[]>(cacheKey);
 
       if (cached !== null) {
         return cached;
@@ -274,7 +278,8 @@ export class PolicyConfigService {
   ): Promise<PermissionPolicyConfig[]> {
     try {
       const cacheKey = `${this.cachePrefix}permission:${permission}`;
-      const cached = await this.cacheService.get<PermissionPolicyConfig[]>(cacheKey);
+      const cached =
+        await this.cacheService.get<PermissionPolicyConfig[]>(cacheKey);
 
       if (cached !== null) {
         return cached;
@@ -313,7 +318,10 @@ export class PolicyConfigService {
 
       return formatted;
     } catch (error) {
-      this.logger.error(`获取权限的策略配置失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `获取权限的策略配置失败: ${error.message}`,
+        error.stack
+      );
       throw new Error(`获取权限的策略配置失败: ${error.message}`);
     }
   }
@@ -326,11 +334,7 @@ export class PolicyConfigService {
     enabled: boolean,
     updatedBy: string
   ): Promise<PermissionPolicyConfig> {
-    return this.updatePolicyConfig(
-      policyId,
-      { enabled },
-      updatedBy
-    );
+    return this.updatePolicyConfig(policyId, { enabled }, updatedBy);
   }
 
   /**

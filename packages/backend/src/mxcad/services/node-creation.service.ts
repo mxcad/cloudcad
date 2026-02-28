@@ -63,7 +63,7 @@ export class NodeCreationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly storageManager: StorageManager,
-    private readonly concurrencyManager: ConcurrencyManager,
+    private readonly concurrencyManager: ConcurrencyManager
   ) {}
 
   /**
@@ -77,7 +77,9 @@ export class NodeCreationService {
       // 验证创建选项
       const validationResult = NodeUtils.validateCreateOptions(options);
       if (!validationResult.isValid) {
-        this.logger.error(`创建节点选项验证失败: ${validationResult.errorMessage}`);
+        this.logger.error(
+          `创建节点选项验证失败: ${validationResult.errorMessage}`
+        );
         return {
           success: false,
           errorMessage: validationResult.errorMessage,
@@ -85,13 +87,19 @@ export class NodeCreationService {
       }
 
       // 生成节点唯一标识符
-      const identifier = NodeUtils.generateNodeIdentifier(options.fileHash, options.ownerId);
+      const identifier = NodeUtils.generateNodeIdentifier(
+        options.fileHash,
+        options.ownerId
+      );
       const lockName = NodeUtils.generateLockName('create', identifier);
 
       // 使用锁执行创建操作
-      const result = await this.concurrencyManager.acquireLock(lockName, async () => {
-        return await this.performCreateNode(options);
-      });
+      const result = await this.concurrencyManager.acquireLock(
+        lockName,
+        async () => {
+          return await this.performCreateNode(options);
+        }
+      );
 
       if (result === null) {
         return {
@@ -104,7 +112,7 @@ export class NodeCreationService {
     } catch (error) {
       this.logger.error(
         `创建节点失败: ${options.name} (${options.fileHash}): ${error.message}`,
-        error.stack,
+        error.stack
       );
       return {
         success: false,
@@ -120,7 +128,10 @@ export class NodeCreationService {
    * @param context 节点引用上下文
    * @returns 创建结果
    */
-  async referenceNode(hash: string, context: NodeReferenceContext): Promise<NodeCreationResult> {
+  async referenceNode(
+    hash: string,
+    context: NodeReferenceContext
+  ): Promise<NodeCreationResult> {
     try {
       // 验证文件哈希格式
       if (!NodeUtils.isValidFileHash(hash)) {
@@ -132,13 +143,19 @@ export class NodeCreationService {
       }
 
       // 生成节点唯一标识符
-      const identifier = NodeUtils.generateNodeIdentifier(hash, context.context.userId);
+      const identifier = NodeUtils.generateNodeIdentifier(
+        hash,
+        context.context.userId
+      );
       const lockName = NodeUtils.generateLockName('reference', identifier);
 
       // 使用锁执行引用操作
-      const result = await this.concurrencyManager.acquireLock(lockName, async () => {
-        return await this.performReferenceNode(hash, context);
-      });
+      const result = await this.concurrencyManager.acquireLock(
+        lockName,
+        async () => {
+          return await this.performReferenceNode(hash, context);
+        }
+      );
 
       if (result === null) {
         return {
@@ -163,8 +180,20 @@ export class NodeCreationService {
    * @param options 创建选项
    * @returns 创建结果
    */
-  private async performCreateNode(options: CreateNodeOptions): Promise<NodeCreationResult> {
-    const { name, fileHash, size, mimeType, extension, parentId, ownerId, sourceFilePath, skipFileCopy } = options;
+  private async performCreateNode(
+    options: CreateNodeOptions
+  ): Promise<NodeCreationResult> {
+    const {
+      name,
+      fileHash,
+      size,
+      mimeType,
+      extension,
+      parentId,
+      ownerId,
+      sourceFilePath,
+      skipFileCopy,
+    } = options;
 
     this.logger.log(`[performCreateNode] 开始创建节点: ${name} (${fileHash})`);
 
@@ -210,7 +239,7 @@ export class NodeCreationService {
         const uniqueName = NodeUtils.generateUniqueFileName(
           NodeUtils.extractBaseName(name),
           extension,
-          existingNames,
+          existingNames
         );
 
         // 创建新节点
@@ -232,7 +261,9 @@ export class NodeCreationService {
         });
 
         nodeId = newNode.id;
-        this.logger.log(`[performCreateNode] 数据库节点创建成功: ${nodeId}, name=${uniqueName}`);
+        this.logger.log(
+          `[performCreateNode] 数据库节点创建成功: ${nodeId}, name=${uniqueName}`
+        );
       });
 
       // 确保 nodeId 已被赋值
@@ -250,10 +281,16 @@ export class NodeCreationService {
           }
 
           // 分配存储空间
-          storageInfo = await this.storageManager.allocateNodeStorage(nodeId, name);
+          storageInfo = await this.storageManager.allocateNodeStorage(
+            nodeId,
+            name
+          );
 
           // 拷贝文件
-          const copySuccess = await FileUtils.copyFile(sourceFilePath, storageInfo.fullPath);
+          const copySuccess = await FileUtils.copyFile(
+            sourceFilePath,
+            storageInfo.fullPath
+          );
           if (!copySuccess) {
             throw new Error('文件拷贝失败');
           }
@@ -264,11 +301,17 @@ export class NodeCreationService {
             data: { path: storageInfo.relativePath },
           });
 
-          this.logger.log(`[performCreateNode] IO操作成功: ${storageInfo.relativePath}`);
+          this.logger.log(
+            `[performCreateNode] IO操作成功: ${storageInfo.relativePath}`
+          );
         } catch (error) {
           // IO失败，回滚数据库
-          this.logger.error(`[performCreateNode] IO操作失败，回滚数据库: ${error.message}`);
-          await this.databaseService.fileSystemNode.delete({ where: { id: nodeId } });
+          this.logger.error(
+            `[performCreateNode] IO操作失败，回滚数据库: ${error.message}`
+          );
+          await this.databaseService.fileSystemNode.delete({
+            where: { id: nodeId },
+          });
           throw error;
         }
       }
@@ -281,7 +324,10 @@ export class NodeCreationService {
         nodeId,
       };
     } catch (error) {
-      this.logger.error(`[performCreateNode] 创建节点失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[performCreateNode] 创建节点失败: ${error.message}`,
+        error.stack
+      );
       return {
         success: false,
         errorMessage: error.message,
@@ -298,7 +344,7 @@ export class NodeCreationService {
    */
   private async performReferenceNode(
     hash: string,
-    context: NodeReferenceContext,
+    context: NodeReferenceContext
   ): Promise<NodeCreationResult> {
     const { context: nodeContext } = context;
     const { nodeId: parentId, userId: ownerId } = nodeContext;
@@ -307,7 +353,11 @@ export class NodeCreationService {
 
     let newNodeId: string | undefined;
     let storageInfo: any = null;
-    let originalNodeInfo: { name: string; extension: string | null; path: string | null } = {
+    let originalNodeInfo: {
+      name: string;
+      extension: string | null;
+      path: string | null;
+    } = {
       name: '',
       extension: null,
       path: null,
@@ -383,7 +433,7 @@ export class NodeCreationService {
         const uniqueName = NodeUtils.generateUniqueFileName(
           NodeUtils.extractBaseName(existingNode.name),
           existingNode.extension || '',
-          existingNames,
+          existingNames
         );
 
         // 创建引用节点
@@ -405,7 +455,9 @@ export class NodeCreationService {
         });
 
         newNodeId = newNode.id;
-        this.logger.log(`[performReferenceNode] 数据库节点创建成功: ${newNodeId}, name=${uniqueName}`);
+        this.logger.log(
+          `[performReferenceNode] 数据库节点创建成功: ${newNodeId}, name=${uniqueName}`
+        );
       });
 
       // 确保 newNodeId 已被赋值
@@ -423,7 +475,8 @@ export class NodeCreationService {
         // 分配存储空间
         storageInfo = await this.storageManager.allocateNodeStorage(
           newNodeId,
-          NodeUtils.extractBaseName(originalNodeInfo.name) + originalNodeInfo.extension,
+          NodeUtils.extractBaseName(originalNodeInfo.name) +
+            originalNodeInfo.extension
         );
 
         // 获取原节点存储信息
@@ -438,7 +491,10 @@ export class NodeCreationService {
 
         // 拷贝文件
         const sourceFullPath = this.storageManager.getFullPath(sourceNode.path);
-        const copySuccess = await FileUtils.copyFile(sourceFullPath, storageInfo.fullPath);
+        const copySuccess = await FileUtils.copyFile(
+          sourceFullPath,
+          storageInfo.fullPath
+        );
         if (!copySuccess) {
           throw new Error('文件拷贝失败');
         }
@@ -449,17 +505,28 @@ export class NodeCreationService {
           data: { path: storageInfo.relativePath },
         });
 
-        this.logger.log(`[performReferenceNode] IO操作成功: ${storageInfo.relativePath}`);
+        this.logger.log(
+          `[performReferenceNode] IO操作成功: ${storageInfo.relativePath}`
+        );
       } catch (error) {
         // IO失败，回滚数据库
-        this.logger.error(`[performReferenceNode] IO操作失败，回滚数据库: ${error.message}`);
-        await this.databaseService.fileSystemNode.delete({ where: { id: newNodeId } });
+        this.logger.error(
+          `[performReferenceNode] IO操作失败，回滚数据库: ${error.message}`
+        );
+        await this.databaseService.fileSystemNode.delete({
+          where: { id: newNodeId },
+        });
         throw error;
       }
 
       // 记录操作日志
       if (originalNodeInfo) {
-        NodeUtils.logNodeOperation(newNodeId, originalNodeInfo.name, hash, 'reference');
+        NodeUtils.logNodeOperation(
+          newNodeId,
+          originalNodeInfo.name,
+          hash,
+          'reference'
+        );
       }
 
       return {
@@ -467,7 +534,10 @@ export class NodeCreationService {
         nodeId: newNodeId,
       };
     } catch (error) {
-      this.logger.error(`[performReferenceNode] 引用节点失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[performReferenceNode] 引用节点失败: ${error.message}`,
+        error.stack
+      );
       return {
         success: false,
         errorMessage: error.message,
@@ -482,7 +552,10 @@ export class NodeCreationService {
    * @param parentId 父节点 ID
    * @returns 节点名称列表
    */
-  private async getExistingNodeNames(tx: any, parentId: string): Promise<string[]> {
+  private async getExistingNodeNames(
+    tx: any,
+    parentId: string
+  ): Promise<string[]> {
     const nodes = await tx.fileSystemNode.findMany({
       where: {
         parentId,

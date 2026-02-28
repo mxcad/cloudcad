@@ -243,7 +243,9 @@ export class GalleryService {
 
     // 转换为 API 格式
     const sharedwgs = await Promise.all(
-      filteredItems.map((item) => this.convertGalleryItemToFileItem(item, userId))
+      filteredItems.map((item) =>
+        this.convertGalleryItemToFileItem(item, userId)
+      )
     );
 
     // 计算分页信息
@@ -598,93 +600,6 @@ export class GalleryService {
   }
 
   /**
-   * 检查用户是否有添加到图库的权限
-   * @param userId 用户 ID
-   * @param nodeId 文件节点 ID
-   * @returns 是否有权限
-   */
-  private async checkGalleryPermission(
-    userId: string,
-    nodeId: string
-  ): Promise<boolean> {
-    try {
-      // 1. 查找文件所属的项目
-      let currentNode = await this.database.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { id: true, parentId: true, isRoot: true, ownerId: true },
-      });
-
-      let projectId: string | null = null;
-
-      if (currentNode?.isRoot) {
-        projectId = nodeId;
-      } else {
-        while (currentNode && !currentNode.isRoot && currentNode.parentId) {
-          currentNode = await this.database.fileSystemNode.findUnique({
-            where: { id: currentNode.parentId },
-            select: { id: true, parentId: true, isRoot: true, ownerId: true },
-          });
-          if (currentNode?.isRoot) {
-            projectId = currentNode.id;
-            break;
-          }
-        }
-      }
-
-      if (!projectId) {
-        return false;
-      }
-
-      // 2. 检查项目所有者
-      const project = await this.database.fileSystemNode.findUnique({
-        where: { id: projectId, isRoot: true },
-        select: { ownerId: true },
-      });
-
-      if (!project) {
-        return false;
-      }
-
-      // 3. 如果是项目所有者，允许添加
-      if (project.ownerId === userId) {
-        return true;
-      }
-
-      // 4. 检查项目成员权限
-      const projectMember = await this.database.projectMember.findFirst({
-        where: {
-          projectId,
-          userId,
-        },
-        include: {
-          projectRole: {
-            include: {
-              permissions: true,
-            },
-          },
-        },
-      });
-
-      if (!projectMember) {
-        return false;
-      }
-
-      // 5. 检查是否有 GALLERY_ADD 权限
-      const hasPermission = projectMember.projectRole.permissions.some(
-        (p) => p.permission === ('GALLERY_ADD' as any)
-      );
-
-      return hasPermission;
-    } catch (error) {
-      this.logger.error(
-        `[checkGalleryPermission] 权限检查失败: ${error.message}`,
-        error
-      );
-      return false;
-    }
-  }
-
-  /**
    * 添加文件到图库
    * @param nodeId 文件节点 ID
    * @param firstType 一级分类 ID
@@ -719,11 +634,8 @@ export class GalleryService {
       throw new Error('不能添加文件夹到图库');
     }
 
-    // 权限检查：文件必须属于用户自己的项目，或者用户对文件所属项目有权限
-    const hasPermission = await this.checkGalleryPermission(userId, nodeId);
-    if (!hasPermission) {
-      throw new Error('您没有权限将此文件添加到图库');
-    }
+    // 注意：权限检查在 Controller 层通过 @RequirePermissions 装饰器完成
+    // Service 层只执行业务逻辑
 
     // 验证分类存在
     const type = await this.database.galleryType.findUnique({

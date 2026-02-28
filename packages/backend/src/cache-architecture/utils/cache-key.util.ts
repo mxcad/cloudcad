@@ -185,7 +185,10 @@ export class CacheKeyUtil {
   /**
    * 生成模式匹配的缓存键
    */
-  static pattern(prefix: CacheKeyPrefix | string, ...parts: Array<string | number | '*'>): string {
+  static pattern(
+    prefix: CacheKeyPrefix | string,
+    ...parts: Array<string | number | '*'>
+  ): string {
     return [prefix, ...parts.map(String)].join(':');
   }
 

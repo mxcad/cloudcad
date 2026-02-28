@@ -27,6 +27,7 @@ import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
 import { VersionControlModule } from '../version-control/version-control.module';
 import { RolesModule } from '../roles/roles.module';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 
 @Module({
   imports: [
@@ -108,6 +109,8 @@ import { RolesModule } from '../roles/roles.module';
       provide: 'FileSystemServiceMain',
       useExisting: MainFileSystemService,
     },
+    // 权限守卫
+    RequireProjectPermissionGuard,
     // 异常过滤器
     {
       provide: 'APP_FILTER',

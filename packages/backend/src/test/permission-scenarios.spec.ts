@@ -83,7 +83,7 @@ describe('核心权限场景测试', () => {
     usersService = moduleFixture.get<UsersService>(UsersService);
     permissionService = moduleFixture.get<PermissionService>(PermissionService);
     roleInheritanceService = moduleFixture.get<RoleInheritanceService>(
-      RoleInheritanceService,
+      RoleInheritanceService
     );
 
     // 清理测试数据
@@ -137,7 +137,7 @@ describe('核心权限场景测试', () => {
       username: string,
       password: string,
       nickname: string,
-      role: UserRole,
+      role: UserRole
     ) {
       const hashedPassword = await bcrypt.hash(password, 12);
       return await prisma.user.create({
@@ -160,7 +160,7 @@ describe('核心权限场景测试', () => {
       'admin_perm_scen',
       'admin123',
       'Admin Scenario User',
-      UserRole.ADMIN,
+      UserRole.ADMIN
     );
 
     // 创建用户管理员
@@ -169,7 +169,7 @@ describe('核心权限场景测试', () => {
       'usermanager_perm_scen',
       'usermgr123',
       'User Manager Scenario User',
-      UserRole.USER_MANAGER,
+      UserRole.USER_MANAGER
     );
 
     // 创建字体管理员
@@ -178,7 +178,7 @@ describe('核心权限场景测试', () => {
       'fontmanager_perm_scen',
       'fontmgr123',
       'Font Manager Scenario User',
-      UserRole.FONT_MANAGER,
+      UserRole.FONT_MANAGER
     );
 
     // 创建普通用户
@@ -187,7 +187,7 @@ describe('核心权限场景测试', () => {
       'user_perm_scen',
       'user123',
       'Regular Scenario User',
-      UserRole.USER,
+      UserRole.USER
     );
 
     // 获取令牌
@@ -220,7 +220,16 @@ describe('核心权限场景测试', () => {
     it('应该允许管理员执行所有系统操作', async () => {
       const operations = [
         { endpoint: '/users', method: 'get', body: {} },
-        { endpoint: '/users', method: 'post', body: { email: 'test@example.com', username: 'test', password: 'test123', nickname: 'Test' } },
+        {
+          endpoint: '/users',
+          method: 'post',
+          body: {
+            email: 'test@example.com',
+            username: 'test',
+            password: 'test123',
+            nickname: 'Test',
+          },
+        },
       ];
 
       for (const op of operations) {
@@ -404,20 +413,22 @@ describe('核心权限场景测试', () => {
   describe('场景 6: 角色继承权限', () => {
     it('应该验证 USER_MANAGER 继承 USER 权限', async () => {
       // 检查用户管理员是否具有普通用户的权限
-      const hasProjectCreatePermission = await permissionService.checkSystemPermission(
-        userManager.id,
-        SystemPermission.PROJECT_CREATE,
-      );
+      const hasProjectCreatePermission =
+        await permissionService.checkSystemPermission(
+          userManager.id,
+          SystemPermission.PROJECT_CREATE
+        );
 
       expect(hasProjectCreatePermission).toBe(true);
     });
 
     it('应该验证 FONT_MANAGER 继承 USER 权限', async () => {
       // 检查字体管理员是否具有普通用户的权限
-      const hasProjectCreatePermission = await permissionService.checkSystemPermission(
-        fontManager.id,
-        SystemPermission.PROJECT_CREATE,
-      );
+      const hasProjectCreatePermission =
+        await permissionService.checkSystemPermission(
+          fontManager.id,
+          SystemPermission.PROJECT_CREATE
+        );
 
       expect(hasProjectCreatePermission).toBe(true);
     });
@@ -425,7 +436,7 @@ describe('核心权限场景测试', () => {
     it('应该验证角色继承链路', async () => {
       // 获取用户管理器的所有权限（包括继承的）
       const userPermissions = await roleInheritanceService.getRolePermissions(
-        UserRole.USER_MANAGER,
+        UserRole.USER_MANAGER
       );
 
       // 应该包含 USER 的权限
@@ -438,13 +449,13 @@ describe('核心权限场景测试', () => {
       // 第一次检查
       const firstCheck = await permissionService.checkSystemPermission(
         regularUser.id,
-        SystemPermission.PROJECT_CREATE,
+        SystemPermission.PROJECT_CREATE
       );
 
       // 第二次检查（应该使用缓存）
       const secondCheck = await permissionService.checkSystemPermission(
         regularUser.id,
-        SystemPermission.PROJECT_CREATE,
+        SystemPermission.PROJECT_CREATE
       );
 
       // 两次结果应该一致
@@ -455,7 +466,7 @@ describe('核心权限场景测试', () => {
       // 第一次检查
       const firstCheck = await permissionService.checkSystemPermission(
         regularUser.id,
-        SystemPermission.PROJECT_CREATE,
+        SystemPermission.PROJECT_CREATE
       );
 
       // 清除缓存
@@ -464,7 +475,7 @@ describe('核心权限场景测试', () => {
       // 第二次检查（应该重新查询数据库）
       const secondCheck = await permissionService.checkSystemPermission(
         regularUser.id,
-        SystemPermission.PROJECT_CREATE,
+        SystemPermission.PROJECT_CREATE
       );
 
       // 两次结果应该一致
@@ -482,7 +493,7 @@ describe('核心权限场景测试', () => {
 
       const results = await permissionService.checkSystemPermissionsBatch(
         adminUser.id,
-        permissions,
+        permissions
       );
 
       expect(results).toBeInstanceOf(Map);
@@ -502,7 +513,7 @@ describe('核心权限场景测试', () => {
 
       const results = await permissionService.checkSystemPermissionsBatch(
         regularUser.id,
-        permissions,
+        permissions
       );
 
       expect(results).toBeInstanceOf(Map);
@@ -518,21 +529,22 @@ describe('核心权限场景测试', () => {
       // 普通用户不应该有用户管理权限
       const userHasUserDelete = await permissionService.checkSystemPermission(
         regularUser.id,
-        SystemPermission.USER_DELETE,
+        SystemPermission.USER_DELETE
       );
       expect(userHasUserDelete).toBe(false);
 
       // 用户管理员应该有用户管理权限
-      const userManagerHasUserDelete = await permissionService.checkSystemPermission(
-        userManager.id,
-        SystemPermission.USER_DELETE,
-      );
+      const userManagerHasUserDelete =
+        await permissionService.checkSystemPermission(
+          userManager.id,
+          SystemPermission.USER_DELETE
+        );
       expect(userManagerHasUserDelete).toBe(true);
 
       // 管理员应该有所有权限
       const adminHasUserDelete = await permissionService.checkSystemPermission(
         adminUser.id,
-        SystemPermission.USER_DELETE,
+        SystemPermission.USER_DELETE
       );
       expect(adminHasUserDelete).toBe(true);
     });
@@ -542,7 +554,7 @@ describe('核心权限场景测试', () => {
     it('应该处理无效的用户 ID', async () => {
       const result = await permissionService.checkSystemPermission(
         'invalid-user-id',
-        SystemPermission.PROJECT_CREATE,
+        SystemPermission.PROJECT_CREATE
       );
 
       expect(result).toBe(false);
@@ -551,7 +563,7 @@ describe('核心权限场景测试', () => {
     it('应该处理不存在的权限', async () => {
       const result = await permissionService.checkSystemPermission(
         regularUser.id,
-        'nonexistent:permission' as SystemPermission,
+        'nonexistent:permission' as SystemPermission
       );
 
       expect(result).toBe(false);
@@ -574,7 +586,7 @@ describe('核心权限场景测试', () => {
 
       const result = await permissionService.checkSystemPermission(
         tempUser.id,
-        SystemPermission.PROJECT_CREATE,
+        SystemPermission.PROJECT_CREATE
       );
 
       expect(result).toBe(false);

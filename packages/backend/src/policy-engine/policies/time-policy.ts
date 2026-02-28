@@ -64,10 +64,12 @@ export class TimePolicy extends BasePolicy implements IPermissionPolicy {
     let inTimeRange = false;
     if (startMinutes <= endMinutes) {
       // 同一天内的时间范围（如 09:00 - 18:00）
-      inTimeRange = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+      inTimeRange =
+        currentMinutes >= startMinutes && currentMinutes <= endMinutes;
     } else {
       // 跨天的时间范围（如 22:00 - 06:00）
-      inTimeRange = currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+      inTimeRange =
+        currentMinutes >= startMinutes || currentMinutes <= endMinutes;
     }
 
     if (!inTimeRange) {
@@ -79,7 +81,15 @@ export class TimePolicy extends BasePolicy implements IPermissionPolicy {
     // 检查是否在允许的工作日内
     if (this.config.allowedDays && this.config.allowedDays.length > 0) {
       if (!this.config.allowedDays.includes(day)) {
-        const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const dayNames = [
+          '周日',
+          '周一',
+          '周二',
+          '周三',
+          '周四',
+          '周五',
+          '周六',
+        ];
         return this.createDeniedResult(
           `当前是 ${dayNames[day]}，不在允许的工作日内`
         );
@@ -99,7 +109,14 @@ export class TimePolicy extends BasePolicy implements IPermissionPolicy {
     }
     const hour = parseInt(parts[0], 10);
     const minute = parseInt(parts[1], 10);
-    if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    if (
+      isNaN(hour) ||
+      isNaN(minute) ||
+      hour < 0 ||
+      hour > 23 ||
+      minute < 0 ||
+      minute > 59
+    ) {
       throw new Error(`无效的时间值: ${timeStr}`);
     }
     return [hour, minute];

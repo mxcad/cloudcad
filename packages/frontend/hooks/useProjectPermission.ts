@@ -190,7 +190,10 @@ export const useProjectPermission = () => {
       }
 
       try {
-        const response = await projectsApi.checkPermission(projectId, permission);
+        const response = await projectsApi.checkPermission(
+          projectId,
+          permission
+        );
         const hasPermission = response.data.hasPermission || false;
 
         // 缓存结果
@@ -335,7 +338,10 @@ export const useProjectPermission = () => {
       globalCache.setPermission(cacheKey, false); // 临时设置为 false，等待重新检查
 
       try {
-        const response = await projectsApi.checkPermission(projectId, permission);
+        const response = await projectsApi.checkPermission(
+          projectId,
+          permission
+        );
         const hasPermission = response.data.hasPermission || false;
 
         // 更新缓存

@@ -23,7 +23,9 @@ async function testDatabaseSchema() {
       },
     });
 
-    console.log(`✓ Status field exists and is queryable. Found ${usersWithStatus.length} active users`);
+    console.log(
+      `✓ Status field exists and is queryable. Found ${usersWithStatus.length} active users`
+    );
 
     // 测试 3: 检查 UserStatus 枚举值
     const allUsers = await prisma.user.findMany({
@@ -34,8 +36,10 @@ async function testDatabaseSchema() {
       },
     });
 
-    const statuses = new Set(allUsers.map(u => u.status));
-    console.log(`✓ UserStatus enum values found: ${Array.from(statuses).join(', ')}`);
+    const statuses = new Set(allUsers.map((u) => u.status));
+    console.log(
+      `✓ UserStatus enum values found: ${Array.from(statuses).join(', ')}`
+    );
 
     console.log('\n✅ All tests passed! Database schema is correct.');
   } catch (error) {

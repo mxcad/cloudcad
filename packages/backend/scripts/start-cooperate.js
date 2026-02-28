@@ -8,7 +8,10 @@ const path = require('path');
 // MxCAD 协同服务可执行文件路径
 const MXCAD_ASSEMBLY_PATH =
   process.env.MXCAD_ASSEMBLY_PATH ||
-  path.resolve(__dirname, '../../mxcadassembly/windows/release/mxcadassembly.exe');
+  path.resolve(
+    __dirname,
+    '../../mxcadassembly/windows/release/mxcadassembly.exe'
+  );
 
 // 协同服务启动参数
 const COOPERATE_ARGS = JSON.stringify({

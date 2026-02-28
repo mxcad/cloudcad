@@ -69,7 +69,8 @@ export class MxCadExceptionFilter implements ExceptionFilter {
         message = '权限不足';
       } else if (status === HttpStatus.BAD_REQUEST) {
         ret = 'errorparam';
-        const responseMsg = (exceptionResponse as Record<string, unknown>).message;
+        const responseMsg = (exceptionResponse as Record<string, unknown>)
+          .message;
         if (typeof responseMsg === 'string') {
           message = responseMsg;
         } else if (Array.isArray(responseMsg)) {

@@ -31,7 +31,7 @@ export const CONFIGURABLE_FILE_TYPES: FileTypeConfig[] = [
     mimeType: 'application/dxf',
     maxSize: 100 * 1024 * 1024,
     enabled: true,
-    magicNumbers: [0x30, 0x0D, 0x0A], // DXF 文件通常以数字开头
+    magicNumbers: [0x30, 0x0d, 0x0a], // DXF 文件通常以数字开头
   },
   {
     extension: '.pdf',
@@ -73,7 +73,10 @@ export class FileValidationService {
     const expectedMimeType = this.getExpectedMimeType(extension);
     if (expectedMimeType) {
       // application/octet-stream 是通用的二进制流类型，允许通过
-      if (!file.mimetype.includes('octet-stream') && file.mimetype !== expectedMimeType) {
+      if (
+        !file.mimetype.includes('octet-stream') &&
+        file.mimetype !== expectedMimeType
+      ) {
         this.logger.error(
           `MIME类型不匹配: 文件=${file.originalname}, 扩展名=${extension}, 期望=${expectedMimeType}, 实际=${file.mimetype}`
         );
@@ -124,8 +127,13 @@ export class FileValidationService {
       const isMatch = this.validateMagicNumberDeep(fileHeader, magicNumbers);
 
       if (!isMatch) {
-        const expected = magicNumbers.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
-        const actual = fileHeader.slice(0, magicNumbers.length).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
+        const expected = magicNumbers
+          .map((b) => '0x' + b.toString(16).padStart(2, '0'))
+          .join(' ');
+        const actual = fileHeader
+          .slice(0, magicNumbers.length)
+          .map((b) => '0x' + b.toString(16).padStart(2, '0'))
+          .join(' ');
         this.logger.error(
           `文件魔数不匹配: 扩展名=${extension}, 期望=${expected}, 实际=${actual}`
         );
@@ -156,7 +164,10 @@ export class FileValidationService {
    * @param magicNumbers 期望的魔数
    * @returns 是否匹配
    */
-  private validateMagicNumberDeep(fileHeader: number[], magicNumbers: number[]): boolean {
+  private validateMagicNumberDeep(
+    fileHeader: number[],
+    magicNumbers: number[]
+  ): boolean {
     // 精确匹配：文件头与魔数完全匹配
     if (magicNumbers.every((byte, index) => fileHeader[index] === byte)) {
       return true;
@@ -168,7 +179,11 @@ export class FileValidationService {
       // 检查前 16 字节中是否包含魔数
       for (let offset = 0; offset < 16; offset++) {
         let match = true;
-        for (let i = 0; i < magicNumbers.length && offset + i < fileHeader.length; i++) {
+        for (
+          let i = 0;
+          i < magicNumbers.length && offset + i < fileHeader.length;
+          i++
+        ) {
           if (fileHeader[offset + i] !== magicNumbers[i]) {
             match = false;
             break;
@@ -223,12 +238,34 @@ export class FileValidationService {
 
     // 检查 DWG 版本标识（应该在文件头附近）
     // DWG 版本通常在文件的前几个字节中
-    const dwgVersions = ['AC1.50', 'AC2.10', 'AC1002', 'AC1003', 'AC1004', 'AC1006', 'AC1009', 'AC1012', 'AC1014', 'AC1015', 'AC1018', 'AC1021', 'AC1024', 'AC1027', 'AC1032'];
-    const headerText = buffer.toString('ascii', 0, Math.min(100, buffer.length));
-    
+    const dwgVersions = [
+      'AC1.50',
+      'AC2.10',
+      'AC1002',
+      'AC1003',
+      'AC1004',
+      'AC1006',
+      'AC1009',
+      'AC1012',
+      'AC1014',
+      'AC1015',
+      'AC1018',
+      'AC1021',
+      'AC1024',
+      'AC1027',
+      'AC1032',
+    ];
+    const headerText = buffer.toString(
+      'ascii',
+      0,
+      Math.min(100, buffer.length)
+    );
+
     // 检查是否包含可能的 DWG 版本标识
-    const hasVersionMarker = dwgVersions.some(version => headerText.includes(version));
-    
+    const hasVersionMarker = dwgVersions.some((version) =>
+      headerText.includes(version)
+    );
+
     if (!hasVersionMarker) {
       this.logger.warn('DWG 文件缺少版本标识，可能不是有效的 DWG 文件');
     }
@@ -240,12 +277,18 @@ export class FileValidationService {
    */
   private validateDxfFileStructure(buffer: Buffer): void {
     // DXF 文件是文本格式，应该以特定的 DXF 标记开始
-    const headerText = buffer.toString('ascii', 0, Math.min(100, buffer.length));
-    
+    const headerText = buffer.toString(
+      'ascii',
+      0,
+      Math.min(100, buffer.length)
+    );
+
     // 检查是否包含 DXF 特定的标记
     const dxfMarkers = ['0', 'SECTION', '2', 'HEADER', 'ENDSEC'];
-    const hasDxfMarkers = dxfMarkers.some(marker => headerText.includes(marker));
-    
+    const hasDxfMarkers = dxfMarkers.some((marker) =>
+      headerText.includes(marker)
+    );
+
     if (!hasDxfMarkers) {
       throw new BadRequestException('DXF 文件缺少必需的 DXF 标记，可能已损坏');
     }
@@ -279,32 +322,33 @@ export class FileValidationService {
       // 2. 移除控制字符（0x00-0x1f, 0x7f-0x9f，故意匹配用于安全清理）
       // eslint-disable-next-line no-control-regex
       sanitized = sanitized.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
-      
+
       // 3. 限制文件名长度（255字节）
       if (Buffer.byteLength(sanitized, 'utf8') > 255) {
         const ext = path.extname(sanitized);
         const base = path.basename(sanitized, ext);
         const maxBaseLength = 255 - Buffer.byteLength(ext, 'utf8');
         // 截断到最大长度
-        sanitized = Buffer.from(base).slice(0, maxBaseLength).toString('utf8') + ext;
+        sanitized =
+          Buffer.from(base).slice(0, maxBaseLength).toString('utf8') + ext;
       }
-      
+
       // 4. 防止空文件名
       if (!sanitized) {
         throw new Error('文件名不能为空');
       }
-      
+
       // 5. 防止文件名只有点号（隐藏文件）
       if (sanitized === '.' || sanitized === '..') {
         throw new Error('文件名不能仅为点号');
       }
-      
+
       // 6. 调用 FileUtils 的清理方法进行最终清理
       sanitized = FileUtils.sanitizeFilename(sanitized);
-      
+
       // 7. 验证清理后的文件名
       this.validateSanitizedFilename(sanitized);
-      
+
       return sanitized;
     } catch (error) {
       this.logger.error(`文件名清理失败: ${error.message}`);
@@ -318,7 +362,11 @@ export class FileValidationService {
    */
   private validateSanitizedFilename(filename: string): void {
     // 验证文件名不包含路径遍历字符
-    if (filename.includes('..') || filename.includes('\\') || filename.includes('/')) {
+    if (
+      filename.includes('..') ||
+      filename.includes('\\') ||
+      filename.includes('/')
+    ) {
       throw new Error('清理后的文件名仍包含路径字符');
     }
 
@@ -348,7 +396,10 @@ export class FileValidationService {
    * @param filePath 文件路径
    * @param file 文件对象
    */
-  validateFileWithMagicNumber(filePath: string, file: Express.Multer.File): void {
+  validateFileWithMagicNumber(
+    filePath: string,
+    file: Express.Multer.File
+  ): void {
     this.validateFile(file);
 
     const extension = `.${file.originalname.split('.').pop()?.toLowerCase() || ''}`;

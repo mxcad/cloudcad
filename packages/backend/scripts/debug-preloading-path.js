@@ -10,7 +10,8 @@ const fileHash = 'f72f8517355ec1d0720d87a2f32249b7';
 const basePath = 'D:\\web\\MxCADOnline\\cloudcad\\filesData';
 
 // 模拟 sourceNode.path
-const sourceNodePath = '202602/cml92vbqy0005xkufgnc96hdi/cml92vbqy0005xkufgnc96hdi.dwg.mxweb';
+const sourceNodePath =
+  '202602/cml92vbqy0005xkufgnc96hdi/cml92vbqy0005xkufgnc96hdi.dwg.mxweb';
 
 console.log('1. 模拟 getStorageRootPath(nodeId):');
 console.log('   sourceNode.path:', sourceNodePath);
@@ -52,7 +53,7 @@ if (exists) {
     path.join(directoryPath, `${fileHash}.mxweb_preloading.json`),
   ];
 
-  alternatives.forEach(altPath => {
+  alternatives.forEach((altPath) => {
     if (fs.existsSync(altPath)) {
       console.log('   找到文件:', altPath);
     }
@@ -64,7 +65,7 @@ console.log('4. 检查目录中的所有文件:');
 if (fs.existsSync(directoryPath)) {
   const files = fs.readdirSync(directoryPath);
   console.log('   目录内容:');
-  files.forEach(file => {
+  files.forEach((file) => {
     const filePath = path.join(directoryPath, file);
     const stats = fs.statSync(filePath);
     const isDir = stats.isDirectory();

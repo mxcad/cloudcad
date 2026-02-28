@@ -470,9 +470,7 @@ describe('PermissionService', () => {
       ];
 
       // Mock cache hits
-      cacheService.get
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
+      cacheService.get.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
 
       const result = await service.checkSystemPermissionsBatch(
         'user-id',

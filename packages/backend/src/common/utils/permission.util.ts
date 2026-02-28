@@ -100,7 +100,9 @@ export interface ContextRule {
  * 验证权限是否有效
  */
 export function isValidPermission(permission: string): boolean {
-  return Object.values(PrismaPermission).includes(permission as PrismaPermission);
+  return Object.values(PrismaPermission).includes(
+    permission as PrismaPermission
+  );
 }
 
 /**
@@ -216,7 +218,14 @@ export function createDefaultFieldPermissionRules(): FieldPermissionRule[] {
       resourceType: 'User',
       requiredPermission: PrismaPermission.SYSTEM_USER_READ,
       operation: 'READ',
-      allowedFields: ['id', 'email', 'username', 'nickname', 'avatar', 'status'],
+      allowedFields: [
+        'id',
+        'email',
+        'username',
+        'nickname',
+        'avatar',
+        'status',
+      ],
       deniedFields: ['password', 'deletedAt'],
       priority: 100,
       description: '用户读取权限 - 允许读取基本字段，拒绝敏感字段',
@@ -250,7 +259,9 @@ export function createDefaultFieldPermissionRules(): FieldPermissionRule[] {
 /**
  * 验证字段过滤上下文
  */
-export function validateFieldFilterContext(context: FieldFilterContext): boolean {
+export function validateFieldFilterContext(
+  context: FieldFilterContext
+): boolean {
   if (!context.resourceType) {
     return false;
   }

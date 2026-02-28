@@ -24,7 +24,7 @@ export class CacheWarmupService {
   constructor(
     private readonly cacheService: MultiLevelCacheService,
     private readonly l3Cache: L3CacheProvider,
-    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly schedulerRegistry: SchedulerRegistry
   ) {}
 
   /**
@@ -66,7 +66,8 @@ export class CacheWarmupService {
     // 计算访问频率（次/分钟）
     const now = Date.now();
     const hotDataWithFrequency = hotData.map((data) => {
-      const minutesSinceLastAccess = (now - data.lastAccessedAt.getTime()) / 60000;
+      const minutesSinceLastAccess =
+        (now - data.lastAccessedAt.getTime()) / 60000;
       const frequency = data.accessCount / Math.max(minutesSinceLastAccess, 1);
       return {
         ...data,
@@ -76,7 +77,7 @@ export class CacheWarmupService {
 
     // 过滤热点数据
     const filteredHotData = hotDataWithFrequency.filter(
-      (data) => data.frequency >= this.config.hotDataThreshold,
+      (data) => data.frequency >= this.config.hotDataThreshold
     );
 
     if (filteredHotData.length === 0) {
@@ -205,7 +206,11 @@ export class CacheWarmupService {
   /**
    * 手动触发预热
    */
-  async triggerWarmup(): Promise<{ success: boolean; count: number; error?: string }> {
+  async triggerWarmup(): Promise<{
+    success: boolean;
+    count: number;
+    error?: string;
+  }> {
     try {
       await this.warmupHotData();
       const stats = await this.cacheService.getStats();
@@ -265,10 +270,12 @@ export class CacheWarmupService {
    * 获取预热历史
    */
   getWarmupHistory(): Array<{ key: string; lastWarmup: Date }> {
-    return Array.from(this.warmupHistory.entries()).map(([key, lastWarmup]) => ({
-      key,
-      lastWarmup,
-    }));
+    return Array.from(this.warmupHistory.entries()).map(
+      ([key, lastWarmup]) => ({
+        key,
+        lastWarmup,
+      })
+    );
   }
 
   /**
@@ -286,7 +293,9 @@ export class CacheWarmupService {
     return {
       config: this.config,
       historySize: this.warmupHistory.size,
-      lastWarmup: Array.from(this.warmupHistory.values()).sort((a, b) => b.getTime() - a.getTime())[0],
+      lastWarmup: Array.from(this.warmupHistory.values()).sort(
+        (a, b) => b.getTime() - a.getTime()
+      )[0],
     };
   }
 }

@@ -11,24 +11,15 @@ import { PolicyConfigController } from './controllers/policy-config.controller';
  * 提供动态权限策略功能
  */
 @Module({
-  imports: [
-    DatabaseModule,
-    CommonModule,
-  ],
+  imports: [DatabaseModule, CommonModule],
   controllers: [PolicyConfigController],
-  providers: [
-    PolicyEngineService,
-    PolicyConfigService,
-  ],
-  exports: [
-    PolicyEngineService,
-    PolicyConfigService,
-  ],
+  providers: [PolicyEngineService, PolicyConfigService],
+  exports: [PolicyEngineService, PolicyConfigService],
 })
 export class PolicyEngineModule {
   constructor(
     private readonly policyEngine: PolicyEngineService,
-    private readonly policyConfig: PolicyConfigService,
+    private readonly policyConfig: PolicyConfigService
   ) {
     // 模块初始化时可以注册默认策略
     this.registerDefaultPolicies();

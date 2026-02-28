@@ -188,9 +188,7 @@ async function main() {
       });
     }
 
-    console.log(
-      `  ✓ 权限分配完成 (${roleConfig.permissions.length} 个权限)`
-    );
+    console.log(`  ✓ 权限分配完成 (${roleConfig.permissions.length} 个权限)`);
   }
 
   console.log('\n✓ 默认项目角色初始化完成!');

@@ -36,7 +36,9 @@ export const useFileSystemNavigation = ({
 
   // 下载格式模态框状态
   const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
-  const [downloadingNode, setDownloadingNode] = useState<FileSystemNode | null>(null);
+  const [downloadingNode, setDownloadingNode] = useState<FileSystemNode | null>(
+    null
+  );
 
   const handleGoBack = useCallback(() => {
     if (currentNode?.parentId) {

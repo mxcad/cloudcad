@@ -17,7 +17,7 @@ export const EmailVerification: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState<string>('');
   const [verificationCode, setVerificationCode] = useState<string>('');
-  
+
   // 重发验证码相关状态
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -211,7 +211,8 @@ export const EmailVerification: React.FC = () => {
               className="w-full h-full object-contain p-2"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling as SVGElement;
+                const fallback = e.currentTarget
+                  .nextElementSibling as SVGElement;
                 if (fallback) fallback.style.display = 'block';
               }}
             />

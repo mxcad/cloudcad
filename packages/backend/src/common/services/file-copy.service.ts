@@ -16,7 +16,10 @@ export class FileCopyService {
   private readonly uploadsPath: string;
 
   constructor(private configService: ConfigService) {
-    this.uploadsPath = this.configService.get('MXCAD_UPLOAD_PATH', '../uploads');
+    this.uploadsPath = this.configService.get(
+      'MXCAD_UPLOAD_PATH',
+      '../uploads'
+    );
   }
 
   /**
@@ -25,7 +28,10 @@ export class FileCopyService {
    * @param targetDir 目标目录（完整路径）
    * @returns 拷贝结果
    */
-  async copyFilesByHash(fileHash: string, targetDir: string): Promise<CopyResult> {
+  async copyFilesByHash(
+    fileHash: string,
+    targetDir: string
+  ): Promise<CopyResult> {
     try {
       this.logger.log(`开始拷贝文件: hash=${fileHash}, targetDir=${targetDir}`);
 
@@ -63,7 +69,9 @@ export class FileCopyService {
         return { success: false, copiedFiles: [], error };
       }
 
-      this.logger.log(`文件拷贝完成: hash=${fileHash}, 共拷贝 ${copiedFiles.length} 个文件`);
+      this.logger.log(
+        `文件拷贝完成: hash=${fileHash}, 共拷贝 ${copiedFiles.length} 个文件`
+      );
       return { success: true, copiedFiles };
     } catch (error) {
       this.logger.error(`文件拷贝失败: hash=${fileHash}`, error.stack);
@@ -106,7 +114,9 @@ export class FileCopyService {
               // 确保文件名以 hash 开头，避免误匹配如 "123abc.dwg"
               if (fileNameWithoutExt.startsWith(fileHash)) {
                 matchedFiles.push(fullPath);
-                this.logger.debug(`匹配文件: ${entry.name} (hash: ${fileHash})`);
+                this.logger.debug(
+                  `匹配文件: ${entry.name} (hash: ${fileHash})`
+                );
               }
             }
           }
@@ -114,7 +124,9 @@ export class FileCopyService {
       };
 
       await traverse(this.uploadsPath);
-      this.logger.log(`找到 ${matchedFiles.length} 个匹配 hash 的文件: ${fileHash}`);
+      this.logger.log(
+        `找到 ${matchedFiles.length} 个匹配 hash 的文件: ${fileHash}`
+      );
       return matchedFiles;
     } catch (error) {
       this.logger.error(`查找文件失败: hash=${fileHash}`, error.stack);
@@ -139,7 +151,10 @@ export class FileCopyService {
       this.logger.log(`文件拷贝成功: ${sourcePath} -> ${targetPath}`);
       return true;
     } catch (error) {
-      this.logger.error(`文件拷贝失败: ${sourcePath} -> ${targetPath}`, error.stack);
+      this.logger.error(
+        `文件拷贝失败: ${sourcePath} -> ${targetPath}`,
+        error.stack
+      );
       return false;
     }
   }
@@ -156,7 +171,9 @@ export class FileCopyService {
       await fsPromises.mkdir(targetDir, { recursive: true });
 
       // 递归拷贝
-      const entries = await fsPromises.readdir(sourceDir, { withFileTypes: true });
+      const entries = await fsPromises.readdir(sourceDir, {
+        withFileTypes: true,
+      });
 
       for (const entry of entries) {
         const sourcePath = path.join(sourceDir, entry.name);
@@ -174,7 +191,10 @@ export class FileCopyService {
       this.logger.log(`目录拷贝成功: ${sourceDir} -> ${targetDir}`);
       return true;
     } catch (error) {
-      this.logger.error(`目录拷贝失败: ${sourceDir} -> ${targetDir}`, error.stack);
+      this.logger.error(
+        `目录拷贝失败: ${sourceDir} -> ${targetDir}`,
+        error.stack
+      );
       return false;
     }
   }

@@ -64,7 +64,7 @@ export class FileSystemService {
     private readonly fileLockService: FileLockService,
     private readonly configService: ConfigService,
     private readonly moduleRef: ModuleRef,
-    private readonly versionControlService: VersionControlService,
+    private readonly versionControlService: VersionControlService
   ) {}
 
   /**
@@ -145,11 +145,11 @@ export class FileSystemService {
 
   /**
    * 统一创建节点方法（项目和文件夹统一处理）
-   * 
+   *
    * 规则：
    * - parentId 为空 → 创建项目（isRoot=true，自动添加成员关系）
    * - parentId 有值 → 创建文件夹（isRoot=false，继承父节点权限）
-   * 
+   *
    * 项目 = 特殊的文件夹（有成员管理）
    */
   async createNode(
@@ -356,13 +356,7 @@ export class FileSystemService {
    * @returns 已删除的项目列表
    */
   async getUserDeletedProjects(userId: string, query?: QueryProjectsDto) {
-    const {
-      search,
-      page = 1,
-      limit = 20,
-      sortBy,
-      sortOrder,
-    } = query || {};
+    const { search, page = 1, limit = 20, sortBy, sortOrder } = query || {};
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -378,7 +372,9 @@ export class FileSystemService {
       ],
     };
 
-    this.logger.log(`查询已删除项目 - 用户ID: ${userId}, 查询条件: ${JSON.stringify(where)}`);
+    this.logger.log(
+      `查询已删除项目 - 用户ID: ${userId}, 查询条件: ${JSON.stringify(where)}`
+    );
 
     if (search) {
       // 使用 AND 条件，避免覆盖原有的 OR 条件
@@ -432,7 +428,9 @@ export class FileSystemService {
         this.prisma.fileSystemNode.count({ where }),
       ]);
 
-      this.logger.log(`查询已删除项目结果 - 找到 ${projects.length} 个项目，总计 ${total} 个`);
+      this.logger.log(
+        `查询已删除项目结果 - 找到 ${projects.length} 个项目，总计 ${total} 个`
+      );
 
       return {
         data: projects,
@@ -444,7 +442,10 @@ export class FileSystemService {
         },
       };
     } catch (error) {
-      this.logger.error(`查询已删除项目列表失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `查询已删除项目列表失败: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
@@ -541,7 +542,7 @@ export class FileSystemService {
           dto.name,
           currentProject.ownerId,
           null,
-          projectId,
+          projectId
         );
       }
 
@@ -666,7 +667,9 @@ export class FileSystemService {
     // 预期格式：YYYYMM[/N]/nodeId/文件名.扩展名
     const pathParts = nodePath.split('/');
     if (pathParts.length < 3) {
-      this.logger.warn(`nodePath 格式不正确，跳过删除: ${nodePath} (期望格式: YYYYMM[/N]/nodeId/文件名)`);
+      this.logger.warn(
+        `nodePath 格式不正确，跳过删除: ${nodePath} (期望格式: YYYYMM[/N]/nodeId/文件名)`
+      );
       return;
     }
 
@@ -676,19 +679,26 @@ export class FileSystemService {
 
     try {
       // 从 SVN 删除节点目录（仅标记删除）
-      const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+      const filesDataPath =
+        this.configService.get('FILES_DATA_PATH') ||
+        path.join(process.cwd(), 'filesData');
       const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
 
       if (this.versionControlService.isReady()) {
         try {
-          const deleteResult = await this.versionControlService.deleteNodeDirectory(nodeDirectory);
+          const deleteResult =
+            await this.versionControlService.deleteNodeDirectory(nodeDirectory);
           if (deleteResult.success) {
             this.logger.log(`节点目录已从 SVN 标记删除: ${nodeDirectory}`);
           } else {
-            this.logger.warn(`节点目录从 SVN 标记删除失败: ${nodeDirectory}, 原因: ${deleteResult.message}`);
+            this.logger.warn(
+              `节点目录从 SVN 标记删除失败: ${nodeDirectory}, 原因: ${deleteResult.message}`
+            );
           }
         } catch (svnError) {
-          this.logger.error(`节点目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${svnError.message}`);
+          this.logger.error(
+            `节点目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${svnError.message}`
+          );
           // SVN 删除失败不影响物理文件删除
         }
       }
@@ -702,7 +712,9 @@ export class FileSystemService {
       // nodeDirectoryPath 应该以 nodeId 结尾，而不是 YYYYMM
       const nodeId = pathParts[pathParts.length - 2]; // 倒数第二个部分是 nodeId
       if (!nodeDirectoryPath.endsWith(nodeId)) {
-        this.logger.error(`路径验证失败，拒绝删除: ${nodeDirectoryPath} (期望以 ${nodeId} 结尾)`);
+        this.logger.error(
+          `路径验证失败，拒绝删除: ${nodeDirectoryPath} (期望以 ${nodeId} 结尾)`
+        );
         throw new Error(`路径验证失败，无法安全删除`);
       }
 
@@ -797,35 +809,24 @@ export class FileSystemService {
         },
       });
 
-      this.logger.log(
-        `[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`
-      );
+      this.logger.log(`[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`);
 
       // 2. 根据节点 ID 创建物理目录（仅在 skipFileCopy=false 时）
 
-            let storageInfo: any = null;
+      let storageInfo: any = null;
 
-      
+      if (!skipFileCopy) {
+        storageInfo = await this.storageManager.allocateNodeStorage(
+          fileNode.id,
 
-            if (!skipFileCopy) {
-
-              storageInfo = await this.storageManager.allocateNodeStorage(
-
-                fileNode.id,
-
-                name
-
-              );
-
-              this.logger.log(
-
-                `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
-
-              );
-      } else {
-        this.logger.log(
-          `[createFileNode] skipFileCopy=true，跳过物理目录创建`
+          name
         );
+
+        this.logger.log(
+          `[createFileNode] 物理目录创建成功: ${storageInfo.relativePath}`
+        );
+      } else {
+        this.logger.log(`[createFileNode] skipFileCopy=true，跳过物理目录创建`);
       }
 
       // 3. 将文件拷贝到节点目录
@@ -841,12 +842,12 @@ export class FileSystemService {
           const files = await fsPromises.readdir(sourceDirectoryPath);
 
           // 查找所有以 fileHash 开头的文件
-          const matchingFiles = files.filter(file => file.startsWith(fileHash));
+          const matchingFiles = files.filter((file) =>
+            file.startsWith(fileHash)
+          );
 
           if (matchingFiles.length === 0) {
-            this.logger.warn(
-              `[createFileNode] 未找到匹配 ${fileHash} 的文件`
-            );
+            this.logger.warn(`[createFileNode] 未找到匹配 ${fileHash} 的文件`);
           } else {
             // 获取节点目录路径（YYYYMM/nodeId）
             const nodeDirectory = path.dirname(storageInfo.fullPath);
@@ -865,9 +866,7 @@ export class FileSystemService {
             );
           }
         } else {
-          this.logger.warn(
-            `[createFileNode] 未提供源文件路径，跳过文件拷贝`
-          );
+          this.logger.warn(`[createFileNode] 未提供源文件路径，跳过文件拷贝`);
         }
 
         // 4. 更新节点的 path 字段（仅在文件拷贝后）
@@ -886,9 +885,9 @@ export class FileSystemService {
       }
 
       // 重新查询返回完整节点信息
-      return await tx.fileSystemNode.findUnique({
+      return (await tx.fileSystemNode.findUnique({
         where: { id: fileNode.id },
-      }) as PrismaFileSystemNode;
+      })) as PrismaFileSystemNode;
     });
   }
 
@@ -1011,13 +1010,8 @@ export class FileSystemService {
         };
       }
 
-      // 如果提供了userId，检查权限
-      if (userId) {
-        const hasPermission = await this.checkNodeAccess(nodeId, userId);
-        if (!hasPermission) {
-          throw new ForbiddenException('没有权限访问此节点');
-        }
-      }
+      // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
+      // Service 层只执行业务逻辑
 
       const [nodes, total] = await Promise.all([
         this.prisma.fileSystemNode.findMany({
@@ -1089,7 +1083,7 @@ export class FileSystemService {
           // 如果新名称的扩展名与原扩展名不同，抛出异常
           if (newExtension && newExtension !== currentExtension) {
             throw new BadRequestException(
-              `不允许修改文件扩展名。文件扩展名必须保持为 ${currentExtension}`,
+              `不允许修改文件扩展名。文件扩展名必须保持为 ${currentExtension}`
             );
           }
 
@@ -1104,7 +1098,7 @@ export class FileSystemService {
           dto.name,
           currentNode.ownerId,
           currentNode.isRoot ? null : currentNode.parentId,
-          nodeId,
+          nodeId
         );
       }
 
@@ -1156,7 +1150,7 @@ export class FileSystemService {
 
   /**
    * 统一删除节点方法（项目和普通节点统一处理）
-   * 
+   *
    * 规则：
    * - isRoot=true → 项目删除，更新 projectStatus
    * - isRoot=false → 普通节点删除，更新 fileStatus
@@ -1166,7 +1160,13 @@ export class FileSystemService {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { isRoot: true, isFolder: true, path: true, fileHash: true, deletedAt: true },
+        select: {
+          isRoot: true,
+          isFolder: true,
+          path: true,
+          fileHash: true,
+          deletedAt: true,
+        },
       });
 
       if (!node) {
@@ -1174,7 +1174,9 @@ export class FileSystemService {
       }
 
       const nodeType = node.isRoot ? '项目' : '节点';
-      this.logger.log(`开始删除${nodeType}: ${nodeId}, permanently=${permanently}`);
+      this.logger.log(
+        `开始删除${nodeType}: ${nodeId}, permanently=${permanently}`
+      );
 
       if (permanently) {
         // 彻底删除：递归删除所有子节点和文件
@@ -1236,7 +1238,7 @@ export class FileSystemService {
 
   /**
    * 统一恢复节点方法（项目和普通节点统一处理）
-   * 
+   *
    * 规则：
    * - isRoot=true → 项目恢复，更新 projectStatus 为 ACTIVE
    * - isRoot=false → 普通节点恢复，更新 fileStatus 为 COMPLETED
@@ -1339,7 +1341,11 @@ export class FileSystemService {
    * @param query 查询参数
    * @returns 回收站内容
    */
-  async getProjectTrash(projectId: string, userId: string, query?: QueryChildrenDto) {
+  async getProjectTrash(
+    projectId: string,
+    userId: string,
+    query?: QueryChildrenDto
+  ) {
     const {
       search,
       nodeType,
@@ -1386,20 +1392,15 @@ export class FileSystemService {
     }
 
     try {
-      // 检查权限
-      const hasPermission = await this.checkNodeAccess(projectId, userId);
-      if (!hasPermission) {
-        throw new ForbiddenException('没有权限访问此项目回收站');
-      }
+      // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
+      // Service 层只执行业务逻辑
 
       const [nodes, total] = await Promise.all([
         this.prisma.fileSystemNode.findMany({
           where,
           skip,
           take: limit,
-          orderBy: sortBy
-            ? { [sortBy]: sortOrder }
-            : { deletedAt: 'desc' },
+          orderBy: sortBy ? { [sortBy]: sortOrder } : { deletedAt: 'desc' },
           include: {
             owner: {
               select: {
@@ -1436,11 +1437,8 @@ export class FileSystemService {
    */
   async clearProjectTrash(projectId: string, userId: string) {
     try {
-      // 检查权限
-      const hasPermission = await this.checkNodeAccess(projectId, userId);
-      if (!hasPermission) {
-        throw new ForbiddenException('没有权限清空此项目回收站');
-      }
+      // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
+      // Service 层只执行业务逻辑
 
       // 彻底删除项目的所有子节点和文件
       await this.prisma.$transaction(async (tx) => {
@@ -1518,7 +1516,7 @@ export class FileSystemService {
         node.name,
         node.ownerId,
         targetParentId,
-        nodeId,
+        nodeId
       );
 
       const movedNode = await this.prisma.fileSystemNode.update({
@@ -1555,7 +1553,7 @@ export class FileSystemService {
     name: string,
     userId: string,
     parentId: string | null,
-    excludeNodeId?: string,
+    excludeNodeId?: string
   ): Promise<void> {
     // 项目级别检查：检查用户是否已有同名项目（大小写不敏感）
     if (!parentId) {
@@ -1597,7 +1595,7 @@ export class FileSystemService {
       throw new BadRequestException(
         existingNode.isFolder
           ? '同级目录已存在同名文件夹'
-          : '同级目录已存在同名文件',
+          : '同级目录已存在同名文件'
       );
     }
   }
@@ -1818,7 +1816,9 @@ export class FileSystemService {
       // 检查磁盘空间
       const diskStatus = this.diskMonitorService.checkDiskStatus();
       if (diskStatus.critical) {
-        throw new BadRequestException(`磁盘空间不足，无法上传: ${diskStatus.message}`);
+        throw new BadRequestException(
+          `磁盘空间不足，无法上传: ${diskStatus.message}`
+        );
       }
 
       // 计算文件哈希
@@ -1846,7 +1846,10 @@ export class FileSystemService {
         }
 
         // 保存文件到 uploads 目录
-        const uploadsPath = this.configService.get('MXCAD_UPLOAD_PATH', '../uploads');
+        const uploadsPath = this.configService.get(
+          'MXCAD_UPLOAD_PATH',
+          '../uploads'
+        );
         const uploadDir = path.resolve(uploadsPath, fileHash);
         await fsPromises.mkdir(uploadDir, { recursive: true });
         const uploadFilePath = path.join(uploadDir, file.originalname);
@@ -1915,7 +1918,9 @@ export class FileSystemService {
             },
           });
 
-          this.logger.log(`文件上传成功: ${updatedNode.name} by user ${userId}`);
+          this.logger.log(
+            `文件上传成功: ${updatedNode.name} by user ${userId}`
+          );
 
           // 提交文件到 SVN 版本控制
           await this.commitFileToSvn(updatedNode, userId);
@@ -1933,10 +1938,11 @@ export class FileSystemService {
           // 删除已创建的节点目录（如果存在）
           try {
             // 尝试获取节点的存储信息
-            const nodeWithDirectory = await this.prisma.fileSystemNode.findUnique({
-              where: { id: fileNode.id },
-              select: { path: true },
-            });
+            const nodeWithDirectory =
+              await this.prisma.fileSystemNode.findUnique({
+                where: { id: fileNode.id },
+                select: { path: true },
+              });
 
             if (nodeWithDirectory?.path) {
               const pathParts = nodeWithDirectory.path.split('/');
@@ -1948,7 +1954,10 @@ export class FileSystemService {
               }
             }
           } catch (cleanupError) {
-            this.logger.error(`清理节点存储失败: ${fileNode.id}`, cleanupError.stack);
+            this.logger.error(
+              `清理节点存储失败: ${fileNode.id}`,
+              cleanupError.stack
+            );
           }
 
           throw error;
@@ -1957,36 +1966,6 @@ export class FileSystemService {
     } catch (error) {
       this.logger.error(`文件上传失败: ${error.message}`, error.stack);
       throw error;
-    }
-  }
-
-  async checkProjectPermission(
-    projectId: string,
-    userId: string,
-    roles: ProjectRole[]
-  ): Promise<boolean> {
-    try {
-      // 1. 如果检查的角色包含 OWNER，先检查是否是项目所有者
-      if (roles.includes(ProjectRole.OWNER)) {
-        const project = await this.prisma.fileSystemNode.findUnique({
-          where: { id: projectId },
-          select: { ownerId: true },
-        });
-
-        if (project?.ownerId === userId) {
-          return true;
-        }
-      }
-
-      // 2. 检查是否是项目成员并具有指定角色
-      return await this.permissionService.hasNodeAccessRole(
-        userId,
-        projectId,
-        roles
-      );
-    } catch (error) {
-      this.logger.error(`检查项目权限失败: ${error.message}`, error.stack);
-      return false;
     }
   }
 
@@ -2130,7 +2109,11 @@ export class FileSystemService {
 
         // 删除项目根节点的文件（如果有）
         if (!project.isFolder && project.path) {
-          await this.deleteFileIfNotReferenced(tx, project.path, project.fileHash);
+          await this.deleteFileIfNotReferenced(
+            tx,
+            project.path,
+            project.fileHash
+          );
           // 更新 deletedFromStorage 字段
           await tx.fileSystemNode.update({
             where: { id: projectId },
@@ -2147,16 +2130,21 @@ export class FileSystemService {
       // 提交 SVN 工作副本（仅在需要时）
       if (commitSvn && this.versionControlService.isReady()) {
         try {
-          const commitResult = await this.versionControlService.commitWorkingCopy(
-            `删除项目: ${project.name} (${projectId})`
-          );
+          const commitResult =
+            await this.versionControlService.commitWorkingCopy(
+              `删除项目: ${project.name} (${projectId})`
+            );
           if (commitResult.success) {
             this.logger.log(`删除项目的 SVN 更改已提交: ${project.name}`);
           } else {
-            this.logger.warn(`删除项目的 SVN 更改提交失败: ${project.name}, 原因: ${commitResult.message}`);
+            this.logger.warn(
+              `删除项目的 SVN 更改提交失败: ${project.name}, 原因: ${commitResult.message}`
+            );
           }
         } catch (svnError) {
-          this.logger.error(`删除项目的 SVN 更改提交失败: ${project.name}, 错误: ${svnError.message}`);
+          this.logger.error(
+            `删除项目的 SVN 更改提交失败: ${project.name}, 错误: ${svnError.message}`
+          );
           // SVN 提交失败不影响删除操作
         }
       }
@@ -2204,16 +2192,21 @@ export class FileSystemService {
       // 提交 SVN 工作副本（仅在需要时）
       if (commitSvn && this.versionControlService.isReady()) {
         try {
-          const commitResult = await this.versionControlService.commitWorkingCopy(
-            `删除节点: ${node.name} (${nodeId})`
-          );
+          const commitResult =
+            await this.versionControlService.commitWorkingCopy(
+              `删除节点: ${node.name} (${nodeId})`
+            );
           if (commitResult.success) {
             this.logger.log(`删除节点的 SVN 更改已提交: ${node.name}`);
           } else {
-            this.logger.warn(`删除节点的 SVN 更改提交失败: ${node.name}, 原因: ${commitResult.message}`);
+            this.logger.warn(
+              `删除节点的 SVN 更改提交失败: ${node.name}, 原因: ${commitResult.message}`
+            );
           }
         } catch (svnError) {
-          this.logger.error(`删除节点的 SVN 更改提交失败: ${node.name}, 错误: ${svnError.message}`);
+          this.logger.error(
+            `删除节点的 SVN 更改提交失败: ${node.name}, 错误: ${svnError.message}`
+          );
           // SVN 提交失败不影响删除操作
         }
       }
@@ -2295,16 +2288,23 @@ export class FileSystemService {
       // 统一提交 SVN 工作副本
       if (this.versionControlService.isReady()) {
         try {
-          const commitResult = await this.versionControlService.commitWorkingCopy(
-            `批量删除 ${items.length} 个项目/节点`
-          );
+          const commitResult =
+            await this.versionControlService.commitWorkingCopy(
+              `批量删除 ${items.length} 个项目/节点`
+            );
           if (commitResult.success) {
-            this.logger.log(`批量删除的 SVN 更改已提交: ${items.length} 个项目/节点`);
+            this.logger.log(
+              `批量删除的 SVN 更改已提交: ${items.length} 个项目/节点`
+            );
           } else {
-            this.logger.warn(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`);
+            this.logger.warn(
+              `批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`
+            );
           }
         } catch (svnError) {
-          this.logger.error(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 错误: ${svnError.message}`);
+          this.logger.error(
+            `批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 错误: ${svnError.message}`
+          );
           // SVN 提交失败不影响删除操作
         }
       }
@@ -2372,16 +2372,21 @@ export class FileSystemService {
       // 统一提交 SVN 工作副本
       if (this.versionControlService.isReady()) {
         try {
-          const commitResult = await this.versionControlService.commitWorkingCopy(
-            `清空用户回收站: ${userId}`
-          );
+          const commitResult =
+            await this.versionControlService.commitWorkingCopy(
+              `清空用户回收站: ${userId}`
+            );
           if (commitResult.success) {
             this.logger.log(`清空回收站的 SVN 更改已提交: ${userId}`);
           } else {
-            this.logger.warn(`清空回收站的 SVN 更改提交失败: ${userId}, 原因: ${commitResult.message}`);
+            this.logger.warn(
+              `清空回收站的 SVN 更改提交失败: ${userId}, 原因: ${commitResult.message}`
+            );
           }
         } catch (svnError) {
-          this.logger.error(`清空回收站的 SVN 更改提交失败: ${userId}, 错误: ${svnError.message}`);
+          this.logger.error(
+            `清空回收站的 SVN 更改提交失败: ${userId}, 错误: ${svnError.message}`
+          );
           // SVN 提交失败不影响清空操作
         }
       }
@@ -2391,31 +2396,6 @@ export class FileSystemService {
     } catch (error) {
       this.logger.error(`清空回收站失败: ${error.message}`, error.stack);
       throw error;
-    }
-  }
-
-  async checkNodeAccess(nodeId: string, userId: string): Promise<boolean> {
-    try {
-      // 1. 先检查是否是项目所有者
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { ownerId: true },
-      });
-
-      // 如果是项目所有者，直接返回 true
-      if (node?.ownerId === userId) {
-        return true;
-      }
-
-      // 2. 检查是否是项目成员
-      const role = await this.permissionService.getNodeAccessRole(
-        userId,
-        nodeId
-      );
-      return role !== null;
-    } catch (error) {
-      this.logger.error(`检查节点访问权限失败: ${error.message}`, error.stack);
-      return false;
     }
   }
 
@@ -2558,7 +2538,10 @@ export class FileSystemService {
       );
       return totalDeleted;
     } catch (error) {
-      this.logger.error(`删除 MxCAD 临时文件失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `删除 MxCAD 临时文件失败: ${error.message}`,
+        error.stack
+      );
       return 0;
     }
   }
@@ -2685,17 +2668,8 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      const hasPermission = await this.checkProjectPermission(
-        projectId,
-
-        operatorId,
-
-        [ProjectRole.OWNER, ProjectRole.ADMIN]
-      );
-
-      if (!hasPermission) {
-        throw new ForbiddenException('没有权限添加项目成员');
-      }
+      // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
+      // Service 层只执行业务逻辑
 
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -2856,15 +2830,8 @@ export class FileSystemService {
         throw new ForbiddenException('不能修改项目所有者的角色');
       }
 
-      const hasPermission = await this.checkProjectPermission(
-        projectId,
-        operatorId,
-        [ProjectRole.OWNER, ProjectRole.ADMIN]
-      );
-
-      if (!hasPermission) {
-        throw new ForbiddenException('没有权限更新项目成员角色');
-      }
+      // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
+      // Service 层只执行业务逻辑
 
       // 检查角色是否存在（项目角色）
       const role = await this.prisma.projectRole.findUnique({
@@ -2991,15 +2958,8 @@ export class FileSystemService {
         throw new NotFoundException('项目不存在');
       }
 
-      const hasPermission = await this.checkProjectPermission(
-        projectId,
-        operatorId,
-        [ProjectRole.OWNER, ProjectRole.ADMIN]
-      );
-
-      if (!hasPermission) {
-        throw new ForbiddenException('没有权限移除项目成员');
-      }
+      // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
+      // Service 层只执行业务逻辑
 
       if (project.ownerId === userId) {
         throw new ForbiddenException('不能移除项目所有者');
@@ -3358,16 +3318,16 @@ export class FileSystemService {
       if (!node.isFolder) {
         const storageDir = this.getStoragePath(node);
         const filename = node.originalName || node.name;
-        
+
         // 确定实际文件名
         let actualFilename = filename;
-        
+
         // CAD 文件：使用 .mxweb 文件
         const ext = path.extname(filename).toLowerCase();
         if (['.dwg', '.dxf'].includes(ext)) {
           actualFilename = `${filename}.mxweb`;
         }
-        
+
         const fullPath = path.join(storageDir, actualFilename);
         const stream = await this.getFileStream(fullPath);
         const mimeType = this.getMimeType(actualFilename);
@@ -3517,7 +3477,8 @@ export class FileSystemService {
           this.logger.log(
             `开始转换文件: ${originalFilename} -> ${targetFilename}`
           );
-          const result = await this.getMxCadService().convertServerFile(conversionOptions);
+          const result =
+            await this.getMxCadService().convertServerFile(conversionOptions);
 
           if (result.code !== 0) {
             this.logger.error(`文件转换失败: ${result.message}`);
@@ -3525,12 +3486,13 @@ export class FileSystemService {
           }
 
           // 获取转换后的文件路径（与 mxweb 文件在同一目录）
-          const mxwebDir = path.dirname(node.path);  // 使用相对路径
+          const mxwebDir = path.dirname(node.path); // 使用相对路径
           // 使用正斜杠构建路径（避免 Windows 上 path.join() 使用反斜杠导致验证失败）
           const targetRelativePath = `${mxwebDir}/${targetFilename}`;
 
           // 检查转换后的文件是否存在
-          const targetFullPath = this.storageManager.getFullPath(targetRelativePath);
+          const targetFullPath =
+            this.storageManager.getFullPath(targetRelativePath);
           const targetExists = await fsPromises
             .access(targetFullPath)
             .then(() => true)
@@ -3552,7 +3514,9 @@ export class FileSystemService {
               await fsPromises.unlink(targetFullPath);
               this.logger.log(`临时转换文件已删除: ${targetFullPath}`);
             } catch (error) {
-              this.logger.warn(`删除临时文件失败: ${targetFullPath}, error: ${error.message}`);
+              this.logger.warn(
+                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
+              );
             }
           });
 
@@ -3562,7 +3526,9 @@ export class FileSystemService {
               await fsPromises.unlink(targetFullPath);
               this.logger.log(`流出错时删除临时文件: ${targetFullPath}`);
             } catch (error) {
-              this.logger.warn(`删除临时文件失败: ${targetFullPath}, error: ${error.message}`);
+              this.logger.warn(
+                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
+              );
             }
           });
 
@@ -3693,7 +3659,7 @@ export class FileSystemService {
 
       const storageDir = this.getStoragePath(node);
       const filename = node.originalName || node.name;
-      
+
       // 确定实际文件名
       let actualFilename = filename;
       // CAD 文件：使用 .mxweb 文件
@@ -3701,7 +3667,7 @@ export class FileSystemService {
       if (['.dwg', '.dxf'].includes(ext)) {
         actualFilename = `${filename}.mxweb`;
       }
-      
+
       const fullPath = path.join(storageDir, actualFilename);
       let stream: NodeJS.ReadableStream | null = null;
 
@@ -3865,7 +3831,10 @@ export class FileSystemService {
    * @param node 文件节点
    * @param userId 用户 ID
    */
-  private async commitFileToSvn(node: PrismaFileSystemNode, userId: string): Promise<void> {
+  private async commitFileToSvn(
+    node: PrismaFileSystemNode,
+    userId: string
+  ): Promise<void> {
     try {
       if (!node.path) {
         this.logger.warn(`文件路径为空，跳过 SVN 提交: ${node.name}`);
@@ -3884,9 +3853,13 @@ export class FileSystemService {
       );
 
       if (commitResult.success) {
-        this.logger.log(`节点目录已提交到 SVN: ${node.name} (${nodeDirectory})`);
+        this.logger.log(
+          `节点目录已提交到 SVN: ${node.name} (${nodeDirectory})`
+        );
       } else {
-        this.logger.warn(`节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`);
+        this.logger.warn(
+          `节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
+        );
       }
     } catch (error) {
       // SVN 提交失败不应影响文件上传流程，仅记录日志

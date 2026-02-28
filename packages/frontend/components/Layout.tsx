@@ -132,14 +132,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const menuItems = [
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
     {
-          to: '/font-library',
-          icon: Type,
-          label: '字体库',
-          visible: hasPermission(SystemPermission.SYSTEM_FONT_READ) ||
-            hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD) ||
-            hasPermission(SystemPermission.SYSTEM_FONT_DELETE) ||
-            hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD),
-        },
+      to: '/font-library',
+      icon: Type,
+      label: '字体库',
+      visible:
+        hasPermission(SystemPermission.SYSTEM_FONT_READ) ||
+        hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD) ||
+        hasPermission(SystemPermission.SYSTEM_FONT_DELETE) ||
+        hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD),
+    },
     {
       to: '/users',
       icon: Users,
@@ -203,7 +204,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   onError={(e) => {
                     // 图片加载失败时显示备用图标
                     e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    const fallback = e.currentTarget
+                      .nextElementSibling as HTMLElement;
                     if (fallback) fallback.style.display = 'flex';
                   }}
                 />
@@ -214,8 +216,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-base font-bold text-gradient-primary">梦想网页CAD实时</span>
-                <span className="text-sm font-semibold text-primary-600">协同平台</span>
+                <span className="text-base font-bold text-gradient-primary">
+                  梦想网页CAD实时
+                </span>
+                <span className="text-sm font-semibold text-primary-600">
+                  协同平台
+                </span>
               </div>
             </div>
             <button

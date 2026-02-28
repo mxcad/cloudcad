@@ -48,7 +48,11 @@ export const versionControlApi = {
    * @param filePath 文件路径
    * @param revision 修订版本号
    */
-  getFileContentAtRevision: (projectId: string, filePath: string, revision: number) =>
+  getFileContentAtRevision: (
+    projectId: string,
+    filePath: string,
+    revision: number
+  ) =>
     apiClient.get<{ success: boolean; message: string; content?: string }>(
       `/version-control/file/${revision}`,
       { params: { projectId, filePath } }

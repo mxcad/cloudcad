@@ -1,4 +1,3 @@
-
 /**
  * 节点工具类
  * 提供文件名处理、MIME 类型检测、文件验证等纯逻辑工具方法
@@ -64,7 +63,8 @@ export class NodeUtils {
   };
 
   // Windows 保留文件名
-  private static readonly RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  private static readonly RESERVED_NAMES =
+    /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
 
   // 非法字符（Windows 和 Linux 都不允许，包含控制字符是故意的用于安全验证）
   // eslint-disable-next-line no-control-regex
@@ -83,7 +83,10 @@ export class NodeUtils {
    * @param originalName 原始文件名
    * @returns 唯一文件名
    */
-  static generateUniqueFileName(existingNames: string[], originalName: string): string {
+  static generateUniqueFileName(
+    existingNames: string[],
+    originalName: string
+  ): string {
     // 提取文件名和扩展名
     const baseName = this.getBaseName(originalName);
     const extension = this.getExtension(originalName);
@@ -108,10 +111,10 @@ export class NodeUtils {
   static parseFileHash(filename: string): string | null {
     // 文件名格式：{hash}.{extension}
     const baseName = this.getBaseName(filename);
-    
+
     // SHA-256 哈希应该是 64 位十六进制字符
     const sha256Pattern = /^[a-f0-9]{64}$/i;
-    
+
     if (sha256Pattern.test(baseName)) {
       return baseName;
     }
@@ -130,8 +133,10 @@ export class NodeUtils {
     }
 
     // 确保扩展名以点开头
-    const normalizedExt = extension.startsWith('.') ? extension.slice(1) : extension;
-    
+    const normalizedExt = extension.startsWith('.')
+      ? extension.slice(1)
+      : extension;
+
     // 转换为小写
     const lowerExt = normalizedExt.toLowerCase();
 
@@ -155,7 +160,11 @@ export class NodeUtils {
     }
 
     // 检查是否包含路径遍历字符
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    if (
+      filename.includes('..') ||
+      filename.includes('/') ||
+      filename.includes('\\')
+    ) {
       return false;
     }
 
@@ -225,7 +234,7 @@ export class NodeUtils {
     }
 
     const lastDotIndex = filename.lastIndexOf('.');
-    
+
     // 没有点，或者点是最后一个字符
     if (lastDotIndex === -1 || lastDotIndex === filename.length - 1) {
       return '';
@@ -250,7 +259,7 @@ export class NodeUtils {
     }
 
     const lastDotIndex = filename.lastIndexOf('.');
-    
+
     // 没有点
     if (lastDotIndex === -1) {
       return filename;
@@ -291,7 +300,9 @@ export class NodeUtils {
    */
   static isImageFile(filename: string): boolean {
     const extension = this.getExtension(filename).toLowerCase();
-    return ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(extension);
+    return ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(
+      extension
+    );
   }
 
   /**
@@ -301,7 +312,20 @@ export class NodeUtils {
    */
   static isDocumentFile(filename: string): boolean {
     const extension = this.getExtension(filename).toLowerCase();
-    return ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.rtf', '.odt', '.ods', '.odp'].includes(extension);
+    return [
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.rtf',
+      '.odt',
+      '.ods',
+      '.odp',
+    ].includes(extension);
   }
 
   /**
@@ -326,7 +350,7 @@ export class NodeUtils {
 
     // 确保以点开头
     let normalized = extension.startsWith('.') ? extension : `.${extension}`;
-    
+
     // 转换为小写
     normalized = normalized.toLowerCase();
 

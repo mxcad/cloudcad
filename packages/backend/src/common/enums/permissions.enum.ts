@@ -7,7 +7,10 @@
  * 角色相关的枚举和映射在本文件中定义
  */
 
-import { Permission as PrismaPermission, ProjectPermission as PrismaProjectPermission } from '@prisma/client';
+import {
+  Permission as PrismaPermission,
+  ProjectPermission as PrismaProjectPermission,
+} from '@prisma/client';
 
 /**
  * 系统权限枚举

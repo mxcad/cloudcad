@@ -73,7 +73,12 @@ describe('FileSystemService', () => {
   const mockFileLockService = {
     acquireLock: jest.fn(),
     releaseLock: jest.fn(),
-    withLock: jest.fn().mockImplementation(async (_lockName: string, callback: () => Promise<unknown>) => callback()),
+    withLock: jest
+      .fn()
+      .mockImplementation(
+        async (_lockName: string, callback: () => Promise<unknown>) =>
+          callback()
+      ),
   };
 
   const mockVersionControlService = {
@@ -97,14 +102,25 @@ describe('FileSystemService', () => {
     jest.clearAllMocks();
 
     // 设置默认 mock 返回值
-    mockPrisma.projectRole.findFirst.mockResolvedValue({ id: 'role-1', name: 'PROJECT_OWNER' });
-    mockDiskMonitorService.checkDiskStatus.mockReturnValue({ critical: false, warning: false, message: '' });
-    mockDiskMonitorService.checkDiskSpace.mockResolvedValue({ available: 1024 * 1024 * 1024 });
+    mockPrisma.projectRole.findFirst.mockResolvedValue({
+      id: 'role-1',
+      name: 'PROJECT_OWNER',
+    });
+    mockDiskMonitorService.checkDiskStatus.mockReturnValue({
+      critical: false,
+      warning: false,
+      message: '',
+    });
+    mockDiskMonitorService.checkDiskSpace.mockResolvedValue({
+      available: 1024 * 1024 * 1024,
+    });
     mockPermissionService.checkNodePermission.mockResolvedValue(true);
     mockAuditLogService.log.mockResolvedValue(undefined);
     mockStorageManager.getStoragePath.mockReturnValue('files/test');
     mockStorageManager.ensureDirectory.mockResolvedValue(undefined);
-    mockPrisma.$transaction.mockImplementation((callback: () => unknown) => callback());
+    mockPrisma.$transaction.mockImplementation((callback: () => unknown) =>
+      callback()
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -112,7 +128,10 @@ describe('FileSystemService', () => {
         { provide: DatabaseService, useValue: mockPrisma },
         { provide: LocalStorageProvider, useValue: mockStorage },
         { provide: FileHashService, useValue: mockFileHashService },
-        { provide: FileSystemPermissionService, useValue: mockPermissionService },
+        {
+          provide: FileSystemPermissionService,
+          useValue: mockPermissionService,
+        },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: StorageManager, useValue: mockStorageManager },
         { provide: FileCopyService, useValue: mockFileCopyService },
@@ -200,7 +219,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.getNodeTree(nodeId)).rejects.toThrow(NotFoundException);
+      await expect(service.getNodeTree(nodeId)).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
@@ -210,7 +231,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.getProject(projectId)).rejects.toThrow(NotFoundException);
+      await expect(service.getProject(projectId)).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
@@ -218,7 +241,11 @@ describe('FileSystemService', () => {
     it('应该返回根节点', async () => {
       const nodeId = 'child-123';
       const mockNode = { id: nodeId, isRoot: false, parentId: 'parent-123' };
-      const mockParent = { id: 'parent-123', isRoot: false, parentId: 'root-123' };
+      const mockParent = {
+        id: 'parent-123',
+        isRoot: false,
+        parentId: 'root-123',
+      };
       const mockRoot = { id: 'root-123', isRoot: true, parentId: null };
 
       mockPrisma.fileSystemNode.findUnique
@@ -236,7 +263,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.getRootNode(nodeId)).rejects.toThrow(NotFoundException);
+      await expect(service.getRootNode(nodeId)).rejects.toThrow(
+        NotFoundException
+      );
     });
 
     it('应该处理节点本身就是根节点的情况', async () => {
@@ -259,7 +288,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow(NotFoundException);
+      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow(
+        NotFoundException
+      );
     });
 
     it('应该在父节点不是文件夹时抛出异常', async () => {
@@ -270,7 +301,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(mockParent);
 
-      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.createFolder(userId, parentId, dto)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 
@@ -280,9 +313,13 @@ describe('FileSystemService', () => {
       const name = '已存在的项目';
 
       // 模拟已存在同名项目
-      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({ id: 'existing-project' });
+      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({
+        id: 'existing-project',
+      });
 
-      await expect(service.createNode(userId, name)).rejects.toThrow('已存在同名项目');
+      await expect(service.createNode(userId, name)).rejects.toThrow(
+        '已存在同名项目'
+      );
     });
 
     it('创建项目时应该允许不存在的名称', async () => {
@@ -292,7 +329,10 @@ describe('FileSystemService', () => {
       // 模拟不存在同名项目
       mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce(null);
       // 模拟 PROJECT_OWNER 角色存在
-      mockPrisma.projectRole.findFirst.mockResolvedValueOnce({ id: 'role-1', name: 'PROJECT_OWNER' });
+      mockPrisma.projectRole.findFirst.mockResolvedValueOnce({
+        id: 'role-1',
+        name: 'PROJECT_OWNER',
+      });
       mockPrisma.fileSystemNode.create.mockResolvedValueOnce({
         id: 'new-project',
         name,
@@ -316,9 +356,14 @@ describe('FileSystemService', () => {
         isRoot: false,
       });
       // 模拟同级目录已存在同名节点
-      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({ id: 'existing-folder', isFolder: true });
+      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({
+        id: 'existing-folder',
+        isFolder: true,
+      });
 
-      await expect(service.createNode(userId, name, { parentId })).rejects.toThrow('同级目录已存在同名文件夹');
+      await expect(
+        service.createNode(userId, name, { parentId })
+      ).rejects.toThrow('同级目录已存在同名文件夹');
     });
 
     it('创建文件夹时应该允许不存在的名称', async () => {
@@ -363,9 +408,14 @@ describe('FileSystemService', () => {
         ownerId: 'user-123',
       });
       // 模拟同级目录已存在同名节点
-      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({ id: 'other-node', isFolder: true });
+      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({
+        id: 'other-node',
+        isFolder: true,
+      });
 
-      await expect(service.updateNode(nodeId, dto)).rejects.toThrow('同级目录已存在同名文件夹');
+      await expect(service.updateNode(nodeId, dto)).rejects.toThrow(
+        '同级目录已存在同名文件夹'
+      );
     });
 
     it('重命名时应该允许不冲突的名称', async () => {
@@ -427,7 +477,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(NotFoundException);
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        NotFoundException
+      );
     });
 
     it('应该禁止移动根节点', async () => {
@@ -437,7 +489,9 @@ describe('FileSystemService', () => {
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(mockNode);
 
-      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(BadRequestException);
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it('移动时应该检查目标目录同名节点', async () => {
@@ -454,9 +508,14 @@ describe('FileSystemService', () => {
         })
         .mockResolvedValueOnce({ isFolder: true });
       // 模拟目标目录已存在同名节点
-      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({ id: 'existing-node', isFolder: true });
+      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({
+        id: 'existing-node',
+        isFolder: true,
+      });
 
-      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow('同级目录已存在同名文件夹');
+      await expect(service.moveNode(nodeId, targetParentId)).rejects.toThrow(
+        '同级目录已存在同名文件夹'
+      );
     });
 
     it('移动时应该允许目标目录无同名节点', async () => {
@@ -489,10 +548,19 @@ describe('FileSystemService', () => {
   describe('deleteNode', () => {
     it('应该允许软删除根节点（项目）到回收站', async () => {
       const nodeId = 'root-123';
-      const mockNode = { isRoot: true, isFolder: true, path: null, fileHash: null, deletedAt: null };
+      const mockNode = {
+        isRoot: true,
+        isFolder: true,
+        path: null,
+        fileHash: null,
+        deletedAt: null,
+      };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(mockNode);
-      mockPrisma.fileSystemNode.update.mockResolvedValueOnce({ id: nodeId, deletedAt: new Date() });
+      mockPrisma.fileSystemNode.update.mockResolvedValueOnce({
+        id: nodeId,
+        deletedAt: new Date(),
+      });
 
       const result = await service.deleteNode(nodeId);
 
@@ -539,9 +607,13 @@ describe('FileSystemService', () => {
         isRoot: true,
       });
       // 模拟已存在同名项目
-      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({ id: 'existing-project' });
+      mockPrisma.fileSystemNode.findFirst.mockResolvedValueOnce({
+        id: 'existing-project',
+      });
 
-      await expect(service.updateProject(projectId, dto)).rejects.toThrow('已存在同名项目');
+      await expect(service.updateProject(projectId, dto)).rejects.toThrow(
+        '已存在同名项目'
+      );
     });
 
     it('重命名项目时应该允许不冲突的名称', async () => {
@@ -598,7 +670,9 @@ describe('FileSystemService', () => {
       // 模拟项目不存在
       mockPrisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.updateProject(projectId, dto)).rejects.toThrow(NotFoundException);
+      await expect(service.updateProject(projectId, dto)).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 });

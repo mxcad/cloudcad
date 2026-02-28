@@ -24,7 +24,6 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   onClose,
   onOpenVersion,
 }) => {
-
   const formatDate = (date: Date) => {
     const d = new Date(date);
     const now = new Date();
@@ -43,7 +42,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     } else if (days < 7) {
       return `${days}天前`;
     }
-    
+
     return d.toLocaleDateString('zh-CN', {
       month: 'numeric',
       day: 'numeric',
@@ -99,7 +98,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
             {entries.map((entry) => {
               const displayName = entry.userName || entry.author || '系统';
               const userNote = extractUserNote(entry.message);
-              
+
               return (
                 <div
                   key={entry.revision}
@@ -110,25 +109,31 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     <span className="font-mono text-sm font-medium text-slate-700 flex-shrink-0">
                       r{entry.revision}
                     </span>
-                    
+
                     {/* 操作人 */}
-                    <span className="text-sm text-slate-600 truncate max-w-[100px]" title={displayName}>
+                    <span
+                      className="text-sm text-slate-600 truncate max-w-[100px]"
+                      title={displayName}
+                    >
                       {displayName}
                     </span>
-                    
+
                     {/* 时间 */}
                     <span className="text-xs text-slate-400 flex-shrink-0">
                       {formatDate(entry.date)}
                     </span>
-                    
+
                     {/* 用户说明 */}
                     {userNote && (
-                      <span className="text-sm text-slate-500 truncate flex-1" title={userNote}>
+                      <span
+                        className="text-sm text-slate-500 truncate flex-1"
+                        title={userNote}
+                      >
                         · {userNote}
                       </span>
                     )}
                   </div>
-                  
+
                   {/* 查看按钮 */}
                   <Button
                     variant="ghost"

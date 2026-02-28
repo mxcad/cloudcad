@@ -4,12 +4,12 @@ import { VersionControlService } from './version-control.service';
 import { VersionControlController } from './version-control.controller';
 import { RolesModule } from '../roles/roles.module';
 import { DatabaseModule } from '../database/database.module';
-import { VersionControlPermissionGuard } from './version-control-permission.guard';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 
 @Module({
   imports: [ConfigModule, RolesModule, DatabaseModule],
   controllers: [VersionControlController],
-  providers: [VersionControlService, VersionControlPermissionGuard],
+  providers: [VersionControlService, RequireProjectPermissionGuard],
   exports: [VersionControlService],
 })
 export class VersionControlModule {}

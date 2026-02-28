@@ -664,7 +664,9 @@ function UploadFontModal({
           </label>
           <select
             value={target}
-            onChange={(e) => setTarget(e.target.value as 'backend' | 'frontend' | 'both')}
+            onChange={(e) =>
+              setTarget(e.target.value as 'backend' | 'frontend' | 'both')
+            }
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
             <option value="both">后端和前端（同时上传）</option>

@@ -134,5 +134,8 @@ export interface IL3CacheManager<T = unknown> extends ICacheManager<T> {
    * @param keys 缓存键数组
    * @param loader 数据加载函数
    */
-  preload<K = T>(keys: string[], loader: (key: string) => Promise<K>): Promise<Map<string, K>>;
+  preload<K = T>(
+    keys: string[],
+    loader: (key: string) => Promise<K>
+  ): Promise<Map<string, K>>;
 }

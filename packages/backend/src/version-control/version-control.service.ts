@@ -23,8 +23,19 @@ const svnDeleteAsync = promisify(svnDelete);
 const svnadminCreateAsync = promisify(svnadminCreate);
 const svnImportAsync = promisify(svnImport);
 const svnLogAsync = promisify(svnLog);
-const svnCatAsync: (filePath: string, revision: number, username: string | null, password: string | null) => Promise<Buffer> = promisify(svnCat) as any;
-const svnListAsync = promisify(svnList) as (repoUrl: string, isRecursive: boolean, revision: number | null, username: string | null, password: string | null) => Promise<string>;
+const svnCatAsync: (
+  filePath: string,
+  revision: number,
+  username: string | null,
+  password: string | null
+) => Promise<Buffer> = promisify(svnCat) as any;
+const svnListAsync = promisify(svnList) as (
+  repoUrl: string,
+  isRecursive: boolean,
+  revision: number | null,
+  username: string | null,
+  password: string | null
+) => Promise<string>;
 
 /**
  * SVN 操作结果
@@ -75,8 +86,10 @@ export class VersionControlService implements OnModuleInit {
   constructor(private readonly configService: ConfigService) {
     // 解析路径为绝对路径
     const basePath = process.cwd();
-    const repoPath = this.configService.get<string>('SVN_REPO_PATH') || '../svn-repo';
-    const dataPath = this.configService.get<string>('FILES_DATA_PATH') || '../filesData';
+    const repoPath =
+      this.configService.get<string>('SVN_REPO_PATH') || '../svn-repo';
+    const dataPath =
+      this.configService.get<string>('FILES_DATA_PATH') || '../filesData';
 
     this.svnRepoPath = path.resolve(basePath, repoPath);
     this.filesDataPath = path.resolve(basePath, dataPath);
@@ -121,7 +134,8 @@ export class VersionControlService implements OnModuleInit {
 
     // filesData 不是工作副本，需要初始化
     const filesDataExists = fs.existsSync(this.filesDataPath);
-    const filesDataIsEmpty = !filesDataExists || fs.readdirSync(this.filesDataPath).length === 0;
+    const filesDataIsEmpty =
+      !filesDataExists || fs.readdirSync(this.filesDataPath).length === 0;
 
     if (filesDataIsEmpty) {
       // 如果 filesData 为空，可以直接 checkout
@@ -196,7 +210,7 @@ export class VersionControlService implements OnModuleInit {
         currentPath = path.join(currentPath, pathParts[i]);
 
         // 判断是否是目标目录（最后一层）
-        const isTargetDirectory = (i === pathParts.length - 1);
+        const isTargetDirectory = i === pathParts.length - 1;
 
         // 添加目录
         // 目标目录递归添加所有内容，中间目录只添加目录本身
@@ -205,7 +219,9 @@ export class VersionControlService implements OnModuleInit {
         } catch (error) {
           // 忽略已存在的错误
           if (!error.message.includes('already under version control')) {
-            this.logger.warn(`添加目录失败: ${currentPath}, 错误: ${error.message}`);
+            this.logger.warn(
+              `添加目录失败: ${currentPath}, 错误: ${error.message}`
+            );
           }
         }
 
@@ -215,7 +231,7 @@ export class VersionControlService implements OnModuleInit {
             const commitMessage = JSON.stringify({
               type: 'add_directory',
               message: `Add directory: ${pathParts[i]}`,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
             });
             const commitResult = await svnCommitAsync(
               [currentPath],
@@ -228,7 +244,9 @@ export class VersionControlService implements OnModuleInit {
           } catch (error) {
             // 如果提交失败，可能目录没有变化，忽略
             if (!error.message.includes('not under version control')) {
-              this.logger.warn(`提交目录失败: ${currentPath}, 错误: ${error.message}`);
+              this.logger.warn(
+                `提交目录失败: ${currentPath}, 错误: ${error.message}`
+              );
             }
           }
         }
@@ -243,7 +261,9 @@ export class VersionControlService implements OnModuleInit {
         return { success: true, message: '没有文件需要提交' };
       }
 
-      this.logger.log(`[SVN] 准备提交 - 目录: ${nodeDirectory}, 文件数: ${files.length}`);
+      this.logger.log(
+        `[SVN] 准备提交 - 目录: ${nodeDirectory}, 文件数: ${files.length}`
+      );
 
       // 添加文件到 SVN
       try {
@@ -261,22 +281,32 @@ export class VersionControlService implements OnModuleInit {
         message: message,
         userId: userId || '',
         userName: userName || '',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
       const fullMessage = JSON.stringify(commitData);
 
       // 提交时包含目录本身和文件，确保父目录被正确添加到版本控制
       const commitPaths = [nodeDirectory, ...files];
-      const result = await svnCommitAsync(commitPaths, fullMessage, false, null, null);
+      const result = await svnCommitAsync(
+        commitPaths,
+        fullMessage,
+        false,
+        null,
+        null
+      );
 
-      this.logger.log(`目录提交成功: ${nodeDirectory}, 共 ${files.length} 个文件`);
+      this.logger.log(
+        `目录提交成功: ${nodeDirectory}, 共 ${files.length} 个文件`
+      );
       return {
         success: true,
         message: '提交成功',
         data: result,
       };
     } catch (error) {
-      this.logger.error(`目录提交失败: ${nodeDirectory}, 错误: ${error.message}`);
+      this.logger.error(
+        `目录提交失败: ${nodeDirectory}, 错误: ${error.message}`
+      );
       return {
         success: false,
         message: `提交失败: ${error.message}`,
@@ -287,7 +317,10 @@ export class VersionControlService implements OnModuleInit {
   /**
    * 批量提交文件到 SVN
    */
-  async commitFiles(filePaths: string[], message: string): Promise<SvnOperationResult> {
+  async commitFiles(
+    filePaths: string[],
+    message: string
+  ): Promise<SvnOperationResult> {
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -302,7 +335,13 @@ export class VersionControlService implements OnModuleInit {
       await svnAddAsync(filePaths, false);
 
       // 提交文件
-      const result = await svnCommitAsync(filePaths, message, false, null, null);
+      const result = await svnCommitAsync(
+        filePaths,
+        message,
+        false,
+        null,
+        null
+      );
 
       this.logger.log(`批量提交成功: ${filePaths.length} 个文件`);
       return {
@@ -316,11 +355,11 @@ export class VersionControlService implements OnModuleInit {
         success: false,
         message: `提交失败: ${error.message}`,
       };
-        }
-      }
-    
-      /**
-       * 递归查找目录下所有非 .mxweb 文件
+    }
+  }
+
+  /**
+   * 递归查找目录下所有非 .mxweb 文件
    * @param directory 目录路径
    * @returns 文件路径数组
    */
@@ -363,7 +402,9 @@ export class VersionControlService implements OnModuleInit {
   /**
    * 删除节点目录从 SVN（仅标记删除，不提交）
    */
-  async deleteNodeDirectory(nodeDirectory: string): Promise<SvnOperationResult> {
+  async deleteNodeDirectory(
+    nodeDirectory: string
+  ): Promise<SvnOperationResult> {
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过删除');
       return { success: false, message: 'SVN 未初始化' };
@@ -386,7 +427,9 @@ export class VersionControlService implements OnModuleInit {
         data: result,
       };
     } catch (error) {
-      this.logger.error(`目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${error.message}`);
+      this.logger.error(
+        `目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${error.message}`
+      );
       return {
         success: false,
         message: `删除失败: ${error.message}`,
@@ -471,7 +514,9 @@ export class VersionControlService implements OnModuleInit {
       // 工作副本可能没有更新到最新版本，导致查询不到最新的提交历史
       const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${directoryPath.replace(/\\/g, '/')}`;
 
-      this.logger.log(`[SVN] 获取目录历史 - 原始路径: ${filePath}, 目录路径: ${directoryPath}, 仓库URL: ${repoUrl}`);
+      this.logger.log(
+        `[SVN] 获取目录历史 - 原始路径: ${filePath}, 目录路径: ${directoryPath}, 仓库URL: ${repoUrl}`
+      );
 
       // 调用 svn log 命令获取目录的提交历史
       const xmlResult = await svnLogAsync(
@@ -485,14 +530,18 @@ export class VersionControlService implements OnModuleInit {
       // 解析 XML 结果
       const entries = this.parseSvnLogXml(xmlResult || '');
 
-      this.logger.log(`获取目录历史成功: ${directoryPath}, 共 ${entries.length} 条记录`);
+      this.logger.log(
+        `获取目录历史成功: ${directoryPath}, 共 ${entries.length} 条记录`
+      );
       return {
         success: true,
         message: '获取成功',
         entries,
       };
     } catch (error) {
-      this.logger.error(`获取目录历史失败: ${filePath}, 错误: ${error.message}`);
+      this.logger.error(
+        `获取目录历史失败: ${filePath}, 错误: ${error.message}`
+      );
       return {
         success: false,
         message: `获取失败: ${error.message}`,
@@ -508,7 +557,8 @@ export class VersionControlService implements OnModuleInit {
     const entries: SvnLogEntry[] = [];
 
     // 简单的 XML 解析器
-    const logEntryRegex = /<logentry\s+revision="(\d+)">([\s\S]*?)<\/logentry>/g;
+    const logEntryRegex =
+      /<logentry\s+revision="(\d+)">([\s\S]*?)<\/logentry>/g;
     let match;
 
     while ((match = logEntryRegex.exec(xmlString)) !== null) {
@@ -525,7 +575,9 @@ export class VersionControlService implements OnModuleInit {
 
       // 提取提交消息（JSON 格式）
       const msgMatch = /<msg>(.*?)<\/msg>/s.exec(content);
-      const rawMessage = msgMatch?.[1] ? this.decodeXmlEntities(msgMatch[1]) : '';
+      const rawMessage = msgMatch?.[1]
+        ? this.decodeXmlEntities(msgMatch[1])
+        : '';
 
       // 解析 JSON 格式的提交消息 - 简化逻辑，直接提取字段，不区分类型
       let message = rawMessage;
@@ -549,7 +601,8 @@ export class VersionControlService implements OnModuleInit {
         // 修复正则表达式以匹配 SVN 实际输出的 XML 格式
         // SVN 输出格式: <path action="A" kind="dir" ...>/.lock</path>
         // 属性顺序可能变化，使用更灵活的正则
-        const pathRegex = /<path[^>]*action="([AMDR])"[^>]*kind="(file|dir)"[^>]*>(.*?)<\/path>/g;
+        const pathRegex =
+          /<path[^>]*action="([AMDR])"[^>]*kind="(file|dir)"[^>]*>(.*?)<\/path>/g;
         let pathMatch;
         while ((pathMatch = pathRegex.exec(pathsMatch[1])) !== null) {
           paths.push({
@@ -602,7 +655,10 @@ export class VersionControlService implements OnModuleInit {
 
     // 最后解码命名实体 &lt; &gt; 等
     for (const [entity, char] of Object.entries(entityMap)) {
-      decoded = decoded.replace(new RegExp(entity.replace('(', '\\(').replace(')', '\\)'), 'g'), char);
+      decoded = decoded.replace(
+        new RegExp(entity.replace('(', '\\(').replace(')', '\\)'), 'g'),
+        char
+      );
     }
 
     return decoded;
@@ -625,12 +681,15 @@ export class VersionControlService implements OnModuleInit {
 
     try {
       // 获取目录相对于 filesData 的路径
-      const relativePath = path.relative(this.filesDataPath, directoryPath) || directoryPath;
-      
+      const relativePath =
+        path.relative(this.filesDataPath, directoryPath) || directoryPath;
+
       // 使用仓库 URL（确保路径使用正斜杠）
       const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
 
-      this.logger.log(`[SVN] 列出目录内容 - 目录: ${relativePath}, 版本: r${revision}, URL: ${repoUrl}`);
+      this.logger.log(
+        `[SVN] 列出目录内容 - 目录: ${relativePath}, 版本: r${revision}, URL: ${repoUrl}`
+      );
 
       // 调用 svn list 命令
       const result = await svnListAsync(repoUrl, false, revision, null, null);
@@ -638,10 +697,12 @@ export class VersionControlService implements OnModuleInit {
       // 解析结果，每行一个文件名
       const files = result
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
 
-      this.logger.log(`列出目录内容成功: ${relativePath} @ r${revision}, 文件数: ${files.length}`);
+      this.logger.log(
+        `列出目录内容成功: ${relativePath} @ r${revision}, 文件数: ${files.length}`
+      );
       return {
         success: true,
         message: '获取成功',
@@ -649,7 +710,9 @@ export class VersionControlService implements OnModuleInit {
       };
     } catch (error: unknown) {
       const err = error as Error;
-      this.logger.error(`列出目录内容失败: ${directoryPath} @ r${revision}, 错误: ${err.message}`);
+      this.logger.error(
+        `列出目录内容失败: ${directoryPath} @ r${revision}, 错误: ${err.message}`
+      );
       return {
         success: false,
         message: `获取失败: ${err.message}`,
@@ -671,28 +734,35 @@ export class VersionControlService implements OnModuleInit {
 
     try {
       // 获取文件相对于 filesData 的路径
-      const relativePath = path.relative(this.filesDataPath, filePath) || filePath;
+      const relativePath =
+        path.relative(this.filesDataPath, filePath) || filePath;
       const targetPath = path.join(this.filesDataPath, relativePath);
 
       // 调用 svn cat 命令获取指定版本的文件内容（返回 Buffer）
       const content = await svnCatAsync(targetPath, revision, null, null);
 
       if (!content) {
-        this.logger.error(`获取文件内容失败: ${filePath} @ r${revision}, 内容为空`);
+        this.logger.error(
+          `获取文件内容失败: ${filePath} @ r${revision}, 内容为空`
+        );
         return {
           success: false,
           message: '获取失败: 文件内容为空',
         };
       }
 
-      this.logger.log(`获取文件内容成功: ${filePath} @ r${revision}, 大小: ${content.length} 字节`);
+      this.logger.log(
+        `获取文件内容成功: ${filePath} @ r${revision}, 大小: ${content.length} 字节`
+      );
       return {
         success: true,
         message: '获取成功',
         content,
       };
     } catch (error) {
-      this.logger.error(`获取文件内容失败: ${filePath} @ r${revision}, 错误: ${error.message}`);
+      this.logger.error(
+        `获取文件内容失败: ${filePath} @ r${revision}, 错误: ${error.message}`
+      );
       return {
         success: false,
         message: `获取失败: ${error.message}`,

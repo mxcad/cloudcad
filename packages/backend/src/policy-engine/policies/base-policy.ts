@@ -58,9 +58,7 @@ export abstract class BasePolicy implements IPermissionPolicy {
     // 检查必填字段
     for (const field of required) {
       if (config[field] === undefined || config[field] === null) {
-        this.logger.warn(
-          `策略配置验证失败: 缺少必填字段 ${field}`
-        );
+        this.logger.warn(`策略配置验证失败: 缺少必填字段 ${field}`);
         return false;
       }
     }
@@ -135,7 +133,9 @@ export abstract class BasePolicy implements IPermissionPolicy {
       case 'array':
         return Array.isArray(value);
       case 'object':
-        return typeof value === 'object' && value !== null && !Array.isArray(value);
+        return (
+          typeof value === 'object' && value !== null && !Array.isArray(value)
+        );
       default:
         return false;
     }

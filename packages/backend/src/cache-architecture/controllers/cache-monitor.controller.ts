@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Delete, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CacheMonitorService } from '../services/cache-monitor.service';
 import { MultiLevelCacheService } from '../services/multi-level-cache.service';
 import { CacheWarmupService } from '../services/cache-warmup.service';
@@ -31,7 +45,7 @@ export class CacheMonitorController {
   constructor(
     private readonly cacheMonitorService: CacheMonitorService,
     private readonly cacheService: MultiLevelCacheService,
-    private readonly cacheWarmupService: CacheWarmupService,
+    private readonly cacheWarmupService: CacheWarmupService
   ) {}
 
   /**
@@ -40,7 +54,11 @@ export class CacheMonitorController {
   @Get('summary')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取缓存监控摘要' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功获取监控摘要', type: CacheMonitoringSummaryDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取监控摘要',
+    type: CacheMonitoringSummaryDto,
+  })
   async getSummary(): Promise<CacheMonitoringSummaryDto> {
     const summary = this.cacheMonitorService.getMonitoringSummary();
     return summary as unknown as CacheMonitoringSummaryDto;
@@ -63,13 +81,19 @@ export class CacheMonitorController {
     }
 
     if (query.includeHotData) {
-      const hotData = await this.cacheMonitorService.getHotData(query.hotDataLimit ?? 100);
+      const hotData = await this.cacheMonitorService.getHotData(
+        query.hotDataLimit ?? 100
+      );
       result = { ...result, hotData };
     }
 
     if (query.includePerformance) {
-      const performanceMetrics = await this.cacheMonitorService.getPerformanceMetrics();
-      result = { ...result, performanceMetrics: Object.fromEntries(performanceMetrics) };
+      const performanceMetrics =
+        await this.cacheMonitorService.getPerformanceMetrics();
+      result = {
+        ...result,
+        performanceMetrics: Object.fromEntries(performanceMetrics),
+      };
     }
 
     return result;
@@ -116,10 +140,19 @@ export class CacheMonitorController {
   @Get('performance-trend')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取性能趋势' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功获取性能趋势', type: PerformanceTrendDto })
-  async getPerformanceTrend(@Query() query: PerformanceTrendQueryDto): Promise<PerformanceTrendDto> {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取性能趋势',
+    type: PerformanceTrendDto,
+  })
+  async getPerformanceTrend(
+    @Query() query: PerformanceTrendQueryDto
+  ): Promise<PerformanceTrendDto> {
     const level = query.level as unknown as CacheLevel;
-    const trend = this.cacheMonitorService.getPerformanceTrend(level, query.minutes ?? 60);
+    const trend = this.cacheMonitorService.getPerformanceTrend(
+      level,
+      query.minutes ?? 60
+    );
     return trend as unknown as PerformanceTrendDto;
   }
 
@@ -129,8 +162,14 @@ export class CacheMonitorController {
   @Get('size-trend')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取缓存大小趋势' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功获取大小趋势', type: SizeTrendDto })
-  async getSizeTrend(@Query('minutes') minutes?: string): Promise<SizeTrendDto> {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取大小趋势',
+    type: SizeTrendDto,
+  })
+  async getSizeTrend(
+    @Query('minutes') minutes?: string
+  ): Promise<SizeTrendDto> {
     const trendMinutes = minutes ? parseInt(minutes, 10) : 60;
     const trend = await this.cacheMonitorService.getSizeTrend(trendMinutes);
 
@@ -152,7 +191,11 @@ export class CacheMonitorController {
   @Get('warnings')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取缓存警告' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功获取警告', type: CacheWarningsDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取警告',
+    type: CacheWarningsDto,
+  })
   async getWarnings(): Promise<CacheWarningsDto> {
     const warnings = await this.cacheMonitorService.checkWarnings();
     return { warnings };
@@ -285,8 +328,14 @@ export class CacheMonitorController {
   @Post('warmup/trigger')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '触发预热' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功触发预热', type: WarmupResponseDto })
-  async triggerWarmup(@Body() dto?: TriggerWarmupDto): Promise<WarmupResponseDto> {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功触发预热',
+    type: WarmupResponseDto,
+  })
+  async triggerWarmup(
+    @Body() dto?: TriggerWarmupDto
+  ): Promise<WarmupResponseDto> {
     return this.cacheWarmupService.triggerWarmup();
   }
 
@@ -296,7 +345,11 @@ export class CacheMonitorController {
   @Get('warmup/history')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取预热历史' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功获取预热历史', type: [WarmupHistoryDto] })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取预热历史',
+    type: [WarmupHistoryDto],
+  })
   async getWarmupHistory(): Promise<WarmupHistoryDto[]> {
     return this.cacheWarmupService.getWarmupHistory();
   }
@@ -307,7 +360,11 @@ export class CacheMonitorController {
   @Get('warmup/stats')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取预热统计' })
-  @ApiResponse({ status: HttpStatus.OK, description: '成功获取预热统计', type: WarmupStatsDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取预热统计',
+    type: WarmupStatsDto,
+  })
   async getWarmupStats(): Promise<WarmupStatsDto> {
     return this.cacheWarmupService.getWarmupStats();
   }

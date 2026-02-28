@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RoleCategory } from '../../common/enums/permissions.enum';
-import { SystemPermission, ProjectPermission } from '../../common/dto/permission.dto';
+import {
+  SystemPermission,
+  ProjectPermission,
+} from '../../common/dto/permission.dto';
 
 // 合并所有权限值
 const ALL_PERMISSIONS = [

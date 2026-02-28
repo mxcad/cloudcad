@@ -67,7 +67,12 @@ export class LocalStorageProvider implements StorageProvider {
     for (let i = 0; i < key.length; i++) {
       const charCode = key.charCodeAt(i);
       // 检查控制字符（除了制表符、换行符等常见空白字符）
-      if (charCode < 32 && charCode !== 9 && charCode !== 10 && charCode !== 13) {
+      if (
+        charCode < 32 &&
+        charCode !== 9 &&
+        charCode !== 10 &&
+        charCode !== 13
+      ) {
         throw new BadRequestException('路径包含非法字符');
       }
       if (charCode === 127) {
@@ -130,7 +135,7 @@ export class LocalStorageProvider implements StorageProvider {
   async downloadFile(key: string): Promise<Buffer> {
     try {
       const absolutePath = this.getAbsolutePath(key);
-      if (!await this.fileExists(key)) {
+      if (!(await this.fileExists(key))) {
         throw new Error(`文件不存在: ${key}`);
       }
       const data = await fsPromises.readFile(absolutePath);
@@ -168,7 +173,7 @@ export class LocalStorageProvider implements StorageProvider {
       const absolutePath = this.getAbsolutePath(key);
 
       // 检查路径是否存在
-      if (!await this.fileExists(key)) {
+      if (!(await this.fileExists(key))) {
         throw new Error(`文件不存在: ${key}`);
       }
 
@@ -203,7 +208,9 @@ export class LocalStorageProvider implements StorageProvider {
         return files;
       }
 
-      const entries = await fsPromises.readdir(absolutePath, { withFileTypes: true });
+      const entries = await fsPromises.readdir(absolutePath, {
+        withFileTypes: true,
+      });
 
       for (const entry of entries) {
         const relativePath = path.join(prefix, entry.name);
@@ -237,7 +244,10 @@ export class LocalStorageProvider implements StorageProvider {
       this.logger.log(`文件拷贝成功: ${sourceKey} -> ${destKey}`);
       return true;
     } catch (error) {
-      this.logger.error(`文件拷贝失败: ${sourceKey} -> ${destKey}`, error.stack);
+      this.logger.error(
+        `文件拷贝失败: ${sourceKey} -> ${destKey}`,
+        error.stack
+      );
       return false;
     }
   }
@@ -289,12 +299,14 @@ export class LocalStorageProvider implements StorageProvider {
   async getSubdirectoryCount(dirKey: string): Promise<number> {
     try {
       const absolutePath = this.getAbsolutePath(dirKey);
-      if (!await this.directoryExists(dirKey)) {
+      if (!(await this.directoryExists(dirKey))) {
         return 0;
       }
 
-      const entries = await fsPromises.readdir(absolutePath, { withFileTypes: true });
-      return entries.filter(entry => entry.isDirectory()).length;
+      const entries = await fsPromises.readdir(absolutePath, {
+        withFileTypes: true,
+      });
+      return entries.filter((entry) => entry.isDirectory()).length;
     } catch (error) {
       this.logger.error(`获取子目录数量失败: ${dirKey}`, error.stack);
       return 0;

@@ -1,8 +1,8 @@
 /**
  * useFileSystem - 文件系统核心 Hook
- * 
+ *
  * 这是组合 Hook，整合所有拆分后的子 Hooks，对外提供统一 API。
- * 
+ *
  * 子 Hooks 职责：
  * - useFileSystemData: 数据加载、分页、回收站状态
  * - useFileSystemSelection: 节点选择、多选模式
@@ -49,12 +49,22 @@ export const useFileSystem = () => {
   const isFolderMode = !!urlProjectId;
 
   // 从 Zustand store 获取视图模式
-  const { viewMode, setViewMode, searchTerm: storeSearchTerm, setSearchTerm: setStoreSearchTerm } =
-    useFileSystemStore();
+  const {
+    viewMode,
+    setViewMode,
+    searchTerm: storeSearchTerm,
+    setSearchTerm: setStoreSearchTerm,
+  } = useFileSystemStore();
 
   // UI Hook (Toast, Confirm)
-  const { toasts, confirmDialog, showToast, removeToast, showConfirm, closeConfirm } =
-    useFileSystemUI();
+  const {
+    toasts,
+    confirmDialog,
+    showToast,
+    removeToast,
+    showConfirm,
+    closeConfirm,
+  } = useFileSystemUI();
 
   // Search Hook
   const {
@@ -76,8 +86,12 @@ export const useFileSystem = () => {
     useFileSystemDragDrop();
 
   // Data Hook - 需要传递 clearSelection 和 setIsMultiSelectMode
-  const [selectionClearFn, setSelectionClearFn] = React.useState<() => void>(() => () => {});
-  const [setMultiSelectModeFn, setSetMultiSelectModeFn] = React.useState<(v: boolean) => void>(() => () => {});
+  const [selectionClearFn, setSelectionClearFn] = React.useState<() => void>(
+    () => () => {}
+  );
+  const [setMultiSelectModeFn, setSetMultiSelectModeFn] = React.useState<
+    (v: boolean) => void
+  >(() => () => {});
 
   const {
     nodes,

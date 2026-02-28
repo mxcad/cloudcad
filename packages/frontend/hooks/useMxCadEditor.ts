@@ -82,12 +82,12 @@ export const useMxCadServerConfig = (
   const setupServerConfig = async () => {
     try {
       const serverConfig = await window.MxPluginContext?.getServerConfig();
-      
+
       if (!serverConfig) {
         Logger.warn('MxPluginContext 或服务器配置不可用');
         return;
       }
-      
+
       Logger.info('当前 MxCAD 服务器配置', serverConfig);
 
       if (serverConfig?.uploadFileConfig?.create) {

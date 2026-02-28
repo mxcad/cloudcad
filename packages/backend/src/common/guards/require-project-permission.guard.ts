@@ -13,7 +13,7 @@ import {
   ProjectPermissionCheckMode,
 } from '../decorators/require-project-permission.decorator';
 import { ProjectPermission } from '../enums/permissions.enum';
-import { FileSystemService } from '../../file-system/file-system.service';
+import { DatabaseService } from '../../database/database.service';
 
 /**
  * 项目权限检查 Guard
@@ -29,29 +29,39 @@ export class RequireProjectPermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly projectPermissionService: ProjectPermissionService,
-    private readonly fileSystemService: FileSystemService
+    private readonly prisma: DatabaseService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // 获取装饰器设置的权限
-    const requiredPermissions = this.reflector.getAllAndOverride<
+    // 获取当前处理的类和处理器方法
+    const targetClass = context.getClass();
+    const targetHandler = context.getHandler();
+
+    // 获取装饰器设置的权限 - 先从方法级别读取，再从类级别读取
+    const requiredPermissions = this.reflector.get<
       ProjectPermission[]
-    >(REQUIRE_PROJECT_PERMISSION_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    >(REQUIRE_PROJECT_PERMISSION_KEY, targetHandler)
+    || this.reflector.get<ProjectPermission[]>(
+      REQUIRE_PROJECT_PERMISSION_KEY,
+      targetClass
+    );
 
     // 如果没有设置权限，则允许访问
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
 
-    // 获取权限检查模式
+    // 获取权限检查模式 - 先从方法级别读取，再从类级别读取
     const mode =
-      this.reflector.getAllAndOverride<ProjectPermissionCheckMode>(
+      this.reflector.get<ProjectPermissionCheckMode>(
         REQUIRE_PROJECT_PERMISSION_MODE_KEY,
-        [context.getHandler(), context.getClass()]
-      ) || ProjectPermissionCheckMode.ALL;
+        targetHandler
+      )
+      || this.reflector.get<ProjectPermissionCheckMode>(
+        REQUIRE_PROJECT_PERMISSION_MODE_KEY,
+        targetClass
+      )
+      || ProjectPermissionCheckMode.ALL;
 
     // 获取请求对象
     const request = context.switchToHttp().getRequest();
@@ -63,26 +73,19 @@ export class RequireProjectPermissionGuard implements CanActivate {
 
     // 从请求中获取项目ID
     const projectId = await this.extractProjectId(request);
+    console.log('[RequireProjectPermissionGuard] 提取到的 projectId:', projectId);
     if (!projectId) {
       throw new BadRequestException('缺少项目ID参数');
     }
 
-    // 检查是否是项目所有者（所有者自动拥有所有权限）
-    const isOwner = await this.projectPermissionService.isProjectOwner(
-      userId,
-      projectId
-    );
-    if (isOwner) {
-      return true;
-    }
-
-    // 检查权限
+    // 检查权限（所有用户都基于权限验证，包括项目所有者）
     const hasPermission = await this.checkPermissions(
       userId,
       projectId,
       requiredPermissions,
       mode
     );
+    console.log('[RequireProjectPermissionGuard] 权限检查结果:', hasPermission);
 
     if (!hasPermission) {
       throw new ForbiddenException('您没有权限执行此操作');
@@ -115,12 +118,14 @@ export class RequireProjectPermissionGuard implements CanActivate {
     }
 
     // 如果有 nodeId，从数据库查找其所属的项目
-    const nodeId =
-      request.params?.nodeId || request.body?.nodeId;
+    const nodeId = request.params?.nodeId || request.body?.nodeId;
 
     if (nodeId) {
       try {
-        const node = await this.fileSystemService.getNodeTree(nodeId);
+        const node = await this.prisma.fileSystemNode.findUnique({
+          where: { id: nodeId },
+          select: { id: true, isRoot: true, parentId: true },
+        });
         if (node) {
           // 如果节点本身是项目根节点，直接返回其ID
           if (node.isRoot) {
@@ -142,7 +147,10 @@ export class RequireProjectPermissionGuard implements CanActivate {
    */
   private async findProjectRoot(nodeId: string): Promise<string | null> {
     try {
-      const node = await this.fileSystemService.getNodeTree(nodeId);
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { id: true, isRoot: true, parentId: true },
+      });
       if (!node) {
         return null;
       }

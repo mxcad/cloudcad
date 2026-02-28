@@ -25,7 +25,6 @@ describe('MxCadController', () => {
       logError: jest.fn(),
       logInfo: jest.fn(),
       logWarn: jest.fn(),
-      checkProjectPermission: jest.fn(),
       getPreloadingData: jest.fn(),
       checkExternalReferenceExists: jest.fn(),
     } as any;
@@ -203,15 +202,24 @@ describe('MxCadController', () => {
     });
 
     it('should return errorparam when required fields are missing', async () => {
-      const mockFile = [{ path: '/tmp/test', originalname: 'test.dwg' }] as Express.Multer.File[];
+      const mockFile = [
+        { path: '/tmp/test', originalname: 'test.dwg' },
+      ] as Express.Multer.File[];
 
-      await controller.uploadFile(mockFile, {} as UploadFilesDto, mockRequest, mockResponse);
+      await controller.uploadFile(
+        mockFile,
+        {} as UploadFilesDto,
+        mockRequest,
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({ ret: 'errorparam' });
     });
 
     it('should handle full file upload successfully', async () => {
-      const mockFile = [{ path: '/tmp/test', originalname: 'test.dwg', size: 1024 }] as Express.Multer.File[];
+      const mockFile = [
+        { path: '/tmp/test', originalname: 'test.dwg', size: 1024 },
+      ] as Express.Multer.File[];
       const body = { hash: 'testhash', name: 'test.dwg', size: 1024 };
 
       mockMxCadService.uploadAndConvertFileWithPermission = jest
@@ -240,7 +248,10 @@ describe('MxCadController', () => {
 
   describe('testUploadFile', () => {
     it('should return ok for successful test upload', async () => {
-      const mockFile = { path: '/tmp/test', originalname: 'test.dwg' } as Express.Multer.File;
+      const mockFile = {
+        path: '/tmp/test',
+        originalname: 'test.dwg',
+      } as Express.Multer.File;
 
       await controller.testUploadFile(mockFile, mockResponse);
 
@@ -248,7 +259,10 @@ describe('MxCadController', () => {
     });
 
     it('should return errorparam when file is missing', async () => {
-      await controller.testUploadFile(undefined as unknown as Express.Multer.File, mockResponse);
+      await controller.testUploadFile(
+        undefined as unknown as Express.Multer.File,
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({ ret: 'errorparam' });
     });
@@ -294,7 +308,10 @@ describe('MxCadController', () => {
 
   describe('uploadAndConvert', () => {
     it('should return error when file is missing', async () => {
-      await controller.uploadAndConvert(undefined as unknown as Express.Multer.File, mockResponse);
+      await controller.uploadAndConvert(
+        undefined as unknown as Express.Multer.File,
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
@@ -317,7 +334,10 @@ describe('MxCadController', () => {
     });
 
     it('should return error when file is missing', async () => {
-      await controller.saveMxweb(undefined as unknown as Express.Multer.File, mockResponse);
+      await controller.saveMxweb(
+        undefined as unknown as Express.Multer.File,
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         code: -1,
@@ -346,7 +366,10 @@ describe('MxCadController', () => {
     });
 
     it('should return error when file is missing', async () => {
-      await controller.saveDwg(undefined as unknown as Express.Multer.File, mockResponse);
+      await controller.saveDwg(
+        undefined as unknown as Express.Multer.File,
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: 'failed',
@@ -377,7 +400,11 @@ describe('MxCadController', () => {
     });
 
     it('should return error when file is missing', async () => {
-      await controller.savePdf(undefined as unknown as Express.Multer.File, {}, mockResponse);
+      await controller.savePdf(
+        undefined as unknown as Express.Multer.File,
+        {},
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: 'failed',
@@ -408,7 +435,11 @@ describe('MxCadController', () => {
     });
 
     it('should return error when file is missing', async () => {
-      await controller.printToPdf(undefined as unknown as Express.Multer.File, { param: '{}' }, mockResponse);
+      await controller.printToPdf(
+        undefined as unknown as Express.Multer.File,
+        { param: '{}' },
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: 'failed',
@@ -439,7 +470,11 @@ describe('MxCadController', () => {
     });
 
     it('should return error when file is missing', async () => {
-      await controller.cutDwg(undefined as unknown as Express.Multer.File, { param: '{}' }, mockResponse);
+      await controller.cutDwg(
+        undefined as unknown as Express.Multer.File,
+        { param: '{}' },
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: 'failed',
@@ -470,7 +505,11 @@ describe('MxCadController', () => {
     });
 
     it('should return error when file is missing', async () => {
-      await controller.cutMxweb(undefined as unknown as Express.Multer.File, { param: '{}' }, mockResponse);
+      await controller.cutMxweb(
+        undefined as unknown as Express.Multer.File,
+        { param: '{}' },
+        mockResponse
+      );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         ret: 'failed',

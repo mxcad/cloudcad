@@ -8,17 +8,25 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { VersionControlPermissionGuard } from './version-control-permission.guard';
-import { NodePermission } from '../common/decorators/project-permission.decorator';
-import { ProjectRole, ProjectPermission } from '../common/enums/permissions.enum';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-import { VersionControlService, SvnLogResponse } from './version-control.service';
+import {
+  VersionControlService,
+  SvnLogResponse,
+} from './version-control.service';
 
 @ApiTags('version-control')
 @Controller('version-control')
-@UseGuards(JwtAuthGuard, VersionControlPermissionGuard)
+@UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
 export class VersionControlController {
   constructor(private readonly versionControlService: VersionControlService) {}
 
@@ -31,8 +39,17 @@ export class VersionControlController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取节点的 SVN 提交历史' })
   @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
-  @ApiQuery({ name: 'filePath', required: true, description: '节点路径（文件或目录路径，后端自动提取目录）' })
-  @ApiQuery({ name: 'limit', required: false, description: '限制返回的记录数量', type: Number })
+  @ApiQuery({
+    name: 'filePath',
+    required: true,
+    description: '节点路径（文件或目录路径，后端自动提取目录）',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '限制返回的记录数量',
+    type: Number,
+  })
   @ApiResponse({ status: 200, description: '获取成功' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未授权' })
@@ -41,7 +58,7 @@ export class VersionControlController {
   async getFileHistory(
     @Query('projectId') projectId: string,
     @Query('filePath') filePath: string,
-    @Query('limit') limit?: number,
+    @Query('limit') limit?: number
   ): Promise<SvnLogResponse> {
     return this.versionControlService.getFileHistory(filePath, limit);
   }
@@ -52,7 +69,12 @@ export class VersionControlController {
   @Get('file/:revision')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取指定版本的文件内容' })
-  @ApiParam({ name: 'revision', required: true, description: '修订版本号', type: Number })
+  @ApiParam({
+    name: 'revision',
+    required: true,
+    description: '修订版本号',
+    type: Number,
+  })
   @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
   @ApiQuery({ name: 'filePath', required: true, description: '文件路径' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -63,8 +85,11 @@ export class VersionControlController {
   async getFileContentAtRevision(
     @Param('revision', ParseIntPipe) revision: number,
     @Query('projectId') projectId: string,
-    @Query('filePath') filePath: string,
+    @Query('filePath') filePath: string
   ): Promise<{ success: boolean; message: string; content?: Buffer }> {
-    return this.versionControlService.getFileContentAtRevision(filePath, revision);
+    return this.versionControlService.getFileContentAtRevision(
+      filePath,
+      revision
+    );
   }
 }

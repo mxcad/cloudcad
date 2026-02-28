@@ -13,11 +13,12 @@ export const CollaborateSidebar: React.FC = () => {
   const { isActive, close } = useSidebar('collaborate');
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
+    console.log(APP_COOPERATE_URL)   
     cooperate.init({
-      server_addres: APP_COOPERATE_URL
-    })
+      server_addres: APP_COOPERATE_URL,
+    });
     return cooperate;
-  }
+  };
   // 侧边栏宽度状态
   const [width, setWidth] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
@@ -39,7 +40,7 @@ export const CollaborateSidebar: React.FC = () => {
   const fetchWorks = useCallback(async () => {
     try {
       setLoading(true);
-      const cooperate = getCooperate()
+      const cooperate = getCooperate();
       if (!cooperate) {
         console.warn('协同对象未初始化');
         return;
@@ -70,7 +71,7 @@ export const CollaborateSidebar: React.FC = () => {
   const handleCreateWork = useCallback(async () => {
     try {
       setCreating(true);
-      const cooperate = getCooperate()
+      const cooperate = getCooperate();
       if (!cooperate) {
         alert('协同对象未初始化');
         setCreating(false);
@@ -101,44 +102,41 @@ export const CollaborateSidebar: React.FC = () => {
   }, [fetchWorks]);
 
   // 加入协同
-  const handleJoinWork = useCallback(
-    async (workId: number) => {
-      try {
-        setJoiningWorkId(workId);
-        const cooperate = getCooperate()
-        if (!cooperate) {
-          alert('协同对象未初始化');
-          setJoiningWorkId(null);
-          return;
-        }
+  const handleJoinWork = useCallback(async (workId: number) => {
+    try {
+      setJoiningWorkId(workId);
+      const cooperate = getCooperate();
+      if (!cooperate) {
+        alert('协同对象未初始化');
+        setJoiningWorkId(null);
+        return;
+      }
 
-        cooperate.joinWork(workId, async (iRet: number) => {
-          setJoiningWorkId(null);
-          if (iRet === 0) {
-            console.log('加入协同成功, workId:', workId);
+      cooperate.joinWork(workId, async (iRet: number) => {
+        setJoiningWorkId(null);
+        if (iRet === 0) {
+          console.log('加入协同成功, workId:', workId);
+          setCurrentWorkId(workId);
+        } else {
+          console.log('加入协同失败, error code:', iRet);
+          if (iRet === 17) {
             setCurrentWorkId(workId);
           } else {
-            console.log('加入协同失败, error code:', iRet);
-            if (iRet === 17) {
-              setCurrentWorkId(workId);
-            } else {
-              alert(`加入协同失败，错误码: ${iRet}`);
-            }
+            alert(`加入协同失败，错误码: ${iRet}`);
           }
-        });
-      } catch (error) {
-        console.error('加入协同失败:', error);
-        setJoiningWorkId(null);
-        alert('加入协同失败');
-      }
-    },
-    []
-  );
+        }
+      });
+    } catch (error) {
+      console.error('加入协同失败:', error);
+      setJoiningWorkId(null);
+      alert('加入协同失败');
+    }
+  }, []);
 
   // 退出协同
   const handleExitWork = useCallback(async () => {
     try {
-      const cooperate = getCooperate()
+      const cooperate = getCooperate();
       if (!cooperate) {
         alert('协同对象未初始化');
         return;
@@ -170,7 +168,8 @@ export const CollaborateSidebar: React.FC = () => {
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!sidebarRef.current) return;
-    const newWidth = e.clientX - sidebarRef.current.getBoundingClientRect().left;
+    const newWidth =
+      e.clientX - sidebarRef.current.getBoundingClientRect().left;
     if (newWidth >= 200 && newWidth <= 600) {
       setWidth(newWidth);
     }
@@ -215,10 +214,11 @@ export const CollaborateSidebar: React.FC = () => {
           <button
             onClick={handleCreateWork}
             disabled={creating || currentWorkId !== null}
-            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-colors ${creating || currentWorkId !== null
-              ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
-              : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
-              }`}
+            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+              creating || currentWorkId !== null
+                ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
+                : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+            }`}
           >
             {creating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -279,27 +279,33 @@ export const CollaborateSidebar: React.FC = () => {
               {works.map((workId) => (
                 <div
                   key={workId}
-                  className={`flex items-center justify-between p-3 rounded transition-colors ${currentWorkId === workId
-                    ? 'bg-[#4F46E5]/20 border border-[#4F46E5]'
-                    : 'bg-[#252B3A] hover:bg-[#333A47]'
-                    }`}
+                  className={`flex items-center justify-between p-3 rounded transition-colors ${
+                    currentWorkId === workId
+                      ? 'bg-[#4F46E5]/20 border border-[#4F46E5]'
+                      : 'bg-[#252B3A] hover:bg-[#333A47]'
+                  }`}
                 >
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-[#94A3B8]" />
-                    <span className="text-sm text-[#E2E8F0]">协同 {workId}</span>
+                    <span className="text-sm text-[#E2E8F0]">
+                      协同 {workId}
+                    </span>
                   </div>
                   {currentWorkId === workId ? (
                     <span className="text-xs text-green-400">已加入</span>
                   ) : (
                     <button
                       onClick={() => handleJoinWork(workId)}
-                      disabled={joiningWorkId !== null || currentWorkId !== null}
-                      className={`px-2 py-1 text-xs rounded transition-colors ${joiningWorkId === workId
-                        ? 'bg-[#4F46E5] text-white'
-                        : joiningWorkId !== null || currentWorkId !== null
-                          ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
-                          : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
-                        }`}
+                      disabled={
+                        joiningWorkId !== null || currentWorkId !== null
+                      }
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        joiningWorkId === workId
+                          ? 'bg-[#4F46E5] text-white'
+                          : joiningWorkId !== null || currentWorkId !== null
+                            ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
+                            : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+                      }`}
                     >
                       {joiningWorkId === workId ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
@@ -318,8 +324,9 @@ export const CollaborateSidebar: React.FC = () => {
       {/* 调整宽度手柄 */}
       <div
         onMouseDown={handleMouseDown}
-        className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${isResizing ? 'bg-[#4F46E5]' : ''
-          }`}
+        className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${
+          isResizing ? 'bg-[#4F46E5]' : ''
+        }`}
         style={{ left: width }}
       />
     </>

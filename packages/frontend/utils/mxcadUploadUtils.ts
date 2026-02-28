@@ -44,7 +44,10 @@ export interface MxCadUploadResult {
  * MxCAD 文件上传错误
  */
 export class MxCadUploadError extends Error {
-  constructor(message: string, public readonly fileName?: string) {
+  constructor(
+    message: string,
+    public readonly fileName?: string
+  ) {
     super(message);
     this.name = 'MxCadUploadError';
   }
@@ -62,7 +65,10 @@ export const validateFileType = (file: File): boolean => {
 /**
  * 验证文件大小
  */
-export const validateFileSize = (file: File, maxSize: number = 100 * 1024 * 1024): boolean => {
+export const validateFileSize = (
+  file: File,
+  maxSize: number = 100 * 1024 * 1024
+): boolean => {
   return file.size <= maxSize;
 };
 
@@ -80,7 +86,8 @@ export const validateFileSize = (file: File, maxSize: number = 100 * 1024 * 1024
 export const uploadMxCadFile = async (
   options: MxCadUploadOptions
 ): Promise<MxCadUploadResult> => {
-  const { file, hash, nodeId, onBeginUpload, onProgress, onFileQueued } = options;
+  const { file, hash, nodeId, onBeginUpload, onProgress, onFileQueued } =
+    options;
 
   // 验证文件类型
   if (!validateFileType(file)) {
@@ -92,10 +99,7 @@ export const uploadMxCadFile = async (
 
   // 验证文件大小
   if (!validateFileSize(file)) {
-    throw new MxCadUploadError(
-      `文件过大: ${file.name} (最大100MB)`,
-      file.name
-    );
+    throw new MxCadUploadError(`文件过大: ${file.name} (最大100MB)`, file.name);
   }
 
   if (!nodeId) {
@@ -221,7 +225,7 @@ export const uploadMxCadFile = async (
   // 4. 直接使用合并时返回的 nodeId
   // 避免再次调用 fileisExist API，防止触发秒传逻辑导致重复创建节点
   const finalNodeId = newNodeId || nodeId;
-  
+
   return {
     file,
     hash,

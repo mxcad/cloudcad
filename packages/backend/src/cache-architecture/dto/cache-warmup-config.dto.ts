@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsArray, IsString, IsOptional } from 'class-validator';
+import {
+  IsBoolean,
+  IsNumber,
+  IsArray,
+  IsString,
+  IsOptional,
+} from 'class-validator';
 
 /**
  * 缓存预热配置 DTO

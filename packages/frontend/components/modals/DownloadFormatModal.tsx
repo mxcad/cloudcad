@@ -51,7 +51,10 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     }
   };
 
-  const formatLabels: Record<DownloadFormat, { label: string; icon: React.ReactNode }> = {
+  const formatLabels: Record<
+    DownloadFormat,
+    { label: string; icon: React.ReactNode }
+  > = {
     dwg: {
       label: 'DWG 格式',
       icon: <File className="w-4 h-4" />,
@@ -71,7 +74,10 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
   };
 
   // 根据选择的格式动态调整文件名
-  const getDisplayFileName = (originalFileName: string, selectedFormat: DownloadFormat): string => {
+  const getDisplayFileName = (
+    originalFileName: string,
+    selectedFormat: DownloadFormat
+  ): string => {
     // 提取文件名（去除扩展名）
     const nameWithoutExt = originalFileName.replace(/\.[^.]+$/, '');
     // 添加对应格式的扩展名
@@ -100,7 +106,9 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         <div className="bg-slate-50 p-4 rounded-lg">
           <p className="text-sm text-slate-600">
             <span className="font-medium">文件：</span>
-            <span className="ml-2 font-mono text-sm">{getDisplayFileName(fileName, format)}</span>
+            <span className="ml-2 font-mono text-sm">
+              {getDisplayFileName(fileName, format)}
+            </span>
           </p>
         </div>
 
@@ -198,10 +206,18 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
 
         {/* 格式说明 */}
         <div className="text-xs text-slate-500 space-y-1">
-          <p>• <strong>MXWEB</strong>：CloudCAD 专用格式，可直接在线编辑</p>
-          <p>• <strong>DWG</strong>：AutoCAD 原生格式，需要转换时间</p>
-          <p>• <strong>DXF</strong>：Drawing Exchange Format，需要转换时间</p>
-          <p>• <strong>PDF</strong>：便携式文档格式，需要转换时间</p>
+          <p>
+            • <strong>MXWEB</strong>：CloudCAD 专用格式，可直接在线编辑
+          </p>
+          <p>
+            • <strong>DWG</strong>：AutoCAD 原生格式，需要转换时间
+          </p>
+          <p>
+            • <strong>DXF</strong>：Drawing Exchange Format，需要转换时间
+          </p>
+          <p>
+            • <strong>PDF</strong>：便携式文档格式，需要转换时间
+          </p>
         </div>
       </div>
     </Modal>

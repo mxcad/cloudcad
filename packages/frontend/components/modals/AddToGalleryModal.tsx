@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, FileText, Box, Check, Search, Edit2, Trash2, Plus, ChevronDown } from 'lucide-react';
+import {
+  X,
+  FileText,
+  Box,
+  Check,
+  Search,
+  Edit2,
+  Trash2,
+  Plus,
+  ChevronDown,
+} from 'lucide-react';
 import { galleryApi } from '../../services/api';
 
 type GalleryType = 'drawings' | 'blocks';
@@ -68,7 +78,12 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredTypes = types.filter((t) => t.pid === parentId && (searchQuery === '' || t.name.toLowerCase().includes(searchQuery.toLowerCase())));
+  const filteredTypes = types.filter(
+    (t) =>
+      t.pid === parentId &&
+      (searchQuery === '' ||
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const selectedType = types.find((t) => t.id === value);
 
@@ -80,7 +95,10 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
         setIsCreating(false);
         setEditingType(null);
@@ -113,7 +131,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
 
     try {
       const galleryType = window.currentGalleryType as GalleryType;
-      const response = await galleryApi.createType(galleryType, newTypeName.trim(), parentId);
+      const response = await galleryApi.createType(
+        galleryType,
+        newTypeName.trim(),
+        parentId
+      );
 
       if (response.data?.code === 'success') {
         await window.fetchTypes?.();
@@ -124,8 +146,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
         alert(response.data?.message || '创建分类失败');
       }
     } catch (error) {
-      const status = (error as { response?: { status?: number } }).response?.status;
-      const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || '创建分类失败';
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || '创建分类失败';
 
       if (status === 400) alert(errorMessage);
       else if (status === 401) alert('登录已过期，请重新登录');
@@ -155,7 +180,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
 
     try {
       const galleryType = window.currentGalleryType as GalleryType;
-      const response = await galleryApi.updateType(galleryType, editingType.id, editingName.trim());
+      const response = await galleryApi.updateType(
+        galleryType,
+        editingType.id,
+        editingName.trim()
+      );
 
       if (response.data?.code === 'success') {
         await window.fetchTypes?.();
@@ -165,8 +194,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
         alert(response.data?.message || '更新分类失败');
       }
     } catch (error) {
-      const status = (error as { response?: { status?: number } }).response?.status;
-      const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || '更新分类失败';
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || '更新分类失败';
 
       if (status === 400) alert(errorMessage);
       else if (status === 401) alert('登录已过期，请重新登录');
@@ -178,7 +210,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
   };
 
   const handleDelete = async (type: GalleryTypeData) => {
-    if (!confirm(`确定要删除分类 "${type.name}" 吗？\n\n注意：只有空的分类才能删除。`)) {
+    if (
+      !confirm(
+        `确定要删除分类 "${type.name}" 吗？\n\n注意：只有空的分类才能删除。`
+      )
+    ) {
       return;
     }
 
@@ -195,8 +231,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
         alert(response.data?.message || '删除分类失败');
       }
     } catch (error) {
-      const status = (error as { response?: { status?: number } }).response?.status;
-      const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || '删除分类失败';
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || '删除分类失败';
 
       if (status === 400) alert(errorMessage);
       else if (status === 401) alert('登录已过期，请重新登录');
@@ -222,7 +261,10 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
         <span className={selectedType ? 'text-gray-900' : 'text-gray-400'}>
           {selectedType ? selectedType.name : placeholder}
         </span>
-        <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {/* 下拉面板 */}
@@ -231,7 +273,10 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
           {/* 搜索栏 */}
           <div className="p-3 border-b border-gray-100">
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -257,7 +302,9 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                   type="text"
                   value={newTypeName}
                   onChange={(e) => setNewTypeName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !isSubmitting && handleSaveCreate()}
+                  onKeyPress={(e) =>
+                    e.key === 'Enter' && !isSubmitting && handleSaveCreate()
+                  }
                   placeholder="输入分类名称"
                   className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   disabled={isSubmitting}
@@ -280,93 +327,100 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                 </div>
               </div>
             ) : (
-                              <>
-                                {filteredTypes.length === 0 ? (
-                                  <div className="p-4 text-center text-gray-400 text-sm">
-                                    {searchQuery ? '未找到匹配的分类' : '暂无分类'}
-                                  </div>
-                                ) : (
-                                  filteredTypes.map((type) => (
-                                    <div
-                                      key={type.id}
-                                      className={`group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors ${
-                                        value === type.id ? 'bg-blue-50' : ''
-                                      }`}
-                                    >
-                                      {editingType?.id === type.id ? (
-                                        <input
-                                          type="text"
-                                          value={editingName}
-                                          onChange={(e) => setEditingName(e.target.value)}
-                                          onKeyPress={(e) => e.key === 'Enter' && !isSubmitting && handleSaveEdit()}
-                                          className="flex-1 px-2 py-1 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                          autoFocus
-                                          disabled={isSubmitting}
-                                        />
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            onChange(type.id);
-                                            setIsOpen(false);
-                                          }}
-                                          className={`flex-1 text-left text-sm ${value === type.id ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
-                                        >
-                                          {type.name}
-                                        </button>
-                                      )}
-            
-                                      <div className="flex items-center gap-1 ml-2">
-                                        {editingType?.id === type.id ? (
-                                          <>
-                                            <button
-                                              onClick={handleSaveEdit}
-                                              disabled={isSubmitting}
-                                              className="p-1 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
-                                            >
-                                              <Check size={14} />
-                                            </button>
-                                            <button
-                                              onClick={() => {
-                                                setEditingType(null);
-                                                setEditingName('');
-                                              }}
-                                              disabled={isSubmitting}
-                                              className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                                            >
-                                              <X size={14} />
-                                            </button>
-                                          </>
-                                        ) : (
-                                          <>
-                                            {value === type.id && (
-                                              <Check size={14} className="text-green-600 mr-1" />
-                                            )}
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleEdit(type);
-                                              }}
-                                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors group-hover:opacity-100 opacity-0"
-                                            >
-                                              <Edit2 size={14} />
-                                            </button>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(type);
-                                              }}
-                                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors group-hover:opacity-100 opacity-0"
-                                            >
-                                              <Trash2 size={14} />
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))
-                                )}
-                              </>
+              <>
+                {filteredTypes.length === 0 ? (
+                  <div className="p-4 text-center text-gray-400 text-sm">
+                    {searchQuery ? '未找到匹配的分类' : '暂无分类'}
+                  </div>
+                ) : (
+                  filteredTypes.map((type) => (
+                    <div
+                      key={type.id}
+                      className={`group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors ${
+                        value === type.id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      {editingType?.id === type.id ? (
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyPress={(e) =>
+                            e.key === 'Enter' &&
+                            !isSubmitting &&
+                            handleSaveEdit()
+                          }
+                          className="flex-1 px-2 py-1 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          autoFocus
+                          disabled={isSubmitting}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => {
+                            onChange(type.id);
+                            setIsOpen(false);
+                          }}
+                          className={`flex-1 text-left text-sm ${value === type.id ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
+                        >
+                          {type.name}
+                        </button>
+                      )}
+
+                      <div className="flex items-center gap-1 ml-2">
+                        {editingType?.id === type.id ? (
+                          <>
+                            <button
+                              onClick={handleSaveEdit}
+                              disabled={isSubmitting}
+                              className="p-1 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingType(null);
+                                setEditingName('');
+                              }}
+                              disabled={isSubmitting}
+                              className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {value === type.id && (
+                              <Check
+                                size={14}
+                                className="text-green-600 mr-1"
+                              />
                             )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(type);
+                              }}
+                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors group-hover:opacity-100 opacity-0"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(type);
+                              }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors group-hover:opacity-100 opacity-0"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </>
+            )}
           </div>
 
           {/* 创建新分类按钮 */}
@@ -439,11 +493,15 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
   // 获取一级分类列表
   const firstLevelTypes = types.filter((t) => t.pid === 0);
-  const selectedFirstTypeData = firstLevelTypes.find((t) => t.id === selectedFirstType);
+  const selectedFirstTypeData = firstLevelTypes.find(
+    (t) => t.id === selectedFirstType
+  );
 
   // 获取二级分类列表
   const secondLevelTypes = types.filter((t) => t.pid === selectedFirstType);
-  const selectedSecondTypeData = secondLevelTypes.find((t) => t.id === selectedSecondType);
+  const selectedSecondTypeData = secondLevelTypes.find(
+    (t) => t.id === selectedSecondType
+  );
 
   // 获取三级分类列表
   const thirdLevelTypes = types.filter((t) => t.pid === selectedSecondType);
@@ -470,10 +528,14 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
       const response = await galleryApi.addToGallery(galleryType, {
         nodeId,
         firstType: selectedFirstType,
-        secondType: selectedSecondType !== -1 ? selectedSecondType : selectedFirstType,
+        secondType:
+          selectedSecondType !== -1 ? selectedSecondType : selectedFirstType,
       });
 
-      if ((response.status === 200 || response.status === 201) && response.data?.code === 'success') {
+      if (
+        (response.status === 200 || response.status === 201) &&
+        response.data?.code === 'success'
+      ) {
         alert('添加成功！');
         onSuccess();
         onClose();
@@ -485,9 +547,21 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         alert(errorMessage);
       }
     } catch (error) {
-      if ((error as Error & { response?: { status?: number; data?: { message?: string } } }).response) {
-        const status = (error as Error & { response?: { status?: number; data?: { message?: string } } }).response.status;
-        const errorMessage = (error as Error & { response?: { data?: { message?: string } } }).response.data?.message || '添加失败';
+      if (
+        (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response
+      ) {
+        const status = (
+          error as Error & {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response.status;
+        const errorMessage =
+          (error as Error & { response?: { data?: { message?: string } } })
+            .response.data?.message || '添加失败';
 
         if (status === 400) alert(errorMessage);
         else if (status === 401) alert('登录已过期，请重新登录');
@@ -521,7 +595,10 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
             <h2 className="text-xl font-bold text-gray-900">添加到图库</h2>
             <p className="text-sm text-gray-500 mt-1">{fileName}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -530,7 +607,9 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         <div className="p-6 space-y-6">
           {/* 图库类型选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">选择图库类型</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              选择图库类型
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -565,7 +644,9 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
           {/* 分类选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">选择分类</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              选择分类
+            </label>
             <div className="space-y-3">
               {/* 一级分类 */}
               <CategorySelect
@@ -621,7 +702,8 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
           {/* 提示信息 */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-700">
-              💡 提示：点击分类名称选择，点击铅笔图标编辑，点击垃圾桶图标删除，点击「创建新分类」添加新分类。
+              💡
+              提示：点击分类名称选择，点击铅笔图标编辑，点击垃圾桶图标删除，点击「创建新分类」添加新分类。
             </p>
           </div>
         </div>

@@ -9,9 +9,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleDto } from './dto/role.dto';
 import { RoleCategory } from '../common/enums/permissions.enum';
-import {
-  isValidPermission,
-} from '../common/utils/permission.util';
+import { isValidPermission } from '../common/utils/permission.util';
 import { Permission as PrismaPermission } from '@prisma/client';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 
@@ -146,10 +144,14 @@ export class RolesService {
     // 系统角色不允许修改名称、描述、类别和级别（仅当值真正改变时才阻止）
     if (role.isSystem) {
       if (
-        (updateRoleDto.name !== undefined && updateRoleDto.name !== role.name) ||
-        (updateRoleDto.description !== undefined && updateRoleDto.description !== role.description) ||
-        (updateRoleDto.category !== undefined && updateRoleDto.category !== role.category) ||
-        (updateRoleDto.level !== undefined && updateRoleDto.level !== role.level)
+        (updateRoleDto.name !== undefined &&
+          updateRoleDto.name !== role.name) ||
+        (updateRoleDto.description !== undefined &&
+          updateRoleDto.description !== role.description) ||
+        (updateRoleDto.category !== undefined &&
+          updateRoleDto.category !== role.category) ||
+        (updateRoleDto.level !== undefined &&
+          updateRoleDto.level !== role.level)
       ) {
         throw new BadRequestException(
           '系统角色不允许修改名称、描述、类别和级别'

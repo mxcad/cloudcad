@@ -53,13 +53,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       // 调试日志
-      this.logger.debug(`HttpException response: ${JSON.stringify(exceptionResponse)}, type: ${typeof exceptionResponse}`);
+      this.logger.debug(
+        `HttpException response: ${JSON.stringify(exceptionResponse)}, type: ${typeof exceptionResponse}`
+      );
 
       if (typeof exceptionResponse === 'string') {
         // NestJS 传入字符串时，getResponse() 返回该字符串
         message = exceptionResponse;
         code = this.getErrorCode(status);
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         // NestJS 标准错误对象格式: { statusCode, message, error }
         const responseObj = exceptionResponse as Record<string, unknown>;
         // message 可能是字符串或字符串数组
@@ -71,7 +76,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else {
           message = exception.message;
         }
-        code = (typeof responseObj.code === 'string' ? responseObj.code : null) || this.getErrorCode(status);
+        code =
+          (typeof responseObj.code === 'string' ? responseObj.code : null) ||
+          this.getErrorCode(status);
       }
     } else if (exception instanceof Error) {
       message = exception.message;

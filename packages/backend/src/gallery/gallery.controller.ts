@@ -22,7 +22,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { NodePermissionGuard } from '../common/guards/project-permission.guard';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -43,7 +43,7 @@ import * as fs from 'fs';
 @ApiTags('图库管理')
 @ApiBearerAuth()
 @Controller('gallery')
-@UseGuards(JwtAuthGuard, NodePermissionGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 export class GalleryController {
   private readonly logger = new Logger(GalleryController.name);
 
@@ -53,7 +53,7 @@ export class GalleryController {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly storageManager: StorageManager,
-    private readonly permissionService: FileSystemPermissionService,
+    private readonly permissionService: FileSystemPermissionService
   ) {}
 
   /**
@@ -918,7 +918,7 @@ export class GalleryController {
       }
 
       // URL 解码（处理中文文件名等特殊字符）
-      pathParts = pathParts.map(part => decodeURIComponent(part));
+      pathParts = pathParts.map((part) => decodeURIComponent(part));
 
       // 第三位（索引2）是 nodeId（需要去除扩展名）
       const nodeId = path.basename(pathParts[2], path.extname(pathParts[2]));
@@ -929,7 +929,10 @@ export class GalleryController {
 
       // 判断是否是主文件（文件名是 nodeId.xxx）
       const lastFileName = path.basename(nodeIdPart);
-      const nodeIdFromFile = path.basename(nodeIdPart, path.extname(nodeIdPart));
+      const nodeIdFromFile = path.basename(
+        nodeIdPart,
+        path.extname(nodeIdPart)
+      );
       const isMainFile = nodeIdFromFile === nodeId;
 
       this.logger.log(
@@ -937,7 +940,11 @@ export class GalleryController {
       );
 
       // 如果是缩略图请求（主文件且文件名为 nodeId.jpg），使用缩略图处理逻辑
-      if (isMainFile && fileExtension === '.jpg' && lastFileName === `${nodeId}.jpg`) {
+      if (
+        isMainFile &&
+        fileExtension === '.jpg' &&
+        lastFileName === `${nodeId}.jpg`
+      ) {
         this.logger.log(
           `[handleGalleryFileRequest] 检测到缩略图请求，调用 handleThumbnailRequest`
         );
@@ -979,7 +986,10 @@ export class GalleryController {
       }
 
       // 检查用户是否有权限
-      const role = await this.permissionService.getNodeAccessRole(userId, node.id);
+      const role = await this.permissionService.getNodeAccessRole(
+        userId,
+        node.id
+      );
       const hasPermission = role !== null;
 
       this.logger.log(
@@ -1046,14 +1056,16 @@ export class GalleryController {
 
           // 检查路径是否是目录
           if (stats.isDirectory()) {
-            this.logger.warn(`[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`);
+            this.logger.warn(
+              `[handleGalleryFileRequest] 路径是目录而非文件: ${foundFilePath}`
+            );
             return res.status(404).json({ code: -1, message: '文件不存在' });
           }
 
           // 根据 Content-Disposition 中使用的文件名（使用原始文件名或节点 ID）
           const downloadFilename = isMainFile
-            ? pathParts[pathParts.length - 1]  // 主文件使用路径中的文件名
-            : pathParts[pathParts.length - 1];  // 外部参照使用路径中的文件名
+            ? pathParts[pathParts.length - 1] // 主文件使用路径中的文件名
+            : pathParts[pathParts.length - 1]; // 外部参照使用路径中的文件名
 
           // 对文件名进行 URL 编码（处理中文文件名）
           const encodedFilename = encodeURIComponent(downloadFilename);
@@ -1061,7 +1073,10 @@ export class GalleryController {
           // 对于 HEAD 请求，只返回文件头信息
           if (isHeadRequest) {
             // 设置响应头（与 MxCAD 保持一致）
-            res.setHeader('Content-Type', isMainFile ? 'application/octet-stream' : 'image/jpeg');
+            res.setHeader(
+              'Content-Type',
+              isMainFile ? 'application/octet-stream' : 'image/jpeg'
+            );
             res.setHeader('Content-Length', stats.size);
             res.setHeader('Cache-Control', 'public, max-age=3600');
             res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1079,7 +1094,10 @@ export class GalleryController {
             }
 
             // 设置响应头
-            res.setHeader('Content-Type', isMainFile ? 'application/octet-stream' : 'image/jpeg');
+            res.setHeader(
+              'Content-Type',
+              isMainFile ? 'application/octet-stream' : 'image/jpeg'
+            );
             res.setHeader(
               'Content-Disposition',
               `inline; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
@@ -1159,14 +1177,17 @@ export class GalleryController {
         // 提取倒数第二个元素作为 nodeId
         const extractedNodeId = pathParts[pathParts.length - 2];
         const nodeIdPart = pathParts[pathParts.length - 1];
-        const nodeIdFromFile = path.basename(nodeIdPart, path.extname(nodeIdPart));
-        
+        const nodeIdFromFile = path.basename(
+          nodeIdPart,
+          path.extname(nodeIdPart)
+        );
+
         if (extractedNodeId !== nodeIdFromFile) {
           this.logger.warn(
             `[handleThumbnailRequest] 路径中的 nodeId 不一致: ${extractedNodeId} vs ${nodeIdFromFile}`
           );
         }
-        
+
         // 使用提取的 nodeId
         if (nodeId !== extractedNodeId) {
           this.logger.warn(
@@ -1204,14 +1225,15 @@ export class GalleryController {
       );
 
       if (!node) {
-        this.logger.warn(
-          `[handleThumbnailRequest] 文件节点不存在: ${nodeId}`
-        );
+        this.logger.warn(`[handleThumbnailRequest] 文件节点不存在: ${nodeId}`);
         return res.status(404).json({ code: -1, message: '文件不存在' });
       }
 
       // 检查用户是否有权限
-      const role = await this.permissionService.getNodeAccessRole(userId, node.id);
+      const role = await this.permissionService.getNodeAccessRole(
+        userId,
+        node.id
+      );
       const hasPermission = role !== null;
 
       this.logger.log(
@@ -1251,7 +1273,9 @@ export class GalleryController {
 
           // 检查路径是否是目录
           if (stats.isDirectory()) {
-            this.logger.warn(`[handleThumbnailRequest] 路径是目录而非文件: ${localThumbnailPath}`);
+            this.logger.warn(
+              `[handleThumbnailRequest] 路径是目录而非文件: ${localThumbnailPath}`
+            );
             return res.status(404).json({ code: -1, message: '缩略图不存在' });
           }
 
@@ -1265,7 +1289,9 @@ export class GalleryController {
           // 检查路径是否是目录
           const stats = fs.statSync(localThumbnailPath);
           if (stats.isDirectory()) {
-            this.logger.warn(`[handleThumbnailRequest] 路径是目录而非文件: ${localThumbnailPath}`);
+            this.logger.warn(
+              `[handleThumbnailRequest] 路径是目录而非文件: ${localThumbnailPath}`
+            );
             return res.status(404).json({ code: -1, message: '缩略图不存在' });
           }
 

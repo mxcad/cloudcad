@@ -97,9 +97,13 @@ export const useFileSystemData = ({
               );
               traversalNode = parentResponse.data;
             } catch (err) {
-              logger.warn('获取父节点失败，停止构建面包屑', 'useFileSystemData', {
-                parentId: traversalNode.parentId,
-              });
+              logger.warn(
+                '获取父节点失败，停止构建面包屑',
+                'useFileSystemData',
+                {
+                  parentId: traversalNode.parentId,
+                }
+              );
               break;
             }
           } else {
@@ -238,7 +242,10 @@ export const useFileSystemData = ({
               },
             ]);
           } catch (err) {
-            logger.warn('获取项目信息失败，使用默认面包屑', 'useFileSystemData');
+            logger.warn(
+              '获取项目信息失败，使用默认面包屑',
+              'useFileSystemData'
+            );
             setBreadcrumbs([
               {
                 id: urlProjectId,
@@ -294,8 +301,7 @@ export const useFileSystemData = ({
         return;
       }
 
-      const errorMessage =
-        err instanceof Error ? err.message : '加载数据失败';
+      const errorMessage = err instanceof Error ? err.message : '加载数据失败';
       setError(errorMessage);
       handleError(err, '加载数据失败');
       showToast(errorMessage, 'error');

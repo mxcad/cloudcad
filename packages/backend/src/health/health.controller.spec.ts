@@ -17,11 +17,15 @@ describe('HealthController', () => {
   };
 
   const mockDatabaseService = {
-    healthCheck: jest.fn().mockResolvedValue({ status: 'healthy', message: 'OK' }),
+    healthCheck: jest
+      .fn()
+      .mockResolvedValue({ status: 'healthy', message: 'OK' }),
   };
 
   const mockStorageService = {
-    healthCheck: jest.fn().mockResolvedValue({ status: 'healthy', message: 'OK' }),
+    healthCheck: jest
+      .fn()
+      .mockResolvedValue({ status: 'healthy', message: 'OK' }),
   };
 
   const mockPermissionService = {

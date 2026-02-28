@@ -25,7 +25,10 @@ import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 import { AuditLogModule } from './audit/audit-log.module';
 import { VersionControlModule } from './version-control/version-control.module';
-import { SystemPermission, ProjectPermission } from './common/dto/permission.dto';
+import {
+  SystemPermission,
+  ProjectPermission,
+} from './common/dto/permission.dto';
 import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 
@@ -112,7 +115,10 @@ export class AppModule {
     // 添加统一权限枚举
     document.components.schemas.Permission = {
       type: 'string',
-      enum: [...Object.values(SystemPermission), ...Object.values(ProjectPermission)],
+      enum: [
+        ...Object.values(SystemPermission),
+        ...Object.values(ProjectPermission),
+      ],
       description: '统一权限枚举',
     };
 

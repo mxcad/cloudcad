@@ -13,7 +13,10 @@ import { TruncateText } from '../ui/TruncateText';
 import { projectsApi, usersApi } from '../../services/apiService';
 import { projectRolesApi } from '../../services/rolesApi';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
-import { ProjectPermission, getRoleDisplayName } from '../../constants/permissions';
+import {
+  ProjectPermission,
+  getRoleDisplayName,
+} from '../../constants/permissions';
 
 interface Member {
   id: string;
@@ -68,7 +71,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   onClose,
 }) => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [projectRoles, setProjectRoles] = useState<{ id: string; name: string }[]>([]);
+  const [projectRoles, setProjectRoles] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -109,7 +114,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const allRoles = (response.data as { id: string; name: string }[]) || [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
-      const addMemberRoles = allRoles.filter((role) => role.name !== 'PROJECT_OWNER');
+      const addMemberRoles = allRoles.filter(
+        (role) => role.name !== 'PROJECT_OWNER'
+      );
 
       setProjectRoles(allRoles);
 
@@ -269,7 +276,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const handleUpdateRole = async (userId: string, projectRoleId: string) => {
     setErrorMessage('');
     try {
-      await projectsApi.updateMember(projectId, userId, { roleId: projectRoleId });
+      await projectsApi.updateMember(projectId, userId, {
+        projectRoleId,
+      });
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );

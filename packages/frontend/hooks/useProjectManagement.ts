@@ -5,7 +5,10 @@ interface UseProjectManagementOptions {
   onProjectCreated?: () => void;
   onProjectUpdated?: () => void;
   onProjectDeleted?: () => void;
-  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  showToast?: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
 }
 
 interface ProjectFormData {

@@ -63,7 +63,9 @@ async function migrateRoles() {
 
     // 3. 迁移 ProjectRole 表数据
     console.log('步骤 3: 迁移 ProjectRole 表数据...');
-    const projectRoles = await db.$queryRaw<Array<{ id: string; name: string }>>`
+    const projectRoles = await db.$queryRaw<
+      Array<{ id: string; name: string }>
+    >`
       SELECT id, name FROM "project_roles"
     `;
 
@@ -75,7 +77,9 @@ async function migrateRoles() {
             "displayName_temp" = ${displayName}
         WHERE id = ${role.id}
       `;
-      console.log(`  - 迁移项目角色: ${role.name} -> displayName: ${displayName}`);
+      console.log(
+        `  - 迁移项目角色: ${role.name} -> displayName: ${displayName}`
+      );
     }
 
     // 4. 删除旧的 name 字段

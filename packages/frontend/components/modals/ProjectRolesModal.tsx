@@ -166,7 +166,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     } catch (error) {
       console.error('保存角色失败:', error);
       alert(
-        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ||
           (error as Error).message ||
           '保存失败'
       );
@@ -196,7 +197,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     } catch (error) {
       console.error('删除角色失败:', error);
       alert(
-        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ||
           (error as Error).message ||
           '删除失败'
       );
@@ -234,7 +236,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
               <div className="flex items-center gap-2">
                 <Settings size={16} />
                 自定义角色
-                <span className="text-xs text-slate-400">({customRoles.length})</span>
+                <span className="text-xs text-slate-400">
+                  ({customRoles.length})
+                </span>
               </div>
             </button>
             <button
@@ -248,7 +252,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
               <div className="flex items-center gap-2">
                 <Shield size={16} />
                 系统角色
-                <span className="text-xs text-slate-400">({systemRoles.length})</span>
+                <span className="text-xs text-slate-400">
+                  ({systemRoles.length})
+                </span>
               </div>
             </button>
           </div>
@@ -287,7 +293,10 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                   </div>
                   {customRoles.length === 0 ? (
                     <div className="text-center py-8 text-slate-500">
-                      <Users size={32} className="mx-auto mb-2 text-slate-300" />
+                      <Users
+                        size={32}
+                        className="mx-auto mb-2 text-slate-300"
+                      />
                       <p className="text-sm">暂无自定义角色</p>
                       {canManageRoles && (
                         <p className="text-xs text-slate-400 mt-1">
@@ -309,7 +318,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                               </h4>
                               {role.description && (
                                 <p className="text-xs text-slate-500 mt-1">
-                                  <DescriptionText>{role.description}</DescriptionText>
+                                  <DescriptionText>
+                                    {role.description}
+                                  </DescriptionText>
                                 </p>
                               )}
                             </div>
@@ -349,7 +360,10 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                   </div>
                   {systemRoles.length === 0 ? (
                     <div className="text-center py-8 text-slate-500">
-                      <Shield size={32} className="mx-auto mb-2 text-slate-300" />
+                      <Shield
+                        size={32}
+                        className="mx-auto mb-2 text-slate-300"
+                      />
                       <p className="text-sm">暂无系统角色</p>
                     </div>
                   ) : (
@@ -371,7 +385,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                               </div>
                               {role.description && (
                                 <p className="text-xs text-slate-500 mt-1">
-                                  <DescriptionText>{role.description}</DescriptionText>
+                                  <DescriptionText>
+                                    {role.description}
+                                  </DescriptionText>
                                 </p>
                               )}
                             </div>
@@ -446,7 +462,10 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
         >
           <div className="space-y-4">
             <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle
+                size={20}
+                className="text-amber-600 flex-shrink-0 mt-0.5"
+              />
               <div className="text-sm text-amber-900">
                 <p className="font-semibold mb-1">重要提示</p>
                 <p className="text-amber-800">
@@ -462,7 +481,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                   {getRoleDisplayName(roleToDelete.name)}
                 </p>
                 {roleToDelete.description && (
-                  <p className="text-xs text-slate-500 mt-1">{roleToDelete.description}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {roleToDelete.description}
+                  </p>
                 )}
               </div>
             </div>

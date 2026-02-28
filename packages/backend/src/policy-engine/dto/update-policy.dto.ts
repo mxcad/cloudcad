@@ -1,5 +1,13 @@
 import { PartialType, OmitType, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsBoolean, IsNumber, IsObject, IsEnum, IsArray } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsNumber,
+  IsObject,
+  IsEnum,
+  IsArray,
+} from 'class-validator';
 import { PolicyType } from '../enums/policy-type.enum';
 import { Permission as PrismaPermission } from '@prisma/client';
 import { CreatePolicyDto } from './create-policy.dto';

@@ -231,7 +231,11 @@ export class RolesController {
     status: HttpStatus.OK,
     description: '成功更新项目角色',
   })
-  async updateProjectRole(@Param('id') id: string, @Body() dto: any, @Request() req) {
+  async updateProjectRole(
+    @Param('id') id: string,
+    @Body() dto: any,
+    @Request() req
+  ) {
     return await this.projectRolesService.update(id, dto, req.user?.id);
   }
 
@@ -260,7 +264,11 @@ export class RolesController {
     @Body() body: { permissions: string[] },
     @Request() req
   ) {
-    await this.projectRolesService.assignPermissions(id, body.permissions as any, req.user?.id);
+    await this.projectRolesService.assignPermissions(
+      id,
+      body.permissions as any,
+      req.user?.id
+    );
     return await this.projectRolesService.findOne(id);
   }
 
@@ -276,7 +284,11 @@ export class RolesController {
     @Body() body: { permissions: string[] },
     @Request() req
   ) {
-    await this.projectRolesService.removePermissions(id, body.permissions as any, req.user?.id);
+    await this.projectRolesService.removePermissions(
+      id,
+      body.permissions as any,
+      req.user?.id
+    );
     return await this.projectRolesService.findOne(id);
   }
 }

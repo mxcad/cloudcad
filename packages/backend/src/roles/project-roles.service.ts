@@ -74,7 +74,7 @@ export class ProjectRolesService {
     }
   }
 
-/**
+  /**
    * 创建项目角色
    */
   async create(dto: CreateProjectRoleDto, userId?: string): Promise<any> {
@@ -93,7 +93,7 @@ export class ProjectRolesService {
         throw new ConflictException(
           dto.projectId
             ? `项目内角色名称 "${dto.name}" 已存在`
-            : `全局角色名称 "${dto.name}" 已存在`,
+            : `全局角色名称 "${dto.name}" 已存在`
         );
       }
 
@@ -113,7 +113,10 @@ export class ProjectRolesService {
 
       return role;
     } catch (error) {
-      if (error instanceof ConflictException || error instanceof ForbiddenException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(`创建项目角色失败: ${error.message}`, error.stack);
@@ -124,7 +127,11 @@ export class ProjectRolesService {
   /**
    * 更新项目角色
    */
-  async update(roleId: string, dto: UpdateProjectRoleDto, userId?: string): Promise<any> {
+  async update(
+    roleId: string,
+    dto: UpdateProjectRoleDto,
+    userId?: string
+  ): Promise<any> {
     try {
       const role = await this.prisma.projectRole.findUnique({
         where: { id: roleId },
@@ -335,7 +342,9 @@ export class ProjectRolesService {
 
       // 将 Prisma ProjectPermission 转换为 TypeScript ProjectPermission
       // 两者使用相同的字符串值，所以可以直接使用 as 进行类型断言
-      return rolePermissions.map((rp) => rp.permission as unknown as ProjectPermission);
+      return rolePermissions.map(
+        (rp) => rp.permission as unknown as ProjectPermission
+      );
     } catch (error) {
       this.logger.error(`获取角色权限失败: ${error.message}`, error.stack);
       throw new BadRequestException('获取角色权限失败');
@@ -375,7 +384,10 @@ export class ProjectRolesService {
 
       this.logger.log(`角色 ${roleId} 的权限分配成功`);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(`分配角色权限失败: ${error.message}`, error.stack);
@@ -414,7 +426,10 @@ export class ProjectRolesService {
 
       this.logger.log(`角色 ${roleId} 的权限移除成功`);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       this.logger.error(`移除角色权限失败: ${error.message}`, error.stack);

@@ -558,7 +558,9 @@ describe.skip('UsersService', () => {
     });
 
     it('should handle bcrypt errors', async () => {
-      (bcrypt.compare as jest.Mock).mockRejectedValue(new Error('Bcrypt error'));
+      (bcrypt.compare as jest.Mock).mockRejectedValue(
+        new Error('Bcrypt error')
+      );
 
       await expect(
         service.validatePassword('password', 'hashedPassword')

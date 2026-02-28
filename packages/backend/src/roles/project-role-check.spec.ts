@@ -105,35 +105,47 @@ describe('ProjectPermissionService', () => {
 
   describe('DEFAULT_PROJECT_ROLE_PERMISSIONS 权限映射', () => {
     it('OWNER 应该拥有所有项目权限', () => {
-      const ownerPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.OWNER];
+      const ownerPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.OWNER];
       const allPermissions = Object.values(ProjectPermission);
       expect(ownerPermissions.length).toBe(allPermissions.length);
     });
 
     it('ADMIN 应该拥有成员管理权限', () => {
-      const adminPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN];
-      expect(adminPermissions).toContain(ProjectPermission.PROJECT_MEMBER_MANAGE);
-      expect(adminPermissions).toContain(ProjectPermission.PROJECT_MEMBER_ASSIGN);
+      const adminPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN];
+      expect(adminPermissions).toContain(
+        ProjectPermission.PROJECT_MEMBER_MANAGE
+      );
+      expect(adminPermissions).toContain(
+        ProjectPermission.PROJECT_MEMBER_ASSIGN
+      );
     });
 
     it('ADMIN 不应该拥有删除项目权限', () => {
-      const adminPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN];
+      const adminPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN];
       expect(adminPermissions).not.toContain(ProjectPermission.PROJECT_DELETE);
     });
 
     it('MEMBER 应该拥有文件创建权限', () => {
-      const memberPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+      const memberPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
       expect(memberPermissions).toContain(ProjectPermission.FILE_CREATE);
       expect(memberPermissions).toContain(ProjectPermission.FILE_UPLOAD);
     });
 
     it('MEMBER 不应该拥有成员管理权限', () => {
-      const memberPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
-      expect(memberPermissions).not.toContain(ProjectPermission.PROJECT_MEMBER_MANAGE);
+      const memberPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+      expect(memberPermissions).not.toContain(
+        ProjectPermission.PROJECT_MEMBER_MANAGE
+      );
     });
 
     it('VIEWER 只应该拥有只读权限', () => {
-      const viewerPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+      const viewerPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
       expect(viewerPermissions).toContain(ProjectPermission.FILE_OPEN);
       expect(viewerPermissions).toContain(ProjectPermission.FILE_DOWNLOAD);
       expect(viewerPermissions).not.toContain(ProjectPermission.FILE_CREATE);
@@ -374,24 +386,33 @@ describe('ProjectPermissionService', () => {
       });
 
       it('MEMBER 不应该拥有 PROJECT_UPDATE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
         expect(permissions).not.toContain(ProjectPermission.PROJECT_UPDATE);
       });
 
       it('EDITOR 不应该拥有 PROJECT_UPDATE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).not.toContain(ProjectPermission.PROJECT_UPDATE);
       });
 
       it('VIEWER 不应该拥有 PROJECT_UPDATE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.PROJECT_UPDATE);
       });
     });
 
     describe('PROJECT_DELETE - 删除项目', () => {
       it('只有 OWNER 应该拥有 PROJECT_DELETE 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           if (role === ProjectRole.OWNER) {
@@ -405,13 +426,21 @@ describe('ProjectPermissionService', () => {
 
     describe('PROJECT_TRANSFER - 转让项目', () => {
       it('只有 OWNER 应该拥有 PROJECT_TRANSFER 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           if (role === ProjectRole.OWNER) {
             expect(permissions).toContain(ProjectPermission.PROJECT_TRANSFER);
           } else {
-            expect(permissions).not.toContain(ProjectPermission.PROJECT_TRANSFER);
+            expect(permissions).not.toContain(
+              ProjectPermission.PROJECT_TRANSFER
+            );
           }
         });
       });
@@ -429,20 +458,33 @@ describe('ProjectPermissionService', () => {
       });
 
       it('MEMBER 不应该拥有 PROJECT_MEMBER_MANAGE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
-        expect(permissions).not.toContain(ProjectPermission.PROJECT_MEMBER_MANAGE);
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        expect(permissions).not.toContain(
+          ProjectPermission.PROJECT_MEMBER_MANAGE
+        );
       });
     });
 
     describe('PROJECT_ROLE_MANAGE - 角色管理', () => {
       it('只有 OWNER 应该拥有 PROJECT_ROLE_MANAGE 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           if (role === ProjectRole.OWNER) {
-            expect(permissions).toContain(ProjectPermission.PROJECT_ROLE_MANAGE);
+            expect(permissions).toContain(
+              ProjectPermission.PROJECT_ROLE_MANAGE
+            );
           } else {
-            expect(permissions).not.toContain(ProjectPermission.PROJECT_ROLE_MANAGE);
+            expect(permissions).not.toContain(
+              ProjectPermission.PROJECT_ROLE_MANAGE
+            );
           }
         });
       });
@@ -462,41 +504,53 @@ describe('ProjectPermissionService', () => {
       });
 
       it('MEMBER 应该拥有 FILE_CREATE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
         expect(permissions).toContain(ProjectPermission.FILE_CREATE);
       });
 
       it('EDITOR 不应该拥有 FILE_CREATE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).not.toContain(ProjectPermission.FILE_CREATE);
       });
 
       it('VIEWER 不应该拥有 FILE_CREATE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.FILE_CREATE);
       });
     });
 
     describe('FILE_UPLOAD - 上传文件', () => {
       it('MEMBER 应该拥有 FILE_UPLOAD 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
         expect(permissions).toContain(ProjectPermission.FILE_UPLOAD);
       });
 
       it('EDITOR 应该拥有 FILE_UPLOAD 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).toContain(ProjectPermission.FILE_UPLOAD);
       });
 
       it('VIEWER 不应该拥有 FILE_UPLOAD 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.FILE_UPLOAD);
       });
     });
 
     describe('FILE_OPEN - 打开文件', () => {
       it('所有角色都应该拥有 FILE_OPEN 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           expect(permissions).toContain(ProjectPermission.FILE_OPEN);
@@ -506,42 +560,55 @@ describe('ProjectPermissionService', () => {
 
     describe('FILE_EDIT - 编辑文件', () => {
       it('VIEWER 不应该拥有 FILE_EDIT 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.FILE_EDIT);
       });
 
       it('EDITOR 应该拥有 FILE_EDIT 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).toContain(ProjectPermission.FILE_EDIT);
       });
     });
 
     describe('FILE_DELETE - 删除文件', () => {
       it('VIEWER 不应该拥有 FILE_DELETE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.FILE_DELETE);
       });
 
       it('MEMBER 应该拥有 FILE_DELETE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
         expect(permissions).toContain(ProjectPermission.FILE_DELETE);
       });
 
       it('EDITOR 应该拥有 FILE_DELETE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).toContain(ProjectPermission.FILE_DELETE);
       });
     });
 
     describe('FILE_TRASH_MANAGE - 回收站管理', () => {
       it('只有 OWNER 和 ADMIN 应该拥有 FILE_TRASH_MANAGE 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           if (role === ProjectRole.OWNER || role === ProjectRole.ADMIN) {
             expect(permissions).toContain(ProjectPermission.FILE_TRASH_MANAGE);
           } else {
-            expect(permissions).not.toContain(ProjectPermission.FILE_TRASH_MANAGE);
+            expect(permissions).not.toContain(
+              ProjectPermission.FILE_TRASH_MANAGE
+            );
           }
         });
       });
@@ -549,7 +616,13 @@ describe('ProjectPermissionService', () => {
 
     describe('FILE_DOWNLOAD - 下载文件', () => {
       it('所有角色都应该拥有 FILE_DOWNLOAD 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           expect(permissions).toContain(ProjectPermission.FILE_DOWNLOAD);
@@ -561,24 +634,33 @@ describe('ProjectPermissionService', () => {
   describe('CAD 图纸权限详细测试', () => {
     describe('CAD_SAVE - 保存图纸', () => {
       it('VIEWER 不应该拥有 CAD_SAVE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.CAD_SAVE);
       });
 
       it('MEMBER 应该拥有 CAD_SAVE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
         expect(permissions).toContain(ProjectPermission.CAD_SAVE);
       });
 
       it('EDITOR 应该拥有 CAD_SAVE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).toContain(ProjectPermission.CAD_SAVE);
       });
     });
 
     describe('CAD_EXPORT - 导出图纸', () => {
       it('所有角色都应该拥有 CAD_EXPORT 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           expect(permissions).toContain(ProjectPermission.CAD_EXPORT);
@@ -588,18 +670,27 @@ describe('ProjectPermissionService', () => {
 
     describe('CAD_EXTERNAL_REFERENCE - 外部参照管理', () => {
       it('VIEWER 不应该拥有 CAD_EXTERNAL_REFERENCE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
-        expect(permissions).not.toContain(ProjectPermission.CAD_EXTERNAL_REFERENCE);
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        expect(permissions).not.toContain(
+          ProjectPermission.CAD_EXTERNAL_REFERENCE
+        );
       });
 
       it('MEMBER 不应该拥有 CAD_EXTERNAL_REFERENCE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
-        expect(permissions).not.toContain(ProjectPermission.CAD_EXTERNAL_REFERENCE);
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        expect(permissions).not.toContain(
+          ProjectPermission.CAD_EXTERNAL_REFERENCE
+        );
       });
 
       it('EDITOR 不应该拥有 CAD_EXTERNAL_REFERENCE 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
-        expect(permissions).not.toContain(ProjectPermission.CAD_EXTERNAL_REFERENCE);
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        expect(permissions).not.toContain(
+          ProjectPermission.CAD_EXTERNAL_REFERENCE
+        );
       });
 
       it('ADMIN 应该拥有 CAD_EXTERNAL_REFERENCE 权限', () => {
@@ -617,17 +708,20 @@ describe('ProjectPermissionService', () => {
   describe('图库权限详细测试', () => {
     describe('GALLERY_ADD - 添加到图库', () => {
       it('VIEWER 不应该拥有 GALLERY_ADD 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
         expect(permissions).not.toContain(ProjectPermission.GALLERY_ADD);
       });
 
       it('MEMBER 应该拥有 GALLERY_ADD 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
         expect(permissions).toContain(ProjectPermission.GALLERY_ADD);
       });
 
       it('EDITOR 不应该拥有 GALLERY_ADD 权限', () => {
-        const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+        const permissions =
+          DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
         expect(permissions).not.toContain(ProjectPermission.GALLERY_ADD);
       });
     });
@@ -636,7 +730,13 @@ describe('ProjectPermissionService', () => {
   describe('版本管理权限详细测试', () => {
     describe('VERSION_READ - 查看版本', () => {
       it('所有角色都应该拥有 VERSION_READ 权限', () => {
-        const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+        const allRoles = [
+          ProjectRole.OWNER,
+          ProjectRole.ADMIN,
+          ProjectRole.MEMBER,
+          ProjectRole.EDITOR,
+          ProjectRole.VIEWER,
+        ];
         allRoles.forEach((role) => {
           const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
           expect(permissions).toContain(ProjectPermission.VERSION_READ);
@@ -674,8 +774,11 @@ describe('ProjectPermissionService', () => {
 
   describe('权限层级关系验证', () => {
     it('ADMIN 权限应该是 MEMBER 权限的超集', () => {
-      const adminPermissions = new Set(DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN]);
-      const memberPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
+      const adminPermissions = new Set(
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN]
+      );
+      const memberPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER];
 
       // MEMBER 的所有权限都应该在 ADMIN 的权限中
       memberPermissions.forEach((permission) => {
@@ -684,8 +787,11 @@ describe('ProjectPermissionService', () => {
     });
 
     it('MEMBER 权限应该是 EDITOR 权限的超集（部分）', () => {
-      const memberPermissions = new Set(DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER]);
-      const editorPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
+      const memberPermissions = new Set(
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER]
+      );
+      const editorPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR];
 
       // EDITOR 的所有权限都应该在 MEMBER 的权限中
       editorPermissions.forEach((permission) => {
@@ -694,8 +800,11 @@ describe('ProjectPermissionService', () => {
     });
 
     it('EDITOR 权限应该是 VIEWER 权限的超集', () => {
-      const editorPermissions = new Set(DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR]);
-      const viewerPermissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
+      const editorPermissions = new Set(
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.EDITOR]
+      );
+      const viewerPermissions =
+        DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
 
       // VIEWER 的所有权限都应该在 EDITOR 的权限中
       viewerPermissions.forEach((permission) => {
@@ -706,7 +815,13 @@ describe('ProjectPermissionService', () => {
 
   describe('权限重复检测', () => {
     it('所有角色的权限数组不应该有重复项', () => {
-      const allRoles = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER, ProjectRole.EDITOR, ProjectRole.VIEWER];
+      const allRoles = [
+        ProjectRole.OWNER,
+        ProjectRole.ADMIN,
+        ProjectRole.MEMBER,
+        ProjectRole.EDITOR,
+        ProjectRole.VIEWER,
+      ];
       allRoles.forEach((role) => {
         const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
         const uniquePermissions = new Set(permissions);
@@ -746,7 +861,9 @@ describe('ProjectPermissionService', () => {
       it('USER_MANAGER 应该拥有角色管理权限', () => {
         const permissions = SYSTEM_ROLE_PERMISSIONS[SystemRole.USER_MANAGER];
         expect(permissions).toContain(SystemPermission.SYSTEM_ROLE_READ);
-        expect(permissions).toContain(SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE);
+        expect(permissions).toContain(
+          SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE
+        );
       });
 
       it('USER_MANAGER 不应该拥有系统管理权限', () => {

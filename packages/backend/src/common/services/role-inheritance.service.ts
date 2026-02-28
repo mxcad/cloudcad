@@ -1,6 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { SystemRole, SystemPermission, SYSTEM_ROLE_HIERARCHY } from '../enums/permissions.enum';
+import {
+  SystemRole,
+  SystemPermission,
+  SYSTEM_ROLE_HIERARCHY,
+} from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
 import { CACHE_TTL } from '../constants/cache.constants';
 
@@ -57,21 +61,25 @@ export class RoleInheritanceService implements OnModuleInit {
    * @param roleName 角色名称
    * @returns 角色拥有的所有权限（包括从父角色继承的权限）
    */
-  async getRolePermissions(
-    roleName: SystemRole
-  ): Promise<SystemPermission[]> {
+  async getRolePermissions(roleName: SystemRole): Promise<SystemPermission[]> {
     const cacheKey = `role:permissions:${roleName}`;
-    const cached = await this.cacheService.get<SystemPermission[] | 'null'>(cacheKey);
+    const cached = await this.cacheService.get<SystemPermission[] | 'null'>(
+      cacheKey
+    );
 
     if (cached !== null) {
-      this.logger.log(`角色 ${roleName} 权限缓存命中: ${cached === 'null' ? '空' : `${(cached as SystemPermission[]).length} 个权限`}`);
+      this.logger.log(
+        `角色 ${roleName} 权限缓存命中: ${cached === 'null' ? '空' : `${(cached as SystemPermission[]).length} 个权限`}`
+      );
       return cached === 'null' ? [] : (cached as SystemPermission[]);
     }
 
     try {
       // 收集角色及其所有祖先角色的 ID
       const roleIds = await this.collectRoleAncestors(roleName, 0);
-      this.logger.log(`角色 ${roleName} 及其祖先角色的 ID: ${JSON.stringify(roleIds)}`);
+      this.logger.log(
+        `角色 ${roleName} 及其祖先角色的 ID: ${JSON.stringify(roleIds)}`
+      );
 
       if (roleIds.length === 0) {
         this.logger.warn(`角色 ${roleName} 没有找到角色 ID`);
@@ -88,8 +96,10 @@ export class RoleInheritanceService implements OnModuleInit {
           permission: true,
         },
       });
-      
-      this.logger.log(`角色 ${roleName} 查询到 ${permissions.length} 条权限记录`);
+
+      this.logger.log(
+        `角色 ${roleName} 查询到 ${permissions.length} 条权限记录`
+      );
 
       const allPermissions = [
         ...new Set(permissions.map((p) => p.permission as SystemPermission)),
@@ -99,12 +109,19 @@ export class RoleInheritanceService implements OnModuleInit {
       if (allPermissions.length === 0) {
         this.cacheService.set(cacheKey, 'null', CACHE_TTL.ROLE_PERMISSION);
       } else {
-        this.cacheService.set(cacheKey, allPermissions, CACHE_TTL.ROLE_PERMISSION);
+        this.cacheService.set(
+          cacheKey,
+          allPermissions,
+          CACHE_TTL.ROLE_PERMISSION
+        );
       }
 
       return allPermissions;
     } catch (error) {
-      this.logger.error(`获取角色权限失败: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `获取角色权限失败: ${(error as Error).message}`,
+        (error as Error).stack
+      );
       // 出错时不缓存空结果，让下次请求可以重新尝试
       return [];
     }
@@ -113,11 +130,13 @@ export class RoleInheritanceService implements OnModuleInit {
   /**
    * 强制刷新角色权限缓存（清除缓存后重新获取）
    */
-  async forceRefreshRolePermissions(roleName: SystemRole): Promise<SystemPermission[]> {
+  async forceRefreshRolePermissions(
+    roleName: SystemRole
+  ): Promise<SystemPermission[]> {
     // 先清除缓存
     const cacheKey = `role:permissions:${roleName}`;
     this.cacheService.delete(cacheKey);
-    
+
     // 重新获取权限
     return this.getRolePermissions(roleName);
   }
@@ -152,7 +171,10 @@ export class RoleInheritanceService implements OnModuleInit {
       });
 
       if (parentRole) {
-        const parentIds = await this.collectRoleAncestors(parentRole.name, depth + 1);
+        const parentIds = await this.collectRoleAncestors(
+          parentRole.name,
+          depth + 1
+        );
         ids.push(...parentIds);
       }
     }
@@ -185,7 +207,11 @@ export class RoleInheritanceService implements OnModuleInit {
       // 检查父角色是否在继承路径中
       const hasInheritance = ancestors.includes(parentRoleName);
 
-      this.cacheService.set(cacheKey, hasInheritance, CACHE_TTL.ROLE_INHERITANCE);
+      this.cacheService.set(
+        cacheKey,
+        hasInheritance,
+        CACHE_TTL.ROLE_INHERITANCE
+      );
       return hasInheritance;
     } catch (error) {
       this.logger.error(
@@ -227,7 +253,10 @@ export class RoleInheritanceService implements OnModuleInit {
       });
 
       if (parentRole) {
-        const parentNames = await this.collectAncestorNames(parentRole.name, depth + 1);
+        const parentNames = await this.collectAncestorNames(
+          parentRole.name,
+          depth + 1
+        );
         names.push(...parentNames);
       }
     }
@@ -295,12 +324,14 @@ export class RoleInheritanceService implements OnModuleInit {
 
       const roleName = user.role.name as SystemRole;
       const rolePermissions = await this.getRolePermissions(roleName);
-      
+
       this.logger.log(`角色 ${roleName} 的权限数量: ${rolePermissions.length}`);
-      
+
       const hasPermission = rolePermissions.includes(permission);
-      this.logger.log(`权限检查: 用户=${userId.substring(0, 8)}..., 角色=${roleName}, 权限=${permission}, 结果=${hasPermission}`);
-      
+      this.logger.log(
+        `权限检查: 用户=${userId.substring(0, 8)}..., 角色=${roleName}, 权限=${permission}, 结果=${hasPermission}`
+      );
+
       return hasPermission;
     } catch (error) {
       this.logger.error(
@@ -363,10 +394,7 @@ export class RoleInheritanceService implements OnModuleInit {
         `递归清除角色权限缓存（含子角色）: ${roleName} (${children.length} 个子角色)`
       );
     } catch (error) {
-      this.logger.error(
-        `递归清除角色缓存失败: ${error.message}`,
-        error.stack
-      );
+      this.logger.error(`递归清除角色缓存失败: ${error.message}`, error.stack);
     }
   }
 
@@ -392,10 +420,7 @@ export class RoleInheritanceService implements OnModuleInit {
 
       return tree;
     } catch (error) {
-      this.logger.error(
-        `获取角色层级树失败: ${error.message}`,
-        error.stack
-      );
+      this.logger.error(`获取角色层级树失败: ${error.message}`, error.stack);
       return [];
     }
   }

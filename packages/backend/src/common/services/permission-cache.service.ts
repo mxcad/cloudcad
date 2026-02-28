@@ -1,10 +1,19 @@
-import { Injectable, Logger, OnModuleDestroy, Inject, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  Inject,
+  Optional,
+} from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { SystemPermission, ProjectPermission } from '../enums/permissions.enum';
 import { MultiLevelCacheService } from '../../cache-architecture/services/multi-level-cache.service';
 import { CacheKeyUtil } from '../../cache-architecture/utils/cache-key.util';
-import { CacheVersionService, CacheVersionType } from '../../cache-architecture/services/cache-version.service';
+import {
+  CacheVersionService,
+  CacheVersionType,
+} from '../../cache-architecture/services/cache-version.service';
 
 /**
  * 缓存失效事件
@@ -26,7 +35,9 @@ export class PermissionCacheService implements OnModuleDestroy {
   constructor(
     @InjectRedis() private readonly redis: Redis,
     private readonly multiLevelCache: MultiLevelCacheService,
-    @Optional() @Inject(CacheVersionService) private readonly cacheVersionService?: CacheVersionService,
+    @Optional()
+    @Inject(CacheVersionService)
+    private readonly cacheVersionService?: CacheVersionService
   ) {
     this.subscribeToInvalidationEvents();
     this.setupVersionControl();
@@ -49,7 +60,9 @@ export class PermissionCacheService implements OnModuleDestroy {
    */
   private setupVersionControl(): void {
     // 用户权限版本控制
-    this.multiLevelCache.enableVersionControl(CacheVersionType.USER_PERMISSIONS);
+    this.multiLevelCache.enableVersionControl(
+      CacheVersionType.USER_PERMISSIONS
+    );
 
     this.logger.debug('权限缓存版本控制已启用');
   }
@@ -73,7 +86,9 @@ export class PermissionCacheService implements OnModuleDestroy {
       for (const channel of channels) {
         await this.subscriber.subscribe(channel, (err) => {
           if (err) {
-            this.logger.error(`订阅缓存失效事件失败: ${channel} - ${err.message}`);
+            this.logger.error(
+              `订阅缓存失效事件失败: ${channel} - ${err.message}`
+            );
           }
         });
       }
@@ -184,7 +199,11 @@ export class PermissionCacheService implements OnModuleDestroy {
   /**
    * 设置缓存
    */
-  async set<T>(key: string, value: T, ttl: number = this.defaultTTL): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    ttl: number = this.defaultTTL
+  ): Promise<void> {
     await this.multiLevelCache.set(key, value, ttl);
   }
 
@@ -234,7 +253,9 @@ export class PermissionCacheService implements OnModuleDestroy {
       // 删除 is_admin 缓存
       `is_admin:${userId}`,
       // 删除所有单个权限缓存
-      ...Object.values(SystemPermission).map((perm) => `system_perm:${userId}:${perm}`),
+      ...Object.values(SystemPermission).map(
+        (perm) => `system_perm:${userId}:${perm}`
+      ),
     ];
 
     // 使用多级缓存进行删除
@@ -256,7 +277,11 @@ export class PermissionCacheService implements OnModuleDestroy {
     }
 
     // 先发布事件
-    await this.publishInvalidationEvent('project', projectId, 'clearProjectCache');
+    await this.publishInvalidationEvent(
+      'project',
+      projectId,
+      'clearProjectCache'
+    );
     // 然后执行本地清除
     this.clearProjectCacheInternal(projectId);
   }
@@ -361,14 +386,19 @@ export class PermissionCacheService implements OnModuleDestroy {
    * 批量清除项目缓存
    */
   async clearMultipleProjectCache(projectIds: string[]): Promise<void> {
-    await Promise.all(projectIds.map((projectId) => this.clearProjectCache(projectId)));
+    await Promise.all(
+      projectIds.map((projectId) => this.clearProjectCache(projectId))
+    );
     this.logger.debug(`批量清除 ${projectIds.length} 个项目的缓存`);
   }
 
   /**
    * 缓存用户系统权限
    */
-  async cacheUserPermissions(userId: string, permissions: SystemPermission[]): Promise<void> {
+  async cacheUserPermissions(
+    userId: string,
+    permissions: SystemPermission[]
+  ): Promise<void> {
     const key = this.generateCacheKey('user', userId);
     await this.set(key, permissions);
   }
@@ -400,7 +430,10 @@ export class PermissionCacheService implements OnModuleDestroy {
   /**
    * 缓存项目权限
    */
-  async cacheProjectPermissions(projectId: string, permissions: ProjectPermission[]): Promise<void> {
+  async cacheProjectPermissions(
+    projectId: string,
+    permissions: ProjectPermission[]
+  ): Promise<void> {
     const key = this.generateCacheKey('project', projectId);
     await this.set(key, permissions);
   }
@@ -408,7 +441,9 @@ export class PermissionCacheService implements OnModuleDestroy {
   /**
    * 获取项目权限缓存
    */
-  async getProjectPermissions(projectId: string): Promise<ProjectPermission[] | null> {
+  async getProjectPermissions(
+    projectId: string
+  ): Promise<ProjectPermission[] | null> {
     const key = this.generateCacheKey('project', projectId);
     return this.get<ProjectPermission[]>(key);
   }
@@ -469,7 +504,8 @@ export class PermissionCacheService implements OnModuleDestroy {
   }> {
     const stats = await this.multiLevelCache.getStats();
     return {
-      totalEntries: stats.levels.L1.size + stats.levels.L2.size + stats.levels.L3.size,
+      totalEntries:
+        stats.levels.L1.size + stats.levels.L2.size + stats.levels.L3.size,
       capacity: 1000,
       memoryUsage: `${Math.round(stats.summary.totalMemoryUsage / 1024 / 1024)}MB`,
       hitRate: stats.summary.overallHitRate,

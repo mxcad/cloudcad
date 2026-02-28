@@ -141,7 +141,9 @@ export const mxcadApi = {
       (async () => {
         try {
           // 将 Blob 转换为 File 对象
-          const file = new File([blob], 'drawing.mxweb', { type: 'application/octet-stream' });
+          const file = new File([blob], 'drawing.mxweb', {
+            type: 'application/octet-stream',
+          });
 
           const formData = new FormData();
           formData.append('file', file);
@@ -156,7 +158,8 @@ export const mxcadApi = {
               headers: { 'Content-Type': 'multipart/form-data' },
               onUploadProgress: (progressEvent: AxiosProgressEvent) => {
                 if (onProgress && progressEvent.total) {
-                  const percentage = (progressEvent.loaded / progressEvent.total) * 100;
+                  const percentage =
+                    (progressEvent.loaded / progressEvent.total) * 100;
                   onProgress(percentage);
                 }
               },

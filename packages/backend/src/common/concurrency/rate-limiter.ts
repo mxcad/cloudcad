@@ -77,7 +77,10 @@ export class RateLimiter {
       const result = await task();
       return result;
     } catch (error) {
-      this.logger.error(`任务执行失败 [${taskId}]: ${error.message}`, error.stack);
+      this.logger.error(
+        `任务执行失败 [${taskId}]: ${error.message}`,
+        error.stack
+      );
       throw error;
     } finally {
       // 从运行中移除

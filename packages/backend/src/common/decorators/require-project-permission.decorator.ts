@@ -19,7 +19,8 @@ export const REQUIRE_PROJECT_PERMISSION_KEY = 'require_project_permissions';
 /**
  * 项目权限检查模式元数据键
  */
-export const REQUIRE_PROJECT_PERMISSION_MODE_KEY = 'require_project_permissions_mode';
+export const REQUIRE_PROJECT_PERMISSION_MODE_KEY =
+  'require_project_permissions_mode';
 
 /**
  * 要求特定项目权限的装饰器

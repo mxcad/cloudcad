@@ -192,7 +192,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               />
               <div className="text-sm text-amber-800">
                 <p className="font-medium mb-1">
-                  检测到 {missingCount} 个缺失的外部参照文件（共 {files.length} 个）
+                  检测到 {missingCount} 个缺失的外部参照文件（共 {files.length}{' '}
+                  个）
                 </p>
                 <p className="text-amber-700">
                   这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。
@@ -251,7 +252,9 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex flex-col gap-1">
-                      <span className={`text-sm ${file.exists && file.uploadState === 'notSelected' ? 'text-slate-500' : 'text-slate-900'}`}>
+                      <span
+                        className={`text-sm ${file.exists && file.uploadState === 'notSelected' ? 'text-slate-500' : 'text-slate-900'}`}
+                      >
                         <FileNameText>{file.name}</FileNameText>
                       </span>
                       <span className={`text-xs ${getStatusColor(file)}`}>

@@ -42,7 +42,8 @@ export class IpPolicy extends BasePolicy implements IPermissionPolicy {
   }
 
   getDescription(): string {
-    const count = this.config.allowedIps.length + (this.config.allowedRanges?.length || 0);
+    const count =
+      this.config.allowedIps.length + (this.config.allowedRanges?.length || 0);
     return `基于 IP 地址的访问控制，允许 ${count} 个 IP 地址/范围访问`;
   }
 
@@ -61,7 +62,9 @@ export class IpPolicy extends BasePolicy implements IPermissionPolicy {
     if (this.config.deniedRanges) {
       for (const range of this.config.deniedRanges) {
         if (this.isIpInRange(ipAddress, range)) {
-          return this.createDeniedResult(`IP 地址 ${ipAddress} 在拒绝范围 ${range} 中`);
+          return this.createDeniedResult(
+            `IP 地址 ${ipAddress} 在拒绝范围 ${range} 中`
+          );
         }
       }
     }

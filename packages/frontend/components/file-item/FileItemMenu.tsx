@@ -74,7 +74,11 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
   // 操作处理函数映射
   const actionHandlers: Record<ActionType, () => void> = {
-    upload_external_reference: () => onUploadExternalReference?.({ stopPropagation: () => {}, preventDefault: () => {} } as React.MouseEvent),
+    upload_external_reference: () =>
+      onUploadExternalReference?.({
+        stopPropagation: () => {},
+        preventDefault: () => {},
+      } as React.MouseEvent),
     download: () => onDownload?.(node),
     view_version_history: () => onShowVersionHistory?.(node),
     add_to_gallery: () => onAddToGallery?.(node),
@@ -85,8 +89,10 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     delete: () => onDelete(node),
     permanently_delete: () => onPermanentlyDelete?.(node),
     edit: () => onEdit?.({ stopPropagation: () => {} } as React.MouseEvent),
-    show_members: () => onShowMembers?.({ stopPropagation: () => {} } as React.MouseEvent),
-    show_roles: () => onShowRoles?.({ stopPropagation: () => {} } as React.MouseEvent),
+    show_members: () =>
+      onShowMembers?.({ stopPropagation: () => {} } as React.MouseEvent),
+    show_roles: () =>
+      onShowRoles?.({ stopPropagation: () => {} } as React.MouseEvent),
   };
 
   // 获取可用操作列表
@@ -160,7 +166,8 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
       <>
         {availableActions.map((action, index) => {
           const isLast = index === availableActions.length - 1;
-          const isDividerAfter = isLast && action.isDestructive && availableActions.length > 1;
+          const isDividerAfter =
+            isLast && action.isDestructive && availableActions.length > 1;
 
           return (
             <React.Fragment key={action.type}>

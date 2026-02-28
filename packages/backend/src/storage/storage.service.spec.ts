@@ -68,7 +68,9 @@ describe('StorageService', () => {
       const result = await service.fileExists('test.txt');
 
       expect(result).toBe(true);
-      expect(mockLocalStorageProvider.fileExists).toHaveBeenCalledWith('test.txt');
+      expect(mockLocalStorageProvider.fileExists).toHaveBeenCalledWith(
+        'test.txt'
+      );
     });
   });
 
@@ -80,7 +82,9 @@ describe('StorageService', () => {
       const result = await service.getFileStream('test.txt');
 
       expect(result).toBe(mockStream);
-      expect(mockLocalStorageProvider.getFileStream).toHaveBeenCalledWith('test.txt');
+      expect(mockLocalStorageProvider.getFileStream).toHaveBeenCalledWith(
+        'test.txt'
+      );
     });
   });
 });

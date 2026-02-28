@@ -168,7 +168,9 @@ export const FileSystemManager: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(false);
 
   // 项目权限状态
-  const [projectPermissions, setProjectPermissions] = useState<Record<string, boolean>>({});
+  const [projectPermissions, setProjectPermissions] = useState<
+    Record<string, boolean>
+  >({});
 
   // 加载项目权限
   useEffect(() => {
@@ -194,7 +196,7 @@ export const FileSystemManager: React.FC = () => {
         ];
 
         const permissionResults = await Promise.all(
-          permissions.map(perm => checkPermission(urlProjectId, perm))
+          permissions.map((perm) => checkPermission(urlProjectId, perm))
         );
 
         const newPermissions: Record<string, boolean> = {};
@@ -212,12 +214,12 @@ export const FileSystemManager: React.FC = () => {
 
   // 移动/拷贝状态（支持批量操作标记）
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
-  const [moveSourceNode, setMoveSourceNode] = useState<FileSystemNode | { id: 'batch' } | null>(
-    null
-  );
-  const [copySourceNode, setCopySourceNode] = useState<FileSystemNode | { id: 'batch' } | null>(
-    null
-  );
+  const [moveSourceNode, setMoveSourceNode] = useState<
+    FileSystemNode | { id: 'batch' } | null
+  >(null);
+  const [copySourceNode, setCopySourceNode] = useState<
+    FileSystemNode | { id: 'batch' } | null
+  >(null);
 
   // 图库相关状态
   const [showAddToGalleryModal, setShowAddToGalleryModal] = useState(false);
@@ -226,10 +228,15 @@ export const FileSystemManager: React.FC = () => {
 
   // 版本历史相关状态
   const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
-  const [versionHistoryNode, setVersionHistoryNode] = useState<FileSystemNode | null>(null);
-  const [versionHistoryEntries, setVersionHistoryEntries] = useState<{ revision: number; author: string; date: string; message: string }[]>([]);
+  const [versionHistoryNode, setVersionHistoryNode] =
+    useState<FileSystemNode | null>(null);
+  const [versionHistoryEntries, setVersionHistoryEntries] = useState<
+    { revision: number; author: string; date: string; message: string }[]
+  >([]);
   const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
-  const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
+  const [versionHistoryError, setVersionHistoryError] = useState<string | null>(
+    null
+  );
 
   // 是否在根级别（无 projectId）
   const isAtRoot = !urlProjectId;
@@ -314,62 +321,47 @@ export const FileSystemManager: React.FC = () => {
 
   // 加载节点权限信息
 
-    useEffect(() => {
+  useEffect(() => {
+    if (!user) return;
 
-      if (!user) return;
+    // 确定需要加载权限的节点列表
 
-  
+    let nodesToLoad: string[] = [];
 
-      // 确定需要加载权限的节点列表
+    if (isAtRoot) {
+      // 项目列表页面：为所有项目根节点加载权限
 
-      let nodesToLoad: string[] = [];
+      nodesToLoad = displayNodes
 
-  
+        .filter((node) => node.isRoot)
 
-      if (isAtRoot) {
+        .map((node) => node.id);
+    } else if (urlProjectId) {
+      // 项目内部页面：为当前项目加载权限
 
-        // 项目列表页面：为所有项目根节点加载权限
+      nodesToLoad = [urlProjectId];
+    }
 
-        nodesToLoad = displayNodes
+    if (nodesToLoad.length === 0) return;
 
-          .filter((node) => node.isRoot)
+    const loadPermissions = async () => {
+      setPermissionsLoading(true);
 
-          .map((node) => node.id);
+      try {
+        const {
+          canEditNode,
+          canDeleteNode,
+          canManageNodeMembers,
+          canManageNodeRoles,
+        } = await import('../utils/permissionUtils');
 
-      } else if (urlProjectId) {
+        // 并行加载所有节点的权限
 
-        // 项目内部页面：为当前项目加载权限
+        const permissionsPromises = nodesToLoad.map(async (nodeId) => {
+          console.log('[FileSystemManager] 正在加载节点权限:', nodeId);
 
-        nodesToLoad = [urlProjectId];
-
-      }
-
-  
-
-      if (nodesToLoad.length === 0) return;
-
-  
-
-      const loadPermissions = async () => {
-
-        setPermissionsLoading(true);
-
-        try {
-
-          const { canEditNode, canDeleteNode, canManageNodeMembers, canManageNodeRoles } =
-
-            await import('../utils/permissionUtils');
-
-  
-
-          // 并行加载所有节点的权限
-
-          const permissionsPromises = nodesToLoad.map(async (nodeId) => {
-
-            console.log('[FileSystemManager] 正在加载节点权限:', nodeId);
-
-            const [canEdit, canDelete, canManageMembers, canManageRoles] = await Promise.all([
-
+          const [canEdit, canDelete, canManageMembers, canManageRoles] =
+            await Promise.all([
               canEditNode(user, nodeId),
 
               canDeleteNode(user, nodeId),
@@ -377,76 +369,61 @@ export const FileSystemManager: React.FC = () => {
               canManageNodeMembers(user, nodeId),
 
               canManageNodeRoles(user, nodeId),
-
             ]);
 
-  
-
-            console.log('[FileSystemManager] 节点权限加载完成:', nodeId, { canEdit, canDelete, canManageMembers, canManageRoles });
-
-            return {
-
-              nodeId,
-
-              canEdit,
-
-              canDelete,
-
-              canManageMembers,
-
-              canManageRoles,
-
-            };
-
+          console.log('[FileSystemManager] 节点权限加载完成:', nodeId, {
+            canEdit,
+            canDelete,
+            canManageMembers,
+            canManageRoles,
           });
 
-  
+          return {
+            nodeId,
 
-          const permissionsResults = await Promise.all(permissionsPromises);
+            canEdit,
 
-          console.log('[FileSystemManager] 所有权限加载完成:', permissionsResults);
+            canDelete,
 
-          setNodePermissions((prev) => {
+            canManageMembers,
 
-            const newMap = new Map(prev);
+            canManageRoles,
+          };
+        });
 
-            permissionsResults.forEach((result) => {
+        const permissionsResults = await Promise.all(permissionsPromises);
 
-              newMap.set(result.nodeId, {
+        console.log(
+          '[FileSystemManager] 所有权限加载完成:',
+          permissionsResults
+        );
 
-                canEdit: result.canEdit,
+        setNodePermissions((prev) => {
+          const newMap = new Map(prev);
 
-                canDelete: result.canDelete,
+          permissionsResults.forEach((result) => {
+            newMap.set(result.nodeId, {
+              canEdit: result.canEdit,
 
-                canManageMembers: result.canManageMembers,
+              canDelete: result.canDelete,
 
-                canManageRoles: result.canManageRoles,
+              canManageMembers: result.canManageMembers,
 
-              });
-
+              canManageRoles: result.canManageRoles,
             });
-
-            return newMap;
-
           });
 
-        } catch (error) {
+          return newMap;
+        });
+      } catch (error) {
+        console.error('[FileSystemManager] 加载权限信息失败:', error);
+      } finally {
+        setPermissionsLoading(false);
+      }
+    };
 
-          console.error('[FileSystemManager] 加载权限信息失败:', error);
-
-        } finally {
-
-          setPermissionsLoading(false);
-
-        }
-
-      };
-
-  
-
-      loadPermissions();
-
-    }, [user, isAtRoot, urlProjectId, nodes.length]);
+    loadPermissions();
+  }, [user, isAtRoot, urlProjectId, nodes.length]);
 
   // 打开成员管理模态框
   const handleShowMembers = useCallback((project: FileSystemNode) => {
@@ -530,52 +507,64 @@ export const FileSystemManager: React.FC = () => {
   /**
    * 显示版本历史
    */
-  const handleShowVersionHistory = useCallback(async (node: FileSystemNode) => {
-    if (!projectPermissions[ProjectPermission.VERSION_READ]) {
-      alert('您没有权限查看版本历史');
-      return;
-    }
-
-    if (!node.path) {
-      console.error('[FileSystemManager] 节点没有 path', node);
-      return;
-    }
-
-    setVersionHistoryNode(node);
-    setShowVersionHistoryModal(true);
-    setVersionHistoryLoading(true);
-    setVersionHistoryError(null);
-
-    try {
-      const response = await versionControlApi.getFileHistory(urlProjectId || '', node.path, 50);
-      console.log('[FileSystemManager] 版本历史 API 响应:', response);
-      // apiClient.get 返回 AxiosResponse，响应拦截器解包后 response.data 是 { success: true, message: "获取成功", entries: [...] }
-      if (response.data?.success) {
-        setVersionHistoryEntries(response.data.entries || []);
-      } else {
-        setVersionHistoryError(response.data?.message || '加载版本历史失败');
+  const handleShowVersionHistory = useCallback(
+    async (node: FileSystemNode) => {
+      if (!projectPermissions[ProjectPermission.VERSION_READ]) {
+        alert('您没有权限查看版本历史');
+        return;
       }
-    } catch (err) {
-      console.error('[FileSystemManager] 版本历史加载失败:', err);
-      setVersionHistoryError(err instanceof Error ? err.message : '加载版本历史失败');
-    } finally {
-      setVersionHistoryLoading(false);
-    }
-  }, [urlProjectId, projectPermissions]);
+
+      if (!node.path) {
+        console.error('[FileSystemManager] 节点没有 path', node);
+        return;
+      }
+
+      setVersionHistoryNode(node);
+      setShowVersionHistoryModal(true);
+      setVersionHistoryLoading(true);
+      setVersionHistoryError(null);
+
+      try {
+        const response = await versionControlApi.getFileHistory(
+          urlProjectId || '',
+          node.path,
+          50
+        );
+        console.log('[FileSystemManager] 版本历史 API 响应:', response);
+        // apiClient.get 返回 AxiosResponse，响应拦截器解包后 response.data 是 { success: true, message: "获取成功", entries: [...] }
+        if (response.data?.success) {
+          setVersionHistoryEntries(response.data.entries || []);
+        } else {
+          setVersionHistoryError(response.data?.message || '加载版本历史失败');
+        }
+      } catch (err) {
+        console.error('[FileSystemManager] 版本历史加载失败:', err);
+        setVersionHistoryError(
+          err instanceof Error ? err.message : '加载版本历史失败'
+        );
+      } finally {
+        setVersionHistoryLoading(false);
+      }
+    },
+    [urlProjectId, projectPermissions]
+  );
 
   /**
    * 打开历史版本编辑器
    */
-  const handleOpenHistoricalVersion = useCallback((revision: number) => {
-    if (!versionHistoryNode?.path || !versionHistoryNode.id) {
-      return;
-    }
+  const handleOpenHistoricalVersion = useCallback(
+    (revision: number) => {
+      if (!versionHistoryNode?.path || !versionHistoryNode.id) {
+        return;
+      }
 
-    // 在新标签页中打开历史版本编辑器
-    // 同时传递 nodeId（父节点）和 v（版本号）参数
-    const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}`;
-    window.open(url, '_blank');
-  }, [versionHistoryNode]);
+      // 在新标签页中打开历史版本编辑器
+      // 同时传递 nodeId（父节点）和 v（版本号）参数
+      const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}`;
+      window.open(url, '_blank');
+    },
+    [versionHistoryNode]
+  );
 
   /**
    * 确认移动/拷贝
@@ -878,7 +867,9 @@ export const FileSystemManager: React.FC = () => {
             我的项目
           </button>
           <button
-            onClick={() => !isProjectTrashView && handleToggleProjectTrashView()}
+            onClick={() =>
+              !isProjectTrashView && handleToggleProjectTrashView()
+            }
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
               isProjectTrashView
                 ? 'text-primary-600 border-primary-600'
@@ -896,7 +887,10 @@ export const FileSystemManager: React.FC = () => {
               className="ml-auto text-slate-600"
               title="刷新"
             >
-              <RefreshIcon size={14} className={loading ? 'animate-spin mr-1' : 'mr-1'} />
+              <RefreshIcon
+                size={14}
+                className={loading ? 'animate-spin mr-1' : 'mr-1'}
+              />
               刷新
             </Button>
           )}
@@ -911,7 +905,11 @@ export const FileSystemManager: React.FC = () => {
           />
           <input
             type="text"
-            placeholder={isAtRoot && isProjectTrashView ? "搜索已删除的项目..." : "搜索文件或项目..."}
+            placeholder={
+              isAtRoot && isProjectTrashView
+                ? '搜索已删除的项目...'
+                : '搜索文件或项目...'
+            }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
@@ -1132,11 +1130,24 @@ export const FileSystemManager: React.FC = () => {
 
             const permissions = node.isRoot
               ? cachedPermissions || defaultPermissions
-              : { canEdit: true, canDelete: true, canManageMembers: false, canManageRoles: false };
+              : {
+                  canEdit: true,
+                  canDelete: true,
+                  canManageMembers: false,
+                  canManageRoles: false,
+                };
 
             // 调试信息：检查项目节点的权限
             if (node.isRoot) {
-              console.log('[FileSystemManager] 渲染项目节点:', node.id, node.name, '权限:', permissions, '缓存权限:', cachedPermissions);
+              console.log(
+                '[FileSystemManager] 渲染项目节点:',
+                node.id,
+                node.name,
+                '权限:',
+                permissions,
+                '缓存权限:',
+                cachedPermissions
+              );
             }
 
             return (
@@ -1154,7 +1165,11 @@ export const FileSystemManager: React.FC = () => {
                 onPermanentlyDelete={handlePermanentlyDelete}
                 onRename={handleOpenRename}
                 onRefresh={handleRefresh}
-                onRestore={(isTrashView || isProjectTrashView) ? handleRestoreNode : undefined}
+                onRestore={
+                  isTrashView || isProjectTrashView
+                    ? handleRestoreNode
+                    : undefined
+                }
                 onEdit={
                   node.isRoot && permissions.canEdit
                     ? () => openEditProject(node)
@@ -1183,8 +1198,18 @@ export const FileSystemManager: React.FC = () => {
                     ? () => handleShowRoles(node)
                     : undefined
                 }
-                onMove={!node.isRoot && projectPermissions[ProjectPermission.FILE_MOVE] ? handleMove : undefined}
-                onCopy={!node.isRoot && projectPermissions[ProjectPermission.FILE_COPY] ? handleCopy : undefined}
+                onMove={
+                  !node.isRoot &&
+                  projectPermissions[ProjectPermission.FILE_MOVE]
+                    ? handleMove
+                    : undefined
+                }
+                onCopy={
+                  !node.isRoot &&
+                  projectPermissions[ProjectPermission.FILE_COPY]
+                    ? handleCopy
+                    : undefined
+                }
                 onAddToGallery={
                   !node.isFolder &&
                   !isTrashView &&
@@ -1205,11 +1230,25 @@ export const FileSystemManager: React.FC = () => {
                 onDrop={handleDrop}
                 isDropTarget={dropTargetId === node.id}
                 canUpload={projectPermissions[ProjectPermission.FILE_UPLOAD]}
-                canEdit={node.isRoot ? (permissions.canEdit ?? false) : projectPermissions[ProjectPermission.FILE_EDIT]}
-                canDelete={node.isRoot ? (permissions.canDelete ?? false) : projectPermissions[ProjectPermission.FILE_DELETE]}
-                canDownload={projectPermissions[ProjectPermission.FILE_DOWNLOAD]}
-                canAddToGallery={projectPermissions[ProjectPermission.GALLERY_ADD]}
-                canViewVersionHistory={projectPermissions[ProjectPermission.VERSION_READ]}
+                canEdit={
+                  node.isRoot
+                    ? (permissions.canEdit ?? false)
+                    : projectPermissions[ProjectPermission.FILE_EDIT]
+                }
+                canDelete={
+                  node.isRoot
+                    ? (permissions.canDelete ?? false)
+                    : projectPermissions[ProjectPermission.FILE_DELETE]
+                }
+                canDownload={
+                  projectPermissions[ProjectPermission.FILE_DOWNLOAD]
+                }
+                canAddToGallery={
+                  projectPermissions[ProjectPermission.GALLERY_ADD]
+                }
+                canViewVersionHistory={
+                  projectPermissions[ProjectPermission.VERSION_READ]
+                }
               />
             );
           })}
@@ -1280,7 +1319,7 @@ export const FileSystemManager: React.FC = () => {
               已选中 {selectedNodes.size} 项
             </span>
             <div className="w-px h-4 bg-slate-700" />
-            
+
             {/* 回收站视图显示恢复按钮 */}
             {(isTrashView || isProjectTrashView) && (
               <button
@@ -1290,7 +1329,7 @@ export const FileSystemManager: React.FC = () => {
                 恢复
               </button>
             )}
-            
+
             {/* 正常视图显示移动和复制按钮 */}
             {!isTrashView && !isProjectTrashView && (
               <>
@@ -1316,7 +1355,7 @@ export const FileSystemManager: React.FC = () => {
                 </button>
               </>
             )}
-            
+
             {(isTrashView || isProjectTrashView) && (
               <button
                 onClick={() => handleBatchDelete(true)}

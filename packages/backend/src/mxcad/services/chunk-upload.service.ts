@@ -47,7 +47,7 @@ export class ChunkUploadService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly concurrencyManager: ConcurrencyManager,
+    private readonly concurrencyManager: ConcurrencyManager
   ) {
     this.tempPath =
       this.configService.get('MXCAD_TEMP_PATH') ||
@@ -65,7 +65,7 @@ export class ChunkUploadService {
       const chunkFilename = `${chunk}_${hash}`;
       const chunkPath = path.join(
         this.getChunkTempDirPath(hash),
-        chunkFilename,
+        chunkFilename
       );
 
       const exists = await FileUtils.exists(chunkPath);
@@ -75,20 +75,20 @@ export class ChunkUploadService {
         const size = await FileUtils.getFileSize(chunkPath);
         if (size === 0) {
           this.logger.warn(
-            `分片文件存在但大小为0，视为不存在: ${chunkFilename}`,
+            `分片文件存在但大小为0，视为不存在: ${chunkFilename}`
           );
           return false;
         }
       }
 
       this.logger.debug(
-        `检查分片存在性: hash=${hash}, chunk=${chunk}, exists=${exists}`,
+        `检查分片存在性: hash=${hash}, chunk=${chunk}, exists=${exists}`
       );
       return exists;
     } catch (error) {
       this.logger.error(
         `检查分片存在性失败: hash=${hash}, chunk=${chunk}, error=${error.message}`,
-        error.stack,
+        error.stack
       );
       return false;
     }
@@ -120,7 +120,7 @@ export class ChunkUploadService {
     } catch (error) {
       this.logger.error(
         `上传分片失败: ${chunkData}, error=${error.message}`,
-        error.stack,
+        error.stack
       );
       return false;
     }
@@ -150,7 +150,7 @@ export class ChunkUploadService {
       // 验证分片数量
       if (files.length !== chunks) {
         this.logger.error(
-          `分片数量不匹配: 期望=${chunks}, 实际=${files.length}`,
+          `分片数量不匹配: 期望=${chunks}, 实际=${files.length}`
         );
         // 清理临时文件
         await this.cleanupTempDirectory(hash);
@@ -162,7 +162,7 @@ export class ChunkUploadService {
         `merge:${hash}`,
         async () => {
           return await this.performMerge(chunkDir, targetPath, hash, chunks);
-        },
+        }
       );
 
       if (!success) {
@@ -181,7 +181,7 @@ export class ChunkUploadService {
     } catch (error) {
       this.logger.error(
         `合并分片失败: ${name} (${hash}), error=${error.message}`,
-        error.stack,
+        error.stack
       );
       // 确保在失败时清理临时文件
       try {
@@ -189,7 +189,7 @@ export class ChunkUploadService {
       } catch (cleanupError) {
         this.logger.error(
           `清理临时目录失败: ${cleanupError.message}`,
-          cleanupError.stack,
+          cleanupError.stack
         );
       }
       return false;
@@ -228,11 +228,15 @@ export class ChunkUploadService {
           const success = await FileUtils.deleteDirectory(chunkDir);
 
           if (success) {
-            this.logger.log(`临时目录清理成功: ${chunkDir} (尝试 ${attempt + 1}/${maxRetries})`);
+            this.logger.log(
+              `临时目录清理成功: ${chunkDir} (尝试 ${attempt + 1}/${maxRetries})`
+            );
             return true;
           } else {
-            this.logger.warn(`临时目录清理失败 (尝试 ${attempt + 1}/${maxRetries}): ${chunkDir}`);
-            
+            this.logger.warn(
+              `临时目录清理失败 (尝试 ${attempt + 1}/${maxRetries}): ${chunkDir}`
+            );
+
             // 如果不是最后一次尝试，等待后重试
             if (attempt < maxRetries - 1) {
               const delay = 1000 * (attempt + 1); // 指数退避：1s, 2s, 3s
@@ -259,7 +263,7 @@ export class ChunkUploadService {
     } catch (error) {
       this.logger.error(
         `清理临时目录失败: hash=${hash}, error=${error.message}`,
-        error.stack,
+        error.stack
       );
       return false;
     }
@@ -271,11 +275,13 @@ export class ChunkUploadService {
    * @param maxAge 最大文件年龄（毫秒），默认 24 小时
    * @returns 清理的目录数量
    */
-  async cleanupExpiredTempFiles(maxAge: number = 24 * 60 * 60 * 1000): Promise<number> {
+  async cleanupExpiredTempFiles(
+    maxAge: number = 24 * 60 * 60 * 1000
+  ): Promise<number> {
     try {
       const tempDir = this.tempPath;
       const exists = await FileUtils.exists(tempDir);
-      
+
       if (!exists) {
         this.logger.debug(`临时目录不存在: ${tempDir}`);
         return 0;
@@ -284,7 +290,7 @@ export class ChunkUploadService {
       // 读取临时目录中的所有子目录
       const entries = await FileUtils.readDirectory(tempDir);
       const chunkDirs = entries.filter((entry) => entry.startsWith('chunk_'));
-      
+
       this.logger.log(`找到 ${chunkDirs.length} 个临时分片目录`);
 
       let cleanedCount = 0;
@@ -292,7 +298,7 @@ export class ChunkUploadService {
 
       for (const chunkDir of chunkDirs) {
         const chunkDirPath = path.join(tempDir, chunkDir);
-        
+
         try {
           // 获取目录的修改时间
           const stats = await fsPromises.stat(chunkDirPath);
@@ -305,7 +311,7 @@ export class ChunkUploadService {
 
             // 删除过期目录
             const success = await FileUtils.deleteDirectory(chunkDirPath);
-            
+
             if (success) {
               cleanedCount++;
               this.logger.log(`过期临时目录清理成功: ${chunkDir}`);
@@ -336,22 +342,24 @@ export class ChunkUploadService {
    * @param requiredSpace 需要的磁盘空间（字节），默认 1GB
    * @returns 磁盘空间是否足够
    */
-  async checkDiskSpace(requiredSpace: number = 1024 * 1024 * 1024): Promise<boolean> {
+  async checkDiskSpace(
+    requiredSpace: number = 1024 * 1024 * 1024
+  ): Promise<boolean> {
     try {
       const tempDir = this.tempPath;
-      
+
       // 使用 fs.statfs 获取磁盘统计信息
       // 在 Windows 上，statfs 需要两个参数
       const stats = await fsPromises.statfs(tempDir);
-      
+
       // TypeScript 类型定义可能不准确，使用类型断言
       const typedStats = stats as {
         bavail: number;
         bsize: number;
       };
-      
+
       const freeSpace = typedStats.bavail * typedStats.bsize; // 可用空间（字节）
-      
+
       this.logger.debug(
         `磁盘空间检查: 可用空间=${Math.round(freeSpace / 1024 / 1024)}MB, 需要=${Math.round(requiredSpace / 1024 / 1024)}MB`
       );
@@ -392,7 +400,7 @@ export class ChunkUploadService {
     chunkDir: string,
     targetPath: string,
     hash: string,
-    chunks: number,
+    chunks: number
   ): Promise<boolean> {
     return new Promise((resolve) => {
       try {
@@ -421,7 +429,7 @@ export class ChunkUploadService {
           for (let i = 0; i < fileList.length; i++) {
             if (fileList[i].num !== i) {
               this.logger.error(
-                `分片不连续: 期望=${i}, 实际=${fileList[i].num}`,
+                `分片不连续: 期望=${i}, 实际=${fileList[i].num}`
               );
               resolve(false);
               return;

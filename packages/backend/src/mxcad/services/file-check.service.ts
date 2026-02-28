@@ -13,7 +13,7 @@ export class FileCheckService {
 
   constructor(
     private readonly storageCheckService: StorageCheckService,
-    private readonly concurrencyManager: ConcurrencyManager,
+    private readonly concurrencyManager: ConcurrencyManager
   ) {}
 
   /**
@@ -23,9 +23,8 @@ export class FileCheckService {
    * @returns 文件是否存在
    */
   async checkFileExists(hash: string, filename: string): Promise<boolean> {
-    return this.concurrencyManager.acquireLock(
-      `file-check:${hash}`,
-      () => this.performFileExistenceCheck(hash, filename),
+    return this.concurrencyManager.acquireLock(`file-check:${hash}`, () =>
+      this.performFileExistenceCheck(hash, filename)
     ) as Promise<boolean>;
   }
 
@@ -54,7 +53,7 @@ export class FileCheckService {
    */
   private async performFileExistenceCheck(
     hash: string,
-    filename: string,
+    filename: string
   ): Promise<boolean> {
     try {
       const exists = await this.checkFileInStorage(hash, filename);

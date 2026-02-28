@@ -68,7 +68,10 @@ export class DevicePolicy extends BasePolicy implements IPermissionPolicy {
     const deviceType = this.detectDeviceType(context.userAgent);
 
     // 检查拒绝列表
-    if (this.config.deniedTypes && this.config.deniedTypes.includes(deviceType)) {
+    if (
+      this.config.deniedTypes &&
+      this.config.deniedTypes.includes(deviceType)
+    ) {
       return this.createDeniedResult(`设备类型 ${deviceType} 在拒绝列表中`);
     }
 
@@ -105,9 +108,7 @@ export class DevicePolicy extends BasePolicy implements IPermissionPolicy {
     }
 
     // 检测桌面浏览器
-    if (
-      /mozilla|chrome|safari|firefox|edge|opera|msie|trident/i.test(ua)
-    ) {
+    if (/mozilla|chrome|safari|firefox|edge|opera|msie|trident/i.test(ua)) {
       return DeviceType.DESKTOP;
     }
 

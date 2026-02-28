@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import path from 'path';
 import { ChunkUploadService } from '../services/chunk-upload.service';
 import { FileCheckService } from '../services/file-check.service';
-import { NodeCreationService, CreateNodeOptions, NodeCreationContext } from '../services/node-creation.service';
+import {
+  NodeCreationService,
+  CreateNodeOptions,
+  NodeCreationContext,
+} from '../services/node-creation.service';
 import { FileConversionService } from '../services/file-conversion.service';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
 
@@ -110,7 +114,7 @@ export class UploadOrchestrator {
     private readonly fileCheckService: FileCheckService,
     private readonly nodeCreationService: NodeCreationService,
     private readonly fileConversionService: FileConversionService,
-    private readonly concurrencyManager: ConcurrencyManager,
+    private readonly concurrencyManager: ConcurrencyManager
   ) {}
 
   /**
@@ -119,12 +123,14 @@ export class UploadOrchestrator {
    * @param options 分片上传选项
    * @returns 上传结果
    */
-  async handleChunkUpload(options: HandleChunkUploadOptions): Promise<UploadResult> {
+  async handleChunkUpload(
+    options: HandleChunkUploadOptions
+  ): Promise<UploadResult> {
     try {
       const { hash, chunk, chunkData, size } = options;
 
       this.logger.debug(
-        `处理分片上传: hash=${hash}, chunk=${chunk}, size=${size}`,
+        `处理分片上传: hash=${hash}, chunk=${chunk}, size=${size}`
       );
 
       // 验证分片数据路径
@@ -136,7 +142,8 @@ export class UploadOrchestrator {
       }
 
       // 上传分片
-      const uploadSuccess = await this.chunkUploadService.uploadChunk(chunkData);
+      const uploadSuccess =
+        await this.chunkUploadService.uploadChunk(chunkData);
 
       if (!uploadSuccess) {
         return {
@@ -149,10 +156,7 @@ export class UploadOrchestrator {
 
       return { success: true };
     } catch (error) {
-      this.logger.error(
-        `处理分片上传失败: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`处理分片上传失败: ${error.message}`, error.stack);
       return {
         success: false,
         errorMessage: error.message || '分片上传失败',
@@ -166,16 +170,21 @@ export class UploadOrchestrator {
    * @param options 文件上传选项
    * @returns 上传结果
    */
-  async handleFileUpload(options: HandleFileUploadOptions): Promise<UploadResult> {
+  async handleFileUpload(
+    options: HandleFileUploadOptions
+  ): Promise<UploadResult> {
     try {
       const { hash, name, size, mimeType, context } = options;
 
       this.logger.debug(
-        `处理文件上传: hash=${hash}, name=${name}, size=${size}`,
+        `处理文件上传: hash=${hash}, name=${name}, size=${size}`
       );
 
       // 检查文件是否已存在
-      const fileExists = await this.fileCheckService.checkFileExists(hash, name);
+      const fileExists = await this.fileCheckService.checkFileExists(
+        hash,
+        name
+      );
 
       if (fileExists) {
         this.logger.log(`文件已存在，跳过上传: ${name} (${hash})`);
@@ -195,7 +204,8 @@ export class UploadOrchestrator {
         skipFileCopy: true, // 文件已由调用者处理，无需复制
       };
 
-      const createResult = await this.nodeCreationService.createNode(createOptions);
+      const createResult =
+        await this.nodeCreationService.createNode(createOptions);
 
       if (!createResult.success) {
         return {
@@ -204,17 +214,16 @@ export class UploadOrchestrator {
         };
       }
 
-      this.logger.log(`文件上传成功: ${name} (${hash}), nodeId=${createResult.nodeId}`);
+      this.logger.log(
+        `文件上传成功: ${name} (${hash}), nodeId=${createResult.nodeId}`
+      );
 
       return {
         success: true,
         nodeId: createResult.nodeId,
       };
     } catch (error) {
-      this.logger.error(
-        `处理文件上传失败: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`处理文件上传失败: ${error.message}`, error.stack);
       return {
         success: false,
         errorMessage: error.message || '文件上传失败',
@@ -228,11 +237,13 @@ export class UploadOrchestrator {
    * @param options 合并请求选项
    * @returns 上传结果
    */
-  async handleMergeRequest(options: HandleMergeRequestOptions): Promise<UploadResult> {
+  async handleMergeRequest(
+    options: HandleMergeRequestOptions
+  ): Promise<UploadResult> {
     const { hash, name, size, chunks, context } = options;
 
     this.logger.debug(
-      `处理合并请求: hash=${hash}, name=${name}, size=${size}, chunks=${chunks}`,
+      `处理合并请求: hash=${hash}, name=${name}, size=${size}, chunks=${chunks}`
     );
 
     // 使用并发控制执行合并流程
@@ -240,7 +251,7 @@ export class UploadOrchestrator {
       `merge:${hash}`,
       async () => {
         return await this.performMerge(options);
-      },
+      }
     );
 
     if (result === null) {
@@ -259,24 +270,26 @@ export class UploadOrchestrator {
    * @param options 分片存在检查选项
    * @returns 上传结果
    */
-  async checkChunkExists(options: CheckChunkExistsOptions): Promise<UploadResult> {
+  async checkChunkExists(
+    options: CheckChunkExistsOptions
+  ): Promise<UploadResult> {
     try {
       const { hash, chunk } = options;
 
       this.logger.debug(`检查分片存在: hash=${hash}, chunk=${chunk}`);
 
-      const exists = await this.chunkUploadService.checkChunkExists(hash, chunk);
+      const exists = await this.chunkUploadService.checkChunkExists(
+        hash,
+        chunk
+      );
 
       this.logger.debug(
-        `分片存在检查结果: hash=${hash}, chunk=${chunk}, exists=${exists}`,
+        `分片存在检查结果: hash=${hash}, chunk=${chunk}, exists=${exists}`
       );
 
       return { success: true };
     } catch (error) {
-      this.logger.error(
-        `检查分片存在失败: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`检查分片存在失败: ${error.message}`, error.stack);
       return {
         success: false,
         errorMessage: error.message || '检查分片存在失败',
@@ -295,25 +308,23 @@ export class UploadOrchestrator {
   async checkFileExists(
     filename: string,
     fileHash: string,
-    context: UploadContext,
+    context: UploadContext
   ): Promise<UploadResult> {
     try {
-      this.logger.debug(
-        `检查文件存在: filename=${filename}, hash=${fileHash}`,
+      this.logger.debug(`检查文件存在: filename=${filename}, hash=${fileHash}`);
+
+      const exists = await this.fileCheckService.checkFileExists(
+        fileHash,
+        filename
       );
 
-      const exists = await this.fileCheckService.checkFileExists(fileHash, filename);
-
       this.logger.debug(
-        `文件存在检查结果: filename=${filename}, hash=${fileHash}, exists=${exists}`,
+        `文件存在检查结果: filename=${filename}, hash=${fileHash}, exists=${exists}`
       );
 
       return { success: true };
     } catch (error) {
-      this.logger.error(
-        `检查文件存在失败: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`检查文件存在失败: ${error.message}`, error.stack);
       return {
         success: false,
         errorMessage: error.message || '检查文件存在失败',
@@ -327,7 +338,9 @@ export class UploadOrchestrator {
    * @param options 合并请求选项
    * @returns 上传结果
    */
-  private async performMerge(options: HandleMergeRequestOptions): Promise<UploadResult> {
+  private async performMerge(
+    options: HandleMergeRequestOptions
+  ): Promise<UploadResult> {
     const { hash, name, size, chunks, context } = options;
 
     try {
@@ -344,7 +357,8 @@ export class UploadOrchestrator {
         targetPath: tempFilePath,
       };
 
-      const mergeSuccess = await this.chunkUploadService.mergeChunks(mergeOptions);
+      const mergeSuccess =
+        await this.chunkUploadService.mergeChunks(mergeOptions);
 
       if (!mergeSuccess) {
         return {
@@ -356,7 +370,10 @@ export class UploadOrchestrator {
       this.logger.log(`分片合并成功: ${name} (${hash})`);
 
       // 检查文件是否已存在
-      const fileExists = await this.fileCheckService.checkFileExists(hash, name);
+      const fileExists = await this.fileCheckService.checkFileExists(
+        hash,
+        name
+      );
 
       let nodeId: string | undefined;
 
@@ -367,7 +384,10 @@ export class UploadOrchestrator {
           context: this.convertUploadContextToNodeCreationContext(context),
         };
 
-        const referenceResult = await this.nodeCreationService.referenceNode(hash, referenceContext);
+        const referenceResult = await this.nodeCreationService.referenceNode(
+          hash,
+          referenceContext
+        );
 
         if (!referenceResult.success) {
           return {
@@ -377,7 +397,9 @@ export class UploadOrchestrator {
         }
 
         nodeId = referenceResult.nodeId;
-        this.logger.log(`引用现有节点成功: ${name} (${hash}), nodeId=${nodeId}`);
+        this.logger.log(
+          `引用现有节点成功: ${name} (${hash}), nodeId=${nodeId}`
+        );
       } else {
         // 创建新节点
         const extension = this.getFileExtension(name);
@@ -393,7 +415,8 @@ export class UploadOrchestrator {
           skipFileCopy: false,
         };
 
-        const createResult = await this.nodeCreationService.createNode(createOptions);
+        const createResult =
+          await this.nodeCreationService.createNode(createOptions);
 
         if (!createResult.success) {
           return {
@@ -408,10 +431,11 @@ export class UploadOrchestrator {
 
       // 转换文件（如果需要）
       if (this.fileConversionService.needsConversion(name)) {
-        const convertedExt = this.fileConversionService.getConvertedExtension(name);
+        const convertedExt =
+          this.fileConversionService.getConvertedExtension(name);
         const convertedPath = path.join(
           path.dirname(tempFilePath),
-          `${hash}${convertedExt}`,
+          `${hash}${convertedExt}`
         );
 
         const conversionOptions = {
@@ -420,11 +444,12 @@ export class UploadOrchestrator {
           createPreloadingData: true,
         };
 
-        const conversionResult = await this.fileConversionService.convertFile(conversionOptions);
+        const conversionResult =
+          await this.fileConversionService.convertFile(conversionOptions);
 
         if (!conversionResult.isOk) {
           this.logger.warn(
-            `文件转换失败: ${name} (${hash}), error=${conversionResult.error}`,
+            `文件转换失败: ${name} (${hash}), error=${conversionResult.error}`
           );
           // 转换失败不影响上传结果，文件仍可用
         } else {
@@ -442,10 +467,7 @@ export class UploadOrchestrator {
         nodeId,
       };
     } catch (error) {
-      this.logger.error(
-        `执行合并操作失败: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`执行合并操作失败: ${error.message}`, error.stack);
       return {
         success: false,
         errorMessage: error.message || '合并操作失败',
@@ -492,7 +514,7 @@ export class UploadOrchestrator {
    * 将 UploadContext 转换为 NodeCreationContext
    */
   private convertUploadContextToNodeCreationContext(
-    uploadContext: UploadContext,
+    uploadContext: UploadContext
   ): NodeCreationContext {
     return {
       nodeId: uploadContext.nodeId,

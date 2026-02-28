@@ -48,7 +48,7 @@ async function migrateGalleryData() {
     }
 
     console.log(`✓ 检测到 ${columns.length} 个图库相关字段：`);
-    columns.forEach(col => console.log(`  - ${col.column_name}`));
+    columns.forEach((col) => console.log(`  - ${col.column_name}`));
 
     // 2. 查询所有在图库中的文件
     const nodesInGallery = await prisma.fileSystemNode.findMany({
@@ -82,7 +82,9 @@ async function migrateGalleryData() {
       console.log(`  - ${node.originalName || node.name}`);
       console.log(`    用户: ${node.ownerId}`);
       console.log(`    类型: ${node.galleryType}`);
-      console.log(`    分类: ${node.galleryFirstType} -> ${node.gallerySecondType}`);
+      console.log(
+        `    分类: ${node.galleryFirstType} -> ${node.gallerySecondType}`
+      );
       console.log(`    浏览次数: ${node.galleryLookNum}`);
     }
     console.log('========================================\n');
@@ -114,7 +116,9 @@ async function migrateGalleryData() {
         });
 
         if (existingItem) {
-          console.log(`  ⚠️  跳过：${node.originalName || node.name}（已存在）`);
+          console.log(
+            `  ⚠️  跳过：${node.originalName || node.name}（已存在）`
+          );
           continue;
         }
 
@@ -134,8 +138,11 @@ async function migrateGalleryData() {
         console.log(`  ✓ 迁移成功：${node.originalName || node.name}`);
         successCount++;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '未知错误';
-        console.log(`  ✗ 迁移失败：${node.originalName || node.name} - ${errorMessage}`);
+        const errorMessage =
+          error instanceof Error ? error.message : '未知错误';
+        console.log(
+          `  ✗ 迁移失败：${node.originalName || node.name} - ${errorMessage}`
+        );
         errors.push({
           node: node.originalName || node.name,
           error: errorMessage,
@@ -166,7 +173,6 @@ async function migrateGalleryData() {
       console.log('  2. 验证数据完整性');
       console.log('  3. 测试图库功能');
     }
-
   } catch (error) {
     console.error('\n✗ 迁移失败:', error);
     process.exit(1);
@@ -192,7 +198,7 @@ async function checkMigrationStatus() {
 
     if (columns.length > 0) {
       console.log('⚠️  FileSystemNode 表中仍有图库相关字段：');
-      columns.forEach(col => console.log(`  - ${col.column_name}`));
+      columns.forEach((col) => console.log(`  - ${col.column_name}`));
 
       const nodesInGallery = await prisma.fileSystemNode.count({
         where: {
@@ -202,7 +208,9 @@ async function checkMigrationStatus() {
 
       if (nodesInGallery > 0) {
         console.log(`\n⚠️  检测到 ${nodesInGallery} 个在图库中的文件`);
-        console.log('建议运行：pnpm tsx scripts/migrate-gallery-data.ts 进行数据迁移');
+        console.log(
+          '建议运行：pnpm tsx scripts/migrate-gallery-data.ts 进行数据迁移'
+        );
       } else {
         console.log('\n✓ 没有需要迁移的数据');
         console.log('建议运行：prisma db push 删除旧字段');
@@ -216,7 +224,6 @@ async function checkMigrationStatus() {
     }
 
     console.log('\n========================================');
-
   } catch (error) {
     console.error('\n✗ 检查失败:', error);
     process.exit(1);
@@ -234,8 +241,12 @@ async function main() {
     await checkMigrationStatus();
   } else {
     console.log('用法:');
-    console.log('  pnpm tsx scripts/migrate-gallery-data.ts migrate  # 执行数据迁移');
-    console.log('  pnpm tsx scripts/migrate-gallery-data.ts check    # 检查迁移状态');
+    console.log(
+      '  pnpm tsx scripts/migrate-gallery-data.ts migrate  # 执行数据迁移'
+    );
+    console.log(
+      '  pnpm tsx scripts/migrate-gallery-data.ts check    # 检查迁移状态'
+    );
     console.log('\n默认执行检查...');
     await checkMigrationStatus();
   }

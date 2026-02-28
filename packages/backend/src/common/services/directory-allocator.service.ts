@@ -17,7 +17,7 @@ export class DirectoryAllocator {
   constructor(
     private readonly configService: ConfigService,
     private readonly fileLockService: FileLockService,
-    private readonly localStorageProvider: LocalStorageProvider,
+    private readonly localStorageProvider: LocalStorageProvider
   ) {
     this.nodeLimit = this.configService.get('FILES_NODE_LIMIT', 300000);
   }
@@ -41,7 +41,8 @@ export class DirectoryAllocator {
 
     // 主目录已满，尝试分配子目录
     let suffix = 1;
-    while (suffix <= 100) { // 最多支持 100 个子目录
+    while (suffix <= 100) {
+      // 最多支持 100 个子目录
       const subDirectoryName = `${yearMonth}_${suffix}`;
       const subResult = await this.tryAllocateDirectory(subDirectoryName);
       if (subResult) {
@@ -59,13 +60,16 @@ export class DirectoryAllocator {
    * @param directoryName 目录名称（如：202602 或 202602_1）
    * @returns 分配结果或 null（如果目录已满）
    */
-  private async tryAllocateDirectory(directoryName: string): Promise<AllocationResult | null> {
+  private async tryAllocateDirectory(
+    directoryName: string
+  ): Promise<AllocationResult | null> {
     const lockName = `allocate-${directoryName}`;
 
     try {
       return await this.fileLockService.withLock(lockName, async () => {
         // 检查目录是否存在
-        const exists = await this.localStorageProvider.directoryExists(directoryName);
+        const exists =
+          await this.localStorageProvider.directoryExists(directoryName);
 
         if (!exists) {
           // 目录不存在，创建它
@@ -73,16 +77,20 @@ export class DirectoryAllocator {
           this.logger.log(`创建新目录: ${directoryName}`);
           return {
             targetDirectory: directoryName,
-            fullPath: this.localStorageProvider['getAbsolutePath'](directoryName),
+            fullPath:
+              this.localStorageProvider['getAbsolutePath'](directoryName),
             nodeCount: 0,
           };
         }
 
         // 目录存在，检查节点数量
-        const nodeCount = await this.localStorageProvider.getSubdirectoryCount(directoryName);
+        const nodeCount =
+          await this.localStorageProvider.getSubdirectoryCount(directoryName);
 
         if (nodeCount >= this.nodeLimit) {
-          this.logger.log(`目录已满: ${directoryName} (${nodeCount}/${this.nodeLimit})`);
+          this.logger.log(
+            `目录已满: ${directoryName} (${nodeCount}/${this.nodeLimit})`
+          );
           return null;
         }
 
@@ -120,11 +128,13 @@ export class DirectoryAllocator {
     nodeCount: number;
     fullPath: string;
   }> {
-    const exists = await this.localStorageProvider.directoryExists(directoryName);
+    const exists =
+      await this.localStorageProvider.directoryExists(directoryName);
     const nodeCount = exists
       ? await this.localStorageProvider.getSubdirectoryCount(directoryName)
       : 0;
-    const fullPath = this.localStorageProvider['getAbsolutePath'](directoryName);
+    const fullPath =
+      this.localStorageProvider['getAbsolutePath'](directoryName);
 
     return {
       exists,
@@ -137,11 +147,13 @@ export class DirectoryAllocator {
    * 获取所有目录列表
    * @returns 目录列表
    */
-  async listDirectories(): Promise<Array<{
-    name: string;
-    nodeCount: number;
-    isFull: boolean;
-  }>> {
+  async listDirectories(): Promise<
+    Array<{
+      name: string;
+      nodeCount: number;
+      isFull: boolean;
+    }>
+  > {
     try {
       const files = await this.localStorageProvider.listFiles('', '');
       const directories: Array<{

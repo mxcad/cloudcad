@@ -91,7 +91,8 @@ export const ResetPassword: React.FC = () => {
               className="w-full h-full object-contain p-2"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling as SVGElement;
+                const fallback = e.currentTarget
+                  .nextElementSibling as SVGElement;
                 if (fallback) fallback.style.display = 'block';
               }}
             />

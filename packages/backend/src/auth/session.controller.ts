@@ -23,7 +23,13 @@ export class SessionController {
    * 设置用户 Session
    */
   @Post('create')
-  async createSession(@Req() req: Request, @Body() body: { user: { id: string; email: string; username: string; role: string } }) {
+  async createSession(
+    @Req() req: Request,
+    @Body()
+    body: {
+      user: { id: string; email: string; username: string; role: string };
+    }
+  ) {
     this.logger.debug(`创建 Session, 用户: ${body.user?.id}`);
     this.logger.debug(`Session ID: ${req.sessionID}`);
 

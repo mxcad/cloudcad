@@ -374,8 +374,12 @@ export class FileConversionService implements IFileConversionService {
         return { success: false, error: `解析输出失败: ${e.message}` };
       }
     } catch (error: unknown) {
-      const err = error as Error & { code?: number; stdout?: string | Buffer; stderr?: string | Buffer };
-      
+      const err = error as Error & {
+        code?: number;
+        stdout?: string | Buffer;
+        stderr?: string | Buffer;
+      };
+
       // 确保 stdout 和 stderr 是字符串
       const errorStdout = err.stdout
         ? Buffer.isBuffer(err.stdout)

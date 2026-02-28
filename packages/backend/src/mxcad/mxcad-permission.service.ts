@@ -66,14 +66,18 @@ export class MxCadPermissionService {
     // 如果当前节点是项目根目录（没有父节点），则使用当前节点本身
     const targetNodeId = node.parentId || node.id;
 
-    this.logger.debug(
-      `目标节点: ${targetNodeId} (节点: ${node.name})`
-    );
+    this.logger.debug(`目标节点: ${targetNodeId} (节点: ${node.name})`);
 
     // 1. 检查用户是否是目标节点所有者
     const targetNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: targetNodeId, deletedAt: null },
-      select: { id: true, ownerId: true, parentId: true, isRoot: true, name: true },
+      select: {
+        id: true,
+        ownerId: true,
+        parentId: true,
+        isRoot: true,
+        name: true,
+      },
     });
 
     if (targetNode?.ownerId === context.userId) {
@@ -82,11 +86,14 @@ export class MxCadPermissionService {
     }
 
     // 2. 检查用户是否有项目成员权限
-    const projectRootId = targetNode?.isRoot 
-      ? targetNode.id 
+    const projectRootId = targetNode?.isRoot
+      ? targetNode.id
       : await this.findProjectRootId(targetNode?.parentId ?? undefined);
     if (projectRootId) {
-      const isProjectMember = await this.checkProjectMember(context.userId, projectRootId);
+      const isProjectMember = await this.checkProjectMember(
+        context.userId,
+        projectRootId
+      );
       if (isProjectMember) {
         this.logger.debug('用户是项目成员，允许上传');
         return true;
@@ -142,13 +149,13 @@ export class MxCadPermissionService {
         this.logger.error(
           `达到最大递归深度 (${maxDepth})，拒绝访问以防止绕过权限检查`
         );
-        throw new ForbiddenException('权限验证失败：目录层级过深，无法验证权限');
+        throw new ForbiddenException(
+          '权限验证失败：目录层级过深，无法验证权限'
+        );
       }
     }
 
-    this.logger.warn(
-      `权限检查失败: 用户 ${context.userId} 没有任何访问权限`
-    );
+    this.logger.warn(`权限检查失败: 用户 ${context.userId} 没有任何访问权限`);
     throw new ForbiddenException('您没有该节点的访问权限，无法上传文件');
   }
 
@@ -157,7 +164,9 @@ export class MxCadPermissionService {
    * @param nodeId 节点 ID
    * @returns 项目根目录 ID，如果找不到返回 null
    */
-  private async findProjectRootId(nodeId: string | undefined): Promise<string | null> {
+  private async findProjectRootId(
+    nodeId: string | undefined
+  ): Promise<string | null> {
     if (!nodeId) return null;
 
     let currentNodeId: string | undefined = nodeId;
@@ -189,7 +198,10 @@ export class MxCadPermissionService {
    * @param projectRootId 项目根目录 ID
    * @returns 是否是项目成员
    */
-  private async checkProjectMember(userId: string, projectRootId: string): Promise<boolean> {
+  private async checkProjectMember(
+    userId: string,
+    projectRootId: string
+  ): Promise<boolean> {
     try {
       // 检查 ProjectMember 表中是否有记录
       const member = await this.prisma.projectMember.findFirst({

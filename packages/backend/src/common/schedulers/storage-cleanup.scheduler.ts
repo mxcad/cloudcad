@@ -11,7 +11,7 @@ export class StorageCleanupScheduler {
   constructor(
     private readonly storageCleanupService: StorageCleanupService,
     private readonly diskMonitorService: DiskMonitorService,
-    private readonly fileLockService: FileLockService,
+    private readonly fileLockService: FileLockService
   ) {}
 
   /**
@@ -30,7 +30,9 @@ export class StorageCleanupScheduler {
       );
 
       if (result.errors.length > 0) {
-        this.logger.warn(`Cleanup task encountered ${result.errors.length} errors`);
+        this.logger.warn(
+          `Cleanup task encountered ${result.errors.length} errors`
+        );
         result.errors.forEach((error, index) => {
           this.logger.warn(`Error ${index + 1}: ${error}`);
         });
@@ -40,7 +42,9 @@ export class StorageCleanupScheduler {
       const healthReport = this.diskMonitorService.getHealthReport();
 
       if (!healthReport.healthy) {
-        this.logger.warn(`Disk status abnormal: ${healthReport.status.message}`);
+        this.logger.warn(
+          `Disk status abnormal: ${healthReport.status.message}`
+        );
         this.logger.warn(`Recommendation: ${healthReport.recommendation}`);
       } else {
         this.logger.log(`Disk status normal: ${healthReport.status.message}`);
@@ -60,7 +64,9 @@ export class StorageCleanupScheduler {
     try {
       const cleanedCount = await this.fileLockService.cleanupExpiredLocks();
 
-      this.logger.log(`Expired lock file cleanup completed: Cleaned ${cleanedCount} lock files`);
+      this.logger.log(
+        `Expired lock file cleanup completed: Cleaned ${cleanedCount} lock files`
+      );
     } catch (error) {
       this.logger.error('Expired lock file cleanup failed', error.stack);
     }

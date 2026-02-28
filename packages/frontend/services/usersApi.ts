@@ -1,5 +1,18 @@
 import { apiClient } from './apiClient';
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  username: string;
+  nickname?: string;
+  avatar?: string;
+  role?: {
+    id: string;
+    name: string;
+    permissions: string[];
+  };
+}
+
 export const usersApi = {
   list: (params?: {
     page?: number;
@@ -35,4 +48,12 @@ export const usersApi = {
   ) => apiClient.patch(`/users/${id}`, data),
 
   delete: (id: string) => apiClient.delete(`/users/${id}`),
+
+  getProfile: () => apiClient.get('/users/profile/me'),
+
+  updateProfile: (data: { nickname?: string; avatar?: string }) =>
+    apiClient.patch('/users/profile/me', data),
+
+  changePassword: (data: { oldPassword: string; newPassword: string }) =>
+    apiClient.post('/users/change-password', data),
 };

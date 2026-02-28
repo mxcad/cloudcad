@@ -16,7 +16,7 @@ export class StorageManager {
 
   constructor(
     private readonly directoryAllocator: DirectoryAllocator,
-    private readonly localStorageProvider: LocalStorageProvider,
+    private readonly localStorageProvider: LocalStorageProvider
   ) {}
 
   /**
@@ -25,7 +25,10 @@ export class StorageManager {
    * @param fileName 文件名（可选）
    * @returns 存储信息
    */
-  async allocateNodeStorage(nodeId: string, fileName?: string): Promise<NodeStorageInfo> {
+  async allocateNodeStorage(
+    nodeId: string,
+    fileName?: string
+  ): Promise<NodeStorageInfo> {
     // 分配目标目录
     const allocation = await this.directoryAllocator.allocateDirectory();
 
@@ -46,7 +49,9 @@ export class StorageManager {
       relativePath,
     };
 
-    this.logger.log(`为节点 ${nodeId} 分配存储成功: ${storageInfo.relativePath}`);
+    this.logger.log(
+      `为节点 ${nodeId} 分配存储成功: ${storageInfo.relativePath}`
+    );
     return storageInfo;
   }
 
@@ -57,7 +62,11 @@ export class StorageManager {
    * @param fileName 文件名（可选）
    * @returns 存储信息
    */
-  getNodeStorageInfo(nodeId: string, directory: string, fileName?: string): NodeStorageInfo {
+  getNodeStorageInfo(
+    nodeId: string,
+    directory: string,
+    fileName?: string
+  ): NodeStorageInfo {
     let relativePath = `${directory}/${nodeId}`;
     if (fileName) {
       relativePath = `${relativePath}/${fileName}`;

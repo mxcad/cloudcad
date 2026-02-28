@@ -225,7 +225,16 @@ export const UserManagement = () => {
         if (formData.password) {
           updateData.password = formData.password;
         }
-        await usersApi.update(editingUser.id, updateData as { username: string; email: string; roleId: string; nickname: string; password?: string });
+        await usersApi.update(
+          editingUser.id,
+          updateData as {
+            username: string;
+            email: string;
+            roleId: string;
+            nickname: string;
+            password?: string;
+          }
+        );
       } else {
         // 创建用户
         const createData = {
@@ -532,7 +541,9 @@ export const UserManagement = () => {
                       <div className="flex items-center justify-end gap-2">
                         {/* 编辑按钮：需要查看和编辑权限 */}
                         {hasPermission(SystemPermission.SYSTEM_USER_READ) &&
-                          hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
+                          hasPermission(
+                            SystemPermission.SYSTEM_USER_UPDATE
+                          ) && (
                             <button
                               onClick={() => handleOpenEdit(user)}
                               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -543,7 +554,9 @@ export const UserManagement = () => {
                           )}
                         {/* 删除按钮：需要查看和删除权限 */}
                         {hasPermission(SystemPermission.SYSTEM_USER_READ) &&
-                          hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
+                          hasPermission(
+                            SystemPermission.SYSTEM_USER_DELETE
+                          ) && (
                             <button
                               onClick={() => handleDelete(user.id)}
                               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

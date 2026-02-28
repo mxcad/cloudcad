@@ -155,10 +155,7 @@ describe('CacheVersionService', () => {
     it('should delete a version', async () => {
       mockRedis.del.mockResolvedValue(1);
 
-      await service.deleteVersion(
-        CacheVersionType.USER_PERMISSIONS,
-        'user-id'
-      );
+      await service.deleteVersion(CacheVersionType.USER_PERMISSIONS, 'user-id');
 
       expect(mockRedis.del).toHaveBeenCalledWith(
         'cache:version:user_permissions:user-id'
@@ -347,7 +344,9 @@ describe('CacheVersionService', () => {
           })
         );
 
-      const result = await service.getAllVersions(CacheVersionType.USER_PERMISSIONS);
+      const result = await service.getAllVersions(
+        CacheVersionType.USER_PERMISSIONS
+      );
 
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({
@@ -363,7 +362,9 @@ describe('CacheVersionService', () => {
     it('should return empty array when no versions exist', async () => {
       mockRedis.keys.mockResolvedValue([]);
 
-      const result = await service.getAllVersions(CacheVersionType.USER_PERMISSIONS);
+      const result = await service.getAllVersions(
+        CacheVersionType.USER_PERMISSIONS
+      );
 
       expect(result).toEqual([]);
     });

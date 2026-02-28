@@ -11,7 +11,7 @@ export class CacheCleanupScheduler {
   constructor(
     private readonly cacheService: PermissionCacheService,
     private readonly cacheMonitorService: CacheMonitorService,
-    private readonly l3Cache: L3CacheProvider,
+    private readonly l3Cache: L3CacheProvider
   ) {}
 
   /**

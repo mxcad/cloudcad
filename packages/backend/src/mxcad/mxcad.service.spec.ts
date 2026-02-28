@@ -38,7 +38,6 @@ describe('MxCadService', () => {
 
     mockFileSystemNodeService = {
       inferContextForMxCadApp: jest.fn(),
-      checkProjectPermission: jest.fn().mockResolvedValue(true),
     } as any;
 
     mockFileConversionService = {
@@ -251,21 +250,6 @@ describe('MxCadService', () => {
       expect(
         mockFileSystemNodeService.inferContextForMxCadApp
       ).toHaveBeenCalledWith('testhash', {});
-    });
-  });
-
-  describe('checkProjectPermission', () => {
-    it('should delegate to fileSystemNodeService', async () => {
-      const result = await service.checkProjectPermission(
-        'project-id',
-        'user-id',
-        'USER'
-      );
-
-      expect(result).toBe(true);
-      expect(
-        mockFileSystemNodeService.checkProjectPermission
-      ).toHaveBeenCalledWith('project-id', 'user-id', 'USER');
     });
   });
 

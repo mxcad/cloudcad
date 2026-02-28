@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
-import { IPermissionPolicy, PolicyContext, PolicyEvaluationResult } from '../interfaces/permission-policy.interface';
+import {
+  IPermissionPolicy,
+  PolicyContext,
+  PolicyEvaluationResult,
+} from '../interfaces/permission-policy.interface';
 import { TimePolicy } from '../policies/time-policy';
 import { IpPolicy } from '../policies/ip-policy';
 import { DevicePolicy } from '../policies/device-policy';
@@ -27,14 +31,26 @@ export interface PolicyEvaluationSummary {
 export class PolicyEngineService {
   private readonly logger = new Logger(PolicyEngineService.name);
   private readonly policies: Map<string, IPermissionPolicy> = new Map();
-  private readonly policyFactories: Map<PolicyType, (id: string, config: unknown) => IPermissionPolicy>;
+  private readonly policyFactories: Map<
+    PolicyType,
+    (id: string, config: unknown) => IPermissionPolicy
+  >;
 
   constructor(private readonly cacheService: PermissionCacheService) {
     // 初始化策略工厂
     this.policyFactories = new Map();
-    this.policyFactories.set(PolicyType.TIME, (id, config) => new TimePolicy(id, config as never));
-    this.policyFactories.set(PolicyType.IP, (id, config) => new IpPolicy(id, config as never));
-    this.policyFactories.set(PolicyType.DEVICE, (id, config) => new DevicePolicy(id, config as never));
+    this.policyFactories.set(
+      PolicyType.TIME,
+      (id, config) => new TimePolicy(id, config as never)
+    );
+    this.policyFactories.set(
+      PolicyType.IP,
+      (id, config) => new IpPolicy(id, config as never)
+    );
+    this.policyFactories.set(
+      PolicyType.DEVICE,
+      (id, config) => new DevicePolicy(id, config as never)
+    );
   }
 
   /**
@@ -61,7 +77,11 @@ export class PolicyEngineService {
   /**
    * 创建策略实例
    */
-  createPolicy(type: PolicyType, policyId: string, config: Record<string, unknown>): IPermissionPolicy {
+  createPolicy(
+    type: PolicyType,
+    policyId: string,
+    config: Record<string, unknown>
+  ): IPermissionPolicy {
     const factory = this.policyFactories.get(type);
     if (!factory) {
       throw new Error(`未知的策略类型: ${type}`);
@@ -80,7 +100,11 @@ export class PolicyEngineService {
   /**
    * 创建策略实例（不验证配置）
    */
-  createPolicyUnsafe(type: PolicyType, policyId: string, config: Record<string, unknown>): IPermissionPolicy {
+  createPolicyUnsafe(
+    type: PolicyType,
+    policyId: string,
+    config: Record<string, unknown>
+  ): IPermissionPolicy {
     const factory = this.policyFactories.get(type);
     if (!factory) {
       throw new Error(`未知的策略类型: ${type}`);
@@ -98,7 +122,8 @@ export class PolicyEngineService {
   ): Promise<PolicyEvaluationResult> {
     try {
       const cacheKey = this.buildCacheKey(policy, context);
-      const cached = await this.cacheService.get<PolicyEvaluationResult>(cacheKey);
+      const cached =
+        await this.cacheService.get<PolicyEvaluationResult>(cacheKey);
 
       if (cached !== null) {
         return cached;
@@ -226,7 +251,10 @@ export class PolicyEngineService {
   /**
    * 构建缓存键
    */
-  private buildCacheKey(policy: IPermissionPolicy, context: PolicyContext): string {
+  private buildCacheKey(
+    policy: IPermissionPolicy,
+    context: PolicyContext
+  ): string {
     const parts = [
       'policy',
       policy.getType(),

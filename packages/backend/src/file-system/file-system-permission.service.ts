@@ -1,5 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ProjectPermission, ProjectRole } from '../common/enums/permissions.enum';
+import {
+  ProjectPermission,
+  ProjectRole,
+} from '../common/enums/permissions.enum';
 import { ProjectPermissionService } from '../roles/project-permission.service';
 import { DatabaseService } from '../database/database.service';
 
@@ -133,10 +136,15 @@ export class FileSystemPermissionService {
    * @param depth 当前递归深度（内部使用）
    * @returns 项目根节点ID
    */
-  private async findProjectRootId(nodeId: string, depth: number = 0): Promise<string | null> {
+  private async findProjectRootId(
+    nodeId: string,
+    depth: number = 0
+  ): Promise<string | null> {
     // 检查递归深度，防止无限递归
     if (depth > FileSystemPermissionService.MAX_RECURSION_DEPTH) {
-      this.logger.error(`[findProjectRootId] 超过最大递归深度限制，可能存在循环引用: ${nodeId}`);
+      this.logger.error(
+        `[findProjectRootId] 超过最大递归深度限制，可能存在循环引用: ${nodeId}`
+      );
       return null;
     }
 
@@ -364,7 +372,10 @@ export class FileSystemPermissionService {
     });
 
     if (project?.ownerId) {
-      await this.projectPermissionService.clearUserCache(project.ownerId, nodeId);
+      await this.projectPermissionService.clearUserCache(
+        project.ownerId,
+        nodeId
+      );
     }
   }
 
@@ -374,7 +385,10 @@ export class FileSystemPermissionService {
    * @param userId 用户 ID
    * @param projectId 项目 ID
    */
-  async clearUserProjectCache(userId: string, projectId: string): Promise<void> {
+  async clearUserProjectCache(
+    userId: string,
+    projectId: string
+  ): Promise<void> {
     await this.projectPermissionService.clearUserCache(userId, projectId);
   }
 

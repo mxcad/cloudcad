@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsBoolean, IsNumber, IsObject, IsEnum, IsArray, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsNumber,
+  IsObject,
+  IsEnum,
+  IsArray,
+  IsNotEmpty,
+} from 'class-validator';
 import { PolicyType } from '../enums/policy-type.enum';
 import { Permission as PrismaPermission } from '@prisma/client';
 

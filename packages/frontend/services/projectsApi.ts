@@ -17,7 +17,7 @@ export const projectsApi = {
 
   /**
    * 统一创建节点接口
-   * 
+   *
    * 规则：
    * - parentId 为空 → 创建项目
    * - parentId 有值 → 创建文件夹
@@ -88,13 +88,15 @@ export const projectsApi = {
   getMembers: (projectId: string) =>
     apiClient.get(`/file-system/projects/${projectId}/members`),
 
-  addMember: (projectId: string, data: { userId: string; projectRoleId: string }) =>
-    apiClient.post(`/file-system/projects/${projectId}/members`, data),
+  addMember: (
+    projectId: string,
+    data: { userId: string; projectRoleId: string }
+  ) => apiClient.post(`/file-system/projects/${projectId}/members`, data),
 
   removeMember: (projectId: string, userId: string) =>
     apiClient.delete(`/file-system/projects/${projectId}/members/${userId}`),
 
-  updateMember: (projectId: string, userId: string, data: { roleId: string }) =>
+  updateMember: (projectId: string, userId: string, data: { projectRoleId: string }) =>
     apiClient.patch(
       `/file-system/projects/${projectId}/members/${userId}`,
       data

@@ -99,8 +99,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] 登录响应:', response);
 
       const { accessToken, refreshToken, user: userData } = response.data;
-      console.log('[AuthContext] Access Token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'missing');
-      console.log('[AuthContext] Refresh Token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing');
+      console.log(
+        '[AuthContext] Access Token:',
+        accessToken ? `${accessToken.substring(0, 20)}...` : 'missing'
+      );
+      console.log(
+        '[AuthContext] Refresh Token:',
+        refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing'
+      );
 
       // 存储到本地存储
       localStorage.setItem('accessToken', accessToken);

@@ -16,9 +16,9 @@ interface PdfOptions {
 }
 
 export const filesApi = {
-  list: () => apiClient.get('/files'),
+  list: () => apiClient.get('/file-system/nodes'),
 
-  upload: async (file: File, projectId: string) => {
+  upload: async (file: File, parentId: string) => {
     const fileContent = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -33,11 +33,11 @@ export const filesApi = {
     return apiClient.post('/file-system/files/upload', {
       fileName: file.name,
       fileContent,
-      projectId,
+      parentId,
     });
   },
 
-  get: (id: string) => apiClient.get(`/files/${id}`),
+  get: (id: string) => apiClient.get(`/file-system/nodes/${id}`),
 
   download: (id: string) =>
     apiClient.get(`/file-system/nodes/${id}/download`, {
@@ -62,18 +62,18 @@ export const filesApi = {
   },
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch(`/files/${id}`, data),
+    apiClient.patch(`/file-system/nodes/${id}`, data),
 
-  delete: (id: string) => apiClient.delete(`/files/${id}`),
+  delete: (id: string) => apiClient.delete(`/file-system/nodes/${id}`),
 
   share: (id: string, data: { userId: string; role: string }) =>
-    apiClient.post(`/files/${id}/share`, data),
+    apiClient.post(`/file-system/nodes/${id}/share`, data),
 
-  getAccess: (id: string) => apiClient.get(`/files/${id}/access`),
+  getAccess: (id: string) => apiClient.get(`/file-system/nodes/${id}/access`),
 
   updateAccess: (id: string, userId: string, role: string) =>
-    apiClient.patch(`/files/${id}/access/${userId}`, { role }),
+    apiClient.patch(`/file-system/nodes/${id}/access/${userId}`, { role }),
 
   removeAccess: (id: string, userId: string) =>
-    apiClient.delete(`/files/${id}/access/${userId}`),
+    apiClient.delete(`/file-system/nodes/${id}/access/${userId}`),
 };

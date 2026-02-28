@@ -362,7 +362,7 @@ CAD 图纸分片上传、断点续传、自动转换
 
 ### 7.11 SVN 版本控制
 
-集成 SVN 版本控制工具，支持图纸版本管理、仓库创建、检出、提交等操作
+集成 SVN 版本控制工具，整个系统使用统一的 SVN 仓库，按项目目录隔离，支持图纸版本管理、检出、提交、历史查看等操作
 
 详细信息请参考：[version-control.md](documents/backend/modules/version-control.md)
 
@@ -462,6 +462,7 @@ Hooks 文档请参考：
 | 使用 Express | 必须使用 @nestjs/platform-express |
 | 测试覆盖 | 确保核心业务逻辑有充分的测试覆盖 |
 | 装饰器使用 | 使用 @Req() 装饰器注入 Request 对象 |
+| **权限检查架构** | **必须在 Controller 层通过 Guard + 装饰器完成，禁止在 Service 层检查权限** |
 | 权限控制 | 使用 @RequirePermissions() 装饰器 |
 | 项目权限 | 使用 @RequireProjectPermission() 装饰器 |
 | 策略引擎 | 使用 PolicyEngineService 进行权限策略评估 |
@@ -547,6 +548,67 @@ Hooks 文档请参考：
 - 权限检查、缓存状态等关键路径使用 `log` 或 `warn` 级别
 - 生产环境可通过 `DEBUG` 环境变量控制详细日志
 - 临时调试完成后及时调整日志级别
+
+#### 10.5.5 权限检查架构错误（严重）
+
+**失误**：在 Service 层进行权限检查，而不是通过 Guard + 装饰器在 Controller 层统一处理。
+
+**错误示例**：
+```typescript
+// ❌ 错误：Service 层检查权限
+@Injectable()
+export class FileSystemService {
+  async getNodeChildren(nodeId: string, userId: string) {
+    // 权限检查散落在业务逻辑中
+    const hasPermission = await this.checkNodeAccess(nodeId, userId);
+    if (!hasPermission) {
+      throw new ForbiddenException('没有权限');
+    }
+    // 业务逻辑...
+  }
+}
+```
+
+**后果**：
+- **维护困难**：权限逻辑散落在各处，没有集中管理
+- **重复代码**：多个 Controller 调用同一个 Service 时需要重复检查
+- **违反单一职责**：Service 应该只关心业务逻辑，不应该关心权限
+- **架构混乱**：无法一眼看出哪些接口需要哪些权限
+
+**正确做法**：
+```typescript
+// ✅ 正确：Controller 层使用装饰器
+@Controller('file-system')
+export class FileSystemController {
+  @Get(':nodeId/children')
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)  // 集中声明权限
+  async getNodeChildren(@Param('nodeId') nodeId: string) {
+    // Service 只执行业务逻辑，不关心权限
+    return this.fileSystemService.getNodeChildren(nodeId);
+  }
+}
+
+@Injectable()
+export class FileSystemService {
+  async getNodeChildren(nodeId: string) {
+    // 纯业务逻辑，不检查权限
+    return this.prisma.fileSystemNode.findMany({...});
+  }
+}
+```
+
+**规避**：
+- **所有权限检查必须在 Controller 层通过装饰器完成**
+- **Service 层只接收已验证的用户ID，不检查权限**
+- **使用 @RequirePermissions() 或 @RequireProjectPermission() 装饰器**
+- **配合 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard) 使用**
+
+**架构原则**：
+```
+请求 → Controller → Guard（权限检查）→ Service（业务逻辑）
+            ↑
+       @RequireProjectPermission()
+```
 
 ---
 

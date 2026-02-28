@@ -29,9 +29,18 @@ const req1 = http.request(getNodeOptions, (res) => {
     try {
       const response = JSON.parse(data);
       console.log('   节点信息:');
-      console.log('   - hasMissingExternalReferences:', response.data?.hasMissingExternalReferences);
-      console.log('   - missingExternalReferencesCount:', response.data?.missingExternalReferencesCount);
-      console.log('   - externalReferencesJson:', response.data?.externalReferencesJson);
+      console.log(
+        '   - hasMissingExternalReferences:',
+        response.data?.hasMissingExternalReferences
+      );
+      console.log(
+        '   - missingExternalReferencesCount:',
+        response.data?.missingExternalReferencesCount
+      );
+      console.log(
+        '   - externalReferencesJson:',
+        response.data?.externalReferencesJson
+      );
     } catch (e) {
       console.log('   解析失败:', e.message);
       console.log('   原始响应:', data);
@@ -76,9 +85,18 @@ const req1 = http.request(getNodeOptions, (res) => {
             try {
               const response = JSON.parse(data);
               console.log('   节点信息:');
-              console.log('   - hasMissingExternalReferences:', response.data?.hasMissingExternalReferences);
-              console.log('   - missingExternalReferencesCount:', response.data?.missingExternalReferencesCount);
-              console.log('   - externalReferencesJson:', response.data?.externalReferencesJson);
+              console.log(
+                '   - hasMissingExternalReferences:',
+                response.data?.hasMissingExternalReferences
+              );
+              console.log(
+                '   - missingExternalReferencesCount:',
+                response.data?.missingExternalReferencesCount
+              );
+              console.log(
+                '   - externalReferencesJson:',
+                response.data?.externalReferencesJson
+              );
             } catch (e) {
               console.log('   解析失败:', e.message);
               console.log('   原始响应:', data);

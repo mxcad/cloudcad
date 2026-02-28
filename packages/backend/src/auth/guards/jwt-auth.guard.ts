@@ -21,7 +21,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
     this.logger.debug(`URL: ${request.url}`);
-    this.logger.debug(`Token: ${token ? `present (${token.substring(0, 20)}...)` : 'missing'}`);
+    this.logger.debug(
+      `Token: ${token ? `present (${token.substring(0, 20)}...)` : 'missing'}`
+    );
     this.logger.debug(
       `Session: ${request.session?.userId ? 'present' : 'missing'}`
     );
@@ -65,7 +67,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return result;
     } catch (error) {
       const err = error as Error;
-      
+
       if (error instanceof UnauthorizedException) {
         throw error;
       }

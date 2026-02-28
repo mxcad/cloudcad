@@ -51,7 +51,9 @@ class ApiClient {
           response.data.ret === 'errorparam' &&
           response.data.message === '用户未认证'
         ) {
-          console.log('[apiClient] 检测到 MxCAD 格式的未认证响应，跳转到登录页');
+          console.log(
+            '[apiClient] 检测到 MxCAD 格式的未认证响应，跳转到登录页'
+          );
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -87,7 +89,9 @@ class ApiClient {
           error.response.data.ret === 'errorparam' &&
           error.response.data.message === '用户未认证'
         ) {
-          console.log('[apiClient] 检测到 MxCAD 格式的未认证错误，跳转到登录页');
+          console.log(
+            '[apiClient] 检测到 MxCAD 格式的未认证错误，跳转到登录页'
+          );
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -102,7 +106,11 @@ class ApiClient {
         // 排除登录接口本身的 401 错误（密码错误等）
         const isLoginEndpoint = originalRequest.url?.includes('/auth/login');
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isLoginEndpoint) {
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !isLoginEndpoint
+        ) {
           originalRequest._retry = true;
 
           const refreshToken = localStorage.getItem('refreshToken');
@@ -119,10 +127,9 @@ class ApiClient {
 
           // 尝试用 refreshToken 刷新 token
           try {
-            const response = await axios.post(
-              `${API_BASE_URL}/auth/refresh`,
-              { refreshToken }
-            );
+            const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+              refreshToken,
+            });
 
             const responseData = response.data.data || response.data;
             const { accessToken, refreshToken: newRefreshToken } = responseData;
@@ -152,8 +159,12 @@ class ApiClient {
 
           // 直接修改错误对象的属性
           error.message = errorMessage;
-          (error as Error & { isPermissionError: boolean; statusCode: number }).isPermissionError = true;
-          (error as Error & { isPermissionError: boolean; statusCode: number }).statusCode = 403;
+          (
+            error as Error & { isPermissionError: boolean; statusCode: number }
+          ).isPermissionError = true;
+          (
+            error as Error & { isPermissionError: boolean; statusCode: number }
+          ).statusCode = 403;
 
           return Promise.reject(error);
         }

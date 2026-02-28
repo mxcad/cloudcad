@@ -164,7 +164,9 @@ export const useFileSystem = () => {
   const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
   const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
   const [folderName, setFolderName] = useState('');
-  const [downloadingNode, setDownloadingNode] = useState<FileSystemNode | null>(null);
+  const [downloadingNode, setDownloadingNode] = useState<FileSystemNode | null>(
+    null
+  );
 
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -281,7 +283,11 @@ export const useFileSystem = () => {
               currentNode = parentResponse.data;
             } catch (error) {
               // 获取父节点失败（可能是权限问题或节点已删除），停止遍历
-              console.warn('[useFileSystem] 获取父节点失败，停止构建面包屑:', currentNode.parentId, error);
+              console.warn(
+                '[useFileSystem] 获取父节点失败，停止构建面包屑:',
+                currentNode.parentId,
+                error
+              );
               break;
             }
           } else {
@@ -356,7 +362,10 @@ export const useFileSystem = () => {
 
       if (isProjectRootMode) {
         // 项目根目录模式
-        console.log('[useFileSystem] 项目根目录模式, isProjectTrashView:', isProjectTrashViewRef.current);
+        console.log(
+          '[useFileSystem] 项目根目录模式, isProjectTrashView:',
+          isProjectTrashViewRef.current
+        );
         let response;
 
         if (isProjectTrashViewRef.current) {
@@ -452,7 +461,10 @@ export const useFileSystem = () => {
             ]);
           } catch (error) {
             // 获取项目信息失败（可能是权限问题），使用项目 ID 构建简单的面包屑
-            console.warn('[useFileSystem] 获取项目信息失败，使用默认面包屑:', error);
+            console.warn(
+              '[useFileSystem] 获取项目信息失败，使用默认面包屑:',
+              error
+            );
             setBreadcrumbs([
               {
                 id: urlProjectId,
@@ -884,10 +896,13 @@ export const useFileSystem = () => {
               loadData();
             }
             // 如果是彻底删除且包含项目，跳转到项目根目录（仅当不在回收站视图时）
-            else if (permanently && Array.from(selectedNodes).some(nodeId => {
-              const node = nodes.find((n) => n.id === nodeId);
-              return node?.isRoot;
-            })) {
+            else if (
+              permanently &&
+              Array.from(selectedNodes).some((nodeId) => {
+                const node = nodes.find((n) => n.id === nodeId);
+                return node?.isRoot;
+              })
+            ) {
               navigate('/projects');
             }
             // 其他情况重新加载数据

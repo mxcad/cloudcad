@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Database, HardDrive, RefreshCw, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import {
+  Activity,
+  Database,
+  HardDrive,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-react';
 import { apiService } from '../services/api';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
@@ -92,7 +100,9 @@ export const SystemMonitorPage: React.FC = () => {
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="bg-white p-8 rounded-lg shadow-md text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">无权限访问</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            无权限访问
+          </h2>
           <p className="text-gray-600">您需要系统监控权限才能访问此页面</p>
         </div>
       </div>
@@ -172,7 +182,9 @@ export const SystemMonitorPage: React.FC = () => {
                   <Database size={32} className="text-blue-600" />
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">数据库</h3>
-                    <p className="text-sm text-gray-500">PostgreSQL 数据库连接</p>
+                    <p className="text-sm text-gray-500">
+                      PostgreSQL 数据库连接
+                    </p>
                   </div>
                 </div>
                 {getStatusIcon(systemHealth.database.status)}
@@ -193,7 +205,9 @@ export const SystemMonitorPage: React.FC = () => {
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-sm text-gray-600">检查时间</span>
                   <span className="text-sm text-gray-700">
-                    {new Date(systemHealth.database.timestamp).toLocaleString('zh-CN')}
+                    {new Date(systemHealth.database.timestamp).toLocaleString(
+                      'zh-CN'
+                    )}
                   </span>
                 </div>
               </div>
@@ -207,7 +221,9 @@ export const SystemMonitorPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <HardDrive size={32} className="text-purple-600" />
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">存储服务</h3>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      存储服务
+                    </h3>
                     <p className="text-sm text-gray-500">本地文件存储</p>
                   </div>
                 </div>
@@ -229,7 +245,9 @@ export const SystemMonitorPage: React.FC = () => {
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-sm text-gray-600">检查时间</span>
                   <span className="text-sm text-gray-700">
-                    {new Date(systemHealth.storage.timestamp).toLocaleString('zh-CN')}
+                    {new Date(systemHealth.storage.timestamp).toLocaleString(
+                      'zh-CN'
+                    )}
                   </span>
                 </div>
               </div>
@@ -248,7 +266,9 @@ export const SystemMonitorPage: React.FC = () => {
             <div>
               <span className="text-sm text-gray-500">环境</span>
               <p className="text-sm font-semibold text-gray-900">
-                {import.meta.env.MODE === 'production' ? '生产环境' : '开发环境'}
+                {import.meta.env.MODE === 'production'
+                  ? '生产环境'
+                  : '开发环境'}
               </p>
             </div>
             <div>

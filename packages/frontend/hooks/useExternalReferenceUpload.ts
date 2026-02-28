@@ -36,17 +36,13 @@ export const useExternalReferenceUpload = (
 
   // 使用 ref 存储正在进行的请求，避免重复请求
 
-    const pendingRequestsRef = useRef<Set<string>>(new Set());
+  const pendingRequestsRef = useRef<Set<string>>(new Set());
 
-  
+  // 使用 ref 存储预加载数据缓存，避免重复请求
 
-    // 使用 ref 存储预加载数据缓存，避免重复请求
+  const preloadingDataCacheRef = useRef<Map<string, PreloadingData>>(new Map());
 
-    const preloadingDataCacheRef = useRef<Map<string, PreloadingData>>(new Map());
-
-  
-
-    /**
+  /**
 
        * 获取预加载数据
 
@@ -60,109 +56,73 @@ export const useExternalReferenceUpload = (
 
        */
 
-  
+  const fetchPreloadingData = useCallback(
+    async (nodeId: string): Promise<PreloadingData | null> => {
+      if (!nodeId) {
+        logger.warn('nodeId 为空，无法获取预加载数据');
 
-    const fetchPreloadingData = useCallback(
+        return null;
+      }
 
-      async (nodeId: string): Promise<PreloadingData | null> => {
+      // 检查缓存（缓存有效期 5 秒）
 
-        if (!nodeId) {
+      const cached = preloadingDataCacheRef.current.get(nodeId);
 
-          logger.warn('nodeId 为空，无法获取预加载数据');
+      if (cached) {
+        logger.debug(`[fetchPreloadingData] 返回缓存数据: ${nodeId}`);
 
-          return null;
+        return cached;
+      }
 
+      // 检查是否已有相同请求在进行中
+
+      if (pendingRequestsRef.current.has(nodeId)) {
+        logger.debug(
+          `[fetchPreloadingData] 节点 ${nodeId} 的请求已在进行中，跳过重复请求`
+        );
+
+        return null;
+      }
+
+      // 标记请求开始
+
+      pendingRequestsRef.current.add(nodeId);
+
+      try {
+        const response = await mxcadApi.getPreloadingData(nodeId);
+
+        // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
+
+        // 需要提取 data 字段中的实际预加载数据
+
+        const data = response.data?.data || null;
+
+        // 如果成功获取数据，更新缓存
+
+        if (data) {
+          preloadingDataCacheRef.current.set(nodeId, data);
+
+          // 5 秒后清除缓存
+
+          setTimeout(() => {
+            preloadingDataCacheRef.current.delete(nodeId);
+          }, 5000);
         }
 
-  
+        return data;
+      } catch (error) {
+        handleError(error, '获取预加载数据失败');
 
-        // 检查缓存（缓存有效期 5 秒）
+        return null;
+      } finally {
+        // 请求完成后移除标记
 
-        const cached = preloadingDataCacheRef.current.get(nodeId);
+        pendingRequestsRef.current.delete(nodeId);
+      }
+    },
 
-        if (cached) {
-
-          logger.debug(`[fetchPreloadingData] 返回缓存数据: ${nodeId}`);
-
-          return cached;
-
-        }
-
-  
-
-        // 检查是否已有相同请求在进行中
-
-        if (pendingRequestsRef.current.has(nodeId)) {
-
-          logger.debug(`[fetchPreloadingData] 节点 ${nodeId} 的请求已在进行中，跳过重复请求`);
-
-          return null;
-
-        }
-
-  
-
-        // 标记请求开始
-
-        pendingRequestsRef.current.add(nodeId);
-
-  
-
-        try {
-
-          const response = await mxcadApi.getPreloadingData(nodeId);
-
-          // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
-
-          // 需要提取 data 字段中的实际预加载数据
-
-          const data = response.data?.data || null;
-
-  
-
-          // 如果成功获取数据，更新缓存
-
-          if (data) {
-
-            preloadingDataCacheRef.current.set(nodeId, data);
-
-  
-
-            // 5 秒后清除缓存
-
-            setTimeout(() => {
-
-              preloadingDataCacheRef.current.delete(nodeId);
-
-            }, 5000);
-
-          }
-
-  
-
-          return data;
-
-        } catch (error) {
-
-          handleError(error, '获取预加载数据失败');
-
-          return null;
-
-        } finally {
-
-          // 请求完成后移除标记
-
-          pendingRequestsRef.current.delete(nodeId);
-
-        }
-
-      },
-
-  
-
-      []
-
-    );
+    []
+  );
 
   /**
    * 检查外部参照是否存在
@@ -175,7 +135,12 @@ export const useExternalReferenceUpload = (
           nodeId,
           fileName
         );
-        logger.debug('[checkReferenceExists] 响应:', 'external-reference', fileName, response.data);
+        logger.debug(
+          '[checkReferenceExists] 响应:',
+          'external-reference',
+          fileName,
+          response.data
+        );
         // checkExternalReference 接口使用 res.json({ exists }) 直接返回，绕过了全局响应包装
         // 所以 response.data 就是 {exists: boolean}
         return response.data?.exists ?? false;
@@ -275,7 +240,9 @@ export const useExternalReferenceUpload = (
         return false;
       }
 
-      const missingCount = allExternalReferences.filter((f) => !f.exists).length;
+      const missingCount = allExternalReferences.filter(
+        (f) => !f.exists
+      ).length;
       logger.debug(
         `[useExternalReferenceUpload] 外部参照总数: ${allExternalReferences.length} 个，缺失: ${missingCount} 个`,
         'external-reference'
@@ -293,7 +260,10 @@ export const useExternalReferenceUpload = (
    * DWG 外部参照使用外部参照上传接口，图片外部参照直接上传
    */
   const uploadFiles = useCallback(async () => {
-    logger.debug('[useExternalReferenceUpload] uploadFiles 被调用', 'external-reference');
+    logger.debug(
+      '[useExternalReferenceUpload] uploadFiles 被调用',
+      'external-reference'
+    );
     logger.debug(
       '[useExternalReferenceUpload] 当前文件列表:',
       'external-reference',
@@ -316,7 +286,10 @@ export const useExternalReferenceUpload = (
     );
 
     if (filesToUpload.length === 0) {
-      logger.debug('[useExternalReferenceUpload] 没有需要上传的文件', 'external-reference');
+      logger.debug(
+        '[useExternalReferenceUpload] 没有需要上传的文件',
+        'external-reference'
+      );
       return;
     }
     setLoading(true);

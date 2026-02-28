@@ -96,7 +96,8 @@ export const useMxCadUploadNative = () => {
             onProgress: config.onProgress,
           };
 
-          const result: MxCadUploadResult = await uploadMxCadFile(uploadOptions);
+          const result: MxCadUploadResult =
+            await uploadMxCadFile(uploadOptions);
 
           // 调用成功回调
           config.onSuccess?.({
@@ -115,8 +116,8 @@ export const useMxCadUploadNative = () => {
             error instanceof MxCadUploadError
               ? error.message
               : error instanceof Error
-              ? error.message
-              : String(error);
+                ? error.message
+                : String(error);
           config.onError?.(`文件 ${file.name} 上传失败: ${errorMessage}`);
         }
       }

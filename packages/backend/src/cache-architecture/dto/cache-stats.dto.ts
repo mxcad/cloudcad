@@ -33,7 +33,10 @@ export class CacheHealthStatusDto {
   @ApiProperty({ description: '缓存级别' })
   level: string;
 
-  @ApiProperty({ description: '健康状态', enum: ['healthy', 'degraded', 'unhealthy'] })
+  @ApiProperty({
+    description: '健康状态',
+    enum: ['healthy', 'degraded', 'unhealthy'],
+  })
   status: 'healthy' | 'degraded' | 'unhealthy';
 
   @ApiProperty({ description: '最后检查时间' })
@@ -176,7 +179,11 @@ export class CacheRefreshDto {
  * 缓存清理请求 DTO
  */
 export class CacheCleanupDto {
-  @ApiProperty({ description: '缓存级别', enum: ['L1', 'L2', 'L3', 'ALL'], required: false })
+  @ApiProperty({
+    description: '缓存级别',
+    enum: ['L1', 'L2', 'L3', 'ALL'],
+    required: false,
+  })
   level?: 'L1' | 'L2' | 'L3' | 'ALL';
 
   @ApiProperty({ description: '模式（支持通配符）', required: false })
@@ -187,7 +194,11 @@ export class CacheCleanupDto {
  * 缓存统计查询 DTO
  */
 export class CacheStatsQueryDto {
-  @ApiProperty({ description: '缓存级别', enum: ['L1', 'L2', 'L3'], required: false })
+  @ApiProperty({
+    description: '缓存级别',
+    enum: ['L1', 'L2', 'L3'],
+    required: false,
+  })
   level?: 'L1' | 'L2' | 'L3';
 
   @ApiProperty({ description: '是否包含性能指标', required: false })

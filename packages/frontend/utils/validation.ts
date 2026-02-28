@@ -14,22 +14,22 @@ interface ValidationRule {
 export const ValidationRules: Record<string, ValidationRule> = {
   email: {
     required: true,
-    isEmail: true
+    isEmail: true,
   },
   username: {
     required: true,
     minLength: 3,
     maxLength: 20,
-    pattern: /^[a-zA-Z0-9_]+$/
+    pattern: /^[a-zA-Z0-9_]+$/,
   },
   password: {
     required: true,
     minLength: 8,
-    maxLength: 50
+    maxLength: 50,
   },
   nickname: {
-    maxLength: 50
-  }
+    maxLength: 50,
+  },
 };
 
 /**
@@ -60,7 +60,10 @@ const ERROR_MESSAGES: Record<string, Record<string, string>> = {
 /**
  * 验证字段
  */
-export function validateField(field: keyof typeof ValidationRules, value: string): string | null {
+export function validateField(
+  field: keyof typeof ValidationRules,
+  value: string
+): string | null {
   const rules = ValidationRules[field];
   if (!rules) return null;
 

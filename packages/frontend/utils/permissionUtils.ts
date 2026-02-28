@@ -18,7 +18,12 @@ export interface User {
 /**
  * 节点访问角色 - 与后端 ProjectRole 枚举保持一致
  */
-export type NodeAccessRole = 'PROJECT_OWNER' | 'PROJECT_ADMIN' | 'PROJECT_MEMBER' | 'PROJECT_EDITOR' | 'PROJECT_VIEWER';
+export type NodeAccessRole =
+  | 'PROJECT_OWNER'
+  | 'PROJECT_ADMIN'
+  | 'PROJECT_MEMBER'
+  | 'PROJECT_EDITOR'
+  | 'PROJECT_VIEWER';
 
 /**
  * 节点权限缓存

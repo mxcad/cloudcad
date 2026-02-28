@@ -3,7 +3,10 @@ import { DatabaseService } from '../database/database.service';
 import { PermissionService } from '../common/services/permission.service';
 import { RoleInheritanceService } from '../common/services/role-inheritance.service';
 import { SystemRole } from '../common/enums/permissions.enum';
-import { Permission as PrismaPermission, ProjectPermission as PrismaProjectPermission } from '@prisma/client';
+import {
+  Permission as PrismaPermission,
+  ProjectPermission as PrismaProjectPermission,
+} from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 /**
@@ -67,7 +70,7 @@ export class PermissionTestRunner {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly permissionService: PermissionService,
-    private readonly roleInheritanceService: RoleInheritanceService,
+    private readonly roleInheritanceService: RoleInheritanceService
   ) {}
 
   /**
@@ -98,7 +101,9 @@ export class PermissionTestRunner {
   /**
    * 运行单个测试套件（批量优化版本）
    */
-  async runTestSuite(suite: PermissionTestSuite): Promise<PermissionTestReport> {
+  async runTestSuite(
+    suite: PermissionTestSuite
+  ): Promise<PermissionTestReport> {
     this.logger.log(`运行测试套件: ${suite.name}`);
 
     const startTime = Date.now();
@@ -114,7 +119,10 @@ export class PermissionTestRunner {
         const testUser = testUsers[i];
 
         if (testUser) {
-          const result = await this.runTestCaseWithExistingUser(testCase, testUser);
+          const result = await this.runTestCaseWithExistingUser(
+            testCase,
+            testUser
+          );
           results.push(result);
         }
       }
@@ -138,7 +146,7 @@ export class PermissionTestRunner {
     };
 
     this.logger.log(
-      `测试套件 ${suite.name} 完成: ${passedTests}/${results.length} 通过`,
+      `测试套件 ${suite.name} 完成: ${passedTests}/${results.length} 通过`
     );
 
     return report;
@@ -149,17 +157,14 @@ export class PermissionTestRunner {
    */
   private async runTestCaseWithExistingUser(
     testCase: PermissionTestCase,
-    testUser: { id: string; role: { name: SystemRole } },
+    testUser: { id: string; role: { name: SystemRole } }
   ): Promise<PermissionTestResult> {
     const startTime = Date.now();
 
     try {
       // 对于缓存测试，执行缓存验证逻辑
       if (testCase.name.includes('缓存')) {
-        const cacheResult = await this.runCacheTest(
-          testUser.id,
-          testCase,
-        );
+        const cacheResult = await this.runCacheTest(testUser.id, testCase);
 
         const duration = Date.now() - startTime;
 
@@ -177,12 +182,12 @@ export class PermissionTestRunner {
       // 检查权限（仅处理系统权限）
       const hasPermission = await this.permissionService.checkSystemPermission(
         testUser.id,
-        testCase.permission as PrismaPermission,
+        testCase.permission as PrismaPermission
       );
 
       // 验证期望结果
       const shouldHavePermission = testCase.expectedRoles.includes(
-        testUser.role.name as SystemRole,
+        testUser.role.name as SystemRole
       );
 
       const passed = hasPermission === shouldHavePermission;
@@ -215,7 +220,9 @@ export class PermissionTestRunner {
   /**
    * 运行单个测试用例（兼容性方法，内部使用批量优化）
    */
-  async runTestCase(testCase: PermissionTestCase): Promise<PermissionTestResult> {
+  async runTestCase(
+    testCase: PermissionTestCase
+  ): Promise<PermissionTestResult> {
     const startTime = Date.now();
 
     try {
@@ -225,12 +232,12 @@ export class PermissionTestRunner {
       // 检查权限（仅处理系统权限）
       const hasPermission = await this.permissionService.checkSystemPermission(
         testUser.id,
-        testCase.permission as PrismaPermission,
+        testCase.permission as PrismaPermission
       );
 
       // 验证期望结果
       const shouldHavePermission = testCase.expectedRoles.includes(
-        testUser.role.name as SystemRole,
+        testUser.role.name as SystemRole
       );
 
       const passed = hasPermission === shouldHavePermission;
@@ -268,7 +275,7 @@ export class PermissionTestRunner {
    */
   private async runCacheTest(
     userId: string,
-    testCase: PermissionTestCase,
+    testCase: PermissionTestCase
   ): Promise<{ passed: boolean; details: any }> {
     const isFirstCheck = testCase.name.includes('缓存命中');
     const isClearCache = testCase.name.includes('缓存失效');
@@ -276,13 +283,13 @@ export class PermissionTestRunner {
     // 第一次检查
     const firstCheck = await this.permissionService.checkSystemPermission(
       userId,
-      testCase.permission as PrismaPermission,
+      testCase.permission as PrismaPermission
     );
 
     // 第二次检查（应该使用缓存）
     const secondCheck = await this.permissionService.checkSystemPermission(
       userId,
-      testCase.permission as PrismaPermission,
+      testCase.permission as PrismaPermission
     );
 
     if (isFirstCheck) {
@@ -303,7 +310,7 @@ export class PermissionTestRunner {
       // 缓存失效测试：验证清除缓存后重新检查
       const thirdCheck = await this.permissionService.checkSystemPermission(
         userId,
-        testCase.permission as PrismaPermission,
+        testCase.permission as PrismaPermission
       );
 
       // 清除缓存
@@ -312,10 +319,13 @@ export class PermissionTestRunner {
       // 第四次检查（应该重新查询数据库）
       const fourthCheck = await this.permissionService.checkSystemPermission(
         userId,
-        testCase.permission as PrismaPermission,
+        testCase.permission as PrismaPermission
       );
 
-      const passed = firstCheck === secondCheck && secondCheck === thirdCheck && thirdCheck === fourthCheck;
+      const passed =
+        firstCheck === secondCheck &&
+        secondCheck === thirdCheck &&
+        thirdCheck === fourthCheck;
 
       return {
         passed,
@@ -389,13 +399,21 @@ export class PermissionTestRunner {
           name: 'USER_MANAGER 继承 USER 权限',
           description: '用户管理员应继承普通用户的权限',
           permission: PrismaPermission.SYSTEM_FONT_UPLOAD,
-          expectedRoles: [SystemRole.USER, SystemRole.USER_MANAGER, SystemRole.ADMIN],
+          expectedRoles: [
+            SystemRole.USER,
+            SystemRole.USER_MANAGER,
+            SystemRole.ADMIN,
+          ],
         },
         {
           name: 'FONT_MANAGER 继承 USER 权限',
           description: '字体管理员应继承普通用户的权限',
           permission: PrismaPermission.SYSTEM_FONT_UPLOAD,
-          expectedRoles: [SystemRole.USER, SystemRole.FONT_MANAGER, SystemRole.ADMIN],
+          expectedRoles: [
+            SystemRole.USER,
+            SystemRole.FONT_MANAGER,
+            SystemRole.ADMIN,
+          ],
         },
       ],
     };
@@ -453,7 +471,7 @@ export class PermissionTestRunner {
    * 创建测试用户
    */
   private async createTestUser(
-    testCase: PermissionTestCase,
+    testCase: PermissionTestCase
   ): Promise<{ id: string; role: { name: SystemRole } }> {
     const roleName = testCase.expectedRoles[0];
 
@@ -493,7 +511,7 @@ export class PermissionTestRunner {
    * @returns 创建的测试用户数组
    */
   private async batchCreateTestUsers(
-    testCases: PermissionTestCase[],
+    testCases: PermissionTestCase[]
   ): Promise<Array<{ id: string; role: { name: SystemRole } }>> {
     if (testCases.length === 0) {
       return [];
@@ -670,7 +688,9 @@ export class PermissionTestRunner {
         const status = result.passed ? '✅ 通过' : '❌ 失败';
         // 安全：只提取角色名称，不包含用户 ID 或其他敏感信息
         const role = result.details?.role || 'N/A';
-        const hasPermission = result.details?.hasPermission ? '有权限' : '无权限';
+        const hasPermission = result.details?.hasPermission
+          ? '有权限'
+          : '无权限';
         const errorInfo = result.error ? `错误: ${result.error}` : '';
         const details = `${hasPermission} ${errorInfo}`.trim();
         markdown += `| ${result.testName} | ${status} | ${result.duration}ms | ${role} | ${details} |\n`;

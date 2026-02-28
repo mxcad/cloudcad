@@ -83,7 +83,9 @@ describe('RoleInheritanceService', () => {
           parentId: null,
         });
 
-      const permissions = await service.getRolePermissions(SystemRole.USER_MANAGER);
+      const permissions = await service.getRolePermissions(
+        SystemRole.USER_MANAGER
+      );
 
       expect(permissions).toContain(SystemPermission.SYSTEM_USER_READ);
       expect(permissions).toContain(SystemPermission.SYSTEM_USER_CREATE);
@@ -147,7 +149,10 @@ describe('RoleInheritanceService', () => {
         parentId: null,
       });
 
-      const result = await service.isInheritedFrom(SystemRole.ADMIN, SystemRole.USER);
+      const result = await service.isInheritedFrom(
+        SystemRole.ADMIN,
+        SystemRole.USER
+      );
 
       expect(result).toBe(false);
     });
@@ -207,9 +212,7 @@ describe('RoleInheritanceService', () => {
           id: 'user-mgr-id',
           name: SystemRole.USER_MANAGER,
           parentId: 'user-id',
-          permissions: [
-            { permission: SystemPermission.SYSTEM_USER_READ },
-          ],
+          permissions: [{ permission: SystemPermission.SYSTEM_USER_READ }],
         })
         .mockResolvedValueOnce({
           id: 'user-mgr-id',

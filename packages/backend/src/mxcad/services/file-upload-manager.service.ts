@@ -144,7 +144,9 @@ export class FileUploadManagerService {
           if (allChunksExist) {
             // 所有分片已存在，但不触发合并
             // 合并操作由 uploadChunk 在最后一个分片时统一触发
-            this.logger.log(`✅ 所有分片已存在，等待 uploadChunk 触发合并: ${name}`);
+            this.logger.log(
+              `✅ 所有分片已存在，等待 uploadChunk 触发合并: ${name}`
+            );
             return { ret: MxUploadReturn.kChunkAlreadyExist };
           }
         }
@@ -230,9 +232,7 @@ export class FileUploadManagerService {
    * 4. 拷贝时重命名文件：hash.xxx → nodeId.xxx
    * 5. 更新节点的 path 字段，指向 filesData/YYYYMM[/N]/nodeId/nodeId.dwg.mxweb
    */
-  async mergeConvertFile(
-    options: MergeOptions
-  ): Promise<MergeResult> {
+  async mergeConvertFile(options: MergeOptions): Promise<MergeResult> {
     const {
       hash: hashFile,
       chunks,
@@ -264,11 +264,16 @@ export class FileUploadManagerService {
       if (chunks === stack.length) {
         // 使用 Redis 缓存防止重复合并
         const mergeKey = `merging:${fileMd5}`;
-        const isMerging = await this.cacheManager.get<boolean>('file-upload', mergeKey);
-        
+        const isMerging = await this.cacheManager.get<boolean>(
+          'file-upload',
+          mergeKey
+        );
+
         if (isMerging) {
           // 文件已经在合并中了，就直接返回
-          this.logger.log(`[mergeConvertFile] 文件正在合并中，跳过: ${fileMd5}`);
+          this.logger.log(
+            `[mergeConvertFile] 文件正在合并中，跳过: ${fileMd5}`
+          );
           return { ret: MxUploadReturn.kOk };
         }
 
@@ -323,17 +328,25 @@ export class FileUploadManagerService {
             const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
             // 获取父节点信息
-            const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+            const parentNode = await this.fileSystemServiceMain.getNode(
+              context.nodeId
+            );
 
             if (!parentNode) {
-              this.logger.error(`[mergeConvertFile] 父节点不存在: ${context.nodeId}`);
+              this.logger.error(
+                `[mergeConvertFile] 父节点不存在: ${context.nodeId}`
+              );
               await this.cacheManager.delete('file-upload', mergeKey);
               return { ret: MxUploadReturn.kConvertFileError };
             }
 
-            const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+            const parentId = parentNode.isFolder
+              ? parentNode.id
+              : parentNode.parentId;
             if (!parentId) {
-              this.logger.error(`[mergeConvertFile] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`);
+              this.logger.error(
+                `[mergeConvertFile] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`
+              );
               await this.cacheManager.delete('file-upload', mergeKey);
               return { ret: MxUploadReturn.kConvertFileError };
             }
@@ -356,19 +369,28 @@ export class FileUploadManagerService {
             });
 
             newNodeId = newNode.id;
-            this.logger.log(`[mergeConvertFile] 节点创建成功: ${newNodeId} (跳过物理目录创建)`);
+            this.logger.log(
+              `[mergeConvertFile] 节点创建成功: ${newNodeId} (跳过物理目录创建)`
+            );
 
             // 转换成功后，创建物理目录并拷贝文件
             // 注意：先只分配目录，不包含文件名，因为我们需要先确定转换后的文件名
-            const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId);
-            this.logger.log(`[mergeConvertFile] 物理目录创建成功: ${storageInfo.relativePath}`);
+            const storageInfo =
+              await this.storageManager.allocateNodeStorage(newNodeId);
+            this.logger.log(
+              `[mergeConvertFile] 物理目录创建成功: ${storageInfo.relativePath}`
+            );
 
             // 从 uploads 目录拷贝所有文件（用于秒传）
             const files = await fsPromises.readdir(uploadPath);
-            const matchingFiles = files.filter(file => file.startsWith(fileMd5));
+            const matchingFiles = files.filter((file) =>
+              file.startsWith(fileMd5)
+            );
 
             if (matchingFiles.length === 0) {
-              this.logger.warn(`[mergeConvertFile] 未找到匹配 ${fileMd5} 的文件`);
+              this.logger.warn(
+                `[mergeConvertFile] 未找到匹配 ${fileMd5} 的文件`
+              );
             } else {
               // 获取节点目录路径（YYYYMM/nodeId）
               // 注意：storageInfo.fullPath 已经是节点目录路径（未传 fileName）
@@ -397,39 +419,61 @@ export class FileUploadManagerService {
               // 更新节点的 path 字段，指向 mxweb 文件
               if (mxwebFileName) {
                 const nodePathWithFile = `${storageInfo.relativePath}/${mxwebFileName}`;
-                await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
-                this.logger.log(`[mergeConvertFile] 节点 path 已更新: ${nodePathWithFile}`);
+                await this.fileSystemServiceMain.updateNodePath(
+                  newNodeId,
+                  nodePathWithFile
+                );
+                this.logger.log(
+                  `[mergeConvertFile] 节点 path 已更新: ${nodePathWithFile}`
+                );
               } else {
                 // 如果没有 mxweb 文件，使用预期的 mxweb 文件名
                 const expectedMxwebFileName = `${newNodeId}${extension}.mxweb`;
                 const nodePathWithFile = `${storageInfo.relativePath}/${expectedMxwebFileName}`;
-                await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
-                this.logger.log(`[mergeConvertFile] 节点 path 已更新（预期）: ${nodePathWithFile}`);
+                await this.fileSystemServiceMain.updateNodePath(
+                  newNodeId,
+                  nodePathWithFile
+                );
+                this.logger.log(
+                  `[mergeConvertFile] 节点 path 已更新（预期）: ${nodePathWithFile}`
+                );
               }
             }
 
             // 【新增】提交节点目录到 SVN 版本控制
             try {
-              const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+              const filesDataPath =
+                this.configService.get('FILES_DATA_PATH') ||
+                path.join(process.cwd(), 'filesData');
               // 注意：storageInfo.fullPath 已经是节点目录路径（未传 fileName）
               const nodeDirectory = storageInfo.fullPath;
 
-              this.logger.log(`[mergeConvertFile] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, nodeDirectory=${nodeDirectory}`);
-
-              const commitResult = await this.versionControlService.commitNodeDirectory(
-                nodeDirectory,
-                `Upload file: ${fileName}`,
-                context.userId,
-                `User${context.userId}`
+              this.logger.log(
+                `[mergeConvertFile] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, nodeDirectory=${nodeDirectory}`
               );
 
+              const commitResult =
+                await this.versionControlService.commitNodeDirectory(
+                  nodeDirectory,
+                  `Upload file: ${fileName}`,
+                  context.userId,
+                  `User${context.userId}`
+                );
+
               if (commitResult.success) {
-                this.logger.log(`[mergeConvertFile] 节点目录已提交到 SVN: ${fileName} (${nodeDirectory})`);
+                this.logger.log(
+                  `[mergeConvertFile] 节点目录已提交到 SVN: ${fileName} (${nodeDirectory})`
+                );
               } else {
-                this.logger.warn(`[mergeConvertFile] 节点目录 SVN 提交失败: ${fileName}, 原因: ${commitResult.message}`);
+                this.logger.warn(
+                  `[mergeConvertFile] 节点目录 SVN 提交失败: ${fileName}, 原因: ${commitResult.message}`
+                );
               }
             } catch (svnError) {
-              this.logger.error(`[mergeConvertFile] 节点目录 SVN 提交异常: ${fileName}`, svnError.stack);
+              this.logger.error(
+                `[mergeConvertFile] 节点目录 SVN 提交异常: ${fileName}`,
+                svnError.stack
+              );
               // SVN 提交失败不影响主流程
             }
 
@@ -479,9 +523,13 @@ export class FileUploadManagerService {
           if (newNodeId) {
             try {
               await this.fileSystemServiceMain.deleteNode(newNodeId, true); // 彻底删除
-              this.logger.log(`[mergeConvertFile] 发生错误，已删除节点: ${newNodeId}`);
+              this.logger.log(
+                `[mergeConvertFile] 发生错误，已删除节点: ${newNodeId}`
+              );
             } catch (deleteError) {
-              this.logger.error(`[mergeConvertFile] 删除节点失败: ${deleteError.message}`);
+              this.logger.error(
+                `[mergeConvertFile] 删除节点失败: ${deleteError.message}`
+              );
             }
           }
           return { ret: MxUploadReturn.kConvertFileError };
@@ -504,7 +552,8 @@ export class FileUploadManagerService {
   private async getExternalRefDirName(srcDwgNodeId: string): Promise<string> {
     try {
       // 通过 nodeId 查找源图纸节点
-      const sourceNode = await this.fileSystemNodeService.findById(srcDwgNodeId);
+      const sourceNode =
+        await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
         throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
@@ -522,7 +571,9 @@ export class FileUploadManagerService {
 
       // 读取 preloading.json 文件
       if (!(await this.fileSystemService.exists(preloadingFilePath))) {
-        this.logger.warn(`[getExternalRefDirName] preloading.json 文件不存在: ${preloadingFilePath}`);
+        this.logger.warn(
+          `[getExternalRefDirName] preloading.json 文件不存在: ${preloadingFilePath}`
+        );
         // 如果文件不存在，降级使用 nodeId 作为目录名
         return srcDwgNodeId;
       }
@@ -534,15 +585,22 @@ export class FileUploadManagerService {
       const srcFileMd5 = data.src_file_md5;
 
       if (!srcFileMd5) {
-        this.logger.warn(`[getExternalRefDirName] preloading.json 中没有 src_file_md5 字段: ${preloadingFilePath}`);
+        this.logger.warn(
+          `[getExternalRefDirName] preloading.json 中没有 src_file_md5 字段: ${preloadingFilePath}`
+        );
         // 如果字段不存在，降级使用 nodeId 作为目录名
         return srcDwgNodeId;
       }
 
-      this.logger.log(`[getExternalRefDirName] 获取到 src_file_md5: ${srcFileMd5}`);
+      this.logger.log(
+        `[getExternalRefDirName] 获取到 src_file_md5: ${srcFileMd5}`
+      );
       return srcFileMd5;
     } catch (error) {
-      this.logger.error(`[getExternalRefDirName] 读取失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[getExternalRefDirName] 读取失败: ${error.message}`,
+        error.stack
+      );
       // 发生错误时，降级使用 nodeId 作为目录名
       return srcDwgNodeId;
     }
@@ -566,7 +624,8 @@ export class FileUploadManagerService {
       );
 
       // 通过 nodeId 查找源图纸节点
-      const sourceNode = await this.fileSystemNodeService.findById(srcDwgNodeId);
+      const sourceNode =
+        await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
         throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
@@ -591,7 +650,9 @@ export class FileUploadManagerService {
       // 确保外部参照目录存在
       if (!(await this.fileSystemService.exists(externalRefDir))) {
         await fsPromises.mkdir(externalRefDir, { recursive: true } as any);
-        this.logger.log(`[handleExternalReferenceFile] 创建外部参照目录: ${externalRefDir}`);
+        this.logger.log(
+          `[handleExternalReferenceFile] 创建外部参照目录: ${externalRefDir}`
+        );
       }
 
       // 获取转换后的文件路径
@@ -599,7 +660,10 @@ export class FileUploadManagerService {
 
       // 构建目标文件路径：使用外部参照文件名（带原始扩展名）+ .mxweb
       const convertedExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
-      const targetFile = path.join(externalRefDir, `${extRefFileName}${convertedExt}`);
+      const targetFile = path.join(
+        externalRefDir,
+        `${extRefFileName}${convertedExt}`
+      );
 
       // 检查源文件是否存在
       if (!(await this.fileSystemService.exists(sourceFile))) {
@@ -660,7 +724,12 @@ export class FileUploadManagerService {
     // 使用限流器控制并发
     return this.uploadRateLimiter.execute(async () => {
       try {
-        await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
+        await this.fileSystemService.writeStatusFile(
+          name,
+          size,
+          hash,
+          filePath
+        );
         const { isOk, ret } = await this.fileConversionService.convertFile({
           srcPath: filePath,
           fileHash: hash,
@@ -689,9 +758,7 @@ export class FileUploadManagerService {
   /**
    * 合并分片文件方法（用于完成请求）
    */
-  async mergeChunksWithPermission(
-    options: MergeOptions
-  ): Promise<MergeResult> {
+  async mergeChunksWithPermission(options: MergeOptions): Promise<MergeResult> {
     const { hash, name, size, chunks, context, srcDwgNodeId } = options;
 
     this.logger.log(
@@ -700,10 +767,15 @@ export class FileUploadManagerService {
 
     // 使用 Redis 缓存防止重复合并
     const mergeKey = `merging:${hash}`;
-    const isMerging = await this.cacheManager.get<boolean>('file-upload', mergeKey);
-    
+    const isMerging = await this.cacheManager.get<boolean>(
+      'file-upload',
+      mergeKey
+    );
+
     if (isMerging) {
-      this.logger.log(`[mergeChunksWithPermission] 文件正在合并中，跳过: ${hash}`);
+      this.logger.log(
+        `[mergeChunksWithPermission] 文件正在合并中，跳过: ${hash}`
+      );
       return { ret: MxUploadReturn.kOk };
     }
 
@@ -750,17 +822,25 @@ export class FileUploadManagerService {
           const extension = path.extname(name).toLowerCase();
           const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
-          const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+          const parentNode = await this.fileSystemServiceMain.getNode(
+            context.nodeId
+          );
 
           if (!parentNode) {
-            this.logger.error(`[mergeChunksWithPermission] 父节点不存在: ${context.nodeId}`);
+            this.logger.error(
+              `[mergeChunksWithPermission] 父节点不存在: ${context.nodeId}`
+            );
             await this.fileSystemService.deleteDirectory(tmpDir);
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
-          const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+          const parentId = parentNode.isFolder
+            ? parentNode.id
+            : parentNode.parentId;
           if (!parentId) {
-            this.logger.error(`[mergeChunksWithPermission] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`);
+            this.logger.error(
+              `[mergeChunksWithPermission] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`
+            );
             await this.fileSystemService.deleteDirectory(tmpDir);
             return { ret: MxUploadReturn.kConvertFileError };
           }
@@ -778,43 +858,69 @@ export class FileUploadManagerService {
           });
 
           const newNodeId = newNode.id;
-          this.logger.log(`[mergeChunksWithPermission] 非CAD节点创建成功: ${newNodeId} (跳过物理目录创建)`);
+          this.logger.log(
+            `[mergeChunksWithPermission] 非CAD节点创建成功: ${newNodeId} (跳过物理目录创建)`
+          );
 
           // 手动创建物理目录并拷贝文件
-          const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId, name);
-          this.logger.log(`[mergeChunksWithPermission] 物理目录创建成功: ${storageInfo.relativePath}`);
+          const storageInfo = await this.storageManager.allocateNodeStorage(
+            newNodeId,
+            name
+          );
+          this.logger.log(
+            `[mergeChunksWithPermission] 物理目录创建成功: ${storageInfo.relativePath}`
+          );
 
           // 从临时目录拷贝文件
           const targetPath = storageInfo.fullPath;
           await fsPromises.copyFile(mergedFilePath, targetPath);
-          this.logger.log(`[mergeChunksWithPermission] 文件拷贝成功: ${mergedFilePath} -> ${targetPath}`);
+          this.logger.log(
+            `[mergeChunksWithPermission] 文件拷贝成功: ${mergedFilePath} -> ${targetPath}`
+          );
 
           // 更新节点的 path 字段
-          await this.fileSystemServiceMain.updateNodePath(newNodeId, storageInfo.relativePath);
-          this.logger.log(`[mergeChunksWithPermission] 节点 path 已更新: ${storageInfo.relativePath}`);
+          await this.fileSystemServiceMain.updateNodePath(
+            newNodeId,
+            storageInfo.relativePath
+          );
+          this.logger.log(
+            `[mergeChunksWithPermission] 节点 path 已更新: ${storageInfo.relativePath}`
+          );
 
           // 【新增】提交节点目录到 SVN 版本控制
           try {
-            const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+            const filesDataPath =
+              this.configService.get('FILES_DATA_PATH') ||
+              path.join(process.cwd(), 'filesData');
             const fullPath = path.join(filesDataPath, storageInfo.relativePath);
             const nodeDirectory = path.dirname(fullPath);
-            
-            this.logger.log(`[mergeChunksWithPermission] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`);
 
-            const commitResult = await this.versionControlService.commitNodeDirectory(
-              nodeDirectory,
-              `Upload file: ${name}`,
-              context.userId,
-              `User${context.userId}`
+            this.logger.log(
+              `[mergeChunksWithPermission] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`
             );
 
+            const commitResult =
+              await this.versionControlService.commitNodeDirectory(
+                nodeDirectory,
+                `Upload file: ${name}`,
+                context.userId,
+                `User${context.userId}`
+              );
+
             if (commitResult.success) {
-              this.logger.log(`[mergeChunksWithPermission] 节点目录已提交到 SVN: ${name} (${nodeDirectory})`);
+              this.logger.log(
+                `[mergeChunksWithPermission] 节点目录已提交到 SVN: ${name} (${nodeDirectory})`
+              );
             } else {
-              this.logger.warn(`[mergeChunksWithPermission] 节点目录 SVN 提交失败: ${name}, 原因: ${commitResult.message}`);
+              this.logger.warn(
+                `[mergeChunksWithPermission] 节点目录 SVN 提交失败: ${name}, 原因: ${commitResult.message}`
+              );
             }
           } catch (svnError) {
-            this.logger.error(`[mergeChunksWithPermission] 节点目录 SVN 提交异常: ${name}`, svnError.stack);
+            this.logger.error(
+              `[mergeChunksWithPermission] 节点目录 SVN 提交异常: ${name}`,
+              svnError.stack
+            );
             // SVN 提交失败不影响主流程
           }
 
@@ -856,7 +962,10 @@ export class FileUploadManagerService {
 
       // 分配存储空间
       // 注意：传递文件名，确保 storageInfo.relativePath 包含完整文件路径
-      const storageInfo = await this.storageManager.allocateNodeStorage(nodeId, fileName);
+      const storageInfo = await this.storageManager.allocateNodeStorage(
+        nodeId,
+        fileName
+      );
 
       // 确保目标目录存在
       const targetDir = path.dirname(storageInfo.fullPath);
@@ -867,13 +976,20 @@ export class FileUploadManagerService {
 
       // 拷贝文件
       await fsPromises.copyFile(sourceFilePath, storageInfo.fullPath);
-      this.logger.log(`[handleNonCadFileCopy] 拷贝成功: ${fileName} → ${storageInfo.fullPath}`);
+      this.logger.log(
+        `[handleNonCadFileCopy] 拷贝成功: ${fileName} → ${storageInfo.fullPath}`
+      );
 
       // storageInfo.relativePath 已经是完整路径：YYYYMM[/N]/nodeId/fileName
       // 直接使用，不需要再次拼接
-      await this.fileSystemServiceMain.updateNodePath(nodeId, storageInfo.relativePath);
+      await this.fileSystemServiceMain.updateNodePath(
+        nodeId,
+        storageInfo.relativePath
+      );
 
-      this.logger.log(`[handleNonCadFileCopy] 节点路径更新成功: ${nodeId} → ${storageInfo.relativePath}`);
+      this.logger.log(
+        `[handleNonCadFileCopy] 节点路径更新成功: ${nodeId} → ${storageInfo.relativePath}`
+      );
     } catch (error) {
       this.logger.error(
         `[handleNonCadFileCopy] 处理失败: nodeId=${nodeId}, error=${error.message}`,
@@ -903,16 +1019,24 @@ export class FileUploadManagerService {
         const extension = path.extname(name).toLowerCase();
         const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
-        const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+        const parentNode = await this.fileSystemServiceMain.getNode(
+          context.nodeId
+        );
 
         if (!parentNode) {
-          this.logger.error(`[uploadAndConvertFileWithPermission] 父节点不存在: ${context.nodeId}`);
+          this.logger.error(
+            `[uploadAndConvertFileWithPermission] 父节点不存在: ${context.nodeId}`
+          );
           return { ret: MxUploadReturn.kConvertFileError };
         }
 
-        const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+        const parentId = parentNode.isFolder
+          ? parentNode.id
+          : parentNode.parentId;
         if (!parentId) {
-          this.logger.error(`[uploadAndConvertFileWithPermission] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`);
+          this.logger.error(
+            `[uploadAndConvertFileWithPermission] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`
+          );
           return { ret: MxUploadReturn.kConvertFileError };
         }
 
@@ -935,18 +1059,27 @@ export class FileUploadManagerService {
         });
 
         const newNodeId = newNode.id;
-        this.logger.log(`[uploadAndConvertFileWithPermission] 秒传节点创建成功: ${newNodeId} (跳过物理目录创建)`);
+        this.logger.log(
+          `[uploadAndConvertFileWithPermission] 秒传节点创建成功: ${newNodeId} (跳过物理目录创建)`
+        );
 
         // 手动创建物理目录并拷贝文件
-        const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId, name);
-        this.logger.log(`[uploadAndConvertFileWithPermission] 物理目录创建成功: ${storageInfo.relativePath}`);
+        const storageInfo = await this.storageManager.allocateNodeStorage(
+          newNodeId,
+          name
+        );
+        this.logger.log(
+          `[uploadAndConvertFileWithPermission] 物理目录创建成功: ${storageInfo.relativePath}`
+        );
 
         // 从 uploads 目录拷贝文件
         const files = await fsPromises.readdir(uploadPath);
-        const matchingFiles = files.filter(file => file.startsWith(hash));
+        const matchingFiles = files.filter((file) => file.startsWith(hash));
 
         if (matchingFiles.length === 0) {
-          this.logger.warn(`[uploadAndConvertFileWithPermission] 未找到匹配 ${hash} 的文件`);
+          this.logger.warn(
+            `[uploadAndConvertFileWithPermission] 未找到匹配 ${hash} 的文件`
+          );
         } else {
           const nodeDirectory = path.dirname(storageInfo.fullPath);
           let mxwebFileName = '';
@@ -961,44 +1094,68 @@ export class FileUploadManagerService {
               mxwebFileName = targetFileName;
             }
           }
-          this.logger.log(`[uploadAndConvertFileWithPermission] 文件拷贝成功: ${matchingFiles.length} 个文件`);
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 文件拷贝成功: ${matchingFiles.length} 个文件`
+          );
 
           // 更新节点的 path 字段，指向 mxweb 文件
           if (mxwebFileName) {
             const nodePathWithFile = `${path.dirname(storageInfo.relativePath)}/${mxwebFileName}`;
-            await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
-            this.logger.log(`[uploadAndConvertFileWithPermission] 节点 path 已更新: ${nodePathWithFile}`);
+            await this.fileSystemServiceMain.updateNodePath(
+              newNodeId,
+              nodePathWithFile
+            );
+            this.logger.log(
+              `[uploadAndConvertFileWithPermission] 节点 path 已更新: ${nodePathWithFile}`
+            );
           } else {
             // 如果没有 mxweb 文件，使用预期的 mxweb 文件名
             const expectedMxwebFileName = `${newNodeId}${extension}.mxweb`;
             const nodePathWithFile = `${path.dirname(storageInfo.relativePath)}/${expectedMxwebFileName}`;
-            await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
-            this.logger.log(`[uploadAndConvertFileWithPermission] 节点 path 已更新（预期）: ${nodePathWithFile}`);
+            await this.fileSystemServiceMain.updateNodePath(
+              newNodeId,
+              nodePathWithFile
+            );
+            this.logger.log(
+              `[uploadAndConvertFileWithPermission] 节点 path 已更新（预期）: ${nodePathWithFile}`
+            );
           }
         }
 
         // 【新增】提交节点目录到 SVN 版本控制
         try {
-          const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+          const filesDataPath =
+            this.configService.get('FILES_DATA_PATH') ||
+            path.join(process.cwd(), 'filesData');
           const fullPath = path.join(filesDataPath, storageInfo.relativePath);
           const nodeDirectory = path.dirname(fullPath);
-          
-          this.logger.log(`[uploadAndConvertFileWithPermission] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`);
 
-          const commitResult = await this.versionControlService.commitNodeDirectory(
-            nodeDirectory,
-            `Fast upload file: ${name}`,
-            context.userId,
-            `User${context.userId}`
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`
           );
 
+          const commitResult =
+            await this.versionControlService.commitNodeDirectory(
+              nodeDirectory,
+              `Fast upload file: ${name}`,
+              context.userId,
+              `User${context.userId}`
+            );
+
           if (commitResult.success) {
-            this.logger.log(`[uploadAndConvertFileWithPermission] 秒传节点目录已提交到 SVN: ${name} (${nodeDirectory})`);
+            this.logger.log(
+              `[uploadAndConvertFileWithPermission] 秒传节点目录已提交到 SVN: ${name} (${nodeDirectory})`
+            );
           } else {
-            this.logger.warn(`[uploadAndConvertFileWithPermission] 秒传节点目录 SVN 提交失败: ${name}, 原因: ${commitResult.message}`);
+            this.logger.warn(
+              `[uploadAndConvertFileWithPermission] 秒传节点目录 SVN 提交失败: ${name}, 原因: ${commitResult.message}`
+            );
           }
         } catch (svnError) {
-          this.logger.error(`[uploadAndConvertFileWithPermission] 秒传节点目录 SVN 提交异常: ${name}`, svnError.stack);
+          this.logger.error(
+            `[uploadAndConvertFileWithPermission] 秒传节点目录 SVN 提交异常: ${name}`,
+            svnError.stack
+          );
           // SVN 提交失败不影响主流程
         }
 
@@ -1026,7 +1183,9 @@ export class FileUploadManagerService {
               );
             }
           } catch (extRefError) {
-            this.logger.error(`[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${extRefError.message}`);
+            this.logger.error(
+              `[uploadAndConvertFileWithPermission] 外部参照文件拷贝失败: ${extRefError.message}`
+            );
             // 外部参照文件拷贝失败不影响主流程
           }
         }
@@ -1109,16 +1268,24 @@ export class FileUploadManagerService {
           const extension = path.extname(name).toLowerCase();
           const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
-          const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+          const parentNode = await this.fileSystemServiceMain.getNode(
+            context.nodeId
+          );
 
           if (!parentNode) {
-            this.logger.error(`[uploadAndConvertFileWithPermission] 父节点不存在: ${context.nodeId}`);
+            this.logger.error(
+              `[uploadAndConvertFileWithPermission] 父节点不存在: ${context.nodeId}`
+            );
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
-          const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+          const parentId = parentNode.isFolder
+            ? parentNode.id
+            : parentNode.parentId;
           if (!parentId) {
-            this.logger.error(`[uploadAndConvertFileWithPermission] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`);
+            this.logger.error(
+              `[uploadAndConvertFileWithPermission] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`
+            );
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
@@ -1135,19 +1302,33 @@ export class FileUploadManagerService {
           });
 
           const newNodeId = newNode.id;
-          this.logger.log(`[uploadAndConvertFileWithPermission] 非CAD节点创建成功: ${newNodeId} (跳过物理目录创建)`);
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 非CAD节点创建成功: ${newNodeId} (跳过物理目录创建)`
+          );
 
           // 手动创建物理目录并拷贝文件
-          const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId, name);
-          this.logger.log(`[uploadAndConvertFileWithPermission] 物理目录创建成功: ${storageInfo.relativePath}`);
+          const storageInfo = await this.storageManager.allocateNodeStorage(
+            newNodeId,
+            name
+          );
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 物理目录创建成功: ${storageInfo.relativePath}`
+          );
 
           // 从源文件拷贝
           await fsPromises.copyFile(filePath, storageInfo.fullPath);
-          this.logger.log(`[uploadAndConvertFileWithPermission] 文件拷贝成功: ${filePath} -> ${storageInfo.fullPath}`);
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 文件拷贝成功: ${filePath} -> ${storageInfo.fullPath}`
+          );
 
           // 更新节点的 path 字段
-          await this.fileSystemServiceMain.updateNodePath(newNodeId, storageInfo.relativePath);
-          this.logger.log(`[uploadAndConvertFileWithPermission] 节点 path 已更新: ${storageInfo.relativePath}`);
+          await this.fileSystemServiceMain.updateNodePath(
+            newNodeId,
+            storageInfo.relativePath
+          );
+          this.logger.log(
+            `[uploadAndConvertFileWithPermission] 节点 path 已更新: ${storageInfo.relativePath}`
+          );
 
           // 如果是外部参照图片上传，额外拷贝文件到源图纸目录
           if (context.srcDwgNodeId && context.isImage) {
@@ -1200,7 +1381,8 @@ export class FileUploadManagerService {
       );
 
       // 通过 nodeId 查找源图纸节点
-      const sourceNode = await this.fileSystemNodeService.findById(srcDwgNodeId);
+      const sourceNode =
+        await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
         throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
@@ -1225,7 +1407,9 @@ export class FileUploadManagerService {
       // 确保外部参照目录存在
       if (!(await this.fileSystemService.exists(externalRefDir))) {
         await fsPromises.mkdir(externalRefDir, { recursive: true } as any);
-        this.logger.log(`[handleExternalReferenceImage] 创建外部参照目录: ${externalRefDir}`);
+        this.logger.log(
+          `[handleExternalReferenceImage] 创建外部参照目录: ${externalRefDir}`
+        );
       }
 
       // 拷贝图片到外部参照目录
@@ -1296,23 +1480,36 @@ export class FileUploadManagerService {
           const extension = `.${suffix}`.toLowerCase();
           const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
-          const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+          const parentNode = await this.fileSystemServiceMain.getNode(
+            context.nodeId
+          );
 
           if (!parentNode) {
-            this.logger.error(`[performFileExistenceCheck] 父节点不存在: ${context.nodeId}`);
+            this.logger.error(
+              `[performFileExistenceCheck] 父节点不存在: ${context.nodeId}`
+            );
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
-          const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+          const parentId = parentNode.isFolder
+            ? parentNode.id
+            : parentNode.parentId;
           if (!parentId) {
-            this.logger.error(`[performFileExistenceCheck] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`);
+            this.logger.error(
+              `[performFileExistenceCheck] 无法确定父节点ID: ${context.nodeId}, isFolder=${parentNode.isFolder}`
+            );
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
           // 处理文件名重复
-          const uniqueName = await this.generateUniqueFileName(parentId, filename);
+          const uniqueName = await this.generateUniqueFileName(
+            parentId,
+            filename
+          );
           if (uniqueName !== filename) {
-            this.logger.log(`[performFileExistenceCheck] 文件名重复，自动重命名: ${filename} -> ${uniqueName}`);
+            this.logger.log(
+              `[performFileExistenceCheck] 文件名重复，自动重命名: ${filename} -> ${uniqueName}`
+            );
           }
 
           // 获取源文件路径（uploads 目录中的转换后文件）
@@ -1324,7 +1521,9 @@ export class FileUploadManagerService {
           // 创建新节点，使用 skipFileCopy=true，先不创建物理目录
           // 使用 context.fileSize 作为文件大小
           const fileSize = context.fileSize || 0;
-          this.logger.log(`[performFileExistenceCheck] 准备创建节点: fileSize=${fileSize}, context.fileSize=${context.fileSize}`);
+          this.logger.log(
+            `[performFileExistenceCheck] 准备创建节点: fileSize=${fileSize}, context.fileSize=${context.fileSize}`
+          );
           const newNode = await this.fileSystemServiceMain.createFileNode({
             name: uniqueName,
             fileHash: fileHash,
@@ -1337,18 +1536,29 @@ export class FileUploadManagerService {
           });
 
           const newNodeId = newNode.id;
-          this.logger.log(`[performFileExistenceCheck] 秒传节点创建成功: ${newNodeId}, name=${uniqueName}, size=${newNode.size} (跳过物理目录创建)`);
+          this.logger.log(
+            `[performFileExistenceCheck] 秒传节点创建成功: ${newNodeId}, name=${uniqueName}, size=${newNode.size} (跳过物理目录创建)`
+          );
 
           // 手动创建物理目录并拷贝文件
-          const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId, uniqueName);
-          this.logger.log(`[performFileExistenceCheck] 物理目录创建成功: ${storageInfo.relativePath}`);
+          const storageInfo = await this.storageManager.allocateNodeStorage(
+            newNodeId,
+            uniqueName
+          );
+          this.logger.log(
+            `[performFileExistenceCheck] 物理目录创建成功: ${storageInfo.relativePath}`
+          );
 
           // 从 uploads 目录拷贝文件
           const files = await fsPromises.readdir(uploadPath);
-          const matchingFiles = files.filter(file => file.startsWith(fileHash));
+          const matchingFiles = files.filter((file) =>
+            file.startsWith(fileHash)
+          );
 
           if (matchingFiles.length === 0) {
-            this.logger.warn(`[performFileExistenceCheck] 未找到匹配 ${fileHash} 的文件`);
+            this.logger.warn(
+              `[performFileExistenceCheck] 未找到匹配 ${fileHash} 的文件`
+            );
           } else {
             const nodeDirectory = path.dirname(storageInfo.fullPath);
             let mxwebFileName = '';
@@ -1363,46 +1573,70 @@ export class FileUploadManagerService {
                 mxwebFileName = targetFileName;
               }
             }
-            this.logger.log(`[performFileExistenceCheck] 文件拷贝成功: ${matchingFiles.length} 个文件`);
+            this.logger.log(
+              `[performFileExistenceCheck] 文件拷贝成功: ${matchingFiles.length} 个文件`
+            );
 
             // 更新节点的 path 字段，指向 mxweb 文件
             if (mxwebFileName) {
               const nodePathWithFile = `${path.dirname(storageInfo.relativePath)}/${mxwebFileName}`;
-              await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
-              this.logger.log(`[performFileExistenceCheck] 节点 path 已更新: ${nodePathWithFile}`);
+              await this.fileSystemServiceMain.updateNodePath(
+                newNodeId,
+                nodePathWithFile
+              );
+              this.logger.log(
+                `[performFileExistenceCheck] 节点 path 已更新: ${nodePathWithFile}`
+              );
             } else {
               // 如果没有 mxweb 文件，使用预期的 mxweb 文件名
               const expectedMxwebFileName = `${newNodeId}${extension}.mxweb`;
               const nodePathWithFile = `${path.dirname(storageInfo.relativePath)}/${expectedMxwebFileName}`;
-              await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
-              this.logger.log(`[performFileExistenceCheck] 节点 path 已更新（预期）: ${nodePathWithFile}`);
+              await this.fileSystemServiceMain.updateNodePath(
+                newNodeId,
+                nodePathWithFile
+              );
+              this.logger.log(
+                `[performFileExistenceCheck] 节点 path 已更新（预期）: ${nodePathWithFile}`
+              );
             }
           }
 
           // 【新增】提交节点目录到 SVN 版本控制
           try {
             // 获取节点目录路径（完整路径，包含 nodeId）
-            const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+            const filesDataPath =
+              this.configService.get('FILES_DATA_PATH') ||
+              path.join(process.cwd(), 'filesData');
             const fullPath = path.join(filesDataPath, storageInfo.relativePath);
             // 【修复】获取节点目录（不包含文件名）
             // storageInfo.relativePath 格式：YYYYMM/nodeId/filename，所以需要获取父目录
             const nodeDirectory = path.dirname(fullPath);
-            this.logger.log(`[performFileExistenceCheck] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`);
-
-            const commitResult = await this.versionControlService.commitNodeDirectory(
-              nodeDirectory,
-              `Fast upload file: ${uniqueName}`,
-              context.userId,
-              `User${context.userId}`
+            this.logger.log(
+              `[performFileExistenceCheck] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`
             );
 
+            const commitResult =
+              await this.versionControlService.commitNodeDirectory(
+                nodeDirectory,
+                `Fast upload file: ${uniqueName}`,
+                context.userId,
+                `User${context.userId}`
+              );
+
             if (commitResult.success) {
-              this.logger.log(`[performFileExistenceCheck] 秒传节点目录已提交到 SVN: ${uniqueName} (${nodeDirectory})`);
+              this.logger.log(
+                `[performFileExistenceCheck] 秒传节点目录已提交到 SVN: ${uniqueName} (${nodeDirectory})`
+              );
             } else {
-              this.logger.warn(`[performFileExistenceCheck] 秒传节点目录 SVN 提交失败: ${uniqueName}, 原因: ${commitResult.message}`);
+              this.logger.warn(
+                `[performFileExistenceCheck] 秒传节点目录 SVN 提交失败: ${uniqueName}, 原因: ${commitResult.message}`
+              );
             }
           } catch (svnError) {
-            this.logger.error(`[performFileExistenceCheck] 秒传节点目录 SVN 提交异常: ${uniqueName}`, svnError.stack);
+            this.logger.error(
+              `[performFileExistenceCheck] 秒传节点目录 SVN 提交异常: ${uniqueName}`,
+              svnError.stack
+            );
             // SVN 提交失败不影响主流程
           }
 
@@ -1430,26 +1664,31 @@ export class FileUploadManagerService {
                 );
               }
             } catch (extRefError) {
-              this.logger.error(`[performFileExistenceCheck] 外部参照文件拷贝失败: ${extRefError.message}`);
+              this.logger.error(
+                `[performFileExistenceCheck] 外部参照文件拷贝失败: ${extRefError.message}`
+              );
               // 外部参照文件拷贝失败不影响主流程
             }
           }
 
           return { ret: MxUploadReturn.kFileAlreadyExist, nodeId: newNodeId };
         } catch (error) {
-          this.logger.error(`[performFileExistenceCheck] 秒传节点创建失败: ${error.message}`, error.stack);
+          this.logger.error(
+            `[performFileExistenceCheck] 秒传节点创建失败: ${error.message}`,
+            error.stack
+          );
           return { ret: MxUploadReturn.kConvertFileError };
         }
       } else {
-        this.logger.warn(`[performFileExistenceCheck] 秒传缺少必要参数: userId=${context?.userId}, nodeId=${context?.nodeId}`);
+        this.logger.warn(
+          `[performFileExistenceCheck] 秒传缺少必要参数: userId=${context?.userId}, nodeId=${context?.nodeId}`
+        );
         return { ret: MxUploadReturn.kConvertFileError };
       }
     } else {
       return { ret: MxUploadReturn.kFileNoExist };
     }
   }
-
-  
 
   /**
    * 处理文件拷贝和路径更新
@@ -1472,7 +1711,9 @@ export class FileUploadManagerService {
       // 验证文件扩展名（防止扩展名注入）
       const normalizedExt = fileExtName.toLowerCase();
       const targetExtension = `.${normalizedExt}` as '.dwg' | '.dxf';
-      if (!StoragePathConstants.ALLOWED_CAD_EXTENSIONS.includes(targetExtension)) {
+      if (
+        !StoragePathConstants.ALLOWED_CAD_EXTENSIONS.includes(targetExtension)
+      ) {
         this.logger.error(
           `[handleFileCopyAndPathUpdate] 不支持的文件扩展名: .${fileExtName}`
         );
@@ -1482,7 +1723,10 @@ export class FileUploadManagerService {
       // 分配存储空间
       // 注意：传递目标文件名，确保 storageInfo.relativePath 包含完整文件路径
       const targetFileName = `${nodeId}.${normalizedExt}${StoragePathConstants.MXWEB_EXTENSION}`;
-      const storageInfo = await this.storageManager.allocateNodeStorage(nodeId, targetFileName);
+      const storageInfo = await this.storageManager.allocateNodeStorage(
+        nodeId,
+        targetFileName
+      );
 
       // 确保目标目录存在
       const targetDir = path.dirname(storageInfo.fullPath);
@@ -1497,14 +1741,19 @@ export class FileUploadManagerService {
         path.join(process.cwd(), 'uploads');
 
       // 优化：使用 findFilesByPrefix 直接查找匹配的文件，避免扫描整个目录
-      const mxcadFiles = await this.fileSystemService.findFilesByPrefix(uploadPath, fileHash);
+      const mxcadFiles = await this.fileSystemService.findFilesByPrefix(
+        uploadPath,
+        fileHash
+      );
 
       this.logger.log(
         `[handleFileCopyAndPathUpdate] 找到文件数=${mxcadFiles.length}, 文件列表: ${mxcadFiles.join(', ')}`
       );
 
       if (mxcadFiles.length === 0) {
-        this.logger.error(`[handleFileCopyAndPathUpdate] 未找到转换后的文件: ${fileHash}`);
+        this.logger.error(
+          `[handleFileCopyAndPathUpdate] 未找到转换后的文件: ${fileHash}`
+        );
         throw new Error(`未找到转换后的文件: ${fileHash}`);
       }
 
@@ -1519,14 +1768,21 @@ export class FileUploadManagerService {
 
         // 拷贝文件
         await fsPromises.copyFile(sourceFile, targetFile);
-        this.logger.log(`[handleFileCopyAndPathUpdate] 拷贝成功: ${mxcadFile} → ${currentTargetFileName}`);
+        this.logger.log(
+          `[handleFileCopyAndPathUpdate] 拷贝成功: ${mxcadFile} → ${currentTargetFileName}`
+        );
       }
 
       // storageInfo.relativePath 已经是完整路径：YYYYMM[/N]/nodeId/nodeId.dwg.mxweb
       // 直接使用，不需要再次拼接
-      await this.fileSystemServiceMain.updateNodePath(nodeId, storageInfo.relativePath);
+      await this.fileSystemServiceMain.updateNodePath(
+        nodeId,
+        storageInfo.relativePath
+      );
 
-      this.logger.log(`[handleFileCopyAndPathUpdate] 节点路径更新成功: ${nodeId} → ${storageInfo.relativePath}`);
+      this.logger.log(
+        `[handleFileCopyAndPathUpdate] 节点路径更新成功: ${nodeId} → ${storageInfo.relativePath}`
+      );
 
       // 检查并更新外部参照信息
       try {
@@ -1541,17 +1797,22 @@ export class FileUploadManagerService {
       try {
         // 获取 nodeId 目录路径（去掉文件名）
         const nodeDirectory = targetDir;
-        const commitResult = await this.versionControlService.commitNodeDirectory(
-          nodeDirectory,
-          `Upload file: ${fileName}`,
-          userId,
-          `User${userId}`
-        );
+        const commitResult =
+          await this.versionControlService.commitNodeDirectory(
+            nodeDirectory,
+            `Upload file: ${fileName}`,
+            userId,
+            `User${userId}`
+          );
 
         if (commitResult.success) {
-          this.logger.log(`节点目录已提交到 SVN: ${fileName} (${nodeDirectory})`);
+          this.logger.log(
+            `节点目录已提交到 SVN: ${fileName} (${nodeDirectory})`
+          );
         } else {
-          this.logger.warn(`节点目录 SVN 提交失败: ${fileName}, 原因: ${commitResult.message}`);
+          this.logger.warn(
+            `节点目录 SVN 提交失败: ${fileName}, 原因: ${commitResult.message}`
+          );
         }
       } catch (svnError) {
         this.logger.error(`节点目录 SVN 提交异常: ${fileName}`, svnError.stack);
@@ -1584,16 +1845,24 @@ export class FileUploadManagerService {
 
     try {
       // 获取父节点
-      const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+      const parentNode = await this.fileSystemServiceMain.getNode(
+        context.nodeId
+      );
 
       if (!parentNode) {
-        this.logger.error(`[handleFileNodeCreation] 父节点不存在: ${context.nodeId}`);
+        this.logger.error(
+          `[handleFileNodeCreation] 父节点不存在: ${context.nodeId}`
+        );
         return;
       }
 
-      const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+      const parentId = parentNode.isFolder
+        ? parentNode.id
+        : parentNode.parentId;
       if (!parentId) {
-        this.logger.error(`[handleFileNodeCreation] 无法确定父节点ID: ${context.nodeId}`);
+        this.logger.error(
+          `[handleFileNodeCreation] 无法确定父节点ID: ${context.nodeId}`
+        );
         return;
       }
 
@@ -1618,15 +1887,20 @@ export class FileUploadManagerService {
         skipFileCopy: true, // 先不创建物理目录
       });
 
-      this.logger.log(`✅ 文件系统节点创建成功: ${originalName} (${fileHash}) (跳过物理目录创建)`);
+      this.logger.log(
+        `✅ 文件系统节点创建成功: ${originalName} (${fileHash}) (跳过物理目录创建)`
+      );
 
       // 手动创建物理目录并拷贝文件
-      const storageInfo = await this.storageManager.allocateNodeStorage(newNode.id, originalName);
+      const storageInfo = await this.storageManager.allocateNodeStorage(
+        newNode.id,
+        originalName
+      );
       this.logger.log(`✅ 物理目录创建成功: ${storageInfo.relativePath}`);
 
       // 从 uploads 目录拷贝文件
       const files = await fsPromises.readdir(uploadPath);
-      const matchingFiles = files.filter(file => file.startsWith(fileHash));
+      const matchingFiles = files.filter((file) => file.startsWith(fileHash));
 
       if (matchingFiles.length === 0) {
         this.logger.warn(`⚠️ 未找到匹配 ${fileHash} 的文件`);
@@ -1649,44 +1923,65 @@ export class FileUploadManagerService {
         // 更新节点的 path 字段，指向 mxweb 文件
         if (mxwebFileName) {
           const nodePathWithFile = `${path.dirname(storageInfo.relativePath)}/${mxwebFileName}`;
-          await this.fileSystemServiceMain.updateNodePath(newNode.id, nodePathWithFile);
+          await this.fileSystemServiceMain.updateNodePath(
+            newNode.id,
+            nodePathWithFile
+          );
           this.logger.log(`✅ 节点 path 已更新: ${nodePathWithFile}`);
         } else {
           // 如果没有 mxweb 文件，使用预期的 mxweb 文件名
           const expectedMxwebFileName = `${newNode.id}${extension}.mxweb`;
           const nodePathWithFile = `${path.dirname(storageInfo.relativePath)}/${expectedMxwebFileName}`;
-          await this.fileSystemServiceMain.updateNodePath(newNode.id, nodePathWithFile);
+          await this.fileSystemServiceMain.updateNodePath(
+            newNode.id,
+            nodePathWithFile
+          );
           this.logger.log(`✅ 节点 path 已更新（预期）: ${nodePathWithFile}`);
         }
       }
-              this.logger.log(`✅ 节点 path 已更新: ${storageInfo.relativePath}`);
-      
-            // 【新增】提交节点目录到 SVN 版本控制
-            try {
-              const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
-              const fullPath = path.join(filesDataPath, storageInfo.relativePath);
-              const nodeDirectory = path.dirname(fullPath);
-              
-              this.logger.log(`[handleFileNodeCreation] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`);
-      
-              const commitResult = await this.versionControlService.commitNodeDirectory(
-                        nodeDirectory,
-                        `Upload file: ${originalName}`,
-                        context.userId,
-                        `User${context.userId}`
-                      );        if (commitResult.success) {
-          this.logger.log(`[handleFileNodeCreation] 节点目录已提交到 SVN: ${originalName} (${nodeDirectory})`);
+      this.logger.log(`✅ 节点 path 已更新: ${storageInfo.relativePath}`);
+
+      // 【新增】提交节点目录到 SVN 版本控制
+      try {
+        const filesDataPath =
+          this.configService.get('FILES_DATA_PATH') ||
+          path.join(process.cwd(), 'filesData');
+        const fullPath = path.join(filesDataPath, storageInfo.relativePath);
+        const nodeDirectory = path.dirname(fullPath);
+
+        this.logger.log(
+          `[handleFileNodeCreation] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`
+        );
+
+        const commitResult =
+          await this.versionControlService.commitNodeDirectory(
+            nodeDirectory,
+            `Upload file: ${originalName}`,
+            context.userId,
+            `User${context.userId}`
+          );
+        if (commitResult.success) {
+          this.logger.log(
+            `[handleFileNodeCreation] 节点目录已提交到 SVN: ${originalName} (${nodeDirectory})`
+          );
         } else {
-          this.logger.warn(`[handleFileNodeCreation] 节点目录 SVN 提交失败: ${originalName}, 原因: ${commitResult.message}`);
+          this.logger.warn(
+            `[handleFileNodeCreation] 节点目录 SVN 提交失败: ${originalName}, 原因: ${commitResult.message}`
+          );
         }
       } catch (svnError) {
-        this.logger.error(`[handleFileNodeCreation] 节点目录 SVN 提交异常: ${originalName}`, svnError.stack);
+        this.logger.error(
+          `[handleFileNodeCreation] 节点目录 SVN 提交异常: ${originalName}`,
+          svnError.stack
+        );
         // SVN 提交失败不影响主流程
       }
 
       // 检查并更新外部参照信息
       try {
-        await this.mxCadService.updateExternalReferenceAfterUpload(context.nodeId);
+        await this.mxCadService.updateExternalReferenceAfterUpload(
+          context.nodeId
+        );
       } catch (extRefError) {
         this.logger.warn(
           `⚠️ 外部参照信息更新失败（不影响主流程）: ${extRefError.message}`
@@ -1714,16 +2009,22 @@ export class FileUploadManagerService {
   ): Promise<void> {
     try {
       // 获取父节点
-      const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+      const parentNode = await this.fileSystemServiceMain.getNode(
+        context.nodeId
+      );
 
       if (!parentNode) {
         this.logger.error(`[createNonCadNode] 父节点不存在: ${context.nodeId}`);
         throw new Error(`父节点不存在: ${context.nodeId}`);
       }
 
-      const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+      const parentId = parentNode.isFolder
+        ? parentNode.id
+        : parentNode.parentId;
       if (!parentId) {
-        this.logger.error(`[createNonCadNode] 无法确定父节点ID: ${context.nodeId}`);
+        this.logger.error(
+          `[createNonCadNode] 无法确定父节点ID: ${context.nodeId}`
+        );
         throw new Error(`无法确定父节点ID: ${context.nodeId}`);
       }
 
@@ -1747,39 +2048,59 @@ export class FileUploadManagerService {
       );
 
       // 手动创建物理目录并拷贝文件
-      const storageInfo = await this.storageManager.allocateNodeStorage(newNode.id, originalName);
+      const storageInfo = await this.storageManager.allocateNodeStorage(
+        newNode.id,
+        originalName
+      );
       this.logger.log(`✅ 物理目录创建成功: ${storageInfo.relativePath}`);
 
       // 从源文件拷贝
       await fsPromises.copyFile(sourceFilePath, storageInfo.fullPath);
-      this.logger.log(`✅ 文件拷贝成功: ${sourceFilePath} -> ${storageInfo.fullPath}`);
+      this.logger.log(
+        `✅ 文件拷贝成功: ${sourceFilePath} -> ${storageInfo.fullPath}`
+      );
 
       // 更新节点的 path 字段
-      await this.fileSystemServiceMain.updateNodePath(newNode.id, storageInfo.relativePath);
+      await this.fileSystemServiceMain.updateNodePath(
+        newNode.id,
+        storageInfo.relativePath
+      );
       this.logger.log(`✅ 节点 path 已更新: ${storageInfo.relativePath}`);
 
       // 【新增】提交节点目录到 SVN 版本控制
       try {
-        const filesDataPath = this.configService.get('FILES_DATA_PATH') || path.join(process.cwd(), 'filesData');
+        const filesDataPath =
+          this.configService.get('FILES_DATA_PATH') ||
+          path.join(process.cwd(), 'filesData');
         const fullPath = path.join(filesDataPath, storageInfo.relativePath);
         const nodeDirectory = path.dirname(fullPath);
-        
-        this.logger.log(`[createNonCadNode] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`);
 
-        const commitResult = await this.versionControlService.commitNodeDirectory(
-          nodeDirectory,
-          `Upload file: ${originalName}`,
-          context.userId,
-          `User${context.userId}`
+        this.logger.log(
+          `[createNonCadNode] 准备提交 SVN: filesDataPath=${filesDataPath}, storageInfo.relativePath=${storageInfo.relativePath}, fullPath=${fullPath}, nodeDirectory=${nodeDirectory}`
         );
 
+        const commitResult =
+          await this.versionControlService.commitNodeDirectory(
+            nodeDirectory,
+            `Upload file: ${originalName}`,
+            context.userId,
+            `User${context.userId}`
+          );
+
         if (commitResult.success) {
-          this.logger.log(`[createNonCadNode] 节点目录已提交到 SVN: ${originalName} (${nodeDirectory})`);
+          this.logger.log(
+            `[createNonCadNode] 节点目录已提交到 SVN: ${originalName} (${nodeDirectory})`
+          );
         } else {
-          this.logger.warn(`[createNonCadNode] 节点目录 SVN 提交失败: ${originalName}, 原因: ${commitResult.message}`);
+          this.logger.warn(
+            `[createNonCadNode] 节点目录 SVN 提交失败: ${originalName}, 原因: ${commitResult.message}`
+          );
         }
       } catch (svnError) {
-        this.logger.error(`[createNonCadNode] 节点目录 SVN 提交异常: ${originalName}`, svnError.stack);
+        this.logger.error(
+          `[createNonCadNode] 节点目录 SVN 提交异常: ${originalName}`,
+          svnError.stack
+        );
         // SVN 提交失败不影响主流程
       }
     } catch (error) {
@@ -1847,7 +2168,7 @@ export class FileUploadManagerService {
       path.join(process.cwd(), 'uploads');
     const localPath = path.join(uploadPath, targetFile);
     const existsInLocal = fs.existsSync(localPath);
-    
+
     if (!existsInLocal) {
       return false;
     }
@@ -1913,7 +2234,8 @@ export class FileUploadManagerService {
   ): Promise<string> {
     try {
       // 获取父节点下的所有子节点
-      const childrenResult = await this.fileSystemServiceMain.getChildren(parentId);
+      const childrenResult =
+        await this.fileSystemServiceMain.getChildren(parentId);
       const existingNodes = childrenResult.data || [];
 
       // 提取现有文件名
@@ -1968,7 +2290,9 @@ export class FileUploadManagerService {
     const numberedFiles: number[] = [];
 
     // 构建匹配模式：基础文件名 (数字).扩展名
-    const pattern = new RegExp(`^${this.escapeRegExp(baseName)} \\((\\d+)\\)${this.escapeRegExp(extension)}$`);
+    const pattern = new RegExp(
+      `^${this.escapeRegExp(baseName)} \\((\\d+)\\)${this.escapeRegExp(extension)}$`
+    );
 
     for (const name of existingNames) {
       const match = name.match(pattern);
@@ -1986,7 +2310,9 @@ export class FileUploadManagerService {
     const maxNumber = Math.max(...numberedFiles);
     const nextNumber = maxNumber + 1;
 
-    this.logger.log(`[generateNumberedFileName] 找到 ${numberedFiles.length} 个序号文件: [${numberedFiles.join(', ')}], 最大序号: ${maxNumber}, 下一个序号: ${nextNumber}`);
+    this.logger.log(
+      `[generateNumberedFileName] 找到 ${numberedFiles.length} 个序号文件: [${numberedFiles.join(', ')}], 最大序号: ${maxNumber}, 下一个序号: ${nextNumber}`
+    );
 
     return `${baseName} (${nextNumber})`;
   }

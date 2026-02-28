@@ -87,7 +87,7 @@ export class MultiLevelCacheService {
     private readonly l1Cache: L1CacheProvider,
     private readonly l2Cache: L2CacheProvider,
     private readonly l3Cache: L3CacheProvider,
-    @Optional() private readonly cacheVersionService?: CacheVersionService,
+    @Optional() private readonly cacheVersionService?: CacheVersionService
   ) {}
 
   /**
@@ -334,7 +334,9 @@ export class MultiLevelCacheService {
       this.deleteL3ByPattern(pattern),
     ]);
 
-    this.logger.debug(`根据模式删除缓存: ${pattern}, L2: ${l2Count}, L3: ${l3Count}`);
+    this.logger.debug(
+      `根据模式删除缓存: ${pattern}, L2: ${l2Count}, L3: ${l3Count}`
+    );
     return l2Count + l3Count;
   }
 
@@ -389,8 +391,10 @@ export class MultiLevelCacheService {
         totalHits,
         totalMisses,
         totalRequests,
-        overallHitRate: totalRequests > 0 ? (totalHits / totalRequests) * 100 : 0,
-        totalMemoryUsage: l1Stats.memoryUsage + l2Stats.memoryUsage + l3Stats.memoryUsage,
+        overallHitRate:
+          totalRequests > 0 ? (totalHits / totalRequests) * 100 : 0,
+        totalMemoryUsage:
+          l1Stats.memoryUsage + l2Stats.memoryUsage + l3Stats.memoryUsage,
       },
     };
   }
@@ -422,7 +426,12 @@ export class MultiLevelCacheService {
   /**
    * 仅写入指定级别
    */
-  async setToLevel<T>(key: string, value: T, level: CacheLevel, ttl?: number): Promise<void> {
+  async setToLevel<T>(
+    key: string,
+    value: T,
+    level: CacheLevel,
+    ttl?: number
+  ): Promise<void> {
     switch (level) {
       case CacheLevel.L1:
         await this.l1Cache.set(key, value, ttl);
@@ -447,14 +456,19 @@ export class MultiLevelCacheService {
     }
 
     const baseTTL = ttl ?? 300;
-    const randomOffset = Math.floor(Math.random() * this.avalancheConfig.randomizationRange);
+    const randomOffset = Math.floor(
+      Math.random() * this.avalancheConfig.randomizationRange
+    );
     return baseTTL + randomOffset;
   }
 
   /**
    * 批量设置 L1 缓存
    */
-  private async setL1Many<T>(items: Map<string, T>, ttl?: number): Promise<void> {
+  private async setL1Many<T>(
+    items: Map<string, T>,
+    ttl?: number
+  ): Promise<void> {
     const promises: Promise<void>[] = [];
     for (const [key, value] of items.entries()) {
       promises.push(this.l1Cache.set(key, value, ttl));
@@ -465,7 +479,10 @@ export class MultiLevelCacheService {
   /**
    * 批量设置 L3 缓存
    */
-  private async setL3Many<T>(items: Map<string, T>, ttl?: number): Promise<void> {
+  private async setL3Many<T>(
+    items: Map<string, T>,
+    ttl?: number
+  ): Promise<void> {
     const promises: Promise<void>[] = [];
     for (const [key, value] of items.entries()) {
       promises.push(this.l3Cache.set(key, value, ttl));
@@ -494,7 +511,9 @@ export class MultiLevelCacheService {
    * 简单的模式匹配
    */
   private matchPattern(key: string, pattern: string): boolean {
-    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+    const regex = new RegExp(
+      '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
+    );
     return regex.test(key);
   }
 }

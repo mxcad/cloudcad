@@ -19,7 +19,7 @@ export class InitializationService implements OnModuleInit {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService
   ) {}
 
   /**
@@ -120,7 +120,9 @@ export class InitializationService implements OnModuleInit {
               skipDuplicates: true,
             });
 
-            this.logger.log(`✅ 系统角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`);
+            this.logger.log(
+              `✅ 系统角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`
+            );
           }
           continue;
         }
@@ -145,7 +147,9 @@ export class InitializationService implements OnModuleInit {
           skipDuplicates: true,
         });
 
-        this.logger.log(`✅ 系统角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`);
+        this.logger.log(
+          `✅ 系统角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`
+        );
       }
     } catch (error) {
       this.logger.error('创建系统默认角色失败', error);
@@ -165,14 +169,25 @@ export class InitializationService implements OnModuleInit {
           description: '项目所有者，拥有项目的完整管理权限',
           permissions: [
             // 项目管理权限
-            'PROJECT_UPDATE', 'PROJECT_DELETE', 'PROJECT_MEMBER_MANAGE',
-            'PROJECT_MEMBER_ASSIGN', 'PROJECT_TRANSFER', 'PROJECT_ROLE_MANAGE',
+            'PROJECT_UPDATE',
+            'PROJECT_DELETE',
+            'PROJECT_MEMBER_MANAGE',
+            'PROJECT_MEMBER_ASSIGN',
+            'PROJECT_TRANSFER',
+            'PROJECT_ROLE_MANAGE',
             'PROJECT_ROLE_PERMISSION_MANAGE',
             // 文件操作权限
-            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
+            'FILE_CREATE',
+            'FILE_UPLOAD',
+            'FILE_OPEN',
+            'FILE_EDIT',
+            'FILE_DELETE',
+            'FILE_TRASH_MANAGE',
+            'FILE_DOWNLOAD',
             // CAD 图纸权限
-            'CAD_SAVE', 'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE',
+            'CAD_SAVE',
+            'CAD_EXPORT',
+            'CAD_EXTERNAL_REFERENCE',
             // 图库权限
             'GALLERY_ADD',
             // 版本管理权限
@@ -184,12 +199,21 @@ export class InitializationService implements OnModuleInit {
           description: '项目管理员，管理项目和团队成员',
           permissions: [
             // 项目管理权限（无删除和转让）
-            'PROJECT_UPDATE', 'PROJECT_MEMBER_MANAGE', 'PROJECT_MEMBER_ASSIGN',
+            'PROJECT_UPDATE',
+            'PROJECT_MEMBER_MANAGE',
+            'PROJECT_MEMBER_ASSIGN',
             // 文件操作权限
-            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_TRASH_MANAGE', 'FILE_DOWNLOAD',
+            'FILE_CREATE',
+            'FILE_UPLOAD',
+            'FILE_OPEN',
+            'FILE_EDIT',
+            'FILE_DELETE',
+            'FILE_TRASH_MANAGE',
+            'FILE_DOWNLOAD',
             // CAD 图纸权限
-            'CAD_SAVE', 'CAD_EXPORT', 'CAD_EXTERNAL_REFERENCE',
+            'CAD_SAVE',
+            'CAD_EXPORT',
+            'CAD_EXTERNAL_REFERENCE',
             // 图库权限
             'GALLERY_ADD',
             // 版本管理权限
@@ -201,10 +225,15 @@ export class InitializationService implements OnModuleInit {
           description: '项目成员，可以查看和编辑项目内容',
           permissions: [
             // 文件操作权限（无回收站管理）
-            'FILE_CREATE', 'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_DOWNLOAD',
+            'FILE_CREATE',
+            'FILE_UPLOAD',
+            'FILE_OPEN',
+            'FILE_EDIT',
+            'FILE_DELETE',
+            'FILE_DOWNLOAD',
             // CAD 图纸权限（无外部参照管理）
-            'CAD_SAVE', 'CAD_EXPORT',
+            'CAD_SAVE',
+            'CAD_EXPORT',
             // 图库权限
             'GALLERY_ADD',
             // 版本管理权限
@@ -216,10 +245,14 @@ export class InitializationService implements OnModuleInit {
           description: '项目编辑者，可以编辑项目文件',
           permissions: [
             // 文件操作权限（无创建和回收站管理）
-            'FILE_UPLOAD', 'FILE_OPEN', 'FILE_EDIT',
-            'FILE_DELETE', 'FILE_DOWNLOAD',
+            'FILE_UPLOAD',
+            'FILE_OPEN',
+            'FILE_EDIT',
+            'FILE_DELETE',
+            'FILE_DOWNLOAD',
             // CAD 图纸权限（无外部参照管理）
-            'CAD_SAVE', 'CAD_EXPORT',
+            'CAD_SAVE',
+            'CAD_EXPORT',
             // 版本管理权限
             'VERSION_READ',
           ],
@@ -229,7 +262,8 @@ export class InitializationService implements OnModuleInit {
           description: '项目查看者，仅能查看项目内容',
           permissions: [
             // 只读权限
-            'FILE_OPEN', 'FILE_DOWNLOAD',
+            'FILE_OPEN',
+            'FILE_DOWNLOAD',
             // CAD 导出权限
             'CAD_EXPORT',
             // 版本管理权限
@@ -273,7 +307,9 @@ export class InitializationService implements OnModuleInit {
               skipDuplicates: true,
             });
 
-            this.logger.log(`✅ 项目角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`);
+            this.logger.log(
+              `✅ 项目角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`
+            );
           }
 
           continue;
@@ -297,7 +333,9 @@ export class InitializationService implements OnModuleInit {
           skipDuplicates: true,
         });
 
-        this.logger.log(`✅ 项目角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`);
+        this.logger.log(
+          `✅ 项目角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`
+        );
       }
     } catch (error) {
       this.logger.error('创建项目默认角色失败', error);
@@ -330,9 +368,18 @@ export class InitializationService implements OnModuleInit {
       }
 
       // 创建初始管理员账户
-      const adminEmail = this.configService.get<string>('INITIAL_ADMIN_EMAIL', 'admin@example.com');
-      const adminUsername = this.configService.get<string>('INITIAL_ADMIN_USERNAME', 'admin');
-      const adminPassword = this.configService.get<string>('INITIAL_ADMIN_PASSWORD', 'Admin123!');
+      const adminEmail = this.configService.get<string>(
+        'INITIAL_ADMIN_EMAIL',
+        'admin@example.com'
+      );
+      const adminUsername = this.configService.get<string>(
+        'INITIAL_ADMIN_USERNAME',
+        'admin'
+      );
+      const adminPassword = this.configService.get<string>(
+        'INITIAL_ADMIN_PASSWORD',
+        'Admin123!'
+      );
       const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
       const adminUser = await this.prisma.user.create({
@@ -353,7 +400,7 @@ export class InitializationService implements OnModuleInit {
           `   邮箱: ${adminEmail}\n` +
           `   用户名: ${adminUsername}\n` +
           `   密码: ${adminPassword}\n` +
-          `   ⚠️  请在首次登录后立即修改密码！`,
+          `   ⚠️  请在首次登录后立即修改密码！`
       );
     } catch (error) {
       this.logger.error('创建初始管理员账户失败', error);

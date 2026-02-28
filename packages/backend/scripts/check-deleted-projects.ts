@@ -76,7 +76,9 @@ async function checkDeletedProjects() {
         },
       });
 
-      console.log(`用户 ${userId} 的已删除项目数: ${userDeletedProjects.length}`);
+      console.log(
+        `用户 ${userId} 的已删除项目数: ${userDeletedProjects.length}`
+      );
 
       if (userDeletedProjects.length > 0) {
         console.log('用户已删除项目列表:');

@@ -39,29 +39,26 @@ export class ProjectPermissionService {
     permission: ProjectPermission
   ): Promise<boolean> {
     try {
-      // 1. 检查用户是否为项目所有者
-      const isOwner = await this.isProjectOwner(userId, projectId);
-      if (isOwner) {
-        // 权限检查不记录审计日志（避免日志过多）
-        return true; // 项目所有者拥有所有权限
-      }
-
-      // 2. 检查缓存
+      // 1. 检查缓存
       const cacheKey = `project:permission:${userId}:${projectId}:${permission}`;
       const cached = await this.cacheService.get<boolean>(cacheKey);
       if (cached !== null) {
         return cached;
       }
 
-      // 3. 检查用户的项目角色权限
+      // 2. 检查用户的项目权限（所有用户都基于权限验证，包括项目所有者）
       const hasPermission = await this.checkRolePermission(
         userId,
         projectId,
         permission
       );
 
-      // 4. 缓存结果
-      this.cacheService.set(cacheKey, hasPermission, CACHE_TTL.PROJECT_PERMISSION); // 5分钟
+      // 3. 缓存结果
+      this.cacheService.set(
+        cacheKey,
+        hasPermission,
+        CACHE_TTL.PROJECT_PERMISSION
+      ); // 5分钟
 
       // 权限检查不记录审计日志（避免日志过多）
       return hasPermission;
@@ -74,10 +71,7 @@ export class ProjectPermissionService {
   /**
    * 检查用户是否为项目所有者
    */
-  async isProjectOwner(
-    userId: string,
-    projectId: string
-  ): Promise<boolean> {
+  async isProjectOwner(userId: string, projectId: string): Promise<boolean> {
     try {
       const cacheKey = `project:owner:${userId}:${projectId}`;
       const cached = await this.cacheService.get<boolean>(cacheKey);
@@ -135,20 +129,14 @@ export class ProjectPermissionService {
 
   /**
    * 获取用户在项目中的所有权限
+   * 所有用户都基于实际权限查询，包括项目所有者
    */
   async getUserPermissions(
     userId: string,
     projectId: string
   ): Promise<ProjectPermission[]> {
     try {
-      // 1. 检查用户是否为项目所有者
-      const isOwner = await this.isProjectOwner(userId, projectId);
-      if (isOwner) {
-        // 项目所有者拥有所有权限
-        return Object.values(ProjectPermission) as ProjectPermission[];
-      }
-
-      // 2. 获取用户的项目角色权限
+      // 查询用户的项目角色权限
       const member = await this.prisma.projectMember.findUnique({
         where: {
           projectId_userId: {
@@ -282,6 +270,7 @@ export class ProjectPermissionService {
    * 批量检查权限（多个权限，OR 逻辑）
    * 只要有一个权限就返回 true
    * 优化后：使用并行检查提升性能
+   * 所有用户都基于权限验证，包括项目所有者
    */
   async checkAnyPermission(
     userId: string,
@@ -290,16 +279,7 @@ export class ProjectPermissionService {
   ): Promise<boolean> {
     const startTime = Date.now();
     try {
-      // 项目所有者直接返回 true
-      const isOwner = await this.isProjectOwner(userId, projectId);
-      if (isOwner) {
-        this.logger.debug(
-          `批量权限检查通过（项目所有者）: userId=${userId}, projectId=${projectId}, permissions=${permissions.length}个, 耗时=${Date.now() - startTime}ms`
-        );
-        return true;
-      }
-
-      // 并行检查所有权限
+      // 并行检查所有权限（所有用户都基于权限验证）
       const results = await Promise.all(
         permissions.map((permission) =>
           this.checkPermission(userId, projectId, permission)
@@ -326,6 +306,7 @@ export class ProjectPermissionService {
    * 批量检查权限（多个权限，AND 逻辑）
    * 必须所有权限都满足才返回 true
    * 优化后：使用并行检查提升性能
+   * 所有用户都基于权限验证，包括项目所有者
    */
   async checkAllPermissions(
     userId: string,
@@ -334,16 +315,7 @@ export class ProjectPermissionService {
   ): Promise<boolean> {
     const startTime = Date.now();
     try {
-      // 项目所有者直接返回 true
-      const isOwner = await this.isProjectOwner(userId, projectId);
-      if (isOwner) {
-        this.logger.debug(
-          `批量权限检查通过（项目所有者）: userId=${userId}, projectId=${projectId}, permissions=${permissions.length}个, 耗时=${Date.now() - startTime}ms`
-        );
-        return true;
-      }
-
-      // 并行检查所有权限
+      // 并行检查所有权限（所有用户都基于权限验证）
       const results = await Promise.all(
         permissions.map((permission) =>
           this.checkPermission(userId, projectId, permission)

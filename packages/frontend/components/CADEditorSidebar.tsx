@@ -80,7 +80,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!sidebarRef.current) return;
-    const newWidth = e.clientX - sidebarRef.current.getBoundingClientRect().left;
+    const newWidth =
+      e.clientX - sidebarRef.current.getBoundingClientRect().left;
     if (newWidth >= 200 && newWidth <= 600) {
       setWidth(newWidth);
     }
@@ -124,7 +125,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         const queryParams = {
           keywords: searchKeyword || undefined,
           firstType: selectedFirstType === -1 ? undefined : selectedFirstType,
-          secondType: selectedSecondType === -1 ? undefined : selectedSecondType,
+          secondType:
+            selectedSecondType === -1 ? undefined : selectedSecondType,
           thirdType: selectedThirdType === -1 ? undefined : selectedThirdType,
           pageIndex: index,
           pageSize: 20,
@@ -294,7 +296,9 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       // 图块库：使用 Mx_Insert 插入图块
       if (galleryType === 'blocks') {
         // 通过 nodeId 获取 mxweb 文件 URL
-        const mxwebFileUrl = await galleryApi.getMxwebFileUrlByNodeId(file.nodeId);
+        const mxwebFileUrl = await galleryApi.getMxwebFileUrlByNodeId(
+          file.nodeId
+        );
 
         // 使用 MxFun.sendStringToExecute 插入图块
         MxFun.sendStringToExecute('Mx_Insert', {
@@ -320,7 +324,9 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       }
     } catch (error) {
       console.error('操作失败:', error);
-      alert(`${galleryType === 'blocks' ? '插入图块' : '打开图纸'}失败: ${file.filename}`);
+      alert(
+        `${galleryType === 'blocks' ? '插入图块' : '打开图纸'}失败: ${file.filename}`
+      );
     }
   };
 

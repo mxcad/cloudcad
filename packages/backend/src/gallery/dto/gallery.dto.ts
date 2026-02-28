@@ -66,7 +66,10 @@ export class GalleryFileItemDto {
   @ApiProperty({ description: '分类名称', example: '门' })
   type: string;
 
-  @ApiProperty({ description: '文件哈希（用于兼容 mxcad-app），值为 nodeId', example: 'clxxx...' })
+  @ApiProperty({
+    description: '文件哈希（用于兼容 mxcad-app），值为 nodeId',
+    example: 'clxxx...',
+  })
   filehash: string;
 }
 

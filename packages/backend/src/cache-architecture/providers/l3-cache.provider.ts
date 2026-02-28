@@ -54,17 +54,19 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
 
       // 解析并返回值（更新访问信息失败不影响读取）
       this.hits++;
-      
+
       // 异步更新访问信息（使用 updateMany 避免条目不存在时报错）
-      this.prisma.cacheEntry.updateMany({
-        where: { id: entry.id },
-        data: {
-          lastAccessedAt: new Date(),
-          accessCount: { increment: 1 },
-        },
-      }).catch(() => {
-        // 忽略错误
-      });
+      this.prisma.cacheEntry
+        .updateMany({
+          where: { id: entry.id },
+          data: {
+            lastAccessedAt: new Date(),
+            accessCount: { increment: 1 },
+          },
+        })
+        .catch(() => {
+          // 忽略错误
+        });
 
       return JSON.parse(entry.value) as K;
     } catch (error) {
@@ -212,17 +214,17 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
   /**
    * 预加载数据
    */
-  async preload<K = T>(keys: string[], loader: (key: string) => Promise<K>): Promise<Map<string, K>> {
+  async preload<K = T>(
+    keys: string[],
+    loader: (key: string) => Promise<K>
+  ): Promise<Map<string, K>> {
     const result = new Map<string, K>();
 
     // 批量检查缓存
     const cachedEntries = await this.prisma.cacheEntry.findMany({
       where: {
         key: { in: keys },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
     });
 
@@ -351,7 +353,11 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
   /**
    * 获取热点数据
    */
-  async getHotData(limit: number = 100): Promise<Array<{ key: string; accessCount: number; lastAccessedAt: Date }>> {
+  async getHotData(
+    limit: number = 100
+  ): Promise<
+    Array<{ key: string; accessCount: number; lastAccessedAt: Date }>
+  > {
     try {
       const entries = await this.prisma.cacheEntry.findMany({
         orderBy: { accessCount: 'desc' },

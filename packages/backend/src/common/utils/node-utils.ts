@@ -65,8 +65,18 @@ export class NodeUtils {
    * @param options 创建选项
    * @returns 验证结果
    */
-  static validateCreateOptions(options: CreateNodeOptions): NodeValidationResult {
-    const requiredFields = ['name', 'fileHash', 'size', 'mimeType', 'extension', 'parentId', 'ownerId'];
+  static validateCreateOptions(
+    options: CreateNodeOptions
+  ): NodeValidationResult {
+    const requiredFields = [
+      'name',
+      'fileHash',
+      'size',
+      'mimeType',
+      'extension',
+      'parentId',
+      'ownerId',
+    ];
 
     for (const field of requiredFields) {
       if (!options[field]) {
@@ -162,7 +172,10 @@ export class NodeUtils {
    * @param identifier 标识符
    * @returns 锁名称
    */
-  static generateLockName(type: 'create' | 'reference' | 'upload', identifier: string): string {
+  static generateLockName(
+    type: 'create' | 'reference' | 'upload',
+    identifier: string
+  ): string {
     return `${type}:${identifier}`;
   }
 
@@ -172,7 +185,10 @@ export class NodeUtils {
    * @param fileHash 文件哈希
    * @returns 存储目录名称
    */
-  static generateStorageDirectoryName(nodeId: string, fileHash: string): string {
+  static generateStorageDirectoryName(
+    nodeId: string,
+    fileHash: string
+  ): string {
     return `${nodeId}`;
   }
 
@@ -276,7 +292,11 @@ export class NodeUtils {
    * @param fileName 文件名（可选）
    * @returns 相对路径
    */
-  static buildRelativePath(directory: string, nodeId: string, fileName?: string): string {
+  static buildRelativePath(
+    directory: string,
+    nodeId: string,
+    fileName?: string
+  ): string {
     let path = `${directory}/${nodeId}`;
     if (fileName) {
       path = `${path}/${fileName}`;
@@ -314,7 +334,14 @@ export class NodeUtils {
    * @returns 是否支持
    */
   static isSupportedImageFile(extension: string): boolean {
-    const supportedExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+    const supportedExtensions = [
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.bmp',
+      '.webp',
+    ];
     return supportedExtensions.includes(extension.toLowerCase());
   }
 

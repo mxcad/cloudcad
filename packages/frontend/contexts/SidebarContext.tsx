@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 
 /**
  * 侧边栏类型定义
@@ -65,7 +71,14 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
       toggleSidebar,
       isActive,
     }),
-    [activeSidebar, openSidebar, closeSidebar, closeAll, toggleSidebar, isActive]
+    [
+      activeSidebar,
+      openSidebar,
+      closeSidebar,
+      closeAll,
+      toggleSidebar,
+      isActive,
+    ]
   );
 
   return (

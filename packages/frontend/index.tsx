@@ -3,10 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-
 import './styles/transitions.css';
 import './styles/app.css';
-
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

@@ -69,11 +69,26 @@ describe('GalleryService', () => {
   describe('getTypes', () => {
     it('应该返回分类列表', async () => {
       const mockTypes = [
-        { id: 1, pid: 0, name: '建筑', status: 1, galleryType: 'drawings', ownerId: mockUserId },
-        { id: 2, pid: 1, name: '门', status: 1, galleryType: 'drawings', ownerId: mockUserId },
+        {
+          id: 1,
+          pid: 0,
+          name: '建筑',
+          status: 1,
+          galleryType: 'drawings',
+          ownerId: mockUserId,
+        },
+        {
+          id: 2,
+          pid: 1,
+          name: '门',
+          status: 1,
+          galleryType: 'drawings',
+          ownerId: mockUserId,
+        },
       ];
 
-      jest.spyOn(prisma.galleryType, 'findMany')
+      jest
+        .spyOn(prisma.galleryType, 'findMany')
         .mockResolvedValueOnce([mockTypes[0]])
         .mockResolvedValueOnce([mockTypes[1]]);
 
@@ -127,13 +142,20 @@ describe('GalleryService', () => {
         lookNum: 0,
       };
 
-      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockNode as any);
-      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockProject as any);
-      jest.spyOn(prisma.galleryType, 'findUnique')
+      jest
+        .spyOn(prisma.fileSystemNode, 'findUnique')
+        .mockResolvedValue(mockNode as any);
+      jest
+        .spyOn(prisma.fileSystemNode, 'findUnique')
+        .mockResolvedValue(mockProject as any);
+      jest
+        .spyOn(prisma.galleryType, 'findUnique')
         .mockResolvedValueOnce(mockType as any)
         .mockResolvedValueOnce(mockFirstTypeRecord as any);
       jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(null);
-      jest.spyOn(prisma.galleryItem, 'create').mockResolvedValue(mockCreatedItem as any);
+      jest
+        .spyOn(prisma.galleryItem, 'create')
+        .mockResolvedValue(mockCreatedItem as any);
 
       const result = await service.addToGallery(
         mockNodeId,
@@ -174,7 +196,9 @@ describe('GalleryService', () => {
         isRoot: false,
       };
 
-      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockNode as any);
+      jest
+        .spyOn(prisma.fileSystemNode, 'findUnique')
+        .mockResolvedValue(mockNode as any);
 
       await expect(
         service.addToGallery(
@@ -226,12 +250,19 @@ describe('GalleryService', () => {
         secondType: mockSecondType,
       };
 
-      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockNode as any);
-      jest.spyOn(prisma.fileSystemNode, 'findUnique').mockResolvedValue(mockProject as any);
-      jest.spyOn(prisma.galleryType, 'findUnique')
+      jest
+        .spyOn(prisma.fileSystemNode, 'findUnique')
+        .mockResolvedValue(mockNode as any);
+      jest
+        .spyOn(prisma.fileSystemNode, 'findUnique')
+        .mockResolvedValue(mockProject as any);
+      jest
+        .spyOn(prisma.galleryType, 'findUnique')
         .mockResolvedValueOnce(mockType as any)
         .mockResolvedValueOnce(mockFirstTypeRecord as any);
-      jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(mockExistingItem as any);
+      jest
+        .spyOn(prisma.galleryItem, 'findFirst')
+        .mockResolvedValue(mockExistingItem as any);
 
       await expect(
         service.addToGallery(
@@ -248,7 +279,9 @@ describe('GalleryService', () => {
 
   describe('removeFromGallery', () => {
     it('应该成功从图库移除文件', async () => {
-      jest.spyOn(prisma.galleryItem, 'deleteMany').mockResolvedValue({ count: 1 });
+      jest
+        .spyOn(prisma.galleryItem, 'deleteMany')
+        .mockResolvedValue({ count: 1 });
 
       await expect(
         service.removeFromGallery(mockNodeId, 'drawings', mockUserId)
@@ -273,7 +306,9 @@ describe('GalleryService', () => {
         lookNum: 5,
       };
 
-      jest.spyOn(prisma.galleryItem, 'findFirst').mockResolvedValue(mockGalleryItem as any);
+      jest
+        .spyOn(prisma.galleryItem, 'findFirst')
+        .mockResolvedValue(mockGalleryItem as any);
       jest.spyOn(prisma.galleryItem, 'update').mockResolvedValue({
         ...mockGalleryItem,
         lookNum: 6,
@@ -312,9 +347,16 @@ describe('GalleryService', () => {
       };
 
       jest.spyOn(prisma.galleryType, 'findFirst').mockResolvedValue(null);
-      jest.spyOn(prisma.galleryType, 'create').mockResolvedValue(mockCreatedType as any);
+      jest
+        .spyOn(prisma.galleryType, 'create')
+        .mockResolvedValue(mockCreatedType as any);
 
-      const result = await service.createType('drawings', '建筑', 0, mockUserId);
+      const result = await service.createType(
+        'drawings',
+        '建筑',
+        0,
+        mockUserId
+      );
 
       expect(result.id).toBe(1);
       expect(result.name).toBe('建筑');
@@ -330,7 +372,9 @@ describe('GalleryService', () => {
         ownerId: mockUserId,
       };
 
-      jest.spyOn(prisma.galleryType, 'findFirst').mockResolvedValue(mockExistingType as any);
+      jest
+        .spyOn(prisma.galleryType, 'findFirst')
+        .mockResolvedValue(mockExistingType as any);
 
       await expect(
         service.createType('drawings', '建筑', 0, mockUserId)
@@ -353,11 +397,20 @@ describe('GalleryService', () => {
         name: '建筑设计',
       };
 
-      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest
+        .spyOn(prisma.galleryType, 'findUnique')
+        .mockResolvedValue(mockType as any);
       jest.spyOn(prisma.galleryType, 'findFirst').mockResolvedValue(null);
-      jest.spyOn(prisma.galleryType, 'update').mockResolvedValue(mockUpdatedType as any);
+      jest
+        .spyOn(prisma.galleryType, 'update')
+        .mockResolvedValue(mockUpdatedType as any);
 
-      const result = await service.updateType(1, '建筑设计', 'drawings', mockUserId);
+      const result = await service.updateType(
+        1,
+        '建筑设计',
+        'drawings',
+        mockUserId
+      );
 
       expect(result.name).toBe('建筑设计');
     });
@@ -381,10 +434,14 @@ describe('GalleryService', () => {
         ownerId: mockUserId,
       };
 
-      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest
+        .spyOn(prisma.galleryType, 'findUnique')
+        .mockResolvedValue(mockType as any);
       jest.spyOn(prisma.galleryType, 'findMany').mockResolvedValue([]);
       jest.spyOn(prisma.galleryItem, 'findMany').mockResolvedValue([]);
-      jest.spyOn(prisma.galleryType, 'delete').mockResolvedValue(mockType as any);
+      jest
+        .spyOn(prisma.galleryType, 'delete')
+        .mockResolvedValue(mockType as any);
 
       await expect(
         service.deleteType(1, 'drawings', mockUserId)
@@ -405,11 +462,21 @@ describe('GalleryService', () => {
       };
 
       const mockChildTypes = [
-        { id: 2, pid: 1, name: '门', galleryType: 'drawings', ownerId: mockUserId },
+        {
+          id: 2,
+          pid: 1,
+          name: '门',
+          galleryType: 'drawings',
+          ownerId: mockUserId,
+        },
       ];
 
-      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
-      jest.spyOn(prisma.galleryType, 'findMany').mockResolvedValue(mockChildTypes as any);
+      jest
+        .spyOn(prisma.galleryType, 'findUnique')
+        .mockResolvedValue(mockType as any);
+      jest
+        .spyOn(prisma.galleryType, 'findMany')
+        .mockResolvedValue(mockChildTypes as any);
 
       await expect(
         service.deleteType(1, 'drawings', mockUserId)
@@ -426,12 +493,23 @@ describe('GalleryService', () => {
       };
 
       const mockItems = [
-        { id: 'item-1', userId: mockUserId, nodeId: 'node-1', firstType: 1, secondType: 2, galleryType: 'drawings' },
+        {
+          id: 'item-1',
+          userId: mockUserId,
+          nodeId: 'node-1',
+          firstType: 1,
+          secondType: 2,
+          galleryType: 'drawings',
+        },
       ];
 
-      jest.spyOn(prisma.galleryType, 'findUnique').mockResolvedValue(mockType as any);
+      jest
+        .spyOn(prisma.galleryType, 'findUnique')
+        .mockResolvedValue(mockType as any);
       jest.spyOn(prisma.galleryType, 'findMany').mockResolvedValue([]);
-      jest.spyOn(prisma.galleryItem, 'findMany').mockResolvedValue(mockItems as any);
+      jest
+        .spyOn(prisma.galleryItem, 'findMany')
+        .mockResolvedValue(mockItems as any);
 
       await expect(
         service.deleteType(1, 'drawings', mockUserId)

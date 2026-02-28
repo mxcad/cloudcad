@@ -10,7 +10,7 @@ export class StorageService {
 
   constructor(
     private localStorageProvider: LocalStorageProvider,
-    private configService: ConfigService,
+    private configService: ConfigService
   ) {}
 
   /**
@@ -36,9 +36,14 @@ export class StorageService {
    * @param key 存储键名
    * @returns 文件信息
    */
-  async getFileInfo(key: string): Promise<{ contentType: string; contentLength: number } | null> {
+  async getFileInfo(
+    key: string
+  ): Promise<{ contentType: string; contentLength: number } | null> {
     try {
-      const absolutePath = path.resolve(this.configService.get('FILES_DATA_PATH', '../filesData'), key);
+      const absolutePath = path.resolve(
+        this.configService.get('FILES_DATA_PATH', '../filesData'),
+        key
+      );
       const stats = await fs.promises.stat(absolutePath);
 
       // 根据文件扩展名猜测 Content-Type
@@ -72,7 +77,10 @@ export class StorageService {
 
   async healthCheck() {
     try {
-      const filesDataPath = this.configService.get('FILES_DATA_PATH', '../filesData');
+      const filesDataPath = this.configService.get(
+        'FILES_DATA_PATH',
+        '../filesData'
+      );
       const resolvedPath = path.resolve(filesDataPath);
 
       // 检查目录是否存在

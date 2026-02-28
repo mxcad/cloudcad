@@ -75,7 +75,10 @@ export class FileUtils {
    * @param prefix 文件名前缀
    * @returns 文件路径列表
    */
-  static async getFilesByPrefix(dir: string, prefix: string): Promise<string[]> {
+  static async getFilesByPrefix(
+    dir: string,
+    prefix: string
+  ): Promise<string[]> {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       const files: string[] = [];
@@ -86,7 +89,9 @@ export class FileUtils {
         }
       }
 
-      this.logger.debug(`在目录 ${dir} 中找到 ${files.length} 个前缀为 ${prefix} 的文件`);
+      this.logger.debug(
+        `在目录 ${dir} 中找到 ${files.length} 个前缀为 ${prefix} 的文件`
+      );
       return files;
     } catch (error) {
       this.logger.error(`获取目录文件失败: ${dir}, 前缀: ${prefix}`, error);
