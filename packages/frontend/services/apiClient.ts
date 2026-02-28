@@ -44,27 +44,6 @@ class ApiClient {
     // 响应拦截器 - 自动解包后端响应格式和处理 token 刷新
     this.client.interceptors.response.use(
       (response) => {
-        // 检查 MxCAD 格式的错误响应
-        if (
-          response.data &&
-          typeof response.data === 'object' &&
-          response.data.ret === 'errorparam' &&
-          response.data.message === '用户未认证'
-        ) {
-          console.log(
-            '[apiClient] 检测到 MxCAD 格式的未认证响应，跳转到登录页'
-          );
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-          return Promise.reject({
-            ...response,
-            isUnauthorized: true,
-            message: '用户未认证',
-          });
-        }
-
         const isGalleryEndpoint = response.config.url?.includes('/gallery/');
         const shouldSkipUnwrap = isGalleryEndpoint;
 
@@ -83,26 +62,6 @@ class ApiClient {
       },
       async (error) => {
         const originalRequest = error.config;
-
-        // 检查错误响应中的 MxCAD 格式
-        if (
-          error.response?.data &&
-          error.response.data.ret === 'errorparam' &&
-          error.response.data.message === '用户未认证'
-        ) {
-          console.log(
-            '[apiClient] 检测到 MxCAD 格式的未认证错误，跳转到登录页'
-          );
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-          return Promise.reject({
-            ...error,
-            isUnauthorized: true,
-            message: '用户未认证',
-          });
-        }
 
         // 排除登录接口本身的 401 错误（密码错误等）
         const isLoginEndpoint = originalRequest.url?.includes('/auth/login');
