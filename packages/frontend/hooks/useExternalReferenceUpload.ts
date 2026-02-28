@@ -88,29 +88,41 @@ export const useExternalReferenceUpload = (
 
       pendingRequestsRef.current.add(nodeId);
 
-      try {
-        const response = await mxcadApi.getPreloadingData(nodeId);
+            try {
 
-        // 后端返回的是全局响应格式 {code: 'SUCCESS', data: {...}, ...}
+              const response = await mxcadApi.getPreloadingData(nodeId);
 
-        // 需要提取 data 字段中的实际预加载数据
+      
 
-        const data = response.data?.data || null;
+              // apiClient 已经自动解包，response.data 就是实际数据
 
-        // 如果成功获取数据，更新缓存
+              const data = response.data || null;
 
-        if (data) {
-          preloadingDataCacheRef.current.set(nodeId, data);
+      
 
-          // 5 秒后清除缓存
+              // 如果成功获取数据，更新缓存
 
-          setTimeout(() => {
-            preloadingDataCacheRef.current.delete(nodeId);
-          }, 5000);
-        }
+              if (data) {
 
-        return data;
-      } catch (error) {
+                preloadingDataCacheRef.current.set(nodeId, data);
+
+      
+
+                // 5 秒后清除缓存
+
+                setTimeout(() => {
+
+                  preloadingDataCacheRef.current.delete(nodeId);
+
+                }, 5000);
+
+              }
+
+      
+
+              return data;
+
+            } catch (error) {
         handleError(error, '获取预加载数据失败');
 
         return null;
@@ -141,8 +153,7 @@ export const useExternalReferenceUpload = (
           fileName,
           response.data
         );
-        // checkExternalReference 接口使用 res.json({ exists }) 直接返回，绕过了全局响应包装
-        // 所以 response.data 就是 {exists: boolean}
+        // apiClient 已经自动解包，response.data 就是 {exists: boolean}
         return response.data?.exists ?? false;
       } catch (error) {
         handleError(error, '检查外部参照失败');

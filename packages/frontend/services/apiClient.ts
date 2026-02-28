@@ -65,15 +65,16 @@ class ApiClient {
           });
         }
 
-        const isMxCadEndpoint = response.config.url?.includes('/mxcad/');
         const isGalleryEndpoint = response.config.url?.includes('/gallery/');
-        const shouldSkipUnwrap = isMxCadEndpoint || isGalleryEndpoint;
+        const shouldSkipUnwrap = isGalleryEndpoint;
 
+        // 对所有端点（除了 gallery）解包标准响应格式 { code, message, data }
         if (
           !shouldSkipUnwrap &&
           response.data &&
           typeof response.data === 'object' &&
-          'data' in response.data
+          'data' in response.data &&
+          'code' in response.data
         ) {
           response.data = response.data.data;
         }

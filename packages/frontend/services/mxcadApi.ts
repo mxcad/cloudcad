@@ -11,8 +11,6 @@ interface RefreshExternalReferencesStats {
 
 /** 外部引用刷新响应 */
 interface RefreshExternalReferencesResponse {
-  code: number;
-  message: string;
   stats?: RefreshExternalReferencesStats;
 }
 
@@ -23,16 +21,10 @@ export const mxcadApi = {
     ),
 
   checkThumbnail: (nodeId: string) =>
-    apiClient.get<{ code: number; message: string; exists: boolean }>(
-      `/mxcad/thumbnail/${nodeId}`
-    ),
+    apiClient.get<{ exists: boolean }>(`/mxcad/thumbnail/${nodeId}`),
 
   uploadThumbnail: (nodeId: string, formData: FormData) =>
-    apiClient.post<{
-      code: number;
-      message: string;
-      data?: { fileName: string };
-    }>(`/mxcad/thumbnail/${nodeId}`, formData, {
+    apiClient.post<{ fileName: string }>(`/mxcad/thumbnail/${nodeId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 
@@ -73,11 +65,8 @@ export const mxcadApi = {
             }
           );
 
-          if (response.data?.code === 0) {
-            resolve(response);
-          } else {
-            reject(new Error(response.data?.message || '上传失败'));
-          }
+          // apiClient 已经解包，直接返回数据
+          resolve(response);
         } catch (error) {
           reject(error);
         }
@@ -111,11 +100,8 @@ export const mxcadApi = {
             }
           );
 
-          if (response.data?.code === 0) {
-            resolve(response);
-          } else {
-            reject(new Error(response.data?.message || '上传失败'));
-          }
+          // apiClient 已经解包，直接返回数据
+          resolve(response);
         } catch (error) {
           reject(error);
         }
@@ -166,11 +152,8 @@ export const mxcadApi = {
             }
           );
 
-          if (response.data?.code === 'SUCCESS') {
-            resolve(response);
-          } else {
-            reject(new Error(response.data?.message || '保存失败'));
-          }
+          // apiClient 已经解包，直接返回数据
+          resolve(response);
         } catch (error) {
           reject(error);
         }
