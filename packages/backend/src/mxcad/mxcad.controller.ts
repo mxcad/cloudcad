@@ -15,27 +15,22 @@
   Logger,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
   UseGuards,
 } from '@nestjs/common';
 import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import type { Response } from 'express';
-import { JwtService } from '@nestjs/jwt';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import * as os from 'os';
 
 import { ApiTags, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { MxCadService } from './mxcad.service';
-import { ConvertDto } from './dto/convert.dto';
 import { DatabaseService } from '../database/database.service';
-import { TzDto } from './dto/tz.dto';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
 import { UploadFilesDto } from './dto/upload-files.dto';
-import { PdfConversionDto } from './dto/pdf-conversion.dto';
 import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
@@ -73,18 +68,6 @@ export class MxCadController {
     this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
   }
 
-  @Get('test')
-  @ApiResponse({
-    status: 200,
-    description: '测试端点',
-  })
-  async test(@Req() req: any) {
-    this.logger.log(`[Test Endpoint] Called`);
-    this.logger.log(`[Test Endpoint] Session: ${JSON.stringify(req.session)}`);
-    this.logger.log(`[Test Endpoint] User: ${JSON.stringify(req.user)}`);
-    return { message: 'OK', session: req.session, user: req.user };
-  }
-
   /**
    * 检查分片是否存在
    */
@@ -95,13 +78,12 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '检查分片是否存在' })
   async checkChunkExist(
     @Body() body: any,
-    @Req() request: MxCadRequest,
-    @Res() res: Response
+    @Req() request: MxCadRequest
   ) {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
     // 构建上下文
     const context = await this.buildContextFromRequest(request);
-    const result = await this.mxCadService.checkChunkExist(
+    return this.mxCadService.checkChunkExist(
       body.chunk,
       body.fileHash,
       body.size,
@@ -109,7 +91,6 @@ export class MxCadController {
       body.filename,
       context
     );
-    return res.json(result);
   }
 
   /**
@@ -122,8 +103,7 @@ export class MxCadController {
   @ApiResponse({ status: 200, description: '检查文件是否存在' })
   async checkFileExist(
     @Body() body: any,
-    @Req() request: MxCadRequest,
-    @Res() res: Response
+    @Req() request: MxCadRequest
   ) {
     const context = await this.buildContextFromRequest(request);
     // 添加文件大小到 context
@@ -131,23 +111,11 @@ export class MxCadController {
     this.logger.log(
       `[checkFileExist] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, fileSize=${body.fileSize}, nodeId=${context.nodeId}`
     );
-    const result = await this.mxCadService.checkFileExist(
+    return this.mxCadService.checkFileExist(
       body.filename,
       body.fileHash,
       context
     );
-    return res.json(result);
-  }
-
-  /**
-   * 检查图纸状态
-   */
-  @Post('files/tz')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '检查图纸状态' })
-  async checkTzStatus(@Body() dto: TzDto, @Res() res: Response) {
-    const result = await this.mxCadService.checkTzStatus(dto.fileHash);
-    return res.json(result);
   }
 
   /**
@@ -244,8 +212,7 @@ export class MxCadController {
   })
   async checkExternalReference(
     @Param('nodeId') nodeId: string,
-    @Body() body: { fileName: string },
-    @Res() res: Response
+    @Body() body: { fileName: string }
   ) {
     this.logger.log(
       `[checkExternalReference] 请求参数: nodeId=${nodeId}, fileName=${body.fileName}`
@@ -253,9 +220,7 @@ export class MxCadController {
 
     // 验证参数
     if (!body.fileName) {
-      return res
-        .status(400)
-        .json({ code: -1, message: '缺少必要参数: fileName' });
+      throw new BadRequestException('缺少必要参数: fileName');
     }
 
     const exists = await this.mxCadService.checkExternalReferenceExists(
@@ -265,52 +230,7 @@ export class MxCadController {
 
     this.logger.log(`[checkExternalReference] 检查结果: ${exists}`);
 
-    return res.json({ exists });
-  }
-
-  /**
-   * 获取文件的外部参照统计信息
-   * @param nodeId 文件系统节点 ID
-   * @returns 外部参照统计信息
-   */
-  @Get('file/:nodeId/external-references')
-  @ApiResponse({
-    status: 200,
-    description: '成功获取外部参照统计信息',
-    schema: {
-      type: 'object',
-      properties: {
-        hasMissing: { type: 'boolean', description: '是否有缺失的外部参照' },
-        missingCount: { type: 'number', description: '缺失的外部参照数量' },
-        totalCount: { type: 'number', description: '总外部参照数量' },
-        references: { type: 'array', description: '外部参照列表' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: '文件不存在',
-  })
-  async getExternalReferences(
-    @Param('nodeId') nodeId: string,
-    @Res() res: Response
-  ) {
-    this.logger.log(`[getExternalReferences] 请求参数: nodeId=${nodeId}`);
-
-    try {
-      const stats = await this.mxCadService.getExternalReferenceStats(nodeId);
-
-      this.logger.log(
-        `[getExternalReferences] 检查结果: 缺失=${stats.missingCount}, 总数=${stats.totalCount}`
-      );
-
-      return res.json(stats);
-    } catch (error) {
-      this.logger.error(`[getExternalReferences] 获取失败: ${error.message}`);
-      return res
-        .status(500)
-        .json({ code: -1, message: '获取外部参照信息失败' });
-    }
+    return { exists };
   }
 
   /**
@@ -336,28 +256,18 @@ export class MxCadController {
     description: '刷新失败',
   })
   async refreshExternalReferences(
-    @Param('nodeId') nodeId: string,
-    @Res() res: Response
+    @Param('nodeId') nodeId: string
   ) {
     this.logger.log(`[refreshExternalReferences] 请求参数: nodeId=${nodeId}`);
 
-    try {
-      const stats = await this.mxCadService.getExternalReferenceStats(nodeId);
-      await this.mxCadService.updateExternalReferenceInfo(nodeId, stats);
+    const stats = await this.mxCadService.getExternalReferenceStats(nodeId);
+    await this.mxCadService.updateExternalReferenceInfo(nodeId, stats);
 
-      this.logger.log(`[refreshExternalReferences] 刷新成功: nodeId=${nodeId}`);
+    this.logger.log(`[refreshExternalReferences] 刷新成功: nodeId=${nodeId}`);
 
-      return res.json({
-        code: 0,
-        message: '刷新成功',
-        stats,
-      });
-    } catch (error) {
-      this.logger.error(
-        `[refreshExternalReferences] 刷新失败: ${error.message}`
-      );
-      return res.status(500).json({ code: -1, message: '刷新失败' });
-    }
+    return {
+      stats,
+    };
   }
 
   /**
@@ -525,183 +435,6 @@ export class MxCadController {
   }
 
   /**
-   * 测试上传文件
-   */
-  @Post('files/testupfile')
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '测试上传文件' })
-  async testUploadFile(
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ ret: 'errorparam' });
-    }
-    return res.send('ok');
-  }
-
-  /**
-   * 转换服务器文件
-   */
-  @Post('convert')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '转换服务器文件' })
-  async convertServerFile(@Body() dto: ConvertDto, @Res() res: Response) {
-    let param = dto.param;
-    if (typeof param === 'string') {
-      try {
-        param = JSON.parse(param);
-      } catch (error) {
-        return res.json({ code: 12, message: 'param error' });
-      }
-    }
-
-    const result = await this.mxCadService.convertServerFile(param);
-    return res.json(result);
-  }
-
-  /**
-   * 上传并转换文件（不支持断点续传）
-   */
-  @Post('upfile')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '上传并转换文件' })
-  async uploadAndConvert(
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ code: -1, message: '缺少文件' });
-    }
-
-    // 计算文件 MD5 哈希值
-    const fileBuffer = fs.readFileSync(file.path);
-    const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
-
-    const param = {
-      srcpath: file.path.replace(/\\/g, '/'),
-      src_file_md5: fileHash,
-    };
-
-    const result = await this.mxCadService.convertServerFile(param);
-
-    try {
-      // 添加文件名到返回结果，与参考代码保持一致
-      const fileName = file.path.substring(file.path.lastIndexOf('/') + 1);
-      if (result) {
-        result.filename = fileName;
-      }
-      return res.json(result);
-    } catch (e) {
-      return res.json({ code: -1, message: 'catch error' });
-    }
-  }
-
-  /**
-   * 保存 DWG 到服务器
-   */
-  @Post('savedwg')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '保存 DWG 到服务器' })
-  async saveDwg(
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
-    }
-
-    const inputFile = file.path.replace(/\\/g, '/');
-    const outputFile = `${file.filename}.dwg`;
-
-    // 计算文件 MD5 哈希值
-    const fileBuffer = fs.readFileSync(file.path);
-    const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
-
-    const param = {
-      srcpath: inputFile,
-      src_file_md5: fileHash,
-      outname: outputFile,
-    };
-
-    const result = await this.mxCadService.convertServerFile(param);
-
-    try {
-      result.file = outputFile;
-      if (result.code === 0) {
-        result.ret = 'ok';
-      } else {
-        result.ret = 'failed';
-      }
-      return res.json(result);
-    } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
-    }
-  }
-
-  /**
-   * 保存 PDF 到服务器
-   */
-  @Post('savepdf')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '保存 PDF 到服务器' })
-  async savePdf(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: PdfConversionDto,
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
-    }
-
-    let param: any = {
-      width: '2000',
-      height: '2000',
-      colorPolicy: 'mono',
-    };
-
-    if (body.param) {
-      try {
-        if (typeof body.param === 'string') {
-          const parsedParam = JSON.parse(body.param);
-          param = { ...param, ...parsedParam };
-        } else if (typeof body.param === 'object') {
-          param = { ...param, ...body.param };
-        }
-      } catch (error) {
-        return res.json({ ret: 'failed', code: -1, message: '参数格式错误' });
-      }
-    }
-
-    const inputFile = file.path.replace(/\\/g, '/');
-    const outputFile = `${file.filename}.pdf`;
-
-    param.srcpath = inputFile;
-    param.outname = outputFile;
-
-    const result = await this.mxCadService.convertServerFile(param);
-
-    try {
-      result.file = outputFile;
-      if (result.code === 0) {
-        result.ret = 'ok';
-      } else {
-        result.ret = 'failed';
-      }
-      return res.json(result);
-    } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
-    }
-  }
-
-  /**
    * 保存 mxweb 文件到指定节点
    * 路由: POST /api/mxcad/savemxweb/:nodeId
    */
@@ -716,253 +449,36 @@ export class MxCadController {
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('commitMessage') commitMessage: string,
-    @Req() request: any,
-    @Res() res: Response
+    @Req() request: any
   ) {
-    try {
-      this.logger.log(
-        `[saveMxwebToNode] 开始保存: nodeId=${nodeId}, commitMessage=${commitMessage || '(无)'}`
-      );
+    this.logger.log(
+      `[saveMxwebToNode] 开始保存: nodeId=${nodeId}, commitMessage=${commitMessage || '(无)'}`
+    );
 
-      // 获取用户信息
-      const userId = request.user?.id;
-      const userName =
-        request.user?.username || request.user?.nickname || request.user?.email;
+    // 获取用户信息
+    const userId = request.user?.id;
+    const userName =
+      request.user?.username || request.user?.nickname || request.user?.email;
 
-      // 调用服务保存文件
-      const result = await this.mxCadService.saveMxwebFile(
-        nodeId,
-        file,
-        userId,
-        userName,
-        commitMessage
-      );
+    // 调用服务保存文件
+    const result = await this.mxCadService.saveMxwebFile(
+      nodeId,
+      file,
+      userId,
+      userName,
+      commitMessage
+    );
 
-      if (result.success) {
-        this.logger.log(`[saveMxwebToNode] 保存成功: nodeId=${nodeId}`);
-        return res.json({
-          code: 'SUCCESS',
-          message: result.message,
-          data: {
-            nodeId,
-            path: result.path,
-          },
-        });
-      } else {
-        this.logger.error(`[saveMxwebToNode] 保存失败: ${result.message}`);
-        return res.status(HttpStatus.BAD_REQUEST).json({
-          code: 'FAILED',
-          message: result.message,
-        });
-      }
-    } catch (error) {
-      this.logger.error(
-        `[saveMxwebToNode] 保存失败: ${error.message}`,
-        error.stack
-      );
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        code: 'ERROR',
-        message: '保存失败，请稍后重试',
-      });
-    }
-  }
-
-  /**
-   * 打印为 PDF
-   */
-  @Post('print_to_pdf')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '打印为 PDF' })
-  async printToPdf(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: PdfConversionDto,
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
+    if (!result.success) {
+      this.logger.error(`[saveMxwebToNode] 保存失败: ${result.message}`);
+      throw new BadRequestException(result.message);
     }
 
-    if (!body.param) {
-      return res.json({ ret: 'failed', code: -1, message: 'param error' });
-    }
-
-    let param;
-    try {
-      if (typeof body.param === 'string') {
-        param = JSON.parse(body.param);
-      } else {
-        param = body.param;
-      }
-    } catch (error) {
-      return res.json({ ret: 'failed', code: -1, message: 'param error' });
-    }
-
-    const inputFile = file.path.replace(/\\/g, '/');
-    const outputFile = `${file.filename}.pdf`;
-
-    param.cmd = 'print_to_pdf';
-    param.srcpath = inputFile;
-    param.outname = outputFile;
-    if (!param.colorPolicy) {
-      param.colorPolicy = 'mono';
-    }
-
-    const result = await this.mxCadService.convertServerFile(param);
-
-    try {
-      result.file = outputFile;
-      if (result.code === 0) {
-        result.ret = 'ok';
-      } else {
-        result.ret = 'failed';
-      }
-      return res.json(result);
-    } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
-    }
-  }
-
-  /**
-   * 裁剪 DWG
-   */
-  @Post('cut_dwg')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath =
-            process.env.MXCAD_UPLOAD_PATH ||
-            path.join(process.cwd(), 'uploads');
-          fs.mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uuid = crypto.randomUUID();
-          const ext = file.originalname.split('.').pop();
-          cb(null, `${uuid}.${ext}`);
-        },
-      }),
-    })
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '裁剪 DWG' })
-  async cutDwg(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: { param: string },
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
-    }
-
-    if (!body.param) {
-      return res.json({ ret: 'failed', code: -1, message: 'param error' });
-    }
-
-    let param;
-    try {
-      if (typeof body.param === 'string') {
-        param = JSON.parse(body.param);
-      } else {
-        param = body.param;
-      }
-    } catch (error) {
-      return res.json({ ret: 'failed', code: -1, message: 'param error' });
-    }
-
-    const inputFile = file.path.replace(/\\/g, '/');
-    const outputFile = `${file.filename}.dwg`;
-
-    param.cmd = 'cut_dwg';
-    param.srcpath = inputFile;
-    param.outname = outputFile;
-
-    const result = await this.mxCadService.convertServerFile(param);
-
-    try {
-      result.file = outputFile;
-      if (result.code === 0) {
-        result.ret = 'ok';
-      } else {
-        result.ret = 'failed';
-      }
-      return res.json(result);
-    } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
-    }
-  }
-
-  /**
-   * 裁剪 MXWEB
-   */
-  @Post('cut_mxweb')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath =
-            process.env.MXCAD_UPLOAD_PATH ||
-            path.join(process.cwd(), 'uploads');
-          fs.mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uuid = crypto.randomUUID();
-          const ext = file.originalname.split('.').pop();
-          cb(null, `${uuid}.${ext}`);
-        },
-      }),
-    })
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '裁剪 MXWEB' })
-  async cutMxweb(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: { param: string },
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ ret: 'failed', code: -1, message: '缺少文件' });
-    }
-
-    if (!body.param) {
-      return res.json({ ret: 'failed', code: -1, message: 'param error' });
-    }
-
-    let param;
-    try {
-      if (typeof body.param === 'string') {
-        param = JSON.parse(body.param);
-      } else {
-        param = body.param;
-      }
-    } catch (error) {
-      return res.json({ ret: 'failed', code: -1, message: 'param error' });
-    }
-
-    const inputFile = file.path.replace(/\\/g, '/');
-    const outputFile = `${file.filename}${this.mxCadFileExt}`;
-    param.cmd = 'cut_dwg';
-    param.srcpath = inputFile;
-    param.outname = outputFile;
-
-    const result = await this.mxCadService.convertServerFile(param);
-
-    try {
-      result.file = outputFile;
-      if (result.code === 0) {
-        result.ret = 'ok';
-      } else {
-        result.ret = 'failed';
-      }
-      return res.json(result);
-    } catch (e) {
-      return res.json({ ret: 'failed', code: -1, message: 'catch error' });
-    }
+    this.logger.log(`[saveMxwebToNode] 保存成功: nodeId=${nodeId}`);
+    return {
+      nodeId,
+      path: result.path,
+    };
   }
 
   /**
@@ -1477,35 +993,6 @@ export class MxCadController {
         code: -1,
         message: '上传缩略图失败',
       });
-    }
-  }
-
-  /**
-   * 上传图片
-   */
-  @Post('up_image')
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '上传图片' })
-  async uploadImage(
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response
-  ) {
-    if (!file) {
-      return res.json({ code: -1, message: '缺少文件' });
-    }
-
-    // 直接返回原始文件名，与参考代码保持一致
-    const fileName = file.filename;
-
-    try {
-      return res.json({
-        code: 0,
-        message: 'ok',
-        file: fileName,
-      });
-    } catch (error) {
-      return res.json({ code: -1, message: 'catch error' });
     }
   }
 
