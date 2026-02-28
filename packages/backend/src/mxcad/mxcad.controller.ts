@@ -78,7 +78,16 @@ export class MxCadController {
   @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '检查分片是否存在' })
+  @ApiResponse({
+    status: 200,
+    description: '检查分片是否存在',
+    schema: {
+      type: 'object',
+      properties: {
+        exists: { type: 'boolean', description: '分片是否已存在' },
+      },
+    },
+  })
   async checkChunkExist(
     @Body() body: any,
     @Req() request: MxCadRequest
@@ -105,7 +114,17 @@ export class MxCadController {
   @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '检查文件是否存在' })
+  @ApiResponse({
+    status: 200,
+    description: '检查文件是否存在',
+    schema: {
+      type: 'object',
+      properties: {
+        exists: { type: 'boolean', description: '文件是否已存在（秒传）' },
+        nodeId: { type: 'string', description: '已存在文件的节点 ID（秒传时返回）' },
+      },
+    },
+  })
   async checkFileExist(
     @Body() body: any,
     @Req() request: MxCadRequest
@@ -323,7 +342,17 @@ export class MxCadController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: '上传文件' })
+  @ApiResponse({
+    status: 200,
+    description: '上传文件成功',
+    schema: {
+      type: 'object',
+      properties: {
+        nodeId: { type: 'string', description: '上传文件的节点 ID' },
+        tz: { type: 'boolean', description: '是否为图纸文件' },
+      },
+    },
+  })
   async uploadFile(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() body: UploadFilesDto,
