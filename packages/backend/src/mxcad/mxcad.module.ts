@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
-import { MxCadPermissionService } from './mxcad-permission.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { FileSystemService } from './services/file-system.service';
 import { CacheManagerService } from './services/cache-manager.service';
@@ -90,7 +89,6 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
   controllers: [MxCadController],
   providers: [
     MxCadService,
-    MxCadPermissionService,
     FileConversionService,
     FileSystemService,
     CacheManagerService,
