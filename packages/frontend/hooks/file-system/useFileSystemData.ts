@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { projectsApi, trashApi } from '../../services/apiService';
+import { projectsApi, trashApi } from '../../services';
 import { FileSystemNode, BreadcrumbItem } from '../../types/filesystem';
 import { PaginationMeta } from '../../components/ui/Pagination';
 import { logger } from '../../utils/logger';

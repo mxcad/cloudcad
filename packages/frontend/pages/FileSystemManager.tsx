@@ -13,7 +13,7 @@ import { useProjectManagement } from '../hooks/useProjectManagement';
 import { usePermission } from '../hooks/usePermission';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import { useAuth } from '../contexts/AuthContext';
-import { projectsApi } from '../services/apiService';
+import { projectsApi } from '../services';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
   EmptyFolderIcon,

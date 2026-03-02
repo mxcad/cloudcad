@@ -12,8 +12,8 @@ export {
 } from './TruncateText';
 export type { TruncateTextProps, TruncateMode } from './TruncateText';
 
-export { default as Button } from './Button';
-export { default as Modal } from './Modal';
-export { default as Toast } from './Toast';
-export { default as ConfirmDialog } from './ConfirmDialog';
-export { default as Pagination } from './Pagination';
+export { Button } from './Button';
+export { Modal } from './Modal';
+export { Toast } from './Toast';
+export { ConfirmDialog } from './ConfirmDialog';
+export { Pagination } from './Pagination';

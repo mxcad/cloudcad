@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { apiService } from '../services/apiService';
+import { authApi } from '../services';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME, APP_LOGO } from '../constants/appConfig';
 
@@ -50,7 +50,7 @@ export const ResetPassword: React.FC = () => {
     }
 
     try {
-      await apiService.post('/auth/reset-password', {
+      await authApi.resetPassword({
         email: formData.email,
         code: formData.code,
         newPassword: formData.newPassword,

@@ -10,7 +10,7 @@ import {
   Home,
   Loader2,
 } from 'lucide-react';
-import { projectsApi } from '../../services/apiService';
+import { projectsApi } from '../../services';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface SelectFolderModalProps {

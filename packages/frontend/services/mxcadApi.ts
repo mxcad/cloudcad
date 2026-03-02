@@ -14,7 +14,54 @@ interface RefreshExternalReferencesResponse {
   stats?: RefreshExternalReferencesStats;
 }
 
+/** 文件存在检查响应 */
+interface FileExistResponse {
+  exists: boolean;
+  nodeId?: string;
+}
+
+/** 分片存在检查响应 */
+interface ChunkExistResponse {
+  exists: boolean;
+}
+
+/** 分片上传响应 */
+interface ChunkUploadResponse {
+  nodeId?: string;
+  tz?: boolean;
+}
+
 export const mxcadApi = {
+  /**
+   * 检查文件是否已存在（秒传检查）
+   */
+  checkFileExist: (params: {
+    fileHash: string;
+    filename: string;
+    nodeId: string;
+    fileSize: number;
+  }) =>
+    apiClient.post<FileExistResponse>('/mxcad/files/fileisExist', params),
+
+  /**
+   * 检查分片是否已存在
+   */
+  checkChunkExist: (params: {
+    fileHash: string;
+    filename: string;
+    nodeId: string;
+    chunk: number;
+    chunks: number;
+    size: number;
+  }) => apiClient.post<ChunkExistResponse>('/mxcad/files/chunkisExist', params),
+
+  /**
+   * 上传分片
+   */
+  uploadChunk: (formData: FormData) =>
+    apiClient.post<ChunkUploadResponse>('/mxcad/files/uploadFiles', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   getPreloadingData: (nodeId: string) =>
     apiClient.get<import('../types/api').PreloadingData>(
       `/mxcad/file/${nodeId}/preloading`

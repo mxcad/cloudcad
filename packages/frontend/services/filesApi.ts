@@ -39,6 +39,9 @@ export const filesApi = {
 
   get: (id: string) => apiClient.get(`/file-system/nodes/${id}`),
 
+  /** 获取节点的根节点（项目根） */
+  getRoot: (id: string) => apiClient.get(`/file-system/nodes/${id}/root`),
+
   download: (id: string) =>
     apiClient.get(`/file-system/nodes/${id}/download`, {
       responseType: 'blob',

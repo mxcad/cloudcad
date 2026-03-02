@@ -1,4 +1,4 @@
-import { apiService } from '../services/apiService';
+import { mxcadApi } from '../services';
 
 /**
  * MxCAD 上传配置接口
@@ -121,11 +121,8 @@ export const uploadMxCadFile = async (
   });
 
   // 1. 检查文件是否已存在（秒传）
-  // 标准格式返回 { exists: boolean; nodeId?: string }
   const existRequest = buildRequest({ fileSize: file.size });
-  const existResponse = await apiService.post<
-    { exists: boolean; nodeId?: string }
-  >('/mxcad/files/fileisExist', existRequest);
+  const existResponse = await mxcadApi.checkFileExist(existRequest);
 
   // apiClient 自动解包，直接访问 data
   const existData = existResponse.data;
@@ -157,15 +154,12 @@ export const uploadMxCadFile = async (
     const chunk = file.slice(start, end);
 
     // 检查分片是否存在
-    // 标准格式返回 { exists: boolean }
     const chunkRequest = buildRequest({
       chunk: chunkIndex,
       chunks: totalChunks,
       size: chunk.size,
     });
-    const chunkResponse = await apiService.post<
-      { exists: boolean }
-    >('/mxcad/files/chunkisExist', chunkRequest);
+    const chunkResponse = await mxcadApi.checkChunkExist(chunkRequest);
 
     const chunkData = chunkResponse.data;
     if (chunkData.exists) {
@@ -184,12 +178,7 @@ export const uploadMxCadFile = async (
     formData.append('nodeId', nodeId);
     formData.append('file', chunk);
 
-    // 标准格式返回 { nodeId?: string; tz?: boolean }
-    const uploadResponse = await apiService.post<
-      { nodeId?: string; tz?: boolean }
-    >('/mxcad/files/uploadFiles', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const uploadResponse = await mxcadApi.uploadChunk(formData);
 
     hasUploadedAnyChunk = true; // 标记已上传至少一个分片
 
@@ -212,12 +201,7 @@ export const uploadMxCadFile = async (
     mergeFormData.append('size', file.size.toString());
     mergeFormData.append('nodeId', nodeId);
 
-    // 标准格式返回 { nodeId?: string; tz?: boolean }
-    const mergeResponse = await apiService.post<
-      { nodeId?: string; tz?: boolean }
-    >('/mxcad/files/uploadFiles', mergeFormData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const mergeResponse = await mxcadApi.uploadChunk(mergeFormData);
 
     const mergeData = mergeResponse.data;
     if (mergeData.nodeId) {

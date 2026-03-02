@@ -7,9 +7,8 @@ import {
   SidebarType,
 } from '../contexts/SidebarContext';
 import { ProjectPermission } from '../constants/permissions';
-import { apiService } from '../services/apiService';
+import { filesApi } from '../services';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
-import { filesApi } from '../services/filesApi';
 import CADEditorSidebar from '../components/CADEditorSidebar';
 import CollaborateSidebar from '../components/CollaborateSidebar';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
@@ -204,9 +203,7 @@ export const CADEditorDirect: React.FC = () => {
     const initEditor = async () => {
       try {
         // 获取文件信息
-        const fileResponse = await apiService.get(
-          `/file-system/nodes/${fileId}`
-        );
+        const fileResponse = await filesApi.get(fileId);
         const file = fileResponse.data as {
           fileHash?: string;
           path?: string;
@@ -237,9 +234,7 @@ export const CADEditorDirect: React.FC = () => {
         let projectId = file.parentId || null;
         if (!file.isRoot && file.parentId) {
           try {
-            const rootResponse = await apiService.get(
-              `/file-system/nodes/${file.id}/root`
-            );
+            const rootResponse = await filesApi.getRoot(file.id);
             if (rootResponse.data?.id) {
               projectId = rootResponse.data.id;
             }
@@ -362,9 +357,7 @@ export const CADEditorDirect: React.FC = () => {
 
     const updateFileInfo = async () => {
       try {
-        const fileResponse = await apiService.get(
-          `/file-system/nodes/${fileId}`
-        );
+        const fileResponse = await filesApi.get(fileId);
         const file = fileResponse.data as {
           fileHash?: string;
           path?: string;
@@ -390,9 +383,7 @@ export const CADEditorDirect: React.FC = () => {
         let projectId = file.parentId || null;
         if (!file.isRoot && file.parentId) {
           try {
-            const rootResponse = await apiService.get(
-              `/file-system/nodes/${file.id}/root`
-            );
+            const rootResponse = await filesApi.getRoot(file.id);
             if (rootResponse.data?.id) {
               projectId = rootResponse.data.id;
             }
@@ -424,9 +415,7 @@ export const CADEditorDirect: React.FC = () => {
   }) => {
     try {
       // 获取目标文件信息（要打开的文件）
-      const targetFileResponse = await apiService.get(
-        `/file-system/nodes/${file.nodeId}`
-      );
+      const targetFileResponse = await filesApi.get(file.nodeId);
       const targetFile = targetFileResponse.data as {
         deletedAt?: string | null;
       };
@@ -437,7 +426,7 @@ export const CADEditorDirect: React.FC = () => {
       }
 
       // 获取当前文件信息，确定 uploadTargetNodeId
-      const fileResponse = await apiService.get(`/file-system/nodes/${fileId}`);
+      const fileResponse = await filesApi.get(fileId);
       const currentFile = fileResponse.data as {
         parentId?: string | null;
         id?: string;

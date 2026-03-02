@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiService } from '../services/apiService';
+import { authApi } from '../services';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME, APP_LOGO } from '../constants/appConfig';
 
@@ -18,7 +18,7 @@ export const ForgotPassword: React.FC = () => {
     setError(null);
 
     try {
-      await apiService.post('/auth/forgot-password', { email });
+      await authApi.forgotPassword(email);
       setSuccess(true);
     } catch (err) {
       setError(

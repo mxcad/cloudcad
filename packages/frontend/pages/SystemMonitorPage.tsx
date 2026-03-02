@@ -8,23 +8,11 @@ import {
   XCircle,
   AlertTriangle,
 } from 'lucide-react';
-import { apiService } from '../services/api';
+import { healthApi } from '../services';
+import type { SystemHealth } from '../services';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-
-// 健康状态接口
-interface HealthStatus {
-  status: 'up' | 'down';
-  message: string;
-  timestamp: string;
-}
-
-// 系统健康状态接口
-interface SystemHealth {
-  database: HealthStatus;
-  storage: HealthStatus;
-}
 
 export const SystemMonitorPage: React.FC = () => {
   useDocumentTitle('系统监控');
@@ -47,20 +35,10 @@ export const SystemMonitorPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.get('/health');
+      const response = await healthApi.getHealth();
       const healthData = response.data;
       if (healthData && healthData.info) {
-        const timestamp = new Date().toISOString();
-        setSystemHealth({
-          database: {
-            ...healthData.info.database,
-            timestamp,
-          },
-          storage: {
-            ...healthData.info.storage,
-            timestamp,
-          },
-        });
+        setSystemHealth(healthData);
       } else {
         throw new Error('无效的响应数据格式');
       }

@@ -4,6 +4,7 @@
  */
 
 import { logger } from './logger';
+import { projectsApi } from '../services';
 
 export type Role = 'ADMIN' | 'USER' | 'VIEWER';
 
@@ -73,9 +74,6 @@ export const hasNodePermission = async (
   }
 
   try {
-    // 动态导入 API 服务以避免循环依赖
-    const { projectsApi } = await import('../services/apiService');
-
     // 获取项目成员列表
     const response = await projectsApi.getMembers(nodeId);
     const members = response.data as Array<{
@@ -120,9 +118,6 @@ export const canEditNode = async (
   }
 
   try {
-    // 动态导入 API 服务以避免循环依赖
-    const { projectsApi } = await import('../services/apiService');
-
     // 检查用户是否具有 PROJECT_UPDATE 权限
     const response = await projectsApi.checkPermission(
       nodeId,
@@ -151,9 +146,6 @@ export const canDeleteNode = async (
   }
 
   try {
-    // 动态导入 API 服务以避免循环依赖
-    const { projectsApi } = await import('../services/apiService');
-
     // 检查用户是否具有 PROJECT_DELETE 权限
     const response = await projectsApi.checkPermission(
       nodeId,
@@ -182,9 +174,6 @@ export const canManageNodeMembers = async (
   }
 
   try {
-    // 动态导入 API 服务以避免循环依赖
-    const { projectsApi } = await import('../services/apiService');
-
     // 检查用户是否具有 PROJECT_MEMBER_MANAGE 权限
     const response = await projectsApi.checkPermission(
       nodeId,
@@ -232,9 +221,6 @@ export const canManageNodeRoles = async (
   }
 
   try {
-    // 动态导入 API 服务以避免循环依赖
-    const { projectsApi } = await import('../services/apiService');
-
     // 检查用户是否具有 PROJECT_ROLE_MANAGE 权限
     const response = await projectsApi.checkPermission(
       nodeId,

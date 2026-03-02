@@ -17,7 +17,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { components } from '../types/api';
-import { projectsApi } from '../services/api';
+import { projectsApi } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';

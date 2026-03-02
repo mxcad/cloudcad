@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { apiService } from '../services/apiService';
+import { filesApi } from '../services';
 import { logger as Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
 
 /** MxPluginContext 类型声明 */
@@ -60,7 +60,7 @@ export const useProjectContext = () => {
 export const useFileInfo = () => {
   const getFileInfo = async (nodeId: string) => {
     try {
-      const fileData = await apiService.get(`/file-system/nodes/${nodeId}`);
+      const fileData = await filesApi.get(nodeId);
       Logger.info('文件信息', fileData.data);
       return fileData.data;
     } catch (error) {

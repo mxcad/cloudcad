@@ -15,6 +15,7 @@
 - **100% 使用 Express**（后端 NestJS 开发使用 Express 平台）
 - **100% 禁止 any 类型**（TypeScript 严格模式，代码质量检查必须通过）
 - **100% 禁止创建一个快速测试来验证修复**
+- **100% API 类型安全**（后端 Swagger 定义 ↔ 前端类型自动生成，禁止手动维护 API 类型）
 
 ---
 
@@ -171,6 +172,27 @@ cloudcad/
 | 包名 | 描述 | 详细文档 |
 |------|------|---------|
 | svnVersionTool | SVN 版本控制工具包 | [README.md](packages/svnVersionTool/README.md) |
+
+### 4.7 前端 API 服务（Frontend API Services）
+
+| 服务 | 描述 |
+|------|------|
+| apiClient | Axios 封装，支持 Token 自动刷新、响应解包 |
+| authApi | 认证相关 API |
+| usersApi | 用户管理 API |
+| projectsApi | 项目管理 API |
+| filesApi | 文件系统 API |
+| trashApi | 回收站 API |
+| adminApi | 管理员 API |
+| fontsApi | 字体管理 API |
+| rolesApi | 角色管理 API |
+| mxcadApi | MxCAD 转换 API |
+| galleryApi | 图库管理 API |
+| tagsApi | 标签管理 API |
+| versionControlApi | 版本控制 API |
+| auditApi | 审计日志 API |
+| cacheApi | 缓存管理 API |
+| healthApi | 健康检查 API |
 
 ---
 
@@ -403,10 +425,12 @@ CAD 图纸分片上传、断点续传、自动转换
 | 文件系统 | `/api/file-system/*` | 项目、文件夹、文件的 CRUD |
 | 项目 | `/api/projects/*` | 项目管理 |
 | 图库 | `/api/gallery/*` | 图库管理（图纸库、图块库） |
+| 标签 | `/api/tags/*` | 标签管理 |
 | 字体管理 | `/api/font-management/*` | 字体上传、删除、下载、列表查询 |
 | 审计日志 | `/api/audit/*` | 审计日志查询、统计、清理 |
 | 健康检查 | `/api/health/*` | 服务状态监控 |
 | 版本控制 | `/api/version-control/*` | SVN 版本控制操作 |
+| MxCAD | `/api/mxcad/*` | CAD 文件上传、转换、缩略图 |
 | API 文档 | `/api/docs` | Swagger UI |
 
 ---
@@ -471,7 +495,7 @@ Hooks 文档请参考：
 
 | 实践 | 说明 |
 |------|------|
-| 统一 API 调用 | 通过统一的 API 接口层（services/api.ts） |
+| 统一 API 调用 | 通过统一的 API 接口层（services/*.ts） |
 | 类型安全 | 使用 openapi-typescript 生成的类型定义 |
 | 组件设计 | 遵循单一职责原则 |
 | 状态管理 | 使用 React Context + useReducer 或 Zustand |
@@ -642,24 +666,7 @@ export class FileSystemService {
 
 ---
 
-## 12. iFlow 专用工具与技能
-
-### 12.1 专用代理（Agents）
-
-| 代理 | 用途 |
-|------|------|
-| `code-explorer` | 深度分析现有代码库功能，追踪执行路径 |
-| `code-architect` | 设计功能架构和实现蓝图 |
-| `code-reviewer` | 审查代码的 bug、质量问题和项目规范 |
-
-### 12.2 自定义命令（Commands）
-
-| 命令 | 说明 |
-|------|------|
-| `/feature-dev` | 启动功能开发工作流，包含 7 个阶段的系统化开发流程 |
-| `/start` | 启动项目开发环境 |
-
-### 12.3 技能集（Skills）
+## 12. iFlow 技能集（Skills）
 
 | 技能 | 说明 |
 |------|------|
@@ -668,20 +675,6 @@ export class FileSystemService {
 | `ui-ux-pro-max` | UI/UX 设计智能，50 种风格、21 种配色、50 种字体配对 |
 | `frontend-design` | 创建独特、生产级的前端界面 |
 | `file-planner` | Manus 风格的持久化 Markdown 规划 |
-
-### 12.4 Feature Development 工作流
-
-使用 `/feature-dev` 命令启动 7 阶段功能开发流程：
-
-1. **Discovery** - 理解需求
-2. **Codebase Exploration** - 探索代码库
-3. **Clarifying Questions** - 澄清问题
-4. **Architecture Design** - 架构设计
-5. **Implementation** - 实现
-6. **Quality Review** - 质量审查
-7. **Summary** - 总结
-
-详细信息请参考：[Feature Development Plugin](.iflow/IFLOW.md)
 
 ---
 
@@ -696,17 +689,6 @@ export class FileSystemService {
 | 非交互式 | 对于需要用户交互的命令，总是传递非交互式标志 |
 | 后台执行 | 对于长时间运行的任务，在后台执行 |
 | 避免循环 | 避免陷入重复调用工具而没有进展的循环 |
-
-### 13.2 工具使用优先级
-
-| 优先级 | 工具 | 用途 |
-|--------|------|------|
-| 1 | read_file | 读取文件内容 |
-| 2 | replace | 小范围代码修改 |
-| 3 | write_file | 创建新文件或大规模重写 |
-| 4 | run_shell_command | 执行系统命令 |
-| 5 | glob/search_file_content | 搜索文件或内容 |
-| 6 | task | 复杂多步骤任务 |
 
 ---
 
@@ -762,7 +744,256 @@ Architecture Design → Implementation → Quality Review → Summary
 
 ---
 
-## 16. 更新记录
+## 16. API 类型规范（API Type Safety Standards）
+
+> **核心原则**：后端 Swagger 定义是唯一的类型数据源，前端类型通过自动化工具从后端生成，禁止手动维护 API 类型。
+
+### 16.1 架构概述
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   后端 NestJS   │────▶│  Swagger/OpenAPI │────▶│  前端 TypeScript │
+│   (@ApiResponse)│     │    规范文档       │     │   (自动生成类型) │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+         │                                               │
+         │                                               │
+         ▼                                               ▼
+   定义 Response DTO                              使用 openapi-fetch
+   使用 @ApiOkResponse                            自动类型推断
+```
+
+### 16.2 后端规范（NestJS）
+
+#### 16.2.1 必须定义响应类型
+
+每个 Controller 方法必须使用 `@ApiOkResponse` 或 `@ApiResponse` 定义响应类型：
+
+```typescript
+// ✅ 正确：定义了完整的响应类型
+@Get('projects')
+@ApiOkResponse({
+  description: '获取项目列表成功',
+  type: FileSystemNodeListResponseDto,  // 必须指定 DTO
+})
+async getProjects() {
+  return this.service.getProjects();
+}
+
+// ❌ 错误：没有定义响应类型
+@Get('projects')
+@ApiResponse({ status: 200, description: '获取项目列表成功' })  // 缺少 type
+async getProjects() {
+  return this.service.getProjects();
+}
+```
+
+#### 16.2.2 Response DTO 定义
+
+所有 API 响应必须使用 DTO 定义，禁止使用原始类型：
+
+```typescript
+// ✅ 正确：使用 DTO 定义响应结构
+export class FileSystemNodeDto {
+  @ApiProperty({ description: '节点ID' })
+  id: string;
+
+  @ApiProperty({ description: '节点名称' })
+  name: string;
+
+  @ApiProperty({ description: '是否是文件夹' })
+  isFolder: boolean;
+  
+  // ... 其他字段
+}
+
+export class FileSystemNodeListResponseDto {
+  @ApiProperty({ description: '数据列表', type: [FileSystemNodeDto] })
+  data: FileSystemNodeDto[];
+
+  @ApiProperty({ description: '分页元数据' })
+  meta: PaginationMetaDto;
+}
+
+// ❌ 错误：返回原始类型或 any
+@Get('projects')
+async getProjects(): Promise<any> {  // 禁止使用 any
+  return this.service.getProjects();
+}
+```
+
+#### 16.2.3 统一响应格式
+
+后端统一使用 `{ code, message, data }` 格式，通过全局拦截器自动包装：
+
+```typescript
+// 全局响应拦截器会自动包装
+{
+  code: 'SUCCESS',
+  message: '操作成功',
+  data: { /* 实际的 DTO 数据 */ }
+}
+```
+
+### 16.3 前端规范（TypeScript + React）
+
+#### 16.3.1 类型生成
+
+运行 `pnpm generate:types` 从后端 Swagger 自动生成类型：
+
+```bash
+# 前端目录下执行
+pnpm generate:types
+
+# 这会生成 types/api.ts，包含所有 API 的类型定义
+```
+
+#### 16.3.2 使用 openapi-fetch（强烈推荐 ✅）
+
+使用 `openapi-fetch` 作为 API 客户端，**类型完全自动推断，无需手动指定**：
+
+```typescript
+import createClient from 'openapi-fetch';
+import type { paths } from '../types/api';
+
+const client = createClient<paths>({ baseUrl: API_BASE_URL });
+
+// ✅ 正确：调用 API - 类型完全自动推断，无需手动指定泛型
+const { data, error } = await client.GET('/file-system/projects');
+// data 自动为 FileSystemNode[] 类型，无需导入或定义
+
+// ✅ 正确：带路径参数 - 类型自动检查
+const { data } = await client.GET('/file-system/nodes/{nodeId}', {
+  params: { 
+    path: { nodeId: '123' },  // TypeScript 自动检查 nodeId 必须是 string
+    query: { page: 1 }        // TypeScript 自动检查查询参数类型
+  },
+});
+
+// ❌ 错误：不需要也不能手动指定泛型
+const { data } = await client.GET<FileSystemNode[]>('/file-system/projects');  // 错误！
+```
+
+**关键优势**：
+- 无需导入任何类型
+- 无需指定泛型
+- 路径、参数、响应全部自动推断
+- 后端 Swagger 变更后，重新生成类型即可，前端代码无需修改
+
+#### 16.3.3 兼容 axios 的方案（过渡方案 ⚠️）
+
+**仅在无法迁移到 openapi-fetch 时使用，新项目必须使用 openapi-fetch**
+
+当前项目使用 axios 封装的 `apiClient`，类型通过手动定义接口实现：
+
+```typescript
+// services/tagsApi.ts 示例
+export interface Tag {
+  id: string;
+  name: string;
+  color?: string;
+  description?: string;
+  isSystem: boolean;
+}
+
+export const tagsApi = {
+  list: () => apiClient.get<Tag[]>('/tags'),
+  create: (params: CreateTagParams) => apiClient.post<Tag>('/tags', params),
+};
+```
+
+**⚠️ 重要限制**：axios 方案需要手动维护类型定义，增加了维护成本。
+
+**绝对禁止**：
+- 在前端手动定义 API 类型与后端不一致
+- 使用 `any` 类型绕过类型检查
+
+### 16.4 工作流程
+
+#### 16.4.1 新增 API 的标准流程
+
+1. **后端开发**：
+   - 创建 Request/Response DTO
+   - 使用 `@ApiOkResponse` 装饰器
+   - 本地测试 Swagger 文档：`http://localhost:3001/api/docs`
+
+2. **生成前端类型**：
+   ```bash
+   cd packages/frontend
+   pnpm generate:types
+   ```
+
+3. **前端开发**：
+   - 使用 `openapi-fetch` 或带类型的 `apiClient`
+   - 类型自动推断，无需手动定义
+
+#### 16.4.2 修改 API 的标准流程
+
+1. **修改后端 DTO**
+2. **重新生成前端类型**：`pnpm generate:types`
+3. **前端自动获得类型更新**，TypeScript 会提示所有不兼容的调用
+
+### 16.5 检查清单
+
+在提交代码前，确保：
+
+- [ ] 后端所有 API 都定义了 `@ApiOkResponse` 或 `@ApiResponse`
+- [ ] 所有 Response DTO 都使用了 `@ApiProperty()` 装饰器
+- [ ] 运行 `pnpm generate:types` 成功，没有错误
+- [ ] 前端代码没有手动定义与后端不一致的 API 类型
+- [ ] `pnpm type-check` 通过
+
+### 16.6 常见错误
+
+#### ❌ 错误 1：后端没有定义响应类型
+```typescript
+// 错误
+@ApiResponse({ status: 200, description: '成功' })  // 缺少 type
+async getData() { ... }
+
+// 正确
+@ApiOkResponse({ type: MyResponseDto })  // 指定 DTO
+async getData() { ... }
+```
+
+#### ❌ 错误 2：前端手动定义类型与后端不一致
+```typescript
+// ❌ 错误 - 手动定义类型可能与后端不同步
+interface FileSystemNode {
+  id: string;
+  name: string;
+}
+
+// ✅ 正确 - 从生成的类型导入
+import type { components } from '../types/api';
+type FileSystemNode = components['schemas']['FileSystemNodeDto'];
+```
+
+#### ❌ 错误 3：使用 any 类型
+```typescript
+// 错误
+const response = await apiClient.get<any>('/api/data');
+
+// 正确
+const response = await apiClient.get('/api/data');  // 类型自动推断
+```
+
+---
+
+## 17. 更新记录
+
+### 2026-03-02（v7.2 - 前端服务层更新）
+
+**核心更新**：
+- 新增前端 API 服务列表章节（4.7）
+- 新增 `tagsApi`、`healthApi` 服务
+- 新增 `/api/tags/*` 标签管理 API 端点
+- 添加 API 类型规范章节（16），确立前后端类型安全最佳实践
+- 完善前端开发规范，明确 axios 过渡方案
+
+**影响文件**：
+- `packages/frontend/services/tagsApi.ts` - 新增
+- `packages/frontend/services/healthApi.ts` - 新增
+- `packages/frontend/services/index.ts` - 更新导出
 
 ### 2026-02-27（v7.0 - 文档全面更新）
 
@@ -835,5 +1066,5 @@ Architecture Design → Implementation → Quality Review → Summary
 
 ---
 
-_v7.0 | 2026-02-27 | CloudCAD 团队_
-_更新：文档全面更新、策略引擎、版本控制、技能集扩展_
+_v7.2 | 2026-03-02 | CloudCAD 团队_
+_更新：前端服务层更新、API 类型规范、标签管理 API_

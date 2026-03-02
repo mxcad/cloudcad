@@ -1,6 +1,6 @@
 ﻿import { MxCADView } from 'mxcad-app';
 import { logger as Logger, UrlHelper } from '../utils/mxcadUtils';
-import { mxcadApi, apiService } from './apiService';
+import { mxcadApi, filesApi } from './index';
 import { MxFun } from 'mxdraw';
 import { McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../utils/hashUtils';
@@ -524,9 +524,7 @@ async function getProjectId(
     projectId = currentFileInfo.projectId;
   } else if (fileInfo.parentId) {
     try {
-      const rootResponse = await apiService.get(
-        `/file-system/nodes/${newNodeId}/root`
-      );
+      const rootResponse = await filesApi.getRoot(newNodeId);
       if (rootResponse.data?.id) {
         projectId = rootResponse.data.id;
       }
@@ -576,9 +574,7 @@ export async function openUploadedFile(
   uploadTargetNodeId: string
 ): Promise<void> {
   updateLoadingMessage(DEFAULT_MESSAGES.OPENING_FILE);
-  const fileInfoResponse = await apiService.get(
-    `/file-system/nodes/${newNodeId}`
-  );
+  const fileInfoResponse = await filesApi.get(newNodeId);
   const fileInfo = fileInfoResponse.data;
 
   if (!fileInfo.fileHash || !fileInfo.path) {

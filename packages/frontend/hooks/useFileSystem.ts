@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { projectsApi, filesApi, trashApi } from '../services/apiService';
+import { projectsApi, filesApi, trashApi } from '../services';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
 import { PaginationMeta } from '../components/ui/Pagination';

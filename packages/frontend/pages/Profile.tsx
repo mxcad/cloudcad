@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
-import { apiService } from '../services/apiService';
+import { usersApi } from '../services';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const Profile: React.FC = () => {
@@ -49,7 +49,7 @@ export const Profile: React.FC = () => {
     }
 
     try {
-      await apiService.post('/users/change-password', {
+      await usersApi.changePassword({
         oldPassword: passwordForm.oldPassword,
         newPassword: passwordForm.newPassword,
       });

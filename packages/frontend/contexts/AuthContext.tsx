@@ -8,7 +8,7 @@
   ReactNode,
 } from 'react';
 import { components } from '../types/api';
-import { authApi } from '../services/apiService';
+import { authApi } from '../services';
 
 type User = components['schemas']['UserDto'];
 

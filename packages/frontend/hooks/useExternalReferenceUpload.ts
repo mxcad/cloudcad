@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { mxcadApi } from '../services/apiService';
+import { mxcadApi } from '../services';
 import type {
   PreloadingData,
   ExternalReferenceFile,

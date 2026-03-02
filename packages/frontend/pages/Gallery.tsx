@@ -11,7 +11,7 @@ import {
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { galleryApi } from '../services/api';
+import { galleryApi } from '../services';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { Button } from '../components/ui/Button';

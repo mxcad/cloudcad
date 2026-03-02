@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Filter, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
-import { apiService } from '../services/apiService';
+import { auditApi } from '../services';
+import type { AuditLogQueryParams } from '../services/auditApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -129,7 +130,7 @@ export const AuditLogPage: React.FC = () => {
     if (!hasAdminPermission) return;
     setLoading(true);
     try {
-      const params: Record<string, unknown> = {
+      const params: AuditLogQueryParams = {
         page,
         limit,
       };
@@ -143,7 +144,7 @@ export const AuditLogPage: React.FC = () => {
       if (filters.endDate) params.endDate = filters.endDate;
       if (filters.success !== '') params.success = filters.success === 'true';
 
-      const response = await apiService.get('/audit/logs', { params });
+      const response = await auditApi.getLogs(params);
       setLogs(response.data.logs || []);
       setTotal(response.data.total || 0);
     } catch (error) {
@@ -156,12 +157,7 @@ export const AuditLogPage: React.FC = () => {
   const loadStatistics = useCallback(async () => {
     if (!hasAdminPermission) return;
     try {
-      const params: Record<string, unknown> = {};
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate) params.endDate = filters.endDate;
-      if (filters.userId) params.userId = filters.userId;
-
-      const response = await apiService.get('/audit/statistics', { params });
+      const response = await auditApi.getStatistics();
       setStatistics({
         total: response.data.total || 0,
         successCount: response.data.successCount || 0,
@@ -171,7 +167,7 @@ export const AuditLogPage: React.FC = () => {
     } catch (error) {
       console.error('加载统计信息失败:', error);
     }
-  }, [filters, hasAdminPermission]);
+  }, [hasAdminPermission]);
 
   useEffect(() => {
     loadLogs();

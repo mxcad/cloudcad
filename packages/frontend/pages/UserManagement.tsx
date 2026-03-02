@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { TruncateText } from '../components/ui/TruncateText';
-import { usersApi, rolesApi } from '../services/apiService';
+import { usersApi, rolesApi } from '../services';
 import { components } from '../types/api';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '../constants/permissions';

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
-import { projectsApi } from '../../services/apiService';
+import { projectsApi } from '../../services';
 
 interface FileSystemDragDropHandlerProps {
   draggedNodes: FileSystemNode[];

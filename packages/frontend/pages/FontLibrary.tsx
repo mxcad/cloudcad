@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fontsApi } from '../services/api';
+import { fontsApi } from '../services';
 import { Trash2, Download, Upload } from 'lucide-react';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/api';

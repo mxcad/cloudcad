@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { projectsApi, trashApi } from '../../services/apiService';
+import { projectsApi, trashApi } from '../../services';
 import { FileSystemNode } from '../../types/filesystem';
 import { handleError } from '../../utils/errorHandler';
 

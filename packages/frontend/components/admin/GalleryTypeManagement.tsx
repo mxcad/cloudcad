@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { galleryApi } from '../../services/api';
+import { galleryApi } from '../../services';
 import { Button } from '../ui/Button';
 
 // 图库类型

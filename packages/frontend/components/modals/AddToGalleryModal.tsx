@@ -10,7 +10,7 @@ import {
   Plus,
   ChevronDown,
 } from 'lucide-react';
-import { galleryApi } from '../../services/api';
+import { galleryApi } from '../../services';
 
 type GalleryType = 'drawings' | 'blocks';
 
