@@ -5,6 +5,7 @@ import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { VersionControlService } from '../version-control/version-control.service';
+import { DatabaseService } from '../database/database.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { ConversionOptions } from './interfaces/file-conversion.interface';
 import {
@@ -26,7 +27,8 @@ export class MxCadService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
     private readonly storageManager: StorageManager,
-    private readonly versionControlService: VersionControlService
+    private readonly versionControlService: VersionControlService,
+    private readonly prisma: DatabaseService
   ) {}
 
   /**
@@ -971,6 +973,13 @@ export class MxCadService {
       this.logger.log(
         `[saveMxwebFile] 文件保存成功: ${file.path} -> ${targetPath}`
       );
+
+      // 更新数据库中的 updatedAt 字段，确保前端能检测到文件变更
+      await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: { updatedAt: new Date() },
+      });
+      this.logger.log(`[saveMxwebFile] 更新节点时间戳: ${nodeId}`);
 
       // 调用 mxcadassembly 生成 bin 文件
       await this.generateBinFiles(targetPath, node.name);

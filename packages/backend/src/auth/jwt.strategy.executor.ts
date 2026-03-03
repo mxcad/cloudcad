@@ -13,16 +13,23 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
   }
 
   async canActivate(context: any): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+
+    // 添加详细日志排查问题
+    this.logger.log(
+      `[JWT] ${request.method} ${request.path} - Auth: ${request.headers.authorization ? 'present' : 'missing'} - Session: ${request.session?.userId || 'none'}`
+    );
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
     if (isPublic) {
+      this.logger.log(`[JWT] ${request.path} - 公开端点，跳过认证`);
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
     // 如果没有Token，检查 Session
@@ -41,10 +48,14 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
       }
 
       // 既没有 Token 也没有 Session，抛出异常
+      this.logger.warn(
+        `[JWT] ${request.method} ${request.path} - 认证失败: 无Token且无Session`
+      );
       throw new UnauthorizedException('未登录或登录已过期');
     }
 
     // 有 Token，继续正常的 JWT 验证
+    this.logger.log(`[JWT] ${request.path} - 发现Token，开始JWT验证`);
     const result = await super.canActivate(context);
     return result as boolean;
   }

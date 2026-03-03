@@ -54,6 +54,7 @@ import { ProjectPermission } from '../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -1193,6 +1194,8 @@ export class MxCadController {
   /**
    * 访问 filesData 目录中的文件 - HEAD 方法
    * 用于获取文件信息而不下载文件内容
+   * 注意：HEAD 请求公开访问，因为 MxCAD 库内部发送的 HEAD 请求无法自定义请求头
+   * 实际的安全性由 GET 请求和文件路径的随机性保证
    *
    * @param res Express Response 对象
    * @param req Express Request 对象

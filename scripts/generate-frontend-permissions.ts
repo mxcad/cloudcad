@@ -309,9 +309,6 @@ function generatePermissionDependencies(
   if (projectPermissions.includes('FILE_DOWNLOAD')) {
     dependencies['FILE_DOWNLOAD'] = ['FILE_OPEN'];
   }
-  if (projectPermissions.includes('FILE_SHARE')) {
-    dependencies['FILE_SHARE'] = ['FILE_OPEN'];
-  }
   if (projectPermissions.includes('CAD_SAVE')) {
     dependencies['CAD_SAVE'] = ['FILE_OPEN'];
   }
@@ -326,15 +323,6 @@ function generatePermissionDependencies(
   }
   if (projectPermissions.includes('VERSION_READ')) {
     dependencies['VERSION_READ'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('VERSION_CREATE')) {
-    dependencies['VERSION_CREATE'] = ['VERSION_READ'];
-  }
-  if (projectPermissions.includes('VERSION_DELETE')) {
-    dependencies['VERSION_DELETE'] = ['VERSION_READ'];
-  }
-  if (projectPermissions.includes('VERSION_RESTORE')) {
-    dependencies['VERSION_RESTORE'] = ['VERSION_READ'];
   }
 
   return Object.entries(dependencies)
@@ -504,15 +492,11 @@ function getPermissionLabel(permission: string): string {
     'FILE_DELETE': '删除文件',
     'FILE_TRASH_MANAGE': '回收站管理',
     'FILE_DOWNLOAD': '下载文件',
-    'FILE_SHARE': '分享文件',
     'CAD_SAVE': '保存图纸',
     'CAD_EXPORT': '导出图纸',
     'CAD_EXTERNAL_REFERENCE': '管理外部参照',
     'GALLERY_ADD': '添加到图库',
     'VERSION_READ': '查看版本',
-    'VERSION_CREATE': '创建版本',
-    'VERSION_DELETE': '删除版本',
-    'VERSION_RESTORE': '恢复版本',
   };
 
   return labels[permission] || permission;

@@ -227,7 +227,7 @@ export const CADEditorDirect: React.FC = () => {
         }
 
         // 设置当前文件信息和 navigate 函数（用于返回命令）
-        const { setCurrentFileInfo, setNavigateFunction } =
+        const { setCurrentFileInfo, setNavigateFunction, setCacheTimestamp } =
           await import('../services/mxcadManager');
 
         // 获取项目根节点 ID
@@ -255,11 +255,17 @@ export const CADEditorDirect: React.FC = () => {
         setNavigateFunction(navigate);
 
         // 构造 mxweb 文件访问 URL
+        // 历史版本使用 ?v= 参数，最新版本使用 ?t={updatedAt} 确保获取服务器最新
         let mxcadFileUrl: string;
+        let cacheTimestamp: number | undefined;
         if (versionParam) {
           mxcadFileUrl = `/mxcad/filesData/${file.path}?v=${versionParam}`;
+          setCacheTimestamp(undefined); // 历史版本不需要清理缓存
         } else {
-          mxcadFileUrl = `/mxcad/filesData/${file.path}`;
+          // 使用 updatedAt 时间戳作为缓存版本标识，确保获取最新文件
+          cacheTimestamp = new Date(file.updatedAt).getTime();
+          mxcadFileUrl = `/mxcad/filesData/${file.path}?t=${cacheTimestamp}`;
+          setCacheTimestamp(cacheTimestamp); // 设置缓存时间戳，用于清理旧缓存
         }
 
         // 如果已经初始化过 MxCAD

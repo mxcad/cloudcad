@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-02-27T06:42:15.443Z
+ * 生成时间: 2026-03-03T06:37:27.369Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -63,14 +63,12 @@ export const ProjectPermission = {
 /**
  * 系统权限类型
  */
-export type SystemPermission =
-  (typeof SystemPermission)[keyof typeof SystemPermission];
+export type SystemPermission = typeof SystemPermission[keyof typeof SystemPermission];
 
 /**
  * 项目权限类型
  */
-export type ProjectPermission =
-  (typeof ProjectPermission)[keyof typeof ProjectPermission];
+export type ProjectPermission = typeof ProjectPermission[keyof typeof ProjectPermission];
 
 /**
  * 统一权限类型
@@ -80,53 +78,44 @@ export type Permission = SystemPermission | ProjectPermission;
 /**
  * 获取系统权限的所有值
  */
-export const SystemPermissionValues = Object.values(
-  SystemPermission
-) as readonly SystemPermission[];
+export const SystemPermissionValues = Object.values(SystemPermission) as readonly SystemPermission[];
 
 /**
  * 获取项目权限的所有值
  */
-export const ProjectPermissionValues = Object.values(
-  ProjectPermission
-) as readonly ProjectPermission[];
+export const ProjectPermissionValues = Object.values(ProjectPermission) as readonly ProjectPermission[];
 
 /**
  * 获取所有权限的值
  */
-export const PermissionValues = [
-  ...SystemPermissionValues,
-  ...ProjectPermissionValues,
-] as readonly Permission[];
+export const PermissionValues = [...SystemPermissionValues, ...ProjectPermissionValues] as readonly Permission[];
 
 /**
  * 权限依赖关系
  * 记录每个权限需要依赖的其他权限
  */
 export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
-  SYSTEM_USER_UPDATE: ['SYSTEM_USER_READ'],
-  SYSTEM_USER_DELETE: ['SYSTEM_USER_READ'],
-  SYSTEM_ROLE_UPDATE: ['SYSTEM_ROLE_READ'],
-  SYSTEM_ROLE_DELETE: ['SYSTEM_ROLE_READ'],
-  SYSTEM_FONT_UPLOAD: ['SYSTEM_FONT_READ'],
-  SYSTEM_FONT_DELETE: ['SYSTEM_FONT_READ'],
-  SYSTEM_FONT_DOWNLOAD: ['SYSTEM_FONT_READ'],
-  PROJECT_UPDATE: ['FILE_OPEN'],
-  PROJECT_DELETE: ['PROJECT_UPDATE'],
-  PROJECT_MEMBER_MANAGE: ['PROJECT_UPDATE'],
-  PROJECT_MEMBER_ASSIGN: ['PROJECT_UPDATE'],
-  PROJECT_TRANSFER: ['PROJECT_UPDATE'],
-  FILE_EDIT: ['FILE_OPEN'],
-  FILE_DELETE: ['FILE_OPEN'],
-  FILE_TRASH_MANAGE: ['FILE_OPEN'],
-  FILE_DOWNLOAD: ['FILE_OPEN'],
-  FILE_MOVE: ['FILE_OPEN'],
-  FILE_COPY: ['FILE_OPEN'],
-  CAD_SAVE: ['FILE_OPEN'],
-  CAD_EXPORT: ['FILE_OPEN'],
-  CAD_EXTERNAL_REFERENCE: ['FILE_OPEN'],
-  GALLERY_ADD: ['FILE_OPEN'],
-  VERSION_READ: ['FILE_OPEN'],
+  'SYSTEM_USER_UPDATE': ["SYSTEM_USER_READ"],
+  'SYSTEM_USER_DELETE': ["SYSTEM_USER_READ"],
+  'SYSTEM_ROLE_UPDATE': ["SYSTEM_ROLE_READ"],
+  'SYSTEM_ROLE_DELETE': ["SYSTEM_ROLE_READ"],
+  'SYSTEM_FONT_UPLOAD': ["SYSTEM_FONT_READ"],
+  'SYSTEM_FONT_DELETE': ["SYSTEM_FONT_READ"],
+  'SYSTEM_FONT_DOWNLOAD': ["SYSTEM_FONT_READ"],
+  'PROJECT_UPDATE': ["FILE_OPEN"],
+  'PROJECT_DELETE': ["PROJECT_UPDATE"],
+  'PROJECT_MEMBER_MANAGE': ["PROJECT_UPDATE"],
+  'PROJECT_MEMBER_ASSIGN': ["PROJECT_UPDATE"],
+  'PROJECT_TRANSFER': ["PROJECT_UPDATE"],
+  'FILE_EDIT': ["FILE_OPEN"],
+  'FILE_DELETE': ["FILE_OPEN"],
+  'FILE_TRASH_MANAGE': ["FILE_OPEN"],
+  'FILE_DOWNLOAD': ["FILE_OPEN"],
+  'CAD_SAVE': ["FILE_OPEN"],
+  'CAD_EXPORT': ["FILE_OPEN"],
+  'CAD_EXTERNAL_REFERENCE': ["FILE_OPEN"],
+  'GALLERY_ADD': ["FILE_OPEN"],
+  'VERSION_READ': ["FILE_OPEN"],
 };
 
 /**
@@ -193,8 +182,8 @@ export const PERMISSION_GROUPS = {
         { key: 'FILE_DELETE', label: '删除文件' },
         { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
         { key: 'FILE_DOWNLOAD', label: '下载文件' },
-        { key: 'FILE_MOVE', label: '移动文件' },
-        { key: 'FILE_COPY', label: '复制文件' },
+        { key: 'FILE_MOVE', label: 'FILE_MOVE' },
+        { key: 'FILE_COPY', label: 'FILE_COPY' },
       ],
     },
     {
@@ -207,13 +196,18 @@ export const PERMISSION_GROUPS = {
     },
     {
       label: '图库权限',
-      items: [{ key: 'GALLERY_ADD', label: '添加到图库' }],
+      items: [
+        { key: 'GALLERY_ADD', label: '添加到图库' },
+      ],
     },
     {
       label: '版本管理',
-      items: [{ key: 'VERSION_READ', label: '查看版本' }],
+      items: [
+        { key: 'VERSION_READ', label: '查看版本' },
+      ],
     },
   ],
+
 } as const;
 
 /**
@@ -235,10 +229,7 @@ export type PermissionGroup = {
 /**
  * 检查权限是否满足依赖条件
  */
-export const isPermissionEnabled = (
-  perm: string,
-  selected: string[]
-): boolean => {
+export const isPermissionEnabled = (perm: string, selected: string[]): boolean => {
   const dependencies = PERMISSION_DEPENDENCIES[perm];
   if (!dependencies || dependencies.length === 0) return true;
 
@@ -248,10 +239,7 @@ export const isPermissionEnabled = (
 /**
  * 获取权限缺失的依赖
  */
-export const getMissingDependencies = (
-  perm: string,
-  selected: string[]
-): string[] => {
+export const getMissingDependencies = (perm: string, selected: string[]): string[] => {
   const dependencies = PERMISSION_DEPENDENCIES[perm];
   if (!dependencies || dependencies.length === 0) return [];
 
@@ -297,10 +285,7 @@ export const PROJECT_ROLE_NAMES: Record<string, string> = {
 /**
  * 获取角色显示名称
  */
-export const getRoleDisplayName = (
-  roleName: string,
-  isSystemRole: boolean
-): string => {
+export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): string => {
   // 根据角色名称前缀判断是否为项目角色
   const isProjectRole = roleName.startsWith('PROJECT_');
   const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
