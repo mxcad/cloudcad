@@ -1,16 +1,12 @@
-import { apiClient } from './apiClient';
-import type { AxiosRequestConfig } from 'axios';
-
-/**
- * 统一节点创建参数
- * - parentId 为空时创建项目
- * - parentId 有值时创建文件夹
- */
-interface CreateNodeParams {
-  name: string;
-  description?: string;
-  parentId?: string;
-}
+import { getApiClient } from './apiClient';
+import type {
+  CreateNodeDto,
+  UpdateNodeDto,
+  CreateProjectDto,
+  MoveNodeDto,
+  CopyNodeDto,
+  CreateFolderDto,
+} from '../types/api-client';
 
 export const projectsApi = {
   // ========== 统一节点操作 ==========
@@ -22,90 +18,82 @@ export const projectsApi = {
    * - parentId 为空 → 创建项目
    * - parentId 有值 → 创建文件夹
    */
-  createNode: (data: CreateNodeParams) =>
-    apiClient.post('/file-system/nodes', data),
+  createNode: (data: CreateNodeDto) =>
+    getApiClient().FileSystemController_createNode(null, data),
 
   // ========== 项目操作（兼容旧 API） ==========
 
-  list: (config?: AxiosRequestConfig) =>
-    apiClient.get('/file-system/projects', config),
+  list: () =>
+    getApiClient().FileSystemController_getProjects(),
 
-  getDeletedProjects: (config?: AxiosRequestConfig) =>
-    apiClient.get('/file-system/projects/trash', config),
+  getDeletedProjects: () =>
+    getApiClient().FileSystemController_getDeletedProjects(),
 
   /**
    * 创建项目（兼容旧 API，内部调用 createNode）
    */
-  create: (data: { name: string; description?: string }) =>
-    apiClient.post('/file-system/projects', data),
+  create: (data: CreateProjectDto) =>
+    getApiClient().FileSystemController_createProject(null, data),
 
   get: (projectId: string) =>
-    apiClient.get(`/file-system/projects/${projectId}`),
+    getApiClient().FileSystemController_getProject({ projectId }),
 
-  update: (
-    projectId: string,
-    data: { name?: string; description?: string; status?: string }
-  ) => apiClient.patch(`/file-system/projects/${projectId}`, data),
+  update: (projectId: string, data: CreateProjectDto) =>
+    getApiClient().FileSystemController_updateProject({ projectId }, data),
 
   delete: (projectId: string, permanently: boolean = false) =>
-    apiClient.delete(`/file-system/projects/${projectId}`, {
-      params: { permanently },
-    }),
+    getApiClient().FileSystemController_deleteProject({ projectId, permanently }),
 
   // ========== 节点操作（兼容旧 API） ==========
 
   /**
    * 创建文件夹（兼容旧 API，内部调用 createNode）
    */
-  createFolder: (parentId: string, data: { name: string }) =>
-    apiClient.post(`/file-system/nodes/${parentId}/folders`, data),
+  createFolder: (parentId: string, data: CreateFolderDto) =>
+    getApiClient().FileSystemController_createFolder({ parentId }, data),
 
-  getNode: (nodeId: string, config?: AxiosRequestConfig) =>
-    apiClient.get(`/file-system/nodes/${nodeId}`, config),
+  getNode: (nodeId: string) =>
+    getApiClient().FileSystemController_getNode({ nodeId }),
 
-  getChildren: (nodeId: string, config?: AxiosRequestConfig) =>
-    apiClient.get(`/file-system/nodes/${nodeId}/children`, config),
+  getChildren: (nodeId: string) =>
+    getApiClient().FileSystemController_getChildren({ nodeId }),
 
-  updateNode: (nodeId: string, data: { name?: string; description?: string }) =>
-    apiClient.patch(`/file-system/nodes/${nodeId}`, data),
+  updateNode: (nodeId: string, data: UpdateNodeDto) =>
+    getApiClient().FileSystemController_updateNode({ nodeId }, data),
 
   renameNode: (nodeId: string, data: { name: string }) =>
-    apiClient.patch(`/file-system/nodes/${nodeId}`, data),
+    getApiClient().FileSystemController_updateNode({ nodeId }, data),
 
   deleteNode: (nodeId: string, permanently: boolean = false) =>
-    apiClient.delete(`/file-system/nodes/${nodeId}`, {
-      params: { permanently },
-    }),
+    getApiClient().FileSystemController_deleteNode({ nodeId, permanently }),
 
-  moveNode: (nodeId: string, targetParentId: string) =>
-    apiClient.post(`/file-system/nodes/${nodeId}/move`, { targetParentId }),
+  moveNode: (nodeId: string, targetParentId: string) => {
+    const data: MoveNodeDto = { targetParentId };
+    return getApiClient().FileSystemController_moveNode({ nodeId }, data);
+  },
 
-  copyNode: (nodeId: string, targetParentId: string) =>
-    apiClient.post(`/file-system/nodes/${nodeId}/copy`, { targetParentId }),
+  copyNode: (nodeId: string, targetParentId: string) => {
+    const data: CopyNodeDto = { targetParentId };
+    return getApiClient().FileSystemController_copyNode({ nodeId }, data);
+  },
 
-  getStorageInfo: () => apiClient.get('/file-system/storage'),
+  getStorageInfo: () =>
+    getApiClient().FileSystemController_getStorageInfo(),
 
   getMembers: (projectId: string) =>
-    apiClient.get(`/file-system/projects/${projectId}/members`),
+    getApiClient().FileSystemController_getProjectMembers({ projectId }),
 
-  addMember: (
-    projectId: string,
-    data: { userId: string; projectRoleId: string }
-  ) => apiClient.post(`/file-system/projects/${projectId}/members`, data),
+  addMember: (projectId: string, data: { userId: string; projectRoleId: string }) =>
+    getApiClient().FileSystemController_addProjectMember({ projectId }, data),
 
   removeMember: (projectId: string, userId: string) =>
-    apiClient.delete(`/file-system/projects/${projectId}/members/${userId}`),
+    getApiClient().FileSystemController_removeProjectMember({ projectId, userId }),
 
   updateMember: (projectId: string, userId: string, data: { projectRoleId: string }) =>
-    apiClient.patch(
-      `/file-system/projects/${projectId}/members/${userId}`,
-      data
-    ),
+    getApiClient().FileSystemController_updateProjectMember({ projectId, userId }, data),
 
   transferOwnership: (projectId: string, newOwnerId: string) =>
-    apiClient.post(`/file-system/projects/${projectId}/transfer`, {
-      newOwnerId,
-    }),
+    getApiClient().FileSystemController_transferProjectOwnership({ projectId }, { newOwnerId }),
 
   // ========== 项目权限检查 ==========
 
@@ -113,45 +101,43 @@ export const projectsApi = {
    * 获取用户在项目中的所有权限
    */
   getPermissions: (projectId: string) =>
-    apiClient.get(`/file-system/projects/${projectId}/permissions`),
+    getApiClient().FileSystemController_getUserProjectPermissions({ projectId }),
 
   /**
    * 检查用户是否具有特定权限
    */
   checkPermission: (projectId: string, permission: string) =>
-    apiClient.get(`/file-system/projects/${projectId}/permissions/check`, {
-      params: { permission },
-    }),
+    getApiClient().FileSystemController_checkProjectPermission({ projectId, permission }),
 
   /**
    * 获取用户在项目中的角色
    */
   getRole: (projectId: string) =>
-    apiClient.get(`/file-system/projects/${projectId}/role`),
+    getApiClient().FileSystemController_getUserProjectRole({ projectId }),
 
   // ========== 项目内回收站 ==========
 
   /**
    * 获取项目内回收站内容
    */
-  getProjectTrash: (projectId: string, config?: AxiosRequestConfig) =>
-    apiClient.get(`/file-system/projects/${projectId}/trash`, config),
+  getProjectTrash: (projectId: string) =>
+    getApiClient().FileSystemController_getProjectTrash({ projectId }),
 
   /**
    * 恢复已删除的节点
    */
   restoreNode: (nodeId: string) =>
-    apiClient.post(`/file-system/nodes/${nodeId}/restore`),
+    getApiClient().FileSystemController_restoreNode({ nodeId }),
 
   /**
    * 清空项目回收站
    */
   clearProjectTrash: (projectId: string) =>
-    apiClient.delete(`/file-system/projects/${projectId}/trash`),
+    getApiClient().FileSystemController_clearProjectTrash({ projectId }),
 
   /**
    * 恢复项目
    */
   restoreProject: (projectId: string) =>
-    apiClient.post('/file-system/trash/restore', { itemIds: [projectId] }),
+    getApiClient().FileSystemController_restoreTrashItems(null, { itemIds: [projectId] }),
 };

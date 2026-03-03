@@ -1,0 +1,269 @@
+﻿
+> cloudcad-manager@0.0.0 type-check D:\web\MxCADOnline\cloudcad\packages\frontend
+> tsc --noEmit
+
+contexts/AuthContext.tsx(101,28): error TS2352: Conversion of type '{ code: "SUCCESS" | "ERROR"; message: string; data: { accessToken: string; refreshToken: string; user: { id: string; email: string; username: string; nickname?: string; avatar?: string; role: { id?: string; name?: "ADMIN" | ... 2 more ... | "USER"; description?: string; isSystem?: boolean; permissions?: { ...; }[]; ...' to type '{ accessToken: string; refreshToken: string; user: { id: string; email: string; username: string; nickname?: string; avatar?: string; role: { id?: string; name?: string; description?: string; isSystem?: boolean; }; status?: string; }; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ code: "SUCCESS" | "ERROR"; message: string; data: { accessToken: string; refreshToken: string; user: { id: string; email: string; username: string; nickname?: string; avatar?: string; role: { id?: string; name?: "ADMIN" | ... 2 more ... | "USER"; description?: string; isSystem?: boolean; permissions?: { ...; }[]; ...' is missing the following properties from type '{ accessToken: string; refreshToken: string; user: { id: string; email: string; username: string; nickname?: string; avatar?: string; role: { id?: string; name?: string; description?: string; isSystem?: boolean; }; status?: string; }; }': accessToken, refreshToken, user
+hooks/file-system/useFileSystemCRUD.ts(426,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+hooks/file-system/useFileSystemCRUD.ts(427,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+hooks/file-system/useFileSystemCRUD.ts(443,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+hooks/file-system/useFileSystemCRUD.ts(444,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+hooks/file-system/useFileSystemCRUD.ts(474,32): error TS2345: Argument of type '(message: string, type: "error" | "success" | "info" | "warning") => void' is not assignable to parameter of type 'string'.
+hooks/file-system/useFileSystemCRUD.ts(499,30): error TS2345: Argument of type '(message: string, type: "error" | "success" | "info" | "warning") => void' is not assignable to parameter of type 'string'.
+hooks/file-system/useFileSystemData.ts(98,15): error TS2740: Type '{}' is missing the following properties from type 'FileSystemNode': id, name, isFolder, isRoot, and 4 more.
+hooks/file-system/useFileSystemData.ts(201,56): error TS2554: Expected 0 arguments, but got 1.
+hooks/file-system/useFileSystemData.ts(206,35): error TS2339: Property 'data' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(207,41): error TS2339: Property 'data' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(208,50): error TS2339: Property 'meta' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(213,32): error TS2339: Property 'length' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(217,27): error TS2339: Property 'length' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(232,33): error TS2339: Property 'id' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(233,35): error TS2339: Property 'name' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(278,38): error TS2339: Property 'data' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(279,44): error TS2339: Property 'data' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(280,53): error TS2339: Property 'meta' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(285,35): error TS2339: Property 'length' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemData.ts(289,30): error TS2339: Property 'length' does not exist on type 'unknown'.
+hooks/file-system/useFileSystemNavigation.ts(70,16): error TS2339: Property 'deletedAt' does not exist on type 'FileSystemNode'.
+hooks/file-system/useFileSystemNavigation.ts(109,16): error TS2339: Property 'deletedAt' does not exist on type 'FileSystemNode'.
+hooks/file-system/useFileSystemNavigation.ts(121,32): error TS2322: Type 'unknown' is not assignable to type 'BlobPart'.
+hooks/file-system/useFileSystemNavigation.ts(185,32): error TS2322: Type 'unknown' is not assignable to type 'BlobPart'.
+hooks/useExternalReferenceUpload.ts(154,11): error TS2554: Expected 1-3 arguments, but got 4.
+hooks/useExternalReferenceUpload.ts(470,3): error TS2739: Type '{ isOpen: any; files: any; loading: any; checkMissingReferences: any; selectAndUploadFiles: any; close: any; complete: any; skip: any; openModalForUpload: any; }' is missing the following properties from type 'UseExternalReferenceUploadReturn': selectFiles, uploadFiles
+hooks/useProjectPermission.ts(197,45): error TS2339: Property 'hasPermission' does not exist on type 'unknown'.
+hooks/useProjectPermission.ts(229,43): error TS2339: Property 'permissions' does not exist on type 'unknown'.
+hooks/useProjectPermission.ts(259,36): error TS2339: Property 'role' does not exist on type 'unknown'.
+hooks/useProjectPermission.ts(345,45): error TS2339: Property 'hasPermission' does not exist on type 'unknown'.
+pages/AuditLogPage.tsx(142,38): error TS2339: Property 'resourceId' does not exist on type 'AuditLogQueryParams'.
+pages/AuditLogPage.tsx(145,42): error TS2339: Property 'success' does not exist on type 'AuditLogQueryParams'.
+pages/AuditLogPage.tsx(148,29): error TS2339: Property 'logs' does not exist on type 'unknown'.
+pages/AuditLogPage.tsx(149,30): error TS2339: Property 'total' does not exist on type 'unknown'.
+pages/AuditLogPage.tsx(162,30): error TS2339: Property 'total' does not exist on type 'unknown'.
+pages/AuditLogPage.tsx(163,37): error TS2339: Property 'successCount' does not exist on type 'unknown'.
+pages/AuditLogPage.tsx(164,37): error TS2339: Property 'failureCount' does not exist on type 'unknown'.
+pages/AuditLogPage.tsx(165,36): error TS2339: Property 'successRate' does not exist on type 'unknown'.
+pages/CADEditorDirect.tsx(15,15): error TS2614: Module '"../components/modals/DownloadFormatModal"' has no exported member 'PdfOptions'. Did you mean to use 'import PdfOptions from "../components/modals/DownloadFormatModal"' instead?
+pages/CADEditorDirect.tsx(74,17): error TS2339: Property 'checkPermission' does not exist on type 'typeof import("D:/web/MxCADOnline/cloudcad/packages/frontend/hooks/useProjectPermission")'.
+pages/CADEditorDirect.tsx(176,44): error TS2339: Property 'formData' does not exist on type 'string'.
+pages/CADEditorDirect.tsx(177,49): error TS2339: Property 'formData' does not exist on type 'string'.
+pages/CADEditorDirect.tsx(238,36): error TS2339: Property 'id' does not exist on type 'unknown'.
+pages/CADEditorDirect.tsx(239,45): error TS2339: Property 'id' does not exist on type 'unknown'.
+pages/CADEditorDirect.tsx(387,36): error TS2339: Property 'id' does not exist on type 'unknown'.
+pages/CADEditorDirect.tsx(388,45): error TS2339: Property 'id' does not exist on type 'unknown'.
+pages/CADEditorDirect.tsx(455,63): error TS2554: Expected 2 arguments, but got 3.
+pages/CADEditorDirect.tsx(475,30): error TS2322: Type 'unknown' is not assignable to type 'BlobPart'.
+pages/FileSystemManager.tsx(535,28): error TS2339: Property 'success' does not exist on type 'unknown'.
+pages/FileSystemManager.tsx(536,50): error TS2339: Property 'entries' does not exist on type 'unknown'.
+pages/FileSystemManager.tsx(538,49): error TS2339: Property 'message' does not exist on type 'unknown'.
+pages/FileSystemManager.tsx(581,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+pages/FileSystemManager.tsx(583,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+pages/FileSystemManager.tsx(1492,11): error TS2552: Cannot find name 'setDownloadingNode'. Did you mean 'downloadingNode'?
+pages/FontLibrary.tsx(5,15): error TS2305: Module '"../types/api"' has no exported member 'FontInfo'.
+pages/FontLibrary.tsx(219,31): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+pages/FontLibrary.tsx(234,56): error TS2322: Type 'MockAxiosResponse<unknown>' is not assignable to type 'BlobPart'.
+pages/RoleManagement.tsx(234,11): error TS2353: Object literal may only specify known properties, and 'ownerId' does not exist in type '{ projectId?: string; name: string; description?: string; permissions: string[]; }'.
+pages/RoleManagement.tsx(398,40): error TS2322: Type 'readonly [{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; }, { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; }, { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; }, { ...; }] | readonly [...] | readonly [...] | readonly [...]' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; } | readonly ({ ...; } | ... 2 more ... | { ...; })[]'.
+  Type 'readonly [{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }, { readonly key: "SYSTEM_ROLE_CREATE"; readonly label: "创建角色"; }, { readonly key: "SYSTEM_ROLE_UPDATE"; readonly label: "编辑角色"; }, { ...; }, { ...; }]' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; } | readonly ({ ...; } | ... 2 more ... | { ...; })[]'.
+    Type 'readonly [{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }, { readonly key: "SYSTEM_ROLE_CREATE"; readonly label: "创建角色"; }, { readonly key: "SYSTEM_ROLE_UPDATE"; readonly label: "编辑角色"; }, { ...; }, { ...; }]' is not assignable to type 'readonly ({ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; })[]'.
+      Type '{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; } | { readonly key: "SYSTEM_ROLE_CREATE"; readonly label: "创建角色"; } | { readonly key: "SYSTEM_ROLE_UPDATE"; readonly label: "编辑角色"; } | { ...; } | { ...; }' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; }'.
+        Type '{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; }'.
+          Type '{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }' is not assignable to type '{ readonly key: "SYSTEM_USER_DELETE"; readonly label: "删除用户"; }'.
+            Types of property 'key' are incompatible.
+              Type '"SYSTEM_ROLE_READ"' is not assignable to type '"SYSTEM_USER_DELETE"'.
+pages/RoleManagement.tsx(401,40): error TS2322: Type 'readonly [{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; }, { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; }, { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; }, { ...; }, { ...; }, { ...; }, { ...; }] | readonly [...] | readonly [...] | readonly [...] | readonly [...]' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | ... 4 more ... | readonly ({ ...; } | ... 5 more ... | { ...; })[]'.
+  Type 'readonly [{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }, { readonly key: "FILE_UPLOAD"; readonly label: "上传文件"; }, { readonly key: "FILE_OPEN"; readonly label: "查看文件"; }, { readonly key: "FILE_EDIT"; readonly label: "编辑文件"; }, ... 4 more ..., { ...; }]' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | ... 4 more ... | readonly ({ ...; } | ... 5 more ... | { ...; })[]'.
+    Type 'readonly [{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }, { readonly key: "FILE_UPLOAD"; readonly label: "上传文件"; }, { readonly key: "FILE_OPEN"; readonly label: "查看文件"; }, { readonly key: "FILE_EDIT"; readonly label: "编辑文件"; }, ... 4 more ..., { ...; }]' is not assignable to type 'readonly ({ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | { ...; } | { ...; } | { ...; } | { ...; })[]'.
+      Type '{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; } | { readonly key: "FILE_UPLOAD"; readonly label: "上传文件"; } | { readonly key: "FILE_OPEN"; readonly label: "查看文件"; } | { readonly key: "FILE_EDIT"; readonly label: "编辑文件"; } | ... 4 more ... | { ...; }' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | { ...; } | { ...; } | { ...; } | { ...; }'.
+        Type '{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | { ...; } | { ...; } | { ...; } | { ...; }'.
+          Type '{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }' is not assignable to type '{ readonly key: "PROJECT_ROLE_PERMISSION_MANAGE"; readonly label: "角色权限配置"; }'.
+            Types of property 'key' are incompatible.
+              Type '"FILE_CREATE"' is not assignable to type '"PROJECT_ROLE_PERMISSION_MANAGE"'.
+pages/RoleManagement.tsx(405,46): error TS2339: Property 'key' does not exist on type 'unknown'.
+pages/RoleManagement.tsx(408,42): error TS2339: Property 'label' does not exist on type 'unknown'.
+pages/RoleManagement.tsx(529,40): error TS2322: Type 'readonly [{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; }, { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; }, { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; }, { ...; }] | readonly [...] | readonly [...] | readonly [...]' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; } | readonly ({ ...; } | ... 2 more ... | { ...; })[]'.
+  Type 'readonly [{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }, { readonly key: "SYSTEM_ROLE_CREATE"; readonly label: "创建角色"; }, { readonly key: "SYSTEM_ROLE_UPDATE"; readonly label: "编辑角色"; }, { ...; }, { ...; }]' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; } | readonly ({ ...; } | ... 2 more ... | { ...; })[]'.
+    Type 'readonly [{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }, { readonly key: "SYSTEM_ROLE_CREATE"; readonly label: "创建角色"; }, { readonly key: "SYSTEM_ROLE_UPDATE"; readonly label: "编辑角色"; }, { ...; }, { ...; }]' is not assignable to type 'readonly ({ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; })[]'.
+      Type '{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; } | { readonly key: "SYSTEM_ROLE_CREATE"; readonly label: "创建角色"; } | { readonly key: "SYSTEM_ROLE_UPDATE"; readonly label: "编辑角色"; } | { ...; } | { ...; }' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; }'.
+        Type '{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }' is not assignable to type '{ readonly key: "SYSTEM_USER_READ"; readonly label: "查看用户"; } | { readonly key: "SYSTEM_USER_CREATE"; readonly label: "创建用户"; } | { readonly key: "SYSTEM_USER_UPDATE"; readonly label: "编辑用户"; } | { ...; }'.
+          Type '{ readonly key: "SYSTEM_ROLE_READ"; readonly label: "查看角色"; }' is not assignable to type '{ readonly key: "SYSTEM_USER_DELETE"; readonly label: "删除用户"; }'.
+            Types of property 'key' are incompatible.
+              Type '"SYSTEM_ROLE_READ"' is not assignable to type '"SYSTEM_USER_DELETE"'.
+pages/RoleManagement.tsx(532,40): error TS2322: Type 'readonly [{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; }, { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; }, { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; }, { ...; }, { ...; }, { ...; }, { ...; }] | readonly [...] | readonly [...] | readonly [...] | readonly [...]' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | ... 4 more ... | readonly ({ ...; } | ... 5 more ... | { ...; })[]'.
+  Type 'readonly [{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }, { readonly key: "FILE_UPLOAD"; readonly label: "上传文件"; }, { readonly key: "FILE_OPEN"; readonly label: "查看文件"; }, { readonly key: "FILE_EDIT"; readonly label: "编辑文件"; }, ... 4 more ..., { ...; }]' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | ... 4 more ... | readonly ({ ...; } | ... 5 more ... | { ...; })[]'.
+    Type 'readonly [{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }, { readonly key: "FILE_UPLOAD"; readonly label: "上传文件"; }, { readonly key: "FILE_OPEN"; readonly label: "查看文件"; }, { readonly key: "FILE_EDIT"; readonly label: "编辑文件"; }, ... 4 more ..., { ...; }]' is not assignable to type 'readonly ({ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | { ...; } | { ...; } | { ...; } | { ...; })[]'.
+      Type '{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; } | { readonly key: "FILE_UPLOAD"; readonly label: "上传文件"; } | { readonly key: "FILE_OPEN"; readonly label: "查看文件"; } | { readonly key: "FILE_EDIT"; readonly label: "编辑文件"; } | ... 4 more ... | { ...; }' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | { ...; } | { ...; } | { ...; } | { ...; }'.
+        Type '{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }' is not assignable to type '{ readonly key: "PROJECT_UPDATE"; readonly label: "编辑项目"; } | { readonly key: "PROJECT_DELETE"; readonly label: "删除项目"; } | { readonly key: "PROJECT_MEMBER_MANAGE"; readonly label: "成员管理"; } | { ...; } | { ...; } | { ...; } | { ...; }'.
+          Type '{ readonly key: "FILE_CREATE"; readonly label: "创建文件"; }' is not assignable to type '{ readonly key: "PROJECT_ROLE_PERMISSION_MANAGE"; readonly label: "角色权限配置"; }'.
+            Types of property 'key' are incompatible.
+              Type '"FILE_CREATE"' is not assignable to type '"PROJECT_ROLE_PERMISSION_MANAGE"'.
+pages/RoleManagement.tsx(536,46): error TS2339: Property 'key' does not exist on type 'unknown'.
+pages/RoleManagement.tsx(539,42): error TS2339: Property 'label' does not exist on type 'unknown'.
+pages/SystemMonitorPage.tsx(12,15): error TS2305: Module '"../services"' has no exported member 'SystemHealth'.
+pages/UserManagement.tsx(115,9): error TS2353: Object literal may only specify known properties, and 'sortBy' does not exist in type '{ page?: number; limit?: number; search?: string; roleId?: string; }'.
+pages/UserManagement.tsx(118,30): error TS2339: Property 'data' does not exist on type 'unknown'.
+pages/UserManagement.tsx(119,35): error TS2339: Property 'pagination' does not exist on type 'unknown'.
+pages/UserManagement.tsx(226,22): error TS2339: Property 'password' does not exist on type '{ username: any; email: any; roleId: any; nickname: any; }'.
+services/adminApi.ts(11,22): error TS2345: Argument of type '`/admin/permissions/cache/user/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/adminApi.ts(14,22): error TS2345: Argument of type '`/admin/permissions/cache/project/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/adminApi.ts(17,22): error TS2345: Argument of type '`/admin/permissions/cache/file/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/adminApi.ts(20,19): error TS2345: Argument of type '`/admin/permissions/user/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/apiClient.ts(195,51): error TS2345: Argument of type 'PathsWithMethod<"get">' is not assignable to parameter of type 'PathsWithMethod<paths, "get">'.
+  Type '"/cache-monitor/values"' is not assignable to type 'PathsWithMethod<paths, "get">'. Did you mean '"/cache-monitor/value"'?
+services/apiClient.ts(223,52): error TS2345: Argument of type 'PathsWithMethod<"post">' is not assignable to parameter of type 'PathsWithMethod<paths, "post">'.
+  Type '""' is not assignable to type 'PathsWithMethod<paths, "post">'.
+services/apiClient.ts(224,7): error TS2698: Spread types may only be created from object types.
+services/apiClient.ts(254,51): error TS2345: Argument of type 'PathsWithMethod<"put">' is not assignable to parameter of type 'PathsWithMethod<paths, "put">'.
+  Type '""' is not assignable to type 'PathsWithMethod<paths, "put">'.
+services/apiClient.ts(255,7): error TS2698: Spread types may only be created from object types.
+services/apiClient.ts(285,53): error TS2345: Argument of type 'PathsWithMethod<"patch">' is not assignable to parameter of type 'PathsWithMethod<paths, "patch">'.
+  Type '""' is not assignable to type 'PathsWithMethod<paths, "patch">'.
+services/apiClient.ts(286,7): error TS2698: Spread types may only be created from object types.
+services/apiClient.ts(313,54): error TS2345: Argument of type 'PathsWithMethod<"delete">' is not assignable to parameter of type 'PathsWithMethod<paths, "delete">'.
+  Type '""' is not assignable to type 'PathsWithMethod<paths, "delete">'.
+services/apiClient.ts(337,52): error TS2345: Argument of type 'PathsWithMethod<"post">' is not assignable to parameter of type 'PathsWithMethod<paths, "post">'.
+  Type '""' is not assignable to type 'PathsWithMethod<paths, "post">'.
+services/auditApi.ts(39,36): error TS2322: Type 'AuditLogQueryParams' is not assignable to type 'never'.
+services/auditApi.ts(41,45): error TS2345: Argument of type '`/audit/logs/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/auditApi.ts(45,63): error TS2345: Argument of type '{ days: number; }' is not assignable to parameter of type 'never'.
+services/authApi.ts(22,47): error TS2345: Argument of type '{ email: string; }' is not assignable to parameter of type 'never'.
+services/authApi.ts(28,49): error TS2345: Argument of type '{ email: string; }' is not assignable to parameter of type 'never'.
+services/cacheApi.ts(28,20): error TS2345: Argument of type '`/cache/warmup/user/${string}`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/cacheApi.ts(31,20): error TS2345: Argument of type '`/cache/warmup/project/${string}`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/filesApi.ts(33,56): error TS2345: Argument of type '{ fileName: string; fileContent: string; parentId: string; }' is not assignable to parameter of type 'never'.
+services/filesApi.ts(40,38): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/filesApi.ts(43,42): error TS2345: Argument of type '`/file-system/nodes/${string}/root`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/filesApi.ts(46,19): error TS2345: Argument of type '`/file-system/nodes/${string}/download`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/filesApi.ts(61,26): error TS2345: Argument of type '`/file-system/nodes/${string}/download-with-format`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/filesApi.ts(68,21): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/filesApi.ts(70,44): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/filesApi.ts(73,20): error TS2345: Argument of type '`/file-system/nodes/${string}/share`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/filesApi.ts(75,44): error TS2345: Argument of type '`/file-system/nodes/${string}/access`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/filesApi.ts(78,21): error TS2345: Argument of type '`/file-system/nodes/${string}/access/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/filesApi.ts(81,22): error TS2345: Argument of type '`/file-system/nodes/${string}/access/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/fontsApi.ts(6,7): error TS2322: Type '{ location: "backend" | "frontend"; }' is not assignable to type 'never'.
+services/fontsApi.ts(16,54): error TS2345: Argument of type 'FormData' is not assignable to parameter of type 'never'.
+services/fontsApi.ts(22,25): error TS2345: Argument of type '`/font-management/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/fontsApi.ts(25,26): error TS2345: Argument of type '`/font-management/download/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/galleryApi.ts(30,20): error TS2345: Argument of type '"/gallery/drawings/types/create" | "/gallery/blocks/types/create"' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+  Type '"/gallery/drawings/types/create"' is not assignable to type 'PathsWithMethod<"post">'. Did you mean '"/gallery/drawings/types"'?
+services/galleryApi.ts(37,19): error TS2345: Argument of type '`/gallery/drawings/types/${number}` | `/gallery/blocks/types/${number}`' is not assignable to parameter of type 'PathsWithMethod<"put">'.
+  Type '`/gallery/drawings/types/${number}`' is not assignable to type 'PathsWithMethod<"put">'.
+services/galleryApi.ts(40,22): error TS2345: Argument of type '`/gallery/drawings/types/${number}` | `/gallery/blocks/types/${number}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+  Type '`/gallery/drawings/types/${number}`' is not assignable to type 'PathsWithMethod<"delete">'.
+services/galleryApi.ts(60,20): error TS2345: Argument of type '"/gallery/drawings/items" | "/gallery/blocks/items"' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+  Type '"/gallery/drawings/items"' is not assignable to type 'PathsWithMethod<"post">'. Did you mean '"/gallery/drawings/types"'?
+services/galleryApi.ts(63,22): error TS2345: Argument of type '`/gallery/drawings/items/${string}` | `/gallery/blocks/items/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+  Type '`/gallery/drawings/items/${string}`' is not assignable to type 'PathsWithMethod<"delete">'.
+services/galleryApi.ts(74,19): error TS2345: Argument of type '`/gallery/drawings/items/${string}` | `/gallery/blocks/items/${string}`' is not assignable to parameter of type 'PathsWithMethod<"put">'.
+  Type '`/gallery/drawings/items/${string}`' is not assignable to type 'PathsWithMethod<"put">'.
+services/galleryApi.ts(83,42): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/galleryApi.ts(85,49): error TS2339: Property 'path' does not exist on type 'unknown'.
+services/index.ts(6,25): error TS2307: Cannot find module './tagsApi' or its corresponding type declarations.
+services/index.ts(7,60): error TS2307: Cannot find module './tagsApi' or its corresponding type declarations.
+services/mxcadApi.ts(44,20): error TS2344: Type 'FileExistResponse' does not satisfy the constraint 'PathsWithMethod<"post">'.
+services/mxcadApi.ts(56,24): error TS2344: Type 'ChunkExistResponse' does not satisfy the constraint 'PathsWithMethod<"post">'.
+services/mxcadApi.ts(62,20): error TS2344: Type 'ChunkUploadResponse' does not satisfy the constraint 'PathsWithMethod<"post">'.
+services/mxcadApi.ts(66,42): error TS2694: Namespace '"D:/web/MxCADOnline/cloudcad/packages/frontend/types/api"' has no exported member 'PreloadingData'.
+services/mxcadApi.ts(71,19): error TS2344: Type '{ exists: boolean; }' does not satisfy the constraint 'PathsWithMethod<"get">'.
+services/mxcadApi.ts(74,20): error TS2344: Type '{ fileName: string; }' does not satisfy the constraint 'PathsWithMethod<"post">'.
+services/mxcadApi.ts(79,43): error TS2694: Namespace '"D:/web/MxCADOnline/cloudcad/packages/frontend/types/api"' has no exported member 'CheckReferenceExistsResult'.
+services/mxcadApi.ts(85,20): error TS2344: Type 'RefreshExternalReferencesResponse' does not satisfy the constraint 'PathsWithMethod<"post">'.
+services/mxcadApi.ts(108,13): error TS2345: Argument of type 'FormData' is not assignable to parameter of type 'never'.
+services/mxcadApi.ts(143,13): error TS2345: Argument of type 'FormData' is not assignable to parameter of type 'never'.
+services/mxcadApi.ts(188,13): error TS2345: Argument of type '`/mxcad/savemxweb/${string}`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/mxcadManager.ts(96,27): error TS2345: Argument of type '{ fileId: string; parentId: string; projectId: string; name: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(528,30): error TS2339: Property 'id' does not exist on type 'unknown'.
+services/mxcadManager.ts(529,39): error TS2339: Property 'id' does not exist on type 'unknown'.
+services/mxcadManager.ts(580,17): error TS2339: Property 'fileHash' does not exist on type 'unknown'.
+services/mxcadManager.ts(580,39): error TS2339: Property 'path' does not exist on type 'unknown'.
+services/mxcadManager.ts(588,24): error TS2339: Property 'parentId' does not exist on type 'unknown'.
+services/mxcadManager.ts(590,20): error TS2339: Property 'name' does not exist on type 'unknown'.
+services/mxcadManager.ts(594,61): error TS2339: Property 'path' does not exist on type 'unknown'.
+services/mxcadManager.ts(689,26): error TS2345: Argument of type '{ fileId: string; fileName: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(838,38): error TS2304: Cannot find name 'apiService'.
+services/mxcadManager.ts(860,58): error TS2339: Property 'buffer' does not exist on type 'ArrayBuffer'.
+services/mxcadManager.ts(964,36): error TS2345: Argument of type '{ initialFileUrl: string; hasExistingView: boolean; isInitialized: boolean; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(976,31): error TS2345: Argument of type '{ initialFileUrl: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(990,37): error TS2345: Argument of type '{ initialFileUrl: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(998,26): error TS2345: Argument of type '{ initialFileUrl: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(1118,37): error TS2339: Property 'exists' does not exist on type 'unknown'.
+services/mxcadManager.ts(1159,36): error TS2345: Argument of type '{ openFile: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(1183,40): error TS2345: Argument of type '{ openFile: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(1220,39): error TS2345: Argument of type '{ currentFileName: string; targetFileName: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(1227,29): error TS2345: Argument of type '{ fileUrl: string; currentFileName: string; targetFileName: string; }' is not assignable to parameter of type 'string'.
+services/mxcadManager.ts(1246,53): error TS2345: Argument of type '{ fileUrl: string; }' is not assignable to parameter of type 'string'.
+services/projectsApi.ts(31,44): error TS2345: Argument of type 'AxiosRequestConfig<any>' is not assignable to parameter of type 'Record<string, never>'.
+  Index signature for type 'string' is missing in type 'AxiosRequestConfig<any>'.
+services/projectsApi.ts(34,50): error TS2345: Argument of type 'AxiosRequestConfig<any>' is not assignable to parameter of type 'Record<string, never>'.
+  Index signature for type 'string' is missing in type 'AxiosRequestConfig<any>'.
+services/projectsApi.ts(43,19): error TS2345: Argument of type '`/file-system/projects/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(48,24): error TS2345: Argument of type '`/file-system/projects/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/projectsApi.ts(51,22): error TS2345: Argument of type '`/file-system/projects/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/projectsApi.ts(61,20): error TS2345: Argument of type '`/file-system/nodes/${string}/folders`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/projectsApi.ts(64,19): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(67,19): error TS2345: Argument of type '`/file-system/nodes/${string}/children`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(70,21): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/projectsApi.ts(73,21): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/projectsApi.ts(76,22): error TS2345: Argument of type '`/file-system/nodes/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/projectsApi.ts(81,20): error TS2345: Argument of type '`/file-system/nodes/${string}/move`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/projectsApi.ts(84,20): error TS2345: Argument of type '`/file-system/nodes/${string}/copy`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/projectsApi.ts(89,19): error TS2345: Argument of type '`/file-system/projects/${string}/members`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(94,23): error TS2345: Argument of type '`/file-system/projects/${string}/members`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/projectsApi.ts(97,22): error TS2345: Argument of type '`/file-system/projects/${string}/members/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/projectsApi.ts(101,7): error TS2345: Argument of type '`/file-system/projects/${string}/members/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/projectsApi.ts(106,20): error TS2345: Argument of type '`/file-system/projects/${string}/transfer`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/projectsApi.ts(116,19): error TS2345: Argument of type '`/file-system/projects/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(122,19): error TS2345: Argument of type '`/file-system/projects/${string}/permissions/check`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(130,19): error TS2345: Argument of type '`/file-system/projects/${string}/role`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(138,19): error TS2345: Argument of type '`/file-system/projects/${string}/trash`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/projectsApi.ts(144,20): error TS2345: Argument of type '`/file-system/nodes/${string}/restore`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/projectsApi.ts(150,22): error TS2345: Argument of type '`/file-system/projects/${string}/trash`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/projectsApi.ts(156,50): error TS2345: Argument of type '{ itemIds: string[]; }' is not assignable to parameter of type 'never'.
+services/rolesApi.ts(7,38): error TS2345: Argument of type '`/roles/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/rolesApi.ts(15,34): error TS2345: Argument of type '{ name: string; description?: string; permissions: string[]; category?: string; level?: number; }' is not assignable to parameter of type '{ name: string; description?: string; category?: "SYSTEM" | "PROJECT" | "CUSTOM"; level?: number; permissions: string[]; }'.
+  Types of property 'category' are incompatible.
+    Type 'string' is not assignable to type '"SYSTEM" | "PROJECT" | "CUSTOM"'.
+services/rolesApi.ts(26,24): error TS2345: Argument of type '`/roles/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/rolesApi.ts(28,44): error TS2345: Argument of type '`/roles/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/rolesApi.ts(30,49): error TS2345: Argument of type '`/roles/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/rolesApi.ts(33,20): error TS2345: Argument of type '`/roles/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/rolesApi.ts(36,22): error TS2345: Argument of type '`/roles/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/rolesApi.ts(46,19): error TS2345: Argument of type '`/roles/project-roles/project/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/rolesApi.ts(48,38): error TS2345: Argument of type '`/roles/project-roles/${string}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/rolesApi.ts(55,48): error TS2345: Argument of type '{ projectId?: string; name: string; description?: string; permissions: string[]; }' is not assignable to parameter of type 'never'.
+services/rolesApi.ts(64,24): error TS2345: Argument of type '`/roles/project-roles/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/rolesApi.ts(66,44): error TS2345: Argument of type '`/roles/project-roles/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/rolesApi.ts(69,19): error TS2345: Argument of type '`/roles/project-roles/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+services/rolesApi.ts(72,20): error TS2345: Argument of type '`/roles/project-roles/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"post">'.
+services/rolesApi.ts(75,22): error TS2345: Argument of type '`/roles/project-roles/${string}/permissions`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/trashApi.ts(7,50): error TS2345: Argument of type '{ itemIds: string[]; }' is not assignable to parameter of type 'never'.
+services/trashApi.ts(10,52): error TS2322: Type '{ itemIds: string[]; }' is not assignable to type 'never'.
+services/usersApi.ts(9,35): error TS2322: Type '{ page?: number; limit?: number; search?: string; roleId?: string; }' is not assignable to type 'never'.
+services/usersApi.ts(12,38): error TS2322: Type '{ page?: number; limit?: number; search?: string; }' is not assignable to type 'never'.
+services/usersApi.ts(15,57): error TS2353: Object literal may only specify known properties, and 'email' does not exist in type '{ query?: { email: string; }; }'.
+services/usersApi.ts(35,24): error TS2345: Argument of type '`/users/${string}`' is not assignable to parameter of type 'PathsWithMethod<"patch">'.
+services/usersApi.ts(37,44): error TS2345: Argument of type '`/users/${string}`' is not assignable to parameter of type 'PathsWithMethod<"delete">'.
+services/versionControlApi.ts(19,17): error TS2353: Object literal may only specify known properties, and 'projectId' does not exist in type '{ query?: { projectId: string; filePath: string; limit?: number; }; }'.
+services/versionControlApi.ts(34,7): error TS2345: Argument of type '`/version-control/file/${number}`' is not assignable to parameter of type 'PathsWithMethod<"get">'.
+stores/fileSystemStore.ts(3,10): error TS2305: Module '"../types"' has no exported member 'FileSystemNode'.
+types/api.ts(3234,5): error TS2300: Duplicate identifier 'CacheMonitorController_getStats'.
+types/api.ts(4009,5): error TS2300: Duplicate identifier 'CacheMonitorController_getStats'.
+types/api.ts(4009,5): error TS2717: Subsequent property declarations must have the same type.  Property 'CacheMonitorController_getStats' must be of type '{ parameters: { query?: { level?: "L1" | "L2" | "L3"; includePerformance?: boolean; includeHotData?: boolean; hotDataLimit?: number; }; header?: never; path?: never; cookie?: never; }; requestBody?: never; responses: { ...; }; }', but here has type '{ parameters: { query?: never; header?: never; path?: never; cookie?: never; }; requestBody?: never; responses: { 200: { headers: { [name: string]: unknown; }; content?: never; }; }; }'.
+utils/mxcadUploadUtils.ts(125,55): error TS2345: Argument of type '{ fileHash: string; filename: string; nodeId: string; }' is not assignable to parameter of type '{ fileHash: string; filename: string; nodeId: string; fileSize: number; }'.
+  Property 'fileSize' is missing in type '{ fileHash: string; filename: string; nodeId: string; }' but required in type '{ fileHash: string; filename: string; nodeId: string; fileSize: number; }'.
+utils/mxcadUploadUtils.ts(129,17): error TS2339: Property 'exists' does not exist on type 'unknown'.
+utils/mxcadUploadUtils.ts(131,37): error TS2339: Property 'nodeId' does not exist on type 'unknown'.
+utils/mxcadUploadUtils.ts(162,58): error TS2345: Argument of type '{ fileHash: string; filename: string; nodeId: string; }' is not assignable to parameter of type '{ fileHash: string; filename: string; nodeId: string; chunk: number; chunks: number; size: number; }'.
+  Type '{ fileHash: string; filename: string; nodeId: string; }' is missing the following properties from type '{ fileHash: string; filename: string; nodeId: string; chunk: number; chunks: number; size: number; }': chunk, chunks, size
+utils/mxcadUploadUtils.ts(165,19): error TS2339: Property 'exists' does not exist on type 'unknown'.
+utils/mxcadUploadUtils.ts(187,47): error TS2339: Property 'nodeId' does not exist on type 'unknown'.
+utils/mxcadUploadUtils.ts(188,30): error TS2339: Property 'nodeId' does not exist on type 'unknown'.
+utils/mxcadUploadUtils.ts(207,19): error TS2339: Property 'nodeId' does not exist on type 'unknown'.
+utils/mxcadUploadUtils.ts(208,29): error TS2339: Property 'nodeId' does not exist on type 'unknown'.
+utils/mxcadUtils.ts(100,7): error TS2304: Cannot find name 'Logger'.
+utils/mxcadUtils.ts(125,22): error TS2339: Property 'nodeId' does not exist on type '{ projectId?: string; parentId?: string; }'.
+utils/permissionUtils.ts(127,27): error TS2339: Property 'hasPermission' does not exist on type 'unknown'.
+utils/permissionUtils.ts(155,27): error TS2339: Property 'hasPermission' does not exist on type 'unknown'.
+utils/permissionUtils.ts(183,27): error TS2339: Property 'hasPermission' does not exist on type 'unknown'.
+utils/permissionUtils.ts(230,27): error TS2339: Property 'hasPermission' does not exist on type 'unknown'.
+ ELIFECYCLE  Command failed with exit code 2.

@@ -1,7 +1,8 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { initApiClient } from './services/apiClient';
 
 import './styles/transitions.css';
 import './styles/app.css';
@@ -21,11 +22,51 @@ const GlobalLoading = () => (
   </div>
 );
 
+// 应用启动器：先初始化 API Client，再渲染应用
+const AppInitializer: React.FC = () => {
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initApiClient()
+      .then(() => {
+        setIsReady(true);
+      })
+      .catch((err) => {
+        console.error('API Client 初始化失败:', err);
+        setError('应用初始化失败，请刷新页面重试');
+      });
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <div className="text-slate-700">{error}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            刷新页面
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isReady) {
+    return <GlobalLoading />;
+  }
+
+  return (
+    <Suspense fallback={<GlobalLoading />}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </Suspense>
+  );
+};
+
 const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <Suspense fallback={<GlobalLoading />}>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </Suspense>
-);
+root.render(<AppInitializer />);

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fontsApi } from '../services';
 import { Trash2, Download, Upload } from 'lucide-react';
 import { FileNameText } from '../components/ui/TruncateText';
-import type { FontInfo } from '../types/api';
+import type { FontInfo } from '../types';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';

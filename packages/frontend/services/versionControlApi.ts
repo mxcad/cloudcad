@@ -1,34 +1,11 @@
-import { apiClient } from './apiClient';
+import { getApiClient } from './apiClient';
+import type {
+  OperationMethods,
+  SvnLogResponseDto,
+  FileContentResponseDto,
+} from '../types/api-client';
 
-/**
- * SVN 提交记录中的变更路径
- */
-export interface SvnLogPath {
-  action: 'A' | 'M' | 'D' | 'R';
-  kind: 'file' | 'dir';
-  path: string;
-}
-
-/**
- * SVN 提交记录条目
- */
-export interface SvnLogEntry {
-  revision: number;
-  author: string;
-  date: Date;
-  message: string;
-  userName?: string; // 提交用户名称（从提交信息中解析）
-  paths?: SvnLogPath[];
-}
-
-/**
- * 获取 SVN 提交历史的响应
- */
-export interface SvnLogResponse {
-  success: boolean;
-  message: string;
-  entries: SvnLogEntry[];
-}
+export type { SvnLogResponseDto, FileContentResponseDto };
 
 export const versionControlApi = {
   /**
@@ -37,10 +14,15 @@ export const versionControlApi = {
    * @param filePath 文件路径
    * @param limit 限制返回的记录数量
    */
-  getFileHistory: (projectId: string, filePath: string, limit?: number) =>
-    apiClient.get<SvnLogResponse>('/version-control/history', {
-      params: { projectId, filePath, limit },
-    }),
+  getFileHistory: (projectId: string, filePath: string, limit?: number) => {
+    type HistoryParams = Parameters<OperationMethods['VersionControlController_getFileHistory']>[0];
+    const params: HistoryParams = {
+      projectId,
+      filePath,
+      ...(limit !== undefined && { limit }),
+    };
+    return getApiClient().VersionControlController_getFileHistory(params);
+  },
 
   /**
    * 获取指定版本的文件内容
@@ -52,9 +34,13 @@ export const versionControlApi = {
     projectId: string,
     filePath: string,
     revision: number
-  ) =>
-    apiClient.get<{ success: boolean; message: string; content?: string }>(
-      `/version-control/file/${revision}`,
-      { params: { projectId, filePath } }
-    ),
+  ) => {
+    type ContentParams = Parameters<OperationMethods['VersionControlController_getFileContentAtRevision']>[0];
+    const params: ContentParams = {
+      revision,
+      projectId,
+      filePath,
+    };
+    return getApiClient().VersionControlController_getFileContentAtRevision(params);
+  },
 };

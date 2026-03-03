@@ -1,20 +1,12 @@
-import { apiClient } from './apiClient';
-
-/** 健康状态 */
-interface HealthStatus {
-  status: 'up' | 'down';
-  message: string;
-}
-
-/** 系统健康信息 */
-export interface SystemHealth {
-  info: {
-    database: HealthStatus;
-    storage: HealthStatus;
-  };
-}
+import { getApiClient } from './apiClient';
 
 export const healthApi = {
   /** 获取系统健康状态 */
-  getHealth: () => apiClient.get<SystemHealth>('/health'),
+  getHealth: () => getApiClient().HealthController_check(),
+
+  /** 检查数据库健康状态 */
+  checkDatabase: () => getApiClient().HealthController_checkDatabase(),
+
+  /** 检查存储服务健康状态 */
+  checkStorage: () => getApiClient().HealthController_checkStorage(),
 };

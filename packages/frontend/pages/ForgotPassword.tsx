@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../services';
+import { authApi } from '../services/authApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME, APP_LOGO } from '../constants/appConfig';
 

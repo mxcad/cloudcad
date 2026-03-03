@@ -8,7 +8,8 @@
   ReactNode,
 } from 'react';
 import { components } from '../types/api';
-import { authApi } from '../services';
+import { getApiClient } from '../services/apiClient';
+import type { LoginDto, RegisterDto, RefreshTokenDto } from '../types/api-client';
 
 type User = components['schemas']['UserDto'];
 
@@ -22,7 +23,7 @@ interface AuthContextType {
     username: string;
     nickname?: string;
   }) => Promise<{ message: string; email: string }>;
-  verifyEmailAndLogin: (token: string) => Promise<void>;
+  verifyEmailAndLogin: (token: string) => Promise<unknown>;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
@@ -76,8 +77,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (token && user) {
       // 静默：验证 token 有效性
-      authApi
-        .getProfile()
+      getApiClient()
+        .AuthController_getProfile()
         .then((response) => {
           setUser(response.data);
         })
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (account: string, password: string) => {
     console.log('[AuthContext] 开始登录:', account);
     try {
-      const response = await authApi.login({ account, password });
+      const response = await getApiClient().AuthController_login(null, { account, password } as LoginDto);
       console.log('[AuthContext] 登录响应:', response);
 
       const { accessToken, refreshToken, user: userData } = response.data;
@@ -134,15 +135,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       username: string;
       nickname?: string;
     }) => {
-      const response = await authApi.register(data);
+      const response = await getApiClient().AuthController_register(null, data as RegisterDto);
       // 注册成功但不自动登录，返回注册成功信息
       return response.data; // { message: string; email: string }
     },
     []
   );
   const verifyEmailAndLogin = useCallback(
-    async (email: string, code: string) => {
-      const response = await authApi.verifyEmail({ email, code });
+    async (token: string) => {
+      const response = await getApiClient().AuthController_verifyEmail({ token });
       // 注意：现在验证邮箱不再返回 tokens，只是验证成功
       // 用户需要重新登录
       return response.data;
@@ -151,7 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
   const logout = useCallback(async () => {
     try {
-      await authApi.logout();
+      await getApiClient().AuthController_logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

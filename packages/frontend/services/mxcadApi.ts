@@ -1,91 +1,77 @@
-import { apiClient } from './apiClient';
+import { getApiClient } from './apiClient';
 import { calculateFileHash } from '../utils/hashUtils';
 import type { AxiosProgressEvent } from 'axios';
-
-/** 外部引用刷新统计 */
-interface RefreshExternalReferencesStats {
-  added?: number;
-  updated?: number;
-  removed?: number;
-}
-
-/** 外部引用刷新响应 */
-interface RefreshExternalReferencesResponse {
-  stats?: RefreshExternalReferencesStats;
-}
-
-/** 文件存在检查响应 */
-interface FileExistResponse {
-  exists: boolean;
-  nodeId?: string;
-}
-
-/** 分片存在检查响应 */
-interface ChunkExistResponse {
-  exists: boolean;
-}
-
-/** 分片上传响应 */
-interface ChunkUploadResponse {
-  nodeId?: string;
-  tz?: boolean;
-}
+import type {
+  CheckFileExistDto,
+  CheckChunkExistDto,
+} from '../types/api-client';
 
 export const mxcadApi = {
   /**
    * 检查文件是否已存在（秒传检查）
    */
-  checkFileExist: (params: {
-    fileHash: string;
-    filename: string;
-    nodeId: string;
-    fileSize: number;
-  }) =>
-    apiClient.post<FileExistResponse>('/mxcad/files/fileisExist', params),
+  checkFileExist: (params: CheckFileExistDto) =>
+    getApiClient().MxCadController_checkFileExist(undefined, params)
+      .then(res => res.data),
 
   /**
    * 检查分片是否已存在
    */
-  checkChunkExist: (params: {
-    fileHash: string;
-    filename: string;
-    nodeId: string;
-    chunk: number;
-    chunks: number;
-    size: number;
-  }) => apiClient.post<ChunkExistResponse>('/mxcad/files/chunkisExist', params),
+  checkChunkExist: (params: CheckChunkExistDto) =>
+    getApiClient().MxCadController_checkChunkExist(undefined, params)
+      .then(res => res.data),
 
   /**
    * 上传分片
    */
   uploadChunk: (formData: FormData) =>
-    apiClient.post<ChunkUploadResponse>('/mxcad/files/uploadFiles', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    getApiClient().MxCadController_uploadFile(
+      undefined,
+      formData as any
+    ).then(res => res.data),
+
+  /**
+   * 获取预加载数据
+   */
   getPreloadingData: (nodeId: string) =>
-    apiClient.get<import('../types/api').PreloadingData>(
-      `/mxcad/file/${nodeId}/preloading`
-    ),
+    getApiClient().MxCadController_getPreloadingData({ nodeId })
+      .then(res => res.data),
 
+  /**
+   * 检查缩略图是否存在
+   */
   checkThumbnail: (nodeId: string) =>
-    apiClient.get<{ exists: boolean }>(`/mxcad/thumbnail/${nodeId}`),
+    getApiClient().MxCadController_checkThumbnail({ nodeId })
+      .then(res => res.data),
 
+  /**
+   * 上传缩略图
+   */
   uploadThumbnail: (nodeId: string, formData: FormData) =>
-    apiClient.post<{ fileName: string }>(`/mxcad/thumbnail/${nodeId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    getApiClient().MxCadController_uploadThumbnail(
+      { nodeId },
+      formData as any
+    ).then(res => res.data),
 
+  /**
+   * 检查外部参照是否存在
+   */
   checkExternalReferenceExists: (nodeId: string, fileName: string) =>
-    apiClient.post<import('../types/api').CheckReferenceExistsResult>(
-      `/mxcad/file/${nodeId}/check-reference`,
+    getApiClient().MxCadController_checkExternalReference(
+      { nodeId },
       { fileName }
-    ),
+    ).then(res => res.data),
 
+  /**
+   * 刷新外部参照
+   */
   refreshExternalReferences: (nodeId: string) =>
-    apiClient.post<RefreshExternalReferencesResponse>(
-      `/mxcad/file/${nodeId}/refresh-external-references`
-    ),
+    getApiClient().MxCadController_refreshExternalReferences({ nodeId })
+      .then(res => res.data),
 
+  /**
+   * 上传外部参照 DWG 文件
+   */
   uploadExtReferenceDwg: (
     file: File,
     nodeId: string,
@@ -103,17 +89,13 @@ export const mxcadApi = {
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 
-          const response = await apiClient.post(
-            '/mxcad/up_ext_reference_dwg',
-            formData,
-            {
-              headers: { 'Content-Type': 'multipart/form-data' },
-              onUploadProgress: onProgress,
-            }
+          const response = await getApiClient().MxCadController_uploadExtReferenceDwg(
+            undefined,
+            formData as any,
+            { onUploadProgress: onProgress }
           );
 
-          // apiClient 已经解包，直接返回数据
-          resolve(response);
+          resolve(response.data);
         } catch (error) {
           reject(error);
         }
@@ -121,6 +103,9 @@ export const mxcadApi = {
     });
   },
 
+  /**
+   * 上传外部参照图片文件
+   */
   uploadExtReferenceImage: (
     file: File,
     nodeId: string,
@@ -138,17 +123,13 @@ export const mxcadApi = {
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 
-          const response = await apiClient.post(
-            '/mxcad/up_ext_reference_image',
-            formData,
-            {
-              headers: { 'Content-Type': 'multipart/form-data' },
-              onUploadProgress: onProgress,
-            }
+          const response = await getApiClient().MxCadController_uploadExtReferenceImage(
+            undefined,
+            formData as any,
+            { onUploadProgress: onProgress }
           );
 
-          // apiClient 已经解包，直接返回数据
-          resolve(response);
+          resolve(response.data);
         } catch (error) {
           reject(error);
         }
@@ -184,11 +165,10 @@ export const mxcadApi = {
             formData.append('commitMessage', commitMessage);
           }
 
-          const response = await apiClient.post(
-            `/mxcad/savemxweb/${nodeId}`,
-            formData,
+          const response = await getApiClient().MxCadController_saveMxwebToNode(
+            { nodeId },
+            formData as any,
             {
-              headers: { 'Content-Type': 'multipart/form-data' },
               onUploadProgress: (progressEvent: AxiosProgressEvent) => {
                 if (onProgress && progressEvent.total) {
                   const percentage =
@@ -199,8 +179,7 @@ export const mxcadApi = {
             }
           );
 
-          // apiClient 已经解包，直接返回数据
-          resolve(response);
+          resolve(response.data);
         } catch (error) {
           reject(error);
         }

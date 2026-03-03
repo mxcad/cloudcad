@@ -8,11 +8,23 @@ import {
   XCircle,
   AlertTriangle,
 } from 'lucide-react';
-import { healthApi } from '../services';
-import type { SystemHealth } from '../services';
+import { healthApi } from '../services/healthApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
+// 健康状态接口
+interface HealthStatus {
+  status: 'up' | 'down';
+  message: string;
+  timestamp: string;
+}
+
+// 系统健康状态接口
+interface SystemHealth {
+  database: HealthStatus;
+  storage: HealthStatus;
+}
 
 export const SystemMonitorPage: React.FC = () => {
   useDocumentTitle('系统监控');
@@ -38,7 +50,21 @@ export const SystemMonitorPage: React.FC = () => {
       const response = await healthApi.getHealth();
       const healthData = response.data;
       if (healthData && healthData.info) {
-        setSystemHealth(healthData);
+        const timestamp = new Date().toISOString();
+        const databaseInfo = healthData.info.database;
+        const storageInfo = healthData.info.storage;
+        setSystemHealth({
+          database: {
+            status: databaseInfo?.status === 'up' ? 'up' : 'down',
+            message: databaseInfo?.message || (databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
+            timestamp,
+          },
+          storage: {
+            status: storageInfo?.status === 'up' ? 'up' : 'down',
+            message: storageInfo?.message || (storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
+            timestamp,
+          },
+        });
       } else {
         throw new Error('无效的响应数据格式');
       }

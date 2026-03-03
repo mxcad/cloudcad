@@ -34,6 +34,16 @@ import { DatabaseService } from '../database/database.service';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
 import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
 import { UploadFilesDto } from './dto/upload-files.dto';
+import { FileExistResponseDto } from './dto/file-exist-response.dto';
+import { ChunkExistResponseDto } from './dto/chunk-exist-response.dto';
+import { CheckFileExistDto } from './dto/check-file-exist.dto';
+import { CheckChunkExistDto } from './dto/check-chunk-exist.dto';
+import { CheckReferenceResponseDto } from './dto/check-reference-response.dto';
+import { RefreshExternalReferencesResponseDto } from './dto/refresh-external-references-response.dto';
+import { UploadFileResponseDto } from './dto/upload-file-response.dto';
+import { CheckThumbnailResponseDto } from './dto/check-thumbnail-response.dto';
+import { UploadThumbnailResponseDto } from './dto/upload-thumbnail-response.dto';
+import { SaveMxwebResponseDto } from './dto/save-mxweb-response.dto';
 import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
@@ -81,15 +91,10 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '检查分片是否存在',
-    schema: {
-      type: 'object',
-      properties: {
-        exists: { type: 'boolean', description: '分片是否已存在' },
-      },
-    },
+    type: ChunkExistResponseDto,
   })
   async checkChunkExist(
-    @Body() body: any,
+    @Body() body: CheckChunkExistDto,
     @Req() request: MxCadRequest
   ) {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
@@ -117,16 +122,10 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '检查文件是否存在',
-    schema: {
-      type: 'object',
-      properties: {
-        exists: { type: 'boolean', description: '文件是否已存在（秒传）' },
-        nodeId: { type: 'string', description: '已存在文件的节点 ID（秒传时返回）' },
-      },
-    },
+    type: FileExistResponseDto,
   })
   async checkFileExist(
-    @Body() body: any,
+    @Body() body: CheckFileExistDto,
     @Req() request: MxCadRequest
   ) {
     const context = await this.buildContextFromRequest(request);
@@ -221,12 +220,7 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '成功检查文件存在性',
-    schema: {
-      type: 'object',
-      properties: {
-        exists: { type: 'boolean', description: '文件是否存在' },
-      },
-    },
+    type: CheckReferenceResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -271,14 +265,7 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '刷新成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 0 },
-        message: { type: 'string', example: '刷新成功' },
-        stats: { type: 'object', description: '外部参照统计信息' },
-      },
-    },
+    type: RefreshExternalReferencesResponseDto,
   })
   @ApiResponse({
     status: 500,
@@ -295,6 +282,8 @@ export class MxCadController {
     this.logger.log(`[refreshExternalReferences] 刷新成功: nodeId=${nodeId}`);
 
     return {
+      code: 0,
+      message: '刷新成功',
       stats,
     };
   }
@@ -345,13 +334,7 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '上传文件成功',
-    schema: {
-      type: 'object',
-      properties: {
-        nodeId: { type: 'string', description: '上传文件的节点 ID' },
-        tz: { type: 'boolean', description: '是否为图纸文件' },
-      },
-    },
+    type: UploadFileResponseDto,
   })
   async uploadFile(
     @UploadedFiles() files: Express.Multer.File[],
@@ -485,7 +468,7 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '保存 mxweb 文件到指定节点' })
+  @ApiResponse({ status: 200, description: '保存 mxweb 文件到指定节点', type: SaveMxwebResponseDto })
   async saveMxwebToNode(
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
@@ -835,14 +818,7 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '查询成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 0 },
-        message: { type: 'string', example: 'ok' },
-        exists: { type: 'boolean', description: '缩略图是否存在' },
-      },
-    },
+    type: CheckThumbnailResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -902,19 +878,7 @@ export class MxCadController {
   @ApiResponse({
     status: 200,
     description: '上传成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 0 },
-        message: { type: 'string', example: 'ok' },
-        data: {
-          type: 'object',
-          properties: {
-            fileName: { type: 'string', description: '文件名' },
-          },
-        },
-      },
-    },
+    type: UploadThumbnailResponseDto,
   })
   @ApiResponse({
     status: 400,

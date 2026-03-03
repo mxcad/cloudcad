@@ -10,7 +10,8 @@ import {
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { TruncateText } from '../ui/TruncateText';
-import { projectsApi, usersApi } from '../../services';
+import { projectsApi } from '../../services/projectsApi';
+import { usersApi } from '../../services/usersApi';
 import { projectRolesApi } from '../../services/rolesApi';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
 import {

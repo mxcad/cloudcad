@@ -7,7 +7,7 @@ import {
   SidebarType,
 } from '../contexts/SidebarContext';
 import { ProjectPermission } from '../constants/permissions';
-import { filesApi } from '../services';
+import { filesApi } from '../services/filesApi';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import CADEditorSidebar from '../components/CADEditorSidebar';
 import CollaborateSidebar from '../components/CollaborateSidebar';

@@ -1,6 +1,7 @@
 ﻿import { MxCADView } from 'mxcad-app';
 import { logger as Logger, UrlHelper } from '../utils/mxcadUtils';
-import { mxcadApi, filesApi } from './index';
+import { mxcadApi } from './mxcadApi';
+import { filesApi } from './filesApi';
 import { MxFun } from 'mxdraw';
 import { McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../utils/hashUtils';
@@ -835,9 +836,7 @@ MxFun.addCommand('Mx_Save', async () => {
     // 更新 indexedDB 中的缓存
     try {
       // 获取当前文件的 URL
-      const fileInfoResponse = await apiService.get(
-        `/file-system/nodes/${fileId}`
-      );
+      const fileInfoResponse = await filesApi.get(fileId);
       const fileInfo = fileInfoResponse.data;
 
       if (fileInfo.path) {
@@ -1115,7 +1114,7 @@ class MxCADInstanceManager {
           const fileId = currentFileInfo.fileId;
           const thumbnailResult = await mxcadApi.checkThumbnail(fileId);
 
-          if (!thumbnailResult.data.exists) {
+          if (!thumbnailResult.data?.exists) {
             Logger.info('缩略图不存在，开始生成...');
             const imageData = await this.generateThumbnail();
             if (imageData) {

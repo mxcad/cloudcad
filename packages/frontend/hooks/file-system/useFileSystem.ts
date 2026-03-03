@@ -23,7 +23,7 @@ import { useFileSystemNavigation } from './useFileSystemNavigation';
 import { useFileSystemSearch } from './useFileSystemSearch';
 import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
-import { trashApi } from '../../services';
+import { trashApi } from '../../services/trashApi';
 
 export const useFileSystem = () => {
   const navigate = useNavigate();

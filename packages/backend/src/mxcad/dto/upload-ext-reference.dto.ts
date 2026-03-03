@@ -6,6 +6,14 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
  */
 export class UploadExtReferenceDto {
   @ApiProperty({
+    description: '上传的文件',
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  file?: any;
+
+  @ApiProperty({
     description: '文件哈希值（用于 Multer 文件名生成）',
     example: '25e89b5adf19984330f4e68b0f99db64',
     required: false,

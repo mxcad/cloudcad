@@ -11,6 +11,7 @@ import {
 import {
   ApiTags,
   ApiOperation,
+  ApiOkResponse,
   ApiResponse,
   ApiQuery,
   ApiParam,
@@ -19,10 +20,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-import {
-  VersionControlService,
-  SvnLogResponse,
-} from './version-control.service';
+import { VersionControlService } from './version-control.service';
+import { SvnLogResponseDto, FileContentResponseDto } from './dto';
 
 @ApiTags('version-control')
 @Controller('version-control')
@@ -50,7 +49,10 @@ export class VersionControlController {
     description: '限制返回的记录数量',
     type: Number,
   })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiOkResponse({
+    description: '获取成功',
+    type: SvnLogResponseDto,
+  })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '无权限' })
@@ -59,7 +61,7 @@ export class VersionControlController {
     @Query('projectId') projectId: string,
     @Query('filePath') filePath: string,
     @Query('limit') limit?: number
-  ): Promise<SvnLogResponse> {
+  ): Promise<SvnLogResponseDto> {
     return this.versionControlService.getFileHistory(filePath, limit);
   }
 
@@ -77,7 +79,10 @@ export class VersionControlController {
   })
   @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
   @ApiQuery({ name: 'filePath', required: true, description: '文件路径' })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiOkResponse({
+    description: '获取成功',
+    type: FileContentResponseDto,
+  })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '无权限' })
@@ -86,10 +91,10 @@ export class VersionControlController {
     @Param('revision', ParseIntPipe) revision: number,
     @Query('projectId') projectId: string,
     @Query('filePath') filePath: string
-  ): Promise<{ success: boolean; message: string; content?: Buffer }> {
+  ): Promise<FileContentResponseDto> {
     return this.versionControlService.getFileContentAtRevision(
       filePath,
       revision
-    );
+    ) as Promise<FileContentResponseDto>;
   }
 }

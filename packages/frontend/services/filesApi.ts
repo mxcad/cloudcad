@@ -1,12 +1,13 @@
-import { apiClient } from './apiClient';
-
-/** 下载格式参数 */
-interface DownloadParams {
-  format: 'dwg' | 'dxf' | 'mxweb' | 'pdf';
-  width?: string;
-  height?: string;
-  colorPolicy?: string;
-}
+import { getApiClient } from './apiClient';
+import type {
+  CreateNodeDto,
+  UpdateNodeDto,
+  MoveNodeDto,
+  CopyNodeDto,
+  CreateFolderDto,
+  UploadFileDto,
+  OperationMethods,
+} from '../types/api-client';
 
 /** PDF 导出选项 */
 interface PdfOptions {
@@ -16,7 +17,8 @@ interface PdfOptions {
 }
 
 export const filesApi = {
-  list: () => apiClient.get('/file-system/nodes'),
+  list: () =>
+    getApiClient().FileSystemController_getProjects(),
 
   upload: async (file: File, parentId: string) => {
     const fileContent = await new Promise<string>((resolve, reject) => {
@@ -30,53 +32,52 @@ export const filesApi = {
       reader.readAsDataURL(file);
     });
 
-    return apiClient.post('/file-system/files/upload', {
+    const data: UploadFileDto = {
       fileName: file.name,
       fileContent,
       parentId,
-    });
+    };
+    return getApiClient().FileSystemController_uploadFile(null, data);
   },
 
-  get: (id: string) => apiClient.get(`/file-system/nodes/${id}`),
+  get: (id: string) =>
+    getApiClient().FileSystemController_getNode({ nodeId: id }),
 
   /** 获取节点的根节点（项目根） */
-  getRoot: (id: string) => apiClient.get(`/file-system/nodes/${id}/root`),
+  getRoot: (id: string) =>
+    getApiClient().FileSystemController_getRootNode({ nodeId: id }),
 
   download: (id: string) =>
-    apiClient.get(`/file-system/nodes/${id}/download`, {
-      responseType: 'blob',
-    }),
+    getApiClient().FileSystemController_downloadNode({ nodeId: id }),
 
   downloadWithFormat: (
     id: string,
     format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
     pdfOptions?: PdfOptions
   ) => {
-    const params: DownloadParams = { format };
-    if (format === 'pdf' && pdfOptions) {
-      if (pdfOptions.width) params.width = pdfOptions.width;
-      if (pdfOptions.height) params.height = pdfOptions.height;
-      if (pdfOptions.colorPolicy) params.colorPolicy = pdfOptions.colorPolicy;
-    }
-    return apiClient.get(`/file-system/nodes/${id}/download-with-format`, {
-      params,
-      responseType: 'blob',
-    });
+    type DownloadParams = Parameters<OperationMethods['FileSystemController_downloadNodeWithFormat']>[0];
+    const params: DownloadParams = {
+      nodeId: id,
+      format,
+      ...(pdfOptions?.width && { width: pdfOptions.width }),
+      ...(pdfOptions?.height && { height: pdfOptions.height }),
+      ...(pdfOptions?.colorPolicy && { colorPolicy: pdfOptions.colorPolicy }),
+    };
+    return getApiClient().FileSystemController_downloadNodeWithFormat(params);
   },
 
-  update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch(`/file-system/nodes/${id}`, data),
+  update: (id: string, data: UpdateNodeDto) =>
+    getApiClient().FileSystemController_updateNode({ nodeId: id }, data),
 
-  delete: (id: string) => apiClient.delete(`/file-system/nodes/${id}`),
+  delete: (id: string, permanent?: boolean) =>
+    getApiClient().FileSystemController_deleteNode({ nodeId: id, permanently : permanent }),
 
-  share: (id: string, data: { userId: string; role: string }) =>
-    apiClient.post(`/file-system/nodes/${id}/share`, data),
+  createFolder: (parentId: string, data: CreateFolderDto) =>
+    getApiClient().FileSystemController_createFolder({  parentId }, data),
 
-  getAccess: (id: string) => apiClient.get(`/file-system/nodes/${id}/access`),
+  moveNode: (id: string, data: MoveNodeDto) =>
+    getApiClient().FileSystemController_moveNode({ nodeId: id }, data),
 
-  updateAccess: (id: string, userId: string, role: string) =>
-    apiClient.patch(`/file-system/nodes/${id}/access/${userId}`, { role }),
-
-  removeAccess: (id: string, userId: string) =>
-    apiClient.delete(`/file-system/nodes/${id}/access/${userId}`),
+  copyNode: (id: string, data: CopyNodeDto) =>
+    getApiClient().FileSystemController_copyNode({ nodeId: id }, data),
 };

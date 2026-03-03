@@ -3,34 +3,26 @@
  * 🚫 请勿手动编辑此文件，运行 pnpm generate:types 重新生成
  */
 
-interface ValidationRule {
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  isEmail?: boolean;
-}
-
-export const ValidationRules: Record<string, ValidationRule> = {
+export const ValidationRules = {
   email: {
     required: true,
-    isEmail: true,
+    isEmail: true
   },
   username: {
     required: true,
     minLength: 3,
     maxLength: 20,
-    pattern: /^[a-zA-Z0-9_]+$/,
+    pattern: /^[a-zA-Z0-9_]+$/
   },
   password: {
     required: true,
     minLength: 8,
-    maxLength: 50,
+    maxLength: 50
   },
   nickname: {
-    maxLength: 50,
-  },
-};
+    maxLength: 50
+  }
+} as const;
 
 /**
  * 字段验证规则错误消息映射
@@ -60,25 +52,22 @@ const ERROR_MESSAGES: Record<string, Record<string, string>> = {
 /**
  * 验证字段
  */
-export function validateField(
-  field: keyof typeof ValidationRules,
-  value: string
-): string | null {
-  const rules = ValidationRules[field];
+export function validateField(field: keyof typeof ValidationRules, value: string): string | null {
+  const rules = ValidationRules[field] as any;
   if (!rules) return null;
 
   const messages = ERROR_MESSAGES[field] || {};
 
   if (rules.required && !value) {
-    return messages.required || `${field}不能为空`;
+    return messages.required || field + '不能为空';
   }
 
   if (rules.minLength && value.length < rules.minLength) {
-    return messages.minLength || `至少${rules.minLength}个字符`;
+    return messages.minLength || '至少' + rules.minLength + '个字符';
   }
 
   if (rules.maxLength && value.length > rules.maxLength) {
-    return messages.maxLength || `最多${rules.maxLength}个字符`;
+    return messages.maxLength || '最多' + rules.maxLength + '个字符';
   }
 
   if (rules.pattern && !rules.pattern.test(value)) {

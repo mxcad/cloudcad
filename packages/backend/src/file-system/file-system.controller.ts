@@ -27,6 +27,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiQuery,
+  ApiProduces,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
@@ -47,7 +48,22 @@ import {
   DownloadNodeQueryDto,
   CadDownloadFormat,
 } from './dto/download-node.dto';
+import { UploadFileDto } from './dto/upload-file.dto';
 import { UpdateProjectMemberDto } from './dto/update-project-member.dto';
+import {
+  FileSystemNodeDto,
+  ProjectDto,
+  ProjectListResponseDto,
+  NodeListResponseDto,
+  NodeTreeResponseDto,
+  StorageInfoDto,
+  TrashListResponseDto,
+  OperationSuccessDto,
+  BatchOperationResponseDto,
+  ProjectUserPermissionsDto,
+  PermissionCheckResponseDto,
+  ProjectMemberDto,
+} from './dto/file-system-response.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -65,19 +81,36 @@ export class FileSystemController {
 
   @Post('projects')
   @RequireProjectPermission(ProjectPermission.FILE_CREATE)
-  @ApiResponse({ status: 201, description: '项目创建成功' })
+  @ApiOperation({ summary: '创建项目' })
+  @ApiResponse({
+    status: 201,
+    description: '项目创建成功',
+    type: ProjectDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 403, description: '无权限创建项目' })
   async createProject(@Request() req, @Body() dto: CreateProjectDto) {
     return this.fileSystemService.createProject(req.user.id, dto);
   }
 
   @Get('projects')
-  @ApiResponse({ status: 200, description: '获取项目列表成功' })
+  @ApiOperation({ summary: '获取项目列表' })
+  @ApiResponse({
+    status: 200,
+    description: '获取项目列表成功',
+    type: ProjectListResponseDto,
+  })
   async getProjects(@Request() req, @Query() query?: QueryProjectsDto) {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
 
   @Get('projects/trash')
-  @ApiResponse({ status: 200, description: '获取已删除项目列表成功' })
+  @ApiOperation({ summary: '获取已删除项目列表' })
+  @ApiResponse({
+    status: 200,
+    description: '获取已删除项目列表成功',
+    type: ProjectListResponseDto,
+  })
   async getDeletedProjects(@Request() req, @Query() query?: QueryProjectsDto) {
     this.logger.log(
       `获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`
@@ -87,14 +120,26 @@ export class FileSystemController {
 
   @Get('projects/:projectId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiResponse({ status: 200, description: '获取项目详情成功' })
+  @ApiOperation({ summary: '获取项目详情' })
+  @ApiResponse({
+    status: 200,
+    description: '获取项目详情成功',
+    type: ProjectDto,
+  })
+  @ApiResponse({ status: 404, description: '项目不存在' })
   async getProject(@Param('projectId') projectId: string) {
     return this.fileSystemService.getProject(projectId);
   }
 
   @Patch('projects/:projectId')
   @RequireProjectPermission(ProjectPermission.PROJECT_UPDATE)
-  @ApiResponse({ status: 200, description: '更新项目信息成功' })
+  @ApiOperation({ summary: '更新项目信息' })
+  @ApiResponse({
+    status: 200,
+    description: '更新项目信息成功',
+    type: ProjectDto,
+  })
+  @ApiResponse({ status: 404, description: '项目不存在' })
   async updateProject(
     @Param('projectId') projectId: string,
     @Body() dto: UpdateNodeDto
@@ -105,7 +150,13 @@ export class FileSystemController {
   @Delete('projects/:projectId')
   @RequireProjectPermission(ProjectPermission.PROJECT_DELETE)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '删除项目成功' })
+  @ApiOperation({ summary: '删除项目' })
+  @ApiResponse({
+    status: 200,
+    description: '删除项目成功',
+    type: OperationSuccessDto,
+  })
+  @ApiResponse({ status: 404, description: '项目不存在' })
   async deleteProject(
     @Param('projectId') projectId: string,
     @Query('permanently') permanently?: boolean
@@ -123,7 +174,12 @@ export class FileSystemController {
 
   @Get('trash')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
-  @ApiResponse({ status: 200, description: '获取回收站列表成功' })
+  @ApiOperation({ summary: '获取回收站列表' })
+  @ApiResponse({
+    status: 200,
+    description: '获取回收站列表成功',
+    type: TrashListResponseDto,
+  })
   async getTrash(@Request() req) {
     return this.fileSystemService.getTrashItems(req.user.id);
   }
@@ -131,7 +187,12 @@ export class FileSystemController {
   @Post('trash/restore')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '恢复项目成功' })
+  @ApiOperation({ summary: '恢复回收站项目' })
+  @ApiResponse({
+    status: 200,
+    description: '恢复项目成功',
+    type: BatchOperationResponseDto,
+  })
   async restoreTrashItems(@Body() body: { itemIds: string[] }) {
     return this.fileSystemService.restoreTrashItems(body.itemIds);
   }
@@ -139,7 +200,12 @@ export class FileSystemController {
   @Delete('trash/items')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '永久删除项目成功' })
+  @ApiOperation({ summary: '永久删除回收站项目' })
+  @ApiResponse({
+    status: 200,
+    description: '永久删除项目成功',
+    type: BatchOperationResponseDto,
+  })
   async permanentlyDeleteTrashItems(@Body() body: { itemIds: string[] }) {
     return this.fileSystemService.permanentlyDeleteTrashItems(body.itemIds);
   }
@@ -147,7 +213,12 @@ export class FileSystemController {
   @Delete('trash')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '清空回收站成功' })
+  @ApiOperation({ summary: '清空回收站' })
+  @ApiResponse({
+    status: 200,
+    description: '清空回收站成功',
+    type: OperationSuccessDto,
+  })
   async clearTrash(@Request() req) {
     return this.fileSystemService.clearTrash(req.user.id);
   }
@@ -160,7 +231,11 @@ export class FileSystemController {
   @Get('projects/:projectId/trash')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取项目内回收站内容' })
-  @ApiResponse({ status: 200, description: '成功获取项目回收站内容' })
+  @ApiResponse({
+    status: 200,
+    description: '成功获取项目回收站内容',
+    type: TrashListResponseDto,
+  })
   async getProjectTrash(
     @Request() req,
     @Param('projectId') projectId: string,
@@ -180,7 +255,12 @@ export class FileSystemController {
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '恢复已删除的节点' })
-  @ApiResponse({ status: 200, description: '节点恢复成功' })
+  @ApiResponse({
+    status: 200,
+    description: '节点恢复成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async restoreNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.restoreNode(nodeId);
   }
@@ -192,7 +272,11 @@ export class FileSystemController {
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '清空项目回收站' })
-  @ApiResponse({ status: 200, description: '项目回收站已清空' })
+  @ApiResponse({
+    status: 200,
+    description: '项目回收站已清空',
+    type: OperationSuccessDto,
+  })
   async clearProjectTrash(
     @Request() req,
     @Param('projectId') projectId: string
@@ -213,7 +297,12 @@ export class FileSystemController {
    */
   @Post('nodes')
   @ApiOperation({ summary: '创建节点（项目或文件夹）' })
-  @ApiResponse({ status: 201, description: '节点创建成功' })
+  @ApiResponse({
+    status: 201,
+    description: '节点创建成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
   async createNode(@Request() req, @Body() dto: CreateNodeDto) {
     return this.fileSystemService.createNode(req.user.id, dto.name, {
       parentId: dto.parentId,
@@ -226,7 +315,13 @@ export class FileSystemController {
    */
   @Post('nodes/:parentId/folders')
   @RequireProjectPermission(ProjectPermission.FILE_CREATE)
-  @ApiResponse({ status: 201, description: '创建文件夹成功' })
+  @ApiOperation({ summary: '创建文件夹' })
+  @ApiResponse({
+    status: 201,
+    description: '创建文件夹成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: '父节点不存在' })
   async createFolder(
     @Request() req,
     @Param('parentId') parentId: string,
@@ -237,21 +332,39 @@ export class FileSystemController {
 
   @Get('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiResponse({ status: 200, description: '获取节点详情成功' })
+  @ApiOperation({ summary: '获取节点详情' })
+  @ApiResponse({
+    status: 200,
+    description: '获取节点详情成功',
+    type: NodeTreeResponseDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async getNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
   @Get('nodes/:nodeId/root')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiResponse({ status: 200, description: '获取根节点成功' })
+  @ApiOperation({ summary: '获取根节点' })
+  @ApiResponse({
+    status: 200,
+    description: '获取根节点成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async getRootNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getRootNode(nodeId);
   }
 
   @Get('nodes/:nodeId/children')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiResponse({ status: 200, description: '获取子节点列表成功' })
+  @ApiOperation({ summary: '获取子节点列表' })
+  @ApiResponse({
+    status: 200,
+    description: '获取子节点列表成功',
+    type: NodeListResponseDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async getChildren(
     @Param('nodeId') nodeId: string,
     @Request() req,
@@ -261,7 +374,13 @@ export class FileSystemController {
   }
   @Patch('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_EDIT)
-  @ApiResponse({ status: 200, description: '更新节点成功' })
+  @ApiOperation({ summary: '更新节点' })
+  @ApiResponse({
+    status: 200,
+    description: '更新节点成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async updateNode(
     @Param('nodeId') nodeId: string,
     @Body() dto: UpdateNodeDto
@@ -272,7 +391,13 @@ export class FileSystemController {
   @Delete('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_DELETE)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: '删除节点成功' })
+  @ApiOperation({ summary: '删除节点' })
+  @ApiResponse({
+    status: 200,
+    description: '删除节点成功',
+    type: OperationSuccessDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async deleteNode(
     @Param('nodeId') nodeId: string,
     @Body() body?: { permanently?: boolean },
@@ -284,27 +409,44 @@ export class FileSystemController {
 
   @Post('nodes/:nodeId/move')
   @RequireProjectPermission(ProjectPermission.FILE_MOVE)
-  @ApiResponse({ status: 200, description: '移动节点成功' })
+  @ApiOperation({ summary: '移动节点' })
+  @ApiResponse({
+    status: 200,
+    description: '移动节点成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
     return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
   }
 
   @Post('nodes/:nodeId/copy')
   @RequireProjectPermission(ProjectPermission.FILE_COPY)
-  @ApiResponse({ status: 201, description: '复制节点成功' })
+  @ApiOperation({ summary: '复制节点' })
+  @ApiResponse({
+    status: 201,
+    description: '复制节点成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: '节点不存在' })
   async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
   }
 
   @Post('files/upload')
   @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
-  @ApiResponse({ status: 201, description: '文件上传成功' })
+  @ApiOperation({ summary: '上传文件' })
+  @ApiResponse({
+    status: 201,
+    description: '文件上传成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
   async uploadFile(
     @Request() req,
-    @Body()
-    body: { parentId?: string; fileName?: string; fileContent?: string }
+    @Body() dto: UploadFileDto
   ) {
-    const { parentId, fileName, fileContent } = body;
+    const { parentId, fileName, fileContent } = dto;
     if (!fileName) {
       throw new BadRequestException('缺少文件名称');
     }
@@ -341,7 +483,12 @@ export class FileSystemController {
   }
 
   @Get('storage')
-  @ApiResponse({ status: 200, description: '获取存储空间信息成功' })
+  @ApiOperation({ summary: '获取存储空间信息' })
+  @ApiResponse({
+    status: 200,
+    description: '获取存储空间信息成功',
+    type: StorageInfoDto,
+  })
   async getStorageInfo(@Request() req) {
     return this.fileSystemService.getUserStorageInfo(req.user.id);
   }
@@ -349,7 +496,11 @@ export class FileSystemController {
   @Get('projects/:projectId/members')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取项目成员列表' })
-  @ApiResponse({ status: 200, description: '获取成员列表成功' })
+  @ApiResponse({
+    status: 200,
+    description: '获取成员列表成功',
+    type: [ProjectMemberDto],
+  })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限访问该项目' })
   @ApiResponse({ status: 404, description: '项目不存在' })
@@ -360,7 +511,11 @@ export class FileSystemController {
   @Post('projects/:projectId/members')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
   @ApiOperation({ summary: '添加项目成员' })
-  @ApiResponse({ status: 201, description: '添加成员成功' })
+  @ApiResponse({
+    status: 201,
+    description: '添加成员成功',
+    type: ProjectMemberDto,
+  })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限添加成员' })
@@ -382,7 +537,11 @@ export class FileSystemController {
   @Patch('projects/:projectId/members/:userId')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
   @ApiOperation({ summary: '更新项目成员角色' })
-  @ApiResponse({ status: 200, description: '更新成员角色成功' })
+  @ApiResponse({
+    status: 200,
+    description: '更新成员角色成功',
+    type: ProjectMemberDto,
+  })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限修改成员角色' })
@@ -409,7 +568,11 @@ export class FileSystemController {
   @Delete('projects/:projectId/members/:userId')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
   @ApiOperation({ summary: '移除项目成员' })
-  @ApiResponse({ status: 200, description: '移除成员成功' })
+  @ApiResponse({
+    status: 200,
+    description: '移除成员成功',
+    type: OperationSuccessDto,
+  })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限移除成员' })
   @ApiResponse({ status: 404, description: '项目或成员不存在' })
@@ -429,7 +592,11 @@ export class FileSystemController {
   @Post('projects/:projectId/transfer')
   @RequireProjectPermission(ProjectPermission.PROJECT_TRANSFER)
   @ApiOperation({ summary: '转移项目所有权' })
-  @ApiResponse({ status: 200, description: '转移成功' })
+  @ApiResponse({
+    status: 200,
+    description: '转移成功',
+    type: OperationSuccessDto,
+  })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限转移' })
   @ApiResponse({ status: 400, description: '转移目标无效' })
@@ -450,7 +617,11 @@ export class FileSystemController {
   @Post('projects/:projectId/members/batch')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
   @ApiOperation({ summary: '批量添加项目成员' })
-  @ApiResponse({ status: 201, description: '批量添加成员成功' })
+  @ApiResponse({
+    status: 201,
+    description: '批量添加成员成功',
+    type: BatchOperationResponseDto,
+  })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限添加成员' })
@@ -469,7 +640,11 @@ export class FileSystemController {
   @Patch('projects/:projectId/members/batch')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
   @ApiOperation({ summary: '批量更新项目成员角色' })
-  @ApiResponse({ status: 200, description: '批量更新成员角色成功' })
+  @ApiResponse({
+    status: 200,
+    description: '批量更新成员角色成功',
+    type: BatchOperationResponseDto,
+  })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限修改成员角色' })
@@ -505,7 +680,8 @@ export class FileSystemController {
    */
   @Get('nodes/:nodeId/thumbnail')
   @ApiOperation({ summary: '获取文件节点缩略图' })
-  @ApiResponse({ status: 200, description: '获取缩略图成功', type: 'stream' })
+  @ApiProduces('image/jpeg')
+  @ApiResponse({ status: 200, description: '获取缩略图成功' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限访问该文件' })
   @ApiResponse({ status: 404, description: '文件不存在' })
@@ -600,7 +776,8 @@ export class FileSystemController {
 
   @Get('nodes/:nodeId/download')
   @ApiOperation({ summary: '下载节点（文件或目录）' })
-  @ApiResponse({ status: 200, description: '下载成功', type: 'stream' })
+  @ApiProduces('application/octet-stream')
+  @ApiResponse({ status: 200, description: '下载成功' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限访问该节点' })
   @ApiResponse({ status: 404, description: '节点不存在' })
@@ -757,7 +934,8 @@ export class FileSystemController {
     description:
       'PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono',
   })
-  @ApiResponse({ status: 200, description: '下载成功', type: 'stream' })
+  @ApiProduces('application/octet-stream')
+  @ApiResponse({ status: 200, description: '下载成功' })
   @ApiResponse({ status: 400, description: '参数错误或转换失败' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权访问该节点' })
@@ -910,7 +1088,11 @@ export class FileSystemController {
   @Get('projects/:projectId/permissions')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取用户在项目中的权限列表' })
-  @ApiResponse({ status: 200, description: '成功获取用户权限列表' })
+  @ApiResponse({
+    status: 200,
+    description: '成功获取用户权限列表',
+    type: ProjectUserPermissionsDto,
+  })
   async getUserProjectPermissions(
     @Request() req,
     @Param('projectId') projectId: string
@@ -932,7 +1114,11 @@ export class FileSystemController {
   @Get('projects/:projectId/permissions/check')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '检查用户是否具有特定权限' })
-  @ApiResponse({ status: 200, description: '权限检查结果' })
+  @ApiResponse({
+    status: 200,
+    description: '权限检查结果',
+    type: PermissionCheckResponseDto,
+  })
   async checkProjectPermission(
     @Request() req,
     @Param('projectId') projectId: string,

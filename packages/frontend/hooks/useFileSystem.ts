@@ -1,6 +1,8 @@
 ﻿import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { projectsApi, filesApi, trashApi } from '../services';
+import { projectsApi } from '../services/projectsApi';
+import { filesApi } from '../services/filesApi';
+import { trashApi } from '../services/trashApi';
 import { FileSystemNode, BreadcrumbItem } from '../types/filesystem';
 import { ToastType, Toast } from '../components/ui/Toast';
 import { PaginationMeta } from '../components/ui/Pagination';
@@ -945,7 +947,7 @@ export const useFileSystem = () => {
       `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
       async () => {
         try {
-          const { trashApi } = await import('../services/apiService');
+          const { trashApi } = await import('../services/trashApi');
           await trashApi.restoreItems(Array.from(selectedNodes));
           showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
           setSelectedNodes(new Set<string>());

@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
-import { usersApi } from '../services';
+import { usersApi } from '../services/usersApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const Profile: React.FC = () => {

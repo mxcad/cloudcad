@@ -1,21 +1,15 @@
-import { apiClient } from './apiClient';
+import { getApiClient } from './apiClient';
 
 export const adminApi = {
-  getStats: () => apiClient.get('/admin/stats'),
+  getStats: () => getApiClient().AdminController_getAdminStats(),
 
-  getCacheStats: () => apiClient.get('/admin/permissions/cache'),
+  getCacheStats: () => getApiClient().AdminController_getCacheStats(),
 
-  cleanupCache: () => apiClient.post('/admin/permissions/cache/cleanup'),
+  cleanupCache: () => getApiClient().AdminController_cleanupCache(),
 
   clearUserCache: (userId: string) =>
-    apiClient.delete(`/admin/permissions/cache/user/${userId}`),
-
-  clearProjectCache: (projectId: string) =>
-    apiClient.delete(`/admin/permissions/cache/project/${projectId}`),
-
-  clearFileCache: (fileId: string) =>
-    apiClient.delete(`/admin/permissions/cache/file/${fileId}`),
+    getApiClient().AdminController_clearUserCache({ userId }),
 
   getUserPermissions: (userId: string) =>
-    apiClient.get(`/admin/permissions/user/${userId}`),
+    getApiClient().AdminController_getUserPermissions({ userId }),
 };

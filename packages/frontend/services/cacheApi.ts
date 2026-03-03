@@ -1,32 +1,18 @@
-import { apiClient } from './apiClient';
-
-export interface CacheStats {
-  l1Cache: {
-    size: number;
-    hitRate: number;
-  };
-  l2Cache: {
-    size: number;
-    hitRate: number;
-  };
-  l3Cache: {
-    size: number;
-    hitRate: number;
-  };
-  totalKeys: number;
-  memoryUsage: number;
-}
+import { getApiClient } from './apiClient';
 
 export const cacheApi = {
-  getStats: () => apiClient.get('/cache/stats'),
+  getStats: () =>
+    getApiClient().CacheMonitorController_getStats(),
 
-  clear: () => apiClient.post('/cache/clear'),
+  clear: () =>
+    getApiClient().CacheMonitorController_clearAll(),
 
-  warmup: () => apiClient.post('/cache/warmup'),
+  warmup: () =>
+    getApiClient().CacheMonitorController_manualWarmup(),
 
   warmupUser: (userId: string) =>
-    apiClient.post(`/cache/warmup/user/${userId}`),
+    getApiClient().CacheMonitorController_warmupUser({ userId }),
 
   warmupProject: (projectId: string) =>
-    apiClient.post(`/cache/warmup/project/${projectId}`),
+    getApiClient().CacheMonitorController_warmupProject( { projectId }),
 };

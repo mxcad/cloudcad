@@ -1,30 +1,30 @@
-import { apiClient } from './apiClient';
+import { getApiClient } from './apiClient';
+import type { UploadFontDto } from '../types/api-client';
+
+// 从后端生成的 DTO 中提取类型
+type FontTarget = UploadFontDto['target'];
+type FontLocation = Exclude<FontTarget, 'both'>;
 
 export const fontsApi = {
-  getFonts: (location?: 'backend' | 'frontend') =>
-    apiClient.get('/font-management', {
-      params: location ? { location } : undefined,
-    }),
+  getFonts: (location?: FontLocation) =>
+    getApiClient().FontsController_getFonts(location ? { location } : undefined),
 
   uploadFont: (
     file: File,
-    target: 'backend' | 'frontend' | 'both' = 'both'
+    target: FontTarget = 'both'
   ) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('target', target);
-    return apiClient.post('/font-management/upload', formData);
+    return getApiClient().FontsController_uploadFont(undefined, formData as unknown as UploadFontDto);
   },
 
   deleteFont: (
     fileName: string,
-    target: 'backend' | 'frontend' | 'both' = 'both'
-  ) => apiClient.delete(`/font-management/${fileName}`, { params: { target } }),
+    target: FontTarget = 'both'
+  ) =>
+    getApiClient().FontsController_deleteFont({ fileName, target }),
 
-  downloadFont: (fileName: string, location: 'backend' | 'frontend') => {
-    return apiClient.get(`/font-management/download/${fileName}`, {
-      params: { location },
-      responseType: 'blob',
-    });
-  },
+  downloadFont: (fileName: string, location: FontLocation) =>
+    getApiClient().FontsController_downloadFont({ fileName, location }),
 };

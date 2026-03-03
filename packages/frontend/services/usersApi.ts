@@ -1,17 +1,10 @@
-import { apiClient } from './apiClient';
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  username: string;
-  nickname?: string;
-  avatar?: string;
-  role?: {
-    id: string;
-    name: string;
-    permissions: string[];
-  };
-}
+import { getApiClient } from './apiClient';
+import type {
+  CreateUserDto,
+  UpdateUserDto,
+  ChangePasswordDto,
+  OperationMethods,
+} from '../types/api-client';
 
 export const usersApi = {
   list: (params?: {
@@ -19,41 +12,30 @@ export const usersApi = {
     limit?: number;
     search?: string;
     roleId?: string;
-  }) => apiClient.get('/users', { params }),
+  }) =>
+    getApiClient().UsersController_findAll(params || undefined),
 
   search: (params?: { page?: number; limit?: number; search?: string }) =>
-    apiClient.get('/users/search', { params }),
+    getApiClient().UsersController_searchUsers(params || undefined),
 
   searchByEmail: (email: string) =>
-    apiClient.get('/users/search/by-email', { params: { email } }),
+    getApiClient().UsersController_searchByEmail({ email }),
 
-  create: (data: {
-    email: string;
-    password: string;
-    username: string;
-    nickname?: string;
-    roleId?: string;
-  }) => apiClient.post('/users', data),
+  create: (data: CreateUserDto) =>
+    getApiClient().UsersController_create(null, data),
 
-  update: (
-    id: string,
-    data: {
-      email?: string;
-      username?: string;
-      nickname?: string;
-      roleId?: string;
-      status?: string;
-      password?: string;
-    }
-  ) => apiClient.patch(`/users/${id}`, data),
+  update: (id: string, data: UpdateUserDto) =>
+    getApiClient().UsersController_update({ id }, data),
 
-  delete: (id: string) => apiClient.delete(`/users/${id}`),
+  delete: (id: string) =>
+    getApiClient().UsersController_remove({ id }),
 
-  getProfile: () => apiClient.get('/users/profile/me'),
+  getProfile: () =>
+    getApiClient().UsersController_getProfile(),
 
-  updateProfile: (data: { nickname?: string; avatar?: string }) =>
-    apiClient.patch('/users/profile/me', data),
+  updateProfile: (data: UpdateUserDto) =>
+    getApiClient().UsersController_updateProfile(null, data),
 
-  changePassword: (data: { oldPassword: string; newPassword: string }) =>
-    apiClient.post('/users/change-password', data),
+  changePassword: (data: ChangePasswordDto) =>
+    getApiClient().UsersController_changePassword(null, data),
 };

@@ -1,4 +1,4 @@
-import { mxcadApi } from '../services';
+import { mxcadApi } from '../services/mxcadApi';
 
 /**
  * MxCAD 上传配置接口

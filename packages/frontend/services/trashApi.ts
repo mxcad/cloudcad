@@ -1,13 +1,14 @@
-import { apiClient } from './apiClient';
-
+import { getApiClient } from './apiClient';
 export const trashApi = {
-  getList: () => apiClient.get('/file-system/trash'),
+  getList: () =>
+    getApiClient().FileSystemController_getTrash(),
 
   restoreItems: (itemIds: string[]) =>
-    apiClient.post('/file-system/trash/restore', { itemIds }),
+    getApiClient().FileSystemController_restoreTrashItems(null, { itemIds }),
 
   permanentlyDeleteItems: (itemIds: string[]) =>
-    apiClient.delete('/file-system/trash/items', { data: { itemIds } }),
+    getApiClient().FileSystemController_permanentlyDeleteTrashItems(null, { itemIds }),
 
-  clear: () => apiClient.delete('/file-system/trash'),
+  clear: () =>
+    getApiClient().FileSystemController_clearTrash(),
 };

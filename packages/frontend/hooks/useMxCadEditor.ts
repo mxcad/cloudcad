@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { filesApi } from '../services';
+import { filesApi } from '../services/filesApi';
 import { logger as Logger, ErrorHandler, UrlHelper } from '../utils/mxcadUtils';
 
 /** MxPluginContext 类型声明 */

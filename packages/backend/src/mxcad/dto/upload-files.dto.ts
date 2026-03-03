@@ -5,6 +5,14 @@ import { IsString, IsNumber, IsOptional } from 'class-validator';
  * 上传文件请求体 DTO
  */
 export class UploadFilesDto {
+  @ApiProperty({
+    description: '上传的文件',
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  file?: any;
+
   @ApiProperty({ description: '文件 MD5 哈希值' })
   @IsString()
   hash: string;

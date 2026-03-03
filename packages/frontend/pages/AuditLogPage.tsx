@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Filter, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
-import { auditApi } from '../services';
+import { auditApi } from '../services/auditApi';
 import type { AuditLogQueryParams } from '../services/auditApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';

@@ -1,46 +1,14 @@
-import { apiClient } from './apiClient';
-
-export interface AuditLogQueryParams {
-  page?: number;
-  limit?: number;
-  userId?: string;
-  action?: string;
-  resourceType?: string;
-  startDate?: string;
-  endDate?: string;
-}
-
-export interface AuditLog {
-  id: string;
-  userId: string;
-  username: string;
-  action: string;
-  resourceType: string;
-  resourceId?: string;
-  details?: Record<string, unknown>;
-  ipAddress?: string;
-  userAgent?: string;
-  createdAt: string;
-}
-
-export interface AuditStatistics {
-  totalLogs: number;
-  todayLogs: number;
-  actionCounts: Record<string, number>;
-  userActivity: Array<{
-    userId: string;
-    username: string;
-    count: number;
-  }>;
-}
-
+import { getApiClient } from './apiClient';
+import { OperationMethods } from "../types/api-client";
 export const auditApi = {
-  getLogs: (params?: AuditLogQueryParams) =>
-    apiClient.get('/audit/logs', { params }),
+  getLogs: (params?: Parameters<OperationMethods['AuditLogController_findAll']>) =>
+    getApiClient().AuditLogController_findAll(params),
 
-  getLogById: (id: string) => apiClient.get(`/audit/logs/${id}`),
+  getLogById: (id: string) =>
+    getApiClient().AuditLogController_findOne({ id }),
 
-  getStatistics: () => apiClient.get('/audit/statistics'),
+  getStatistics: () => getApiClient().AuditLogController_getStatistics(),
 
-  cleanup: (days: number) => apiClient.post('/audit/cleanup', { days }),
+  cleanup: (daysToKeep: number) =>
+    getApiClient().AuditLogController_cleanupOldLogs(null, { daysToKeep }),
 };
