@@ -1,6 +1,7 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, AlertCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
 import { rolesApi, projectRolesApi } from '../services/rolesApi';
@@ -55,6 +56,14 @@ export const RoleManagement = () => {
   const [systemRoleName, setSystemRoleName] = useState('');
   const [systemRoleDesc, setSystemRoleDesc] = useState('');
   const [selectedSystemPerms, setSelectedSystemPerms] = useState<string[]>([]);
+
+  // 删除确认模态框状态
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+
+  // 错误提示模态框状态
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   // 项目角色状态
   const [projectRoles, setProjectRoles] = useState<ProjectRole[]>([]);
@@ -137,7 +146,8 @@ export const RoleManagement = () => {
 
   const handleSaveSystemRole = async () => {
     if (!systemRoleName) {
-      alert('请输入角色名称');
+      setErrorModalMessage('请输入角色名称');
+      setErrorModalOpen(true);
       return;
     }
 
@@ -161,32 +171,49 @@ export const RoleManagement = () => {
       setSystemModalOpen(false);
       loadSystemRoles();
     } catch (error) {
-      alert(
+      const message =
         (error as { response?: { data?: { message?: string } } }).response?.data
           ?.message ||
-          (error as Error).message ||
-          '保存失败'
-      );
+        (error as Error).message ||
+        '保存失败';
+      setErrorModalMessage(message);
+      setErrorModalOpen(true);
     }
   };
 
-  const handleDeleteSystemRole = async (id: string) => {
-    if (
-      window.confirm(
-        '确认删除该角色？删除后，属于该角色的用户将需要重新分配角色。'
-      )
-    ) {
-      try {
-        await rolesApi.delete(id);
-        loadSystemRoles();
-      } catch (error) {
-        console.error('删除角色失败:', error);
-        alert(
-          (error as { response?: { data?: { message?: string } } }).response
-            ?.data?.message || '删除失败'
-        );
-      }
+  const handleDeleteSystemRole = (id: string) => {
+    setRoleToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteSystemRole = async () => {
+    if (!roleToDelete) return;
+
+    try {
+      await rolesApi.delete(roleToDelete);
+      loadSystemRoles();
+      setDeleteConfirmOpen(false);
+      setRoleToDelete(null);
+    } catch (error) {
+      console.error('删除角色失败:', error);
+      const message =
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || '删除失败';
+      setErrorModalMessage(message);
+      setErrorModalOpen(true);
+      setDeleteConfirmOpen(false);
+      setRoleToDelete(null);
     }
+  };
+
+  const cancelDeleteSystemRole = () => {
+    setDeleteConfirmOpen(false);
+    setRoleToDelete(null);
+  };
+
+  const closeErrorModal = () => {
+    setErrorModalOpen(false);
+    setErrorModalMessage('');
   };
 
   // 项目角色操作
@@ -218,7 +245,8 @@ export const RoleManagement = () => {
 
   const handleSaveProjectRole = async () => {
     if (!projectRoleName) {
-      alert('请输入角色名称');
+      setErrorModalMessage('请输入角色名称');
+      setErrorModalOpen(true);
       return;
     }
 
@@ -241,18 +269,20 @@ export const RoleManagement = () => {
       setProjectModalOpen(false);
       loadProjectRoles();
     } catch (error) {
-      alert(
+      const message =
         (error as { response?: { data?: { message?: string } } }).response?.data
           ?.message ||
-          (error as Error).message ||
-          '保存失败'
-      );
+        (error as Error).message ||
+        '保存失败';
+      setErrorModalMessage(message);
+      setErrorModalOpen(true);
     }
   };
 
-  const handleDeleteProjectRole = async (id: string) => {
+  const handleDeleteProjectRole = (id: string) => {
     // 系统项目角色不允许删除
-    alert('系统默认项目角色不允许删除');
+    setErrorModalMessage('系统默认项目角色不允许删除');
+    setErrorModalOpen(true);
   };
 
   // 过滤后的系统角色
@@ -608,6 +638,64 @@ export const RoleManagement = () => {
         }
         permissionType="project"
       />
+
+      {/* 删除确认模态框 */}
+      <Modal
+        isOpen={deleteConfirmOpen}
+        onClose={cancelDeleteSystemRole}
+        title="确认删除角色"
+        footer={
+          <>
+            <Button variant="ghost" onClick={cancelDeleteSystemRole}>
+              取消
+            </Button>
+            <Button
+              onClick={confirmDeleteSystemRole}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              确认删除
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertCircle
+              size={20}
+              className="text-amber-600 flex-shrink-0 mt-0.5"
+            />
+            <div className="text-sm text-amber-900">
+              <p className="font-semibold mb-1">重要提示</p>
+              <p className="text-amber-800">
+                删除后，属于该角色的用户将需要重新分配角色。
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-600">
+            确定要删除该角色吗？此操作不可恢复。
+          </p>
+        </div>
+      </Modal>
+
+      {/* 错误提示模态框 */}
+      <Modal
+        isOpen={errorModalOpen}
+        onClose={closeErrorModal}
+        title="提示"
+        footer={
+          <Button onClick={closeErrorModal} className="w-full sm:w-auto">
+            确定
+          </Button>
+        }
+      >
+        <div className="flex items-start gap-3">
+          <AlertCircle
+            size={20}
+            className="text-amber-600 flex-shrink-0 mt-0.5"
+          />
+          <p className="text-sm text-slate-700">{errorModalMessage}</p>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -666,6 +666,64 @@ const baseURL = API_BASE_URL.replace(/\/api$/, '');
 - 使用可选链操作符：`thumbnailResult.data?.exists`
 - 或先检查 `data` 是否存在再访问属性
 
+#### 10.5.10 禁止使用浏览器原生弹框（严重）
+
+**失误**：在前端代码中直接使用 `window.confirm()`、`window.alert()`、`window.prompt()` 等浏览器原生弹框。
+
+**错误示例**：
+```typescript
+// ❌ 错误：使用浏览器原生 confirm
+if (window.confirm('确定要删除此文件吗？')) {
+  await deleteFile(fileId);
+}
+
+// ❌ 错误：使用浏览器原生 alert
+window.alert('操作成功');
+```
+
+**后果**：
+- **UI 不一致**：原生弹框与项目设计风格不一致，破坏用户体验
+- **无法定制**：无法自定义样式、动画、国际化支持
+- **阻塞主线程**：原生弹框会阻塞 JavaScript 执行，影响应用响应
+- **测试困难**：难以在自动化测试中控制和验证原生弹框
+
+**正确做法**：
+```typescript
+// ✅ 正确：使用项目统一的 ConfirmModal 组件
+import { useModal } from '../hooks/useModal';
+
+const MyComponent = () => {
+  const { confirm } = useModal();
+
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: '确认删除',
+      content: '确定要删除此文件吗？此操作不可恢复。',
+      okText: '删除',
+      okType: 'danger',
+    });
+
+    if (confirmed) {
+      await deleteFile(fileId);
+    }
+  };
+};
+```
+
+**规避**：
+- **统一使用项目组件**：使用 `ConfirmModal`、`Message`、`Notification` 等项目中已封装的弹框和提示组件
+- **使用 Hooks**：通过 `useModal`、`useMessage`、`useNotification` 等 Hooks 调用弹框和提示
+- **代码审查**：在 Code Review 中检查是否使用了原生弹框
+- **ESLint 规则**：建议配置 ESLint 规则禁止直接调用 `window.confirm`、`window.alert`、`window.prompt`
+
+**替代方案**：
+
+| 原生方法 | 项目替代方案 | 导入路径 |
+|---------|-------------|---------|
+| `window.confirm()` | `useModal().confirm()` | `hooks/useModal` |
+| `window.alert()` | `useMessage().success/error/warning()` | `hooks/useMessage` |
+| `window.prompt()` | `PromptModal` 或表单对话框 | `components/modals/PromptModal` |
+
 ---
 
 ## 11. 测试架构
@@ -914,6 +972,17 @@ async downloadNodeWithFormat(@Query() query: DownloadNodeQueryDto) { }
 ---
 
 ## 17. 更新记录
+
+### 2026-03-03（v7.3 - 前端开发规范补充）
+
+**核心更新**：
+- 新增禁止使用浏览器原生弹框规则（第 10.5.10 节）
+- 明确禁止使用 `window.confirm()`、`window.alert()`、`window.prompt()`
+- 规定统一使用项目封装的 `useModal`、`useMessage` 等 Hooks
+- 提供完整的替代方案对照表
+
+**影响文件**：
+- `IFLOW.md` - 本文档
 
 ### 2026-03-03（v7.2 - API Client 初始化优化）
 

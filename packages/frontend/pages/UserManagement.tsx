@@ -60,6 +60,10 @@ export const UserManagement = () => {
     nickname: '',
   });
 
+  // 删除确认模态框状态
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
   // 表单验证错误
   const [formErrors, setFormErrors] = useState({
     username: '',
@@ -257,18 +261,30 @@ export const UserManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('确定要删除该用户吗？相关数据可能无法恢复。')) {
-      setLoading(true);
-      try {
-        await usersApi.delete(id);
-        await loadData();
-      } catch (error) {
-        setError('删除用户失败');
-      } finally {
-        setLoading(false);
-      }
+  const handleDelete = (id: string) => {
+    setUserToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    setLoading(true);
+    try {
+      await usersApi.delete(userToDelete);
+      await loadData();
+    } catch (error) {
+      setError('删除用户失败');
+    } finally {
+      setLoading(false);
+      setDeleteConfirmOpen(false);
+      setUserToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setUserToDelete(null);
   };
 
   const getRoleName = (role: string | { name: string }) => {
@@ -710,6 +726,45 @@ export const UserManagement = () => {
                 </div>
               </div>
             </form>
+          </Modal>
+
+          {/* 删除确认模态框 */}
+          <Modal
+            isOpen={deleteConfirmOpen}
+            onClose={cancelDelete}
+            title="确认删除用户"
+            footer={
+              <>
+                <Button variant="ghost" onClick={cancelDelete} disabled={loading}>
+                  取消
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {loading ? '删除中...' : '确认删除'}
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertCircle
+                  size={20}
+                  className="text-amber-600 flex-shrink-0 mt-0.5"
+                />
+                <div className="text-sm text-amber-900">
+                  <p className="font-semibold mb-1">重要提示</p>
+                  <p className="text-amber-800">
+                    删除用户后，该用户的所有相关数据可能无法恢复。请谨慎操作。
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600">
+                确定要删除该用户吗？此操作不可恢复。
+              </p>
+            </div>
           </Modal>
         </>
       )}

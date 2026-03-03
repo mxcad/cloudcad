@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FolderPlus, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Pagination } from '../components/ui/Pagination';
@@ -135,6 +136,11 @@ export const FileSystemManager: React.FC = () => {
     setFormData: setProjectFormData,
     handleCreate: handleCreateProjectSubmit,
     handleUpdate: handleUpdateProjectSubmit,
+    // 删除确认模态框
+    deleteConfirmOpen,
+    projectToDelete,
+    confirmDelete,
+    cancelDelete,
   } = useProjectManagement({
     onProjectCreated: handleRefresh,
     onProjectUpdated: handleRefresh,
@@ -1420,6 +1426,60 @@ export const FileSystemManager: React.FC = () => {
         onFormDataChange={setProjectFormData}
         onSubmit={handleSubmitProject}
       />
+
+      {/* 删除项目确认模态框 */}
+      <Modal
+        isOpen={deleteConfirmOpen}
+        onClose={cancelDelete}
+        title="确认删除项目"
+        footer={
+          <>
+            <Button variant="ghost" onClick={cancelDelete} disabled={projectLoading}>
+              取消
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              disabled={projectLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {projectLoading ? '删除中...' : '确认删除'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertCircle
+              size={20}
+              className="text-amber-600 flex-shrink-0 mt-0.5"
+            />
+            <div className="text-sm text-amber-900">
+              <p className="font-semibold mb-1">重要提示</p>
+              <p className="text-amber-800">
+                删除项目后，项目中的所有文件和数据可能无法恢复。
+              </p>
+            </div>
+          </div>
+          {projectToDelete && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-700">删除项目：</p>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm font-medium text-slate-900">
+                  {projectToDelete.name}
+                </p>
+                {projectToDelete.description && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {projectToDelete.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          <p className="text-sm text-slate-600">
+            确定要删除该项目吗？此操作不可恢复。
+          </p>
+        </div>
+      </Modal>
 
       <MembersModal
         isOpen={isMembersModalOpen}

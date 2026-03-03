@@ -29,6 +29,11 @@ export function useProjectManagement(
   });
   const [loading, setLoading] = useState(false);
 
+  // 删除确认模态框状态
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<FileSystemNode | null>(null);
+  const [deleteCallback, setDeleteCallback] = useState<((id: string, name: string) => Promise<void>) | null>(null);
+
   const openCreateModal = useCallback(() => {
     setEditingProject(null);
     setFormData({ name: '', description: '' });
@@ -99,24 +104,40 @@ export function useProjectManagement(
   );
 
   const handleDelete = useCallback(
-    async (
+    (
       project: FileSystemNode,
       deleteProject: (id: string, name: string) => Promise<void>
     ) => {
-      if (
-        window.confirm(`确定要删除项目"${project.name}"吗？此操作不可恢复。`)
-      ) {
-        try {
-          await deleteProject(project.id, project.name);
-          options.onProjectDeleted?.();
-        } catch (error) {
-          const errorMessage = (error as Error).message || '删除项目失败';
-          options.showToast?.(errorMessage, 'error');
-        }
-      }
+      setProjectToDelete(project);
+      setDeleteCallback(() => deleteProject);
+      setDeleteConfirmOpen(true);
     },
-    [options]
+    []
   );
+
+  const confirmDelete = useCallback(async () => {
+    if (!projectToDelete || !deleteCallback) return;
+
+    setLoading(true);
+    try {
+      await deleteCallback(projectToDelete.id, projectToDelete.name);
+      options.onProjectDeleted?.();
+      setDeleteConfirmOpen(false);
+      setProjectToDelete(null);
+      setDeleteCallback(null);
+    } catch (error) {
+      const errorMessage = (error as Error).message || '删除项目失败';
+      options.showToast?.(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectToDelete, deleteCallback, options]);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteConfirmOpen(false);
+    setProjectToDelete(null);
+    setDeleteCallback(null);
+  }, []);
 
   return {
     isModalOpen,
@@ -131,6 +152,11 @@ export function useProjectManagement(
     handleCreate,
     handleUpdate,
     handleDelete,
+    // 删除确认模态框
+    deleteConfirmOpen,
+    projectToDelete,
+    confirmDelete,
+    cancelDelete,
   };
 }
 
