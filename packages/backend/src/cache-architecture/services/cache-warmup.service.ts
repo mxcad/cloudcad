@@ -117,7 +117,7 @@ export class CacheWarmupService {
       // 触发权限加载
       await this.cacheService.getOrLoad(key, async () => {
         // 这里应该调用实际的权限加载逻辑
-        return { permissions: [] };
+        return { permissions: [] as string[] };
       });
 
       this.warmupHistory.set(key, new Date());

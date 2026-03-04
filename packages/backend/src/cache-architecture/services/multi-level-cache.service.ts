@@ -1,4 +1,9 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Optional,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { L1CacheProvider } from '../providers/l1-cache.provider';
 import { L2CacheProvider } from '../providers/l2-cache.provider';
 import { L3CacheProvider } from '../providers/l3-cache.provider';
@@ -419,7 +424,7 @@ export class MultiLevelCacheService {
       case CacheLevel.L3:
         return this.l3Cache.get<T>(key);
       default:
-        throw new Error(`不支持的缓存级别: ${level}`);
+        throw new InternalServerErrorException(`不支持的缓存级别: ${level}`);
     }
   }
 
@@ -443,7 +448,7 @@ export class MultiLevelCacheService {
         await this.l3Cache.set(key, value, ttl);
         break;
       default:
-        throw new Error(`不支持的缓存级别: ${level}`);
+        throw new InternalServerErrorException(`不支持的缓存级别: ${level}`);
     }
   }
 

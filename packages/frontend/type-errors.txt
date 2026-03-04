@@ -1,0 +1,160 @@
+﻿src/components/FileItem.tsx(512,17): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'width' does not exist in type 'Partial<unknown> & Attributes'.
+src/components/modals/MembersModal.tsx(432,24): error TS2532: Object is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(649,20): error TS2532: Object is possibly 'undefined'.
+src/components/modals/VersionHistoryModal.tsx(114,21): error TS2322: Type 'void | "" | Element | null' is not assignable to type 'ReactNode'.
+  Type 'void' is not assignable to type 'ReactNode'.
+src/components/modals/VersionHistoryModal.tsx(123,35): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Date'.
+src/hooks/file-system/useFileSystem.ts(182,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/file-system/useFileSystem.ts(251,5): error TS2322: Type '{ urlProjectId: string | undefined; urlNodeId: string | undefined; refreshCount: number; }' is not assignable to type '{ urlProjectId: string; urlNodeId: string | undefined; refreshCount: number; }'.
+  Types of property 'urlProjectId' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/hooks/file-system/useFileSystemData.ts(239,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/file-system/useFileSystemData.ts(266,17): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/file-system/useFileSystemData.ts(282,33): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/file-system/useFileSystemData.ts(285,37): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/file-system/useFileSystemSelection.ts(87,9): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/hooks/useFileSystem.ts(1025,32): error TS2322: Type '$200' is not assignable to type 'BlobPart'.
+src/hooks/useFileSystem.ts(1090,11): error TS2345: Argument of type '{ width?: string | undefined; height?: string | undefined; colorPolicy?: string | undefined; } | undefined' is not assignable to parameter of type 'PdfOptions | undefined'.
+  Type '{ width?: string | undefined; height?: string | undefined; colorPolicy?: string | undefined; }' is not assignable to type 'PdfOptions'.
+    Types of property 'colorPolicy' are incompatible.
+      Type 'string | undefined' is not assignable to type '"mono" | "color" | undefined'.
+        Type 'string' is not assignable to type '"mono" | "color" | undefined'.
+src/hooks/useFileSystem.ts(1093,32): error TS2322: Type '$200' is not assignable to type 'BlobPart'.
+src/hooks/useFileSystem.ts(1172,38): error TS2345: Argument of type '{ name?: string | undefined; description?: string | undefined; }' is not assignable to parameter of type 'CreateProjectDto'.
+  Types of property 'name' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/hooks/useFileSystem.ts(1196,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/hooks/useFileSystem.ts(1198,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/hooks/useFileSystem.ts(1199,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/hooks/useFileSystem.ts(1214,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/hooks/useFileSystem.ts(1216,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/hooks/useFileSystem.ts(1217,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/hooks/useFileSystem.ts(1354,32): error TS2345: Argument of type '(message: string, type?: ToastType) => void' is not assignable to parameter of type 'string'.
+src/hooks/useFileSystem.ts(1382,30): error TS2345: Argument of type '(message: string, type?: ToastType) => void' is not assignable to parameter of type 'string'.
+src/hooks/useFileSystem.ts(1413,5): error TS2322: Type '{ urlProjectId: string | undefined; urlNodeId: string | undefined; refreshCount: number; }' is not assignable to type '{ urlProjectId: string; urlNodeId: string | undefined; refreshCount: number; }'.
+  Types of property 'urlProjectId' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/hooks/useMxCadInstance.ts(5,3): error TS2305: Module '"../utils/mxcadUtils"' has no exported member 'Logger'.
+src/hooks/useMxCadInstance.ts(46,15): error TS2339: Property 'success' does not exist on type 'Console'.
+src/hooks/useMxCadInstance.ts(83,42): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/useMxCadInstance.ts(116,32): error TS2339: Property 'originalName' does not exist on type 'NodeTreeResponseDto'.
+src/hooks/useMxCadInstance.ts(125,17): error TS2339: Property 'success' does not exist on type 'Console'.
+src/hooks/useMxCadInstance.ts(136,15): error TS2339: Property 'success' does not exist on type 'Console'.
+src/hooks/useProjectPermission.ts(3,24): error TS2307: Cannot find module '../utils/logger' or its corresponding type declarations.
+src/pages/AuditLogPage.tsx(456,25): error TS2322: Type '{ text: string; maxLength: number; }' is not assignable to type 'IntrinsicAttributes & Omit<TruncateTextProps, "mode">'.
+  Property 'text' does not exist on type 'IntrinsicAttributes & Omit<TruncateTextProps, "mode">'.
+src/pages/AuditLogPage.tsx(473,25): error TS2322: Type '{ text: string; maxLength: number; }' is not assignable to type 'IntrinsicAttributes & Omit<TruncateTextProps, "mode">'.
+  Property 'text' does not exist on type 'IntrinsicAttributes & Omit<TruncateTextProps, "mode">'.
+src/pages/CADEditorDirect.tsx(237,57): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/CADEditorDirect.tsx(246,11): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/pages/CADEditorDirect.tsx(250,11): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/CADEditorDirect.tsx(253,11): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/CADEditorDirect.tsx(266,37): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/pages/CADEditorDirect.tsx(385,57): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/CADEditorDirect.tsx(393,11): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/pages/CADEditorDirect.tsx(397,11): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/CADEditorDirect.tsx(400,11): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/EmailVerification.tsx(66,40): error TS2554: Expected 1 arguments, but got 2.
+src/pages/FileSystemManager.tsx(211,11): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/pages/FileSystemManager.tsx(372,27): error TS2345: Argument of type 'UserDto' is not assignable to parameter of type 'User'.
+  The types of 'role.name' are incompatible between these types.
+    Type '"ADMIN" | "USER_MANAGER" | "FONT_MANAGER" | "USER" | undefined' is not assignable to type 'Role'.
+      Type 'undefined' is not assignable to type 'Role'.
+src/pages/FileSystemManager.tsx(374,29): error TS2345: Argument of type 'UserDto' is not assignable to parameter of type 'User'.
+  The types of 'role.name' are incompatible between these types.
+    Type '"ADMIN" | "USER_MANAGER" | "FONT_MANAGER" | "USER" | undefined' is not assignable to type 'Role'.
+      Type 'undefined' is not assignable to type 'Role'.
+src/pages/FileSystemManager.tsx(376,36): error TS2345: Argument of type 'UserDto' is not assignable to parameter of type 'User'.
+  The types of 'role.name' are incompatible between these types.
+    Type '"ADMIN" | "USER_MANAGER" | "FONT_MANAGER" | "USER" | undefined' is not assignable to type 'Role'.
+      Type 'undefined' is not assignable to type 'Role'.
+src/pages/FileSystemManager.tsx(378,34): error TS2345: Argument of type 'UserDto' is not assignable to parameter of type 'User'.
+  The types of 'role.name' are incompatible between these types.
+    Type '"ADMIN" | "USER_MANAGER" | "FONT_MANAGER" | "USER" | undefined' is not assignable to type 'Role'.
+      Type 'undefined' is not assignable to type 'Role'.
+src/pages/FileSystemManager.tsx(453,11): error TS2322: Type 'OperationResponse<ProjectDto>' is not assignable to type 'Promise<void>'.
+  Type 'AxiosResponse<ProjectDto, any>' is not assignable to type 'void'.
+src/pages/FileSystemManager.tsx(460,11): error TS2322: Type 'OperationResponse<ProjectDto>' is not assignable to type 'Promise<void>'.
+  Type 'AxiosResponse<ProjectDto, any>' is not assignable to type 'void'.
+src/pages/FileSystemManager.tsx(667,29): error TS2532: Object is possibly 'undefined'.
+src/pages/FileSystemManager.tsx(1510,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/FontLibrary.tsx(89,53): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/pages/FontLibrary.tsx(94,53): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/pages/FontLibrary.tsx(110,22): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/pages/FontLibrary.tsx(110,56): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/pages/FontLibrary.tsx(536,35): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | Date'.
+  Type 'undefined' is not assignable to type 'string | Date'.
+src/pages/FontLibrary.tsx(539,35): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | Date'.
+  Type 'undefined' is not assignable to type 'string | Date'.
+src/pages/RoleManagement.tsx(90,22): error TS2345: Argument of type '$200' is not assignable to parameter of type 'SetStateAction<UserResponseDto | null>'.
+src/pages/RoleManagement.tsx(108,23): error TS2345: Argument of type '$200' is not assignable to parameter of type 'SetStateAction<ProjectRole[]>'.
+src/pages/RoleManagement.tsx(389,28): error TS2745: This JSX tag's 'children' prop expects type 'string' which requires multiple children, but only a single child was provided.
+src/pages/RoleManagement.tsx(519,28): error TS2745: This JSX tag's 'children' prop expects type 'string' which requires multiple children, but only a single child was provided.
+src/pages/UserManagement.tsx(17,10): error TS2305: Module '"../types/api-client"' has no exported member 'components'.
+src/pages/UserManagement.tsx(120,9): error TS2353: Object literal may only specify known properties, and 'sortBy' does not exist in type '{ page?: number | undefined; limit?: number | undefined; search?: string | undefined; roleId?: string | undefined; }'.
+src/pages/UserManagement.tsx(231,22): error TS2339: Property 'password' does not exist on type '{ username: string; email: string; roleId: string; nickname: string; }'.
+src/pages/UserManagement.tsx(433,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/pages/UserManagement.tsx(460,19): error TS2322: Type '"xsmall"' is not assignable to type '"sm" | "md" | "lg" | undefined'.
+src/pages/UserManagement.tsx(480,19): error TS2322: Type '"xsmall"' is not assignable to type '"sm" | "md" | "lg" | undefined'.
+src/services/apiClient.ts(3,10): error TS2305: Module '"../utils/mxcadUtils"' has no exported member 'logger'.
+src/services/authApi.ts(27,57): error TS2353: Object literal may only specify known properties, and 'token' does not exist in type 'ResetPasswordDto'.
+src/services/filesApi.ts(22,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | PromiseLike<string>'.
+  Type 'undefined' is not assignable to type 'string | PromiseLike<string>'.
+src/services/filesApi.ts(66,52): error TS2345: Argument of type '{ nodeId: string; permanently: boolean | undefined; }' is not assignable to parameter of type 'Parameters<QueryParameters & PathParameters> | null | undefined'.
+  Type '{ nodeId: string; permanently: boolean | undefined; }' is not assignable to type 'undefined'.
+src/services/galleryApi.ts(71,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/services/mxcadManager.ts(1037,20): error TS7017: Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.

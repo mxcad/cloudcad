@@ -787,7 +787,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "获取用户信息成功"
+            "description": "获取用户信息成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponseDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "未授权"
@@ -4604,7 +4611,14 @@
         "parameters": [],
         "responses": {
           "201": {
-            "description": ""
+            "description": "返回分类列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GalleryTypesResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4656,7 +4670,14 @@
         "parameters": [],
         "responses": {
           "201": {
-            "description": ""
+            "description": "返回分类列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GalleryTypesResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6894,6 +6915,93 @@
           "refreshToken"
         ]
       },
+      "UserRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "角色 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "角色名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "是否为系统角色"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "isSystem"
+        ]
+      },
+      "UserProfileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "用户 ID"
+          },
+          "email": {
+            "type": "string",
+            "description": "用户邮箱"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "用户昵称"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像 URL"
+          },
+          "status": {
+            "type": "string",
+            "description": "用户状态",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "SUSPENDED"
+            ]
+          },
+          "role": {
+            "description": "用户角色",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRoleDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "username",
+          "status",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "SendVerificationResponseDto": {
         "type": "object",
         "properties": {
@@ -7065,12 +7173,18 @@
             "type": "string",
             "description": "新密码",
             "example": "NewPassword123!"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "description": "确认新密码",
+            "example": "NewPassword123!"
           }
         },
         "required": [
           "email",
           "code",
-          "newPassword"
+          "newPassword",
+          "confirmPassword"
         ]
       },
       "ResetPasswordResponseDto": {
@@ -7166,32 +7280,6 @@
           "email",
           "username",
           "password"
-        ]
-      },
-      "UserRoleDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "角色 ID"
-          },
-          "name": {
-            "type": "string",
-            "description": "角色名称"
-          },
-          "description": {
-            "type": "string",
-            "description": "角色描述"
-          },
-          "isSystem": {
-            "type": "boolean",
-            "description": "是否为系统角色"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "isSystem"
         ]
       },
       "UserResponseDto": {
@@ -7318,67 +7406,6 @@
           "id",
           "email",
           "username"
-        ]
-      },
-      "UserProfileResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "用户 ID"
-          },
-          "email": {
-            "type": "string",
-            "description": "用户邮箱"
-          },
-          "username": {
-            "type": "string",
-            "description": "用户名"
-          },
-          "nickname": {
-            "type": "string",
-            "description": "用户昵称"
-          },
-          "avatar": {
-            "type": "string",
-            "description": "头像 URL"
-          },
-          "status": {
-            "type": "string",
-            "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ]
-          },
-          "role": {
-            "description": "用户角色",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/UserRoleDto"
-              }
-            ]
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "创建时间"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "更新时间"
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "username",
-          "status",
-          "role",
-          "createdAt",
-          "updatedAt"
         ]
       },
       "UpdateUserDto": {
@@ -8553,6 +8580,58 @@
         },
         "required": [
           "target"
+        ]
+      },
+      "GalleryTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "分类 ID",
+            "example": 1
+          },
+          "pid": {
+            "type": "number",
+            "description": "父分类 ID",
+            "example": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "分类名称",
+            "example": "建筑"
+          },
+          "pname": {
+            "type": "string",
+            "description": "父分类名称",
+            "example": "建筑"
+          },
+          "status": {
+            "type": "number",
+            "description": "状态",
+            "example": 1
+          }
+        },
+        "required": [
+          "id",
+          "pid",
+          "name",
+          "pname",
+          "status"
+        ]
+      },
+      "GalleryTypesResponseDto": {
+        "type": "object",
+        "properties": {
+          "allblocks": {
+            "description": "分类列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GalleryTypeDto"
+            }
+          }
+        },
+        "required": [
+          "allblocks"
         ]
       },
       "GalleryFileListDto": {

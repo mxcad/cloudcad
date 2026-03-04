@@ -239,8 +239,8 @@ describe('权限枚举', () => {
     it('修复：ProjectRole.ADMIN 权限数量应该是正确的', () => {
       const adminPermissions =
         DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.ADMIN];
-      // 预期有 15 个不重复的权限
-      expect(adminPermissions).toHaveLength(15);
+      // 预期有 17 个不重复的权限
+      expect(adminPermissions).toHaveLength(17);
     });
   });
 });

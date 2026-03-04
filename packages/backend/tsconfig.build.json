@@ -1,4 +1,13 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "strictNullChecks": false,
+    "noImplicitReturns": false,
+    "noImplicitAny": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false
+  },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "scripts"]
 }

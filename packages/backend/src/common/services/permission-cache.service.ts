@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   Inject,
   Optional,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -98,14 +99,14 @@ export class PermissionCacheService implements OnModuleDestroy {
         try {
           const event: CacheInvalidationEvent = JSON.parse(message);
           this.handleInvalidationEvent(event);
-        } catch (error) {
-          this.logger.error(`处理缓存失效事件失败: ${error.message}`);
+        } catch (error: unknown) {
+          this.logger.error(`处理缓存失效事件失败: ${(error as Error).message}`);
         }
       });
 
       this.logger.log('缓存失效事件订阅已启动');
-    } catch (error) {
-      this.logger.error(`订阅缓存失效事件失败: ${error.message}`);
+    } catch (error: unknown) {
+      this.logger.error(`订阅缓存失效事件失败: ${(error as Error).message}`);
     }
   }
 
@@ -192,7 +193,7 @@ export class PermissionCacheService implements OnModuleDestroy {
       case 'project':
         return CacheKeyUtil.projectPermissions(idNum);
       default:
-        throw new Error(`不支持的缓存类型: ${type}`);
+        throw new InternalServerErrorException(`不支持的缓存类型: ${type}`);
     }
   }
 

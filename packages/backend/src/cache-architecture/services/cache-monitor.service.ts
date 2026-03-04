@@ -381,17 +381,21 @@ export class CacheMonitorService {
     const p99Index = Math.floor(responseTimes.length * 0.99);
 
     // 计算吞吐量（请求/秒）
+    const firstData = data[0];
+    const lastData = data[data.length - 1];
     const timeSpan =
-      (data[data.length - 1].timestamp - data[0].timestamp) / 1000;
+      firstData && lastData
+        ? (lastData.timestamp - firstData.timestamp) / 1000
+        : 0;
     const throughput = timeSpan > 0 ? data.length / timeSpan : 0;
 
     return {
       avgResponseTime:
         responseTimes.reduce((sum, time) => sum + time, 0) /
         responseTimes.length,
-      p50ResponseTime: responseTimes[p50Index],
-      p95ResponseTime: responseTimes[p95Index],
-      p99ResponseTime: responseTimes[p99Index],
+      p50ResponseTime: responseTimes[p50Index] ?? 0,
+      p95ResponseTime: responseTimes[p95Index] ?? 0,
+      p99ResponseTime: responseTimes[p99Index] ?? 0,
       throughput,
       errorRate: (errors / data.length) * 100,
     };

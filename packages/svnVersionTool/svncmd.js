@@ -7,6 +7,7 @@ const svnImport = require('./svnimport');
 const svnDelete = require('./svndelete');
 const svnLog = require('./svnlog');
 const svnCat = require('./svncat');
+const { checkSvnAvailable, checkSvnAvailableSync, getPlatformInfo } = require('./svncheck');
 
 
 // 导出函数
@@ -19,5 +20,8 @@ module.exports = {
     svnImport,
     svnDelete,
     svnLog,
-    svnCat
+    svnCat,
+    checkSvnAvailable,
+    checkSvnAvailableSync,
+    getPlatformInfo
 };

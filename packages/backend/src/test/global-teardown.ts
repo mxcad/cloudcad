@@ -1,4 +1,4 @@
-﻿import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 // Global test teardown for integration tests
 const prisma = new PrismaClient();

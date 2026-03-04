@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { FileStatus } from '@prisma/client';
 
@@ -161,7 +166,7 @@ export class FileSystemNodeService {
       this.logger.error(
         `[createNonCadNode] 节点不存在或已被删除: ${context.nodeId}`
       );
-      throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
+      throw new NotFoundException(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
     // 如果当前节点是文件夹，则直接使用它作为父节点
@@ -462,7 +467,7 @@ export class FileSystemNodeService {
       this.logger.error(
         `[createNewNode] 节点不存在或已被删除: ${context.nodeId}`
       );
-      throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
+      throw new NotFoundException(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
     // 如果当前节点是文件夹，则直接使用它作为父节点
@@ -563,7 +568,7 @@ export class FileSystemNodeService {
       this.logger.error(
         `[handleExistingNode] 节点不存在或已被删除: ${context.nodeId}`
       );
-      throw new Error(`节点不存在或已被删除: ${context.nodeId}`);
+      throw new NotFoundException(`节点不存在或已被删除: ${context.nodeId}`);
     }
 
     // 如果当前节点是文件夹，则直接使用它作为父节点
@@ -616,7 +621,7 @@ export class FileSystemNodeService {
       this.logger.error(
         `[handleExistingNode] 父节点不存在或已被删除: ${targetParentId}`
       );
-      throw new Error(`父节点不存在或已被删除: ${targetParentId}`);
+      throw new NotFoundException(`父节点不存在或已被删除: ${targetParentId}`);
     }
 
     this.logger.log(

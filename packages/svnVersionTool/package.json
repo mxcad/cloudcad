@@ -17,9 +17,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "os": [
-    "win32"
-  ],
   "files": [
     "svncmd.js",
     "svncheckout.js",
@@ -28,8 +25,12 @@
     "svnlist.js",
     "svnadmincreate.js",
     "svnimport.js",
+    "svndelete.js",
+    "svnlog.js",
+    "svncat.js",
     "svnpath.js",
     "svnadminpath.js",
+    "svncheck.js",
     "subversion",
     "index.d.ts",
     "README.md"

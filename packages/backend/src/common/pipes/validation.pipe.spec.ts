@@ -29,9 +29,9 @@ describe('CustomValidationPipe', () => {
           { email: 'invalid', password: '123' },
           { type: 'body', metatype: TestDto }
         );
-      } catch (exception) {
+      } catch (exception: unknown) {
         expect(exception).toBeInstanceOf(BadRequestException);
-        const response = exception.getResponse() as {
+        const response = (exception as BadRequestException).getResponse() as {
           code: string;
           message: string;
           errors: unknown;
@@ -52,9 +52,9 @@ describe('CustomValidationPipe', () => {
           { field: null },
           { type: 'body', metatype: TestDto }
         );
-      } catch (exception) {
+      } catch (exception: unknown) {
         expect(exception).toBeInstanceOf(BadRequestException);
-        const response = exception.getResponse() as {
+        const response = (exception as BadRequestException).getResponse() as {
           code: string;
         };
         expect(response.code).toBe('VALIDATION_ERROR');

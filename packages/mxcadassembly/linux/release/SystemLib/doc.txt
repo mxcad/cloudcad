@@ -1,0 +1,3 @@
+sudo chmod -R 777 mxcadassembly
+sudo chmod -R 777 ./mx/so/*
+sudo  cp -r -f ./mx/locale /usr/local/share/locale

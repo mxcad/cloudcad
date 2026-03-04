@@ -26,22 +26,11 @@ export class GalleryTypeDto {
  * 分类列表响应 DTO
  */
 export class GalleryTypesResponseDto {
-  @ApiProperty({ description: '状态码', example: 'success' })
-  code: string;
-
   @ApiProperty({
     description: '分类列表',
-    type: 'object',
-    properties: {
-      allblocks: {
-        type: 'array',
-        items: { type: 'object' },
-      },
-    },
+    type: [GalleryTypeDto],
   })
-  result: {
-    allblocks: GalleryTypeDto[];
-  };
+  allblocks: GalleryTypeDto[];
 }
 
 /**

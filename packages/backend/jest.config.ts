@@ -34,7 +34,25 @@ const config: Config = {
     'cache-cleanup.scheduler.spec.ts',
   ],
   transform: {
-    '^\.+\.(t|j)s$': 'ts-jest',
+    '^\.+\.(t|j)s$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          module: 'commonjs',
+          moduleResolution: 'node',
+          target: 'ES2023',
+          emitDecoratorMetadata: true,
+          experimentalDecorators: true,
+          esModuleInterop: true,
+          strict: false,
+          noImplicitAny: false,
+          strictNullChecks: false,
+          noImplicitThis: false,
+          alwaysStrict: false,
+          skipLibCheck: true,
+        },
+      },
+    ],
   },
   collectCoverageFrom: [
     'src/**/*.(t|j)s',

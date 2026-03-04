@@ -1,4 +1,11 @@
-﻿import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  forwardRef,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
@@ -513,16 +520,16 @@ export class MxCadService {
           nodeId: 'test-node-id',
         };
       }
-      throw new Error('上下文参数不能为空');
+      throw new BadRequestException('上下文参数不能为空');
     }
 
     // 确保必要的字段存在
     if (!context.userId) {
-      throw new Error('上下文缺少用户ID');
+      throw new BadRequestException('上下文缺少用户ID');
     }
 
     if (!context.nodeId) {
-      throw new Error('上下文缺少节点ID');
+      throw new BadRequestException('上下文缺少节点ID');
     }
 
     return context;
@@ -697,7 +704,7 @@ export class MxCadService {
       };
     }
     // 在生产环境中，抛出异常要求必须提供上下文
-    throw new Error('必须提供有效的上下文参数');
+    throw new BadRequestException('必须提供有效的上下文参数');
   }
 
   /**

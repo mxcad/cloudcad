@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import {
@@ -174,7 +175,9 @@ export class FileSystemService {
         });
 
         if (!ownerRole) {
-          throw new Error('PROJECT_OWNER 角色不存在，请检查系统初始化');
+          throw new InternalServerErrorException(
+            'PROJECT_OWNER 角色不存在，请检查系统初始化',
+          );
         }
 
         const node = await this.prisma.fileSystemNode.create({
@@ -715,7 +718,7 @@ export class FileSystemService {
         this.logger.error(
           `路径验证失败，拒绝删除: ${nodeDirectoryPath} (期望以 ${nodeId} 结尾)`
         );
-        throw new Error(`路径验证失败，无法安全删除`);
+        throw new BadRequestException(`路径验证失败，无法安全删除`);
       }
 
       // 删除整个 nodeid 目录（包括其中的所有文件）
@@ -1897,7 +1900,9 @@ export class FileSystemService {
           );
 
           if (!copyResult.success) {
-            throw new Error(`文件拷贝失败: ${copyResult.error}`);
+            throw new InternalServerErrorException(
+              `文件拷贝失败: ${copyResult.error}`,
+            );
           }
 
           // 更新节点的 path 字段

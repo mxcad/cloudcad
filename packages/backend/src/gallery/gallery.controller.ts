@@ -29,7 +29,7 @@ import { RequirePermissions } from '../common/decorators/require-permissions.dec
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { GalleryService } from './gallery.service';
-import { GalleryFileListDto, AddToGalleryDto } from './dto/gallery.dto';
+import { GalleryFileListDto, AddToGalleryDto, GalleryTypesResponseDto } from './dto/gallery.dto';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
@@ -38,7 +38,6 @@ import * as fs from 'fs';
 
 /**
  * 图库控制器
- * 绕过全局响应包装，直接返回原始 JSON 格式
  */
 @ApiTags('图库管理')
 @ApiBearerAuth()
@@ -65,23 +64,20 @@ export class GalleryController {
     summary: '获取图纸库分类列表',
     description: '获取图纸库的所有分类信息',
   })
-  async getDrawingsTypes(@Req() req: any, @Res() res: Response) {
-    try {
-      this.logger.log('[getDrawingsTypes] 获取图纸库分类列表');
+  @ApiResponse({
+    status: 201,
+    description: '返回分类列表',
+    type: GalleryTypesResponseDto,
+  })
+  async getDrawingsTypes(@Req() req: any) {
+    this.logger.log('[getDrawingsTypes] 获取图纸库分类列表');
 
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      const result = await this.galleryService.getTypes('drawings', userId);
-
-      // 绕过全局响应包装，直接返回原始 JSON 格式
-      return res.status(200).json(result);
-    } catch (error) {
-      this.logger.error('[getDrawingsTypes] 错误:', error);
-      throw error;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
     }
+
+    return this.galleryService.getTypes('drawings', userId);
   }
 
   /**
@@ -95,47 +91,16 @@ export class GalleryController {
   })
   async getDrawingsFileList(
     @Req() req: any,
-    @Body() dto: GalleryFileListDto,
-    @Res() res: Response
+    @Body() dto: GalleryFileListDto
   ) {
-    try {
-      // 打印详细的请求信息
-      this.logger.log('========================================');
-      this.logger.log('[getDrawingsFileList] 接收到请求');
-      this.logger.log(`[getDrawingsFileList] 请求方法: ${req.method}`);
-      this.logger.log(`[getDrawingsFileList] 请求路径: ${req.path}`);
-      this.logger.log(
-        `[getDrawingsFileList] 请求来源: ${req.headers.referer || req.headers['user-agent'] || 'unknown'}`
-      );
-      this.logger.log(
-        `[getDrawingsFileList] 用户ID: ${req.user?.id || 'unknown'}`
-      );
-      this.logger.log(`[getDrawingsFileList] 请求参数: ${JSON.stringify(dto)}`);
-      this.logger.log(
-        `[getDrawingsFileList] pageIndex类型: ${typeof dto.pageIndex}, 值: ${dto.pageIndex}`
-      );
-      this.logger.log(
-        `[getDrawingsFileList] pageSize类型: ${typeof dto.pageSize}, 值: ${dto.pageSize}`
-      );
-      this.logger.log('========================================');
+    this.logger.log(`[getDrawingsFileList] 参数: ${JSON.stringify(dto)}`);
 
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      const result = await this.galleryService.getFileList(
-        dto,
-        'drawings',
-        userId
-      );
-
-      // 绕过全局响应包装，直接返回原始 JSON 格式
-      return res.status(200).json(result);
-    } catch (error) {
-      this.logger.error('[getDrawingsFileList] 错误:', error);
-      throw error;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
     }
+
+    return this.galleryService.getFileList(dto, 'drawings', userId);
   }
 
   /**
@@ -147,23 +112,20 @@ export class GalleryController {
     summary: '获取图块库分类列表',
     description: '获取图块库的所有分类信息',
   })
-  async getBlocksTypes(@Req() req: any, @Res() res: Response) {
-    try {
-      this.logger.log('[getBlocksTypes] 获取图块库分类列表');
+  @ApiResponse({
+    status: 201,
+    description: '返回分类列表',
+    type: GalleryTypesResponseDto,
+  })
+  async getBlocksTypes(@Req() req: any) {
+    this.logger.log('[getBlocksTypes] 获取图块库分类列表');
 
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      const result = await this.galleryService.getTypes('blocks', userId);
-
-      // 绕过全局响应包装，直接返回原始 JSON 格式
-      return res.status(200).json(result);
-    } catch (error) {
-      this.logger.error('[getBlocksTypes] 错误:', error);
-      throw error;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
     }
+
+    return this.galleryService.getTypes('blocks', userId);
   }
 
   /**
@@ -177,30 +139,16 @@ export class GalleryController {
   })
   async getBlocksFileList(
     @Req() req: any,
-    @Body() dto: GalleryFileListDto,
-    @Res() res: Response
+    @Body() dto: GalleryFileListDto
   ) {
-    try {
-      this.logger.log(
-        `[getBlocksFileList] 获取图块列表，参数: ${JSON.stringify(dto)}`
-      );
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
+    this.logger.log(`[getBlocksFileList] 参数: ${JSON.stringify(dto)}`);
 
-      const result = await this.galleryService.getFileList(
-        dto,
-        'blocks',
-        userId
-      );
-
-      // 绕过全局响应包装，直接返回原始 JSON 格式
-      return res.status(200).json(result);
-    } catch (error) {
-      this.logger.error('[getBlocksFileList] 错误:', error);
-      throw error;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
     }
+
+    return this.galleryService.getFileList(dto, 'blocks', userId);
   }
 
   /**
@@ -352,72 +300,28 @@ export class GalleryController {
   async createType(
     @Param('galleryType') galleryType: string,
     @Req() req: any,
-    @Body() body: { name: string; pid: number },
-    @Res() res: Response
+    @Body() body: { name: string; pid: number }
   ) {
-    try {
-      this.logger.log(
-        `[createType] 创建分类: ${galleryType}, ${JSON.stringify(body)}`
-      );
+    this.logger.log(
+      `[createType] 创建分类: ${galleryType}, ${JSON.stringify(body)}`
+    );
 
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        return res.status(400).json({
-          code: 'error',
-          message: '无效的图库类型',
-        });
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(400).json({
-          code: 'error',
-          message: '用户 ID 不存在',
-        });
-      }
-
-      const result = await this.galleryService.createType(
-        galleryType as 'drawings' | 'blocks',
-        body.name,
-        body.pid || 0,
-        userId
-      );
-
-      return res.status(201).json({
-        code: 'success',
-        data: result,
-      });
-    } catch (error) {
-      this.logger.error('[createType] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        let userMessage = errorMessage;
-
-        // 友好的错误消息
-        if (errorMessage.includes('父分类不存在')) {
-          userMessage = '父分类不存在，请重新选择';
-        } else if (errorMessage.includes('父分类类型不匹配')) {
-          userMessage = '父分类类型不匹配，请重新选择';
-        } else if (errorMessage.includes('不能创建四级分类')) {
-          userMessage = '不能创建四级分类，最多支持三级分类';
-        } else if (errorMessage.includes('分类名称已存在')) {
-          userMessage = '该分类名称已存在，请使用其他名称';
-        }
-
-        return res.status(400).json({
-          code: 'error',
-          message: userMessage,
-        });
-      }
-
-      // 其他未知错误
-      return res.status(500).json({
-        code: 'error',
-        message: '服务器内部错误，请稍后重试',
-      });
+    // 验证图库类型
+    if (galleryType !== 'drawings' && galleryType !== 'blocks') {
+      throw new InternalServerErrorException('无效的图库类型');
     }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
+    }
+
+    return this.galleryService.createType(
+      galleryType as 'drawings' | 'blocks',
+      body.name,
+      body.pid || 0,
+      userId
+    );
   }
 
   /**
@@ -438,70 +342,28 @@ export class GalleryController {
     @Param('galleryType') galleryType: string,
     @Param('typeId', ParseIntPipe) typeId: number,
     @Req() req: any,
-    @Body() body: { name: string },
-    @Res() res: Response
+    @Body() body: { name: string }
   ) {
-    try {
-      this.logger.log(
-        `[updateType] 更新分类: ${galleryType}, typeId: ${typeId}, ${JSON.stringify(body)}`
-      );
+    this.logger.log(
+      `[updateType] 更新分类: ${galleryType}, typeId: ${typeId}, ${JSON.stringify(body)}`
+    );
 
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        return res.status(400).json({
-          code: 'error',
-          message: '无效的图库类型',
-        });
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(400).json({
-          code: 'error',
-          message: '用户 ID 不存在',
-        });
-      }
-
-      const result = await this.galleryService.updateType(
-        typeId,
-        body.name,
-        galleryType as 'drawings' | 'blocks',
-        userId
-      );
-
-      return res.status(200).json({
-        code: 'success',
-        data: result,
-      });
-    } catch (error) {
-      this.logger.error('[updateType] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        let userMessage = errorMessage;
-
-        // 友好的错误消息
-        if (errorMessage.includes('分类不存在')) {
-          userMessage = '分类不存在，请刷新页面后重试';
-        } else if (errorMessage.includes('分类类型不匹配')) {
-          userMessage = '分类类型不匹配，请刷新页面后重试';
-        } else if (errorMessage.includes('分类名称已存在')) {
-          userMessage = '该分类名称已存在，请使用其他名称';
-        }
-
-        return res.status(400).json({
-          code: 'error',
-          message: userMessage,
-        });
-      }
-
-      // 其他未知错误
-      return res.status(500).json({
-        code: 'error',
-        message: '服务器内部错误，请稍后重试',
-      });
+    // 验证图库类型
+    if (galleryType !== 'drawings' && galleryType !== 'blocks') {
+      throw new InternalServerErrorException('无效的图库类型');
     }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
+    }
+
+    return this.galleryService.updateType(
+      typeId,
+      body.name,
+      galleryType as 'drawings' | 'blocks',
+      userId
+    );
   }
 
   /**
@@ -521,72 +383,27 @@ export class GalleryController {
   async deleteType(
     @Param('galleryType') galleryType: string,
     @Param('typeId', ParseIntPipe) typeId: number,
-    @Req() req: any,
-    @Res() res: Response
+    @Req() req: any
   ) {
-    try {
-      this.logger.log(
-        `[deleteType] 删除分类: ${galleryType}, typeId: ${typeId}`
-      );
+    this.logger.log(`[deleteType] 删除分类: ${galleryType}, typeId: ${typeId}`);
 
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        return res.status(400).json({
-          code: 'error',
-          message: '无效的图库类型',
-        });
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(400).json({
-          code: 'error',
-          message: '用户 ID 不存在',
-        });
-      }
-
-      await this.galleryService.deleteType(
-        typeId,
-        galleryType as 'drawings' | 'blocks',
-        userId
-      );
-
-      return res.status(200).json({
-        code: 'success',
-        message: '删除成功',
-      });
-    } catch (error) {
-      this.logger.error('[deleteType] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        let userMessage = errorMessage;
-
-        // 友好的错误消息
-        if (errorMessage.includes('分类不存在')) {
-          userMessage = '分类不存在，请刷新页面后重试';
-        } else if (errorMessage.includes('分类类型不匹配')) {
-          userMessage = '分类类型不匹配，请刷新页面后重试';
-        } else if (errorMessage.includes('该分类下有子分类')) {
-          userMessage = '该分类下有子分类，无法删除。请先删除子分类。';
-        } else if (errorMessage.includes('该分类下有文件')) {
-          userMessage =
-            '该分类下有文件，无法删除。请先将文件移到其他分类或从图库中移除。';
-        }
-
-        return res.status(400).json({
-          code: 'error',
-          message: userMessage,
-        });
-      }
-
-      // 其他未知错误
-      return res.status(500).json({
-        code: 'error',
-        message: '服务器内部错误，请稍后重试',
-      });
+    // 验证图库类型
+    if (galleryType !== 'drawings' && galleryType !== 'blocks') {
+      throw new InternalServerErrorException('无效的图库类型');
     }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
+    }
+
+    await this.galleryService.deleteType(
+      typeId,
+      galleryType as 'drawings' | 'blocks',
+      userId
+    );
+
+    return { message: '删除成功' };
   }
 
   /**
@@ -606,76 +423,30 @@ export class GalleryController {
   async addToGallery(
     @Param('galleryType') galleryType: string,
     @Req() req: any,
-    @Body() body: AddToGalleryDto,
-    @Res() res: Response
+    @Body() body: AddToGalleryDto
   ) {
-    try {
-      this.logger.log(
-        `[addToGallery] 添加文件到图库: ${galleryType}, nodeId=${body.nodeId}, firstType=${body.firstType}, secondType=${body.secondType}`
-      );
+    this.logger.log(
+      `[addToGallery] 添加文件到图库: ${galleryType}, nodeId=${body.nodeId}, firstType=${body.firstType}, secondType=${body.secondType}`
+    );
 
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        return res.status(400).json({
-          code: 'error',
-          message: '无效的图库类型',
-        });
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(400).json({
-          code: 'error',
-          message: '用户 ID 不存在',
-        });
-      }
-
-      const result = await this.galleryService.addToGallery(
-        body.nodeId,
-        body.firstType,
-        body.secondType,
-        body.thirdType,
-        galleryType as 'drawings' | 'blocks',
-        userId
-      );
-
-      return res.status(201).json({
-        code: 'success',
-        data: result,
-      });
-    } catch (error) {
-      this.logger.error('[addToGallery] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        let userMessage = errorMessage;
-
-        // 友好的错误消息
-        if (errorMessage.includes('文件不存在')) {
-          userMessage = '文件不存在，请检查文件是否被删除';
-        } else if (errorMessage.includes('不能添加文件夹')) {
-          userMessage = '不能将文件夹添加到图库';
-        } else if (errorMessage.includes('分类不存在')) {
-          userMessage = '选择的分类不存在，请重新选择';
-        } else if (errorMessage.includes('分类类型不匹配')) {
-          userMessage = '分类类型不匹配，请重新选择';
-        } else if (errorMessage.includes('该文件已经在图库中')) {
-          userMessage = '该文件已经在图库中，无需重复添加';
-        }
-
-        return res.status(400).json({
-          code: 'error',
-          message: userMessage,
-        });
-      }
-
-      // 其他未知错误
-      return res.status(500).json({
-        code: 'error',
-        message: '服务器内部错误，请稍后重试',
-      });
+    // 验证图库类型
+    if (galleryType !== 'drawings' && galleryType !== 'blocks') {
+      throw new InternalServerErrorException('无效的图库类型');
     }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
+    }
+
+    return this.galleryService.addToGallery(
+      body.nodeId,
+      body.firstType,
+      body.secondType,
+      body.thirdType,
+      galleryType as 'drawings' | 'blocks',
+      userId
+    );
   }
 
   /**
@@ -694,58 +465,29 @@ export class GalleryController {
   async removeFromGallery(
     @Param('galleryType') galleryType: string,
     @Param('nodeId') nodeId: string,
-    @Req() req: any,
-    @Res() res: Response
+    @Req() req: any
   ) {
-    try {
-      this.logger.log(
-        `[removeFromGallery] 从图库移除文件: ${galleryType}, nodeId: ${nodeId}`
-      );
+    this.logger.log(
+      `[removeFromGallery] 从图库移除文件: ${galleryType}, nodeId: ${nodeId}`
+    );
 
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        throw new InternalServerErrorException('无效的图库类型');
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      await this.galleryService.removeFromGallery(
-        nodeId,
-        galleryType as 'drawings' | 'blocks',
-        userId
-      );
-
-      return res.status(200).json({
-        code: 'success',
-        message: '已从图库中移除',
-      });
-    } catch (error) {
-      this.logger.error('[removeFromGallery] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        let userMessage = errorMessage;
-
-        if (errorMessage.includes('文件不存在')) {
-          userMessage = '文件不存在，请检查文件是否被删除';
-        } else if (errorMessage.includes('文件不在图库中')) {
-          userMessage = '文件不在图库中';
-        } else if (errorMessage.includes('图库类型不匹配')) {
-          userMessage = '图库类型不匹配';
-        }
-
-        return res.status(400).json({
-          code: 'error',
-          message: userMessage,
-        });
-      }
-
-      throw error;
+    // 验证图库类型
+    if (galleryType !== 'drawings' && galleryType !== 'blocks') {
+      throw new InternalServerErrorException('无效的图库类型');
     }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
+    }
+
+    await this.galleryService.removeFromGallery(
+      nodeId,
+      galleryType as 'drawings' | 'blocks',
+      userId
+    );
+
+    return { message: '已从图库中移除' };
   }
 
   /**
@@ -765,65 +507,30 @@ export class GalleryController {
     @Param('galleryType') galleryType: string,
     @Param('nodeId') nodeId: string,
     @Req() req: any,
-    @Body() body: { firstType: number; secondType: number; thirdType?: number },
-    @Res() res: Response
+    @Body() body: { firstType: number; secondType: number; thirdType?: number }
   ) {
-    try {
-      this.logger.log(
-        `[updateGalleryItem] 更新图库文件分类: ${galleryType}, nodeId: ${nodeId}, ${JSON.stringify(body)}`
-      );
+    this.logger.log(
+      `[updateGalleryItem] 更新图库文件分类: ${galleryType}, nodeId: ${nodeId}, ${JSON.stringify(body)}`
+    );
 
-      // 验证图库类型
-      if (galleryType !== 'drawings' && galleryType !== 'blocks') {
-        throw new InternalServerErrorException('无效的图库类型');
-      }
-
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new InternalServerErrorException('用户 ID 不存在');
-      }
-
-      const result = await this.galleryService.updateGalleryItem(
-        nodeId,
-        body.firstType,
-        body.secondType,
-        body.thirdType,
-        galleryType as 'drawings' | 'blocks',
-        userId
-      );
-
-      return res.status(200).json({
-        code: 'success',
-        data: result,
-      });
-    } catch (error) {
-      this.logger.error('[updateGalleryItem] 错误:', error);
-
-      // 处理业务错误
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        let userMessage = errorMessage;
-
-        if (errorMessage.includes('文件不存在')) {
-          userMessage = '文件不存在，请检查文件是否被删除';
-        } else if (errorMessage.includes('文件不在图库中')) {
-          userMessage = '文件不在图库中';
-        } else if (errorMessage.includes('图库类型不匹配')) {
-          userMessage = '图库类型不匹配';
-        } else if (errorMessage.includes('分类不存在')) {
-          userMessage = '选择的分类不存在，请重新选择';
-        } else if (errorMessage.includes('分类类型不匹配')) {
-          userMessage = '分类类型不匹配，请重新选择';
-        }
-
-        return res.status(400).json({
-          code: 'error',
-          message: userMessage,
-        });
-      }
-
-      throw error;
+    // 验证图库类型
+    if (galleryType !== 'drawings' && galleryType !== 'blocks') {
+      throw new InternalServerErrorException('无效的图库类型');
     }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new InternalServerErrorException('用户 ID 不存在');
+    }
+
+    return this.galleryService.updateGalleryItem(
+      nodeId,
+      body.firstType,
+      body.secondType,
+      body.thirdType,
+      galleryType as 'drawings' | 'blocks',
+      userId
+    );
   }
 
   /**

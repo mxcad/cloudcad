@@ -14,8 +14,8 @@ const __dirname = path.dirname(__filename);
 
 const SWAGGER_URL = 'http://localhost:3001/api/docs-json';
 const LOCAL_SWAGGER_FILE = path.join(__dirname, '../../../swagger_json.json');
-const OUTPUT_FILE = path.join(__dirname, '../types/api-client.ts');
-const VALIDATION_FILE = path.join(__dirname, '../utils/validation.ts');
+const OUTPUT_FILE = path.join(__dirname, '../src/types/api-client.ts');
+const VALIDATION_FILE = path.join(__dirname, '../src/utils/validation.ts');
 
 console.log('🚀 开始生成 OpenAPI 客户端类型...');
 
@@ -190,7 +190,7 @@ ${parts.join(',\n')}
     "    required: '密码不能为空',",
     "    minLength: '密码至少8个字符',",
     "    maxLength: '密码最多50个字符',",
-    "    pattern: '密码必须包含至少1个大写字母、1个小写字母、1个数字和1个特殊字符',",
+
     '  },',
     '  nickname: {',
     "    maxLength: '昵称最多50个字符',",

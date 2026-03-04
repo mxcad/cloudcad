@@ -60,6 +60,7 @@
     "@nestjs/schedule": "^6.1.0",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/terminus": "^11.0.0",
+    "@nestjs/throttler": "^6.5.0",
     "@paralleldrive/cuid2": "^3.0.4",
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",

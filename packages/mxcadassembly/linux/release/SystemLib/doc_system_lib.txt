@@ -1,0 +1,7 @@
+docker使用:
+使用Ubuntu Linux作为基础镜像
+FROM ubuntu:24.04
+sudo cp ./mx/so/libiconv.so.2 /lib/x86_64-linux-gnu/libiconv.so.2
+sudo chmod -R 777 mxcadassembly
+sudo chmod -R 777 /lib/x86_64-linux-gnu/libiconv.so.2
+sudo  cp -r -f ./mx/locale /usr/local/share/locale

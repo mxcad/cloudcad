@@ -40,6 +40,7 @@ import {
   ForgotPasswordApiResponseDto,
   ResetPasswordApiResponseDto,
 } from './dto/password-reset.dto';
+import { UserProfileResponseDto } from '../users/dto/user-response.dto';
 
 @ApiTags('认证')
 @Controller('auth')
@@ -120,6 +121,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: '获取用户信息成功',
+    type: UserProfileResponseDto,
   })
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiBearerAuth()

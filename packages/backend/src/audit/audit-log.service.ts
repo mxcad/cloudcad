@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   ForbiddenException,
+  NotFoundException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
@@ -85,7 +86,8 @@ export class AuditLogService {
         `审计日志记录: ${action} - ${resourceType} - ${resourceId} - ${userId} - ${success ? '成功' : '失败'}`
       );
     } catch (error) {
-      this.logger.error(`记录审计日志失败: ${error.message}`, error.stack);
+      const err = error as Error;
+      this.logger.error(`记录审计日志失败: ${err.message}`, err.stack);
       // 不抛出异常，避免影响主业务流程
     }
   }
@@ -248,7 +250,7 @@ export class AuditLogService {
     });
 
     if (!log) {
-      throw new Error(`审计日志 ID ${id} 不存在`);
+      throw new NotFoundException(`审计日志 ID ${id} 不存在`);
     }
 
     return log;

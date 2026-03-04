@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
@@ -210,11 +216,11 @@ export class NodeCreationService {
         });
 
         if (!parentNode) {
-          throw new Error(`父节点不存在或已被删除: ${parentId}`);
+          throw new NotFoundException(`父节点不存在或已被删除: ${parentId}`);
         }
 
         if (!parentNode.isFolder) {
-          throw new Error(`父节点不是文件夹: ${parentId}`);
+          throw new BadRequestException(`父节点不是文件夹: ${parentId}`);
         }
 
         // 检查是否已存在相同哈希的文件节点
@@ -268,7 +274,7 @@ export class NodeCreationService {
 
       // 确保 nodeId 已被赋值
       if (!nodeId) {
-        throw new Error('节点创建失败：nodeId 未被赋值');
+        throw new InternalServerErrorException('节点创建失败：nodeId 未被赋值');
       }
 
       // 阶段2：IO操作（事务外）
@@ -277,7 +283,7 @@ export class NodeCreationService {
           // 检查源文件是否存在
           const sourceExists = await FileUtils.exists(sourceFilePath);
           if (!sourceExists) {
-            throw new Error(`源文件不存在: ${sourceFilePath}`);
+            throw new NotFoundException(`源文件不存在: ${sourceFilePath}`);
           }
 
           // 分配存储空间
@@ -292,7 +298,7 @@ export class NodeCreationService {
             storageInfo.fullPath
           );
           if (!copySuccess) {
-            throw new Error('文件拷贝失败');
+            throw new InternalServerErrorException('文件拷贝失败');
           }
 
           // 更新节点的 path
@@ -387,7 +393,7 @@ export class NodeCreationService {
         });
 
         if (!existingNode) {
-          throw new Error(`未找到哈希为 ${hash} 的文件节点`);
+          throw new NotFoundException(`未找到哈希为 ${hash} 的文件节点`);
         }
 
         // 保存原节点信息供事务外使用
@@ -421,11 +427,11 @@ export class NodeCreationService {
         });
 
         if (!parentNode) {
-          throw new Error(`父节点不存在或已被删除: ${parentId}`);
+          throw new NotFoundException(`父节点不存在或已被删除: ${parentId}`);
         }
 
         if (!parentNode.isFolder) {
-          throw new Error(`父节点不是文件夹: ${parentId}`);
+          throw new BadRequestException(`父节点不是文件夹: ${parentId}`);
         }
 
         // 生成唯一文件名
@@ -462,14 +468,14 @@ export class NodeCreationService {
 
       // 确保 newNodeId 已被赋值
       if (!newNodeId) {
-        throw new Error('节点引用失败：newNodeId 未被赋值');
+        throw new InternalServerErrorException('节点引用失败：newNodeId 未被赋值');
       }
 
       // 阶段2：IO操作（事务外）
       try {
         // 检查 originalNodeInfo 是否存在
         if (!originalNodeInfo || !originalNodeInfo.extension) {
-          throw new Error('原节点信息缺失');
+          throw new BadRequestException('原节点信息缺失');
         }
 
         // 分配存储空间
@@ -486,7 +492,7 @@ export class NodeCreationService {
         });
 
         if (!sourceNode || !sourceNode.path) {
-          throw new Error('原节点路径不存在');
+          throw new NotFoundException('原节点路径不存在');
         }
 
         // 拷贝文件
@@ -496,7 +502,7 @@ export class NodeCreationService {
           storageInfo.fullPath
         );
         if (!copySuccess) {
-          throw new Error('文件拷贝失败');
+          throw new InternalServerErrorException('文件拷贝失败');
         }
 
         // 更新节点的 path

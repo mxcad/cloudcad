@@ -83,7 +83,7 @@ export class L2CacheProvider<T = unknown>
       }
 
       this.hits++;
-      return JSON.parse(value) as K;
+      return JSON.parse(value as string) as K;
     } catch (error) {
       this.logger.error(`获取 L2 缓存失败: ${key}`, error);
       this.misses++;
@@ -203,7 +203,7 @@ export class L2CacheProvider<T = unknown>
 
       for (let i = 0; i < keys.length; i++) {
         const value = values[i];
-        if (value !== null) {
+        if (value !== null && value !== undefined && typeof value === 'string') {
           result.set(keys[i], JSON.parse(value) as K);
           this.hits++;
         } else {
@@ -359,7 +359,7 @@ export class L2CacheProvider<T = unknown>
 
     try {
       const info = await this.client.info('memory');
-      const match = info.match(/used_memory:(\d+)/);
+      const match = info?.match(/used_memory:(\d+)/);
       return match ? parseInt(match[1], 10) : 0;
     } catch (error) {
       this.logger.error('获取 Redis 内存使用量失败', error);

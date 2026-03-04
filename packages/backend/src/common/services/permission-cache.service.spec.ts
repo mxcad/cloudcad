@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { SystemPermission, SystemRole } from '../enums/permissions.enum';

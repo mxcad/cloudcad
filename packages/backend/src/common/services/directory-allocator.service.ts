@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileLockService } from './file-lock.service';
 import { LocalStorageProvider } from '../../storage/local-storage.provider';
@@ -52,7 +56,9 @@ export class DirectoryAllocator {
       suffix++;
     }
 
-    throw new Error(`无法分配目录：所有 ${yearMonth} 相关目录都已满`);
+    throw new InternalServerErrorException(
+      `无法分配目录：所有 ${yearMonth} 相关目录都已满`
+    );
   }
 
   /**

@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import {
   GalleryTypeDto,
@@ -94,10 +100,7 @@ export class GalleryService {
     }
 
     return {
-      code: 'success',
-      result: {
-        allblocks,
-      },
+      allblocks,
     };
   }
 
@@ -340,16 +343,16 @@ export class GalleryService {
       });
 
       if (!parentType) {
-        throw new Error('父分类不存在');
+        throw new NotFoundException('父分类不存在');
       }
 
       // 验证父分类是否属于当前用户
       if (parentType.ownerId !== userId) {
-        throw new Error('父分类不存在');
+        throw new NotFoundException('父分类不存在');
       }
 
       if (parentType.galleryType !== galleryType) {
-        throw new Error('父分类类型不匹配');
+        throw new BadRequestException('父分类类型不匹配');
       }
 
       // 支持三级分类：父分类的 pid 不能是二级分类（即不能创建四级分类）
@@ -360,7 +363,7 @@ export class GalleryService {
         });
 
         if (grandParentType && grandParentType.pid !== 0) {
-          throw new Error('不能创建四级分类');
+          throw new BadRequestException('不能创建四级分类');
         }
       }
     }
@@ -375,7 +378,7 @@ export class GalleryService {
     });
 
     if (existingType) {
-      throw new Error('分类名称已存在');
+      throw new ConflictException('分类名称已存在');
     }
 
     // 创建分类
@@ -425,16 +428,16 @@ export class GalleryService {
     });
 
     if (!existingType) {
-      throw new Error('分类不存在');
+      throw new NotFoundException('分类不存在');
     }
 
     // 验证分类是否属于当前用户
     if (existingType.ownerId !== userId) {
-      throw new Error('分类不存在');
+      throw new NotFoundException('分类不存在');
     }
 
     if (existingType.galleryType !== galleryType) {
-      throw new Error('分类类型不匹配');
+      throw new BadRequestException('分类类型不匹配');
     }
 
     // 检查分类名称是否重复
@@ -449,7 +452,7 @@ export class GalleryService {
     });
 
     if (duplicateType) {
-      throw new Error('分类名称已存在');
+      throw new ConflictException('分类名称已存在');
     }
 
     // 更新分类
@@ -491,16 +494,16 @@ export class GalleryService {
     });
 
     if (!existingType) {
-      throw new Error('分类不存在');
+      throw new NotFoundException('分类不存在');
     }
 
     // 验证分类是否属于当前用户
     if (existingType.ownerId !== userId) {
-      throw new Error('分类不存在');
+      throw new NotFoundException('分类不存在');
     }
 
     if (existingType.galleryType !== galleryType) {
-      throw new Error('分类类型不匹配');
+      throw new BadRequestException('分类类型不匹配');
     }
 
     // 检查是否有子分类
@@ -513,7 +516,7 @@ export class GalleryService {
     });
 
     if (childTypes.length > 0) {
-      throw new Error('该分类下有子分类，无法删除');
+      throw new BadRequestException('该分类下有子分类，无法删除');
     }
 
     // 检查是否有文件关联
@@ -526,7 +529,7 @@ export class GalleryService {
     });
 
     if (relatedItems.length > 0) {
-      throw new Error('该分类下有文件，无法删除');
+      throw new BadRequestException('该分类下有文件，无法删除');
     }
 
     // 删除分类
@@ -627,11 +630,11 @@ export class GalleryService {
     });
 
     if (!node) {
-      throw new Error('文件不存在');
+      throw new NotFoundException('文件不存在');
     }
 
     if (node.isFolder) {
-      throw new Error('不能添加文件夹到图库');
+      throw new BadRequestException('不能添加文件夹到图库');
     }
 
     // 注意：权限检查在 Controller 层通过 @RequirePermissions 装饰器完成
@@ -643,11 +646,11 @@ export class GalleryService {
     });
 
     if (!type) {
-      throw new Error('分类不存在');
+      throw new NotFoundException('分类不存在');
     }
 
     if (type.galleryType !== galleryType) {
-      throw new Error('分类类型不匹配');
+      throw new BadRequestException('分类类型不匹配');
     }
 
     // 验证一级分类存在且为一级分类（pid = 0）
@@ -656,20 +659,20 @@ export class GalleryService {
     });
 
     if (!firstTypeRecord) {
-      throw new Error('一级分类不存在');
+      throw new NotFoundException('一级分类不存在');
     }
 
     if (firstTypeRecord.pid !== 0) {
-      throw new Error('一级分类必须是顶级分类');
+      throw new BadRequestException('一级分类必须是顶级分类');
     }
 
     if (firstTypeRecord.galleryType !== galleryType) {
-      throw new Error('一级分类类型不匹配');
+      throw new BadRequestException('一级分类类型不匹配');
     }
 
     // 验证二级分类属于一级分类
     if (type.pid !== firstType) {
-      throw new Error('二级分类不属于选择的一级分类');
+      throw new BadRequestException('二级分类不属于选择的一级分类');
     }
 
     // 检查是否已经添加到图库（检查 GalleryItem 表）
@@ -683,7 +686,7 @@ export class GalleryService {
     });
 
     if (existingItem) {
-      throw new Error('该文件已经在您的图库中');
+      throw new ConflictException('该文件已经在您的图库中');
     }
 
     // 创建图库收藏记录
@@ -768,7 +771,7 @@ export class GalleryService {
     });
 
     if (!galleryItem) {
-      throw new Error('文件不在图库中');
+      throw new NotFoundException('文件不在图库中');
     }
 
     // 验证分类存在
@@ -777,11 +780,11 @@ export class GalleryService {
     });
 
     if (!type) {
-      throw new Error('分类不存在');
+      throw new NotFoundException('分类不存在');
     }
 
     if (type.galleryType !== galleryType) {
-      throw new Error('分类类型不匹配');
+      throw new BadRequestException('分类类型不匹配');
     }
 
     // 更新图库收藏记录的分类

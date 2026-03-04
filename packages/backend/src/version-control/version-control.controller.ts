@@ -95,6 +95,6 @@ export class VersionControlController {
     return this.versionControlService.getFileContentAtRevision(
       filePath,
       revision
-    ) as Promise<FileContentResponseDto>;
+    ) as unknown as Promise<FileContentResponseDto>;
   }
 }

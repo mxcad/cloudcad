@@ -146,3 +146,46 @@ export function svnCat(
   password: string | null,
   callback: SvnCallback
 ): void;
+
+/**
+ * SVN 检查结果
+ */
+export interface SvnCheckResult {
+  available: boolean;
+  version: string | null;
+  message: string;
+}
+
+/**
+ * 平台信息
+ */
+export interface PlatformInfo {
+  platform: string;
+  isWindows: boolean;
+  svnPath: string;
+  svnadminPath: string;
+}
+
+/**
+ * SVN 检查回调函数类型
+ */
+export type SvnCheckCallback = (error: Error | null, result?: SvnCheckResult) => void;
+
+/**
+ * 检查 SVN 是否可用（异步）
+ * @param callback - 回调函数
+ */
+export function checkSvnAvailable(callback: SvnCheckCallback): void;
+
+/**
+ * 检查 SVN 是否可用（同步）
+ * 仅用于启动时快速检查，会阻塞进程
+ * @returns SVN 检查结果
+ */
+export function checkSvnAvailableSync(): SvnCheckResult;
+
+/**
+ * 获取当前平台信息
+ * @returns 平台信息对象
+ */
+export function getPlatformInfo(): PlatformInfo;

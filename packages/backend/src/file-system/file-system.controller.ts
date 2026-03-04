@@ -89,7 +89,7 @@ export class FileSystemController {
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 403, description: '无权限创建项目' })
-  async createProject(@Request() req, @Body() dto: CreateProjectDto) {
+  async createProject(@Request() req: ExpressRequest & { user: { id: string } }, @Body() dto: CreateProjectDto) {
     return this.fileSystemService.createProject(req.user.id, dto);
   }
 
@@ -100,7 +100,7 @@ export class FileSystemController {
     description: '获取项目列表成功',
     type: ProjectListResponseDto,
   })
-  async getProjects(@Request() req, @Query() query?: QueryProjectsDto) {
+  async getProjects(@Request() req: ExpressRequest & { user: { id: string } }, @Query() query?: QueryProjectsDto) {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
 
@@ -111,7 +111,7 @@ export class FileSystemController {
     description: '获取已删除项目列表成功',
     type: ProjectListResponseDto,
   })
-  async getDeletedProjects(@Request() req, @Query() query?: QueryProjectsDto) {
+  async getDeletedProjects(@Request() req: ExpressRequest & { user: { id: string } }, @Query() query?: QueryProjectsDto) {
     this.logger.log(
       `获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`
     );
@@ -781,41 +781,21 @@ export class FileSystemController {
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限访问该节点' })
   @ApiResponse({ status: 404, description: '节点不存在' })
+  @RequireProjectPermission(ProjectPermission.FILE_DOWNLOAD)
   async downloadNode(
     @Param('nodeId') nodeId: string,
     @Request() req: ExpressRequest,
     @Res() res: Response
   ) {
-    const userId =
-      (req.user as { id?: string })?.id ||
-      (req.session as { userId?: string })?.userId;
+    const userId = (req.user as { id: string }).id;
     const clientIp = req.ip || req.connection.remoteAddress;
-
-    if (!userId) {
-      throw new UnauthorizedException('未登录');
-    }
 
     try {
       const { stream, filename, mimeType } =
         await this.fileSystemService.downloadNode(nodeId, userId);
 
-      // 设置必要的响应头后再开始传输
-      // 1. CORS 头（必须在最前面）
-      const origin = req.headers.origin || '*';
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, DELETE, OPTIONS'
-      );
-      res.setHeader(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization'
-      );
-
-      this.logger.log(`[下载] CORS 头设置完成: ${origin}`);
-
-      // 2. Content-Type
+      // 设置响应头
+      // 1. Content-Type
       res.setHeader('Content-Type', mimeType);
 
       // 3. Content-Disposition

@@ -3,6 +3,8 @@ import {
   Logger,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -64,9 +66,10 @@ export class AuthService {
       await this.emailVerificationService.sendVerificationEmail(email);
       this.logger.log(`验证码已发送: ${email}`);
     } catch (error) {
-      this.logger.error(`发送验证码失败: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`发送验证码失败: ${err.message}`);
       await this.redis.del(registerKey);
-      throw new Error('发送验证码失败，请稍后重试');
+      throw new InternalServerErrorException('发送验证码失败，请稍后重试');
     }
 
     return {
@@ -88,7 +91,7 @@ export class AuthService {
 
     if (!isValid) {
       this.logger.error(`验证码验证失败: ${email}`);
-      throw new Error('验证码验证失败');
+      throw new BadRequestException('验证码验证失败');
     }
 
     this.logger.log(`验证码验证成功: ${email}`);
@@ -100,7 +103,7 @@ export class AuthService {
 
     if (!registerDataStr) {
       this.logger.error(`注册信息已过期: ${email}`);
-      throw new Error('注册信息已过期，请重新注册');
+      throw new BadRequestException('注册信息已过期，请重新注册');
     }
 
     const registerData = JSON.parse(registerDataStr);
@@ -115,7 +118,7 @@ export class AuthService {
     });
 
     if (!defaultRole) {
-      throw new Error('默认角色不存在');
+      throw new InternalServerErrorException('默认角色不存在');
     }
 
     await this.prisma.user.create({
@@ -299,7 +302,8 @@ export class AuthService {
       await this.deleteAllRefreshTokens(userId);
       this.logger.log(`用户退出登录，已删除刷新令牌: ${userId}`);
     } catch (error) {
-      this.logger.error(`登出失败: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`登出失败: ${err.message}`);
       throw new UnauthorizedException('登出失败');
     }
   }
@@ -427,7 +431,7 @@ export class AuthService {
     const jwtSecret = this.configService.get<string>('jwt.secret');
 
     if (!jwtSecret) {
-      throw new Error('JWT_SECRET environment variable is required');
+      throw new InternalServerErrorException('JWT_SECRET environment variable is required');
     }
 
     const [accessToken, refreshToken] = await Promise.all([

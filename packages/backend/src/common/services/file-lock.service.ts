@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -143,7 +147,7 @@ export class FileLockService {
       }
     }
 
-    throw new Error(
+    throw new InternalServerErrorException(
       `获取锁超时: ${lockName} (重试 ${this.maxRetries} 次后失败)`
     );
   }

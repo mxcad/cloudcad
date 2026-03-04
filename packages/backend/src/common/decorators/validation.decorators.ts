@@ -7,31 +7,64 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  registerDecorator,
 } from 'class-validator';
 
 /**
- * 强密码验证装饰器 - 统一密码策略
- * 要求: 8-50位，包含大小写字母、数字和特殊字符
+ * 字段匹配验证器 - 验证两个字段是否相等
+ */
+@ValidatorConstraint({ name: 'isMatch', async: false })
+export class IsMatchConstraint implements ValidatorConstraintInterface {
+  validate(value: unknown, args: ValidationArguments): boolean {
+    const [relatedPropertyName] = args.constraints;
+    const relatedValue = (args.object as Record<string, unknown>)[
+      relatedPropertyName
+    ];
+    return value === relatedValue;
+  }
+
+  defaultMessage(args: ValidationArguments): string {
+    const [relatedPropertyName] = args.constraints;
+    return `${args.property} 必须与 ${relatedPropertyName} 相同`;
+  }
+}
+
+/**
+ * 字段匹配验证装饰器
+ * @param property 要匹配的属性名
+ * @param validationOptions 验证选项
+ */
+export function IsMatch(property: string, validationOptions?: object) {
+  return function (object: object, propertyName: string): void {
+    registerDecorator({
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      constraints: [property],
+      validator: IsMatchConstraint,
+    });
+  };
+}
+
+/**
+ * 密码验证装饰器 - 统一密码策略
+ * 要求: 8-50位
  */
 export function IsStrongPassword() {
-  const passwordPattern =
-    '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,50}$';
-
   return applyDecorators(
     ApiProperty({
       description: '密码',
-      example: 'Password123!',
+      example: 'password123',
       minLength: 8,
       maxLength: 50,
-      pattern: passwordPattern,
     }),
     IsString({ message: '密码必须是字符串' }),
     IsNotEmpty({ message: '密码不能为空' }),
     MinLength(8, { message: '密码至少8个字符' }),
-    MaxLength(50, { message: '密码最多50个字符' }),
-    Matches(new RegExp(passwordPattern), {
-      message: '密码必须包含至少1个大写字母、1个小写字母、1个数字和1个特殊字符',
-    })
+    MaxLength(50, { message: '密码最多50个字符' })
   );
 }
 

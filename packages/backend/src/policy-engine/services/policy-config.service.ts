@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
 import { PolicyEngineService } from './policy-engine.service';
@@ -83,7 +88,7 @@ export class PolicyConfigService {
       return this.formatPolicyConfig(policyRecord, config.permissions);
     } catch (error) {
       this.logger.error(`创建策略配置失败: ${error.message}`, error.stack);
-      throw new Error(`创建策略配置失败: ${error.message}`);
+      throw new InternalServerErrorException(`创建策略配置失败: ${error.message}`);
     }
   }
 
@@ -105,7 +110,7 @@ export class PolicyConfigService {
       });
 
       if (!existing) {
-        throw new Error(`策略配置不存在: ${policyId}`);
+        throw new NotFoundException(`策略配置不存在: ${policyId}`);
       }
 
       // 如果更新了 config，验证新配置
@@ -162,7 +167,7 @@ export class PolicyConfigService {
       );
     } catch (error) {
       this.logger.error(`更新策略配置失败: ${error.message}`, error.stack);
-      throw new Error(`更新策略配置失败: ${error.message}`);
+      throw new InternalServerErrorException(`更新策略配置失败: ${error.message}`);
     }
   }
 
@@ -187,7 +192,7 @@ export class PolicyConfigService {
       this.logger.log(`策略配置删除成功: ${policyId} by ${deletedBy}`);
     } catch (error) {
       this.logger.error(`删除策略配置失败: ${error.message}`, error.stack);
-      throw new Error(`删除策略配置失败: ${error.message}`);
+      throw new InternalServerErrorException(`删除策略配置失败: ${error.message}`);
     }
   }
 
@@ -227,7 +232,7 @@ export class PolicyConfigService {
       return formatted;
     } catch (error) {
       this.logger.error(`获取策略配置失败: ${error.message}`, error.stack);
-      throw new Error(`获取策略配置失败: ${error.message}`);
+      throw new InternalServerErrorException(`获取策略配置失败: ${error.message}`);
     }
   }
 
@@ -266,7 +271,7 @@ export class PolicyConfigService {
       return formatted;
     } catch (error) {
       this.logger.error(`获取所有策略配置失败: ${error.message}`, error.stack);
-      throw new Error(`获取所有策略配置失败: ${error.message}`);
+      throw new InternalServerErrorException(`获取所有策略配置失败: ${error.message}`);
     }
   }
 
@@ -322,7 +327,7 @@ export class PolicyConfigService {
         `获取权限的策略配置失败: ${error.message}`,
         error.stack
       );
-      throw new Error(`获取权限的策略配置失败: ${error.message}`);
+      throw new InternalServerErrorException(`获取权限的策略配置失败: ${error.message}`);
     }
   }
 

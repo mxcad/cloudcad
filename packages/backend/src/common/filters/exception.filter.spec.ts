@@ -13,6 +13,7 @@ describe('GlobalExceptionFilter', () => {
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
+      setHeader: jest.fn(),
     };
 
     mockRequest = {
@@ -40,7 +41,7 @@ describe('GlobalExceptionFilter', () => {
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
-        code: 'INTERNAL_SERVER_ERROR', // 字符串消息时使用默认代码
+        code: 'BAD_REQUEST', // 字符串消息时基于 HTTP status 返回对应 code
         message: 'Test error',
         timestamp: expect.any(String),
         path: '/test',

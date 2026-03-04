@@ -81,12 +81,11 @@ export class SessionController {
    * 清除 Session
    */
   @Post('destroy')
-  async destroySession(@Req() req: Request, @Res() res: Response) {
+  async destroySession(@Req() req: Request, @Res() res: Response): Promise<void> {
     req.session.destroy((err) => {
       if (err) {
-        return res
-          .status(500)
-          .json({ success: false, message: 'Session 销毁失败' });
+        res.status(500).json({ success: false, message: 'Session 销毁失败' });
+        return;
       }
       res.clearCookie('mxcad.sid');
       res.json({ success: true, message: 'Session 已销毁' });

@@ -1,4 +1,12 @@
-﻿import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  forwardRef,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { FileSystemService } from '../../file-system/file-system.service';
 import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
@@ -556,7 +564,7 @@ export class FileUploadManagerService {
         await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
-        throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
+        throw new NotFoundException(`源图纸节点不存在: ${srcDwgNodeId}`);
       }
 
       // 获取源图纸文件完整路径
@@ -628,7 +636,7 @@ export class FileUploadManagerService {
         await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
-        throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
+        throw new NotFoundException(`源图纸节点不存在: ${srcDwgNodeId}`);
       }
 
       // 获取源图纸文件完整路径
@@ -667,7 +675,7 @@ export class FileUploadManagerService {
 
       // 检查源文件是否存在
       if (!(await this.fileSystemService.exists(sourceFile))) {
-        throw new Error(`转换后的文件不存在: ${sourceFile}`);
+        throw new NotFoundException(`转换后的文件不存在: ${sourceFile}`);
       }
 
       // 拷贝 mxweb 文件
@@ -1385,7 +1393,7 @@ export class FileUploadManagerService {
         await this.fileSystemNodeService.findById(srcDwgNodeId);
 
       if (!sourceNode || !sourceNode.path) {
-        throw new Error(`源图纸节点不存在: ${srcDwgNodeId}`);
+        throw new NotFoundException(`源图纸节点不存在: ${srcDwgNodeId}`);
       }
 
       // 获取源图纸文件完整路径
@@ -1717,7 +1725,7 @@ export class FileUploadManagerService {
         this.logger.error(
           `[handleFileCopyAndPathUpdate] 不支持的文件扩展名: .${fileExtName}`
         );
-        throw new Error(`不支持的文件扩展名: .${fileExtName}`);
+        throw new BadRequestException(`不支持的文件扩展名: .${fileExtName}`);
       }
 
       // 分配存储空间
@@ -1754,7 +1762,7 @@ export class FileUploadManagerService {
         this.logger.error(
           `[handleFileCopyAndPathUpdate] 未找到转换后的文件: ${fileHash}`
         );
-        throw new Error(`未找到转换后的文件: ${fileHash}`);
+        throw new NotFoundException(`未找到转换后的文件: ${fileHash}`);
       }
 
       // 拷贝并重命名文件
@@ -2015,7 +2023,7 @@ export class FileUploadManagerService {
 
       if (!parentNode) {
         this.logger.error(`[createNonCadNode] 父节点不存在: ${context.nodeId}`);
-        throw new Error(`父节点不存在: ${context.nodeId}`);
+        throw new NotFoundException(`父节点不存在: ${context.nodeId}`);
       }
 
       const parentId = parentNode.isFolder
@@ -2025,7 +2033,7 @@ export class FileUploadManagerService {
         this.logger.error(
           `[createNonCadNode] 无法确定父节点ID: ${context.nodeId}`
         );
-        throw new Error(`无法确定父节点ID: ${context.nodeId}`);
+        throw new BadRequestException(`无法确定父节点ID: ${context.nodeId}`);
       }
 
       const extension = path.extname(originalName).toLowerCase();

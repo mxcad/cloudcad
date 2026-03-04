@@ -335,12 +335,12 @@ export class FileValidationService {
 
       // 4. 防止空文件名
       if (!sanitized) {
-        throw new Error('文件名不能为空');
+        throw new BadRequestException('文件名不能为空');
       }
 
       // 5. 防止文件名只有点号（隐藏文件）
       if (sanitized === '.' || sanitized === '..') {
-        throw new Error('文件名不能仅为点号');
+        throw new BadRequestException('文件名不能仅为点号');
       }
 
       // 6. 调用 FileUtils 的清理方法进行最终清理
@@ -367,17 +367,17 @@ export class FileValidationService {
       filename.includes('\\') ||
       filename.includes('/')
     ) {
-      throw new Error('清理后的文件名仍包含路径字符');
+      throw new BadRequestException('清理后的文件名仍包含路径字符');
     }
 
     // 验证文件名不以点开头（防止隐藏文件）
     if (filename.startsWith('.')) {
-      throw new Error('清理后的文件名不能以点开头');
+      throw new BadRequestException('清理后的文件名不能以点开头');
     }
 
     // 验证文件名不以空格开头或结尾
     if (filename !== filename.trim()) {
-      throw new Error('清理后的文件名包含前导或尾随空格');
+      throw new BadRequestException('清理后的文件名包含前导或尾随空格');
     }
   }
 

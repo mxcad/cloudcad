@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+
 
 /**
  * 认证用户信息

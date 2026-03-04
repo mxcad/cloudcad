@@ -244,6 +244,14 @@ describe('ProjectPermissionService', () => {
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
         ownerId: userId,
       });
+      // 模拟所有者拥有 OWNER 角色（包含所有权限）
+      mockPrisma.projectMember.findUnique.mockResolvedValue({
+        projectRole: {
+          permissions: DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.OWNER].map(
+            (p) => ({ permission: p })
+          ),
+        },
+      });
       mockCacheService.get.mockReturnValue(null);
 
       const result = await service.checkPermission(

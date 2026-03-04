@@ -1,4 +1,4 @@
-﻿import { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 // Global test setup for integration tests

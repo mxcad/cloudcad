@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
 import {
   IPermissionPolicy,
@@ -84,14 +88,14 @@ export class PolicyEngineService {
   ): IPermissionPolicy {
     const factory = this.policyFactories.get(type);
     if (!factory) {
-      throw new Error(`未知的策略类型: ${type}`);
+      throw new BadRequestException(`未知的策略类型: ${type}`);
     }
 
     const policy = factory(policyId, config);
 
     // 验证策略配置
     if (!policy.validateConfig(config)) {
-      throw new Error(`策略配置验证失败: ${type}`);
+      throw new BadRequestException(`策略配置验证失败: ${type}`);
     }
 
     return policy;
@@ -107,7 +111,7 @@ export class PolicyEngineService {
   ): IPermissionPolicy {
     const factory = this.policyFactories.get(type);
     if (!factory) {
-      throw new Error(`未知的策略类型: ${type}`);
+      throw new BadRequestException(`未知的策略类型: ${type}`);
     }
 
     return factory(policyId, config);

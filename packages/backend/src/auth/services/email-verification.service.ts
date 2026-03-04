@@ -1,4 +1,4 @@
-﻿import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';

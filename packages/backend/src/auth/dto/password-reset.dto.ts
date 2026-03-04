@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  Validate,
+} from 'class-validator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
+import { IsMatch } from '../../common/decorators/validation.decorators';
 
 export class ForgotPasswordDto {
   @ApiProperty({ description: '邮箱地址', example: 'user@example.com' })
@@ -25,6 +32,14 @@ export class ResetPasswordDto {
   @MinLength(6, { message: '密码至少6个字符' })
   @IsNotEmpty({ message: '密码不能为空' })
   newPassword: string;
+
+  @ApiProperty({ description: '确认新密码', example: 'NewPassword123!' })
+  @IsString({ message: '确认密码必须是字符串' })
+  @IsNotEmpty({ message: '确认密码不能为空' })
+  @Validate(IsMatch, ['newPassword'], {
+    message: '两次输入的密码不一致',
+  })
+  confirmPassword: string;
 }
 
 export class ChangePasswordDto {

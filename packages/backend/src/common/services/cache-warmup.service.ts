@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { RedisCacheService } from './redis-cache.service';
 import { SystemPermission, ProjectRole } from '../enums/permissions.enum';
@@ -260,7 +265,7 @@ export class CacheWarmupService implements OnModuleInit {
       });
 
       if (!user) {
-        throw new Error(`用户 ${userId} 不存在`);
+        throw new NotFoundException(`用户 ${userId} 不存在`);
       }
 
       // 缓存用户角色
@@ -294,7 +299,7 @@ export class CacheWarmupService implements OnModuleInit {
       });
 
       if (!project) {
-        throw new Error(`项目 ${projectId} 不存在`);
+        throw new NotFoundException(`项目 ${projectId} 不存在`);
       }
 
       // 获取项目的所有成员

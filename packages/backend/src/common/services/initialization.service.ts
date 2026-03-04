@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { SystemRole } from '../enums/permissions.enum';
@@ -364,7 +369,9 @@ export class InitializationService implements OnModuleInit {
       });
 
       if (!adminRole) {
-        throw new Error('ADMIN 角色不存在，请检查系统默认角色创建逻辑');
+        throw new InternalServerErrorException(
+          'ADMIN 角色不存在，请检查系统默认角色创建逻辑'
+        );
       }
 
       // 创建初始管理员账户
