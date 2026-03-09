@@ -15,6 +15,7 @@ import { galleryApi } from '../services/galleryApi';
 import { usePermission } from '../hooks/usePermission';
 import { useNotification } from '../contexts/NotificationContext';
 import { SystemPermission } from '../constants/permissions';
+import { GALLERY_CONFIG, PAGINATION_CONFIG } from '../constants/appConfig';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { FileNameText } from '../components/ui/TruncateText';
@@ -121,7 +122,7 @@ export default function Gallery() {
         secondType: selectedSecondType === -1 ? undefined : selectedSecondType,
         thirdType: selectedThirdType === -1 ? undefined : selectedThirdType,
         pageIndex: index,
-        pageSize: 20,
+        pageSize: GALLERY_CONFIG.DEFAULT_PAGE_SIZE,
       };
 
       // 获取文件列表
@@ -139,7 +140,7 @@ export default function Gallery() {
         };
         setFiles(responseData.sharedwgs || []);
         setPagination(
-          responseData.page || { index: 0, size: 20, count: 0, max: 0, up: false, down: false }
+          responseData.page || PAGINATION_CONFIG.DEFAULT_PAGINATION
         );
         setPageIndex(index);
       }

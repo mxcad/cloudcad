@@ -10,7 +10,7 @@ export class StoragePathConstants {
   static readonly STORAGE_PATH_PREFIX = 'filesData';
 
   /** MXWEB 文件访问路径前缀 */
-  static readonly MXWEB_ACCESS_PREFIX = '/mxcad/';
+  static readonly MXWEB_ACCESS_PREFIX = '/api/mxcad/';
 
   /** 日期格式 */
   static readonly DATE_FORMAT = 'YYYYMM';

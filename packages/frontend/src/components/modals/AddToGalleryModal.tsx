@@ -12,11 +12,12 @@ import {
 } from 'lucide-react';
 import { galleryApi } from '../../services/galleryApi';
 import { useNotification } from '../../contexts/NotificationContext';
+import { GALLERY_CONFIG } from '../../constants/appConfig';
 
 type GalleryType = 'drawings' | 'blocks';
 
-// 最大层级（支持三级分类）
-const MAX_LEVEL = 3;
+// 从配置获取最大层级
+const MAX_LEVEL = GALLERY_CONFIG.MAX_TYPE_LEVEL;
 
 interface GalleryTypeData {
   id: number;

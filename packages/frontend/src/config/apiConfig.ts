@@ -64,12 +64,4 @@ export const FILE_TYPE_CONFIG = {
   PDF_EXTENSION: '.pdf',
 } as const;
 
-/**
- * 分页配置
- */
-export const PAGINATION_CONFIG = {
-  /** 默认每页数量 */
-  DEFAULT_PAGE_SIZE: 20,
-  /** 每页数量选项 */
-  PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
-} as const;
+// 注意：PAGINATION_CONFIG 已移至 constants/appConfig.ts 统一管理

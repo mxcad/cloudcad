@@ -9,13 +9,25 @@ offline-data
 
 # Generated entry scripts (use offline node only in project directory)
 node.cmd
+node.ps1
 npm.cmd
+npm.ps1
 npx.cmd
+npx.ps1
 pnpm.cmd
+pnpm.ps1
+pm2.cmd
+pm2.ps1
 packages/*/node.cmd
+packages/*/node.ps1
 packages/*/npm.cmd
+packages/*/npm.ps1
 packages/*/npx.cmd
+packages/*/npx.ps1
 packages/*/pnpm.cmd
+packages/*/pnpm.ps1
+packages/*/pm2.cmd
+packages/*/pm2.ps1
 
 
 # Build outputs

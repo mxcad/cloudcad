@@ -7538,3 +7538,6 @@ export type VerifyEmailResponseDto = Components.Schemas.VerifyEmailResponseDto;
 export type WarmupHistoryDto = Components.Schemas.WarmupHistoryDto;
 export type WarmupResponseDto = Components.Schemas.WarmupResponseDto;
 export type WarmupStatsDto = Components.Schemas.WarmupStatsDto;
+
+// 导出 Paths 命名空间供 API 服务使用
+export type { Paths };

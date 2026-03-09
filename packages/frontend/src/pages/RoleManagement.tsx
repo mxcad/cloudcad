@@ -418,8 +418,11 @@ export const RoleManagement = () => {
                           (p: string | { permission: string; id?: string }) => {
                             const permKey =
                               typeof p === 'string' ? p : p?.permission || '';
-                            const systemPermissions =
-                              PERMISSION_GROUPS.system.flatMap((g) => g.items);
+                            const systemPermissions = (
+                              PERMISSION_GROUPS.system as unknown as {
+                                items: { key: string; label: string }[];
+                              }[]
+                            ).flatMap((g) => g.items);
                             const permItem = systemPermissions.find(
                               (item) => item.key === permKey
                             );
@@ -545,8 +548,11 @@ export const RoleManagement = () => {
                           (p: string | { permission: string; id?: string }) => {
                             const permKey =
                               typeof p === 'string' ? p : p?.permission || '';
-                            const projectPermissions =
-                              PERMISSION_GROUPS.project.flatMap((g) => g.items);
+                            const projectPermissions = (
+                              PERMISSION_GROUPS.project as unknown as {
+                                items: { key: string; label: string }[];
+                              }[]
+                            ).flatMap((g) => g.items);
                             const permItem = projectPermissions.find(
                               (item) => item.key === permKey
                             );

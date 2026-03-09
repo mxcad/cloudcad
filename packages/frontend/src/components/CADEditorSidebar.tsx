@@ -7,6 +7,7 @@ import { MxFun } from 'mxdraw';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useNotification } from '../contexts/NotificationContext';
 import type { GalleryTypeDto } from '../types/api-client';
+import { GALLERY_CONFIG } from '../constants/appConfig';
 
 // 图库类型
 type GalleryType = 'drawings' | 'blocks';
@@ -133,7 +134,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
             selectedSecondType === -1 ? undefined : selectedSecondType,
           thirdType: selectedThirdType === -1 ? undefined : selectedThirdType,
           pageIndex: index,
-          pageSize: 20,
+          pageSize: GALLERY_CONFIG.DEFAULT_PAGE_SIZE,
         };
 
         const response =

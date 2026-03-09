@@ -7,6 +7,7 @@ import {
   isPermissionEnabled,
   getMissingDependencies,
   togglePermission,
+  PermissionGroup,
 } from '../../constants/permissions';
 
 /**
@@ -53,7 +54,7 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
     allKeys: Object.keys(PERMISSION_GROUPS),
   });
 
-  const groups = PERMISSION_GROUPS[permissionType];
+  const groups = PERMISSION_GROUPS[permissionType] as unknown as readonly PermissionGroup[];
 
   // 防御性检查：如果 groups 为 undefined，显示错误信息
   if (!groups) {
