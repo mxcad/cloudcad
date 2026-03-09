@@ -88,35 +88,23 @@ export const useExternalReferenceUpload = (
 
       pendingRequestsRef.current.add(nodeId);
 
-            try {
+      try {
+        const data = await mxcadApi.getPreloadingData(nodeId);
 
-              const data = await mxcadApi.getPreloadingData(nodeId);
+        // 如果成功获取数据，更新缓存
 
-      
+        if (data) {
+          preloadingDataCacheRef.current.set(nodeId, data);
 
-              // 如果成功获取数据，更新缓存
+          // 5 秒后清除缓存
 
-              if (data) {
+          setTimeout(() => {
+            preloadingDataCacheRef.current.delete(nodeId);
+          }, 5000);
+        }
 
-                preloadingDataCacheRef.current.set(nodeId, data);
-
-      
-
-                // 5 秒后清除缓存
-
-                setTimeout(() => {
-
-                  preloadingDataCacheRef.current.delete(nodeId);
-
-                }, 5000);
-
-              }
-
-      
-
-              return data;
-
-            } catch (error) {
+        return data;
+      } catch (error) {
         handleError(error, '获取预加载数据失败');
 
         return null;

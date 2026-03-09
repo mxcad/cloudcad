@@ -16,6 +16,12 @@ import { EmailVerificationService } from './services/email-verification.service'
 import { InitializationService } from '../common/services/initialization.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import {
+  JwtAccessPayload,
+  JwtRefreshPayload,
+  UserForToken,
+  SessionRequest,
+} from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -143,7 +149,10 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto, req?: any): Promise<AuthResponseDto> {
+  async login(
+    loginDto: LoginDto,
+    req?: SessionRequest
+  ): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
 
     this.logger.log(`用户登录尝试: ${account}`);
@@ -237,7 +246,7 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get<string>('jwt.secret'),
-      }) as any;
+      }) as JwtRefreshPayload;
 
       if (payload.type !== 'refresh') {
         throw new UnauthorizedException('无效的刷新Token');
@@ -316,7 +325,7 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('jwt.secret'),
-      }) as any;
+      }) as JwtRefreshPayload & { exp: number };
 
       const now = Math.floor(Date.now() / 1000);
       const expiresIn = payload.exp - now;
@@ -341,7 +350,7 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('jwt.secret'),
-      }) as any;
+      }) as JwtRefreshPayload & { exp: number };
 
       const expiresAt = new Date(payload.exp * 1000);
 
@@ -409,13 +418,13 @@ export class AuthService {
     }
   }
 
-  async generateTokens(user: any): Promise<{
+  async generateTokens(user: UserForToken): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
     // Access Token payload 包含用户基本信息和角色名称
     // 这样 JwtStrategy 就不需要每次都查询数据库
-    const accessPayload = {
+    const accessPayload: JwtAccessPayload = {
       sub: user.id,
       email: user.email,
       username: user.username,
@@ -423,7 +432,7 @@ export class AuthService {
       type: 'access',
     };
 
-    const refreshPayload = {
+    const refreshPayload: JwtRefreshPayload = {
       sub: user.id,
       type: 'refresh',
     };
@@ -431,20 +440,33 @@ export class AuthService {
     const jwtSecret = this.configService.get<string>('jwt.secret');
 
     if (!jwtSecret) {
-      throw new InternalServerErrorException('JWT_SECRET environment variable is required');
+      throw new InternalServerErrorException(
+        'JWT_SECRET environment variable is required'
+      );
     }
+
+    // 获取 expiresIn 配置，默认值使用字面量类型
+    // 注意：ConfigService 返回 string | undefined，需要处理
+    const accessExpiresInConfig =
+      this.configService.get<string>('jwt.expiresIn');
+    const refreshExpiresInConfig = this.configService.get<string>(
+      'jwt.refreshExpiresIn'
+    );
+
+    // 使用字面量默认值，确保类型兼容
+    const accessExpiresIn = (accessExpiresInConfig ||
+      '1h') as `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`;
+    const refreshExpiresIn = (refreshExpiresInConfig ||
+      '7d') as `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`;
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload, {
         secret: jwtSecret,
-        expiresIn: this.configService.get<string>('jwt.expiresIn', '1h') as any,
+        expiresIn: accessExpiresIn,
       }),
       this.jwtService.signAsync(refreshPayload, {
         secret: jwtSecret,
-        expiresIn: this.configService.get<string>(
-          'jwt.refreshExpiresIn',
-          '7d'
-        ) as any,
+        expiresIn: refreshExpiresIn,
       }),
     ]);
 

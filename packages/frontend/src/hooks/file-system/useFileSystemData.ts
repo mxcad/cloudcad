@@ -7,7 +7,7 @@ import {
   projectToNode,
   trashItemToNode,
 } from '../../types/filesystem';
-import type { ProjectDto, TrashItemDto } from '../../types/api-client';
+import type { ProjectDto } from '../../types/api-client';
 import { PaginationMeta } from '../../components/ui/Pagination';
 
 import { handleError } from '../../utils/errorHandler';
@@ -180,17 +180,24 @@ export const useFileSystemData = ({
         }
 
         // 处理分页响应
-        if (response.data?.data) {
+        // ProjectListResponseDto 包含 projects, total, page, limit, totalPages
+        const projectData = response.data;
+        if (projectData?.projects) {
           // ProjectDto[] 转换为 FileSystemNode[]
-          const projectNodes = (response.data.data as ProjectDto[]).map(
-            projectToNode
-          );
+          const projectNodes = projectData.projects.map(projectToNode);
           setNodes(projectNodes);
-          setPaginationMeta(response.data.meta);
+          setPaginationMeta({
+            total: projectData.total,
+            page: projectData.page,
+            limit: projectData.limit,
+            totalPages: projectData.totalPages,
+          });
         } else {
           // 兼容旧格式
           const responseData = response.data as unknown;
-          const allProjects = (Array.isArray(responseData) ? responseData : []) as ProjectDto[];
+          const allProjects = (
+            Array.isArray(responseData) ? responseData : []
+          ) as ProjectDto[];
           const projectNodes = allProjects.map(projectToNode);
           setNodes(projectNodes);
           setPaginationMeta({
@@ -215,13 +222,20 @@ export const useFileSystemData = ({
           });
 
           // TrashItemDto[] 转换为 FileSystemNode[]
-          const trashItems = (trashResponse.data?.data as
-            | TrashItemDto[]
-            | undefined) || [];
+          // TrashListResponseDto 包含 items 和 total
+          const trashData = trashResponse.data;
+          const trashItems = trashData?.items || [];
           const trashNodes = trashItems.map(trashItemToNode);
           setNodes(trashNodes);
-          if (trashResponse.data?.meta) {
-            setPaginationMeta(trashResponse.data.meta);
+          if (trashData?.total !== undefined) {
+            setPaginationMeta({
+              total: trashData.total,
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+              totalPages: Math.ceil(
+                trashData.total / paginationRef.current.limit
+              ),
+            });
           } else {
             setPaginationMeta({
               total: trashNodes.length,
@@ -232,10 +246,11 @@ export const useFileSystemData = ({
               ),
             });
           }
-          
+
           // 尝试获取项目信息作为当前节点
           try {
-            if(!urlProjectId) throw new Error('项目ID不存在，无法加载项目信息');
+            if (!urlProjectId)
+              throw new Error('项目ID不存在，无法加载项目信息');
             const projectResponse = await projectsApi.getNode(urlProjectId, {
               signal: abortController.signal,
             });
@@ -277,7 +292,6 @@ export const useFileSystemData = ({
             ]);
           }
         } else {
-
           // 正常视图：加载文件夹内容
           const [nodeResponse, childrenResponse] = await Promise.all([
             projectsApi.getNode(currentNodeId, {
@@ -290,10 +304,17 @@ export const useFileSystemData = ({
 
           const nodeData = nodeResponse.data;
 
-          const childrenData = childrenResponse.data?.data || [];
+          // NodeListResponseDto 包含 nodes, total, page, limit, totalPages
+          const childrenData = childrenResponse.data?.nodes || [];
           setNodes(childrenData);
-          if (childrenResponse.data?.meta) {
-            setPaginationMeta(childrenResponse.data.meta);
+          const childrenMeta = childrenResponse.data;
+          if (childrenMeta?.total !== undefined) {
+            setPaginationMeta({
+              total: childrenMeta.total,
+              page: childrenMeta.page,
+              limit: childrenMeta.limit,
+              totalPages: childrenMeta.totalPages,
+            });
           } else {
             setPaginationMeta({
               total: childrenData.length,

@@ -2,6 +2,7 @@ import { INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { join } from 'path';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -32,12 +33,21 @@ import {
 import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 
+// env 文件查找路径：优先 backend 目录
+// 本地开发环境不应读取根目录的 .env（那是 Docker 生产配置）
+// 使用 __dirname 获取绝对路径，确保从任何目录运行都能正确加载
+const backendDir = join(__dirname, '..');
+const envFilePaths = [
+  join(backendDir, '.env.local'),
+  join(backendDir, '.env'),
+];
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: envFilePaths,
     }),
     DatabaseModule,
     RedisModule,

@@ -8,7 +8,6 @@ import {
 } from '../utils/mxcadUtils';
 import { globalShowToast } from '../contexts/NotificationContext';
 
-
 /**
  * MxCAD 实例管理 Hook
  */
@@ -115,7 +114,6 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
 
       const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
       const targetFileName = fileInfo.name;
-
 
       // 检查是否已有打开的文件
       const currentFileName = mxcadManager.getCurrentFileName();

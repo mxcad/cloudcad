@@ -21,12 +21,19 @@ import { RolesService } from './roles.service';
 import { ProjectRolesService } from './project-roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
-import { RoleDto } from './dto/role.dto';
+import { RoleDto, ProjectRoleDto } from './dto/role.dto';
+import { CreateProjectRoleDto } from './dto/create-project-role.dto';
+import { UpdateProjectRoleDto } from './dto/update-project-role.dto';
+import { PermissionsDto } from './dto/permissions.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { SystemPermission } from '../common/enums/permissions.enum';
+import {
+  SystemPermission,
+  RoleCategory,
+} from '../common/enums/permissions.enum';
+import { AuthenticatedRequest } from '../common/types/request.types';
 
 @ApiTags('roles')
 @Controller('roles')
@@ -61,7 +68,8 @@ export class RolesController {
   async findByCategory(
     @Param('category') category: string
   ): Promise<RoleDto[]> {
-    return await this.rolesService.findByCategory(category as any);
+    const roleCategory = category as RoleCategory;
+    return await this.rolesService.findByCategory(roleCategory);
   }
 
   @Get(':id')
@@ -164,6 +172,7 @@ export class RolesController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功获取所有项目角色列表',
+    type: [ProjectRoleDto],
   })
   async getAllProjectRoles() {
     return await this.projectRolesService.findAll();
@@ -175,6 +184,7 @@ export class RolesController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功获取系统默认项目角色列表（仅返回 isSystem=true 的角色）',
+    type: [ProjectRoleDto],
   })
   async getSystemProjectRoles() {
     return await this.projectRolesService.findSystemRoles();
@@ -185,6 +195,7 @@ export class RolesController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功获取项目角色列表（包含系统角色和项目自定义角色）',
+    type: [ProjectRoleDto],
   })
   async getProjectRolesByProject(@Param('projectId') projectId: string) {
     return await this.projectRolesService.findByProject(projectId);
@@ -196,6 +207,7 @@ export class RolesController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功获取项目角色',
+    type: ProjectRoleDto,
   })
   async getProjectRole(@Param('id') id: string) {
     return await this.projectRolesService.findOne(id);
@@ -219,8 +231,12 @@ export class RolesController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: '成功创建项目角色',
+    type: ProjectRoleDto,
   })
-  async createProjectRole(@Body() dto: any, @Request() req) {
+  async createProjectRole(
+    @Body() dto: CreateProjectRoleDto,
+    @Request() req: AuthenticatedRequest
+  ) {
     return await this.projectRolesService.create(dto, req.user?.id);
   }
 
@@ -230,11 +246,12 @@ export class RolesController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: '成功更新项目角色',
+    type: ProjectRoleDto,
   })
   async updateProjectRole(
     @Param('id') id: string,
-    @Body() dto: any,
-    @Request() req
+    @Body() dto: UpdateProjectRoleDto,
+    @Request() req: AuthenticatedRequest
   ) {
     return await this.projectRolesService.update(id, dto, req.user?.id);
   }
@@ -247,7 +264,10 @@ export class RolesController {
     status: HttpStatus.OK,
     description: '成功删除项目角色',
   })
-  async deleteProjectRole(@Param('id') id: string, @Request() req) {
+  async deleteProjectRole(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest
+  ) {
     await this.projectRolesService.delete(id, req.user?.id);
     return { message: '项目角色已删除' };
   }
@@ -261,12 +281,12 @@ export class RolesController {
   })
   async addProjectRolePermissions(
     @Param('id') id: string,
-    @Body() body: { permissions: string[] },
-    @Request() req
+    @Body() body: PermissionsDto,
+    @Request() req: AuthenticatedRequest
   ) {
     await this.projectRolesService.assignPermissions(
       id,
-      body.permissions as any,
+      body.permissions,
       req.user?.id
     );
     return await this.projectRolesService.findOne(id);
@@ -281,12 +301,12 @@ export class RolesController {
   })
   async removeProjectRolePermissions(
     @Param('id') id: string,
-    @Body() body: { permissions: string[] },
-    @Request() req
+    @Body() body: PermissionsDto,
+    @Request() req: AuthenticatedRequest
   ) {
     await this.projectRolesService.removePermissions(
       id,
-      body.permissions as any,
+      body.permissions,
       req.user?.id
     );
     return await this.projectRolesService.findOne(id);

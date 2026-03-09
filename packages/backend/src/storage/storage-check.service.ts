@@ -81,8 +81,8 @@ export class StorageCheckService {
    */
   async checkInUploadTemp(fileName: string): Promise<boolean> {
     const uploadTempPath = this.configService.get<string>(
-      'MXCAD_UPLOAD_PATH',
-      'D:\\web\\MxCADOnline\\cloudcad\\uploads'
+      'mxcadUploadPath',
+      '../../uploads'
     );
     return await this.checkInLocalDirectory(fileName, uploadTempPath);
   }
@@ -94,8 +94,8 @@ export class StorageCheckService {
    */
   async checkInConvertDirectory(fileName: string): Promise<boolean> {
     const tempPath = this.configService.get<string>(
-      'MXCAD_TEMP_PATH',
-      'D:\\web\\MxCADOnline\\cloudcad\\temp'
+      'mxcadTempPath',
+      '../../temp'
     );
     return await this.checkInLocalDirectory(fileName, tempPath);
   }

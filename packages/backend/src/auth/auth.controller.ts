@@ -9,6 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/types/request.types';
+import type { SessionRequest } from './interfaces/jwt-payload.interface';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -83,7 +84,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: '账号或密码错误' })
   async login(
     @Body() loginDto: LoginDto,
-    @Req() req: Request
+    @Req() req: SessionRequest
   ): Promise<AuthResponseDto> {
     return this.authService.login(loginDto, req);
   }

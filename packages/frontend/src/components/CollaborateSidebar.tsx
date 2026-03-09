@@ -15,7 +15,7 @@ export const CollaborateSidebar: React.FC = () => {
   const { showToast } = useNotification();
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
-    console.log(APP_COOPERATE_URL)   
+    console.log(APP_COOPERATE_URL);
     cooperate.init({
       server_addres: APP_COOPERATE_URL,
     });
@@ -104,36 +104,39 @@ export const CollaborateSidebar: React.FC = () => {
   }, [fetchWorks, showToast]);
 
   // 加入协同
-  const handleJoinWork = useCallback(async (workId: number) => {
-    try {
-      setJoiningWorkId(workId);
-      const cooperate = getCooperate();
-      if (!cooperate) {
-        showToast('协同对象未初始化', 'error');
-        setJoiningWorkId(null);
-        return;
-      }
+  const handleJoinWork = useCallback(
+    async (workId: number) => {
+      try {
+        setJoiningWorkId(workId);
+        const cooperate = getCooperate();
+        if (!cooperate) {
+          showToast('协同对象未初始化', 'error');
+          setJoiningWorkId(null);
+          return;
+        }
 
-      cooperate.joinWork(workId, async (iRet: number) => {
-        setJoiningWorkId(null);
-        if (iRet === 0) {
-          console.log('加入协同成功, workId:', workId);
-          setCurrentWorkId(workId);
-        } else {
-          console.log('加入协同失败, error code:', iRet);
-          if (iRet === 17) {
+        cooperate.joinWork(workId, async (iRet: number) => {
+          setJoiningWorkId(null);
+          if (iRet === 0) {
+            console.log('加入协同成功, workId:', workId);
             setCurrentWorkId(workId);
           } else {
-            showToast(`加入协同失败，错误码: ${iRet}`, 'error');
+            console.log('加入协同失败, error code:', iRet);
+            if (iRet === 17) {
+              setCurrentWorkId(workId);
+            } else {
+              showToast(`加入协同失败，错误码: ${iRet}`, 'error');
+            }
           }
-        }
-      });
-    } catch (error) {
-      console.error('加入协同失败:', error);
-      setJoiningWorkId(null);
-      showToast('加入协同失败', 'error');
-    }
-  }, [showToast]);
+        });
+      } catch (error) {
+        console.error('加入协同失败:', error);
+        setJoiningWorkId(null);
+        showToast('加入协同失败', 'error');
+      }
+    },
+    [showToast]
+  );
 
   // 退出协同
   const handleExitWork = useCallback(async () => {

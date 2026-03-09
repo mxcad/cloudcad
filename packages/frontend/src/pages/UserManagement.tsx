@@ -14,11 +14,10 @@ import { Modal } from '../components/ui/Modal';
 import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi } from '../services/usersApi';
 import { rolesApi } from '../services/rolesApi';
-import { UpdateUserDto, UserDto, UserResponseDto } from '../types/api-client';
+import { UpdateUserDto, UserResponseDto } from '../types/api-client';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-
 
 type RoleDto = {
   id: string;
@@ -119,8 +118,9 @@ export const UserManagement = () => {
         sortBy,
         sortOrder,
       });
-      setUsers(response.data.data);
-      setTotalUsers(response.data.pagination.total);
+      // UserListResponseDto 包含 users, total, page, limit, totalPages
+      setUsers(response.data?.users || []);
+      setTotalUsers(response.data?.total || 0);
     } catch (error) {
       setError('加载用户列表失败');
     } finally {
@@ -229,10 +229,7 @@ export const UserManagement = () => {
         if (formData.password) {
           updateData.password = formData.password;
         }
-        await usersApi.update(
-          editingUser.id,
-          updateData
-        );
+        await usersApi.update(editingUser.id, updateData);
       } else {
         // 创建用户
         const createData = {
@@ -728,7 +725,11 @@ export const UserManagement = () => {
             title="确认删除用户"
             footer={
               <>
-                <Button variant="ghost" onClick={cancelDelete} disabled={loading}>
+                <Button
+                  variant="ghost"
+                  onClick={cancelDelete}
+                  disabled={loading}
+                >
                   取消
                 </Button>
                 <Button

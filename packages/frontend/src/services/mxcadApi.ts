@@ -11,63 +11,65 @@ export const mxcadApi = {
    * 检查文件是否已存在（秒传检查）
    */
   checkFileExist: (params: CheckFileExistDto) =>
-    getApiClient().MxCadController_checkFileExist(undefined, params)
-      .then(res => res.data),
+    getApiClient()
+      .MxCadController_checkFileExist(undefined, params)
+      .then((res) => res.data),
 
   /**
    * 检查分片是否已存在
    */
   checkChunkExist: (params: CheckChunkExistDto) =>
-    getApiClient().MxCadController_checkChunkExist(undefined, params)
-      .then(res => res.data),
+    getApiClient()
+      .MxCadController_checkChunkExist(undefined, params)
+      .then((res) => res.data),
 
   /**
    * 上传分片
    */
   uploadChunk: (formData: FormData) =>
-    getApiClient().MxCadController_uploadFile(
-      undefined,
-      formData as any
-    ).then(res => res.data),
+    getApiClient()
+      .MxCadController_uploadFile(undefined, formData as any)
+      .then((res) => res.data),
 
   /**
    * 获取预加载数据
    */
   getPreloadingData: (nodeId: string) =>
-    getApiClient().MxCadController_getPreloadingData({ nodeId })
-      .then(res => res.data),
+    getApiClient()
+      .MxCadController_getPreloadingData({ nodeId })
+      .then((res) => res.data),
 
   /**
    * 检查缩略图是否存在
    */
   checkThumbnail: (nodeId: string) =>
-    getApiClient().MxCadController_checkThumbnail({ nodeId })
-      .then(res => res.data),
+    getApiClient()
+      .MxCadController_checkThumbnail({ nodeId })
+      .then((res) => res.data),
 
   /**
    * 上传缩略图
    */
   uploadThumbnail: (nodeId: string, formData: FormData) =>
-    getApiClient().MxCadController_uploadThumbnail(
-      { nodeId },
-      formData as any
-    ).then(res => res.data),
+    getApiClient()
+      .MxCadController_uploadThumbnail({ nodeId }, formData as any)
+      .then((res) => res.data),
 
   /**
    * 检查外部参照是否存在
    */
   checkExternalReferenceExists: (nodeId: string, fileName: string) =>
-    getApiClient().MxCadController_checkExternalReference(
-      { nodeId },
-      { fileName }
-    ).then(res => res.data),
+    getApiClient()
+      .MxCadController_checkExternalReference({ nodeId }, { fileName })
+      .then((res) => res.data),
 
   /**
    * 刷新外部参照
    */
   refreshExternalReferences: (nodeId: string) =>
-    getApiClient().MxCadController_refreshExternalReferences({ nodeId })
-      .then(res => res.data),
+    getApiClient()
+      .MxCadController_refreshExternalReferences({ nodeId })
+      .then((res) => res.data),
 
   /**
    * 上传外部参照 DWG 文件
@@ -89,11 +91,12 @@ export const mxcadApi = {
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 
-          const response = await getApiClient().MxCadController_uploadExtReferenceDwg(
-            undefined,
-            formData as any,
-            { onUploadProgress: onProgress }
-          );
+          const response =
+            await getApiClient().MxCadController_uploadExtReferenceDwg(
+              undefined,
+              formData as any,
+              { onUploadProgress: onProgress }
+            );
 
           resolve(response.data);
         } catch (error) {
@@ -123,11 +126,12 @@ export const mxcadApi = {
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 
-          const response = await getApiClient().MxCadController_uploadExtReferenceImage(
-            undefined,
-            formData as any,
-            { onUploadProgress: onProgress }
-          );
+          const response =
+            await getApiClient().MxCadController_uploadExtReferenceImage(
+              undefined,
+              formData as any,
+              { onUploadProgress: onProgress }
+            );
 
           resolve(response.data);
         } catch (error) {

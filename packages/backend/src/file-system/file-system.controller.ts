@@ -89,7 +89,10 @@ export class FileSystemController {
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 403, description: '无权限创建项目' })
-  async createProject(@Request() req: ExpressRequest & { user: { id: string } }, @Body() dto: CreateProjectDto) {
+  async createProject(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Body() dto: CreateProjectDto
+  ) {
     return this.fileSystemService.createProject(req.user.id, dto);
   }
 
@@ -100,7 +103,10 @@ export class FileSystemController {
     description: '获取项目列表成功',
     type: ProjectListResponseDto,
   })
-  async getProjects(@Request() req: ExpressRequest & { user: { id: string } }, @Query() query?: QueryProjectsDto) {
+  async getProjects(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Query() query?: QueryProjectsDto
+  ) {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
 
@@ -111,7 +117,10 @@ export class FileSystemController {
     description: '获取已删除项目列表成功',
     type: ProjectListResponseDto,
   })
-  async getDeletedProjects(@Request() req: ExpressRequest & { user: { id: string } }, @Query() query?: QueryProjectsDto) {
+  async getDeletedProjects(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Query() query?: QueryProjectsDto
+  ) {
     this.logger.log(
       `获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`
     );
@@ -442,10 +451,7 @@ export class FileSystemController {
     type: FileSystemNodeDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
-  async uploadFile(
-    @Request() req,
-    @Body() dto: UploadFileDto
-  ) {
+  async uploadFile(@Request() req, @Body() dto: UploadFileDto) {
     const { parentId, fileName, fileContent } = dto;
     if (!fileName) {
       throw new BadRequestException('缺少文件名称');

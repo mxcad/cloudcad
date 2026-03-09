@@ -43,7 +43,7 @@ export const useFileSystemSelection = ({
           }
 
           for (let i = startIndex; i <= endIndex; i++) {
-            const node = nodes[i]
+            const node = nodes[i];
             node && newSet.add(node.id);
           }
 

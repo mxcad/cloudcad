@@ -1,5 +1,5 @@
 {
-  "name": "cloudcad-manager",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,8 +17,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm format:check",
     "check:fix": "pnpm lint:fix && pnpm format",
-    "type-check": "tsc --noEmit",
-    "generate:types": "node scripts/generate-api-types.js"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

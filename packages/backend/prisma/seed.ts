@@ -7,7 +7,7 @@ const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = process.env.DB_PORT || '5432';
 const dbUser = process.env.DB_USERNAME || 'postgres';
 const dbPassword = process.env.DB_PASSWORD || 'password';
-const dbDatabase = process.env.DB_DATABASE || 'cloucad';
+const dbDatabase = process.env.DB_DATABASE || 'cloudcad';
 
 // 确保密码是字符串类型并进行URL编码
 const encodedPassword = encodeURIComponent(String(dbPassword));

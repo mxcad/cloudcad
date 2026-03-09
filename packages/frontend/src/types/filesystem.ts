@@ -191,16 +191,16 @@ export interface UseExternalReferenceUploadReturn {
 }
 
 /**
- * 字体信息
+ * 字体信息（匹配后端 FontInfoDto）
  */
 export interface FontInfo {
-  id: string;
   name: string;
-  path: string;
   size: number;
-  updatedAt: string;
   extension: string;
+  existsInBackend: boolean;
+  existsInFrontend: boolean;
   createdAt: string;
+  updatedAt: string;
   creator?: string;
 }
 

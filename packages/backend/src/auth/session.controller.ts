@@ -81,7 +81,10 @@ export class SessionController {
    * 清除 Session
    */
   @Post('destroy')
-  async destroySession(@Req() req: Request, @Res() res: Response): Promise<void> {
+  async destroySession(
+    @Req() req: Request,
+    @Res() res: Response
+  ): Promise<void> {
     req.session.destroy((err) => {
       if (err) {
         res.status(500).json({ success: false, message: 'Session 销毁失败' });

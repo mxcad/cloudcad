@@ -5,14 +5,15 @@ import * as path from 'path';
 import { StorageProvider, UploadResult } from './storage.interface';
 import * as fsPromises from 'fs/promises';
 import { createReadStream } from 'fs';
+import { AppConfig } from '../config/app.config';
 
 @Injectable()
 export class LocalStorageProvider implements StorageProvider {
   private readonly logger = new Logger(LocalStorageProvider.name);
   private readonly basePath: string;
 
-  constructor(private configService: ConfigService) {
-    this.basePath = this.configService.get('FILES_DATA_PATH', '../filesData');
+  constructor(private configService: ConfigService<AppConfig>) {
+    this.basePath = this.configService.get('filesDataPath', { infer: true });
     this.ensureBasePath();
   }
 

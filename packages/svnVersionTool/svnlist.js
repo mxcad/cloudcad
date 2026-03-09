@@ -1,4 +1,4 @@
-const {exec} = require('child_process');
+const { exec } = require('child_process');
 const svnPath = require('./svnpath');
 
 /**
@@ -11,26 +11,26 @@ const svnPath = require('./svnpath');
  * @param {function} callback 回调函数
  */
 function svnList(repoUrl, isRecursive, revision, username, password, callback) {
-    let command = `${svnPath} list ${repoUrl}`;
-    if (revision) {
-        command += ` -r ${revision}`;
+  let command = `${svnPath} list ${repoUrl}`;
+  if (revision) {
+    command += ` -r ${revision}`;
+  }
+  if (isRecursive) {
+    command += ' --recursive';
+  }
+  if (username) {
+    command += ` --username ${username}`;
+  }
+  if (password) {
+    command += ` --password ${password}`;
+  }
+  exec(command, { windowsHide: true }, (error, stdout) => {
+    if (error) {
+      callback(error);
+    } else {
+      callback(null, stdout);
     }
-    if (isRecursive) {
-        command += " --recursive";
-    }
-    if (username) {
-        command += ` --username ${username}`;
-    }
-    if (password) {
-        command += ` --password ${password}`;
-    }
-    exec(command, (error, stdout) => {
-        if (error) {
-            callback(error);
-        } else {
-            callback(null, stdout);
-        }
-    });
+  });
 }
 
 module.exports = svnList;

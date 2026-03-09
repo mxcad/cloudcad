@@ -53,7 +53,6 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
   // 从消息中提取用户说明
   const extractUserNote = (message: string): string | null => {
-
     const saveMatch = message.match(/^Save:\s*.+?\s*-\s*(.+)$/i);
     if (saveMatch) {
       return saveMatch[1]?.trim() ?? null;

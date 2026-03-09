@@ -87,9 +87,9 @@ export class VersionControlService implements OnModuleInit {
     // 解析路径为绝对路径
     const basePath = process.cwd();
     const repoPath =
-      this.configService.get<string>('SVN_REPO_PATH') || '../svn-repo';
+      this.configService.get<string>('SVN_REPO_PATH') || '../../svn-repo';
     const dataPath =
-      this.configService.get<string>('FILES_DATA_PATH') || '../filesData';
+      this.configService.get<string>('FILES_DATA_PATH') || '../../filesData';
 
     this.svnRepoPath = path.resolve(basePath, repoPath);
     this.filesDataPath = path.resolve(basePath, dataPath);

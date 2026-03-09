@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { AppConfig } from '../../config/app.config';
 
 export interface DiskStats {
   path: string;
@@ -22,19 +23,13 @@ export interface DiskStatus {
 @Injectable()
 export class DiskMonitorService {
   private readonly logger = new Logger(DiskMonitorService.name);
-  private readonly warningThreshold: number;
-  private readonly criticalThreshold: number;
+  // 磁盘空间阈值（字节）
+  private readonly warningThreshold = 20 * 1024 * 1024 * 1024; // 20GB
+  private readonly criticalThreshold = 10 * 1024 * 1024 * 1024; // 10GB
+  private readonly filesDataPath: string;
 
-  constructor(private configService: ConfigService) {
-    // 阈值配置（字节）
-    this.warningThreshold = this.configService.get(
-      'DISK_WARNING_THRESHOLD',
-      20 * 1024 * 1024 * 1024 // 20GB
-    );
-    this.criticalThreshold = this.configService.get(
-      'DISK_CRITICAL_THRESHOLD',
-      10 * 1024 * 1024 * 1024 // 10GB
-    );
+  constructor(private configService: ConfigService<AppConfig>) {
+    this.filesDataPath = this.configService.get('filesDataPath', { infer: true });
   }
 
   /**
@@ -43,10 +38,7 @@ export class DiskMonitorService {
    * @returns 磁盘统计信息
    */
   getDiskStats(filePath?: string): DiskStats {
-    const targetPath =
-      filePath ||
-      this.configService.get('FILES_DATA_PATH', '../filesData') ||
-      '../filesData';
+    const targetPath = filePath || this.filesDataPath;
     const resolvedPath = path.resolve(targetPath);
 
     try {
@@ -104,7 +96,8 @@ export class DiskMonitorService {
 
           // 使用 buffer 编码执行 WMIC 命令，然后转换为字符串
           const buffer = execSync(
-            `wmic logicaldisk where "DeviceID='${deviceId}'" get FreeSpace,Size /value`
+            `wmic logicaldisk where "DeviceID='${deviceId}'" get FreeSpace,Size /value`,
+            { windowsHide: true }
           );
           const output = buffer.toString('latin1');
 
@@ -130,7 +123,7 @@ export class DiskMonitorService {
             const driveLetter = drive.replace(/[:\\]/g, ''); // 去掉冒号和反斜杠
             const psOutput = execSync(
               `powershell -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-PSDrive ${driveLetter} | Select-Object Used,Free | ConvertTo-Json"`,
-              { encoding: 'utf-8' }
+              { encoding: 'utf-8', windowsHide: true }
             );
             const psData = JSON.parse(psOutput);
             const free = psData.Free || 0;
@@ -150,6 +143,7 @@ export class DiskMonitorService {
         try {
           const output = execSync(`df -k "${drivePath}"`, {
             encoding: 'utf-8',
+            windowsHide: true,
           });
           const lines = output.trim().split('\n');
           if (lines.length >= 2) {

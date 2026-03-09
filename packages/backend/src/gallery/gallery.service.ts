@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import {
   GalleryTypeDto,
@@ -13,10 +14,7 @@ import {
   GalleryFileListResponseDto,
   GalleryFileItemDto,
 } from './dto/gallery.dto';
-
-// 常量定义
-const MAX_PAGE_SIZE = 100;
-const DEFAULT_PAGE_SIZE = 50;
+import { Prisma } from '@prisma/client';
 
 /**
  * 图库服务
@@ -25,8 +23,17 @@ const DEFAULT_PAGE_SIZE = 50;
 @Injectable()
 export class GalleryService {
   private readonly logger = new Logger(GalleryService.name);
+  private readonly defaultPageSize: number;
+  private readonly maxPageSize: number;
 
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly database: DatabaseService
+  ) {
+    const pagination = this.configService.get('pagination', { infer: true });
+    this.defaultPageSize = pagination.defaultPageSize;
+    this.maxPageSize = pagination.maxPageSize;
+  }
 
   /**
    * 获取分类列表
@@ -136,10 +143,10 @@ export class GalleryService {
 
     // 边界检查
     if (pageSize < 1) {
-      pageSize = DEFAULT_PAGE_SIZE;
+      pageSize = this.defaultPageSize;
     }
-    if (pageSize > MAX_PAGE_SIZE) {
-      pageSize = MAX_PAGE_SIZE;
+    if (pageSize > this.maxPageSize) {
+      pageSize = this.maxPageSize;
     }
 
     // 如果 pageIndex 为 -1，设置为 0（兼容参考代码逻辑）
@@ -152,7 +159,7 @@ export class GalleryService {
     }
 
     // 构建查询条件（查询 GalleryItem 表）
-    const whereClause: any = {
+    const whereClause: Prisma.GalleryItemWhereInput = {
       userId: userId,
       galleryType: galleryType,
     };

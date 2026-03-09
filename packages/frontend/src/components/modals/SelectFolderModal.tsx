@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ChevronDown,
   Check,
-  Home,
   Loader2,
 } from 'lucide-react';
 import { projectsApi } from '../../services/projectsApi';
@@ -58,15 +57,15 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       try {
         const childrenResponse = await projectsApi.getChildren(nodeId);
 
-        // API 返回格式: { data: { data: nodes[], meta: {...} } }
-        // 解包后 childrenResponse.data 是 NodeListResponseDto = { data: nodes[], meta: {...} }
+        // API 返回格式: { data: { nodes: nodes[], total: number, ... } }
+        // 解包后 childrenResponse.data 是 NodeListResponseDto = { nodes: nodes[], total: number, ... }
         let children: FileSystemNode[] = [];
 
         if (childrenResponse.data) {
           const responseData = childrenResponse.data;
-          if (Array.isArray(responseData.data)) {
-            // 正确格式: { data: nodes[], meta: {...} }
-            children = responseData.data as unknown as FileSystemNode[];
+          if (Array.isArray(responseData.nodes)) {
+            // 正确格式: { nodes: nodes[], total: number, ... }
+            children = responseData.nodes as unknown as FileSystemNode[];
           }
         }
 

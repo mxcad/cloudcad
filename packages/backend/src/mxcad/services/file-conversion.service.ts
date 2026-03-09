@@ -22,35 +22,58 @@ export class FileConversionService implements IFileConversionService {
   private readonly compression: boolean;
 
   constructor(private readonly configService: ConfigService) {
+    // 获取 MxCAD 配置
+    const mxcadConfig = this.configService.get('mxcad', { infer: true });
+    
     // 检测操作系统
     const isLinux = os.platform() === 'linux';
 
     // 根据平台配置转换程序路径
-    this.mxCadAssemblyPath =
-      this.configService.get('MXCAD_ASSEMBLY_PATH') ||
-      (isLinux
-        ? path.join(
-            process.cwd(),
-            'mxcadassembly',
-            'linux',
-            'release',
-            'mxcadassembly'
-          )
-        : path.join(
-            process.cwd(),
-            'mxcadassembly',
-            'windows',
-            'release',
-            'mxcadassembly.exe'
-          ));
+    // 后端从 packages/backend 启动，cwd 即为 packages/backend
+    // mxcad 转换程序在 runtime/{platform}/mxcad/
+    const projectRoot = path.join(process.cwd(), '..', '..');
 
-    // Linux 下需要的工作目录（mxcadassembly/bin）
+    this.mxCadAssemblyPath =
+      mxcadConfig.assemblyPath ||
+      (isLinux
+        ? path.join(projectRoot, 'runtime', 'linux', 'mxcad', 'mxcadassembly')
+        : path.join(projectRoot, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe'));
+
+    // Linux 下需要的工作目录（runtime/linux/mxcad）
     this.mxCadBinPath = isLinux
-      ? path.join(process.cwd(), 'mxcadassembly', 'linux', 'bin')
+      ? path.join(projectRoot, 'runtime', 'linux', 'mxcad')
       : '';
 
-    this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
-    this.compression = this.configService.get('MXCAD_COMPRESSION') !== 'false';
+    this.mxCadFileExt = mxcadConfig.fileExt || '.mxweb';
+    this.compression = mxcadConfig.compression !== false;
+  }
+
+  /**
+   * 将路径解析为绝对路径
+   * 确保传递给 mxcadassembly.exe 的路径都是绝对路径
+   * @param inputPath 输入路径（可能是相对路径或绝对路径）
+   * @returns 绝对路径
+   */
+  private resolveToAbsolutePath(inputPath: string): string {
+    if (!inputPath) {
+      return inputPath;
+    }
+
+    // 已经是绝对路径，直接返回
+    if (path.isAbsolute(inputPath)) {
+      return path.normalize(inputPath);
+    }
+
+    // 相对路径：基于项目根目录解析
+    // 后端 cwd 通常是 packages/backend，项目根目录是其上两级
+    const projectRoot = path.join(process.cwd(), '..', '..');
+    const absolutePath = path.resolve(projectRoot, inputPath);
+
+    this.logger.debug(
+      `[resolveToAbsolutePath] ${inputPath} -> ${absolutePath}`
+    );
+
+    return absolutePath;
   }
 
   /**
@@ -80,9 +103,12 @@ export class FileConversionService implements IFileConversionService {
         outjpg,
       } = options;
 
+      // 确保源文件路径是绝对路径
+      const absoluteSrcPath = this.resolveToAbsolutePath(srcPath);
+
       // 构建完整的 param 对象
       const param: any = {
-        srcpath: srcPath.replace(/\\/g, '/'),
+        srcpath: absoluteSrcPath.replace(/\\/g, '/'),
         src_file_md5: fileHash,
         create_preloading_data: createPreloadingData,
       };
@@ -118,7 +144,7 @@ export class FileConversionService implements IFileConversionService {
 
       // Linux 平台特殊处理
       if (this.isLinux()) {
-        // 切换工作目录到 mxcadassembly/bin
+
         if (this.mxCadBinPath) {
           process.chdir(this.mxCadBinPath);
           changedDir = true;
@@ -301,10 +327,14 @@ export class FileConversionService implements IFileConversionService {
     try {
       this.logger.log(`[convertBinToMxweb] 开始转换: ${binPath} -> ${outName}`);
 
+      // 确保路径是绝对路径
+      const absoluteBinPath = this.resolveToAbsolutePath(binPath);
+      const absoluteOutputPath = this.resolveToAbsolutePath(outputPath);
+
       // 构建参数：bin 转 mxweb 需要 srcpath, outpath, outname
       const param: Record<string, string> = {
-        srcpath: binPath.replace(/\\/g, '/'),
-        outpath: outputPath.replace(/\\/g, '/'),
+        srcpath: absoluteBinPath.replace(/\\/g, '/'),
+        outpath: absoluteOutputPath.replace(/\\/g, '/'),
         outname: outName,
       };
 

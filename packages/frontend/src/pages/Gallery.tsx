@@ -45,12 +45,14 @@ interface GalleryFile {
   likeNum?: number;
 }
 
-// 分页信息接口
+// 分页信息接口（匹配后端 PaginationDto）
 interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+  index: number;
+  size: number;
+  count: number;
+  max: number;
+  up: boolean;
+  down: boolean;
 }
 
 // 图库主页面组件
@@ -129,9 +131,16 @@ export default function Gallery() {
           : await galleryApi.getBlocksFileList(queryParams);
 
       // apiClient 已自动解包，response.data 就是实际数据
+      // Swagger 未定义响应类型，手动处理
       if (response.data) {
-        setFiles(response.data.sharedwgs || []);
-        setPagination(response.data.page);
+        const responseData = response.data as {
+          sharedwgs?: GalleryFile[];
+          page?: PaginationInfo;
+        };
+        setFiles(responseData.sharedwgs || []);
+        setPagination(
+          responseData.page || { index: 0, size: 20, count: 0, max: 0, up: false, down: false }
+        );
         setPageIndex(index);
       }
     } catch (error) {
@@ -190,7 +199,7 @@ export default function Gallery() {
 
   // 处理下一页
   const handleNextPage = () => {
-    if (pagination && pageIndex < pagination.totalPages - 1) {
+    if (pagination && pageIndex < pagination.max - 1) {
       fetchFiles(pageIndex + 1);
     }
   };
@@ -423,7 +432,7 @@ export default function Gallery() {
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <span className="text-sm text-gray-600">
                 全部文件 · 共 {files.length} 个文件
-                {pagination && ` (总计 ${pagination.total} 个)`}
+                {pagination && ` (总计 ${pagination.count} 个)`}
               </span>
             </div>
           )}
@@ -518,18 +527,18 @@ export default function Gallery() {
               </div>
 
               {/* 分页 */}
-              {pagination && pagination.total > 0 && (
+              {pagination && pagination.count > 0 && (
                 <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    共 {pagination.total} 个文件，第 {pagination.page + 1} /{' '}
-                    {pagination.totalPages} 页
+                    共 {pagination.count} 个文件，第 {pagination.index + 1} /{' '}
+                    {pagination.max} 页
                   </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={handlePreviousPage}
-                      disabled={pagination.page <= 0}
+                      disabled={!pagination.up}
                     >
                       上一页
                     </Button>
@@ -537,7 +546,7 @@ export default function Gallery() {
                       size="sm"
                       variant="outline"
                       onClick={handleNextPage}
-                      disabled={pagination.page >= pagination.totalPages - 1}
+                      disabled={!pagination.down}
                     >
                       下一页
                     </Button>
@@ -575,7 +584,11 @@ export default function Gallery() {
       </Modal>
 
       {/* 编辑分类模态框 */}
-      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="修改分类">
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        title="修改分类"
+      >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">修改分类</h2>

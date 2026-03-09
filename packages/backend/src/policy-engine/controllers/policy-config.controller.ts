@@ -209,8 +209,8 @@ export class PolicyConfigController {
       permissions: (policy.permissions || []) as PrismaPermission[],
       enabled: policy.enabled,
       priority: policy.priority,
-      createdAt: new Date(), // 这些字段应该在数据库中返回
-      updatedAt: new Date(),
+      createdAt: policy.createdAt,
+      updatedAt: policy.updatedAt,
     };
   }
 }

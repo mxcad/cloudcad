@@ -4,6 +4,7 @@ import {
   OnModuleInit,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { RedisCacheService } from './redis-cache.service';
 import { SystemPermission, ProjectRole } from '../enums/permissions.enum';
@@ -20,13 +21,18 @@ import { SystemPermission, ProjectRole } from '../enums/permissions.enum';
 @Injectable()
 export class CacheWarmupService implements OnModuleInit {
   private readonly logger = new Logger(CacheWarmupService.name);
-  private readonly MAX_USERS_TO_WARMUP = 100; // 最多预热100个用户
-  private readonly MAX_PROJECTS_TO_WARMUP = 50; // 最多预热50个项目
+  private readonly maxUsersToWarmup: number;
+  private readonly maxProjectsToWarmup: number;
 
   constructor(
+    private readonly configService: ConfigService,
     private readonly prisma: DatabaseService,
     private readonly redisCacheService: RedisCacheService
-  ) {}
+  ) {
+    const cacheWarmup = this.configService.get('cacheWarmup', { infer: true });
+    this.maxUsersToWarmup = cacheWarmup.maxUsers;
+    this.maxProjectsToWarmup = cacheWarmup.maxProjects;
+  }
 
   /**
    * 模块初始化时自动执行缓存预热
@@ -70,7 +76,7 @@ export class CacheWarmupService implements OnModuleInit {
         orderBy: {
           updatedAt: 'desc',
         },
-        take: this.MAX_USERS_TO_WARMUP,
+        take: this.maxUsersToWarmup,
         select: {
           id: true,
           role: true,
@@ -117,7 +123,7 @@ export class CacheWarmupService implements OnModuleInit {
         orderBy: {
           updatedAt: 'desc',
         },
-        take: this.MAX_PROJECTS_TO_WARMUP,
+        take: this.maxProjectsToWarmup,
         select: {
           id: true,
           ownerId: true,

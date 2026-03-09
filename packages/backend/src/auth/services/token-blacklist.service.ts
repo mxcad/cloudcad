@@ -7,12 +7,15 @@ import Redis from 'ioredis';
 export class TokenBlacklistService implements OnModuleInit {
   private readonly logger = new Logger(TokenBlacklistService.name);
   private readonly blacklistPrefix = 'token:blacklist:';
-  private readonly defaultTTL = 7 * 24 * 60 * 60; // 7天
+  private readonly defaultTTL: number;
 
   constructor(
     private configService: ConfigService,
     @InjectRedis() private readonly redis: Redis
-  ) {}
+  ) {
+    const cacheTTL = this.configService.get('cacheTTL', { infer: true });
+    this.defaultTTL = cacheTTL.tokenBlacklist;
+  }
 
   onModuleInit() {
     this.redis.on('error', (error) => {

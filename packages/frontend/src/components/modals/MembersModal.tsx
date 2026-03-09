@@ -73,9 +73,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       const response = await projectsApi.getMembers(projectId);
       // 映射 id 为 userId 以保持兼容性
-      const membersWithUserId = ((response.data || []) as ProjectMemberDto[]).map(
-        (m) => ({ ...m, userId: m.id })
-      );
+      const membersWithUserId = (
+        (response.data || []) as ProjectMemberDto[]
+      ).map((m) => ({ ...m, userId: m.id }));
       setMembers(membersWithUserId as Member[]);
     } catch (error) {
       setErrorMessage('加载成员列表失败');
@@ -122,8 +122,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setSearching(true);
       try {
         const response = await usersApi.search({ search: query, limit: 10 });
-        // response.data 是 UserListResponseDto，包含 data 数组
-        const users = (response.data?.data || []) as UserSearchResult[];
+        // response.data 是 UserListResponseDto，包含 users 数组
+        const users = (response.data?.users || []) as UserSearchResult[];
 
         // 过滤掉已经是成员的用户
         const memberUserIds = members.map((m) => m.id);
@@ -429,10 +429,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 {selectedUser && (
                   <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
-                      {((selectedUser.nickname ||
-                        selectedUser.username ||
-                        selectedUser.email ||
-                        '?')[0] ?? '?').toUpperCase()}
+                      {(
+                        (selectedUser.nickname ||
+                          selectedUser.username ||
+                          selectedUser.email ||
+                          '?')[0] ?? '?'
+                      ).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900">
@@ -541,9 +543,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         <TruncateText>{displayName}</TruncateText>
                       </p>
                       <p className="text-xs text-slate-500">
-                        <TruncateText>
-                          {member.email || '无邮箱'}
-                        </TruncateText>
+                        <TruncateText>{member.email || '无邮箱'}</TruncateText>
                       </p>
                     </div>
                     {isOwner ? (
@@ -647,14 +647,15 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               <p className="text-sm font-medium text-slate-700">转让给：</p>
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
-                  {((transferTarget.nickname ||
-                    transferTarget.username ||
-                    transferTarget.email)?.[0] ?? '?').toUpperCase()}
+                  {(
+                    (transferTarget.nickname ||
+                      transferTarget.username ||
+                      transferTarget.email)?.[0] ?? '?'
+                  ).toUpperCase()}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-900">
-                    {transferTarget.nickname ||
-                      transferTarget.username}
+                    {transferTarget.nickname || transferTarget.username}
                   </p>
                   <p className="text-xs text-slate-500">
                     {transferTarget.email}

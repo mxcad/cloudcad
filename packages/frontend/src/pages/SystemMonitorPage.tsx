@@ -56,12 +56,18 @@ export const SystemMonitorPage: React.FC = () => {
         setSystemHealth({
           database: {
             status: databaseInfo?.status === 'up' ? 'up' : 'down',
-            message: databaseInfo?.message || (databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
+            message:
+              databaseInfo?.message ||
+              (databaseInfo?.status === 'up'
+                ? '数据库连接正常'
+                : '数据库连接异常'),
             timestamp,
           },
           storage: {
             status: storageInfo?.status === 'up' ? 'up' : 'down',
-            message: storageInfo?.message || (storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
+            message:
+              storageInfo?.message ||
+              (storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
             timestamp,
           },
         });

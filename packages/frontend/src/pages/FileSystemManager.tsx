@@ -14,7 +14,6 @@ import { useProjectManagement } from '../hooks/useProjectManagement';
 import { usePermission } from '../hooks/usePermission';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotification } from '../contexts/NotificationContext';
 import { projectsApi } from '../services/projectsApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
@@ -509,7 +508,12 @@ export const FileSystemManager: React.FC = () => {
       setSelectedNodeForGallery(node);
       setShowAddToGalleryModal(true);
     },
-    [setSelectedNodeForGallery, setShowAddToGalleryModal, projectPermissions, showToast]
+    [
+      setSelectedNodeForGallery,
+      setShowAddToGalleryModal,
+      projectPermissions,
+      showToast,
+    ]
   );
 
   /**
@@ -1438,7 +1442,11 @@ export const FileSystemManager: React.FC = () => {
         title="确认删除项目"
         footer={
           <>
-            <Button variant="ghost" onClick={cancelDelete} disabled={projectLoading}>
+            <Button
+              variant="ghost"
+              onClick={cancelDelete}
+              disabled={projectLoading}
+            >
               取消
             </Button>
             <Button

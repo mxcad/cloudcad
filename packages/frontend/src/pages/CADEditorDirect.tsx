@@ -76,7 +76,10 @@ export const CADEditorDirect: React.FC = () => {
         const { projectsApi } = await import('../services/projectsApi');
         const [saveRes, exportRes, externalRefRes] = await Promise.all([
           projectsApi.checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
-          projectsApi.checkPermission(urlProjectId, ProjectPermission.CAD_EXPORT),
+          projectsApi.checkPermission(
+            urlProjectId,
+            ProjectPermission.CAD_EXPORT
+          ),
           projectsApi.checkPermission(
             urlProjectId,
             ProjectPermission.CAD_EXTERNAL_REFERENCE
@@ -119,7 +122,11 @@ export const CADEditorDirect: React.FC = () => {
     const serverConfig = await (
       window as unknown as {
         MxPluginContext: {
-          getServerConfig: () => { uploadFileConfig?: { create?: { formData?: Record<string, string> } } };
+          getServerConfig: () => {
+            uploadFileConfig?: {
+              create?: { formData?: Record<string, string> };
+            };
+          };
         };
       }
     ).MxPluginContext.getServerConfig();
@@ -237,7 +244,7 @@ export const CADEditorDirect: React.FC = () => {
 
         if (!file.isRoot && file.parentId) {
           try {
-            if (!file.id) throw new Error('节点ID缺失')
+            if (!file.id) throw new Error('节点ID缺失');
             const rootResponse = await filesApi.getRoot(file.id);
             if (rootResponse.data?.id) {
               projectId = rootResponse.data.id;
@@ -272,7 +279,6 @@ export const CADEditorDirect: React.FC = () => {
             mxcadFileUrl = `/api/mxcad/filesData/${file.path}?t=${cacheTimestamp}`;
             setCacheTimestamp(cacheTimestamp); // 设置缓存时间戳，用于清理旧缓存
           }
-
         }
 
         // 如果已经初始化过 MxCAD
@@ -364,7 +370,7 @@ export const CADEditorDirect: React.FC = () => {
     const updateFileInfo = async () => {
       try {
         const fileResponse = await filesApi.get(fileId);
-        const file = fileResponse.data
+        const file = fileResponse.data;
 
         // 检查文件是否在回收站中
         if (file.deletedAt) {
@@ -453,7 +459,10 @@ export const CADEditorDirect: React.FC = () => {
       await openUploadedFile(file.nodeId, uploadTargetNodeId);
     } catch (error) {
       console.error('打开文件失败:', error);
-      showToast(error instanceof Error ? error.message : '打开文件失败', 'error');
+      showToast(
+        error instanceof Error ? error.message : '打开文件失败',
+        'error'
+      );
     }
   };
 

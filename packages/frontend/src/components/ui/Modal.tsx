@@ -29,7 +29,8 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth,
   size,
 }) => {
-  const effectiveMaxWidth = maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
+  const effectiveMaxWidth =
+    maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
 
   if (!isOpen) return null;
 

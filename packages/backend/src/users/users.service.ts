@@ -10,6 +10,7 @@ import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -105,7 +106,7 @@ export class UsersService {
       const { search, roleId, page = 1, limit = 10, sortBy, sortOrder } = query;
       const skip = (page - 1) * limit;
 
-      const where: any = {};
+      const where: Prisma.UserWhereInput = {};
 
       // 搜索条件
       if (search) {
@@ -155,13 +156,11 @@ export class UsersService {
       ]);
 
       return {
-        data: users,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / (limit || 10)),
-        },
+        users,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / (limit || 10)),
       };
     } catch (error) {
       this.logger.error(`查询用户列表失败: ${error.message}`, error.stack);
@@ -333,14 +332,16 @@ export class UsersService {
       }
 
       // 如果更新密码，需要加密
-      const updateData: any = {};
+      const updateData: Prisma.UserUpdateInput = {};
       if (updateUserDto.email) updateData.email = updateUserDto.email;
       if (updateUserDto.username) updateData.username = updateUserDto.username;
       if (updateUserDto.nickname !== undefined)
         updateData.nickname = updateUserDto.nickname;
       if (updateUserDto.avatar !== undefined)
         updateData.avatar = updateUserDto.avatar;
-      if (updateUserDto.roleId) updateData.roleId = updateUserDto.roleId;
+      if (updateUserDto.roleId) {
+        updateData.role = { connect: { id: updateUserDto.roleId } };
+      }
       if (updateUserDto.status) updateData.status = updateUserDto.status;
       if (updateUserDto.password) {
         updateData.password = await bcrypt.hash(

@@ -6,12 +6,15 @@ This document provides concrete templates and examples for creating Layered Cont
 
 ```markdown
 ---
+
 # Project Name
 
 ## Overview
+
 [2-3 sentences describing what the project does, its primary use case, and key technologies]
 
 ## Architecture
+
 - [Architectural pattern, e.g., Event-driven microservices]
 - [Main component 1]
 - [Main component 2]
@@ -19,10 +22,12 @@ This document provides concrete templates and examples for creating Layered Cont
 
 ## Directory Structure
 ```
+
 project-root/
-├── directory1/     # Brief description
-├── directory2/     # Brief description
-└── key-file.js     # Brief description
+├── directory1/ # Brief description
+├── directory2/ # Brief description
+└── key-file.js # Brief description
+
 ```
 
 ## Global Conventions
@@ -52,10 +57,11 @@ project-root/
 
 ### Core Module Template
 
-```markdown
+````markdown
 # [Module Name]
 
 ## Purpose
+
 [1 paragraph explaining what this module does, why it exists, and its key responsibilities]
 
 ## Public API
@@ -63,9 +69,11 @@ project-root/
 ### Classes
 
 #### [ClassName]
+
 **Purpose**: [What this class does]
 
 **Methods:**
+
 - `methodName(param1, param2)` → [return type]
   - [Purpose of method]
   - [Parameters]:
@@ -73,11 +81,13 @@ project-root/
     - `param2`: [type] - [description]
 
 #### [AnotherClassName]
+
 [Similar structure]
 
 ### Functions
 
 #### [functionName](param)
+
 - **Purpose**: [what it does]
 - **Parameters**: [description]
 - **Returns**: [what it returns]
@@ -86,48 +96,59 @@ project-root/
 ## Implementation Details
 
 ### Architecture
+
 [Internal architecture description]
+
 - [Component 1]: [role]
 - [Component 2]: [role]
 
 ### Key Algorithms/Patterns
+
 - [Pattern 1]: [description]
 - [Algorithm]: [brief explanation]
 
 ### Important Design Decisions
+
 - [Decision 1]: [why this was chosen]
 - [Decision 2]: [alternatives considered]
 
 ## Dependencies & Relationships
 
 ### This Module Depends On
+
 - [Dependency 1]: [how it's used]
 - [Dependency 2]: [how it's used]
 
 ### Modules That Depend On This
+
 - [Module 1]: [how they use this module]
 - [Module 2]: [how they use this module]
 
 ### Integration Points
+
 - [Integration 1]: [description]
 - [Integration 2]: [description]
 
 ## Usage Examples
 
 ### Basic Usage
+
 ```javascript
 // Example from the actual codebase
 const instance = new ClassName();
 const result = instance.methodName(arg1, arg2);
 ```
+````
 
 ### Advanced Usage
+
 ```javascript
 // More complex example
 // Show edge cases or advanced patterns
 ```
 
 ### Common Patterns
+
 - [Pattern 1]: [description and example]
 - [Pattern 2]: [description and example]
 
@@ -136,25 +157,31 @@ const result = instance.methodName(arg1, arg2);
 ### Common Issues
 
 #### [Issue Name]
+
 **Symptom**: [what goes wrong]
 **Cause**: [why it happens]
 **Solution**: [how to fix it]
 
 #### [Another Issue]
+
 [Similar structure]
 
 ### Debugging Tips
+
 - [Tip 1]
 - [Tip 2]
 
 ### Performance Considerations
+
 - [Performance aspect 1]: [implications]
 - [Performance aspect 2]: [implications]
 
 ## Related Documents
+
 - [Related module]: Documents/[related-module].md
 - [Related topic]: Documents/[related-topic].md
-```
+
+````
 
 ### UI Component Template
 
@@ -173,48 +200,54 @@ const result = instance.methodName(arg1, arg2);
   <div class="header">...</div>
   <div class="content">...</div>
 </div>
-```
+````
 
 ### CSS Classes
+
 - `.component-name`: [purpose]
 - `.component-name.header`: [purpose]
 - `.component-name.content`: [purpose]
 
 ## Props/Properties
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| prop1 | string | Yes | - | [description] |
-| prop2 | number | No | 0 | [description] |
-| prop3 | object | No | {} | [description] |
+| Prop  | Type   | Required | Default | Description   |
+| ----- | ------ | -------- | ------- | ------------- |
+| prop1 | string | Yes      | -       | [description] |
+| prop2 | number | No       | 0       | [description] |
+| prop3 | object | No       | {}      | [description] |
 
 ## State Management
 
 ### Internal State
+
 - `state1`: [type] - [purpose]
 - `state2`: [type] - [purpose]
 
 ### External State
+
 - Uses [store/context] for [purpose]
 
 ## Events/Callbacks
 
-| Event | When Triggered | Payload |
-|-------|----------------|---------|
-| onEvent1 | [condition] | [data structure] |
-| onEvent2 | [condition] | [data structure] |
+| Event    | When Triggered | Payload          |
+| -------- | -------------- | ---------------- |
+| onEvent1 | [condition]    | [data structure] |
+| onEvent2 | [condition]    | [data structure] |
 
 ## Styling
 
 ### Design System Integration
+
 - Uses [design system/component library]
 - Follows [design pattern]
 
 ### Custom Styles
+
 - [Style 1]: [purpose]
 - [Style 2]: [purpose]
 
 ### Responsive Behavior
+
 - Mobile: [behavior]
 - Tablet: [behavior]
 - Desktop: [behavior]
@@ -222,19 +255,19 @@ const result = instance.methodName(arg1, arg2);
 ## Usage Examples
 
 ### Basic Usage
+
 ```jsx
 <Component prop1="value" prop2={123} />
 ```
 
 ### With Event Handlers
+
 ```jsx
-<Component
-  prop1="value"
-  onEvent1={(data) => console.log(data)}
-/>
+<Component prop1="value" onEvent1={(data) => console.log(data)} />
 ```
 
 ### Advanced Configuration
+
 ```jsx
 <Component
   prop1="value"
@@ -247,27 +280,33 @@ const result = instance.methodName(arg1, arg2);
 ## Accessibility
 
 ### Keyboard Navigation
+
 - [Key 1]: [action]
 - [Key 2]: [action]
 
 ### ARIA Attributes
+
 - `aria-label`: [when used]
 - `aria-describedby`: [when used]
 
 ### Screen Reader Support
+
 - [Support detail 1]
 - [Support detail 2]
 
 ## Browser Compatibility
+
 - Chrome: [version+]
 - Firefox: [version+]
 - Safari: [version+]
 - Edge: [version+]
 
 ## Known Issues
+
 - [Issue 1]: [workaround]
 - [Issue 2]: [workaround]
-```
+
+````
 
 ### API Service Template
 
@@ -298,10 +337,12 @@ const result = instance.methodName(arg1, arg2);
   "field1": "value1",
   "field2": 123
 }
-```
+````
 
 **Response:**
+
 - **Success (200)**:
+
 ```json
 {
   "status": "success",
@@ -311,7 +352,9 @@ const result = instance.methodName(arg1, arg2);
   }
 }
 ```
+
 - **Error (400/401/404/etc)**:
+
 ```json
 {
   "status": "error",
@@ -321,6 +364,7 @@ const result = instance.methodName(arg1, arg2);
 ```
 
 **Examples:**
+
 ```bash
 # Using curl
 curl -X GET "https://api.example.com/endpoint?param1=value"
@@ -332,20 +376,24 @@ fetch('https://api.example.com/endpoint?param1=value')
 ```
 
 ### [Another Endpoint]
+
 [Repeat structure]
 
 ## Authentication
 
 ### Auth Method
+
 - [JWT/OAuth/API Key/etc]
 
 ### How to Obtain Token
+
 ```javascript
 // Example
 const token = await authService.login(username, password);
 ```
 
 ### Token Usage
+
 ```javascript
 // Include in headers
 headers: {
@@ -354,19 +402,22 @@ headers: {
 ```
 
 ## Rate Limiting
+
 - [Rate limit details]
 - How to handle: [approach]
 
 ## Error Handling
 
 ### Error Codes
-| Code | Meaning | HTTP Status |
-|------|---------|-------------|
-| AUTH_INVALID | Invalid credentials | 401 |
-| RESOURCE_NOT_FOUND | Resource doesn't exist | 404 |
-| RATE_LIMIT_EXCEEDED | Too many requests | 429 |
+
+| Code                | Meaning                | HTTP Status |
+| ------------------- | ---------------------- | ----------- |
+| AUTH_INVALID        | Invalid credentials    | 401         |
+| RESOURCE_NOT_FOUND  | Resource doesn't exist | 404         |
+| RATE_LIMIT_EXCEEDED | Too many requests      | 429         |
 
 ### Retry Strategy
+
 - When to retry: [conditions]
 - Retry delay: [time]
 - Max retries: [number]
@@ -374,6 +425,7 @@ headers: {
 ## Client Integration
 
 ### JavaScript/TypeScript
+
 ```typescript
 import { APIClient } from './api-client';
 
@@ -384,6 +436,7 @@ const result = await client.getData({ param1: 'value' });
 ```
 
 ### Python
+
 ```python
 from api_client import APIClient
 
@@ -396,21 +449,25 @@ result = client.get_data(param1='value')
 ## Testing
 
 ### Unit Tests
+
 - Test file: [path/to/test.file]
 - Key test cases:
   - [test case 1]
   - [test case 2]
 
 ### Integration Tests
+
 - Test file: [path/to/integration-test.file]
 - Scenarios:
   - [scenario 1]
   - [scenario 2]
 
 ## Related Documents
+
 - [Auth service]: Documents/auth-service.md
 - [Data models]: Documents/data-models.md
-```
+
+````
 
 ### Configuration Template
 
@@ -434,9 +491,10 @@ result = client.get_data(param1='value')
     "suboption": true
   }
 }
-```
+````
 
 ### [Another config file]
+
 [Repeat structure]
 
 ## Configuration Options
@@ -444,6 +502,7 @@ result = client.get_data(param1='value')
 ### [Option Group]
 
 #### option1
+
 - **Type**: [string/number/boolean/object]
 - **Default**: [default value]
 - **Required**: [yes/no]
@@ -452,17 +511,19 @@ result = client.get_data(param1='value')
 - **Example**: [example value]
 
 #### option2
+
 [Repeat structure]
 
 ### [Another Group]
+
 [Repeat structure]
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| VAR1 | Yes | - | [description] |
-| VAR2 | No | default | [description] |
+| Variable | Required | Default | Description   |
+| -------- | -------- | ------- | ------------- |
+| VAR1     | Yes      | -       | [description] |
+| VAR2     | No       | default | [description] |
 
 ## Configuration Hierarchy
 
@@ -473,6 +534,7 @@ result = client.get_data(param1='value')
 ## Common Configurations
 
 ### Development
+
 ```json
 {
   "environment": "development",
@@ -482,6 +544,7 @@ result = client.get_data(param1='value')
 ```
 
 ### Production
+
 ```json
 {
   "environment": "production",
@@ -491,6 +554,7 @@ result = client.get_data(param1='value')
 ```
 
 ### Testing
+
 ```json
 {
   "environment": "test",
@@ -502,21 +566,26 @@ result = client.get_data(param1='value')
 ## Validation
 
 ### Schema
+
 [Configuration schema validation rules]
 
 ### Validation Errors
+
 - [Error 1]: [how to fix]
 - [Error 2]: [how to fix]
 
 ## Migration Guide
 
 ### From Version X to Y
+
 - [Change 1]: [migration steps]
 - [Change 2]: [migration steps]
 
 ### Deprecated Options
+
 - [Old option]: [replacement]
-```
+
+````
 
 ## Complete Example: Web Application
 
@@ -538,24 +607,26 @@ A web-based task management application that allows users to create, organize, a
 - State Management: Redux Toolkit
 
 ## Directory Structure
-```
+````
+
 myapp/
-├── client/               # React frontend
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/        # Page components
-│   │   ├── store/        # Redux store
-│   │   └── services/     # API services
-│   └── public/           # Static assets
-├── server/               # Node.js backend
-│   ├── src/
-│   │   ├── controllers/  # Route controllers
-│   │   ├── models/       # Database models
-│   │   ├── routes/       # API routes
-│   │   └── services/     # Business logic
-│   └── config/           # Server configuration
-├── shared/               # Shared types and utilities
-└── docs/                 # Additional documentation
+├── client/ # React frontend
+│ ├── src/
+│ │ ├── components/ # React components
+│ │ ├── pages/ # Page components
+│ │ ├── store/ # Redux store
+│ │ └── services/ # API services
+│ └── public/ # Static assets
+├── server/ # Node.js backend
+│ ├── src/
+│ │ ├── controllers/ # Route controllers
+│ │ ├── models/ # Database models
+│ │ ├── routes/ # API routes
+│ │ └── services/ # Business logic
+│ └── config/ # Server configuration
+├── shared/ # Shared types and utilities
+└── docs/ # Additional documentation
+
 ```
 
 ## Global Conventions
@@ -599,18 +670,21 @@ myapp/
 
 ### Tier 2: Documents/database-models.md
 
-```markdown
+````markdown
 # Database Models
 
 ## Purpose
+
 Defines the database schema, relationships, and ORM models using TypeORM. Manages all data persistence and retrieval operations.
 
 ## Models
 
 ### User
+
 **Purpose**: Represents application users and authentication
 
 **Schema:**
+
 ```typescript
 @Entity('users')
 export class User {
@@ -629,7 +703,7 @@ export class User {
   @Column({ default: 'user' })
   role: 'admin' | 'user';
 
-  @OneToMany(() => Task, task => task.owner)
+  @OneToMany(() => Task, (task) => task.owner)
   tasks: Task[];
 
   @CreateDateColumn()
@@ -639,18 +713,23 @@ export class User {
   updatedAt: Date;
 }
 ```
+````
 
 **Relationships:**
+
 - One-to-many with Task (owner)
 - Many-to-many with Task (assignees through join table)
 
 **Indexes:**
+
 - Unique index on email
 
 ### Task
+
 **Purpose**: Represents tasks with properties, relationships, and status
 
 **Schema:**
+
 ```typescript
 @Entity('tasks')
 export class Task {
@@ -672,13 +751,13 @@ export class Task {
   @Column({ type: 'date' })
   dueDate: Date;
 
-  @ManyToOne(() => User, user => user.tasks)
+  @ManyToOne(() => User, (user) => user.tasks)
   owner: User;
 
-  @ManyToMany(() => User, user => user.assignedTasks)
+  @ManyToMany(() => User, (user) => user.assignedTasks)
   assignees: User[];
 
-  @OneToMany(() => Comment, comment => comment.task)
+  @OneToMany(() => Comment, (comment) => comment.task)
   comments: Comment[];
 
   @CreateDateColumn()
@@ -690,19 +769,23 @@ export class Task {
 ```
 
 **Relationships:**
+
 - Many-to-one with User (owner)
 - Many-to-many with User (assignees)
 - One-to-many with Comment
 
 **Indexes:**
+
 - Index on status
 - Index on dueDate
 - Composite index on status and dueDate
 
 ### Comment
+
 **Purpose**: Comments and discussions on tasks
 
 **Schema:**
+
 ```typescript
 @Entity('comments')
 export class Comment {
@@ -712,7 +795,7 @@ export class Comment {
   @Column({ type: 'text' })
   content: string;
 
-  @ManyToOne(() => Task, task => task.comments)
+  @ManyToOne(() => Task, (task) => task.comments)
   task: Task;
 
   @ManyToOne(() => User)
@@ -727,6 +810,7 @@ export class Comment {
 ```
 
 **Relationships:**
+
 - Many-to-one with Task
 - Many-to-one with User (author)
 
@@ -742,35 +826,39 @@ Task (1) ----< (n) User (author via Comment)
 ## Common Queries
 
 ### Get User with Tasks
+
 ```typescript
 const user = await userRepository.findOne({
   where: { id: userId },
-  relations: ['tasks']
+  relations: ['tasks'],
 });
 ```
 
 ### Get Tasks with Assignees
+
 ```typescript
 const tasks = await taskRepository.find({
   relations: ['owner', 'assignees'],
-  where: { status: 'in-progress' }
+  where: { status: 'in-progress' },
 });
 ```
 
 ### Get Task Comments
+
 ```typescript
 const task = await taskRepository.findOne({
   where: { id: taskId },
-  relations: ['comments', 'comments.author']
+  relations: ['comments', 'comments.author'],
 });
 ```
 
 ### Create Task with Assignees
+
 ```typescript
 const task = taskRepository.create({
   title: 'New Task',
   owner: user,
-  assignees: [assignee1, assignee2]
+  assignees: [assignee1, assignee2],
 });
 await taskRepository.save(task);
 ```
@@ -778,11 +866,13 @@ await taskRepository.save(task);
 ## Database Constraints
 
 ### Foreign Keys
+
 - `tasks.owner_id` → `users.id` (CASCADE DELETE)
 - `comments.task_id` → `tasks.id` (CASCADE DELETE)
 - `comments.author_id` → `users.id` (SET NULL)
 
 ### Validation Rules
+
 - User email: valid email format, unique
 - Task priority: 1-5
 - Task status: must be one of enum values
@@ -790,9 +880,11 @@ await taskRepository.save(task);
 ## Migrations
 
 ### Current Version
+
 - Migration file: `server/migrations/[timestamp]-InitialSchema.ts`
 
 ### Running Migrations
+
 ```bash
 # Generate migration
 npm run migration:generate -- -n MigrationName
@@ -805,6 +897,7 @@ npm run migration:revert
 ```
 
 ### Migration Naming Convention
+
 - Format: `[timestamp]-[Description].ts`
 - Use PascalCase for description
 - Be descriptive: `AddIndexOnTaskStatus.ts`
@@ -812,21 +905,25 @@ npm run migration:revert
 ## Performance Considerations
 
 ### Indexes
+
 - Email uniqueness check uses unique index
 - Task filtering by status uses status index
 - Task filtering by date uses dueDate index
 - Composite index for status + dueDate queries
 
 ### Query Optimization
+
 - Always use `relations` for eager loading, avoid N+1 queries
 - Use `select` to limit columns when possible
 - Use pagination for large result sets
 - Consider query caching for frequently accessed data
 
 ## Related Documents
+
 - **API Endpoints**: Documents/api-endpoints.md (Task and User endpoints)
 - **Business Logic**: Documents/business-logic.md (Service layer using these models)
 - **Testing**: Documents/testing.md (Database testing patterns)
+
 ```
 
 ## Tips for Success
@@ -839,3 +936,4 @@ npm run migration:revert
 6. **Think like an agent**: Write for another AI agent that needs to understand the code
 7. **Update consistently**: Keep documentation in sync with code changes
 8. **Cross-reference**: Link between related documents when helpful
+```

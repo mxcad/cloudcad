@@ -2,7 +2,6 @@ import { FileSystemNode } from '@/types/filesystem';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-
 // 从 localStorage 读取保存的视图模式
 const getInitialViewMode = (): 'grid' | 'list' => {
   if (typeof window === 'undefined') return 'grid';
@@ -95,10 +94,9 @@ export const useFileSystemStore = create<FileSystemState>()(
         if (currentPath.length > 0) {
           const newPath = [...currentPath];
           newPath.pop();
-          const itemNode = newPath[newPath.length - 1]
-          if(!itemNode) return
-          const newParentId =
-            newPath.length > 0 ? itemNode.id : null;
+          const itemNode = newPath[newPath.length - 1];
+          if (!itemNode) return;
+          const newParentId = newPath.length > 0 ? itemNode.id : null;
           set({ currentPath: newPath, currentParentId: newParentId });
         }
       },

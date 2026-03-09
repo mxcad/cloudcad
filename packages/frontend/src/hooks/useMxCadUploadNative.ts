@@ -81,7 +81,7 @@ export const useMxCadUploadNative = () => {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if(!file) continue;
+        if (!file) continue;
         try {
           // 计算文件哈希
           const hash = await calculateFileHash(file);

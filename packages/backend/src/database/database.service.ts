@@ -14,7 +14,7 @@ export class DatabaseService
     const dbPort = configService.get('DB_PORT', '5432');
     const dbUser = configService.get('DB_USERNAME', 'postgres');
     const dbPassword = configService.get('DB_PASSWORD', 'password');
-    const dbDatabase = configService.get('DB_DATABASE', 'cloucad');
+    const dbDatabase = configService.get('DB_DATABASE', 'cloudcad');
 
     // 确保密码是字符串类型并进行URL编码
     const encodedPassword = encodeURIComponent(String(dbPassword));

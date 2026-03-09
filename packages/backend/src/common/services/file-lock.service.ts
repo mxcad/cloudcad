@@ -25,7 +25,7 @@ export class FileLockService {
     // 从 FILES_DATA_PATH 派生锁目录
     const filesDataPath = this.configService.get(
       'FILES_DATA_PATH',
-      '../filesData'
+      '../../filesData'
     );
     this.lockDir = path.resolve(filesDataPath, '.lock');
     // 增加锁超时时间到 5 分钟，以支持大文件拷贝

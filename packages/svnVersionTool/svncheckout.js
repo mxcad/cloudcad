@@ -10,20 +10,20 @@ const svnPath = require('./svnpath');
  * @param {function} callback 回调函数
  */
 function svnCheckout(repoUrl, targetDir, username, password, callback) {
-    let command = `${svnPath} checkout ${repoUrl} ${targetDir}`;
-    if (username) {
-        command += ` --username ${username}`;
+  let command = `${svnPath} checkout ${repoUrl} ${targetDir}`;
+  if (username) {
+    command += ` --username ${username}`;
+  }
+  if (password) {
+    command += ` --password ${password}`;
+  }
+  exec(command, { windowsHide: true }, (error, stdout) => {
+    if (error) {
+      callback(error);
+    } else {
+      callback(null, stdout);
     }
-    if (password) {
-        command += ` --password ${password}`;
-    }
-    exec(command, (error, stdout) => {
-        if (error) {
-            callback(error);
-        } else {
-            callback(null, stdout);
-        }
-    });
+  });
 }
 
 module.exports = svnCheckout;

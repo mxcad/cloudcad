@@ -4,7 +4,6 @@ import {
   Logger,
   forwardRef,
   BadRequestException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileUploadManagerService } from './services/file-upload-manager.service';
@@ -22,13 +21,15 @@ import {
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
+import { AppConfig } from '../config/app.config';
 
 @Injectable()
 export class MxCadService {
   private readonly logger = new Logger(MxCadService.name);
+  private readonly mxcadUploadPath: string;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     @Inject(forwardRef(() => FileUploadManagerService))
     private readonly fileUploadManager: FileUploadManagerService,
     private readonly fileSystemNodeService: FileSystemNodeService,
@@ -36,7 +37,9 @@ export class MxCadService {
     private readonly storageManager: StorageManager,
     private readonly versionControlService: VersionControlService,
     private readonly prisma: DatabaseService
-  ) {}
+  ) {
+    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+  }
 
   /**
    * 检查分片是否存在
@@ -191,10 +194,7 @@ export class MxCadService {
     }
 
     // 节点不存在或查找失败，降级到 uploads 目录（兼容旧文件）
-    const uploadPath =
-      this.configService.get('MXCAD_UPLOAD_PATH') ||
-      path.join(process.cwd(), 'uploads');
-    return uploadPath;
+    return this.mxcadUploadPath;
   }
 
   /**
@@ -509,10 +509,8 @@ export class MxCadService {
     // 在测试环境中，如果 context 为空，返回一个 mock context
     if (!context) {
       // 检查是否是测试环境
-      if (
-        process.env.NODE_ENV === 'test' ||
-        process.env.JEST_WORKER_ID !== undefined
-      ) {
+      const nodeEnv = this.configService.get('nodeEnv', { infer: true });
+      if (nodeEnv === 'test' || process.env.JEST_WORKER_ID !== undefined) {
         return {
           userId: 'test-user-id',
           username: 'test-user',
@@ -692,10 +690,8 @@ export class MxCadService {
    */
   private async createDefaultContext(): Promise<any> {
     // 在测试环境中，返回一个默认的上下文
-    if (
-      process.env.NODE_ENV === 'test' ||
-      process.env.JEST_WORKER_ID !== undefined
-    ) {
+    const nodeEnv = this.configService.get('nodeEnv', { infer: true });
+    if (nodeEnv === 'test' || process.env.JEST_WORKER_ID !== undefined) {
       return {
         userId: 'test-user-id',
         username: 'test-user',

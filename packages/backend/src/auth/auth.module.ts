@@ -17,6 +17,7 @@ import { EmailVerificationService } from './services/email-verification.service'
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { InitializationService } from '../common/services/initialization.service';
+import { AppConfig } from '../config/app.config';
 
 @Module({
   imports: [
@@ -26,35 +27,38 @@ import { InitializationService } from '../common/services/initialization.service
     PassportModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        transport: {
-          host: configService.get('MAIL_HOST'),
-          port: parseInt(configService.get('MAIL_PORT') || '587'),
-          secure: configService.get('MAIL_SECURE') === 'true',
-          auth: {
-            user: configService.get('MAIL_USER'),
-            pass: configService.get('MAIL_PASS'),
+      useFactory: (configService: ConfigService<AppConfig>) => {
+        const mailConfig = configService.get('mail', { infer: true });
+        return {
+          transport: {
+            host: mailConfig.host,
+            port: mailConfig.port,
+            secure: mailConfig.secure,
+            auth: {
+              user: mailConfig.user,
+              pass: mailConfig.pass,
+            },
           },
-        },
-        defaults: {
-          from: configService.get('MAIL_FROM'),
-        },
-        template: {
-          dir: process.cwd() + '/templates',
-          adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true,
+          defaults: {
+            from: mailConfig.from,
           },
-        },
-      }),
+          template: {
+            dir: process.cwd() + '/templates',
+            adapter: new HandlebarsAdapter(),
+            options: {
+              strict: true,
+            },
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('jwt.secret'),
+      useFactory: (configService: ConfigService<AppConfig>) => ({
+        secret: configService.get('jwt.secret', { infer: true }),
         signOptions: {
-          expiresIn: configService.get<string>('jwt.expiresIn', '1h') as any,
+          expiresIn: configService.get('jwt.expiresIn', { infer: true }),
         },
       }),
       inject: [ConfigService],

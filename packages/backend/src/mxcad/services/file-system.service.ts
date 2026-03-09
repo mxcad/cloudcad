@@ -7,6 +7,7 @@ import type {
 import * as fs from 'fs';
 import * as path from 'path';
 import { createReadStream, createWriteStream, statSync } from 'fs';
+import { AppConfig } from '../../config/app.config';
 
 @Injectable()
 export class FileSystemService implements IFileSystemService {
@@ -14,13 +15,9 @@ export class FileSystemService implements IFileSystemService {
   private readonly uploadPath: string;
   private readonly tempPath: string;
 
-  constructor(private readonly configService: ConfigService) {
-    this.uploadPath =
-      this.configService.get('MXCAD_UPLOAD_PATH') ||
-      path.join(process.cwd(), 'uploads');
-    this.tempPath =
-      this.configService.get('MXCAD_TEMP_PATH') ||
-      path.join(process.cwd(), 'temp');
+  constructor(private readonly configService: ConfigService<AppConfig>) {
+    this.uploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+    this.tempPath = this.configService.get('mxcadTempPath', { infer: true });
   }
 
   async exists(path: string): Promise<boolean> {

@@ -1,9 +1,4 @@
-import  {
-  useState,
-  forwardRef,
-  useImperativeHandle,
-  useCallback,
-} from 'react';
+import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   useMxCadUploadNative,
   LoadFileParam,
@@ -46,8 +41,6 @@ const escapeHtml = (unsafe: string): string => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 };
-
-
 
 /**
  * MxCAD 文件上传组件（增强版本）
@@ -121,7 +114,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           onSuccess?.(param);
 
           // 保存节点ID
-         param.nodeId && setCurrentNodeId(param.nodeId);
+          param.nodeId && setCurrentNodeId(param.nodeId);
 
           // 检查外部参照（传入 nodeId 确保不为空）
           await externalReferenceUpload.checkMissingReferences(param.nodeId);

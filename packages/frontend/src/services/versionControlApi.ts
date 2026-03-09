@@ -15,7 +15,9 @@ export const versionControlApi = {
    * @param limit 限制返回的记录数量
    */
   getFileHistory: (projectId: string, filePath: string, limit?: number) => {
-    type HistoryParams = Parameters<OperationMethods['VersionControlController_getFileHistory']>[0];
+    type HistoryParams = Parameters<
+      OperationMethods['VersionControlController_getFileHistory']
+    >[0];
     const params: HistoryParams = {
       projectId,
       filePath,
@@ -35,12 +37,16 @@ export const versionControlApi = {
     filePath: string,
     revision: number
   ) => {
-    type ContentParams = Parameters<OperationMethods['VersionControlController_getFileContentAtRevision']>[0];
+    type ContentParams = Parameters<
+      OperationMethods['VersionControlController_getFileContentAtRevision']
+    >[0];
     const params: ContentParams = {
       revision,
       projectId,
       filePath,
     };
-    return getApiClient().VersionControlController_getFileContentAtRevision(params);
+    return getApiClient().VersionControlController_getFileContentAtRevision(
+      params
+    );
   },
 };

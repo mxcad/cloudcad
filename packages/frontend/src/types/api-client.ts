@@ -649,6 +649,36 @@ declare namespace Components {
              */
             description?: string;
         }
+        export interface CreateProjectRoleDto {
+            /**
+             * 项目 ID（系统角色不需要）
+             * example:
+             * 550e8400-e29b-41d4-a716-446655440000
+             */
+            projectId?: string;
+            /**
+             * 角色名称
+             * example:
+             * 项目经理
+             */
+            name: string;
+            /**
+             * 角色描述
+             * example:
+             * 负责项目管理
+             */
+            description?: string;
+            /**
+             * 权限列表
+             * example:
+             * [
+             *   "PROJECT_UPDATE",
+             *   "PROJECT_DELETE",
+             *   "FILE_CREATE"
+             * ]
+             */
+            permissions: string[];
+        }
         export interface CreateRoleDto {
             /**
              * 角色名称
@@ -1110,6 +1140,18 @@ declare namespace Components {
              */
             hasPermission: boolean;
         }
+        export interface PermissionsDto {
+            /**
+             * 权限 ID 列表
+             * example:
+             * [
+             *   "PROJECT_UPDATE",
+             *   "PROJECT_DELETE",
+             *   "FILE_CREATE"
+             * ]
+             */
+            permissions: string[];
+        }
         export interface PolicyResponseDto {
             /**
              * 策略 ID
@@ -1270,6 +1312,70 @@ declare namespace Components {
          * 项目权限枚举
          */
         export type ProjectPermission = "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
+        export interface ProjectRoleDto {
+            /**
+             * 角色 ID
+             */
+            id: string;
+            /**
+             * 项目 ID
+             */
+            projectId?: string;
+            /**
+             * 角色名称
+             */
+            name: string;
+            /**
+             * 角色描述
+             */
+            description?: string;
+            /**
+             * 是否为系统角色
+             */
+            isSystem: boolean;
+            /**
+             * 权限列表
+             */
+            permissions: ProjectRolePermissionDto[];
+            /**
+             * 成员数量
+             */
+            _count?: {
+                [key: string]: any;
+            };
+            /**
+             * 关联的项目
+             */
+            project?: {
+                [key: string]: any;
+            };
+            /**
+             * 创建时间
+             */
+            createdAt: string; // date-time
+            /**
+             * 更新时间
+             */
+            updatedAt: string; // date-time
+        }
+        export interface ProjectRolePermissionDto {
+            /**
+             * 权限 ID
+             */
+            id: string;
+            /**
+             * 项目角色 ID
+             */
+            projectRoleId: string;
+            /**
+             * 权限名称
+             */
+            permission: "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
+            /**
+             * 创建时间
+             */
+            createdAt: string; // date-time
+        }
         export interface ProjectUserPermissionsDto {
             /**
              * 项目 ID
@@ -1743,6 +1849,30 @@ declare namespace Components {
              * 策略类型
              */
             type?: "TIME" | "IP" | "DEVICE";
+        }
+        export interface UpdateProjectRoleDto {
+            /**
+             * 角色名称
+             * example:
+             * 项目经理
+             */
+            name?: string;
+            /**
+             * 角色描述
+             * example:
+             * 负责项目管理
+             */
+            description?: string;
+            /**
+             * 权限列表
+             * example:
+             * [
+             *   "PROJECT_UPDATE",
+             *   "PROJECT_DELETE",
+             *   "FILE_CREATE"
+             * ]
+             */
+            permissions?: string[];
         }
         export interface UpdateRoleDto {
             /**
@@ -3980,6 +4110,7 @@ declare namespace Paths {
         export interface PathParameters {
             id: Parameters.Id;
         }
+        export type RequestBody = Components.Schemas.PermissionsDto;
         namespace Responses {
             export interface $200 {
             }
@@ -3992,9 +4123,9 @@ declare namespace Paths {
         }
     }
     namespace RolesControllerCreateProjectRole {
+        export type RequestBody = Components.Schemas.CreateProjectRoleDto;
         namespace Responses {
-            export interface $201 {
-            }
+            export type $201 = Components.Schemas.ProjectRoleDto;
         }
     }
     namespace RolesControllerDeleteProjectRole {
@@ -4038,8 +4169,7 @@ declare namespace Paths {
     }
     namespace RolesControllerGetAllProjectRoles {
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.ProjectRoleDto[];
         }
     }
     namespace RolesControllerGetProjectRole {
@@ -4050,8 +4180,7 @@ declare namespace Paths {
             id: Parameters.Id;
         }
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.ProjectRoleDto;
         }
     }
     namespace RolesControllerGetProjectRolePermissions {
@@ -4073,8 +4202,7 @@ declare namespace Paths {
             projectId: Parameters.ProjectId;
         }
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.ProjectRoleDto[];
         }
     }
     namespace RolesControllerGetRolePermissions {
@@ -4090,8 +4218,7 @@ declare namespace Paths {
     }
     namespace RolesControllerGetSystemProjectRoles {
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.ProjectRoleDto[];
         }
     }
     namespace RolesControllerRemove {
@@ -4124,6 +4251,7 @@ declare namespace Paths {
         export interface PathParameters {
             id: Parameters.Id;
         }
+        export type RequestBody = Components.Schemas.PermissionsDto;
         namespace Responses {
             export interface $200 {
             }
@@ -4148,9 +4276,9 @@ declare namespace Paths {
         export interface PathParameters {
             id: Parameters.Id;
         }
+        export type RequestBody = Components.Schemas.UpdateProjectRoleDto;
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.ProjectRoleDto;
         }
     }
     namespace SessionControllerCreateSession {
@@ -4912,7 +5040,7 @@ export interface OperationMethods {
    */
   'RolesController_updateProjectRole'(
     parameters?: Parameters<Paths.RolesControllerUpdateProjectRole.PathParameters> | null,
-    data?: any,
+    data?: Paths.RolesControllerUpdateProjectRole.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerUpdateProjectRole.Responses.$200>
   /**
@@ -4936,7 +5064,7 @@ export interface OperationMethods {
    */
   'RolesController_addProjectRolePermissions'(
     parameters?: Parameters<Paths.RolesControllerAddProjectRolePermissions.PathParameters> | null,
-    data?: any,
+    data?: Paths.RolesControllerAddProjectRolePermissions.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerAddProjectRolePermissions.Responses.$200>
   /**
@@ -4944,7 +5072,7 @@ export interface OperationMethods {
    */
   'RolesController_removeProjectRolePermissions'(
     parameters?: Parameters<Paths.RolesControllerRemoveProjectRolePermissions.PathParameters> | null,
-    data?: any,
+    data?: Paths.RolesControllerRemoveProjectRolePermissions.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerRemoveProjectRolePermissions.Responses.$200>
   /**
@@ -4952,7 +5080,7 @@ export interface OperationMethods {
    */
   'RolesController_createProjectRole'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.RolesControllerCreateProjectRole.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerCreateProjectRole.Responses.$201>
   /**
@@ -6366,7 +6494,7 @@ export interface PathsDictionary {
      */
     'patch'(
       parameters?: Parameters<Paths.RolesControllerUpdateProjectRole.PathParameters> | null,
-      data?: any,
+      data?: Paths.RolesControllerUpdateProjectRole.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerUpdateProjectRole.Responses.$200>
     /**
@@ -6392,7 +6520,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.RolesControllerAddProjectRolePermissions.PathParameters> | null,
-      data?: any,
+      data?: Paths.RolesControllerAddProjectRolePermissions.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerAddProjectRolePermissions.Responses.$200>
     /**
@@ -6400,7 +6528,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.RolesControllerRemoveProjectRolePermissions.PathParameters> | null,
-      data?: any,
+      data?: Paths.RolesControllerRemoveProjectRolePermissions.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerRemoveProjectRolePermissions.Responses.$200>
   }
@@ -6410,7 +6538,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.RolesControllerCreateProjectRole.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerCreateProjectRole.Responses.$201>
   }
@@ -7333,6 +7461,7 @@ export type CreateFolderDto = Components.Schemas.CreateFolderDto;
 export type CreateNodeDto = Components.Schemas.CreateNodeDto;
 export type CreatePolicyDto = Components.Schemas.CreatePolicyDto;
 export type CreateProjectDto = Components.Schemas.CreateProjectDto;
+export type CreateProjectRoleDto = Components.Schemas.CreateProjectRoleDto;
 export type CreateRoleDto = Components.Schemas.CreateRoleDto;
 export type CreateUserDto = Components.Schemas.CreateUserDto;
 export type ExternalReferenceStatsDto = Components.Schemas.ExternalReferenceStatsDto;
@@ -7353,12 +7482,15 @@ export type OperationSuccessDto = Components.Schemas.OperationSuccessDto;
 export type PerformanceTrendDto = Components.Schemas.PerformanceTrendDto;
 export type Permission = Components.Schemas.Permission;
 export type PermissionCheckResponseDto = Components.Schemas.PermissionCheckResponseDto;
+export type PermissionsDto = Components.Schemas.PermissionsDto;
 export type PolicyResponseDto = Components.Schemas.PolicyResponseDto;
 export type PreloadingDataDto = Components.Schemas.PreloadingDataDto;
 export type ProjectDto = Components.Schemas.ProjectDto;
 export type ProjectListResponseDto = Components.Schemas.ProjectListResponseDto;
 export type ProjectMemberDto = Components.Schemas.ProjectMemberDto;
 export type ProjectPermission = Components.Schemas.ProjectPermission;
+export type ProjectRoleDto = Components.Schemas.ProjectRoleDto;
+export type ProjectRolePermissionDto = Components.Schemas.ProjectRolePermissionDto;
 export type ProjectUserPermissionsDto = Components.Schemas.ProjectUserPermissionsDto;
 export type RefreshExternalReferencesResponseDto = Components.Schemas.RefreshExternalReferencesResponseDto;
 export type RefreshTokenDto = Components.Schemas.RefreshTokenDto;
@@ -7381,6 +7513,7 @@ export type TrashListResponseDto = Components.Schemas.TrashListResponseDto;
 export type TriggerWarmupDto = Components.Schemas.TriggerWarmupDto;
 export type UpdateNodeDto = Components.Schemas.UpdateNodeDto;
 export type UpdatePolicyDto = Components.Schemas.UpdatePolicyDto;
+export type UpdateProjectRoleDto = Components.Schemas.UpdateProjectRoleDto;
 export type UpdateRoleDto = Components.Schemas.UpdateRoleDto;
 export type UpdateUserDto = Components.Schemas.UpdateUserDto;
 export type UpdateWarmupConfigDto = Components.Schemas.UpdateWarmupConfigDto;

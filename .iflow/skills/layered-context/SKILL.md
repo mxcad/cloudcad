@@ -8,6 +8,7 @@ description: Generate Layered Context Documents (LCD) by splitting lengthy AGENT
 ## Core Principles
 
 Split AGENTS.md from a "single long document" into a multi-layer structure organized by **code modules** (horizontal splitting):
+
 - **Layer 1 (Upper)**: Concise overview containing project introduction, architecture summary, module index (<100 lines)
 - **Layer 2+ (Lower)**: Detailed documents organized by code modules (core/, modules/, components/, utils/), loaded on-demand by agent
 - **Goal**: When agent fixes a bug in specific module, only read that module's documentation, not entire project
@@ -21,6 +22,7 @@ Split AGENTS.md from a "single long document" into a multi-layer structure organ
 ## Trigger Conditions
 
 Triggered when user explicitly requests:
+
 - "layered context"
 - "split AGENTS.md"
 - "generate modular documentation"
@@ -45,6 +47,7 @@ mkdir documents/
 Organize by code modules, mirror project structure:
 
 **Standard structure:**
+
 ```
 documents/
 ├── core/           # Core modules (event-bus, file-system, etc.)
@@ -55,6 +58,7 @@ documents/
 ```
 
 **Each module file should contain:**
+
 - Brief module overview (1-2 sentences)
 - File location
 - Key classes/functions (list only, no detailed descriptions unless critical)
@@ -62,6 +66,7 @@ documents/
 - Brief testing notes if applicable
 
 **Writing guidelines:**
+
 - Be concise: 1-2 sentences per item unless more is absolutely necessary
 - Avoid redundant explanations
 - Use lists and tables instead of paragraphs
@@ -107,35 +112,35 @@ See [Architecture Overview](documents/shared/architecture.md)
 
 ### Core Modules
 
-| Module | Description | Detailed Doc |
-|--------|-------------|-------------|
+| Module      | Description         | Detailed Doc                                |
+| ----------- | ------------------- | ------------------------------------------- |
 | [event-bus] | [Brief description] | [event-bus.md](documents/core/event-bus.md) |
 
 ### Feature Modules
 
-| Module | Description | Detailed Doc |
-|--------|-------------|-------------|
+| Module           | Description         | Detailed Doc                                             |
+| ---------------- | ------------------- | -------------------------------------------------------- |
 | [canvas-manager] | [Brief description] | [canvas-manager.md](documents/modules/canvas-manager.md) |
 
 ### UI Components
 
-| Component | Description | Detailed Doc |
-|-----------|-------------|-------------|
+| Component      | Description         | Detailed Doc                                            |
+| -------------- | ------------------- | ------------------------------------------------------- |
 | [file-manager] | [Brief description] | [file-manager.md](documents/components/file-manager.md) |
 
 ### Utilities
 
-| Module | Description | Detailed Doc |
-|--------|-------------|-------------|
+| Module          | Description         | Detailed Doc                                         |
+| --------------- | ------------------- | ---------------------------------------------------- |
 | [error-handler] | [Brief description] | [error-handler.md](documents/utils/error-handler.md) |
 
 ### Shared Documentation
 
-| Topic | Description | Detailed Doc |
-|-------|-------------|-------------|
-| Architecture | System architecture | [architecture.md](documents/shared/architecture.md) |
-| Constants | Global constants | [constants.md](documents/shared/constants.md) |
-| Guidelines | Development guidelines | [guidelines.md](documents/shared/guidelines.md) |
+| Topic        | Description            | Detailed Doc                                        |
+| ------------ | ---------------------- | --------------------------------------------------- |
+| Architecture | System architecture    | [architecture.md](documents/shared/architecture.md) |
+| Constants    | Global constants       | [constants.md](documents/shared/constants.md)       |
+| Guidelines   | Development guidelines | [guidelines.md](documents/shared/guidelines.md)     |
 ```
 
 ### Module-Level Template (Layer 2)
@@ -192,26 +197,31 @@ See [Architecture Overview](documents/shared/architecture.md)
 ## File Organization Guidelines
 
 ### documents/core/
+
 - Core infrastructure modules
 - One file per core module
 - Filename matches module name
 
 ### documents/modules/
+
 - Feature-specific modules
 - One file per feature module
 - Filename matches module name
 
 ### documents/components/
+
 - UI components
 - One file per component
 - Filename matches component name
 
 ### documents/utils/
+
 - Utility functions and helpers
 - Group related utilities together
 - Filename describes utility category
 
 ### documents/shared/
+
 - Cross-module documentation
 - architecture.md: System architecture overview
 - constants.md: Global constants and their usage
@@ -222,12 +232,14 @@ See [Architecture Overview](documents/shared/architecture.md)
 ### Be Concise
 
 **Do**:
+
 - Use 1-2 sentences to describe items
 - Use lists instead of paragraphs
 - Focus on what, not how
 - Omit obvious details
 
 **Don't**:
+
 - Write long paragraphs
 - Explain basic concepts
 - Repeat information
@@ -236,6 +248,7 @@ See [Architecture Overview](documents/shared/architecture.md)
 ### Example Comparison
 
 **Too verbose (don't do this):**
+
 ```markdown
 ## Event Bus
 
@@ -245,12 +258,14 @@ The key methods include subscribe, publish, and unsubscribe. The subscribe metho
 ```
 
 **Concise (do this):**
+
 ```markdown
 ## Event Bus
 
 Implements publish-subscribe pattern for inter-module communication.
 
 **Key Methods**:
+
 - `subscribe(event, callback)`: Listen to events
 - `publish(event, data)`: Emit events
 - `unsubscribe(event, callback)`: Stop listening
@@ -259,14 +274,17 @@ Implements publish-subscribe pattern for inter-module communication.
 ## Layer Structure Guidelines
 
 ### When to Use 2 Layers
+
 - Most common use case
 - Simple to navigate and maintain
 
 ### When to Use 3+ Layers
+
 - Very complex modules with many subcomponents
 - When a single module's documentation is still too long
 
 ### Avoid Over-Complication
+
 - Start with 2 layers unless complexity clearly demands more
 - Prefer concise descriptions over additional layers
 
@@ -275,6 +293,7 @@ Implements publish-subscribe pattern for inter-module communication.
 **Horizontal Splitting**: Organize by code modules, not by document chapters.
 
 When agent works on `modules/note-interactions.js`:
+
 - Read: `documents/modules/note-interactions.md`
 - Skip: All other module documents
 - Result: Minimal context, focused information

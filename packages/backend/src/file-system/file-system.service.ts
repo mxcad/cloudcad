@@ -11,6 +11,7 @@ import {
   FileStatus,
   ProjectStatus,
   FileSystemNode as PrismaFileSystemNode,
+  Prisma,
 } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { LocalStorageProvider } from '../storage/local-storage.provider';
@@ -44,14 +45,16 @@ export class FileSystemService {
   // 使用 ModuleRef 延迟加载 MxCadService，避免循环依赖
   private mxCadService: MxCadService | null = null;
 
-  // ZIP 压缩配置
-  private readonly ZIP_CONFIG = {
-    MAX_TOTAL_SIZE: 2 * 1024 * 1024 * 1024, // 2GB
-    MAX_FILE_COUNT: 10000,
-    MAX_DEPTH: 50,
-    MAX_SINGLE_FILE_SIZE: 500 * 1024 * 1024, // 500MB
-    COMPRESSION_LEVEL: 1, // 快速压缩
-  } as const;
+  // 文件限制配置
+  private readonly fileLimits: {
+    zipMaxTotalSize: number;
+    zipMaxFileCount: number;
+    zipMaxDepth: number;
+    zipMaxSingleFileSize: number;
+    zipCompressionLevel: number;
+    maxFilenameLength: number;
+    maxRecursionDepth: number;
+  };
 
   constructor(
     private readonly prisma: DatabaseService,
@@ -66,7 +69,18 @@ export class FileSystemService {
     private readonly configService: ConfigService,
     private readonly moduleRef: ModuleRef,
     private readonly versionControlService: VersionControlService
-  ) {}
+  ) {
+    const limits = this.configService.get('fileLimits', { infer: true });
+    this.fileLimits = {
+      zipMaxTotalSize: limits.zipMaxTotalSize,
+      zipMaxFileCount: limits.zipMaxFileCount,
+      zipMaxDepth: limits.zipMaxDepth,
+      zipMaxSingleFileSize: limits.zipMaxSingleFileSize,
+      zipCompressionLevel: limits.zipCompressionLevel,
+      maxFilenameLength: limits.maxFilenameLength,
+      maxRecursionDepth: limits.maxRecursionDepth,
+    };
+  }
 
   /**
    * 获取 MxCadService 实例（延迟加载）
@@ -93,11 +107,10 @@ export class FileSystemService {
     sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '_');
 
     // 限制文件名长度
-    const MAX_FILENAME_LENGTH = 255;
-    if (sanitized.length > MAX_FILENAME_LENGTH) {
+    if (sanitized.length > this.fileLimits.maxFilenameLength) {
       const ext = path.extname(sanitized);
       const nameWithoutExt = path.basename(sanitized, ext);
-      const maxNameLength = MAX_FILENAME_LENGTH - ext.length;
+      const maxNameLength = this.fileLimits.maxFilenameLength - ext.length;
       sanitized = nameWithoutExt.substring(0, maxNameLength) + ext;
     }
 
@@ -176,7 +189,7 @@ export class FileSystemService {
 
         if (!ownerRole) {
           throw new InternalServerErrorException(
-            'PROJECT_OWNER 角色不存在，请检查系统初始化',
+            'PROJECT_OWNER 角色不存在，请检查系统初始化'
           );
         }
 
@@ -338,13 +351,11 @@ export class FileSystemService {
       ]);
 
       return {
-        data: projects,
-        meta: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
+        projects,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       this.logger.error(`查询项目列表失败: ${error.message}`, error.stack);
@@ -436,13 +447,11 @@ export class FileSystemService {
       );
 
       return {
-        data: projects,
-        meta: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
+        projects,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       this.logger.error(
@@ -592,7 +601,10 @@ export class FileSystemService {
   /**
    * 递归软删除节点的所有后代
    */
-  private async softDeleteDescendants(tx: any, nodeId: string): Promise<void> {
+  private async softDeleteDescendants(
+    tx: Prisma.TransactionClient,
+    nodeId: string
+  ): Promise<void> {
     const children = await tx.fileSystemNode.findMany({
       where: { parentId: nodeId },
       select: { id: true, isFolder: true },
@@ -619,7 +631,7 @@ export class FileSystemService {
    * 递归删除节点的所有后代（包含文件删除逻辑）
    */
   private async deleteDescendantsWithFiles(
-    tx: any,
+    tx: Prisma.TransactionClient,
     nodeId: string
   ): Promise<void> {
     // 获取当前节点的所有直接子节点
@@ -660,7 +672,7 @@ export class FileSystemService {
    * 每个文件节点都有独立的物理目录，删除节点时应该删除对应的物理目录
    */
   private async deleteFileIfNotReferenced(
-    tx: any,
+    tx: Prisma.TransactionClient,
     nodePath: string,
     fileHash: string | null
   ): Promise<void> {
@@ -682,9 +694,7 @@ export class FileSystemService {
 
     try {
       // 从 SVN 删除节点目录（仅标记删除）
-      const filesDataPath =
-        this.configService.get('FILES_DATA_PATH') ||
-        path.join(process.cwd(), 'filesData');
+      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
       const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
 
       if (this.versionControlService.isReady()) {
@@ -1003,13 +1013,11 @@ export class FileSystemService {
       // 如果父节点不存在或已被删除，返回空列表
       if (!parentNode || parentNode.deletedAt) {
         return {
-          data: [],
-          meta: {
-            total: 0,
-            page,
-            limit,
-            totalPages: 0,
-          },
+          nodes: [],
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
         };
       }
 
@@ -1043,13 +1051,11 @@ export class FileSystemService {
       ]);
 
       return {
-        data: nodes,
-        meta: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
+        nodes,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       this.logger.error(`查询子节点失败: ${error.message}`, error.stack);
@@ -1418,13 +1424,11 @@ export class FileSystemService {
       ]);
 
       return {
-        data: nodes,
-        meta: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
+        nodes,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       this.logger.error(`查询项目回收站失败: ${error.message}`, error.stack);
@@ -1850,8 +1854,8 @@ export class FileSystemService {
 
         // 保存文件到 uploads 目录
         const uploadsPath = this.configService.get(
-          'MXCAD_UPLOAD_PATH',
-          '../uploads'
+          'mxcadUploadPath',
+          '../../uploads'
         );
         const uploadDir = path.resolve(uploadsPath, fileHash);
         await fsPromises.mkdir(uploadDir, { recursive: true });
@@ -1901,7 +1905,7 @@ export class FileSystemService {
 
           if (!copyResult.success) {
             throw new InternalServerErrorException(
-              `文件拷贝失败: ${copyResult.error}`,
+              `文件拷贝失败: ${copyResult.error}`
             );
           }
 
@@ -2086,7 +2090,10 @@ export class FileSystemService {
         ...nodes.map((n) => ({ ...n, itemType: 'node' })),
       ];
 
-      return allItems;
+      return {
+        items: allItems,
+        total: allItems.length,
+      };
     } catch (error) {
       this.logger.error(`获取回收站列表失败: ${error.message}`, error.stack);
       throw error;
@@ -2453,15 +2460,10 @@ export class FileSystemService {
       const usagePercentage = Math.round((totalUsed / totalLimit) * 100);
 
       return {
-        totalUsed,
-        totalLimit,
-        available,
-        usagePercentage,
-        formatted: {
-          totalUsed: this.formatBytes(totalUsed),
-          totalLimit: this.formatBytes(totalLimit),
-          available: this.formatBytes(available),
-        },
+        used: totalUsed,
+        total: totalLimit,
+        remaining: available,
+        usagePercent: usagePercentage,
       };
     } catch (error) {
       this.logger.error(`获取用户存储信息失败: ${error.message}`, error.stack);
@@ -2485,8 +2487,7 @@ export class FileSystemService {
     let totalDeleted = 0;
 
     try {
-      const uploadPath =
-        process.env.MXCAD_UPLOAD_PATH || path.join(process.cwd(), 'uploads');
+      const uploadPath = this.configService.get('mxcadUploadPath', { infer: true });
 
       try {
         await fsPromises.access(uploadPath);
@@ -3583,7 +3584,7 @@ export class FileSystemService {
       // 创建 ZIP 压缩流
       const output = new PassThrough();
       const archive = archiver.create('zip', {
-        zlib: { level: this.ZIP_CONFIG.COMPRESSION_LEVEL }, // 快速压缩
+        zlib: { level: this.fileLimits.zipCompressionLevel },
       });
 
       // 错误处理
@@ -3640,7 +3641,7 @@ export class FileSystemService {
     currentFileCount: number = 0
   ): Promise<{ totalSize: number; fileCount: number }> {
     // 检查深度限制
-    if (depth > this.ZIP_CONFIG.MAX_DEPTH) {
+    if (depth > this.fileLimits.zipMaxDepth) {
       this.logger.warn(`目录深度超过限制: ${depth}`);
       throw new BadRequestException('目录深度超过限制');
     }
@@ -3657,7 +3658,7 @@ export class FileSystemService {
     // 如果是文件，添加到压缩包
     if (!node.isFolder && node.path) {
       // 检查单文件大小限制
-      if (node.size && node.size > this.ZIP_CONFIG.MAX_SINGLE_FILE_SIZE) {
+      if (node.size && node.size > this.fileLimits.zipMaxSingleFileSize) {
         this.logger.warn(`文件大小超过限制: ${node.name} (${node.size} bytes)`);
         throw new BadRequestException(`文件大小超过限制: ${node.name}`);
       }
@@ -3732,11 +3733,11 @@ export class FileSystemService {
         currentFileCount = result.fileCount;
 
         // 检查资源限制
-        if (currentTotalSize > this.ZIP_CONFIG.MAX_TOTAL_SIZE) {
+        if (currentTotalSize > this.fileLimits.zipMaxTotalSize) {
           this.logger.warn(`压缩包总大小超过限制: ${currentTotalSize} bytes`);
           throw new BadRequestException('压缩包总大小超过限制');
         }
-        if (currentFileCount > this.ZIP_CONFIG.MAX_FILE_COUNT) {
+        if (currentFileCount > this.fileLimits.zipMaxFileCount) {
           this.logger.warn(`文件数量超过限制: ${currentFileCount}`);
           throw new BadRequestException('文件数量超过限制');
         }

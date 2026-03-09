@@ -33,7 +33,10 @@ async function cleanupDatabase() {
         await prisma.$executeRawUnsafe(
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
-      } catch (error) {}
+      } catch (error) {
+        // 某些表可能因外键约束无法清空，忽略错误继续
+        console.warn(`[global-setup] 清空表 ${tablename} 失败:`, error);
+      }
     }
   }
 }
@@ -71,6 +74,7 @@ async function seedTestData() {
     });
   } catch (error) {
     // Admin user might already exist
+    console.warn('[global-setup] 创建管理员测试用户失败 (可能已存在):', error);
   }
 
   // Create default regular user if it doesn't exist
@@ -103,5 +107,6 @@ async function seedTestData() {
     });
   } catch (error) {
     // Regular user might already exist
+    console.warn('[global-setup] 创建普通测试用户失败 (可能已存在):', error);
   }
 }

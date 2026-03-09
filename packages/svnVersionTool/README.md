@@ -22,24 +22,24 @@ pnpm add @cloudcad/svn-version-tool
 ### 基本导入
 
 ```javascript
-const { 
-  svnCheckout, 
-  svnAdd, 
-  svnCommit, 
-  svnList, 
-  svnadminCreate 
+const {
+  svnCheckout,
+  svnAdd,
+  svnCommit,
+  svnList,
+  svnadminCreate,
 } = require('@cloudcad/svn-version-tool');
 ```
 
 ### TypeScript 支持
 
 ```typescript
-import { 
-  svnCheckout, 
-  svnAdd, 
-  svnCommit, 
-  svnList, 
-  svnadminCreate 
+import {
+  svnCheckout,
+  svnAdd,
+  svnCommit,
+  svnList,
+  svnadminCreate,
 } from '@cloudcad/svn-version-tool';
 ```
 
@@ -50,10 +50,11 @@ import {
 从 SVN 仓库检出代码。
 
 ```javascript
-svnCheckout(repoUrl, targetDir, username, password, callback)
+svnCheckout(repoUrl, targetDir, username, password, callback);
 ```
 
 **参数：**
+
 - `repoUrl` (string): 仓库 URL
 - `targetDir` (string): 目标目录
 - `username` (string | null): 用户名（可选）
@@ -83,10 +84,11 @@ svnCheckout(
 添加文件或目录到 SVN 版本控制。
 
 ```javascript
-svnAdd(targetPaths, isRecursive, callback)
+svnAdd(targetPaths, isRecursive, callback);
 ```
 
 **参数：**
+
 - `targetPaths` (string[]): 目标路径数组
 - `isRecursive` (boolean): 是否递归
 - `callback` (function): 回调函数
@@ -108,10 +110,11 @@ svnAdd(['./localrepo/newfile.txt'], true, (error, result) => {
 向 SVN 仓库提交更改。
 
 ```javascript
-svnCommit(targetPaths, message, isRecursive, username, password, callback)
+svnCommit(targetPaths, message, isRecursive, username, password, callback);
 ```
 
 **参数：**
+
 - `targetPaths` (string[]): 目标路径数组
 - `message` (string): 提交日志
 - `isRecursive` (boolean): 是否递归
@@ -143,10 +146,11 @@ svnCommit(
 列出 SVN 仓库内容。
 
 ```javascript
-svnList(repoUrl, isRecursive, username, password, callback)
+svnList(repoUrl, isRecursive, username, password, callback);
 ```
 
 **参数：**
+
 - `repoUrl` (string): 仓库 URL
 - `isRecursive` (boolean): 是否递归
 - `username` (string | null): 用户名（可选）
@@ -156,19 +160,13 @@ svnList(repoUrl, isRecursive, username, password, callback)
 **示例：**
 
 ```javascript
-svnList(
-  'file:///path/to/repo',
-  true,
-  null,
-  null,
-  (error, result) => {
-    if (error) {
-      console.error('Error:', error);
-    } else {
-      console.log('Repository contents:', result);
-    }
+svnList('file:///path/to/repo', true, null, null, (error, result) => {
+  if (error) {
+    console.error('Error:', error);
+  } else {
+    console.log('Repository contents:', result);
   }
-);
+});
 ```
 
 ### svnadminCreate
@@ -176,10 +174,11 @@ svnList(
 创建一个新的 SVN 仓库。
 
 ```javascript
-svnadminCreate(repoPath, callback)
+svnadminCreate(repoPath, callback);
 ```
 
 **参数：**
+
 - `repoPath` (string): 仓库路径
 - `callback` (function): 回调函数
 

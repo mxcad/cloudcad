@@ -3,8 +3,6 @@
  * 提供一致的错误处理和用户反馈
  */
 
-
-
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export interface AppError {

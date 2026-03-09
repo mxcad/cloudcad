@@ -2189,7 +2189,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "成功获取所有项目角色列表"
+            "description": "成功获取所有项目角色列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectRoleDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2209,7 +2219,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "成功获取系统默认项目角色列表（仅返回 isSystem=true 的角色）"
+            "description": "成功获取系统默认项目角色列表（仅返回 isSystem=true 的角色）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectRoleDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2238,7 +2258,17 @@
         ],
         "responses": {
           "200": {
-            "description": "成功获取项目角色列表（包含系统角色和项目自定义角色）"
+            "description": "成功获取项目角色列表（包含系统角色和项目自定义角色）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectRoleDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2267,7 +2297,14 @@
         ],
         "responses": {
           "200": {
-            "description": "成功获取项目角色"
+            "description": "成功获取项目角色",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRoleDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2292,9 +2329,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRoleDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "成功更新项目角色"
+            "description": "成功更新项目角色",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRoleDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2385,6 +2439,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionsDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "成功分配权限"
@@ -2412,6 +2476,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionsDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "成功移除权限"
@@ -2432,9 +2506,26 @@
       "post": {
         "operationId": "RolesController_createProjectRole",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRoleDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": "成功创建项目角色"
+            "description": "成功创建项目角色",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRoleDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7710,6 +7801,201 @@
             }
           }
         }
+      },
+      "ProjectRolePermissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "权限 ID"
+          },
+          "projectRoleId": {
+            "type": "string",
+            "description": "项目角色 ID"
+          },
+          "permission": {
+            "type": "string",
+            "description": "权限名称",
+            "enum": [
+              "PROJECT_UPDATE",
+              "PROJECT_DELETE",
+              "PROJECT_MEMBER_MANAGE",
+              "PROJECT_MEMBER_ASSIGN",
+              "PROJECT_ROLE_MANAGE",
+              "PROJECT_ROLE_PERMISSION_MANAGE",
+              "PROJECT_TRANSFER",
+              "FILE_CREATE",
+              "FILE_UPLOAD",
+              "FILE_OPEN",
+              "FILE_EDIT",
+              "FILE_DELETE",
+              "FILE_TRASH_MANAGE",
+              "FILE_DOWNLOAD",
+              "FILE_SHARE",
+              "CAD_SAVE",
+              "CAD_EXPORT",
+              "CAD_EXTERNAL_REFERENCE",
+              "GALLERY_ADD",
+              "VERSION_READ",
+              "VERSION_CREATE",
+              "VERSION_DELETE",
+              "VERSION_RESTORE",
+              "PROJECT_SETTINGS_MANAGE"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          }
+        },
+        "required": [
+          "id",
+          "projectRoleId",
+          "permission",
+          "createdAt"
+        ]
+      },
+      "ProjectRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "角色 ID"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "角色名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "是否为系统角色"
+          },
+          "permissions": {
+            "description": "权限列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectRolePermissionDto"
+            }
+          },
+          "_count": {
+            "type": "object",
+            "description": "成员数量"
+          },
+          "project": {
+            "type": "object",
+            "description": "关联的项目"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "isSystem",
+          "permissions",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateProjectRoleDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "项目 ID（系统角色不需要）",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "name": {
+            "type": "string",
+            "description": "角色名称",
+            "example": "项目经理"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述",
+            "example": "负责项目管理"
+          },
+          "permissions": {
+            "description": "权限列表",
+            "example": [
+              "PROJECT_UPDATE",
+              "PROJECT_DELETE",
+              "FILE_CREATE"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "permissions"
+        ]
+      },
+      "UpdateProjectRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "角色名称",
+            "example": "项目经理"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述",
+            "example": "负责项目管理"
+          },
+          "permissions": {
+            "description": "权限列表",
+            "example": [
+              "PROJECT_UPDATE",
+              "PROJECT_DELETE",
+              "FILE_CREATE"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PermissionsDto": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "description": "权限 ID 列表",
+            "example": [
+              "PROJECT_UPDATE",
+              "PROJECT_DELETE",
+              "FILE_CREATE"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
       },
       "CreateProjectDto": {
         "type": "object",

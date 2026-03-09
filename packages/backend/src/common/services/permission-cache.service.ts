@@ -100,7 +100,9 @@ export class PermissionCacheService implements OnModuleDestroy {
           const event: CacheInvalidationEvent = JSON.parse(message);
           this.handleInvalidationEvent(event);
         } catch (error: unknown) {
-          this.logger.error(`处理缓存失效事件失败: ${(error as Error).message}`);
+          this.logger.error(
+            `处理缓存失效事件失败: ${(error as Error).message}`
+          );
         }
       });
 

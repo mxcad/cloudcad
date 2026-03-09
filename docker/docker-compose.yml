@@ -1,0 +1,143 @@
+# CloudCAD 生产部署配置 v2
+# 使用方法:
+#   1. 复制 docker/.env.docker 为 docker/.env.docker.local 并修改配置
+#   2. 运行: pnpm deploy
+#
+# 注意: 生产环境必须配置 JWT_SECRET 和 DB_PASSWORD！
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloudcad-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-cloudcad}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required for production}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../packages/backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cloudcad-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: cloudcad-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cloudcad-network
+
+  # CloudCAD 应用 (前端 + 后端)
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
+    container_name: cloudcad-app
+    restart: unless-stopped
+    environment:
+      # 运行环境
+      NODE_ENV: production
+      PORT: 3001
+      # JWT 配置 (生产环境必须配置!)
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      # 数据库配置
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required for production}
+      DB_DATABASE: ${DB_DATABASE:-cloudcad}
+      DB_SSL: ${DB_SSL:-false}
+      DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-20}
+      # Prisma 数据库连接 URL
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_DATABASE:-cloudcad}
+      # Redis 配置
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES:-3}
+      # 上传配置
+      UPLOAD_MAX_SIZE: ${UPLOAD_MAX_SIZE:-104857600}
+      UPLOAD_ALLOWED_TYPES: ${UPLOAD_ALLOWED_TYPES:-.dwg,.dxf,.pdf,.png,.jpg,.jpeg}
+      # 文件存储路径（容器内路径）
+      FILES_DATA_PATH: /app/filesData
+      SVN_REPO_PATH: /app/svn-repo
+      MXCAD_UPLOAD_PATH: /app/uploads
+      MXCAD_TEMP_PATH: /app/temp
+      MXCAD_ASSEMBLY_PATH: /app/runtime/linux/mxcad/mxcadassembly
+      # 邮件配置
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_SECURE: ${MAIL_SECURE:-false}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-CloudCAD <noreply@cloudcad.com>}
+      # 初始管理员
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@example.com}
+      INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-Admin123!}
+      # 数据库等待配置
+      DB_WAIT_ATTEMPTS: ${DB_WAIT_ATTEMPTS:-30}
+      REDIS_WAIT_ATTEMPTS: ${REDIS_WAIT_ATTEMPTS:-30}
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${API_PORT:-3001}:3001'
+      - '${COOPERATE_PORT:-3000}:3000'
+    volumes:
+      # 使用 Docker 命名卷存储持久化数据（最佳实践）
+      - files_data:/app/filesData
+      - svn_repo:/app/svn-repo
+      - uploads:/app/uploads
+      - temp:/app/temp
+      - logs:/app/logs
+      # 注意: 不再挂载 mxcadassembly，避免覆盖容器内的文件
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cloudcad-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+networks:
+  cloudcad-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  files_data:
+  svn_repo:
+  uploads:
+  temp:
+  logs:

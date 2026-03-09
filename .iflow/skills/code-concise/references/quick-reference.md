@@ -4,23 +4,25 @@ This document provides quick lookup tables for common code violations and their 
 
 ## Severity Matrix
 
-| Category | Critical | High | Medium | Low |
-|----------|----------|-------|--------|-----|
-| Security | SQL injection, XSS, auth bypass | Weak encryption, insecure config | Missing HTTPS | Deprecated methods |
-| Performance | O(n²) in hot path, memory leaks | N+1 queries, large loops | Unnecessary calculations | Minor optimizations |
-| Maintainability | No tests, god objects | Duplicated code, long functions | Poor naming, magic numbers | Style issues |
-| Reliability | Null pointer, unhandled exceptions | Race conditions, timeouts | Edge cases | Typos |
-| Documentation | Critical missing docs | Public API docs missing | Internal docs | Comments |
+| Category        | Critical                           | High                             | Medium                     | Low                 |
+| --------------- | ---------------------------------- | -------------------------------- | -------------------------- | ------------------- |
+| Security        | SQL injection, XSS, auth bypass    | Weak encryption, insecure config | Missing HTTPS              | Deprecated methods  |
+| Performance     | O(n²) in hot path, memory leaks    | N+1 queries, large loops         | Unnecessary calculations   | Minor optimizations |
+| Maintainability | No tests, god objects              | Duplicated code, long functions  | Poor naming, magic numbers | Style issues        |
+| Reliability     | Null pointer, unhandled exceptions | Race conditions, timeouts        | Edge cases                 | Typos               |
+| Documentation   | Critical missing docs              | Public API docs missing          | Internal docs              | Comments            |
 
 ## Common Patterns
 
 ### Naming Violations
+
 - `d`, `x`, `y` → Use descriptive names
 - `data`, `temp`, `value` → Be specific
 - `flag`, `bool` → Use `isX`, `hasX`, `shouldX`
 - `do()`, `process()`, `handle()` → Use action verb + object
 
 ### Function Smells
+
 - Lines > 20 → Extract functions
 - Params > 3 → Use parameter object
 - Returns null → Use exception or Optional
@@ -28,6 +30,7 @@ This document provides quick lookup tables for common code violations and their 
 - Has boolean flag → Split into two functions
 
 ### Class Smells
+
 - Lines > 200 → Split classes
 - Unrelated methods → Apply SRP
 - Mixed concerns → Separate layers
@@ -35,14 +38,14 @@ This document provides quick lookup tables for common code violations and their 
 
 ## Code Metrics
 
-| Metric | Good | Warning | Bad |
-|--------|-------|---------|-----|
-| Function length | < 20 | 20-50 | > 50 |
-| Cyclomatic complexity | < 10 | 10-20 | > 20 |
-| Class length | < 200 | 200-500 | > 500 |
-| Nesting depth | < 3 | 3-5 | > 5 |
-| Parameter count | < 4 | 4-6 | > 6 |
-| Duplicated lines | 0 | 1-10 | > 10 |
+| Metric                | Good  | Warning | Bad   |
+| --------------------- | ----- | ------- | ----- |
+| Function length       | < 20  | 20-50   | > 50  |
+| Cyclomatic complexity | < 10  | 10-20   | > 20  |
+| Class length          | < 200 | 200-500 | > 500 |
+| Nesting depth         | < 3   | 3-5     | > 5   |
+| Parameter count       | < 4   | 4-6     | > 6   |
+| Duplicated lines      | 0     | 1-10    | > 10  |
 
 ## Refactoring Techniques
 
@@ -60,6 +63,7 @@ This document provides quick lookup tables for common code violations and their 
 ## Quick Fix Templates
 
 ### Guard Clause
+
 ```javascript
 // Before
 function process(data) {
@@ -80,6 +84,7 @@ function process(data) {
 ```
 
 ### Early Return
+
 ```javascript
 // Before
 function calculate(data) {
@@ -101,6 +106,7 @@ function calculate(data) {
 ```
 
 ### Named Constants
+
 ```javascript
 // Before
 const result = value * 0.0725 + 100;

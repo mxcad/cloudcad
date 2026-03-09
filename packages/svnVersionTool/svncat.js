@@ -33,16 +33,22 @@ function svnCat(filePath, revision, username, password, callback) {
     args.push('--password', password);
   }
 
-  execFile(svnPath, args, { 
-    encoding: 'buffer',
-    maxBuffer: MAX_BUFFER_SIZE 
-  }, (error, stdout, _stderr) => {
-    if (error) {
-      callback(error);
-    } else {
-      callback(null, stdout);
+  execFile(
+    svnPath,
+    args,
+    {
+      encoding: 'buffer',
+      maxBuffer: MAX_BUFFER_SIZE,
+      windowsHide: true,
+    },
+    (error, stdout, _stderr) => {
+      if (error) {
+        callback(error);
+      } else {
+        callback(null, stdout);
+      }
     }
-  });
+  );
 }
 
 module.exports = svnCat;

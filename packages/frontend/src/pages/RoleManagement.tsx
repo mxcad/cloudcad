@@ -386,7 +386,9 @@ export const RoleManagement = () => {
                           )}
                         </h3>
                         <p className="text-sm text-slate-500 mt-1">
-                          <DescriptionText>{role.description || ''}</DescriptionText>
+                          <DescriptionText>
+                            {role.description || ''}
+                          </DescriptionText>
                         </p>
                         {!role.isSystem && (
                           <p className="text-xs text-slate-400 mt-2">
@@ -416,7 +418,8 @@ export const RoleManagement = () => {
                           (p: string | { permission: string; id?: string }) => {
                             const permKey =
                               typeof p === 'string' ? p : p?.permission || '';
-                            const systemPermissions = PERMISSION_GROUPS.system.flatMap((g) => g.items);
+                            const systemPermissions =
+                              PERMISSION_GROUPS.system.flatMap((g) => g.items);
                             const permItem = systemPermissions.find(
                               (item) => item.key === permKey
                             );
@@ -516,7 +519,9 @@ export const RoleManagement = () => {
                           )}
                         </h3>
                         <p className="text-sm text-slate-500 mt-1">
-                          <DescriptionText>{role.description || ''}</DescriptionText>
+                          <DescriptionText>
+                            {role.description || ''}
+                          </DescriptionText>
                         </p>
                       </div>
                     </div>
@@ -540,7 +545,8 @@ export const RoleManagement = () => {
                           (p: string | { permission: string; id?: string }) => {
                             const permKey =
                               typeof p === 'string' ? p : p?.permission || '';
-                            const projectPermissions = PERMISSION_GROUPS.project.flatMap((g) => g.items);
+                            const projectPermissions =
+                              PERMISSION_GROUPS.project.flatMap((g) => g.items);
                             const permItem = projectPermissions.find(
                               (item) => item.key === permKey
                             );

@@ -7,8 +7,9 @@ export const trashApi = {
     getApiClient().FileSystemController_restoreTrashItems(null, { itemIds }),
 
   permanentlyDeleteItems: (itemIds: string[]) =>
-    getApiClient().FileSystemController_permanentlyDeleteTrashItems(null, { itemIds }),
+    getApiClient().FileSystemController_permanentlyDeleteTrashItems(null, {
+      itemIds,
+    }),
 
-  clear: () =>
-    getApiClient().FileSystemController_clearTrash(),
+  clear: () => getApiClient().FileSystemController_clearTrash(),
 };

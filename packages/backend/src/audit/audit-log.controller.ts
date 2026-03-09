@@ -7,7 +7,6 @@ import {
   Query,
   HttpCode,
   HttpStatus,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -19,7 +18,6 @@ import {
 } from '@nestjs/swagger';
 import { AuditLogService } from './audit-log.service';
 import { AuditAction, ResourceType } from '@prisma/client';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -62,12 +60,9 @@ export class AuditLogController {
     @Query('endDate') endDate?: string,
     @Query('success') success?: string,
     @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Req() req?: Request
+    @Query('limit') limit?: string
   ) {
-    const currentUserId = (req as any).user?.id;
-
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (userId) filters.userId = userId;
     if (action) filters.action = action;
     if (resourceType) filters.resourceType = resourceType;
@@ -76,16 +71,12 @@ export class AuditLogController {
     if (endDate) filters.endDate = new Date(endDate);
     if (success !== undefined) filters.success = success === 'true';
 
-    const pagination: any = {
+    const pagination = {
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 20,
     };
 
-    return await this.auditLogService.findAll(
-      filters,
-      pagination,
-      currentUserId
-    );
+    return await this.auditLogService.findAll(filters, pagination);
   }
 
   @Get('logs/:id')
@@ -94,9 +85,8 @@ export class AuditLogController {
     status: HttpStatus.OK,
     description: '成功获取审计日志详情',
   })
-  async findOne(@Param('id') id: string, @Req() req?: Request) {
-    const currentUserId = (req as any).user?.id;
-    return await this.auditLogService.findOne(id, currentUserId);
+  async findOne(@Param('id') id: string) {
+    return await this.auditLogService.findOne(id);
   }
 
   @Get('statistics')
@@ -111,17 +101,14 @@ export class AuditLogController {
   async getStatistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @Query('userId') userId?: string,
-    @Req() req?: Request
+    @Query('userId') userId?: string
   ) {
-    const currentUserId = (req as any).user?.id;
-
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
     if (userId) filters.userId = userId;
 
-    return await this.auditLogService.getStatistics(filters, currentUserId);
+    return await this.auditLogService.getStatistics(filters);
   }
 
   @Post('cleanup')
@@ -131,14 +118,9 @@ export class AuditLogController {
     status: HttpStatus.OK,
     description: '成功清理旧审计日志',
   })
-  async cleanupOldLogs(
-    @Body() body: { daysToKeep: number },
-    @Req() req?: Request
-  ) {
-    const currentUserId = (req as any).user?.id;
+  async cleanupOldLogs(@Body() body: { daysToKeep: number }) {
     const deletedCount = await this.auditLogService.cleanupOldLogs(
-      body.daysToKeep,
-      currentUserId
+      body.daysToKeep
     );
     return {
       message: `成功清理了 ${deletedCount} 条审计日志`,

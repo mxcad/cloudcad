@@ -119,7 +119,11 @@ export class ProjectMemberDto {
  * 分页响应 DTO
  */
 export class PaginatedResponseDto<T> {
-  @ApiProperty({ description: '数据列表', type: 'array', items: { type: 'object' } })
+  @ApiProperty({
+    description: '数据列表',
+    type: 'array',
+    items: { type: 'object' },
+  })
   data: T[];
 
   @ApiProperty({ description: '总数' })
@@ -179,7 +183,11 @@ export class NodeListResponseDto {
  * 节点树响应 DTO
  */
 export class NodeTreeResponseDto extends FileSystemNodeDto {
-  @ApiProperty({ description: '子节点', type: [FileSystemNodeDto], required: false })
+  @ApiProperty({
+    description: '子节点',
+    type: [FileSystemNodeDto],
+    required: false,
+  })
   children?: FileSystemNodeDto[];
 }
 

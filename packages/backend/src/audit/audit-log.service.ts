@@ -1,15 +1,6 @@
-import {
-  Injectable,
-  Logger,
-  ForbiddenException,
-  NotFoundException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { PermissionService } from '../common/services/permission.service';
-import { SystemPermission } from '../common/enums/permissions.enum';
-import { AuditAction, ResourceType } from '@prisma/client';
+import { AuditAction, ResourceType, Prisma } from '@prisma/client';
 
 /**
  * 审计日志服务
@@ -24,24 +15,7 @@ import { AuditAction, ResourceType } from '@prisma/client';
 export class AuditLogService {
   private readonly logger = new Logger(AuditLogService.name);
 
-  constructor(
-    private readonly prisma: DatabaseService,
-    @Inject(forwardRef(() => PermissionService))
-    private readonly permissionService: PermissionService
-  ) {}
-
-  /**
-   * 检查系统管理员权限
-   */
-  private async checkSystemAdmin(userId: string): Promise<void> {
-    const hasPermission = await this.permissionService.checkSystemPermission(
-      userId,
-      SystemPermission.SYSTEM_ADMIN
-    );
-    if (!hasPermission) {
-      throw new ForbiddenException('需要系统管理员权限');
-    }
-  }
+  constructor(private readonly prisma: DatabaseService) {}
 
   /**
    * 记录审计日志
@@ -109,37 +83,22 @@ export class AuditLogService {
   async findAll(
     filters: {
       userId?: string;
-
       action?: AuditAction;
-
       resourceType?: ResourceType;
-
       resourceId?: string;
-
       startDate?: Date;
-
       endDate?: Date;
-
       success?: boolean;
     },
-
     pagination: {
       page: number;
-
       limit: number;
-    },
-
-    userId: string
+    }
   ) {
-    // 检查权限
-
-    await this.checkSystemAdmin(userId);
-
     const { page = 1, limit = 20 } = pagination;
-
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (filters.userId) {
       where.userId = filters.userId;
@@ -226,11 +185,7 @@ export class AuditLogService {
 
      */
 
-  async findOne(id: string, userId: string) {
-    // 检查权限
-
-    await this.checkSystemAdmin(userId);
-
+  async findOne(id: string) {
     const log = await this.prisma.auditLog.findUnique({
       where: { id },
 
@@ -268,22 +223,12 @@ export class AuditLogService {
 
      */
 
-  async getStatistics(
-    filters: {
-      startDate?: Date;
-
-      endDate?: Date;
-
-      userId?: string;
-    },
-
-    userId: string
-  ) {
-    // 检查权限
-
-    await this.checkSystemAdmin(userId);
-
-    const where: any = {};
+  async getStatistics(filters: {
+    startDate?: Date;
+    endDate?: Date;
+    userId?: string;
+  }) {
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (filters.userId) {
       where.userId = filters.userId;
@@ -350,13 +295,8 @@ export class AuditLogService {
 
      */
 
-  async cleanupOldLogs(daysToKeep: number, userId: string): Promise<number> {
-    // 检查权限
-
-    await this.checkSystemAdmin(userId);
-
+  async cleanupOldLogs(daysToKeep: number): Promise<number> {
     const cutoffDate = new Date();
-
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
     const result = await this.prisma.auditLog.deleteMany({

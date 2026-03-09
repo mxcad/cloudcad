@@ -31,8 +31,12 @@ export function useProjectManagement(
 
   // 删除确认模态框状态
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<FileSystemNode | null>(null);
-  const [deleteCallback, setDeleteCallback] = useState<((id: string, name: string) => Promise<void>) | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<FileSystemNode | null>(
+    null
+  );
+  const [deleteCallback, setDeleteCallback] = useState<
+    ((id: string, name: string) => Promise<void>) | null
+  >(null);
 
   const openCreateModal = useCallback(() => {
     setEditingProject(null);

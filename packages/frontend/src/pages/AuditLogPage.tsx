@@ -4,7 +4,9 @@ import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { auditApi } from '../services/auditApi';
 import type { OperationMethods } from '../types/api-client';
-type AuditLogQueryParams = Parameters<OperationMethods['AuditLogController_findAll']>[0];
+type AuditLogQueryParams = Parameters<
+  OperationMethods['AuditLogController_findAll']
+>[0];
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -143,11 +145,16 @@ export const AuditLogPage: React.FC = () => {
       if (filters.resourceId) params.resourceId = filters.resourceId;
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
-      if (filters.success !== '') params.success = filters.success === 'true' ? 'true' : 'false';
+      if (filters.success !== '')
+        params.success = filters.success === 'true' ? 'true' : 'false';
 
       const response = await auditApi.getLogs(params);
-      setLogs((response.data?.logs || []) as AuditLog[]);
-      setTotal(response.data?.total || 0);
+      // Swagger 未定义响应类型，手动处理
+      const responseData = response.data as
+        | { logs?: AuditLog[]; total?: number }
+        | undefined;
+      setLogs((responseData?.logs || []) as AuditLog[]);
+      setTotal(responseData?.total || 0);
     } catch (error) {
       console.error('加载审计日志失败:', error);
     } finally {
@@ -159,11 +166,18 @@ export const AuditLogPage: React.FC = () => {
     if (!hasAdminPermission) return;
     try {
       const response = await auditApi.getStatistics();
+      // Swagger 未定义响应类型，手动处理
+      const responseData = response.data as {
+        total?: number;
+        successCount?: number;
+        failureCount?: number;
+        successRate?: number;
+      };
       setStatistics({
-        total: response.data.total || 0,
-        successCount: response.data.successCount || 0,
-        failureCount: response.data.failureCount || 0,
-        successRate: response.data.successRate ?? 0,
+        total: responseData?.total || 0,
+        successCount: responseData?.successCount || 0,
+        failureCount: responseData?.failureCount || 0,
+        successRate: responseData?.successRate ?? 0,
       });
     } catch (error) {
       console.error('加载统计信息失败:', error);
@@ -452,10 +466,9 @@ export const AuditLogPage: React.FC = () => {
                       {getResourceTypeDisplayName(log.resourceType)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <DescriptionText
-                        children={log.resourceId || '-'}
-                        maxWidth={20}
-                      />
+                      <DescriptionText maxWidth={20}>
+                        {log.resourceId || '-'}
+                      </DescriptionText>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {log.success ? (
@@ -469,10 +482,9 @@ export const AuditLogPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <DescriptionText
-                        children={log.details || '-'}
-                        maxWidth={30}
-                      />
+                      <DescriptionText maxWidth={30}>
+                        {log.details || '-'}
+                      </DescriptionText>
                       {log.errorMessage && (
                         <div className="text-red-600 text-xs mt-1">
                           {log.errorMessage}

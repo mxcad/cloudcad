@@ -7,7 +7,10 @@
     "noImplicitReturns": false,
     "noImplicitAny": false,
     "strictFunctionTypes": false,
-    "strictBindCallApply": false
+    "strictBindCallApply": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true
   },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "scripts"]
 }

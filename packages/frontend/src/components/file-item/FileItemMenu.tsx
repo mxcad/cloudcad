@@ -33,7 +33,7 @@ interface FileItemMenuProps {
   canDelete?: boolean;
   canAddToGallery?: boolean;
   canViewVersionHistory?: boolean;
-  canManageTrash?: boolean
+  canManageTrash?: boolean;
 }
 
 export const FileItemMenu: React.FC<FileItemMenuProps> = ({

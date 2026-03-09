@@ -6,7 +6,7 @@ import { mxcadManager } from '../services/mxcadManager';
 import { MxFun } from 'mxdraw';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useNotification } from '../contexts/NotificationContext';
-import type { GalleryTypeDto, GalleryTypesResponseDto } from '../../types/api-client';
+import type { GalleryTypeDto } from '../types/api-client';
 
 // 图库类型
 type GalleryType = 'drawings' | 'blocks';
@@ -113,8 +113,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         galleryType === 'drawings'
           ? await galleryApi.getDrawingsTypes()
           : await galleryApi.getBlocksTypes();
-      const data = response.data
-      setTypes(data?.result?.allblocks || []);
+      setTypes(response.data?.allblocks || []);
     } catch (error) {
       console.error('获取分类列表失败:', error);
     } finally {
@@ -251,7 +250,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       message: `确定要将 "${file.filename}" 从图库中移除吗？\n\n注意：文件本身不会被删除，只是从图库中移除。`,
       type: 'warning',
     });
-    
+
     if (!confirmed) {
       return;
     }
@@ -285,7 +284,6 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
           hash: file.nodeId,
           isBlockLibrary: true,
         });
-
       }
       // 图纸库：调用 onInsertFile 打开图纸
       else if (galleryType === 'drawings') {

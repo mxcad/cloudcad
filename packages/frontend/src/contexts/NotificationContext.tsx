@@ -1,5 +1,12 @@
-import React, { useState, useCallback, useRef, createContext, useContext, useEffect } from 'react';
-import { Toast, ToastContainer } from '../components/ui/Toast';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  createContext,
+  useContext,
+  useEffect,
+} from 'react';
+import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import type { ToastType } from '../components/ui/Toast';
 
@@ -31,25 +38,39 @@ export const CONFIRM_EVENT = 'cloudcad:confirm';
 
 // 全局 Toast 触发函数（供非 React 代码使用）
 export const globalShowToast = (message: string, type: ToastType = 'info') => {
-  window.dispatchEvent(new CustomEvent(TOAST_EVENT, { detail: { message, type } }));
+  window.dispatchEvent(
+    new CustomEvent(TOAST_EVENT, { detail: { message, type } })
+  );
 };
 
 // 全局 Confirm 触发函数（供非 React 代码使用）
-export const globalShowConfirm = (options: ConfirmOptions): Promise<boolean> => {
+export const globalShowConfirm = (
+  options: ConfirmOptions
+): Promise<boolean> => {
   return new Promise((resolve) => {
     const handleResponse = (e: Event) => {
       const customEvent = e as CustomEvent<{ confirmed: boolean }>;
       resolve(customEvent.detail.confirmed);
-      window.removeEventListener('cloudcad:confirm-response', handleResponse as EventListener);
+      window.removeEventListener(
+        'cloudcad:confirm-response',
+        handleResponse as EventListener
+      );
     };
-    window.addEventListener('cloudcad:confirm-response', handleResponse as EventListener);
+    window.addEventListener(
+      'cloudcad:confirm-response',
+      handleResponse as EventListener
+    );
     window.dispatchEvent(new CustomEvent(CONFIRM_EVENT, { detail: options }));
   });
 };
 
-const NotificationContext = createContext<NotificationContextValue | null>(null);
+const NotificationContext = createContext<NotificationContextValue | null>(
+  null
+);
 
-export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
@@ -92,41 +113,49 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   // 显示确认对话框
-  const showConfirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
-    return new Promise((resolve) => {
-      confirmResolveRef.current = resolve;
-      setConfirmState({
-        isOpen: true,
-        title: options.title,
-        message: options.message,
-        confirmText: options.confirmText || '确定',
-        cancelText: options.cancelText || '取消',
-        type: options.type || 'warning',
-        onConfirm: () => {
-          resolve(true);
-          setConfirmState((prev) => ({ ...prev, isOpen: false }));
-        },
-        onCancel: () => {
-          resolve(false);
-          setConfirmState((prev) => ({ ...prev, isOpen: false }));
-        },
+  const showConfirm = useCallback(
+    (options: ConfirmOptions): Promise<boolean> => {
+      return new Promise((resolve) => {
+        confirmResolveRef.current = resolve;
+        setConfirmState({
+          isOpen: true,
+          title: options.title,
+          message: options.message,
+          confirmText: options.confirmText || '确定',
+          cancelText: options.cancelText || '取消',
+          type: options.type || 'warning',
+          onConfirm: () => {
+            resolve(true);
+            setConfirmState((prev) => ({ ...prev, isOpen: false }));
+          },
+          onCancel: () => {
+            resolve(false);
+            setConfirmState((prev) => ({ ...prev, isOpen: false }));
+          },
+        });
       });
-    });
-  }, []);
+    },
+    []
+  );
 
   // 监听全局 Toast 事件（供非 React 代码使用）
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ message: string; type: ToastType }>;
+      const customEvent = e as CustomEvent<{
+        message: string;
+        type: ToastType;
+      }>;
       showToast(customEvent.detail.message, customEvent.detail.type);
     };
 
     const handleConfirmEvent = (e: Event) => {
       const customEvent = e as CustomEvent<ConfirmOptions>;
       showConfirm(customEvent.detail).then((confirmed) => {
-        window.dispatchEvent(new CustomEvent('cloudcad:confirm-response', {
-          detail: { confirmed },
-        }));
+        window.dispatchEvent(
+          new CustomEvent('cloudcad:confirm-response', {
+            detail: { confirmed },
+          })
+        );
       });
     };
 
@@ -134,8 +163,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     window.addEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
 
     return () => {
-      window.removeEventListener(TOAST_EVENT, handleToastEvent as EventListener);
-      window.removeEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
+      window.removeEventListener(
+        TOAST_EVENT,
+        handleToastEvent as EventListener
+      );
+      window.removeEventListener(
+        CONFIRM_EVENT,
+        handleConfirmEvent as EventListener
+      );
     };
   }, [showToast, showConfirm]);
 
@@ -150,10 +185,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   return (
     <NotificationContext.Provider value={{ showToast, showConfirm }}>
       {children}
-      
+
       {/* 全局 Toast 容器 */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      
+
       {/* 全局确认对话框 */}
       <ConfirmDialog
         isOpen={confirmState.isOpen}
@@ -173,7 +208,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 export const useNotification = (): NotificationContextValue => {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error('useNotification must be used within a NotificationProvider');
+    throw new Error(
+      'useNotification must be used within a NotificationProvider'
+    );
   }
   return context;
 };

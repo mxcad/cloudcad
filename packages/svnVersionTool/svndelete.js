@@ -1,4 +1,4 @@
-const {exec} = require('child_process');
+const { exec } = require('child_process');
 const svnPath = require('./svnpath');
 
 /**
@@ -10,31 +10,38 @@ const svnPath = require('./svnpath');
  * @param {string} password 密码
  * @param {function} callback 回调函数
  */
-function svnDelete(targetPaths, isRecursive, keepLocal, username, password, callback) {
-    let command = `${svnPath} delete`;
-    targetPaths.forEach(path => {
-        command += ` ${path}`;
-    });
-    if (!isRecursive) {
-        command += " --non-recursive";
-    }
-    if (keepLocal) {
-        command += " --keep-local";
-    }
-    if (username) {
-        command += ` --username ${username}`;
-    }
-    if (password) {
-        command += ` --password ${password}`;
-    }
+function svnDelete(
+  targetPaths,
+  isRecursive,
+  keepLocal,
+  username,
+  password,
+  callback
+) {
+  let command = `${svnPath} delete`;
+  targetPaths.forEach((path) => {
+    command += ` ${path}`;
+  });
+  if (!isRecursive) {
+    command += ' --non-recursive';
+  }
+  if (keepLocal) {
+    command += ' --keep-local';
+  }
+  if (username) {
+    command += ` --username ${username}`;
+  }
+  if (password) {
+    command += ` --password ${password}`;
+  }
 
-    exec(command, (error, stdout, _stderr) => {
-        if (error) {
-            callback(error);
-        } else {
-            callback(null, stdout);
-        }
-    });
+  exec(command, { windowsHide: true }, (error, stdout, _stderr) => {
+    if (error) {
+      callback(error);
+    } else {
+      callback(null, stdout);
+    }
+  });
 }
 
 module.exports = svnDelete;

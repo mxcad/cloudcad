@@ -11,6 +11,7 @@ export class UploadFilesDto {
     format: 'binary',
     required: false,
   })
+  @IsOptional()
   file?: any;
 
   @ApiProperty({ description: '文件 MD5 哈希值' })

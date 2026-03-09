@@ -10,8 +10,7 @@ import type {
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
 export const filesApi = {
-  list: () =>
-    getApiClient().FileSystemController_getProjects(),
+  list: () => getApiClient().FileSystemController_getProjects(),
 
   upload: async (file: File, parentId: string) => {
     const fileContent = await new Promise<string>((resolve, reject) => {
@@ -19,7 +18,7 @@ export const filesApi = {
       reader.onload = () => {
         const result = reader.result as string;
         const base64 = result.split(',')[1];
-       base64 && resolve(base64);
+        base64 && resolve(base64);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
@@ -41,14 +40,18 @@ export const filesApi = {
     getApiClient().FileSystemController_getRootNode({ nodeId: id }),
 
   download: (id: string) =>
-    getApiClient().FileSystemController_downloadNode({ nodeId: id }, null, { responseType: 'blob' }),
+    getApiClient().FileSystemController_downloadNode({ nodeId: id }, null, {
+      responseType: 'blob',
+    }),
 
   downloadWithFormat: (
     id: string,
     format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
     pdfOptions?: PdfOptions
   ) => {
-    type DownloadParams = Parameters<OperationMethods['FileSystemController_downloadNodeWithFormat']>[0];
+    type DownloadParams = Parameters<
+      OperationMethods['FileSystemController_downloadNodeWithFormat']
+    >[0];
     const params: DownloadParams = {
       nodeId: id,
       format,
@@ -56,7 +59,11 @@ export const filesApi = {
       ...(pdfOptions?.height && { height: pdfOptions.height }),
       ...(pdfOptions?.colorPolicy && { colorPolicy: pdfOptions.colorPolicy }),
     };
-    return getApiClient().FileSystemController_downloadNodeWithFormat(params, null, { responseType: 'blob' });
+    return getApiClient().FileSystemController_downloadNodeWithFormat(
+      params,
+      null,
+      { responseType: 'blob' }
+    );
   },
 
   update: (id: string, data: UpdateNodeDto) =>
@@ -70,7 +77,7 @@ export const filesApi = {
     ),
 
   createFolder: (parentId: string, data: CreateFolderDto) =>
-    getApiClient().FileSystemController_createFolder({  parentId }, data),
+    getApiClient().FileSystemController_createFolder({ parentId }, data),
 
   moveNode: (id: string, data: MoveNodeDto) =>
     getApiClient().FileSystemController_moveNode({ nodeId: id }, data),

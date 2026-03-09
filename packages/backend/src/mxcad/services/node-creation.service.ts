@@ -468,7 +468,9 @@ export class NodeCreationService {
 
       // 确保 newNodeId 已被赋值
       if (!newNodeId) {
-        throw new InternalServerErrorException('节点引用失败：newNodeId 未被赋值');
+        throw new InternalServerErrorException(
+          '节点引用失败：newNodeId 未被赋值'
+        );
       }
 
       // 阶段2：IO操作（事务外）

@@ -22,17 +22,23 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
-import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { GalleryService } from './gallery.service';
-import { GalleryFileListDto, AddToGalleryDto, GalleryTypesResponseDto } from './dto/gallery.dto';
+import {
+  GalleryFileListDto,
+  AddToGalleryDto,
+  GalleryTypesResponseDto,
+} from './dto/gallery.dto';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
+import {
+  AuthenticatedRequest,
+  GalleryFileRequest,
+} from '../common/types/request.types';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -69,7 +75,7 @@ export class GalleryController {
     description: '返回分类列表',
     type: GalleryTypesResponseDto,
   })
-  async getDrawingsTypes(@Req() req: any) {
+  async getDrawingsTypes(@Req() req: AuthenticatedRequest) {
     this.logger.log('[getDrawingsTypes] 获取图纸库分类列表');
 
     const userId = req.user?.id;
@@ -90,7 +96,7 @@ export class GalleryController {
     description: '根据条件查询图纸列表，支持分页',
   })
   async getDrawingsFileList(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: GalleryFileListDto
   ) {
     this.logger.log(`[getDrawingsFileList] 参数: ${JSON.stringify(dto)}`);
@@ -117,7 +123,7 @@ export class GalleryController {
     description: '返回分类列表',
     type: GalleryTypesResponseDto,
   })
-  async getBlocksTypes(@Req() req: any) {
+  async getBlocksTypes(@Req() req: AuthenticatedRequest) {
     this.logger.log('[getBlocksTypes] 获取图块库分类列表');
 
     const userId = req.user?.id;
@@ -138,7 +144,7 @@ export class GalleryController {
     description: '根据条件查询图块列表，支持分页',
   })
   async getBlocksFileList(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: GalleryFileListDto
   ) {
     this.logger.log(`[getBlocksFileList] 参数: ${JSON.stringify(dto)}`);
@@ -184,7 +190,7 @@ export class GalleryController {
     status: 404,
     description: '文件不存在',
   })
-  async getBlocksFile(@Res() res: Response, @Req() req: any) {
+  async getBlocksFile(@Res() res: Response, @Req() req: GalleryFileRequest) {
     return this.handleGalleryFileRequest(req, res, 'blocks');
   }
 
@@ -221,7 +227,7 @@ export class GalleryController {
     status: 404,
     description: '文件不存在',
   })
-  async getDrawingsFile(@Res() res: Response, @Req() req: any) {
+  async getDrawingsFile(@Res() res: Response, @Req() req: GalleryFileRequest) {
     return this.handleGalleryFileRequest(req, res, 'drawings');
   }
 
@@ -250,7 +256,10 @@ export class GalleryController {
     status: 404,
     description: '文件不存在',
   })
-  async getBlocksFileHead(@Res() res: Response, @Req() req: any) {
+  async getBlocksFileHead(
+    @Res() res: Response,
+    @Req() req: GalleryFileRequest
+  ) {
     return this.handleGalleryFileRequest(req, res, 'blocks', true);
   }
 
@@ -279,7 +288,10 @@ export class GalleryController {
     status: 404,
     description: '文件不存在',
   })
-  async getDrawingsFileHead(@Res() res: Response, @Req() req: any) {
+  async getDrawingsFileHead(
+    @Res() res: Response,
+    @Req() req: GalleryFileRequest
+  ) {
     return this.handleGalleryFileRequest(req, res, 'drawings', true);
   }
 
@@ -299,7 +311,7 @@ export class GalleryController {
   @UseGuards(JwtAuthGuard)
   async createType(
     @Param('galleryType') galleryType: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: { name: string; pid: number }
   ) {
     this.logger.log(
@@ -341,7 +353,7 @@ export class GalleryController {
   async updateType(
     @Param('galleryType') galleryType: string,
     @Param('typeId', ParseIntPipe) typeId: number,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: { name: string }
   ) {
     this.logger.log(
@@ -383,7 +395,7 @@ export class GalleryController {
   async deleteType(
     @Param('galleryType') galleryType: string,
     @Param('typeId', ParseIntPipe) typeId: number,
-    @Req() req: any
+    @Req() req: AuthenticatedRequest
   ) {
     this.logger.log(`[deleteType] 删除分类: ${galleryType}, typeId: ${typeId}`);
 
@@ -422,7 +434,7 @@ export class GalleryController {
   })
   async addToGallery(
     @Param('galleryType') galleryType: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: AddToGalleryDto
   ) {
     this.logger.log(
@@ -465,7 +477,7 @@ export class GalleryController {
   async removeFromGallery(
     @Param('galleryType') galleryType: string,
     @Param('nodeId') nodeId: string,
-    @Req() req: any
+    @Req() req: AuthenticatedRequest
   ) {
     this.logger.log(
       `[removeFromGallery] 从图库移除文件: ${galleryType}, nodeId: ${nodeId}`
@@ -506,7 +518,7 @@ export class GalleryController {
   async updateGalleryItem(
     @Param('galleryType') galleryType: string,
     @Param('nodeId') nodeId: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: { firstType: number; secondType: number; thirdType?: number }
   ) {
     this.logger.log(
@@ -580,7 +592,7 @@ export class GalleryController {
    * @param isHeadRequest 是否为 HEAD 请求（默认 false）
    */
   private async handleGalleryFileRequest(
-    req: any,
+    req: GalleryFileRequest,
     res: Response,
     galleryType: 'blocks' | 'drawings',
     isHeadRequest: boolean = false
@@ -862,7 +874,7 @@ export class GalleryController {
    * @param isHeadRequest 是否为 HEAD 请求（默认 false）
    */
   private async handleThumbnailRequest(
-    req: any,
+    req: GalleryFileRequest,
     res: Response,
     galleryType: 'blocks' | 'drawings',
     nodeId: string,

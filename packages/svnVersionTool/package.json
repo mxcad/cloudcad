@@ -31,7 +31,6 @@
     "svnpath.js",
     "svnadminpath.js",
     "svncheck.js",
-    "subversion",
     "index.d.ts",
     "README.md"
   ]

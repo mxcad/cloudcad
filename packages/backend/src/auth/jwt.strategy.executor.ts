@@ -26,7 +26,6 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
     ]);
 
     if (isPublic) {
-      this.logger.log(`[JWT] ${request.path} - 公开端点，跳过认证`);
       return true;
     }
 
@@ -55,7 +54,6 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
     }
 
     // 有 Token，继续正常的 JWT 验证
-    this.logger.log(`[JWT] ${request.path} - 发现Token，开始JWT验证`);
     const result = await super.canActivate(context);
     return result as boolean;
   }

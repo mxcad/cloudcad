@@ -102,10 +102,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (account: string, password: string) => {
     console.log('[AuthContext] 开始登录:', account);
     try {
-      const response = await getApiClient().AuthController_login(null, { account, password } as LoginDto);
+      const response = await getApiClient().AuthController_login(null, {
+        account,
+        password,
+      } as LoginDto);
       console.log('[AuthContext] 登录响应:', response);
 
-      const { accessToken, refreshToken, user: userData } = response.data as unknown as LoginResponseData;
+      const {
+        accessToken,
+        refreshToken,
+        user: userData,
+      } = response.data as unknown as LoginResponseData;
       console.log(
         '[AuthContext] Access Token:',
         accessToken ? `${accessToken.substring(0, 20)}...` : 'missing'
@@ -141,21 +148,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       username: string;
       nickname?: string;
     }) => {
-      const response = await getApiClient().AuthController_register(null, data as RegisterDto);
+      const response = await getApiClient().AuthController_register(
+        null,
+        data as RegisterDto
+      );
       // 注册成功但不自动登录，返回注册成功信息
       return response.data; // { message: string; email: string }
     },
     []
   );
-  const verifyEmailAndLogin = useCallback(
-    async (token: string) => {
-      const response = await getApiClient().AuthController_verifyEmail({ token });
-      // 注意：现在验证邮箱不再返回 tokens，只是验证成功
-      // 用户需要重新登录
-      return response.data;
-    },
-    []
-  );
+  const verifyEmailAndLogin = useCallback(async (token: string) => {
+    const response = await getApiClient().AuthController_verifyEmail({ token });
+    // 注意：现在验证邮箱不再返回 tokens，只是验证成功
+    // 用户需要重新登录
+    return response.data;
+  }, []);
   const logout = useCallback(async () => {
     try {
       await getApiClient().AuthController_logout();

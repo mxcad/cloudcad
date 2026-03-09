@@ -5,7 +5,6 @@ import {
   forwardRef,
   NotFoundException,
   BadRequestException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { FileSystemService } from '../../file-system/file-system.service';
 import { ConfigService } from '@nestjs/config';
@@ -77,6 +76,11 @@ export class FileUploadManagerService {
   // 限流器（限制并发上传数量）
   private readonly uploadRateLimiter: RateLimiter;
 
+  // 缓存配置路径
+  private readonly mxcadUploadPath: string;
+  private readonly filesDataPath: string;
+  private readonly mxcadFileExt: string;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly fileConversionService: FileConversionService,
@@ -92,6 +96,10 @@ export class FileUploadManagerService {
   ) {
     // 初始化限流器，最大并发数为 5
     this.uploadRateLimiter = new RateLimiter(5);
+    // 缓存常用配置路径
+    this.mxcadUploadPath = this.configService.get('mxcadUploadPath') || '../../uploads';
+    this.filesDataPath = this.configService.get('filesDataPath') || '../../filesData';
+    this.mxcadFileExt = this.configService.get('mxcad.fileExt') || '.mxweb';
   }
 
   /**
@@ -361,7 +369,7 @@ export class FileUploadManagerService {
 
             // 获取 uploads 目录路径，用于后续拷贝文件
             const uploadPath =
-              this.configService.get('MXCAD_UPLOAD_PATH') ||
+              this.mxcadUploadPath ||
               path.join(process.cwd(), 'uploads');
 
             // 创建新节点，使用 skipFileCopy=true，先不创建物理目录
@@ -451,7 +459,7 @@ export class FileUploadManagerService {
             // 【新增】提交节点目录到 SVN 版本控制
             try {
               const filesDataPath =
-                this.configService.get('FILES_DATA_PATH') ||
+                this.filesDataPath ||
                 path.join(process.cwd(), 'filesData');
               // 注意：storageInfo.fullPath 已经是节点目录路径（未传 fileName）
               const nodeDirectory = storageInfo.fullPath;
@@ -667,7 +675,7 @@ export class FileUploadManagerService {
       const sourceFile = srcFilePath;
 
       // 构建目标文件路径：使用外部参照文件名（带原始扩展名）+ .mxweb
-      const convertedExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
+      const convertedExt = this.mxcadFileExt;
       const targetFile = path.join(
         externalRefDir,
         `${extRefFileName}${convertedExt}`
@@ -898,7 +906,7 @@ export class FileUploadManagerService {
           // 【新增】提交节点目录到 SVN 版本控制
           try {
             const filesDataPath =
-              this.configService.get('FILES_DATA_PATH') ||
+              this.filesDataPath ||
               path.join(process.cwd(), 'filesData');
             const fullPath = path.join(filesDataPath, storageInfo.relativePath);
             const nodeDirectory = path.dirname(fullPath);
@@ -1050,7 +1058,7 @@ export class FileUploadManagerService {
 
         // 获取源文件路径（uploads 目录中的转换后文件）
         const uploadPath =
-          this.configService.get('MXCAD_UPLOAD_PATH') ||
+          this.mxcadUploadPath ||
           path.join(process.cwd(), 'uploads');
         const sourceDirectoryPath = path.join(uploadPath);
 
@@ -1133,7 +1141,7 @@ export class FileUploadManagerService {
         // 【新增】提交节点目录到 SVN 版本控制
         try {
           const filesDataPath =
-            this.configService.get('FILES_DATA_PATH') ||
+            this.filesDataPath ||
             path.join(process.cwd(), 'filesData');
           const fullPath = path.join(filesDataPath, storageInfo.relativePath);
           const nodeDirectory = path.dirname(fullPath);
@@ -1206,7 +1214,7 @@ export class FileUploadManagerService {
 
     // 获取目标文件路径
     const uploadPath =
-      this.configService.get('MXCAD_UPLOAD_PATH') ||
+      this.mxcadUploadPath ||
       path.join(process.cwd(), 'uploads');
     const targetFile = path.join(
       uploadPath,
@@ -1236,7 +1244,7 @@ export class FileUploadManagerService {
           try {
             // 传递转换后的文件路径（包含 .mxweb 扩展名）
             const uploadPath =
-              this.configService.get('MXCAD_UPLOAD_PATH') ||
+              this.mxcadUploadPath ||
               path.join(process.cwd(), 'uploads');
             const convertedFilePath = path.join(
               uploadPath,
@@ -1522,7 +1530,7 @@ export class FileUploadManagerService {
 
           // 获取源文件路径（uploads 目录中的转换后文件）
           const uploadPath =
-            this.configService.get('MXCAD_UPLOAD_PATH') ||
+            this.mxcadUploadPath ||
             path.join(process.cwd(), 'uploads');
           const sourceDirectoryPath = path.join(uploadPath);
 
@@ -1613,7 +1621,7 @@ export class FileUploadManagerService {
           try {
             // 获取节点目录路径（完整路径，包含 nodeId）
             const filesDataPath =
-              this.configService.get('FILES_DATA_PATH') ||
+              this.filesDataPath ||
               path.join(process.cwd(), 'filesData');
             const fullPath = path.join(filesDataPath, storageInfo.relativePath);
             // 【修复】获取节点目录（不包含文件名）
@@ -1745,7 +1753,7 @@ export class FileUploadManagerService {
 
       // 获取 uploads 目录
       const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        this.mxcadUploadPath ||
         path.join(process.cwd(), 'uploads');
 
       // 优化：使用 findFilesByPrefix 直接查找匹配的文件，避免扫描整个目录
@@ -1876,7 +1884,7 @@ export class FileUploadManagerService {
 
       // 获取源文件路径（uploads 目录）
       const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        this.mxcadUploadPath ||
         path.join(process.cwd(), 'uploads');
       const sourceDirectoryPath = uploadPath;
 
@@ -1952,7 +1960,7 @@ export class FileUploadManagerService {
       // 【新增】提交节点目录到 SVN 版本控制
       try {
         const filesDataPath =
-          this.configService.get('FILES_DATA_PATH') ||
+          this.filesDataPath ||
           path.join(process.cwd(), 'filesData');
         const fullPath = path.join(filesDataPath, storageInfo.relativePath);
         const nodeDirectory = path.dirname(fullPath);
@@ -2078,7 +2086,7 @@ export class FileUploadManagerService {
       // 【新增】提交节点目录到 SVN 版本控制
       try {
         const filesDataPath =
-          this.configService.get('FILES_DATA_PATH') ||
+          this.filesDataPath ||
           path.join(process.cwd(), 'filesData');
         const fullPath = path.join(filesDataPath, storageInfo.relativePath);
         const nodeDirectory = path.dirname(fullPath);
@@ -2139,7 +2147,7 @@ export class FileUploadManagerService {
 
       // 尝试查找其他可能的文件格式
       const uploadPath =
-        this.configService.get('MXCAD_UPLOAD_PATH') ||
+        this.mxcadUploadPath ||
         path.join(process.cwd(), 'uploads');
       const allFiles = await this.fileSystemService.readDirectory(uploadPath);
       const relatedFiles = allFiles.filter((file) => file.startsWith(fileHash));
@@ -2172,7 +2180,7 @@ export class FileUploadManagerService {
 
     // 检查本地文件系统
     const uploadPath =
-      this.configService.get('MXCAD_UPLOAD_PATH') ||
+      this.mxcadUploadPath ||
       path.join(process.cwd(), 'uploads');
     const localPath = path.join(uploadPath, targetFile);
     const existsInLocal = fs.existsSync(localPath);
@@ -2244,7 +2252,7 @@ export class FileUploadManagerService {
       // 获取父节点下的所有子节点
       const childrenResult =
         await this.fileSystemServiceMain.getChildren(parentId);
-      const existingNodes = childrenResult.data || [];
+      const existingNodes = childrenResult.nodes || [];
 
       // 提取现有文件名
       const existingNames = existingNodes.map((n) => n.name);

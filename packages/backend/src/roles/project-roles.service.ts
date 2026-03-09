@@ -18,13 +18,13 @@ export interface CreateProjectRoleDto {
   projectId?: string; // 项目 ID（系统角色不需要）
   name: string;
   description?: string;
-  permissions: ProjectPermission[];
+  permissions: string[]; // 接受 string[]，内部转换为 ProjectPermission[]
 }
 
 export interface UpdateProjectRoleDto {
   name?: string;
   description?: string;
-  permissions?: ProjectPermission[];
+  permissions?: string[]; // 接受 string[]，内部转换为 ProjectPermission[]
 }
 
 /**
@@ -356,7 +356,7 @@ export class ProjectRolesService {
    */
   async assignPermissions(
     roleId: string,
-    permissions: ProjectPermission[],
+    permissions: string[], // 接受 string[]，内部转换
     userId?: string
   ): Promise<void> {
     try {
@@ -371,8 +371,11 @@ export class ProjectRolesService {
 
       // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
+      // 转换为 ProjectPermission 类型
+      const typedPermissions = permissions as ProjectPermission[];
+
       // 创建权限关联（直接使用枚举值）
-      const data = permissions.map((permission) => ({
+      const data = typedPermissions.map((permission) => ({
         projectRoleId: roleId,
         permission: permission as PrismaProjectPermission,
       }));
@@ -400,7 +403,7 @@ export class ProjectRolesService {
    */
   async removePermissions(
     roleId: string,
-    permissions: ProjectPermission[],
+    permissions: string[], // 接受 string[]，内部转换
     userId?: string
   ): Promise<void> {
     try {
@@ -415,11 +418,14 @@ export class ProjectRolesService {
 
       // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
+      // 转换为 ProjectPermission 类型
+      const typedPermissions = permissions as ProjectPermission[];
+
       await this.prisma.projectRolePermission.deleteMany({
         where: {
           projectRoleId: roleId,
           permission: {
-            in: permissions as PrismaProjectPermission[],
+            in: typedPermissions as PrismaProjectPermission[],
           },
         },
       });
@@ -442,7 +448,7 @@ export class ProjectRolesService {
    */
   async updatePermissions(
     roleId: string,
-    permissions: ProjectPermission[]
+    permissions: string[] // 接受 string[]，内部转换
   ): Promise<void> {
     try {
       // 先删除所有现有权限

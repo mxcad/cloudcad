@@ -3,23 +3,18 @@ import { API_BASE_URL } from '../config/apiConfig';
 import type { GalleryFileListDto, AddToGalleryDto } from '../types/api-client';
 
 export const galleryApi = {
-  getDrawingsTypes: () =>
-    getApiClient().GalleryController_getDrawingsTypes(),
+  getDrawingsTypes: () => getApiClient().GalleryController_getDrawingsTypes(),
 
   getDrawingsFileList: (params: GalleryFileListDto) =>
     getApiClient().GalleryController_getDrawingsFileList(undefined, params),
 
-  getBlocksTypes: () =>
-    getApiClient().GalleryController_getBlocksTypes(),
+  getBlocksTypes: () => getApiClient().GalleryController_getBlocksTypes(),
 
   getBlocksFileList: (params: GalleryFileListDto) =>
     getApiClient().GalleryController_getBlocksFileList(undefined, params),
 
   createType: (galleryType: string, name: string, pid: number) =>
-    getApiClient().GalleryController_createType(
-      { galleryType },
-      { name, pid }
-    ),
+    getApiClient().GalleryController_createType({ galleryType }, { name, pid }),
 
   updateType: (galleryType: string, typeId: number, name: string) =>
     getApiClient().GalleryController_updateType(
@@ -66,10 +61,12 @@ export const galleryApi = {
    */
   getMxwebFileUrlByNodeId: async (nodeId: string): Promise<string> => {
     const { UrlHelper } = await import('../utils/mxcadUtils');
-    const response = await getApiClient().FileSystemController_getNode({ nodeId });
+    const response = await getApiClient().FileSystemController_getNode({
+      nodeId,
+    });
     const fileInfo = response.data;
-    if(!fileInfo) return ''
-    if(!fileInfo.path) return ''
+    if (!fileInfo) return '';
+    if (!fileInfo.path) return '';
     return UrlHelper.buildMxCadFileUrl(fileInfo.path);
   },
 };

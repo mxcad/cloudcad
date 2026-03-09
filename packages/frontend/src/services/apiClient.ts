@@ -89,10 +89,16 @@ function setupInterceptors(instance: AxiosInstance) {
       return response;
     },
     async (error: AxiosError) => {
-      const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+      const originalRequest = error.config as AxiosRequestConfig & {
+        _retry?: boolean;
+      };
       const isLoginEndpoint = originalRequest?.url?.includes('/auth/login');
 
-      if (error.response?.status === 401 && !originalRequest._retry && !isLoginEndpoint) {
+      if (
+        error.response?.status === 401 &&
+        !originalRequest._retry &&
+        !isLoginEndpoint
+      ) {
         originalRequest._retry = true;
         const refreshToken = localStorage.getItem('refreshToken');
 
@@ -103,11 +109,18 @@ function setupInterceptors(instance: AxiosInstance) {
 
         try {
           const baseURL = API_BASE_URL.replace(/\/api$/, '');
-          const response = await axios.post(`${baseURL}/api/auth/refresh`, { refreshToken });
-          const { accessToken, refreshToken: newRefreshToken } = response.data.data || response.data;
+          const response = await axios.post(`${baseURL}/api/auth/refresh`, {
+            refreshToken,
+          });
+          const { accessToken, refreshToken: newRefreshToken } =
+            response.data.data || response.data;
           localStorage.setItem('accessToken', accessToken);
-          if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
-          originalRequest.headers = { ...originalRequest.headers, Authorization: `Bearer ${accessToken}` };
+          if (newRefreshToken)
+            localStorage.setItem('refreshToken', newRefreshToken);
+          originalRequest.headers = {
+            ...originalRequest.headers,
+            Authorization: `Bearer ${accessToken}`,
+          };
           return instance(originalRequest);
         } catch {
           clearAuthAndRedirect();
@@ -116,14 +129,25 @@ function setupInterceptors(instance: AxiosInstance) {
       }
 
       if (error.response?.status === 403) {
-        const message = (error.response?.data as { message?: string })?.message || '权限不足';
+        const message =
+          (error.response?.data as { message?: string })?.message || '权限不足';
         console.error('[apiClient] 权限错误:', message);
-        (error as Error & { isPermissionError?: boolean; statusCode?: number }).isPermissionError = true;
-        (error as Error & { isPermissionError?: boolean; statusCode?: number }).statusCode = 403;
+        (
+          error as Error & { isPermissionError?: boolean; statusCode?: number }
+        ).isPermissionError = true;
+        (
+          error as Error & { isPermissionError?: boolean; statusCode?: number }
+        ).statusCode = 403;
       }
 
-      const responseData = error.response?.data as { message?: string; error?: string; msg?: string } | undefined;
-      error.message = responseData?.message || responseData?.error || responseData?.msg || (typeof responseData === 'string' ? responseData : '网络错误');
+      const responseData = error.response?.data as
+        | { message?: string; error?: string; msg?: string }
+        | undefined;
+      error.message =
+        responseData?.message ||
+        responseData?.error ||
+        responseData?.msg ||
+        (typeof responseData === 'string' ? responseData : '网络错误');
       return Promise.reject(error);
     }
   );
@@ -136,6 +160,3 @@ function clearAuthAndRedirect() {
   localStorage.removeItem('user');
   window.location.href = '/login';
 }
-
-
-

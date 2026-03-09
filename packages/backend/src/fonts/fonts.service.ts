@@ -11,6 +11,28 @@ import * as path from 'path';
 import { FontUploadTarget } from './dto/font.dto';
 
 /**
+ * 字体信息接口
+ */
+export interface FontInfo {
+  name: string;
+  size: number;
+  extension: string;
+  createdAt: Date;
+  existsInBackend?: boolean;
+  existsInFrontend?: boolean;
+  creator?: string;
+  updatedAt?: Date;
+}
+
+/**
+ * 字体上传结果接口
+ */
+export interface FontUploadResult {
+  message: string;
+  font: FontInfo;
+}
+
+/**
  * 字体管理服务
  * 负责管理后端转换程序和前端的字体文件
  */
@@ -45,9 +67,10 @@ export class FontsService {
       path.join(
         process.cwd(),
         '..',
-        'mxcadassembly',
+        '..',
+        'runtime',
         'windows',
-        'release',
+        'mxcad',
         'fonts'
       )
     );
@@ -72,7 +95,7 @@ export class FontsService {
    * 获取字体列表
    * @param location 指定返回的字体位置：'backend'、'frontend' 或不指定返回全部
    */
-  async getFonts(location?: 'backend' | 'frontend'): Promise<any[]> {
+  async getFonts(location?: 'backend' | 'frontend'): Promise<FontInfo[]> {
     try {
       // 确保目录存在
       await this.ensureDirectoriesExist();
@@ -162,7 +185,7 @@ export class FontsService {
   async uploadFont(
     file: Express.Multer.File,
     target: FontUploadTarget = FontUploadTarget.BOTH
-  ): Promise<{ message: string; font: any }> {
+  ): Promise<FontUploadResult> {
     try {
       // 验证文件
       this.validateFontFile(file);
@@ -343,7 +366,7 @@ export class FontsService {
   private async getFontsFromDirectory(
     dir: string,
     location: string
-  ): Promise<any[]> {
+  ): Promise<FontInfo[]> {
     try {
       const files = await fs.readdir(dir);
       const fonts: Array<{

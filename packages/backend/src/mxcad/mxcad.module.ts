@@ -26,6 +26,7 @@ import { StorageModule } from '../storage/storage.module';
 import { VersionControlModule } from '../version-control/version-control.module';
 import { RolesModule } from '../roles/roles.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
+import { AppConfig } from '../config/app.config';
 
 @Module({
   imports: [
@@ -34,52 +35,60 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService) => ({
-        secret: configService.get('jwt.secret'),
+      useFactory: async (configService: ConfigService<AppConfig>) => ({
+        secret: configService.get('jwt.secret', { infer: true }),
         signOptions: {
-          expiresIn: configService.get('jwt.expiresIn'),
+          expiresIn: configService.get('jwt.expiresIn', { infer: true }),
         },
       }),
       inject: [ConfigService],
     }),
-    MulterModule.register({
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          if (req.body.chunk !== undefined) {
-            // 分片文件存放位置
-            const fileMd5 = req.body.hash;
-            const tmpDir = join(process.cwd(), 'temp', `chunk_${fileMd5}`);
-            fs.mkdirSync(tmpDir, { recursive: true });
-            cb(null, tmpDir);
-          } else {
-            // 完整文件存放位置
-            const uploadPath =
-              process.env.MXCAD_UPLOAD_PATH || join(process.cwd(), 'uploads');
-            fs.mkdirSync(uploadPath, { recursive: true });
-            cb(null, uploadPath);
-          }
-        },
-        filename: (req, file, cb) => {
-          const fileMd5 = req.body.hash;
-          if (req.body.chunk !== undefined) {
-            // 分片文件名: {chunkIndex}_{fileHash}
-            cb(null, `${req.body.chunk}_${fileMd5}`);
-          } else if (fileMd5) {
-            // 完整文件名: {fileHash}.{ext}
-            const ext = file.originalname.split('.').pop();
-            cb(null, `${fileMd5}.${ext}`);
-          } else {
-            // 没有 hash 参数时，使用原始文件名
-            cb(null, file.originalname);
-          }
-        },
-      }),
-      // 确保所有字段都被解析，包括非文件字段
-      limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB
-        fields: 20, // 允许最多20个字段
-        fieldSize: 1024 * 1024, // 每个字段最大1MB
+    MulterModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService<AppConfig>) => {
+        const config = configService.get('mxcadUploadPath', { infer: true });
+        const tempPath = configService.get('mxcadTempPath', { infer: true });
+        const maxFileSize = configService.get('upload.maxSize', { infer: true });
+
+        return {
+          storage: diskStorage({
+            destination: (req, file, cb) => {
+              if (req.body.chunk !== undefined) {
+                // 分片文件存放位置
+                const fileMd5 = req.body.hash;
+                const tmpDir = join(tempPath, `chunk_${fileMd5}`);
+                fs.mkdirSync(tmpDir, { recursive: true });
+                cb(null, tmpDir);
+              } else {
+                // 完整文件存放位置
+                fs.mkdirSync(config, { recursive: true });
+                cb(null, config);
+              }
+            },
+            filename: (req, file, cb) => {
+              const fileMd5 = req.body.hash;
+              if (req.body.chunk !== undefined) {
+                // 分片文件名: {chunkIndex}_{fileHash}
+                cb(null, `${req.body.chunk}_${fileMd5}`);
+              } else if (fileMd5) {
+                // 完整文件名: {fileHash}.{ext}
+                const ext = file.originalname.split('.').pop();
+                cb(null, `${fileMd5}.${ext}`);
+              } else {
+                // 没有 hash 参数时，使用原始文件名
+                cb(null, file.originalname);
+              }
+            },
+          }),
+          // 确保所有字段都被解析，包括非文件字段
+          limits: {
+            fileSize: maxFileSize,
+            fields: 20, // 允许最多20个字段
+            fieldSize: 1024 * 1024, // 每个字段最大1MB
+          },
+        };
       },
+      inject: [ConfigService],
     }),
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),

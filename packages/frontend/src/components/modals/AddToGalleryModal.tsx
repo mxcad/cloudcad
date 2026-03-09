@@ -13,7 +13,6 @@ import {
 import { galleryApi } from '../../services/galleryApi';
 import { useNotification } from '../../contexts/NotificationContext';
 
-
 type GalleryType = 'drawings' | 'blocks';
 
 // 最大层级（支持三级分类）
@@ -46,8 +45,15 @@ interface CategorySelectProps {
   disabled: boolean;
   galleryType: GalleryType;
   onRefresh: () => Promise<void>;
-  showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
-  showConfirm: (options: { title: string; message: string; type?: 'danger' | 'warning' | 'info' }) => Promise<boolean>;
+  showToast: (
+    message: string,
+    type?: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
+  showConfirm: (options: {
+    title: string;
+    message: string;
+    type?: 'danger' | 'warning' | 'info';
+  }) => Promise<boolean>;
 }
 
 const CategorySelect: React.FC<CategorySelectProps> = ({
@@ -157,7 +163,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     setIsSubmitting(true);
 
     try {
-      await galleryApi.updateType(galleryType, editingType.id, editingName.trim());
+      await galleryApi.updateType(
+        galleryType,
+        editingType.id,
+        editingName.trim()
+      );
       await onRefresh();
       setEditingType(null);
       setEditingName('');

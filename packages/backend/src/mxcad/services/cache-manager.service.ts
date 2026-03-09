@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 export interface CacheItem<T> {
   data: T;
@@ -9,7 +10,12 @@ export interface CacheItem<T> {
 export class CacheManagerService {
   private readonly logger = new Logger(CacheManagerService.name);
   private readonly caches: Map<string, Map<string, CacheItem<any>>> = new Map();
-  private readonly defaultTTL = 300000; // 5分钟 - 增加缓存时间，避免文件上传过程中缓存过期
+  private readonly defaultTTL: number;
+
+  constructor(private readonly configService: ConfigService) {
+    const cacheTTL = this.configService.get('cacheTTL', { infer: true });
+    this.defaultTTL = cacheTTL.mxcad * 1000; // 转为毫秒
+  }
 
   /**
    * 获取缓存值

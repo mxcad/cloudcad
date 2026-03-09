@@ -28,7 +28,10 @@ async function cleanupDatabase() {
         await prisma.$executeRawUnsafe(
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
         );
-      } catch (error) {}
+      } catch (error) {
+        // 某些表可能因外键约束无法清空，忽略错误继续
+        console.warn(`[global-teardown] 清空表 ${tablename} 失败:`, error);
+      }
     }
   }
 }

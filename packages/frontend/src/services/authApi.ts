@@ -1,21 +1,25 @@
 import { getApiClient } from './apiClient';
-import type { LoginDto, RegisterDto, RefreshTokenDto, ResetPasswordDto } from '../types/api-client';
+import type {
+  LoginDto,
+  RegisterDto,
+  RefreshTokenDto,
+  ResetPasswordDto,
+} from '../types/api-client';
 
 export const authApi = {
-  login: (data: LoginDto) =>
-    getApiClient().AuthController_login(null, data),
+  login: (data: LoginDto) => getApiClient().AuthController_login(null, data),
 
   register: (data: RegisterDto) =>
     getApiClient().AuthController_register(null, data),
 
   refreshToken: (refreshToken: string) =>
-    getApiClient().AuthController_refreshToken(null, { refreshToken } as RefreshTokenDto),
+    getApiClient().AuthController_refreshToken(null, {
+      refreshToken,
+    } as RefreshTokenDto),
 
-  logout: () =>
-    getApiClient().AuthController_logout(),
+  logout: () => getApiClient().AuthController_logout(),
 
-  getProfile: () =>
-    getApiClient().AuthController_getProfile(),
+  getProfile: () => getApiClient().AuthController_getProfile(),
 
   resendVerification: (email: string) =>
     getApiClient().AuthController_resendVerification(null, { email }),

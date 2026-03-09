@@ -7,7 +7,10 @@ export class UpdateProjectMemberDto {
   @IsOptional()
   projectRoleId?: string;
 
-  @ApiProperty({ description: '角色ID（兼容字段，与 projectRoleId 相同）', required: false })
+  @ApiProperty({
+    description: '角色ID（兼容字段，与 projectRoleId 相同）',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   roleId?: string;

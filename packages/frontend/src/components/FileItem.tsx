@@ -32,7 +32,11 @@ interface FileItemProps {
   canAddToGallery?: boolean;
   canViewVersionHistory?: boolean;
   canManageTrash?: boolean;
-  onSelect: (nodeId: string, isMultiSelect?: boolean, isRangeSelect?: boolean) => void;
+  onSelect: (
+    nodeId: string,
+    isMultiSelect?: boolean,
+    isRangeSelect?: boolean
+  ) => void;
   onEnter: (node: FileSystemNode) => void;
   onDownload: (node: FileSystemNode) => void;
   onDelete: (node: FileSystemNode) => void;
@@ -508,10 +512,16 @@ export const FileItem: React.FC<FileItemProps> = ({
           >
             {/* 将图标的尺寸放大到 18px 以匹配列表视图 */}
             <span className="inline-block scale-110 origin-center">
-              {React.cloneElement(action.icon as React.ReactElement<{ width?: number; height?: number }>, {
-                width: 18,
-                height: 18,
-              })}
+              {React.cloneElement(
+                action.icon as React.ReactElement<{
+                  width?: number;
+                  height?: number;
+                }>,
+                {
+                  width: 18,
+                  height: 18,
+                }
+              )}
             </span>
           </button>
         ))}

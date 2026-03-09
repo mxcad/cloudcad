@@ -19,6 +19,7 @@ import { StorageCleanupScheduler } from './schedulers/storage-cleanup.scheduler'
 import { CacheMonitorController } from './controllers/cache-monitor.controller';
 import { RoleInheritanceService } from './services/role-inheritance.service';
 import { InitializationService } from './services/initialization.service';
+import { FileExtensionsService } from './services/file-extensions.service';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { InitializationService } from './services/initialization.service';
     StorageCleanupScheduler,
     RoleInheritanceService,
     InitializationService,
+    FileExtensionsService,
   ],
   controllers: [CacheMonitorController],
   exports: [
@@ -59,6 +61,7 @@ import { InitializationService } from './services/initialization.service';
     StorageCleanupService,
     RoleInheritanceService,
     InitializationService,
+    FileExtensionsService,
   ],
 })
 export class CommonModule {}

@@ -396,29 +396,15 @@ export const useFileSystem = () => {
         // 处理分页响应
         console.log('[useFileSystem] 处理响应:', response.data);
         console.log('[useFileSystem] 完整响应:', response);
-        if (response.data?.data) {
-          console.log('[useFileSystem] 设置节点数据:', response.data.data);
-          // ProjectDto[] 转换为 FileSystemNode[]
-          const projectNodes = (response.data.data as ProjectDto[]).map(
-            projectToNode
-          );
-          setNodes(projectNodes);
-          setPaginationMeta(response.data.meta);
-        } else {
-          // 兼容旧格式（如果后端还未更新）
-          const responseData = response.data as unknown;
-          const allProjects = (Array.isArray(responseData) ? responseData : []) as ProjectDto[];
-          const projectNodes = allProjects.map(projectToNode);
-          setNodes(projectNodes);
-          setPaginationMeta({
-            total: projectNodes.length,
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-            totalPages: Math.ceil(
-              projectNodes.length / paginationRef.current.limit
-            ),
-          });
-        }
+        // ProjectListResponseDto: { projects, total, page, limit, totalPages }
+        const projectNodes = response.data.projects.map(projectToNode);
+        setNodes(projectNodes);
+        setPaginationMeta({
+          total: response.data.total,
+          page: response.data.page,
+          limit: response.data.limit,
+          totalPages: response.data.totalPages,
+        });
 
         setCurrentNode(null);
         setBreadcrumbs([]);
@@ -433,24 +419,18 @@ export const useFileSystem = () => {
           });
 
           // 处理分页响应
-          // TrashItemDto[] 转换为 FileSystemNode[]
-          const trashItems = (trashResponse.data?.data as
-            | TrashItemDto[]
-            | undefined) || [];
+          // TrashListResponseDto: { items, total }
+          const trashItems = trashResponse.data.items;
           const trashNodes = trashItems.map(trashItemToNode);
           setNodes(trashNodes);
-          if (trashResponse.data?.meta) {
-            setPaginationMeta(trashResponse.data.meta);
-          } else {
-            setPaginationMeta({
-              total: trashNodes.length,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(
-                trashNodes.length / paginationRef.current.limit
-              ),
-            });
-          }
+          setPaginationMeta({
+            total: trashResponse.data.total,
+            page: paginationRef.current.page,
+            limit: paginationRef.current.limit,
+            totalPages: Math.ceil(
+              trashResponse.data.total / paginationRef.current.limit
+            ),
+          });
 
           // 尝试获取项目信息作为当前节点（可能失败，捕获错误）
           try {
@@ -509,23 +489,14 @@ export const useFileSystem = () => {
           const nodeData = nodeResponse.data;
 
           // 处理分页响应
-          if (childrenResponse.data?.data) {
-            // FileSystemNodeDto[] 兼容 FileSystemNode[]
-            setNodes(childrenResponse.data.data as FileSystemNode[]);
-            setPaginationMeta(childrenResponse.data.meta);
-          } else {
-            // 兼容旧格式（如果后端还未更新）
-            const childrenData = (childrenResponse.data as unknown as FileSystemNode[]) || [];
-            setNodes(childrenData);
-            setPaginationMeta({
-              total: childrenData.length,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(
-                childrenData.length / paginationRef.current.limit
-              ),
-            });
-          }
+          // NodeListResponseDto: { nodes, total, page, limit, totalPages }
+          setNodes(childrenResponse.data.nodes as FileSystemNode[]);
+          setPaginationMeta({
+            total: childrenResponse.data.total,
+            page: childrenResponse.data.page,
+            limit: childrenResponse.data.limit,
+            totalPages: childrenResponse.data.totalPages,
+          });
 
           setCurrentNode(nodeData);
 

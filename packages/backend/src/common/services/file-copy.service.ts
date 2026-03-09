@@ -17,8 +17,8 @@ export class FileCopyService {
 
   constructor(private configService: ConfigService) {
     this.uploadsPath = this.configService.get(
-      'MXCAD_UPLOAD_PATH',
-      '../uploads'
+      'mxcadUploadPath',
+      '../../uploads'
     );
   }
 

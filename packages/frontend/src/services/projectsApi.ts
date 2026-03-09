@@ -42,7 +42,10 @@ export const projectsApi = {
     getApiClient().FileSystemController_updateProject({ projectId }, data),
 
   delete: (projectId: string, permanently: boolean = false) =>
-    getApiClient().FileSystemController_deleteProject({ projectId, permanently }),
+    getApiClient().FileSystemController_deleteProject({
+      projectId,
+      permanently,
+    }),
 
   // ========== 节点操作（兼容旧 API） ==========
 
@@ -77,23 +80,38 @@ export const projectsApi = {
     return getApiClient().FileSystemController_copyNode({ nodeId }, data);
   },
 
-  getStorageInfo: () =>
-    getApiClient().FileSystemController_getStorageInfo(),
+  getStorageInfo: () => getApiClient().FileSystemController_getStorageInfo(),
 
   getMembers: (projectId: string) =>
     getApiClient().FileSystemController_getProjectMembers({ projectId }),
 
-  addMember: (projectId: string, data: { userId: string; projectRoleId: string }) =>
+  addMember: (
+    projectId: string,
+    data: { userId: string; projectRoleId: string }
+  ) =>
     getApiClient().FileSystemController_addProjectMember({ projectId }, data),
 
   removeMember: (projectId: string, userId: string) =>
-    getApiClient().FileSystemController_removeProjectMember({ projectId, userId }),
+    getApiClient().FileSystemController_removeProjectMember({
+      projectId,
+      userId,
+    }),
 
-  updateMember: (projectId: string, userId: string, data: { projectRoleId: string }) =>
-    getApiClient().FileSystemController_updateProjectMember({ projectId, userId }, data),
+  updateMember: (
+    projectId: string,
+    userId: string,
+    data: { projectRoleId: string }
+  ) =>
+    getApiClient().FileSystemController_updateProjectMember(
+      { projectId, userId },
+      data
+    ),
 
   transferOwnership: (projectId: string, newOwnerId: string) =>
-    getApiClient().FileSystemController_transferProjectOwnership({ projectId }, { newOwnerId }),
+    getApiClient().FileSystemController_transferProjectOwnership(
+      { projectId },
+      { newOwnerId }
+    ),
 
   // ========== 项目权限检查 ==========
 
@@ -101,13 +119,18 @@ export const projectsApi = {
    * 获取用户在项目中的所有权限
    */
   getPermissions: (projectId: string) =>
-    getApiClient().FileSystemController_getUserProjectPermissions({ projectId }),
+    getApiClient().FileSystemController_getUserProjectPermissions({
+      projectId,
+    }),
 
   /**
    * 检查用户是否具有特定权限
    */
   checkPermission: (projectId: string, permission: string) =>
-    getApiClient().FileSystemController_checkProjectPermission({ projectId, permission }),
+    getApiClient().FileSystemController_checkProjectPermission({
+      projectId,
+      permission,
+    }),
 
   /**
    * 获取用户在项目中的角色
@@ -139,5 +162,7 @@ export const projectsApi = {
    * 恢复项目
    */
   restoreProject: (projectId: string) =>
-    getApiClient().FileSystemController_restoreTrashItems(null, { itemIds: [projectId] }),
+    getApiClient().FileSystemController_restoreTrashItems(null, {
+      itemIds: [projectId],
+    }),
 };

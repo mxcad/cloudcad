@@ -6,14 +6,18 @@ import Redis from 'ioredis';
 
 @Injectable()
 export class EmailVerificationService {
-  private readonly CODE_TTL = 15 * 60; // 15分钟（秒）
-  private readonly RATE_LIMIT_TTL = 60; // 1分钟（秒）
+  private readonly codeTTL: number;
+  private readonly rateLimitTTL: number;
 
   constructor(
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     @InjectRedis() private readonly redis: Redis
-  ) {}
+  ) {
+    const cacheTTL = this.configService.get('cacheTTL', { infer: true });
+    this.codeTTL = cacheTTL.verificationCode;
+    this.rateLimitTTL = cacheTTL.verificationRateLimit;
+  }
 
   private getCodeKey(email: string): string {
     return `email_verification:code:${email}`;
@@ -28,9 +32,9 @@ export class EmailVerificationService {
     const crypto = await import('crypto');
     const code = (100000 + crypto.randomInt(900000)).toString();
 
-    // 存储到 Redis，15分钟过期
+    // 存储到 Redis，配置的过期时间
     const key = this.getCodeKey(email);
-    await this.redis.setex(key, this.CODE_TTL, code);
+    await this.redis.setex(key, this.codeTTL, code);
     return code;
   }
 
@@ -47,8 +51,8 @@ export class EmailVerificationService {
     const token = await this.generateVerificationToken(email);
     await this.emailService.sendVerificationEmail(email, token);
 
-    // 设置频率限制，1分钟内不能重复发送
-    await this.redis.setex(rateLimitKey, this.RATE_LIMIT_TTL, '1');
+    // 设置频率限制，配置的时间内不能重复发送
+    await this.redis.setex(rateLimitKey, this.rateLimitTTL, '1');
   }
 
   async verifyEmail(email: string, code: string): Promise<boolean> {

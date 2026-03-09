@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 
@@ -40,9 +41,18 @@ export class CacheVersionService implements OnModuleInit {
   private readonly logger = new Logger(CacheVersionService.name);
   private readonly VERSION_PREFIX = 'cache:version:';
   private readonly VERSION_LOCK_PREFIX = 'cache:version:lock:';
-  private readonly DEFAULT_TTL = 60 * 60 * 24; // 24 小时
+  private readonly defaultTTL: number;
+  private readonly distributedLockTTL: number;
 
-  constructor(@InjectRedis() private readonly redis: Redis) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRedis() private readonly redis: Redis
+  ) {
+    const cacheTTL = this.configService.get('cacheTTL', { infer: true });
+    const timeout = this.configService.get('timeout', { infer: true });
+    this.defaultTTL = cacheTTL.cacheVersion;
+    this.distributedLockTTL = Math.floor(timeout.distributedLock / 1000); // 转为秒
+  }
 
   async onModuleInit() {
     this.logger.log('缓存版本管理服务已初始化');
@@ -94,7 +104,7 @@ export class CacheVersionService implements OnModuleInit {
     try {
       // 获取分布式锁，防止并发创建版本
       const lockKey = this.getVersionLockKey(type, key);
-      const lock = await this.acquireLock(lockKey, 5000); // 5 秒锁
+      const lock = await this.acquireLock(lockKey, this.distributedLockTTL * 1000); // 使用配置的锁 TTL
 
       if (!lock) {
         // 如果获取锁失败，重试获取现有版本
@@ -120,7 +130,7 @@ export class CacheVersionService implements OnModuleInit {
         const versionKey = this.getVersionKey(type, key);
         await this.redis.setex(
           versionKey,
-          this.DEFAULT_TTL,
+          this.defaultTTL,
           JSON.stringify(info)
         );
 

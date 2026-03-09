@@ -67,10 +67,17 @@ async function clearOldMxwebCache(
     }
 
     if (deletedCount > 0) {
-      console.info(`清理 ${deletedCount} 个旧版本缓存`, 'mxcadManager', { filePath, keepTimestamp });
+      console.info(`清理 ${deletedCount} 个旧版本缓存`, 'mxcadManager', {
+        filePath,
+        keepTimestamp,
+      });
     }
   } catch (error) {
-    console.warn('清理旧缓存失败', 'mxcadManager', { filePath, keepTimestamp, error });
+    console.warn('清理旧缓存失败', 'mxcadManager', {
+      filePath,
+      keepTimestamp,
+      error,
+    });
   }
 }
 
@@ -636,7 +643,8 @@ async function handleFileSelection(
     hideLoadingOverlay();
   } catch (error) {
     hideLoadingOverlay();
-    const errorMessage = error instanceof Error ? error.message : '文件上传失败';
+    const errorMessage =
+      error instanceof Error ? error.message : '文件上传失败';
     globalShowToast(errorMessage, 'error');
   }
 }
@@ -668,7 +676,10 @@ MxFun.addCommand('openFile', async () => {
     picker.click();
   } catch (error) {
     console.error('openFile 命令初始化失败', 'mxcadManager', error);
-    globalShowToast(error instanceof Error ? error.message : '命令执行失败', 'error');
+    globalShowToast(
+      error instanceof Error ? error.message : '命令执行失败',
+      'error'
+    );
   }
 });
 
@@ -677,7 +688,7 @@ MxFun.addCommand('openFile', async () => {
 /**
  * exportFile 命令：打开下载格式选择弹窗
  */
-MxFun.addCommand('exportFile', () => {
+MxFun.addCommand('exportFile', async () => {
   if (!currentFileInfo) {
     globalShowToast('无法获取当前文件信息，请重新打开文件', 'error');
     return;
@@ -699,9 +710,11 @@ MxFun.addCommand('exportFile', () => {
  * Mx_ShowSidebar 命令：显示图库侧边栏
  */
 MxFun.addCommand('Mx_ShowSidebar', () => {
-  window.dispatchEvent(new CustomEvent('mxcad-open-sidebar', {
-    detail: { type: 'gallery' },
-  }));
+  window.dispatchEvent(
+    new CustomEvent('mxcad-open-sidebar', {
+      detail: { type: 'gallery' },
+    })
+  );
 });
 
 // ==================== Mx_ShowCollaborate 命令 ====================
@@ -710,9 +723,11 @@ MxFun.addCommand('Mx_ShowSidebar', () => {
  * Mx_ShowCollaborate 命令：显示协同侧边栏
  */
 MxFun.addCommand('Mx_ShowCollaborate', () => {
-  window.dispatchEvent(new CustomEvent('mxcad-open-sidebar', {
-    detail: { type: 'collaborate' },
-  }));
+  window.dispatchEvent(
+    new CustomEvent('mxcad-open-sidebar', {
+      detail: { type: 'collaborate' },
+    })
+  );
 });
 
 // ==================== Mx_Save 命令 ====================
@@ -947,11 +962,17 @@ class MxCADInstanceManager {
       const w = Math.abs(minPt.x - maxPt.x);
       const h = Math.abs(minPt.y - maxPt.y);
 
-      if (w < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE || h < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE) {
+      if (
+        w < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE ||
+        h < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE
+      ) {
         return undefined;
       }
 
-      const scale = Math.min(THUMBNAIL_CONFIG.TARGET_SIZE / w, THUMBNAIL_CONFIG.TARGET_SIZE / h);
+      const scale = Math.min(
+        THUMBNAIL_CONFIG.TARGET_SIZE / w,
+        THUMBNAIL_CONFIG.TARGET_SIZE / h
+      );
       const centerX = (minPt.x + maxPt.x) / 2;
       const centerY = (minPt.y + maxPt.y) / 2;
 
@@ -998,7 +1019,7 @@ class MxCADInstanceManager {
         console.error('转换为 Blob 失败');
         return false;
       }
-     
+
       const formData = new FormData();
       formData.append('file', blob, 'thumbnail.png');
 
@@ -1015,9 +1036,9 @@ class MxCADInstanceManager {
    */
   private dataURLtoBlob(dataURL: string): Blob | void {
     const arr = dataURL.split(',');
-    const item = arr[0]
-    const item1 = arr[1]
-    if(!item1) return
+    const item = arr[0];
+    const item1 = arr[1];
+    if (!item1) return;
     const mime = item?.match(/:(.*?);/)?.[1] || 'image/png';
     const bstr = atob(item1);
     let n = bstr.length;
@@ -1034,7 +1055,6 @@ class MxCADInstanceManager {
   private setupFileOpenListener(): void {
     const onOpen = async () => {
       if (currentFileInfo) {
-        
         globalThis.MxPluginContext.useFileName().fileName.value =
           ' - ' + currentFileInfo.name;
 
@@ -1056,7 +1076,9 @@ class MxCADInstanceManager {
         if (currentCacheTimestamp && currentFileInfo && currentMxwebUrl) {
           try {
             const urlWithoutTimestamp = currentMxwebUrl.replace(/\?t=\d+$/, '');
-            const pathMatch = urlWithoutTimestamp.match(/\/api\/mxcad\/filesData\/(.*)/);
+            const pathMatch = urlWithoutTimestamp.match(
+              /\/api\/mxcad\/filesData\/(.*)/
+            );
             if (pathMatch?.[1]) {
               await clearOldMxwebCache(pathMatch[1], currentCacheTimestamp);
             }
@@ -1129,7 +1151,11 @@ class MxCADInstanceManager {
       const targetFileName = fileUrl.split('/').pop();
 
       // 使用精确匹配避免历史版本文件名误匹配
-      if (currentFileName && targetFileName && currentFileName === targetFileName) {
+      if (
+        currentFileName &&
+        targetFileName &&
+        currentFileName === targetFileName
+      ) {
         return;
       }
 
@@ -1139,20 +1165,31 @@ class MxCADInstanceManager {
 
       const token = localStorage.getItem('accessToken');
 
-      for (let attempt = 0; attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      for (
+        let attempt = 0;
+        attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
+        attempt++
+      ) {
         try {
           this.mxcadView.mxcad.openWebFile(
             fileUrl,
             undefined,
             true,
-            token ? { requestHeaders: { Authorization: `Bearer ${token}` } } : undefined,
+            token
+              ? { requestHeaders: { Authorization: `Bearer ${token}` } }
+              : undefined,
             0
           );
           return;
         } catch (error) {
           const err = error as Error;
-          if (err.message?.includes('mxdrawObject') && attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1) {
-            await new Promise((resolve) => setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS));
+          if (
+            err.message?.includes('mxdrawObject') &&
+            attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
+          ) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
+            );
             continue;
           }
           throw error;
@@ -1202,20 +1239,31 @@ class MxCADInstanceManager {
     try {
       const token = localStorage.getItem('accessToken');
 
-      for (let attempt = 0; attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      for (
+        let attempt = 0;
+        attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
+        attempt++
+      ) {
         try {
           this.mxcadView.mxcad.openWebFile(
             currentMxwebUrl,
             undefined,
             true,
-            token ? { requestHeaders: { Authorization: `Bearer ${token}` } } : undefined,
+            token
+              ? { requestHeaders: { Authorization: `Bearer ${token}` } }
+              : undefined,
             0
           );
           return true;
         } catch (error) {
           const err = error as Error;
-          if (err.message?.includes('mxdrawObject') && attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1) {
-            await new Promise((resolve) => setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS));
+          if (
+            err.message?.includes('mxdrawObject') &&
+            attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
+          ) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
+            );
             continue;
           }
           throw error;

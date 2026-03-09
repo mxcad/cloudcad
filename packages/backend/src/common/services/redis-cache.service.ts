@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ProjectRole, SystemPermission } from '../enums/permissions.enum';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -16,9 +17,17 @@ import Redis from 'ioredis';
 export class RedisCacheService {
   private readonly logger = new Logger(RedisCacheService.name);
   private readonly KEY_PREFIX = 'permission:';
-  private readonly DEFAULT_TTL = 5 * 60; // 5分钟（秒）
+  private readonly defaultTTL: number;
+  private readonly permissionTTL: number;
 
-  constructor(@InjectRedis() private readonly redis: Redis) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRedis() private readonly redis: Redis
+  ) {
+    const cacheTTL = this.configService.get('cacheTTL', { infer: true });
+    this.defaultTTL = cacheTTL.default;
+    this.permissionTTL = cacheTTL.permission;
+  }
 
   /**
    * 生成缓存键
@@ -44,7 +53,7 @@ export class RedisCacheService {
   async set<T>(
     key: string,
     value: T,
-    ttl: number = this.DEFAULT_TTL
+    ttl: number = this.defaultTTL
   ): Promise<void> {
     try {
       await this.redis.setex(key, ttl, JSON.stringify(value));

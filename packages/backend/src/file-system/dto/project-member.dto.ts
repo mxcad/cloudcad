@@ -27,7 +27,10 @@ export class UpdateProjectMemberDto {
   @ValidateIf((o) => !o.roleId)
   projectRoleId: string;
 
-  @ApiProperty({ description: '角色ID（兼容字段，与 projectRoleId 相同）', required: false })
+  @ApiProperty({
+    description: '角色ID（兼容字段，与 projectRoleId 相同）',
+    required: false,
+  })
   @IsString()
   @ValidateIf((o) => !o.projectRoleId)
   @Transform(({ obj, value }) => {

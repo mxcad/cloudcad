@@ -38,13 +38,15 @@ export class RequireProjectPermissionGuard implements CanActivate {
     const targetHandler = context.getHandler();
 
     // 获取装饰器设置的权限 - 先从方法级别读取，再从类级别读取
-    const requiredPermissions = this.reflector.get<
-      ProjectPermission[]
-    >(REQUIRE_PROJECT_PERMISSION_KEY, targetHandler)
-    || this.reflector.get<ProjectPermission[]>(
-      REQUIRE_PROJECT_PERMISSION_KEY,
-      targetClass
-    );
+    const requiredPermissions =
+      this.reflector.get<ProjectPermission[]>(
+        REQUIRE_PROJECT_PERMISSION_KEY,
+        targetHandler
+      ) ||
+      this.reflector.get<ProjectPermission[]>(
+        REQUIRE_PROJECT_PERMISSION_KEY,
+        targetClass
+      );
 
     // 如果没有设置权限，则允许访问
     if (!requiredPermissions || requiredPermissions.length === 0) {
@@ -56,12 +58,12 @@ export class RequireProjectPermissionGuard implements CanActivate {
       this.reflector.get<ProjectPermissionCheckMode>(
         REQUIRE_PROJECT_PERMISSION_MODE_KEY,
         targetHandler
-      )
-      || this.reflector.get<ProjectPermissionCheckMode>(
+      ) ||
+      this.reflector.get<ProjectPermissionCheckMode>(
         REQUIRE_PROJECT_PERMISSION_MODE_KEY,
         targetClass
-      )
-      || ProjectPermissionCheckMode.ALL;
+      ) ||
+      ProjectPermissionCheckMode.ALL;
 
     // 获取请求对象
     const request = context.switchToHttp().getRequest();
@@ -73,7 +75,10 @@ export class RequireProjectPermissionGuard implements CanActivate {
 
     // 从请求中获取项目ID
     const projectId = await this.extractProjectId(request);
-    console.log('[RequireProjectPermissionGuard] 提取到的 projectId:', projectId);
+    console.log(
+      '[RequireProjectPermissionGuard] 提取到的 projectId:',
+      projectId
+    );
     if (!projectId) {
       throw new BadRequestException('缺少项目ID参数');
     }

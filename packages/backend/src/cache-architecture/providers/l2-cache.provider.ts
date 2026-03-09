@@ -203,7 +203,11 @@ export class L2CacheProvider<T = unknown>
 
       for (let i = 0; i < keys.length; i++) {
         const value = values[i];
-        if (value !== null && value !== undefined && typeof value === 'string') {
+        if (
+          value !== null &&
+          value !== undefined &&
+          typeof value === 'string'
+        ) {
           result.set(keys[i], JSON.parse(value) as K);
           this.hits++;
         } else {

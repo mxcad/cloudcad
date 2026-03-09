@@ -10,9 +10,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "App"
-        ]
+        "tags": ["App"]
       }
     },
     "/api/cache-monitor/summary": {
@@ -37,9 +35,7 @@
           }
         ],
         "summary": "获取缓存监控摘要",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/stats": {
@@ -53,11 +49,7 @@
             "description": "缓存级别",
             "schema": {
               "type": "string",
-              "enum": [
-                "L1",
-                "L2",
-                "L3"
-              ]
+              "enum": ["L1", "L2", "L3"]
             }
           },
           {
@@ -99,9 +91,7 @@
           }
         ],
         "summary": "获取缓存统计信息",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/health": {
@@ -119,9 +109,7 @@
           }
         ],
         "summary": "获取缓存健康状态",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/performance": {
@@ -139,9 +127,7 @@
           }
         ],
         "summary": "获取缓存性能指标",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/hot-data": {
@@ -168,9 +154,7 @@
           }
         ],
         "summary": "获取热点数据",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/performance-trend": {
@@ -184,11 +168,7 @@
             "description": "缓存级别",
             "schema": {
               "type": "string",
-              "enum": [
-                "L1",
-                "L2",
-                "L3"
-              ]
+              "enum": ["L1", "L2", "L3"]
             }
           },
           {
@@ -219,9 +199,7 @@
           }
         ],
         "summary": "获取性能趋势",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/size-trend": {
@@ -255,9 +233,7 @@
           }
         ],
         "summary": "获取缓存大小趋势",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/warnings": {
@@ -282,9 +258,7 @@
           }
         ],
         "summary": "获取缓存警告",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/value": {
@@ -311,9 +285,7 @@
           }
         ],
         "summary": "获取缓存值",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       },
       "post": {
         "operationId": "CacheMonitorController_setValue",
@@ -339,9 +311,7 @@
           }
         ],
         "summary": "设置缓存值",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       },
       "delete": {
         "operationId": "CacheMonitorController_deleteValue",
@@ -366,9 +336,7 @@
           }
         ],
         "summary": "删除缓存",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/values": {
@@ -396,9 +364,7 @@
           }
         ],
         "summary": "批量删除缓存",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/pattern": {
@@ -425,9 +391,7 @@
           }
         ],
         "summary": "根据模式删除缓存",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/refresh": {
@@ -455,9 +419,7 @@
           }
         ],
         "summary": "刷新缓存",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/cleanup": {
@@ -485,9 +447,7 @@
           }
         ],
         "summary": "清理缓存",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/warmup/config": {
@@ -505,9 +465,7 @@
           }
         ],
         "summary": "获取预热配置",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       },
       "post": {
         "operationId": "CacheMonitorController_updateWarmupConfig",
@@ -533,9 +491,7 @@
           }
         ],
         "summary": "更新预热配置",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/warmup/trigger": {
@@ -570,9 +526,7 @@
           }
         ],
         "summary": "触发预热",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/warmup/history": {
@@ -600,9 +554,7 @@
           }
         ],
         "summary": "获取预热历史",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       },
       "delete": {
         "operationId": "CacheMonitorController_clearWarmupHistory",
@@ -618,9 +570,7 @@
           }
         ],
         "summary": "清除预热历史",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/cache-monitor/warmup/stats": {
@@ -645,9 +595,7 @@
           }
         ],
         "summary": "获取预热统计",
-        "tags": [
-          "Cache Monitor"
-        ]
+        "tags": ["Cache Monitor"]
       }
     },
     "/api/auth/register": {
@@ -686,9 +634,7 @@
           }
         },
         "summary": "用户注册",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/login": {
@@ -721,9 +667,7 @@
           }
         },
         "summary": "用户登录",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/refresh": {
@@ -756,9 +700,7 @@
           }
         },
         "summary": "刷新Token",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/logout": {
@@ -776,9 +718,7 @@
           }
         ],
         "summary": "用户登出",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/profile": {
@@ -799,9 +739,7 @@
           }
         ],
         "summary": "获取用户信息",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/send-verification": {
@@ -824,9 +762,7 @@
           }
         },
         "summary": "发送邮箱验证码",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/verify-email": {
@@ -859,9 +795,7 @@
           }
         },
         "summary": "验证邮箱",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/resend-verification": {
@@ -884,9 +818,7 @@
           }
         },
         "summary": "重发验证码",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/forgot-password": {
@@ -922,9 +854,7 @@
           }
         },
         "summary": "忘记密码",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/auth/reset-password": {
@@ -960,9 +890,7 @@
           }
         },
         "summary": "重置密码",
-        "tags": [
-          "认证"
-        ]
+        "tags": ["认证"]
       }
     },
     "/api/session/create": {
@@ -974,9 +902,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/api/session/user": {
@@ -988,9 +914,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/api/session/destroy": {
@@ -1002,9 +926,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/api/cache/stats": {
@@ -1022,9 +944,7 @@
           }
         ],
         "summary": "获取缓存统计信息",
-        "tags": [
-          "cache"
-        ]
+        "tags": ["cache"]
       }
     },
     "/api/cache/clear": {
@@ -1042,9 +962,7 @@
           }
         ],
         "summary": "清理所有缓存",
-        "tags": [
-          "cache"
-        ]
+        "tags": ["cache"]
       }
     },
     "/api/cache/warmup": {
@@ -1062,9 +980,7 @@
           }
         ],
         "summary": "手动触发缓存预热",
-        "tags": [
-          "cache"
-        ]
+        "tags": ["cache"]
       }
     },
     "/api/cache/warmup/user/{userId}": {
@@ -1091,9 +1007,7 @@
           }
         ],
         "summary": "预热指定用户的缓存",
-        "tags": [
-          "cache"
-        ]
+        "tags": ["cache"]
       }
     },
     "/api/cache/warmup/project/{projectId}": {
@@ -1120,9 +1034,7 @@
           }
         ],
         "summary": "预热指定项目的缓存",
-        "tags": [
-          "cache"
-        ]
+        "tags": ["cache"]
       }
     },
     "/api/audit/logs": {
@@ -1224,9 +1136,7 @@
           }
         ],
         "summary": "查询审计日志",
-        "tags": [
-          "audit"
-        ]
+        "tags": ["audit"]
       }
     },
     "/api/audit/logs/{id}": {
@@ -1253,9 +1163,7 @@
           }
         ],
         "summary": "获取审计日志详情",
-        "tags": [
-          "audit"
-        ]
+        "tags": ["audit"]
       }
     },
     "/api/audit/statistics": {
@@ -1301,9 +1209,7 @@
           }
         ],
         "summary": "获取审计统计信息",
-        "tags": [
-          "audit"
-        ]
+        "tags": ["audit"]
       }
     },
     "/api/audit/cleanup": {
@@ -1321,9 +1227,7 @@
           }
         ],
         "summary": "清理旧审计日志",
-        "tags": [
-          "audit"
-        ]
+        "tags": ["audit"]
       }
     },
     "/api/users": {
@@ -1364,9 +1268,7 @@
           }
         ],
         "summary": "创建用户",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       },
       "get": {
         "operationId": "UsersController_findAll",
@@ -1430,10 +1332,7 @@
             "schema": {
               "default": "desc",
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -1455,9 +1354,7 @@
           }
         ],
         "summary": "获取用户列表",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/users/search/by-email": {
@@ -1494,9 +1391,7 @@
           }
         ],
         "summary": "根据邮箱搜索用户",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/users/search": {
@@ -1562,10 +1457,7 @@
             "schema": {
               "default": "desc",
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -1587,9 +1479,7 @@
           }
         ],
         "summary": "搜索用户（用于添加项目成员）",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/users/profile/me": {
@@ -1614,9 +1504,7 @@
           }
         ],
         "summary": "获取当前用户信息",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       },
       "patch": {
         "operationId": "UsersController_updateProfile",
@@ -1652,9 +1540,7 @@
           }
         ],
         "summary": "更新当前用户信息",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/users/{id}": {
@@ -1691,9 +1577,7 @@
           }
         ],
         "summary": "根据 ID 获取用户",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       },
       "patch": {
         "operationId": "UsersController_update",
@@ -1738,9 +1622,7 @@
           }
         ],
         "summary": "更新用户",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       },
       "delete": {
         "operationId": "UsersController_remove",
@@ -1768,9 +1650,7 @@
           }
         ],
         "summary": "删除用户",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/users/{id}/status": {
@@ -1807,9 +1687,7 @@
           }
         ],
         "summary": "更新用户状态",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/users/change-password": {
@@ -1853,9 +1731,7 @@
           }
         ],
         "summary": "修改密码",
-        "tags": [
-          "用户管理"
-        ]
+        "tags": ["用户管理"]
       }
     },
     "/api/roles": {
@@ -1883,9 +1759,7 @@
           }
         ],
         "summary": "获取所有角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "post": {
         "operationId": "RolesController_create",
@@ -1918,9 +1792,7 @@
           }
         ],
         "summary": "创建新角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/category/{category}": {
@@ -1957,9 +1829,7 @@
           }
         ],
         "summary": "根据类别获取角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/{id}": {
@@ -1993,9 +1863,7 @@
           }
         ],
         "summary": "根据 ID 获取角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "patch": {
         "operationId": "RolesController_update",
@@ -2037,9 +1905,7 @@
           }
         ],
         "summary": "更新角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "delete": {
         "operationId": "RolesController_remove",
@@ -2064,9 +1930,7 @@
           }
         ],
         "summary": "删除角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/{id}/permissions": {
@@ -2103,9 +1967,7 @@
           }
         ],
         "summary": "获取角色的所有权限",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "post": {
         "operationId": "RolesController_addPermissions",
@@ -2137,9 +1999,7 @@
           }
         ],
         "summary": "为角色分配权限",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "delete": {
         "operationId": "RolesController_removePermissions",
@@ -2171,9 +2031,7 @@
           }
         ],
         "summary": "从角色移除权限",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/project-roles/all": {
@@ -2191,9 +2049,7 @@
           }
         ],
         "summary": "获取所有项目角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/project-roles/system": {
@@ -2211,9 +2067,7 @@
           }
         ],
         "summary": "获取系统默认项目角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/project-roles/project/{projectId}": {
@@ -2240,9 +2094,7 @@
           }
         ],
         "summary": "获取特定项目的角色列表",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/project-roles/{id}": {
@@ -2269,9 +2121,7 @@
           }
         ],
         "summary": "获取项目角色详情",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "patch": {
         "operationId": "RolesController_updateProjectRole",
@@ -2296,9 +2146,7 @@
           }
         ],
         "summary": "更新项目角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "delete": {
         "operationId": "RolesController_deleteProjectRole",
@@ -2323,9 +2171,7 @@
           }
         ],
         "summary": "删除项目角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/project-roles/{id}/permissions": {
@@ -2362,9 +2208,7 @@
           }
         ],
         "summary": "获取项目角色的所有权限",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "post": {
         "operationId": "RolesController_addProjectRolePermissions",
@@ -2389,9 +2233,7 @@
           }
         ],
         "summary": "为项目角色分配权限",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       },
       "delete": {
         "operationId": "RolesController_removeProjectRolePermissions",
@@ -2416,9 +2258,7 @@
           }
         ],
         "summary": "从项目角色移除权限",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/roles/project-roles": {
@@ -2436,9 +2276,7 @@
           }
         ],
         "summary": "创建项目角色",
-        "tags": [
-          "roles"
-        ]
+        "tags": ["roles"]
       }
     },
     "/api/file-system/projects": {
@@ -2479,9 +2317,7 @@
           }
         ],
         "summary": "创建项目",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "get": {
         "operationId": "FileSystemController_getProjects",
@@ -2502,11 +2338,7 @@
             "description": "项目状态",
             "schema": {
               "type": "string",
-              "enum": [
-                "ACTIVE",
-                "ARCHIVED",
-                "DELETED"
-              ]
+              "enum": ["ACTIVE", "ARCHIVED", "DELETED"]
             }
           },
           {
@@ -2550,10 +2382,7 @@
             "schema": {
               "default": "desc",
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -2575,9 +2404,7 @@
           }
         ],
         "summary": "获取项目列表",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/trash": {
@@ -2600,11 +2427,7 @@
             "description": "项目状态",
             "schema": {
               "type": "string",
-              "enum": [
-                "ACTIVE",
-                "ARCHIVED",
-                "DELETED"
-              ]
+              "enum": ["ACTIVE", "ARCHIVED", "DELETED"]
             }
           },
           {
@@ -2648,10 +2471,7 @@
             "schema": {
               "default": "desc",
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -2673,9 +2493,7 @@
           }
         ],
         "summary": "获取已删除项目列表",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}": {
@@ -2712,9 +2530,7 @@
           }
         ],
         "summary": "获取项目详情",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "patch": {
         "operationId": "FileSystemController_updateProject",
@@ -2759,9 +2575,7 @@
           }
         ],
         "summary": "更新项目信息",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "delete": {
         "operationId": "FileSystemController_deleteProject",
@@ -2804,9 +2618,7 @@
           }
         ],
         "summary": "删除项目",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/trash": {
@@ -2831,9 +2643,7 @@
           }
         ],
         "summary": "获取回收站列表",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "delete": {
         "operationId": "FileSystemController_clearTrash",
@@ -2856,9 +2666,7 @@
           }
         ],
         "summary": "清空回收站",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/trash/restore": {
@@ -2883,9 +2691,7 @@
           }
         ],
         "summary": "恢复回收站项目",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/trash/items": {
@@ -2910,9 +2716,7 @@
           }
         ],
         "summary": "永久删除回收站项目",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/trash": {
@@ -2943,10 +2747,7 @@
             "description": "节点类型",
             "schema": {
               "type": "string",
-              "enum": [
-                "folder",
-                "file"
-              ]
+              "enum": ["folder", "file"]
             }
           },
           {
@@ -3014,10 +2815,7 @@
             "description": "排序方向",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           },
           {
@@ -3049,9 +2847,7 @@
           }
         ],
         "summary": "获取项目内回收站内容",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "delete": {
         "operationId": "FileSystemController_clearProjectTrash",
@@ -3083,9 +2879,7 @@
           }
         ],
         "summary": "清空项目回收站",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/restore": {
@@ -3122,9 +2916,7 @@
           }
         ],
         "summary": "恢复已删除的节点",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes": {
@@ -3162,9 +2954,7 @@
           }
         ],
         "summary": "创建节点（项目或文件夹）",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{parentId}/folders": {
@@ -3211,9 +3001,7 @@
           }
         ],
         "summary": "创建文件夹",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}": {
@@ -3250,9 +3038,7 @@
           }
         ],
         "summary": "获取节点详情",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "patch": {
         "operationId": "FileSystemController_updateNode",
@@ -3297,9 +3083,7 @@
           }
         ],
         "summary": "更新节点",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "delete": {
         "operationId": "FileSystemController_deleteNode",
@@ -3342,9 +3126,7 @@
           }
         ],
         "summary": "删除节点",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/root": {
@@ -3381,9 +3163,7 @@
           }
         ],
         "summary": "获取根节点",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/children": {
@@ -3414,10 +3194,7 @@
             "description": "节点类型",
             "schema": {
               "type": "string",
-              "enum": [
-                "folder",
-                "file"
-              ]
+              "enum": ["folder", "file"]
             }
           },
           {
@@ -3485,10 +3262,7 @@
             "description": "排序方向",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           },
           {
@@ -3523,9 +3297,7 @@
           }
         ],
         "summary": "获取子节点列表",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/move": {
@@ -3572,9 +3344,7 @@
           }
         ],
         "summary": "移动节点",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/copy": {
@@ -3621,9 +3391,7 @@
           }
         ],
         "summary": "复制节点",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/files/upload": {
@@ -3661,9 +3429,7 @@
           }
         ],
         "summary": "上传文件",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/storage": {
@@ -3688,9 +3454,7 @@
           }
         ],
         "summary": "获取存储空间信息",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/members": {
@@ -3736,9 +3500,7 @@
           }
         ],
         "summary": "获取项目成员列表",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "post": {
         "operationId": "FileSystemController_addProjectMember",
@@ -3782,9 +3544,7 @@
           }
         ],
         "summary": "添加项目成员",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/members/{userId}": {
@@ -3838,9 +3598,7 @@
           }
         ],
         "summary": "更新项目成员角色",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "delete": {
         "operationId": "FileSystemController_removeProjectMember",
@@ -3889,9 +3647,7 @@
           }
         ],
         "summary": "移除项目成员",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/transfer": {
@@ -3937,9 +3693,7 @@
           }
         ],
         "summary": "转移项目所有权",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/members/batch": {
@@ -3985,9 +3739,7 @@
           }
         ],
         "summary": "批量添加项目成员",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "patch": {
         "operationId": "FileSystemController_batchUpdateProjectMembers",
@@ -4031,9 +3783,7 @@
           }
         ],
         "summary": "批量更新项目成员角色",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/thumbnail": {
@@ -4069,9 +3819,7 @@
           }
         ],
         "summary": "获取文件节点缩略图",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/download": {
@@ -4089,9 +3837,7 @@
           }
         ],
         "summary": "下载接口 OPTIONS 预检",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       },
       "get": {
         "operationId": "FileSystemController_downloadNode",
@@ -4125,9 +3871,7 @@
           }
         ],
         "summary": "下载节点（文件或目录）",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/nodes/{nodeId}/download-with-format": {
@@ -4149,12 +3893,7 @@
             "in": "query",
             "description": "下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）",
             "schema": {
-              "enum": [
-                "dwg",
-                "dxf",
-                "mxweb",
-                "pdf"
-              ],
+              "enum": ["dwg", "dxf", "mxweb", "pdf"],
               "type": "string"
             }
           },
@@ -4212,9 +3951,7 @@
           }
         ],
         "summary": "下载节点（支持多格式转换）",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/permissions": {
@@ -4248,9 +3985,7 @@
           }
         ],
         "summary": "获取用户在项目中的权限列表",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/permissions/check": {
@@ -4292,9 +4027,7 @@
           }
         ],
         "summary": "检查用户是否具有特定权限",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/file-system/projects/{projectId}/role": {
@@ -4321,9 +4054,7 @@
           }
         ],
         "summary": "获取用户在项目中的角色",
-        "tags": [
-          "文件系统"
-        ]
+        "tags": ["文件系统"]
       }
     },
     "/api/version-control/history": {
@@ -4380,9 +4111,7 @@
           }
         },
         "summary": "获取节点的 SVN 提交历史",
-        "tags": [
-          "version-control"
-        ]
+        "tags": ["version-control"]
       }
     },
     "/api/version-control/file/{revision}": {
@@ -4439,9 +4168,7 @@
           }
         },
         "summary": "获取指定版本的文件内容",
-        "tags": [
-          "version-control"
-        ]
+        "tags": ["version-control"]
       }
     },
     "/api/font-management": {
@@ -4455,10 +4182,7 @@
             "in": "query",
             "description": "字体位置：backend 或 frontend，不指定则返回全部",
             "schema": {
-              "enum": [
-                "backend",
-                "frontend"
-              ],
+              "enum": ["backend", "frontend"],
               "type": "string"
             }
           }
@@ -4474,9 +4198,7 @@
           }
         ],
         "summary": "获取字体列表",
-        "tags": [
-          "字体管理"
-        ]
+        "tags": ["字体管理"]
       }
     },
     "/api/font-management/upload": {
@@ -4505,9 +4227,7 @@
           }
         ],
         "summary": "上传字体文件",
-        "tags": [
-          "字体管理"
-        ]
+        "tags": ["字体管理"]
       }
     },
     "/api/font-management/{fileName}": {
@@ -4529,11 +4249,7 @@
             "in": "query",
             "description": "删除目标",
             "schema": {
-              "enum": [
-                "backend",
-                "frontend",
-                "both"
-              ],
+              "enum": ["backend", "frontend", "both"],
               "type": "string"
             }
           }
@@ -4549,9 +4265,7 @@
           }
         ],
         "summary": "删除字体文件",
-        "tags": [
-          "字体管理"
-        ]
+        "tags": ["字体管理"]
       }
     },
     "/api/font-management/download/{fileName}": {
@@ -4573,10 +4287,7 @@
             "in": "query",
             "description": "下载位置",
             "schema": {
-              "enum": [
-                "backend",
-                "frontend"
-              ],
+              "enum": ["backend", "frontend"],
               "type": "string"
             }
           }
@@ -4592,9 +4303,7 @@
           }
         ],
         "summary": "下载字体文件",
-        "tags": [
-          "字体管理"
-        ]
+        "tags": ["字体管理"]
       }
     },
     "/api/gallery/drawings/types": {
@@ -4613,9 +4322,7 @@
           }
         ],
         "summary": "获取图纸库分类列表",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/drawings/filelist": {
@@ -4644,9 +4351,7 @@
           }
         ],
         "summary": "获取图纸列表",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/blocks/types": {
@@ -4665,9 +4370,7 @@
           }
         ],
         "summary": "获取图块库分类列表",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/blocks/filelist": {
@@ -4696,9 +4399,7 @@
           }
         ],
         "summary": "获取图块列表",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/blocks/{path}": {
@@ -4731,9 +4432,7 @@
           }
         ],
         "summary": "访问图块文件",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       },
       "head": {
         "description": "获取图块库中转换后文件的元信息（不返回文件内容）",
@@ -4756,9 +4455,7 @@
           }
         ],
         "summary": "获取图块文件信息",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/drawings/{path}": {
@@ -4791,9 +4488,7 @@
           }
         ],
         "summary": "访问图纸文件",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       },
       "head": {
         "description": "获取图纸库中转换后文件的元信息（不返回文件内容）",
@@ -4816,9 +4511,7 @@
           }
         ],
         "summary": "获取图纸文件信息",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/{galleryType}/types/create": {
@@ -4846,9 +4539,7 @@
           }
         ],
         "summary": "创建分类",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/{galleryType}/types/{typeId}": {
@@ -4884,9 +4575,7 @@
           }
         ],
         "summary": "更新分类",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       },
       "delete": {
         "description": "删除图库分类",
@@ -4920,9 +4609,7 @@
           }
         ],
         "summary": "删除分类",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/{galleryType}/items": {
@@ -4960,9 +4647,7 @@
           }
         ],
         "summary": "添加文件到图库",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/gallery/{galleryType}/items/{nodeId}": {
@@ -4998,9 +4683,7 @@
           }
         ],
         "summary": "从图库中移除文件",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       },
       "put": {
         "description": "更新图库文件的分类信息",
@@ -5034,9 +4717,7 @@
           }
         ],
         "summary": "更新图库文件的分类",
-        "tags": [
-          "图库管理"
-        ]
+        "tags": ["图库管理"]
       }
     },
     "/api/mxcad/files/chunkisExist": {
@@ -5065,9 +4746,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/files/fileisExist": {
@@ -5096,9 +4775,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/file/{nodeId}/preloading": {
@@ -5129,9 +4806,7 @@
             "description": "预加载数据不存在"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/file/{nodeId}/check-reference": {
@@ -5179,9 +4854,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/file/{nodeId}/refresh-external-references": {
@@ -5212,9 +4885,7 @@
             "description": "刷新失败"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/files/uploadFiles": {
@@ -5273,9 +4944,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/savemxweb/{nodeId}": {
@@ -5303,9 +4972,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/up_ext_reference_dwg": {
@@ -5353,9 +5020,7 @@
             "description": "图纸文件不存在"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/up_ext_reference_image": {
@@ -5403,9 +5068,7 @@
             "description": "图纸文件不存在"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/thumbnail/{nodeId}": {
@@ -5439,9 +5102,7 @@
             "description": "文件不存在"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       },
       "post": {
         "operationId": "MxCadController_uploadThumbnail",
@@ -5473,9 +5134,7 @@
             "description": "上传失败"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/files/{storageKey}": {
@@ -5544,9 +5203,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/filesData/{path}": {
@@ -5606,9 +5263,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       },
       "head": {
         "operationId": "MxCadController_getFilesDataFileHead",
@@ -5624,9 +5279,7 @@
             "description": "服务器内部错误"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/mxcad/file/{path}": {
@@ -5686,9 +5339,7 @@
             }
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       },
       "head": {
         "operationId": "MxCadController_getFileHead",
@@ -5704,9 +5355,7 @@
             "description": "服务器内部错误"
           }
         },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
+        "tags": ["MxCAD 文件上传与转换"]
       }
     },
     "/api/admin/stats": {
@@ -5731,9 +5380,7 @@
           }
         ],
         "summary": "获取管理员统计信息",
-        "tags": [
-          "管理员"
-        ]
+        "tags": ["管理员"]
       }
     },
     "/api/admin/permissions/cache": {
@@ -5758,9 +5405,7 @@
           }
         ],
         "summary": "获取权限缓存统计",
-        "tags": [
-          "管理员"
-        ]
+        "tags": ["管理员"]
       }
     },
     "/api/admin/permissions/cache/cleanup": {
@@ -5785,9 +5430,7 @@
           }
         ],
         "summary": "清理权限缓存",
-        "tags": [
-          "管理员"
-        ]
+        "tags": ["管理员"]
       }
     },
     "/api/admin/permissions/cache/user/{userId}": {
@@ -5821,9 +5464,7 @@
           }
         ],
         "summary": "清除用户权限缓存",
-        "tags": [
-          "管理员"
-        ]
+        "tags": ["管理员"]
       }
     },
     "/api/admin/permissions/user/{userId}": {
@@ -5857,9 +5498,7 @@
           }
         ],
         "summary": "获取用户权限信息",
-        "tags": [
-          "管理员"
-        ]
+        "tags": ["管理员"]
       }
     },
     "/api/health": {
@@ -5887,9 +5526,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -5904,9 +5541,7 @@
                       "example": {},
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -5925,9 +5560,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -5961,9 +5594,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -5983,9 +5614,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -6008,9 +5637,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -6026,9 +5653,7 @@
           }
         },
         "summary": "系统健康检查",
-        "tags": [
-          "健康检查"
-        ]
+        "tags": ["健康检查"]
       }
     },
     "/api/health/db": {
@@ -6044,9 +5669,7 @@
           }
         },
         "summary": "数据库健康检查",
-        "tags": [
-          "健康检查"
-        ]
+        "tags": ["健康检查"]
       }
     },
     "/api/health/storage": {
@@ -6062,9 +5685,7 @@
           }
         },
         "summary": "存储服务健康检查",
-        "tags": [
-          "健康检查"
-        ]
+        "tags": ["健康检查"]
       }
     },
     "/api/policy-config": {
@@ -6102,9 +5723,7 @@
           }
         ],
         "summary": "创建权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       },
       "get": {
         "operationId": "PolicyConfigController_getAllPolicies",
@@ -6130,9 +5749,7 @@
           }
         ],
         "summary": "获取所有权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       }
     },
     "/api/policy-config/{id}": {
@@ -6179,9 +5796,7 @@
           }
         ],
         "summary": "更新权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       },
       "delete": {
         "operationId": "PolicyConfigController_deletePolicy",
@@ -6209,9 +5824,7 @@
           }
         ],
         "summary": "删除权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       },
       "get": {
         "operationId": "PolicyConfigController_getPolicy",
@@ -6246,9 +5859,7 @@
           }
         ],
         "summary": "获取权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       }
     },
     "/api/policy-config/{id}/enable": {
@@ -6282,9 +5893,7 @@
           }
         ],
         "summary": "启用权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       }
     },
     "/api/policy-config/{id}/disable": {
@@ -6318,9 +5927,7 @@
           }
         ],
         "summary": "禁用权限策略配置",
-        "tags": [
-          "权限策略配置"
-        ]
+        "tags": ["权限策略配置"]
       }
     }
   },
@@ -6402,11 +6009,7 @@
             }
           }
         },
-        "required": [
-          "timestamps",
-          "avgResponseTimes",
-          "errorRates"
-        ]
+        "required": ["timestamps", "avgResponseTimes", "errorRates"]
       },
       "SizeTrendDto": {
         "type": "object",
@@ -6433,11 +6036,7 @@
             }
           }
         },
-        "required": [
-          "L1",
-          "L2",
-          "L3"
-        ]
+        "required": ["L1", "L2", "L3"]
       },
       "CacheWarningsDto": {
         "type": "object",
@@ -6450,9 +6049,7 @@
             }
           }
         },
-        "required": [
-          "warnings"
-        ]
+        "required": ["warnings"]
       },
       "CacheOperationDto": {
         "type": "object",
@@ -6470,9 +6067,7 @@
             "description": "TTL（秒）"
           }
         },
-        "required": [
-          "key"
-        ]
+        "required": ["key"]
       },
       "BatchCacheOperationDto": {
         "type": "object",
@@ -6489,9 +6084,7 @@
             "description": "TTL（秒）"
           }
         },
-        "required": [
-          "keys"
-        ]
+        "required": ["keys"]
       },
       "CacheRefreshDto": {
         "type": "object",
@@ -6505,9 +6098,7 @@
             "description": "是否强制刷新"
           }
         },
-        "required": [
-          "key"
-        ]
+        "required": ["key"]
       },
       "CacheCleanupDto": {
         "type": "object",
@@ -6515,12 +6106,7 @@
           "level": {
             "type": "string",
             "description": "缓存级别",
-            "enum": [
-              "L1",
-              "L2",
-              "L3",
-              "ALL"
-            ]
+            "enum": ["L1", "L2", "L3", "ALL"]
           },
           "pattern": {
             "type": "string",
@@ -6588,10 +6174,7 @@
             "description": "错误信息"
           }
         },
-        "required": [
-          "success",
-          "count"
-        ]
+        "required": ["success", "count"]
       },
       "WarmupHistoryDto": {
         "type": "object",
@@ -6606,10 +6189,7 @@
             "description": "最后预热时间"
           }
         },
-        "required": [
-          "key",
-          "lastWarmup"
-        ]
+        "required": ["key", "lastWarmup"]
       },
       "CacheWarmupConfigDto": {
         "type": "object",
@@ -6667,10 +6247,7 @@
             "description": "最后预热时间"
           }
         },
-        "required": [
-          "config",
-          "historySize"
-        ]
+        "required": ["config", "historySize"]
       },
       "RegisterDto": {
         "type": "object",
@@ -6703,11 +6280,7 @@
             "maxLength": 50
           }
         },
-        "required": [
-          "email",
-          "username",
-          "password"
-        ]
+        "required": ["email", "username", "password"]
       },
       "LoginDto": {
         "type": "object",
@@ -6723,10 +6296,7 @@
             "example": "Password123!"
           }
         },
-        "required": [
-          "account",
-          "password"
-        ]
+        "required": ["account", "password"]
       },
       "UserDto": {
         "type": "object",
@@ -6766,12 +6336,7 @@
               },
               "name": {
                 "type": "string",
-                "enum": [
-                  "ADMIN",
-                  "USER_MANAGER",
-                  "FONT_MANAGER",
-                  "USER"
-                ],
+                "enum": ["ADMIN", "USER_MANAGER", "FONT_MANAGER", "USER"],
                 "example": "USER"
               },
               "description": {
@@ -6799,21 +6364,11 @@
           "status": {
             "type": "string",
             "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ],
+            "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"],
             "example": "ACTIVE"
           }
         },
-        "required": [
-          "id",
-          "email",
-          "username",
-          "role",
-          "status"
-        ]
+        "required": ["id", "email", "username", "role", "status"]
       },
       "AuthResponseDto": {
         "type": "object",
@@ -6837,11 +6392,7 @@
             ]
           }
         },
-        "required": [
-          "accessToken",
-          "refreshToken",
-          "user"
-        ]
+        "required": ["accessToken", "refreshToken", "user"]
       },
       "AuthApiResponseDto": {
         "type": "object",
@@ -6850,10 +6401,7 @@
             "type": "string",
             "description": "响应状态码",
             "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
+            "enum": ["SUCCESS", "ERROR"]
           },
           "message": {
             "type": "string",
@@ -6874,12 +6422,7 @@
             "example": "2025-12-12T03:34:55.801Z"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
+        "required": ["code", "message", "data", "timestamp"]
       },
       "RefreshTokenDto": {
         "type": "object",
@@ -6890,9 +6433,7 @@
             "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "SendVerificationResponseDto": {
         "type": "object",
@@ -6903,9 +6444,7 @@
             "example": "验证邮件已发送"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "SendVerificationApiResponseDto": {
         "type": "object",
@@ -6923,12 +6462,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
+        "required": ["code", "message", "data", "timestamp"]
       },
       "VerifyEmailDto": {
         "type": "object",
@@ -6944,10 +6478,7 @@
             "example": "123456"
           }
         },
-        "required": [
-          "email",
-          "code"
-        ]
+        "required": ["email", "code"]
       },
       "VerifyEmailResponseDto": {
         "type": "object",
@@ -6958,9 +6489,7 @@
             "example": "邮箱验证成功"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "VerifyEmailApiResponseDto": {
         "type": "object",
@@ -6978,12 +6507,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
+        "required": ["code", "message", "data", "timestamp"]
       },
       "ForgotPasswordDto": {
         "type": "object",
@@ -6994,9 +6518,7 @@
             "example": "user@example.com"
           }
         },
-        "required": [
-          "email"
-        ]
+        "required": ["email"]
       },
       "ForgotPasswordResponseDto": {
         "type": "object",
@@ -7006,9 +6528,7 @@
             "description": "消息"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "ForgotPasswordApiResponseDto": {
         "type": "object",
@@ -7017,10 +6537,7 @@
             "type": "string",
             "description": "响应状态码",
             "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
+            "enum": ["SUCCESS", "ERROR"]
           },
           "message": {
             "type": "string",
@@ -7041,12 +6558,7 @@
             "example": "2025-12-12T03:34:55.801Z"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
+        "required": ["code", "message", "data", "timestamp"]
       },
       "ResetPasswordDto": {
         "type": "object",
@@ -7067,11 +6579,7 @@
             "example": "NewPassword123!"
           }
         },
-        "required": [
-          "email",
-          "code",
-          "newPassword"
-        ]
+        "required": ["email", "code", "newPassword"]
       },
       "ResetPasswordResponseDto": {
         "type": "object",
@@ -7081,9 +6589,7 @@
             "description": "消息"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "ResetPasswordApiResponseDto": {
         "type": "object",
@@ -7092,10 +6598,7 @@
             "type": "string",
             "description": "响应状态码",
             "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
+            "enum": ["SUCCESS", "ERROR"]
           },
           "message": {
             "type": "string",
@@ -7116,12 +6619,7 @@
             "example": "2025-12-12T03:34:55.801Z"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
+        "required": ["code", "message", "data", "timestamp"]
       },
       "CreateUserDto": {
         "type": "object",
@@ -7162,11 +6660,7 @@
             "example": "clh8x9y0z1a2b3c4d5e6f7g8h9"
           }
         },
-        "required": [
-          "email",
-          "username",
-          "password"
-        ]
+        "required": ["email", "username", "password"]
       },
       "UserRoleDto": {
         "type": "object",
@@ -7188,11 +6682,7 @@
             "description": "是否为系统角色"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "isSystem"
-        ]
+        "required": ["id", "name", "isSystem"]
       },
       "UserResponseDto": {
         "type": "object",
@@ -7220,11 +6710,7 @@
           "status": {
             "type": "string",
             "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ]
+            "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"]
           },
           "role": {
             "description": "用户角色",
@@ -7282,13 +6768,7 @@
             "description": "总页数"
           }
         },
-        "required": [
-          "users",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ]
+        "required": ["users", "total", "page", "limit", "totalPages"]
       },
       "UserSearchResultDto": {
         "type": "object",
@@ -7314,11 +6794,7 @@
             "description": "头像 URL"
           }
         },
-        "required": [
-          "id",
-          "email",
-          "username"
-        ]
+        "required": ["id", "email", "username"]
       },
       "UserProfileResponseDto": {
         "type": "object",
@@ -7346,11 +6822,7 @@
           "status": {
             "type": "string",
             "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ]
+            "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"]
           },
           "role": {
             "description": "用户角色",
@@ -7413,11 +6885,7 @@
           "status": {
             "type": "string",
             "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ]
+            "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"]
           }
         }
       },
@@ -7435,10 +6903,7 @@
             "example": "NewPassword123!"
           }
         },
-        "required": [
-          "oldPassword",
-          "newPassword"
-        ]
+        "required": ["oldPassword", "newPassword"]
       },
       "ChangePasswordResponseDto": {
         "type": "object",
@@ -7448,9 +6913,7 @@
             "description": "消息"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "ChangePasswordApiResponseDto": {
         "type": "object",
@@ -7459,10 +6922,7 @@
             "type": "string",
             "description": "响应状态码",
             "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
+            "enum": ["SUCCESS", "ERROR"]
           },
           "message": {
             "type": "string",
@@ -7483,12 +6943,7 @@
             "example": "2025-12-12T03:34:55.801Z"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
+        "required": ["code", "message", "data", "timestamp"]
       },
       "RoleDto": {
         "type": "object",
@@ -7508,11 +6963,7 @@
           "category": {
             "type": "string",
             "description": "角色类别",
-            "enum": [
-              "SYSTEM",
-              "PROJECT",
-              "CUSTOM"
-            ]
+            "enum": ["SYSTEM", "PROJECT", "CUSTOM"]
           },
           "level": {
             "type": "number",
@@ -7613,11 +7064,7 @@
           "category": {
             "type": "string",
             "description": "角色类别",
-            "enum": [
-              "SYSTEM",
-              "PROJECT",
-              "CUSTOM"
-            ],
+            "enum": ["SYSTEM", "PROJECT", "CUSTOM"],
             "example": "CUSTOM"
           },
           "level": {
@@ -7638,10 +7085,7 @@
             }
           }
         },
-        "required": [
-          "name",
-          "permissions"
-        ]
+        "required": ["name", "permissions"]
       },
       "UpdateRoleDto": {
         "type": "object",
@@ -7659,11 +7103,7 @@
           "category": {
             "type": "string",
             "description": "角色类别",
-            "enum": [
-              "SYSTEM",
-              "PROJECT",
-              "CUSTOM"
-            ],
+            "enum": ["SYSTEM", "PROJECT", "CUSTOM"],
             "example": "CUSTOM"
           },
           "level": {
@@ -7673,10 +7113,7 @@
           },
           "permissions": {
             "description": "权限列表（更新时完全替换原有权限，数据库存储格式：大写）",
-            "example": [
-              "FILE_UPLOAD",
-              "FILE_OPEN"
-            ],
+            "example": ["FILE_UPLOAD", "FILE_OPEN"],
             "type": "array",
             "items": {
               "type": "string"
@@ -7697,9 +7134,7 @@
             "description": "项目描述"
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "ProjectDto": {
         "type": "object",
@@ -7719,11 +7154,7 @@
           "status": {
             "type": "string",
             "description": "项目状态",
-            "enum": [
-              "ACTIVE",
-              "ARCHIVED",
-              "DELETED"
-            ]
+            "enum": ["ACTIVE", "ARCHIVED", "DELETED"]
           },
           "isRoot": {
             "type": "boolean",
@@ -7785,13 +7216,7 @@
             "description": "总页数"
           }
         },
-        "required": [
-          "projects",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ]
+        "required": ["projects", "total", "page", "limit", "totalPages"]
       },
       "UpdateNodeDto": {
         "type": "object",
@@ -7826,10 +7251,7 @@
             "description": "是否成功"
           }
         },
-        "required": [
-          "message",
-          "success"
-        ]
+        "required": ["message", "success"]
       },
       "TrashItemDto": {
         "type": "object",
@@ -7939,10 +7361,7 @@
             "description": "总数"
           }
         },
-        "required": [
-          "items",
-          "total"
-        ]
+        "required": ["items", "total"]
       },
       "BatchOperationResponseDto": {
         "type": "object",
@@ -7977,12 +7396,7 @@
             }
           }
         },
-        "required": [
-          "successCount",
-          "failedCount",
-          "successIds",
-          "failedIds"
-        ]
+        "required": ["successCount", "failedCount", "successIds", "failedIds"]
       },
       "FileSystemNodeDto": {
         "type": "object",
@@ -8090,9 +7504,7 @@
             "example": "clx1234567890"
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "CreateFolderDto": {
         "type": "object",
@@ -8103,9 +7515,7 @@
             "example": "设计图纸"
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "NodeTreeResponseDto": {
         "type": "object",
@@ -8229,13 +7639,7 @@
             "description": "总页数"
           }
         },
-        "required": [
-          "nodes",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ]
+        "required": ["nodes", "total", "page", "limit", "totalPages"]
       },
       "MoveNodeDto": {
         "type": "object",
@@ -8245,9 +7649,7 @@
             "description": "目标父节点ID"
           }
         },
-        "required": [
-          "targetParentId"
-        ]
+        "required": ["targetParentId"]
       },
       "CopyNodeDto": {
         "type": "object",
@@ -8257,9 +7659,7 @@
             "description": "目标父节点ID"
           }
         },
-        "required": [
-          "targetParentId"
-        ]
+        "required": ["targetParentId"]
       },
       "UploadFileDto": {
         "type": "object",
@@ -8277,10 +7677,7 @@
             "description": "父节点ID"
           }
         },
-        "required": [
-          "fileName",
-          "parentId"
-        ]
+        "required": ["fileName", "parentId"]
       },
       "StorageInfoDto": {
         "type": "object",
@@ -8302,12 +7699,7 @@
             "description": "使用率（百分比）"
           }
         },
-        "required": [
-          "used",
-          "total",
-          "remaining",
-          "usagePercent"
-        ]
+        "required": ["used", "total", "remaining", "usagePercent"]
       },
       "ProjectMemberDto": {
         "type": "object",
@@ -8374,11 +7766,7 @@
             }
           }
         },
-        "required": [
-          "projectId",
-          "userId",
-          "permissions"
-        ]
+        "required": ["projectId", "userId", "permissions"]
       },
       "PermissionCheckResponseDto": {
         "type": "object",
@@ -8400,12 +7788,7 @@
             "description": "是否有权限"
           }
         },
-        "required": [
-          "projectId",
-          "userId",
-          "permission",
-          "hasPermission"
-        ]
+        "required": ["projectId", "userId", "permission", "hasPermission"]
       },
       "SvnLogPathDto": {
         "type": "object",
@@ -8413,21 +7796,13 @@
           "action": {
             "type": "string",
             "description": "变更动作类型",
-            "enum": [
-              "A",
-              "M",
-              "D",
-              "R"
-            ],
+            "enum": ["A", "M", "D", "R"],
             "example": "A"
           },
           "kind": {
             "type": "string",
             "description": "路径类型",
-            "enum": [
-              "file",
-              "dir"
-            ],
+            "enum": ["file", "dir"],
             "example": "file"
           },
           "path": {
@@ -8436,11 +7811,7 @@
             "example": "/path/to/file.dwg"
           }
         },
-        "required": [
-          "action",
-          "kind",
-          "path"
-        ]
+        "required": ["action", "kind", "path"]
       },
       "SvnLogEntryDto": {
         "type": "object",
@@ -8479,12 +7850,7 @@
             }
           }
         },
-        "required": [
-          "revision",
-          "author",
-          "date",
-          "message"
-        ]
+        "required": ["revision", "author", "date", "message"]
       },
       "SvnLogResponseDto": {
         "type": "object",
@@ -8507,11 +7873,7 @@
             }
           }
         },
-        "required": [
-          "success",
-          "message",
-          "entries"
-        ]
+        "required": ["success", "message", "entries"]
       },
       "FileContentResponseDto": {
         "type": "object",
@@ -8532,10 +7894,7 @@
             "example": "base64encodedcontent..."
           }
         },
-        "required": [
-          "success",
-          "message"
-        ]
+        "required": ["success", "message"]
       },
       "UploadFontDto": {
         "type": "object",
@@ -8543,17 +7902,11 @@
           "target": {
             "type": "string",
             "description": "上传目标",
-            "enum": [
-              "backend",
-              "frontend",
-              "both"
-            ],
+            "enum": ["backend", "frontend", "both"],
             "default": "both"
           }
         },
-        "required": [
-          "target"
-        ]
+        "required": ["target"]
       },
       "GalleryFileListDto": {
         "type": "object",
@@ -8589,10 +7942,7 @@
             "example": 50
           }
         },
-        "required": [
-          "pageIndex",
-          "pageSize"
-        ]
+        "required": ["pageIndex", "pageSize"]
       },
       "AddToGalleryDto": {
         "type": "object",
@@ -8618,11 +7968,7 @@
             "example": 3
           }
         },
-        "required": [
-          "nodeId",
-          "firstType",
-          "secondType"
-        ]
+        "required": ["nodeId", "firstType", "secondType"]
       },
       "CheckChunkExistDto": {
         "type": "object",
@@ -8675,9 +8021,7 @@
             "description": "分片是否已存在"
           }
         },
-        "required": [
-          "exists"
-        ]
+        "required": ["exists"]
       },
       "CheckFileExistDto": {
         "type": "object",
@@ -8703,12 +8047,7 @@
             "example": 1024567
           }
         },
-        "required": [
-          "fileHash",
-          "filename",
-          "nodeId",
-          "fileSize"
-        ]
+        "required": ["fileHash", "filename", "nodeId", "fileSize"]
       },
       "FileExistResponseDto": {
         "type": "object",
@@ -8722,9 +8061,7 @@
             "description": "已存在文件的节点 ID（秒传时返回）"
           }
         },
-        "required": [
-          "exists"
-        ]
+        "required": ["exists"]
       },
       "PreloadingDataDto": {
         "type": "object",
@@ -8752,12 +8089,7 @@
             }
           }
         },
-        "required": [
-          "tz",
-          "src_file_md5",
-          "images",
-          "externalReference"
-        ]
+        "required": ["tz", "src_file_md5", "images", "externalReference"]
       },
       "CheckReferenceResponseDto": {
         "type": "object",
@@ -8767,9 +8099,7 @@
             "description": "文件是否存在"
           }
         },
-        "required": [
-          "exists"
-        ]
+        "required": ["exists"]
       },
       "ExternalReferenceStatsDto": {
         "type": "object",
@@ -8810,10 +8140,7 @@
             ]
           }
         },
-        "required": [
-          "code",
-          "message"
-        ]
+        "required": ["code", "message"]
       },
       "UploadFileResponseDto": {
         "type": "object",
@@ -8840,10 +8167,7 @@
             "description": "文件路径"
           }
         },
-        "required": [
-          "nodeId",
-          "path"
-        ]
+        "required": ["nodeId", "path"]
       },
       "UploadExtReferenceDto": {
         "type": "object",
@@ -8869,10 +8193,7 @@
             "example": "ref1.dwg"
           }
         },
-        "required": [
-          "nodeId",
-          "ext_ref_file"
-        ]
+        "required": ["nodeId", "ext_ref_file"]
       },
       "CheckThumbnailResponseDto": {
         "type": "object",
@@ -8892,11 +8213,7 @@
             "description": "缩略图是否存在"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "exists"
-        ]
+        "required": ["code", "message", "exists"]
       },
       "UploadThumbnailDataDto": {
         "type": "object",
@@ -8906,9 +8223,7 @@
             "description": "文件名"
           }
         },
-        "required": [
-          "fileName"
-        ]
+        "required": ["fileName"]
       },
       "UploadThumbnailResponseDto": {
         "type": "object",
@@ -8932,11 +8247,7 @@
             ]
           }
         },
-        "required": [
-          "code",
-          "message",
-          "data"
-        ]
+        "required": ["code", "message", "data"]
       },
       "AdminStatsResponseDto": {
         "type": "object",
@@ -8950,10 +8261,7 @@
             "description": "时间戳"
           }
         },
-        "required": [
-          "message",
-          "timestamp"
-        ]
+        "required": ["message", "timestamp"]
       },
       "CacheStatsDto": {
         "type": "object",
@@ -8975,12 +8283,7 @@
             "description": "命中率"
           }
         },
-        "required": [
-          "size",
-          "hits",
-          "misses",
-          "hitRate"
-        ]
+        "required": ["size", "hits", "misses", "hitRate"]
       },
       "CacheStatsResponseDto": {
         "type": "object",
@@ -8998,10 +8301,7 @@
             ]
           }
         },
-        "required": [
-          "message",
-          "data"
-        ]
+        "required": ["message", "data"]
       },
       "CacheCleanupResponseDto": {
         "type": "object",
@@ -9011,9 +8311,7 @@
             "description": "提示消息"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "UserCacheClearResponseDto": {
         "type": "object",
@@ -9023,9 +8321,7 @@
             "description": "提示消息"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "UserPermissionInfoDto": {
         "type": "object",
@@ -9042,10 +8338,7 @@
             }
           }
         },
-        "required": [
-          "userRole",
-          "permissions"
-        ]
+        "required": ["userRole", "permissions"]
       },
       "UserPermissionsResponseDto": {
         "type": "object",
@@ -9063,10 +8356,7 @@
             ]
           }
         },
-        "required": [
-          "message",
-          "data"
-        ]
+        "required": ["message", "data"]
       },
       "CreatePolicyDto": {
         "type": "object",
@@ -9074,11 +8364,7 @@
           "type": {
             "type": "string",
             "description": "策略类型",
-            "enum": [
-              "TIME",
-              "IP",
-              "DEVICE"
-            ],
+            "enum": ["TIME", "IP", "DEVICE"],
             "example": "TIME"
           },
           "name": {
@@ -9097,21 +8383,13 @@
             "example": {
               "startTime": "09:00",
               "endTime": "18:00",
-              "allowedDays": [
-                1,
-                2,
-                3,
-                4,
-                5
-              ]
+              "allowedDays": [1, 2, 3, 4, 5]
             }
           },
           "permissions": {
             "type": "array",
             "description": "关联的权限",
-            "example": [
-              "SYSTEM_USER_DELETE"
-            ],
+            "example": ["SYSTEM_USER_DELETE"],
             "items": {
               "type": "string",
               "enum": [
@@ -9144,12 +8422,7 @@
             "default": 0
           }
         },
-        "required": [
-          "type",
-          "name",
-          "config",
-          "permissions"
-        ]
+        "required": ["type", "name", "config", "permissions"]
       },
       "PolicyResponseDto": {
         "type": "object",
@@ -9161,11 +8434,7 @@
           "type": {
             "type": "string",
             "description": "策略类型",
-            "enum": [
-              "TIME",
-              "IP",
-              "DEVICE"
-            ]
+            "enum": ["TIME", "IP", "DEVICE"]
           },
           "name": {
             "type": "string",
@@ -9252,21 +8521,13 @@
             "example": {
               "startTime": "09:00",
               "endTime": "18:00",
-              "allowedDays": [
-                1,
-                2,
-                3,
-                4,
-                5
-              ]
+              "allowedDays": [1, 2, 3, 4, 5]
             }
           },
           "permissions": {
             "type": "array",
             "description": "关联的权限",
-            "example": [
-              "SYSTEM_USER_DELETE"
-            ],
+            "example": ["SYSTEM_USER_DELETE"],
             "items": {
               "type": "string",
               "enum": [
@@ -9301,11 +8562,7 @@
           "type": {
             "type": "string",
             "description": "策略类型",
-            "enum": [
-              "TIME",
-              "IP",
-              "DEVICE"
-            ]
+            "enum": ["TIME", "IP", "DEVICE"]
           }
         }
       },

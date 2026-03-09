@@ -9,6 +9,7 @@ import session from 'express-session';
 import { createClient } from 'redis';
 import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
+import configuration from './config/configuration';
 
 const logger = new Logger('Bootstrap');
 
@@ -19,6 +20,9 @@ async function bootstrap() {
     process.stderr.setEncoding('utf8');
   }
 
+  // 使用统一的配置源
+  const config = configuration();
+
   const server = express();
   server.use(express.json({ limit: '50mb' }));
   server.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -26,21 +30,30 @@ async function bootstrap() {
   // 禁用 Express 的默认错误处理器，让 NestJS 的异常过滤器处理所有异常
   server.disable('x-powered-by');
 
-  // 创建 Redis 客户端
+  // 创建 Redis 客户端 (使用统一配置)
   const redisClient = createClient({
     socket: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
+      host: config.redis.host,
+      port: config.redis.port,
+      connectTimeout: config.redis.connectTimeout,
     },
-    password: process.env.REDIS_PASSWORD || undefined,
-    database: parseInt(process.env.REDIS_DB || '0'),
+    password: config.redis.password,
+    database: config.redis.db,
   });
 
-  await redisClient.connect().catch((err: Error) => {
-    logger.error('Redis 连接失败:', err.message);
+  redisClient.on('error', (err) => {
+    logger.error('Redis 客户端错误:', err.message);
   });
 
-  // 配置 Redis Session 存储
+  try {
+    await redisClient.connect();
+    logger.log('Redis Session 存储连接成功');
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error('Redis 连接失败:', errorMessage);
+  }
+
+  // 配置 Redis Session 存储 (使用统一配置)
   const redisStore = new RedisStore({
     client: redisClient,
     prefix: 'mxcad:sess:',
@@ -49,18 +62,17 @@ async function bootstrap() {
   // 添加 Session 支持（使用 Redis 存储）
   const sessionMiddleware = session({
     store: redisStore,
-    secret:
-      process.env.JWT_SECRET || 'mxcad-session-secret-key-change-in-production',
+    secret: config.session.secret,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000, // 24小时
+      secure: config.nodeEnv === 'production',
+      maxAge: config.session.maxAge,
       httpOnly: true,
       sameSite: 'lax', // 允许跨站请求携带 Cookie
       // 移除 domain 限制，让浏览器自动处理
     },
-    name: 'mxcad.sid',
+    name: config.session.name,
   });
 
   // 先应用 Session 中间件
@@ -94,6 +106,7 @@ async function bootstrap() {
   // 配置Swagger文档
   AppModule.configureSwagger(app);
 
-  await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
+  await app.listen(config.port, '0.0.0.0');
+  logger.log(`应用已启动，监听端口 ${config.port}`);
 }
 bootstrap();

@@ -2,6 +2,22 @@
 node_modules/
 .pnpm-store/
 
+# Runtime binaries (scripts are kept for version control)
+runtime/windows/
+runtime/linux/
+offline-data
+
+# Generated entry scripts (use offline node only in project directory)
+node.cmd
+npm.cmd
+npx.cmd
+pnpm.cmd
+packages/*/node.cmd
+packages/*/npm.cmd
+packages/*/npx.cmd
+packages/*/pnpm.cmd
+
+
 # Build outputs
 dist/
 build/
@@ -35,9 +51,15 @@ uploads/
 temp/
 filesData/
 svn-repo/
+swagger_json.json
 
-# MinIO data
-**/minio-data/
+# Temporary/debug files
+*.bak
+*.bak[0-9]
+*-errors.txt
+*-warnings.txt
+docker-build-*.txt
+
 
 # Test files
 test-sidebar.html

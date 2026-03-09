@@ -5,6 +5,7 @@ import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { AppConfig } from '../../config/app.config';
 
 /**
  * 分片上传选项
@@ -46,12 +47,10 @@ export class ChunkUploadService {
   private readonly tempPath: string;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     private readonly concurrencyManager: ConcurrencyManager
   ) {
-    this.tempPath =
-      this.configService.get('MXCAD_TEMP_PATH') ||
-      path.join(process.cwd(), 'temp');
+    this.tempPath = this.configService.get('mxcadTempPath', { infer: true });
   }
 
   /**

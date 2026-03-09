@@ -49,37 +49,39 @@ import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
 import { VersionControlService } from '../version-control/version-control.service';
+import { AppConfig } from '../config/app.config';
 import { FileConversionService } from './services/file-conversion.service';
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
 export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
   private readonly mxCadFileExt: string;
+  private readonly cacheTTL: number;
 
   // 预加载数据缓存
   private preloadingDataCache = new Map<
     string,
     { data: PreloadingDataDto; timestamp: number }
   >();
-  private readonly CACHE_TTL = 5000; // 5 秒缓存有效期
 
   constructor(
     private readonly mxCadService: MxCadService,
     private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     private readonly storageService: StorageService,
     private readonly permissionService: FileSystemPermissionService,
     private readonly versionControlService: VersionControlService,
     private readonly fileConversionService: FileConversionService
   ) {
-    this.mxCadFileExt = this.configService.get('MXCAD_FILE_EXT') || '.mxweb';
+    this.mxCadFileExt = this.configService.get('mxcad.fileExt', { infer: true }) || '.mxweb';
+    const cacheTTLConfig = this.configService.get('cacheTTL', { infer: true });
+    this.cacheTTL = cacheTTLConfig.mxcad * 1000; // 转为毫秒
   }
 
   /**
@@ -135,11 +137,11 @@ export class MxCadController {
     this.logger.log(
       `[checkFileExist] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, fileSize=${body.fileSize}, nodeId=${context.nodeId}`
     );
-    const result = await this.mxCadService.checkFileExist(
+    const result = (await this.mxCadService.checkFileExist(
       body.filename,
       body.fileHash,
       context
-    ) as { ret: string; nodeId?: string };
+    )) as { ret: string; nodeId?: string };
     // 转换为标准格式：ret === 'fileAlreadyExist' 表示文件已存在（秒传）
     return {
       exists: result.ret === 'fileAlreadyExist',
@@ -175,7 +177,7 @@ export class MxCadController {
     const cached = this.preloadingDataCache.get(nodeId);
     const now = Date.now();
 
-    if (cached && now - cached.timestamp < this.CACHE_TTL) {
+    if (cached && now - cached.timestamp < this.cacheTTL) {
       this.logger.debug(`[getPreloadingData] 返回缓存数据: ${nodeId}`);
       return cached.data;
     }
@@ -204,7 +206,7 @@ export class MxCadController {
   private cleanExpiredCache(): void {
     const now = Date.now();
     for (const [key, value] of this.preloadingDataCache.entries()) {
-      if (now - value.timestamp >= this.CACHE_TTL) {
+      if (now - value.timestamp >= this.cacheTTL) {
         this.preloadingDataCache.delete(key);
       }
     }
@@ -272,9 +274,7 @@ export class MxCadController {
     status: 500,
     description: '刷新失败',
   })
-  async refreshExternalReferences(
-    @Param('nodeId') nodeId: string
-  ) {
+  async refreshExternalReferences(@Param('nodeId') nodeId: string) {
     this.logger.log(`[refreshExternalReferences] 请求参数: nodeId=${nodeId}`);
 
     const stats = await this.mxCadService.getExternalReferenceStats(nodeId);
@@ -386,14 +386,16 @@ export class MxCadController {
         return { nodeId: result.nodeId, tz: result.tz };
       } catch (error) {
         this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
-        throw new InternalServerErrorException(`文件合并失败: ${error.message}`);
+        throw new InternalServerErrorException(
+          `文件合并失败: ${error.message}`
+        );
       }
     }
 
     if (body.chunk !== undefined) {
-      // 分片上传 - 手动处理文件移动
+      // 分片上传 - Multer 已在模块配置中正确处理存储位置和文件名
       this.logger.log(
-        `[uploadFiles] 收到分片上传请求: chunk=${body.chunk}, chunks=${body.chunks}, hash=${body.hash}`
+        `[uploadFiles] 收到分片上传请求: chunk=${body.chunk}, chunks=${body.chunks}, hash=${body.hash}, filePath=${file?.path}`
       );
       try {
         // 验证 chunks 参数
@@ -401,31 +403,10 @@ export class MxCadController {
           throw new BadRequestException('缺少必要参数: chunks');
         }
 
-        // 获取临时目录路径
-        const tempPath =
-          process.env.MXCAD_TEMP_PATH || path.join(process.cwd(), 'temp');
-        const chunkDir = path.join(tempPath, `chunk_${body.hash}`);
-
-        // 确保目录存在
-        if (!fs.existsSync(chunkDir)) {
-          fs.mkdirSync(chunkDir, { recursive: true });
+        // 验证文件已由 Multer 正确保存
+        if (!file) {
+          throw new BadRequestException('缺少上传文件');
         }
-
-        // 移动文件到正确的位置并重命名
-        const chunkFileName = `${body.chunk}_${body.hash}`;
-        const chunkFilePath = path.join(chunkDir, chunkFileName);
-
-        // 如果文件已经存在，删除它
-        if (fs.existsSync(chunkFilePath)) {
-          fs.unlinkSync(chunkFilePath);
-        }
-
-        // 移动文件
-        if (!file || !fs.existsSync(file.path)) {
-          throw new BadRequestException('上传文件不存在');
-        }
-
-        fs.renameSync(file.path, chunkFilePath);
 
         const result = await this.mxCadService.uploadChunkWithPermission(
           body.hash,
@@ -439,7 +420,9 @@ export class MxCadController {
         return { nodeId: result.nodeId, tz: result.tz };
       } catch (error) {
         this.mxCadService.logError(`分片文件处理失败: ${error.message}`, error);
-        throw new InternalServerErrorException(`分片文件处理失败: ${error.message}`);
+        throw new InternalServerErrorException(
+          `分片文件处理失败: ${error.message}`
+        );
       }
     } else {
       // 完整文件上传（带权限验证）
@@ -469,7 +452,11 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '保存 mxweb 文件到指定节点', type: SaveMxwebResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: '保存 mxweb 文件到指定节点',
+    type: SaveMxwebResponseDto,
+  })
   async saveMxwebToNode(
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
@@ -936,10 +923,7 @@ export class MxCadController {
       // 构建目标目录路径
       // 注意：node.path 包含完整路径（如：202602/nodeId/nodeId.dwg.mxweb）
       // 需要提取目录部分（如：202602/nodeId）
-      const filesDataPath = this.configService.get(
-        'FILES_DATA_PATH',
-        '../filesData'
-      );
+      const filesDataPath = this.configService.get("filesDataPath", { infer: true });
       const nodePathParts = node.path.split('/');
       // 移除最后一个部分（文件名），保留目录部分
       const dirParts = nodePathParts.slice(0, -1);
@@ -1266,10 +1250,7 @@ export class MxCadController {
       }
 
       // 正常请求：构建完整的文件路径: filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
-      const filesDataPath = this.configService.get(
-        'FILES_DATA_PATH',
-        '../filesData'
-      );
+      const filesDataPath = this.configService.get("filesDataPath", { infer: true });
       const absoluteFilePath = path.resolve(filesDataPath, normalizedFilename);
       console.log(filesDataPath, filename, fs.existsSync(absoluteFilePath));
       this.logger.log(`尝试访问文件: ${absoluteFilePath}`);
@@ -1346,10 +1327,7 @@ export class MxCadController {
       );
 
       // 构建完整的文件路径
-      const filesDataPath = this.configService.get(
-        'FILES_DATA_PATH',
-        '../filesData'
-      );
+      const filesDataPath = this.configService.get("filesDataPath", { infer: true });
       const absoluteFilePath = path.resolve(filesDataPath, filename);
 
       // 对于 HEAD 请求，直接返回本地文件信息（当前版本），不从 SVN 获取

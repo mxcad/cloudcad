@@ -114,13 +114,12 @@ export const uploadMxCadFile = async (
 
   // 构建请求参数
 
-
   // 1. 检查文件是否已存在（秒传）
   const existRequest = {
     fileSize: file.size,
     fileHash: hash,
     filename: file.name,
-    nodeId
+    nodeId,
   };
   const existData = await mxcadApi.checkFileExist(existRequest);
 
@@ -159,7 +158,7 @@ export const uploadMxCadFile = async (
       size: chunk.size,
       fileHash: hash,
       filename: file.name,
-      nodeId
+      nodeId,
     };
     const chunkData = await mxcadApi.checkChunkExist(chunkRequest);
 

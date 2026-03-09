@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-03-03T06:37:27.369Z
+ * 生成时间: 2026-03-09T04:12:29.386Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -119,25 +119,9 @@ export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
 };
 
 /**
- * 权限分组项类型
- */
-export interface PermissionGroupItem {
-  key: string;
-  label: string;
-}
-
-/**
- * 权限分组类型
- */
-export interface PermissionGroup {
-  label: string;
-  items: PermissionGroupItem[];
-}
-
-/**
  * 权限分组定义
  */
-export const PERMISSION_GROUPS: { system: PermissionGroup[]; project: PermissionGroup[] } = {
+export const PERMISSION_GROUPS = {
   system: [
     {
       label: '用户权限',
@@ -198,8 +182,8 @@ export const PERMISSION_GROUPS: { system: PermissionGroup[]; project: Permission
         { key: 'FILE_DELETE', label: '删除文件' },
         { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
         { key: 'FILE_DOWNLOAD', label: '下载文件' },
-        { key: 'FILE_MOVE', label: 'FILE_MOVE' },
-        { key: 'FILE_COPY', label: 'FILE_COPY' },
+        { key: 'FILE_MOVE', label: '移动文件' },
+        { key: 'FILE_COPY', label: '复制文件' },
       ],
     },
     {
@@ -225,6 +209,22 @@ export const PERMISSION_GROUPS: { system: PermissionGroup[]; project: Permission
   ],
 
 } as const;
+
+/**
+ * 权限分组项类型
+ */
+export type PermissionGroupItem = {
+  key: Permission;
+  label: string;
+};
+
+/**
+ * 权限分组类型
+ */
+export type PermissionGroup = {
+  label: string;
+  items: PermissionGroupItem[];
+};
 
 /**
  * 检查权限是否满足依赖条件

@@ -8,20 +8,20 @@ const svnPath = require('./svnpath');
  * @param {function} callback 回调函数
  */
 function svnAdd(targetPaths, isRecursive, callback) {
-    let command = `${svnPath} add`;
-    targetPaths.forEach(path => {
-        command += ` ${path}`;
-    });
-    if (!isRecursive) {
-        command += " --non-recursive";
+  let command = `${svnPath} add`;
+  targetPaths.forEach((path) => {
+    command += ` ${path}`;
+  });
+  if (!isRecursive) {
+    command += ' --non-recursive';
+  }
+  exec(command, { windowsHide: true }, (error, stdout) => {
+    if (error) {
+      callback(error);
+    } else {
+      callback(null, stdout);
     }
-    exec(command, (error, stdout) => {
-        if (error) {
-            callback(error);
-        } else {
-            callback(null, stdout);
-        }
-    });
+  });
 }
 
 module.exports = svnAdd;

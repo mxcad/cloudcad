@@ -3,12 +3,15 @@
 ## Research & Discovery
 
 ### [Topic 1]
+
 [Research findings, observations, data]
 
 ### [Topic 2]
+
 [Research findings, observations, data]
 
 ### [Topic 3]
+
 [Research findings, observations, data]
 
 ---
@@ -81,4 +84,5 @@
 ---
 
 ## Notes
+
 [Additional context, scratchpad, or temporary information]

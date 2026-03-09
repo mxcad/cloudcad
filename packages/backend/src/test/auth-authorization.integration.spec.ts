@@ -96,15 +96,24 @@ describe.skip('Authentication & Authorization Integration Tests', () => {
   async function cleanupTestData() {
     try {
       await prisma.fileAccess.deleteMany();
-    } catch (error) {}
+    } catch (error) {
+      // 表可能不存在或为空，忽略错误
+      console.warn('[cleanupTestData] 删除 fileAccess 失败:', error);
+    }
 
     try {
       await prisma.projectMember.deleteMany();
-    } catch (error) {}
+    } catch (error) {
+      // 表可能不存在或为空，忽略错误
+      console.warn('[cleanupTestData] 删除 projectMember 失败:', error);
+    }
 
     try {
       await prisma.fileSystemNode.deleteMany();
-    } catch (error) {}
+    } catch (error) {
+      // 表可能不存在或为空，忽略错误
+      console.warn('[cleanupTestData] 删除 fileSystemNode 失败:', error);
+    }
 
     try {
       await prisma.user.deleteMany({
@@ -115,7 +124,10 @@ describe.skip('Authentication & Authorization Integration Tests', () => {
           ],
         },
       });
-    } catch (error) {}
+    } catch (error) {
+      // 表可能不存在或为空，忽略错误
+      console.warn('[cleanupTestData] 删除测试用户失败:', error);
+    }
   }
 
   async function createTestUsers() {

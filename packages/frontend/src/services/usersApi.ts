@@ -10,8 +10,9 @@ export const usersApi = {
   list: (params?: Parameters<OperationMethods['UsersController_findAll']>[0]) =>
     getApiClient().UsersController_findAll(params || undefined),
 
-  search: (params?: Parameters<OperationMethods['UsersController_searchUsers']>[0]) =>
-    getApiClient().UsersController_searchUsers(params || undefined),
+  search: (
+    params?: Parameters<OperationMethods['UsersController_searchUsers']>[0]
+  ) => getApiClient().UsersController_searchUsers(params || undefined),
 
   searchByEmail: (email: string) =>
     getApiClient().UsersController_searchByEmail({ email }),
@@ -22,11 +23,9 @@ export const usersApi = {
   update: (id: string, data: UpdateUserDto) =>
     getApiClient().UsersController_update({ id }, data),
 
-  delete: (id: string) =>
-    getApiClient().UsersController_remove({ id }),
+  delete: (id: string) => getApiClient().UsersController_remove({ id }),
 
-  getProfile: () =>
-    getApiClient().UsersController_getProfile(),
+  getProfile: () => getApiClient().UsersController_getProfile(),
 
   updateProfile: (data: UpdateUserDto) =>
     getApiClient().UsersController_updateProfile(null, data),

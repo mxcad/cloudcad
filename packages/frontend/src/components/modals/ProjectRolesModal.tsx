@@ -17,6 +17,7 @@ import { projectRolesApi } from '../../services/rolesApi';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
 import { useNotification } from '../../contexts/NotificationContext';
 import { ProjectPermission } from '../../constants/permissions';
+import type { ProjectRoleDto } from '../../types/api-client';
 
 // 角色名称中文映射
 const ROLE_NAME_MAP: Record<string, string> = {
@@ -32,20 +33,6 @@ const getRoleDisplayName = (roleName: string): string => {
   return ROLE_NAME_MAP[roleName] || roleName;
 };
 
-type ProjectRole = {
-  id: string;
-  projectId: string | null;
-  name: string;
-  description?: string;
-  isSystem: boolean;
-  createdAt: string;
-  updatedAt: string;
-  permissions: Array<{ id: string; projectRoleId: string; permission: string }>;
-  _count: {
-    members: number;
-  };
-};
-
 interface ProjectRolesModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,7 +46,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
 }) => {
   const { checkPermission } = useProjectPermission();
   const { showToast } = useNotification();
-  const [roles, setRoles] = useState<ProjectRole[]>([]);
+  const [roles, setRoles] = useState<ProjectRoleDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [canManageRoles, setCanManageRoles] = useState(false);
@@ -70,7 +57,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
 
   // 权限配置弹窗状态
   const [configModalOpen, setConfigModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<ProjectRole | null>(null);
+  const [editingRole, setEditingRole] = useState<ProjectRoleDto | null>(null);
   const [roleName, setRoleName] = useState('');
   const [roleDesc, setRoleDesc] = useState('');
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
@@ -78,14 +65,14 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
 
   // 删除确认弹窗状态
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<ProjectRole | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<ProjectRoleDto | null>(null);
 
   const loadRoles = useCallback(async () => {
     setLoading(true);
     setErrorMessage('');
     try {
       const response = await projectRolesApi.getByProject(projectId);
-      setRoles((response.data as ProjectRole[]) || []);
+      setRoles((response.data as ProjectRoleDto[]) || []);
     } catch (error) {
       console.error('加载项目角色失败:', error);
       setErrorMessage('加载项目角色失败');
@@ -127,7 +114,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   };
 
   // 编辑角色
-  const handleEditRole = (role: ProjectRole) => {
+  const handleEditRole = (role: ProjectRoleDto) => {
     setEditingRole(role);
     setRoleName(role.name);
     setRoleDesc(role.description || '');
@@ -180,7 +167,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   };
 
   // 删除角色
-  const handleDeleteRole = (role: ProjectRole) => {
+  const handleDeleteRole = (role: ProjectRoleDto) => {
     if (role.isSystem) {
       showToast('系统默认角色不允许删除', 'warning');
       return;

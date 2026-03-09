@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
 import {
   IPermissionPolicy,
@@ -39,8 +36,12 @@ export class PolicyEngineService {
     PolicyType,
     (id: string, config: unknown) => IPermissionPolicy
   >;
+  private readonly policyCacheTTL: number;
 
-  constructor(private readonly cacheService: PermissionCacheService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly cacheService: PermissionCacheService
+  ) {
     // 初始化策略工厂
     this.policyFactories = new Map();
     this.policyFactories.set(
@@ -55,6 +56,9 @@ export class PolicyEngineService {
       PolicyType.DEVICE,
       (id, config) => new DevicePolicy(id, config as never)
     );
+
+    const cacheTTL = this.configService.get('cacheTTL', { infer: true });
+    this.policyCacheTTL = cacheTTL.policy * 1000; // 转为毫秒
   }
 
   /**
@@ -135,8 +139,8 @@ export class PolicyEngineService {
 
       const result = await policy.evaluate(context);
 
-      // 缓存结果（5 分钟）
-      this.cacheService.set(cacheKey, result, 300000);
+      // 缓存结果（使用配置的 TTL）
+      this.cacheService.set(cacheKey, result, this.policyCacheTTL);
 
       return result;
     } catch (error) {

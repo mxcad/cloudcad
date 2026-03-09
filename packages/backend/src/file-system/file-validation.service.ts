@@ -1,14 +1,9 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import { FileUtils } from '../common/utils/file-utils';
-
-export const FILE_UPLOAD_CONFIG = {
-  allowedExtensions: ['.dwg', '.dxf'],
-  maxFileSize: 104857600,
-  maxFilesPerUpload: 10,
-  blockedExtensions: ['.exe', '.bat', '.sh', '.cmd', '.ps1'],
-};
+import { AppConfig } from '../config/app.config';
 
 export interface FileTypeConfig {
   extension: string;
@@ -18,33 +13,63 @@ export interface FileTypeConfig {
   magicNumbers?: number[]; // 文件魔数（Magic Number）
 }
 
-export const CONFIGURABLE_FILE_TYPES: FileTypeConfig[] = [
-  {
-    extension: '.dwg',
-    mimeType: 'application/acad',
-    maxSize: 100 * 1024 * 1024,
-    enabled: true,
-    magicNumbers: [0x41, 0x43, 0x31, 0x30], // DWG 文件魔数
-  },
-  {
-    extension: '.dxf',
-    mimeType: 'application/dxf',
-    maxSize: 100 * 1024 * 1024,
-    enabled: true,
-    magicNumbers: [0x30, 0x0d, 0x0a], // DXF 文件通常以数字开头
-  },
-  {
-    extension: '.pdf',
-    mimeType: 'application/pdf',
-    maxSize: 50 * 1024 * 1024,
-    enabled: false,
-    magicNumbers: [0x25, 0x50, 0x44, 0x46], // PDF 文件魔数 (%PDF)
-  },
-];
-
 @Injectable()
 export class FileValidationService {
   private readonly logger = new Logger(FileValidationService.name);
+
+  // 从配置获取文件上传限制
+  private readonly allowedExtensions: string[];
+  private readonly maxFileSize: number;
+  private readonly maxFilesPerUpload: number;
+  private readonly blockedExtensions: string[];
+
+  // 可配置的文件类型（保持原有逻辑，但可扩展为配置化）
+  private readonly configurableFileTypes: FileTypeConfig[];
+
+  constructor(private readonly configService: ConfigService<AppConfig>) {
+    const uploadConfig = this.configService.get('upload', { infer: true });
+    this.allowedExtensions = uploadConfig.allowedExtensions;
+    this.maxFileSize = uploadConfig.maxSize;
+    this.maxFilesPerUpload = uploadConfig.maxFilesPerUpload;
+    this.blockedExtensions = uploadConfig.blockedExtensions;
+
+    // 文件类型配置（可根据需要扩展为从配置读取）
+    this.configurableFileTypes = [
+      {
+        extension: '.dwg',
+        mimeType: 'application/acad',
+        maxSize: this.maxFileSize,
+        enabled: true,
+        magicNumbers: [0x41, 0x43, 0x31, 0x30], // DWG 文件魔数
+      },
+      {
+        extension: '.dxf',
+        mimeType: 'application/dxf',
+        maxSize: this.maxFileSize,
+        enabled: true,
+        magicNumbers: [0x30, 0x0d, 0x0a], // DXF 文件通常以数字开头
+      },
+      {
+        extension: '.pdf',
+        mimeType: 'application/pdf',
+        maxSize: 50 * 1024 * 1024,
+        enabled: false,
+        magicNumbers: [0x25, 0x50, 0x44, 0x46], // PDF 文件魔数 (%PDF)
+      },
+    ];
+  }
+
+  /**
+   * 获取文件上传配置（供外部使用）
+   */
+  getFileUploadConfig() {
+    return {
+      allowedExtensions: this.allowedExtensions,
+      maxFileSize: this.maxFileSize,
+      maxFilesPerUpload: this.maxFilesPerUpload,
+      blockedExtensions: this.blockedExtensions,
+    };
+  }
 
   /**
    * 验证文件类型
@@ -53,19 +78,19 @@ export class FileValidationService {
   validateFileType(file: Express.Multer.File): void {
     const extension = `.${file.originalname.split('.').pop()?.toLowerCase() || ''}`;
 
-    if (FILE_UPLOAD_CONFIG.blockedExtensions.includes(extension)) {
+    if (this.blockedExtensions.includes(extension)) {
       this.logger.error(
         `文件类型被阻止: 文件=${file.originalname}, 扩展名=${extension}`
       );
       throw new BadRequestException(`禁止上传 ${extension} 类型文件`);
     }
 
-    if (!FILE_UPLOAD_CONFIG.allowedExtensions.includes(extension)) {
+    if (!this.allowedExtensions.includes(extension)) {
       this.logger.error(
         `文件类型不允许: 文件=${file.originalname}, 扩展名=${extension}`
       );
       throw new BadRequestException(
-        `仅允许上传以下类型文件: ${FILE_UPLOAD_CONFIG.allowedExtensions.join(', ')}`
+        `仅允许上传以下类型文件: ${this.allowedExtensions.join(', ')}`
       );
     }
 
@@ -94,9 +119,9 @@ export class FileValidationService {
    * @param file 文件对象
    */
   validateFileSize(file: Express.Multer.File): void {
-    if (file.size > FILE_UPLOAD_CONFIG.maxFileSize) {
+    if (file.size > this.maxFileSize) {
       throw new BadRequestException(
-        `文件大小超过限制: ${(file.size / 1024 / 1024).toFixed(2)}MB > ${(FILE_UPLOAD_CONFIG.maxFileSize / 1024 / 1024).toFixed(2)}MB`
+        `文件大小超过限制: ${(file.size / 1024 / 1024).toFixed(2)}MB > ${(this.maxFileSize / 1024 / 1024).toFixed(2)}MB`
       );
     }
   }
@@ -109,7 +134,7 @@ export class FileValidationService {
    */
   validateFileMagicNumber(filePath: string, extension: string): void {
     try {
-      const config = CONFIGURABLE_FILE_TYPES.find(
+      const config = this.configurableFileTypes.find(
         (c) => c.extension === extension && c.enabled
       );
 
@@ -407,7 +432,7 @@ export class FileValidationService {
   }
 
   private getExpectedMimeType(extension: string): string | null {
-    const config = CONFIGURABLE_FILE_TYPES.find(
+    const config = this.configurableFileTypes.find(
       (c) => c.extension === extension && c.enabled
     );
     return config?.mimeType || null;

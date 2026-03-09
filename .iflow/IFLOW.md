@@ -9,6 +9,7 @@ The Feature Development Plugin provides a systematic 7-phase approach to buildin
 ## Philosophy
 
 Building features requires more than just writing code. You need to:
+
 - **Understand the codebase** before making changes
 - **Ask questions** to clarify ambiguous requirements
 - **Design thoughtfully** before implementing
@@ -21,11 +22,13 @@ This plugin embeds these practices into a structured workflow that runs automati
 Launches a guided feature development workflow with 7 distinct phases.
 
 **Usage:**
+
 ```bash
 /feature-dev Add user authentication with OAuth
 ```
 
 Or simply:
+
 ```bash
 /feature-dev
 ```
@@ -39,12 +42,14 @@ The command will guide you through the entire process interactively.
 **Goal**: Understand what needs to be built
 
 **What happens:**
+
 - Clarifies the feature request if it's unclear
 - Asks what problem you're solving
 - Identifies constraints and requirements
 - Summarizes understanding and confirms with you
 
 **Example:**
+
 ```
 You: /feature-dev Add caching
 Claude: Let me understand what you need...
@@ -58,6 +63,7 @@ Claude: Let me understand what you need...
 **Goal**: Understand relevant existing code and patterns
 
 **What happens:**
+
 - Launches 2-3 `code-explorer` agents in parallel
 - Each agent explores different aspects (similar features, architecture, UI patterns)
 - Agents return comprehensive analyses with key files to read
@@ -65,11 +71,13 @@ Claude: Let me understand what you need...
 - Presents comprehensive summary of findings
 
 **Agents launched:**
+
 - "Find features similar to [feature] and trace implementation"
 - "Map the architecture and abstractions for [area]"
 - "Analyze current implementation of [related feature]"
 
 **Example output:**
+
 ```
 Found similar features:
 - User authentication (src/auth/): Uses JWT tokens, middleware pattern
@@ -87,6 +95,7 @@ Key files to understand:
 **Goal**: Fill in gaps and resolve all ambiguities
 
 **What happens:**
+
 - Reviews codebase findings and feature request
 - Identifies underspecified aspects:
   - Edge cases
@@ -98,6 +107,7 @@ Key files to understand:
 - **Waits for your answers before proceeding**
 
 **Example:**
+
 ```
 Before designing the architecture, I need to clarify:
 
@@ -115,6 +125,7 @@ Before designing the architecture, I need to clarify:
 **Goal**: Design multiple implementation approaches
 
 **What happens:**
+
 - Launches 2-3 `code-architect` agents with different focuses:
   - **Minimal changes**: Smallest change, maximum reuse
   - **Clean architecture**: Maintainability, elegant abstractions
@@ -125,6 +136,7 @@ Before designing the architecture, I need to clarify:
 - **Asks which approach you prefer**
 
 **Example output:**
+
 ```
 I've designed 3 approaches:
 
@@ -160,6 +172,7 @@ Which approach would you like to use?
 **Goal**: Build the feature
 
 **What happens:**
+
 - **Waits for explicit approval** before starting
 - Reads all relevant files identified in previous phases
 - Implements following chosen architecture
@@ -168,6 +181,7 @@ Which approach would you like to use?
 - Updates todos as progress is made
 
 **Notes:**
+
 - Implementation only starts after you approve
 - Follows patterns discovered in Phase 2
 - Uses architecture designed in Phase 4
@@ -178,6 +192,7 @@ Which approach would you like to use?
 **Goal**: Ensure code is simple, DRY, elegant, and functionally correct
 
 **What happens:**
+
 - Launches 3 `code-reviewer` agents in parallel with different focuses:
   - **Simplicity/DRY/Elegance**: Code quality and maintainability
   - **Bugs/Correctness**: Functional correctness and logic errors
@@ -191,6 +206,7 @@ Which approach would you like to use?
 - Addresses issues based on your decision
 
 **Example output:**
+
 ```
 Code Review Results:
 
@@ -212,6 +228,7 @@ What would you like to do?
 **Goal**: Document what was accomplished
 
 **What happens:**
+
 - Marks all todos complete
 - Summarizes:
   - What was built
@@ -220,6 +237,7 @@ What would you like to do?
   - Suggested next steps
 
 **Example:**
+
 ```
 Feature Complete: OAuth Authentication
 
@@ -253,6 +271,7 @@ Suggested next steps:
 **Purpose**: Deeply analyzes existing codebase features by tracing execution paths
 
 **Focus areas:**
+
 - Entry points and call chains
 - Data flow and transformations
 - Architecture layers and patterns
@@ -260,10 +279,12 @@ Suggested next steps:
 - Implementation details
 
 **When triggered:**
+
 - Automatically in Phase 2
 - Can be invoked manually when exploring code
 
 **Output:**
+
 - Entry points with file:line references
 - Step-by-step execution flow
 - Key components and responsibilities
@@ -275,6 +296,7 @@ Suggested next steps:
 **Purpose**: Designs feature architectures and implementation blueprints
 
 **Focus areas:**
+
 - Codebase pattern analysis
 - Architecture decisions
 - Component design
@@ -282,10 +304,12 @@ Suggested next steps:
 - Data flow and build sequence
 
 **When triggered:**
+
 - Automatically in Phase 4
 - Can be invoked manually for architecture design
 
 **Output:**
+
 - Patterns and conventions found
 - Architecture decision with rationale
 - Complete component design
@@ -297,16 +321,19 @@ Suggested next steps:
 **Purpose**: Reviews code for bugs, quality issues, and project conventions
 
 **Focus areas:**
+
 - Project guideline compliance (CLAUDE.md)
 - Bug detection
 - Code quality issues
 - Confidence-based filtering (only reports high-confidence issues ≥80)
 
 **When triggered:**
+
 - Automatically in Phase 6
 - Can be invoked manually after writing code
 
 **Output:**
+
 - Critical issues (confidence 75-100)
 - Important issues (confidence 50-74)
 - Specific fixes with file:line references
@@ -315,6 +342,7 @@ Suggested next steps:
 ## Usage Patterns
 
 ### Full workflow (recommended for new features):
+
 ```bash
 /feature-dev Add rate limiting to API endpoints
 ```
@@ -324,16 +352,19 @@ Let the workflow guide you through all 7 phases.
 ### Manual agent invocation:
 
 **Explore a feature:**
+
 ```
 "Launch code-explorer to trace how authentication works"
 ```
 
 **Design architecture:**
+
 ```
 "Launch code-architect to design the caching layer"
 ```
 
 **Review code:**
+
 ```
 "Launch code-reviewer to check my recent changes"
 ```
@@ -349,12 +380,14 @@ Let the workflow guide you through all 7 phases.
 ## When to Use This Plugin
 
 **Use for:**
+
 - New features that touch multiple files
 - Features requiring architectural decisions
 - Complex integrations with existing code
 - Features where requirements are somewhat unclear
 
 **Don't use for:**
+
 - Single-line bug fixes
 - Trivial changes
 - Well-defined, simple tasks
@@ -373,6 +406,7 @@ Let the workflow guide you through all 7 phases.
 **Issue**: Code exploration or architecture agents are slow
 
 **Solution**:
+
 - This is normal for large codebases
 - Agents run in parallel when possible
 - The thoroughness pays off in better understanding
@@ -382,6 +416,7 @@ Let the workflow guide you through all 7 phases.
 **Issue**: Phase 3 asks too many questions
 
 **Solution**:
+
 - Be more specific in your initial feature request
 - Provide context about constraints upfront
 - Say "whatever you think is best" if truly no preference
@@ -391,6 +426,7 @@ Let the workflow guide you through all 7 phases.
 **Issue**: Too many architecture options in Phase 4
 
 **Solution**:
+
 - Trust the recommendation—it's based on codebase analysis
 - If still unsure, ask for more explanation
 - Pick the pragmatic option when in doubt

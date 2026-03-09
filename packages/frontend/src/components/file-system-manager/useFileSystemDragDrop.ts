@@ -37,7 +37,11 @@ export const useFileSystemDragDrop = () => {
   }, []);
 
   const handleDrop = useCallback(
-    async (e: React.DragEvent, targetNode: FileSystemNode, onRefresh: () => void) => {
+    async (
+      e: React.DragEvent,
+      targetNode: FileSystemNode,
+      onRefresh: () => void
+    ) => {
       e.preventDefault();
       setDropTargetId(null);
 

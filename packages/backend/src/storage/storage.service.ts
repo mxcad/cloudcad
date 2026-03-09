@@ -3,15 +3,19 @@ import { LocalStorageProvider } from './local-storage.provider';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import { AppConfig } from '../config/app.config';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
+  private readonly filesDataPath: string;
 
   constructor(
     private localStorageProvider: LocalStorageProvider,
-    private configService: ConfigService
-  ) {}
+    private configService: ConfigService<AppConfig>
+  ) {
+    this.filesDataPath = this.configService.get('filesDataPath', { infer: true });
+  }
 
   /**
    * 检查文件是否存在
@@ -40,10 +44,7 @@ export class StorageService {
     key: string
   ): Promise<{ contentType: string; contentLength: number } | null> {
     try {
-      const absolutePath = path.resolve(
-        this.configService.get('FILES_DATA_PATH', '../filesData'),
-        key
-      );
+      const absolutePath = path.resolve(this.filesDataPath, key);
       const stats = await fs.promises.stat(absolutePath);
 
       // 根据文件扩展名猜测 Content-Type
@@ -77,11 +78,7 @@ export class StorageService {
 
   async healthCheck() {
     try {
-      const filesDataPath = this.configService.get(
-        'FILES_DATA_PATH',
-        '../filesData'
-      );
-      const resolvedPath = path.resolve(filesDataPath);
+      const resolvedPath = path.resolve(this.filesDataPath);
 
       // 检查目录是否存在
       const exists = fs.existsSync(resolvedPath);
