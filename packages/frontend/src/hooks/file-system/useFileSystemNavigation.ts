@@ -80,15 +80,17 @@ export const useFileSystemNavigation = ({
           node.extension &&
           cadExtensions.includes(node.extension.toLowerCase())
         ) {
+          // CAD 文件在新标签页打开编辑器
           const queryParams = new URLSearchParams();
           queryParams.set('nodeId', node.parentId || '');
-          navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
+          const url = `/cad-editor/${node.id}?${queryParams.toString()}`;
+          window.open(url, '_blank');
         } else {
           handleDownload(node);
         }
       }
     },
-    [navigate, urlProjectId, currentNode]
+    [navigate, urlProjectId]
   );
 
   const handleDownload = useCallback(

@@ -4,8 +4,11 @@ import type { AxiosProgressEvent } from 'axios';
 import type {
   CheckFileExistDto,
   CheckChunkExistDto,
+  UploadFilesDto,
+  UploadExtReferenceDto,
+  SaveMxwebDto,
+  UploadThumbnailDto,
 } from '../types/api-client';
-import { Paths } from '../types/api-client';
 
 /**
  * 将 FormData 转换为 API 客户端期望的请求体类型
@@ -14,11 +17,6 @@ import { Paths } from '../types/api-client';
 function asFormData<T>(formData: FormData): T {
   return formData as unknown as T;
 }
-
-/**
- * 后备类型：用于 OpenAPI 未生成 RequestBody 的 multipart/form-data 端点
- */
-type MultipartFormData = Record<string, unknown>;
 
 export const mxcadApi = {
   /**
@@ -43,7 +41,7 @@ export const mxcadApi = {
   uploadChunk: async (formData: FormData) => {
     const res = await getApiClient().MxCadController_uploadFile(
       undefined,
-      asFormData<Paths.MxCadControllerUploadFile.RequestBody>(formData)
+      asFormData<UploadFilesDto>(formData)
     );
     return res.data;
   },
@@ -66,12 +64,11 @@ export const mxcadApi = {
 
   /**
    * 上传缩略图
-   * Note: OpenAPI 未为此端点生成 RequestBody 类型，使用后备类型
    */
   uploadThumbnail: async (nodeId: string, formData: FormData) => {
     const res = await getApiClient().MxCadController_uploadThumbnail(
       { nodeId },
-      asFormData<MultipartFormData>(formData)
+      asFormData<UploadThumbnailDto>(formData)
     );
     return res.data;
   },
@@ -118,7 +115,7 @@ export const mxcadApi = {
           const response =
             await getApiClient().MxCadController_uploadExtReferenceDwg(
               undefined,
-              asFormData<Paths.MxCadControllerUploadExtReferenceDwg.RequestBody>(
+              asFormData<UploadExtReferenceDto>(
                 formData
               ),
               { onUploadProgress: onProgress }
@@ -155,7 +152,7 @@ export const mxcadApi = {
           const response =
             await getApiClient().MxCadController_uploadExtReferenceImage(
               undefined,
-              asFormData<Paths.MxCadControllerUploadExtReferenceImage.RequestBody>(
+              asFormData<UploadExtReferenceDto>(
                 formData
               ),
               { onUploadProgress: onProgress }
@@ -171,7 +168,6 @@ export const mxcadApi = {
 
   /**
    * 保存 mxweb 文件到指定节点
-   * Note: OpenAPI 未为此端点生成 RequestBody 类型，使用后备类型
    * @param blob mxweb 文件的 Blob 对象
    * @param nodeId 节点 ID
    * @param onProgress 上传进度回调
@@ -200,7 +196,7 @@ export const mxcadApi = {
 
           const response = await getApiClient().MxCadController_saveMxwebToNode(
             { nodeId },
-            asFormData<MultipartFormData>(formData),
+            asFormData<SaveMxwebDto>(formData),
             {
               onUploadProgress: (progressEvent: AxiosProgressEvent) => {
                 if (onProgress && progressEvent.total) {

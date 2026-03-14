@@ -196,7 +196,7 @@ export const FileSystemManager: React.FC = () => {
           ProjectPermission.FILE_MOVE,
           ProjectPermission.FILE_COPY,
           ProjectPermission.CAD_SAVE,
-          ProjectPermission.CAD_EXPORT,
+          ProjectPermission.FILE_DOWNLOAD,
           ProjectPermission.CAD_EXTERNAL_REFERENCE,
           ProjectPermission.GALLERY_ADD,
           ProjectPermission.VERSION_READ,

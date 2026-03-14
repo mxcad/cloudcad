@@ -83,6 +83,9 @@ const NoPermissionPage: React.FC = React.memo(() => (
 function AppContent() {
   return (
     <div className="layout-container">
+      {/* 全局 CAD 编辑器覆盖层 - 监听路由变化自动显示/隐藏 */}
+      <CADEditorDirect />
+
       <Routes>
         {/* 公开路由 - 不需要 Layout */}
         <Route path="/login" element={<Login />} />
@@ -91,12 +94,13 @@ function AppContent() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* CAD 编辑器路由 */}
+        {/* CAD 编辑器路由 - 仅用于 URL 导航，实际渲染由全局覆盖层处理 */}
+        {/* 当用户直接访问 /cad-editor/:fileId 时，需要重定向到受保护的路由 */}
         <Route
           path="/cad-editor"
           element={
             <ProtectedRoute>
-              <CADEditorDirect />
+              <Navigate to="/projects" replace />
             </ProtectedRoute>
           }
         />
@@ -104,7 +108,7 @@ function AppContent() {
           path="/cad-editor/:fileId"
           element={
             <ProtectedRoute>
-              <CADEditorDirect />
+              <div />
             </ProtectedRoute>
           }
         />

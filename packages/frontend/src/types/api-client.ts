@@ -1121,7 +1121,7 @@ declare namespace Components {
         /**
          * 统一权限枚举
          */
-        export type Permission = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
+        export type Permission = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
         export interface PermissionCheckResponseDto {
             /**
              * 项目 ID
@@ -1311,7 +1311,7 @@ declare namespace Components {
         /**
          * 项目权限枚举
          */
-        export type ProjectPermission = "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
+        export type ProjectPermission = "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
         export interface ProjectRoleDto {
             /**
              * 角色 ID
@@ -1370,7 +1370,7 @@ declare namespace Components {
             /**
              * 权限名称
              */
-            permission: "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
+            permission: "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
             /**
              * 创建时间
              */
@@ -1550,7 +1550,7 @@ declare namespace Components {
              *   "system:font:read"
              * ]
              */
-            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXPORT" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE")[];
+            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE")[];
             /**
              * 创建时间
              */
@@ -1559,6 +1559,18 @@ declare namespace Components {
              * 更新时间
              */
             updatedAt: string; // date-time
+        }
+        export interface SaveMxwebDto {
+            /**
+             * mxweb 文件
+             */
+            file: string; // binary
+            /**
+             * 提交信息
+             * example:
+             * 保存图纸修改
+             */
+            commitMessage?: string;
         }
         export interface SaveMxwebResponseDto {
             /**
@@ -1965,7 +1977,7 @@ declare namespace Components {
             /**
              * 上传的文件
              */
-            file?: string; // binary
+            file: string; // binary
             /**
              * 文件哈希值（用于 Multer 文件名生成）
              * example:
@@ -2009,6 +2021,52 @@ declare namespace Components {
              */
             tz?: boolean;
         }
+        export interface UploadFilesDto {
+            /**
+             * 上传的文件
+             */
+            file?: string; // binary
+            /**
+             * 文件 MD5 哈希值
+             */
+            hash: string;
+            /**
+             * 原始文件名
+             */
+            name: string;
+            /**
+             * 文件总大小（字节）
+             */
+            size: number;
+            /**
+             * 分片索引（分片上传时必填）
+             */
+            chunk?: number;
+            /**
+             * 总分片数量（分片上传时必填）
+             */
+            chunks?: number;
+            /**
+             * 节点ID（项目根目录或文件夹的 FileSystemNode ID）
+             */
+            nodeId?: string;
+            /**
+             * 源图纸节点 ID（外部参照上传时使用）
+             */
+            srcDwgNodeId?: string;
+            /**
+             * 文件ID（前端传递的标识符）
+             */
+            id?: string;
+            /**
+             * 文件类型（如 dwg、dxf）
+             */
+            type?: string;
+            /**
+             * 文件最后修改日期
+             */
+            lastModifiedDate?: string;
+        }
         export interface UploadFontDto {
             /**
              * 上传目标
@@ -2020,6 +2078,12 @@ declare namespace Components {
              * 文件名
              */
             fileName: string;
+        }
+        export interface UploadThumbnailDto {
+            /**
+             * 缩略图文件
+             */
+            file: string; // binary
         }
         export interface UploadThumbnailResponseDto {
             /**
@@ -3919,6 +3983,7 @@ declare namespace Paths {
         export interface PathParameters {
             nodeId: Parameters.NodeId;
         }
+        export type RequestBody = Components.Schemas.SaveMxwebDto;
         namespace Responses {
             export type $200 = Components.Schemas.SaveMxwebResponseDto;
         }
@@ -3970,33 +4035,7 @@ declare namespace Paths {
         }
     }
     namespace MxCadControllerUploadFile {
-        export interface RequestBody {
-            file?: string; // binary
-            /**
-             * 文件 MD5 哈希值
-             */
-            hash?: string;
-            /**
-             * 原始文件名
-             */
-            name?: string;
-            /**
-             * 文件总大小（字节）
-             */
-            size?: number;
-            /**
-             * 分片索引（分片上传时必填）
-             */
-            chunk?: number;
-            /**
-             * 总分片数量（分片上传时必填）
-             */
-            chunks?: number;
-            /**
-             * 节点ID（项目根目录或文件夹的 FileSystemNode ID）
-             */
-            nodeId?: string;
-        }
+        export type RequestBody = Components.Schemas.UploadFilesDto;
         namespace Responses {
             export type $200 = Components.Schemas.UploadFileResponseDto;
         }
@@ -4008,6 +4047,7 @@ declare namespace Paths {
         export interface PathParameters {
             nodeId: Parameters.NodeId;
         }
+        export type RequestBody = Components.Schemas.UploadThumbnailDto;
         namespace Responses {
             export type $200 = Components.Schemas.UploadThumbnailResponseDto;
             export interface $400 {
@@ -5638,7 +5678,7 @@ export interface OperationMethods {
    */
   'MxCadController_saveMxwebToNode'(
     parameters?: Parameters<Paths.MxCadControllerSaveMxwebToNode.PathParameters> | null,
-    data?: any,
+    data?: Paths.MxCadControllerSaveMxwebToNode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerSaveMxwebToNode.Responses.$200>
   /**
@@ -5670,7 +5710,7 @@ export interface OperationMethods {
    */
   'MxCadController_uploadThumbnail'(
     parameters?: Parameters<Paths.MxCadControllerUploadThumbnail.PathParameters> | null,
-    data?: any,
+    data?: Paths.MxCadControllerUploadThumbnail.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerUploadThumbnail.Responses.$200>
   /**
@@ -7196,7 +7236,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.MxCadControllerSaveMxwebToNode.PathParameters> | null,
-      data?: any,
+      data?: Paths.MxCadControllerSaveMxwebToNode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerSaveMxwebToNode.Responses.$200>
   }
@@ -7234,7 +7274,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.MxCadControllerUploadThumbnail.PathParameters> | null,
-      data?: any,
+      data?: Paths.MxCadControllerUploadThumbnail.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerUploadThumbnail.Responses.$200>
   }
@@ -7499,6 +7539,7 @@ export type ResetPasswordApiResponseDto = Components.Schemas.ResetPasswordApiRes
 export type ResetPasswordDto = Components.Schemas.ResetPasswordDto;
 export type ResetPasswordResponseDto = Components.Schemas.ResetPasswordResponseDto;
 export type RoleDto = Components.Schemas.RoleDto;
+export type SaveMxwebDto = Components.Schemas.SaveMxwebDto;
 export type SaveMxwebResponseDto = Components.Schemas.SaveMxwebResponseDto;
 export type SendVerificationApiResponseDto = Components.Schemas.SendVerificationApiResponseDto;
 export type SendVerificationResponseDto = Components.Schemas.SendVerificationResponseDto;
@@ -7520,8 +7561,10 @@ export type UpdateWarmupConfigDto = Components.Schemas.UpdateWarmupConfigDto;
 export type UploadExtReferenceDto = Components.Schemas.UploadExtReferenceDto;
 export type UploadFileDto = Components.Schemas.UploadFileDto;
 export type UploadFileResponseDto = Components.Schemas.UploadFileResponseDto;
+export type UploadFilesDto = Components.Schemas.UploadFilesDto;
 export type UploadFontDto = Components.Schemas.UploadFontDto;
 export type UploadThumbnailDataDto = Components.Schemas.UploadThumbnailDataDto;
+export type UploadThumbnailDto = Components.Schemas.UploadThumbnailDto;
 export type UploadThumbnailResponseDto = Components.Schemas.UploadThumbnailResponseDto;
 export type UserCacheClearResponseDto = Components.Schemas.UserCacheClearResponseDto;
 export type UserDto = Components.Schemas.UserDto;
@@ -7538,6 +7581,3 @@ export type VerifyEmailResponseDto = Components.Schemas.VerifyEmailResponseDto;
 export type WarmupHistoryDto = Components.Schemas.WarmupHistoryDto;
 export type WarmupResponseDto = Components.Schemas.WarmupResponseDto;
 export type WarmupStatsDto = Components.Schemas.WarmupStatsDto;
-
-// 导出 Paths 命名空间供 API 服务使用
-export type { Paths };

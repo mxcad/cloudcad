@@ -1,4 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+/**
+ * GlobalCADEditor - 全局 CAD 编辑器覆盖层
+ *
+ * 此组件作为全局覆盖层挂载在 App 根层级，始终存在于 DOM 中。
+ * 通过监听路由变化来控制显示/隐藏：
+ * - 路由匹配 /cad-editor/:fileId 时显示编辑器并加载文件
+ * - 路由不匹配时隐藏编辑器
+ *
+ * 使用 visibility: hidden + z-index 方案控制显示，保护 WebGL 上下文不被销毁。
+ */
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -26,14 +36,29 @@ declare global {
   }
 }
 
+/**
+ * 解析路由，判断是否为 CAD 编辑器路由
+ * @param pathname 当前路径
+ * @returns 如果匹配 /cad-editor/:fileId，返回 fileId；否则返回 null
+ */
+function parseCADEditorRoute(pathname: string): string | null {
+  const match = pathname.match(/^\/cad-editor\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
 export const CADEditorDirect: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotification();
-  const [loading, setLoading] = useState(true);
+
+  // 是否激活（路由匹配 /cad-editor/:fileId）
+  const [isActive, setIsActive] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [shouldLoadEditor, setShouldLoadEditor] = useState(false);
+
+  // 当前文件 ID
+  const currentFileIdRef = useRef<string | null>(null);
 
   // 标记是否已初始化 MxCAD，避免重复初始化
   const isInitializedRef = useRef(false);
@@ -52,14 +77,15 @@ export const CADEditorDirect: React.FC = () => {
   const [canExport, setCanExport] = useState(false);
   const [canManageExternalRef, setCanManageExternalRef] = useState(false);
 
-  // 从URL获取文件ID
-  const fileId = location.pathname.split('/').pop() || '';
+  // 从当前路由解析 fileId
+  const fileId = parseCADEditorRoute(location.pathname);
 
-  // 从 URL 获取项目 ID
+  // 从 URL 获取项目 ID（用于权限检查）
   const urlProjectId = React.useMemo(() => {
-    const match = location.pathname.match(/\/projects\/([^/]+)/);
-    return match ? match[1] : '';
-  }, [location.pathname]);
+    // 从 URL 的 nodeId 参数中获取（可能是项目 ID）
+    const nodeIdParam = new URLSearchParams(location.search).get('nodeId');
+    return nodeIdParam || '';
+  }, [location.search]);
 
   // 从 URL 获取版本参数（用于访问历史版本）
   const versionParam = React.useMemo(() => {
@@ -69,7 +95,12 @@ export const CADEditorDirect: React.FC = () => {
 
   // 加载 CAD 权限
   useEffect(() => {
-    if (!urlProjectId) return;
+    if (!urlProjectId) {
+      setCanSave(false);
+      setCanExport(false);
+      setCanManageExternalRef(false);
+      return;
+    }
 
     const checkPermissions = async () => {
       try {
@@ -78,7 +109,7 @@ export const CADEditorDirect: React.FC = () => {
           projectsApi.checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
           projectsApi.checkPermission(
             urlProjectId,
-            ProjectPermission.CAD_EXPORT
+            ProjectPermission.FILE_DOWNLOAD
           ),
           projectsApi.checkPermission(
             urlProjectId,
@@ -190,25 +221,40 @@ export const CADEditorDirect: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (!fileId) {
-      setError('未找到文件ID');
-      setLoading(false);
-      return;
+  // 隐藏编辑器
+  const hideEditor = useCallback(async () => {
+    setIsActive(false);
+    setLoading(false);
+    setError(null);
+
+    // 调用 mxcadManager 隐藏编辑器
+    try {
+      const { mxcadManager } = await loadMxCADDependencies();
+      mxcadManager.showMxCAD(false);
+    } catch (err) {
+      console.error('隐藏编辑器失败:', err);
     }
+  }, []);
 
-    // 延迟加载，确保页面渲染完成后再加载编辑器
-    const timer = setTimeout(() => {
-      setShouldLoadEditor(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [fileId]);
-
+  // 监听路由变化，控制编辑器显示/隐藏
   useEffect(() => {
-    if (!shouldLoadEditor) return;
+    if (fileId && isAuthenticated) {
+      // 路由匹配 /cad-editor/:fileId 且已登录，显示编辑器
+      setIsActive(true);
+    } else {
+      // 路由不匹配或未登录，隐藏编辑器
+      hideEditor();
+    }
+  }, [fileId, isAuthenticated, hideEditor]);
 
-    const initEditor = async () => {
+  // 当 fileId 变化时加载文件
+  useEffect(() => {
+    if (!fileId || !isActive) return;
+
+    const loadFile = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
         // 获取文件信息
         const fileResponse = await filesApi.get(fileId);
@@ -225,6 +271,7 @@ export const CADEditorDirect: React.FC = () => {
 
         // 检查文件是否在回收站中
         if (file.deletedAt) {
+          setError('文件已被删除');
           setLoading(false);
           return;
         }
@@ -236,7 +283,7 @@ export const CADEditorDirect: React.FC = () => {
         }
 
         // 设置当前文件信息和 navigate 函数（用于返回命令）
-        const { setCurrentFileInfo, setNavigateFunction, setCacheTimestamp } =
+        const { setCurrentFileInfo, setNavigateFunction, setCacheTimestamp, mxcadManager } =
           await import('../services/mxcadManager');
 
         // 获取项目根节点 ID
@@ -285,53 +332,57 @@ export const CADEditorDirect: React.FC = () => {
         if (isInitializedRef.current) {
           // 检查是否是同一个文件 URL（包括版本参数）
           if (loadedFileUrlRef.current === mxcadFileUrl) {
-            // 同一个文件，无需重新加载
+            // 同一个文件，只需显示编辑器
+            mxcadManager.showMxCAD(true);
             setLoading(false);
             return;
           }
 
           // URL 变化了（可能是版本参数变化），需要重新加载文件
-          const { mxcadManager } = await loadMxCADDependencies();
-
           console.log(
             `文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`
           );
 
           // 重新加载 mxweb 文件
           await mxcadManager.openFile(mxcadFileUrl);
+          mxcadManager.showMxCAD(true);
 
           // 更新已加载的文件 URL
           loadedFileUrlRef.current = mxcadFileUrl;
+          currentFileIdRef.current = fileId;
 
           setLoading(false);
           return;
         }
 
         // 按需加载 MxCAD 依赖
-        const { mxcadManager } = await loadMxCADDependencies();
+        const deps = await loadMxCADDependencies();
 
         // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
         await initMxCADConfig(file);
 
         // 第一次初始化时传入正确的 mxweb 文件 URL
-        await mxcadManager.initializeMxCADView(mxcadFileUrl);
-        mxcadManager.showMxCAD(true);
+        await deps.mxcadManager.initializeMxCADView(mxcadFileUrl);
+        deps.mxcadManager.showMxCAD(true);
 
         // 标记为已初始化
         isInitializedRef.current = true;
         loadedFileUrlRef.current = mxcadFileUrl;
+        currentFileIdRef.current = fileId;
 
         setLoading(false);
       } catch (err) {
-        console.log(err);
+        console.error('加载文件失败:', err);
         setError('CAD编辑器初始化失败');
         setLoading(false);
       }
     };
 
-    initEditor();
+    loadFile();
+  }, [fileId, isActive, versionParam, navigate]);
 
-    // 监听导出事件
+  // 监听导出事件
+  useEffect(() => {
     const handleExportEvent = (event: Event) => {
       if (!canExport) {
         showToast('您没有导出图纸的权限', 'warning');
@@ -349,68 +400,9 @@ export const CADEditorDirect: React.FC = () => {
     window.addEventListener('mxcad-export-file', handleExportEvent);
 
     return () => {
-      // 移除事件监听
       window.removeEventListener('mxcad-export-file', handleExportEvent);
-
-      // 注意：不在这里清理 MxCAD，避免 URL 更新时白屏闪烁
-      // MxCAD 是全局单例，会在组件卸载时自动清理
-      // 只清理文件信息
-      if (isInitializedRef.current) {
-        import('../services/mxcadManager').then(({ clearCurrentFileInfo }) => {
-          clearCurrentFileInfo(); // 清除文件信息
-        });
-      }
     };
-  }, [shouldLoadEditor, user, location.search]); // 移除 fileId 依赖
-
-  // 单独的 effect 监听 fileId 变化，只更新 currentFileInfo
-  useEffect(() => {
-    if (!shouldLoadEditor || !isInitializedRef.current) return;
-
-    const updateFileInfo = async () => {
-      try {
-        const fileResponse = await filesApi.get(fileId);
-        const file = fileResponse.data;
-
-        // 检查文件是否在回收站中
-        if (file.deletedAt) {
-          return;
-        }
-
-        if (!file.fileHash) {
-          return;
-        }
-
-        const { setCurrentFileInfo } = await import('../services/mxcadManager');
-
-        // 获取项目根节点 ID
-        let projectId = file.parentId || null;
-        if (!file.isRoot && file.parentId) {
-          try {
-            const rootResponse = await filesApi.getRoot(file.id);
-            if (rootResponse.data?.id) {
-              projectId = rootResponse.data.id;
-            }
-          } catch (error) {
-            console.error('获取根节点失败:', error);
-          }
-        } else if (file.isRoot) {
-          projectId = file.id;
-        }
-
-        setCurrentFileInfo({
-          fileId: file.id,
-          parentId: file.parentId || null,
-          projectId,
-          name: file.name,
-        });
-      } catch (error) {
-        console.error('更新文件信息失败:', error);
-      }
-    };
-
-    updateFileInfo();
-  }, [fileId, shouldLoadEditor]);
+  }, [canExport, showToast]);
 
   // 处理从图库插入文件
   const handleInsertFile = async (file: {
@@ -430,7 +422,10 @@ export const CADEditorDirect: React.FC = () => {
       }
 
       // 获取当前文件信息，确定 uploadTargetNodeId
-      const fileResponse = await filesApi.get(fileId);
+      const currentFileId = currentFileIdRef.current;
+      if (!currentFileId) return;
+
+      const fileResponse = await filesApi.get(currentFileId);
       const currentFile = fileResponse.data as {
         parentId?: string | null;
         id?: string;
@@ -457,6 +452,9 @@ export const CADEditorDirect: React.FC = () => {
 
       // 调用 openUploadedFile 打开文件，保持与 openFile 命令完全一致的行为
       await openUploadedFile(file.nodeId, uploadTargetNodeId);
+      
+      // 更新当前文件 ID
+      currentFileIdRef.current = file.nodeId;
     } catch (error) {
       console.error('打开文件失败:', error);
       showToast(
@@ -503,40 +501,52 @@ export const CADEditorDirect: React.FC = () => {
     }
   };
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <div className="text-red-500 text-lg mb-4">{error}</div>
-        <button
-          onClick={() => navigate('/projects')}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          返回项目列表
-        </button>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="mt-4 text-gray-600">正在加载 CAD 编辑器...</p>
-      </div>
-    );
-  }
+  // 错误处理：返回项目列表
+  const handleGoBack = () => {
+    navigate('/projects');
+  };
 
   return (
-    <SidebarProvider>
-      <CADEditorContent
-        onInsertFile={handleInsertFile}
-        showDownloadFormatModal={showDownloadFormatModal}
-        downloadingFileName={downloadingFileName}
-        downloading={downloading}
-        onCloseDownloadModal={() => setShowDownloadFormatModal(false)}
-        onDownloadWithFormat={handleDownloadWithFormat}
-      />
-    </SidebarProvider>
+    <div
+      className="fixed inset-0 bg-white"
+      style={{
+        visibility: isActive ? 'visible' : 'hidden',
+        zIndex: isActive ? 9999 : -1,
+        pointerEvents: isActive ? 'auto' : 'none',
+      }}
+    >
+      {error && (
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="text-red-500 text-lg mb-4">{error}</div>
+          <button
+            onClick={handleGoBack}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            返回项目列表
+          </button>
+        </div>
+      )}
+
+      {loading && !error && (
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">正在加载 CAD 编辑器...</p>
+        </div>
+      )}
+
+      {!loading && !error && isActive && (
+        <SidebarProvider>
+          <CADEditorContent
+            onInsertFile={handleInsertFile}
+            showDownloadFormatModal={showDownloadFormatModal}
+            downloadingFileName={downloadingFileName}
+            downloading={downloading}
+            onCloseDownloadModal={() => setShowDownloadFormatModal(false)}
+            onDownloadWithFormat={handleDownloadWithFormat}
+          />
+        </SidebarProvider>
+      )}
+    </div>
   );
 };
 
@@ -606,3 +616,5 @@ const CADEditorContent: React.FC<CADEditorContentProps> = ({
     </div>
   );
 };
+
+export default CADEditorDirect;

@@ -11,10 +11,6 @@ import { globalShowToast } from '../contexts/NotificationContext';
 
 // ==================== 类型定义 ====================
 
-interface ViewOptions {
-  rootContainer: HTMLElement;
-  openFile?: string;
-}
 
 interface FileInfo {
   parentId?: string;
@@ -142,9 +138,6 @@ let currentMxwebUrl: string | null = null;
 
 // 当前文件的缓存时间戳（用于清理旧缓存）
 let currentCacheTimestamp: number | undefined = undefined;
-
-// 是否处于只读模式（历史版本访问）
-let isBrowseMode = false;
 
 // React Router navigate 函数（由 CADEditorDirect 组件设置）
 let navigateFunction: ((path: string) => void) | null = null;
@@ -877,12 +870,15 @@ class MxCADContainerManager {
     if (!container) {
       container = document.createElement('div');
       container.id = CSS_CLASSES.GLOBAL_CONTAINER;
+      // 初始状态：隐藏，使用 visibility + z-index 方案保护 WebGL 上下文
       container.style.cssText = `
         position: absolute;
         top: 0;
         left: 300px;
         right: 0;
         bottom: 0;
+        visibility: hidden;
+        z-index: -1;
         pointer-events: none;
       `;
       document.body.appendChild(container);
@@ -905,8 +901,19 @@ class MxCADContainerManager {
 
   showContainer(show: boolean): void {
     if (this.globalContainer) {
-      this.globalContainer.style.display = show ? 'block' : 'none';
-      this.globalContainer.style.pointerEvents = show ? 'auto' : 'none';
+      // 使用 visibility + z-index 方案，保护 WebGL 上下文不被销毁
+      // visibility: hidden 保持元素在渲染树中，WebGL 上下文不会丢失
+      // z-index 控制层级，隐藏时放到最底层避免遮挡其他元素
+      // pointer-events 禁用交互
+      if (show) {
+        this.globalContainer.style.visibility = 'visible';
+        this.globalContainer.style.zIndex = '9999';
+        this.globalContainer.style.pointerEvents = 'auto';
+      } else {
+        this.globalContainer.style.visibility = 'hidden';
+        this.globalContainer.style.zIndex = '-1';
+        this.globalContainer.style.pointerEvents = 'none';
+      }
     }
   }
 
@@ -1087,8 +1094,6 @@ class MxCADInstanceManager {
           }
         }
       }
-
-      this.mxcadView?.mxcad.setBrowse(isBrowseMode);
     };
 
     this.mxcadView?.mxcad.on('openFileComplete', onOpen);
@@ -1099,11 +1104,14 @@ class MxCADInstanceManager {
    * @param openFile 初始文件 URL
    * @returns 视图选项对象
    */
-  private buildViewOptions(openFile?: string): ViewOptions {
+  private buildViewOptions(openFile?: string) {
     const containerManager = MxCADContainerManager.getInstance();
+    const token = localStorage.getItem('accessToken');
+
     return {
       rootContainer: containerManager.getContainer(),
       ...(openFile && { openFile }),
+      ...(token && { requestHeaders: { Authorization: `Bearer ${token}` } })
     };
   }
 
@@ -1164,7 +1172,6 @@ class MxCADInstanceManager {
       }
 
       const token = localStorage.getItem('accessToken');
-
       for (
         let attempt = 0;
         attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
@@ -1359,10 +1366,6 @@ export class MxCADManager {
 
   reset(): void {
     this.instanceManager.reset();
-  }
-
-  setBrowse(is: boolean) {
-    isBrowseMode = is;
   }
 
   /**

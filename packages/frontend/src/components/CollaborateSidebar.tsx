@@ -15,7 +15,6 @@ export const CollaborateSidebar: React.FC = () => {
   const { showToast } = useNotification();
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
-    console.log(APP_COOPERATE_URL);
     cooperate.init({
       server_addres: APP_COOPERATE_URL,
     });

@@ -29,7 +29,7 @@ interface AuthContextType {
     username: string;
     nickname?: string;
   }) => Promise<{ message: string; email: string }>;
-  verifyEmailAndLogin: (token: string) => Promise<unknown>;
+  verifyEmailAndLogin: (email: string, code: string) => Promise<unknown>;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
@@ -157,8 +157,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
     []
   );
-  const verifyEmailAndLogin = useCallback(async (token: string) => {
-    const response = await getApiClient().AuthController_verifyEmail({ token });
+  const verifyEmailAndLogin = useCallback(async (email: string, code: string) => {
+    const response = await getApiClient().AuthController_verifyEmail(null, { email, code });
     // 注意：现在验证邮箱不再返回 tokens，只是验证成功
     // 用户需要重新登录
     return response.data;

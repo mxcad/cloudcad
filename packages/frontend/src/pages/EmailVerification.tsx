@@ -63,8 +63,7 @@ export const EmailVerification: React.FC = () => {
     setError(null);
 
     try {
-      // 将 email 和 code 组合成 token 格式（与后端 API 保持一致）
-      await verifyEmailAndLogin(code);
+      await verifyEmailAndLogin(email, code);
       setSuccess(true);
       setTimeout(() => {
         navigate('/login', { replace: true });

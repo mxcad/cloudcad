@@ -524,7 +524,7 @@ export const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                        <Shield size={12} /> {getRoleName(user.role.name || '')}
+                        <Shield size={12} /> {getRoleDisplayName(user.role.name, user.role.isSystem)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

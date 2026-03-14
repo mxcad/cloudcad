@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-03-09T04:12:29.386Z
+ * 生成时间: 2026-03-09T06:03:14.985Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -54,7 +54,6 @@ export const ProjectPermission = {
   FILE_MOVE: 'FILE_MOVE',
   FILE_COPY: 'FILE_COPY',
   CAD_SAVE: 'CAD_SAVE',
-  CAD_EXPORT: 'CAD_EXPORT',
   CAD_EXTERNAL_REFERENCE: 'CAD_EXTERNAL_REFERENCE',
   GALLERY_ADD: 'GALLERY_ADD',
   VERSION_READ: 'VERSION_READ',
@@ -112,7 +111,6 @@ export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
   'FILE_TRASH_MANAGE': ["FILE_OPEN"],
   'FILE_DOWNLOAD': ["FILE_OPEN"],
   'CAD_SAVE': ["FILE_OPEN"],
-  'CAD_EXPORT': ["FILE_OPEN"],
   'CAD_EXTERNAL_REFERENCE': ["FILE_OPEN"],
   'GALLERY_ADD': ["FILE_OPEN"],
   'VERSION_READ': ["FILE_OPEN"],
@@ -190,7 +188,6 @@ export const PERMISSION_GROUPS = {
       label: 'CAD 图纸权限',
       items: [
         { key: 'CAD_SAVE', label: '保存图纸' },
-        { key: 'CAD_EXPORT', label: '导出图纸' },
         { key: 'CAD_EXTERNAL_REFERENCE', label: '管理外部参照' },
       ],
     },
