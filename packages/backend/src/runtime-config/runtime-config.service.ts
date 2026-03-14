@@ -1,6 +1,12 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import {
+  Injectable,
+  OnModuleInit,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
+import { DatabaseService } from '../database/database.service';
 import {
   RUNTIME_CONFIG_DEFINITIONS,
   DEFAULT_RUNTIME_CONFIGS,
@@ -17,8 +23,8 @@ const CACHE_TTL = 3600; // 1 小时
 @Injectable()
 export class RuntimeConfigService implements OnModuleInit {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
+    private readonly prisma: DatabaseService,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
   /**
@@ -79,7 +85,7 @@ export class RuntimeConfigService implements OnModuleInit {
 
     // 4. 解析值并写入缓存
     const value = this.parseValue(config.value, config.type as RuntimeConfigValueType);
-    await this.redis.set(`${CACHE_PREFIX}${key}`, JSON.stringify(value), 'EX', CACHE_TTL);
+    await this.redis.setex(`${CACHE_PREFIX}${key}`, CACHE_TTL, JSON.stringify(value));
 
     return value as T;
   }
@@ -95,7 +101,7 @@ export class RuntimeConfigService implements OnModuleInit {
   ): Promise<void> {
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     if (!def) {
-      throw new Error(`未知的配置项: ${key}`);
+      throw new BadRequestException(`未知的配置项: ${key}`);
     }
 
     // 获取旧值用于日志
@@ -163,7 +169,7 @@ export class RuntimeConfigService implements OnModuleInit {
     }
 
     // 4. 写入缓存
-    await this.redis.set(`${CACHE_PREFIX}all`, JSON.stringify(result), 'EX', CACHE_TTL);
+    await this.redis.setex(`${CACHE_PREFIX}all`, CACHE_TTL, JSON.stringify(result));
 
     return result;
   }
@@ -194,7 +200,7 @@ export class RuntimeConfigService implements OnModuleInit {
   async resetToDefault(key: string, operatorId?: string, operatorIp?: string): Promise<void> {
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     if (!def) {
-      throw new Error(`未知的配置项: ${key}`);
+      throw new BadRequestException(`未知的配置项: ${key}`);
     }
 
     await this.set(key, def.defaultValue, operatorId, operatorIp);
