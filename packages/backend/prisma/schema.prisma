@@ -337,6 +337,10 @@ enum Permission {
   // ========== 系统管理 ==========
   SYSTEM_ADMIN
   SYSTEM_MONITOR
+
+  // ========== 运行时配置管理 ==========
+  SYSTEM_CONFIG_READ
+  SYSTEM_CONFIG_WRITE
 }
 
 // 项目权限枚举（与系统权限完全解耦）
@@ -499,4 +503,38 @@ model PolicyPermission {
   @@unique([policyId, permission])
   @@index([permission])
   @@map("policy_permissions")
+}
+
+// ============ 运行时配置模块 ============
+
+// 运行时配置表
+model RuntimeConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique  // 配置键名
+  value       String            // 配置值（JSON 序列化）
+  type        String            // string | number | boolean
+  category    String            // 分类：mail, support, file, user, system
+  description String?           // 配置说明
+  isPublic    Boolean @default(false)  // 是否公开给前端
+  updatedBy   String?           // 最后修改人 ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@map("runtime_configs")
+}
+
+// 运行时配置日志表
+model RuntimeConfigLog {
+  id        String   @id @default(cuid())
+  key       String   // 配置键名
+  oldValue  String?  // 旧值
+  newValue  String   // 新值
+  operatorId String? // 操作人 ID
+  operatorIp String? // 操作 IP
+  createdAt DateTime @default(now())
+
+  @@index([key])
+  @@index([createdAt])
+  @@map("runtime_config_logs")
 }
