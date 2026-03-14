@@ -146,22 +146,29 @@ run_migrations() {
     # 确保 prisma.config.ts 可以读取环境变量
     export DATABASE_URL="${DATABASE_URL}"
     
-    if [ "${DEV_MODE:-false}" = "true" ] || [ "${NODE_ENV:-production}" = "development" ]; then
-        # 开发模式：可以重置数据库（方便开发调试）
-        log_info "开发模式：同步数据库结构..."
-        npx prisma db push --accept-data-loss 2>/dev/null || npx prisma db push
-    else
-        # 生产模式：优先尝试 migrate deploy
-        log_info "生产模式：应用数据库迁移..."
-        if npx prisma migrate deploy --schema=prisma/schema.prisma 2>/dev/null; then
-            log_info "数据库迁移完成"
-        else
-            log_warn "migrate deploy 失败，尝试 db push..."
-            npx prisma db push --accept-data-loss || {
-                log_error "数据库同步失败"
-                return 1
-            }
+    # 检查是否存在 migrations 目录且有迁移文件
+    local has_migrations=false
+    if [ -d "prisma/migrations" ]; then
+        # 检查是否有实际的迁移文件（不只是目录存在）
+        if [ "$(find prisma/migrations -name '*.sql' 2>/dev/null | wc -l)" -gt 0 ]; then
+            has_migrations=true
         fi
+    fi
+    
+    if [ "$has_migrations" = "true" ]; then
+        # 有迁移文件，使用 migrate deploy
+        log_info "检测到迁移文件，执行 migrate deploy..."
+        npx prisma migrate deploy --schema=prisma/schema.prisma || {
+            log_error "数据库迁移失败"
+            return 1
+        }
+    else
+        # 没有迁移文件，使用 db push 同步 schema
+        log_info "无迁移文件，使用 db push 同步数据库结构..."
+        npx prisma db push --accept-data-loss || {
+            log_error "数据库同步失败"
+            return 1
+        }
     fi
     
     log_info "数据库迁移完成"
@@ -185,12 +192,12 @@ start_nginx() {
 # ==================== 启动协同服务 ====================
 
 start_cooperate() {
-    local cooperate_script="/app/packages/mxcadassembly/start-cooperate.js"
+    local cooperate_script="/app/runtime/scripts/cooperate-manager.js"
     
     if [ -f "$cooperate_script" ]; then
         log_info "启动协同服务..."
-        cd /app/packages/mxcadassembly
-        node start-cooperate.js &
+        cd /app/runtime/scripts
+        node cooperate-manager.js &
         log_info "协同服务已启动"
     else
         log_warn "协同服务脚本不存在: $cooperate_script"

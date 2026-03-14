@@ -5,6 +5,8 @@
 #
 # 注意: 生产环境必须配置 JWT_SECRET 和 DB_PASSWORD！
 
+name: cloudcad
+
 services:
   # PostgreSQL 数据库
   postgres:
@@ -18,7 +20,6 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../packages/backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - '${DB_PORT:-5432}:5432'
     healthcheck:
@@ -90,6 +91,9 @@ services:
       MXCAD_UPLOAD_PATH: /app/uploads
       MXCAD_TEMP_PATH: /app/temp
       MXCAD_ASSEMBLY_PATH: /app/runtime/linux/mxcad/mxcadassembly
+      MXCAD_FONTS_PATH: /app/runtime/linux/mxcad/fonts
+      # 前端字体目录（nginx 静态资源）
+      FRONTEND_FONTS_PATH: /var/www/html/mxcadAppAssets/fonts
       # 邮件配置
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}

@@ -18,7 +18,12 @@ COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
 
 # 安装所有依赖（单独一层，代码改动不会触发重新安装）
-RUN pnpm install --frozen-lockfile
+# --ignore-scripts 跳过其他包的 postinstall，避免本地依赖问题
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 单独运行 mxcad-app postinstall 解压 .gz 文件
+# pnpm 使用符号链接，需要用 find 定位实际路径
+RUN find node_modules -name "postinstall.js" -path "*mxcad-app*" -exec node {} \; || true
 
 # 复制 Prisma schema（用于生成 Prisma Client）
 COPY packages/backend/prisma ./packages/backend/prisma
@@ -92,7 +97,7 @@ COPY packages/backend/prisma ./packages/backend/prisma
 COPY packages/backend/prisma.config.ts ./packages/backend/
 
 # 安装生产依赖 + Prisma CLI（用于 migrate deploy）
-RUN pnpm install --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile
+RUN pnpm install --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile --ignore-scripts
 
 # 生成 Prisma Client
 RUN pnpm --filter backend exec prisma generate
@@ -102,7 +107,7 @@ RUN pnpm --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile 
     pnpm install --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile --prod
 
 # 重新安装 prisma 和 tsx（migrate deploy 需要）
-RUN pnpm --filter backend add prisma@^7.1.0 tsx
+RUN pnpm --filter backend add prisma@^7.1.0 tsx --ignore-scripts
 
 # 复制 svnVersionTool 源代码
 COPY packages/svnVersionTool ./packages/svnVersionTool
@@ -111,9 +116,11 @@ COPY packages/svnVersionTool ./packages/svnVersionTool
 COPY --from=backend-builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=frontend-builder /app/packages/frontend/dist /var/www/html
 
-# 复制 mxcadassembly (只保留 Linux 版本)
-COPY packages/mxcadassembly/linux ./packages/mxcadassembly/linux
-COPY packages/mxcadassembly/start-cooperate.js ./packages/mxcadassembly/start-cooperate.js
+# 复制 mxcadassembly (Linux 运行时)
+COPY runtime/linux/mxcad ./runtime/linux/mxcad
+
+# 复制协同服务管理脚本
+COPY runtime/scripts/cooperate-manager.js ./runtime/scripts/cooperate-manager.js
 
 # 复制 nginx 配置
 COPY docker/nginx/nginx.conf /etc/nginx/http.d/default.conf
@@ -127,7 +134,7 @@ EXPOSE 80 3001 3000
 
 # 健康检查（增加超时时间，适应启动较慢的场景）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
-    CMD curl -f http://localhost:3001/api/health || exit 1
+    CMD curl -f http://localhost:3001/api/health/live || exit 1
 
 # 启动脚本
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
