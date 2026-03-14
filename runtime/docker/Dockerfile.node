@@ -1,0 +1,49 @@
+# Node.js 20 glibc 版本提取
+# 基于 Debian Bullseye (glibc 2.31)，兼容性强
+# 保留完整目录结构，确保所有工具正常工作
+#
+# 构建命令：
+#   docker build -o ../linux/node -f Dockerfile.node .
+#
+# 注意：使用直接安装的 pnpm 而非 corepack，确保离线环境可用
+
+FROM node:20-bullseye-slim AS builder
+
+# 安装 pnpm 和 pm2（直接安装，不用 corepack，支持离线环境）
+RUN npm install -g pnpm@9.15.4 pm2
+
+# 创建提取目录
+WORKDIR /extract
+
+# 收集所有依赖库
+RUN apt-get update && apt-get install -y binutils && \
+    mkdir -p bin lib node_modules && \
+    cp /usr/local/bin/node bin/ && \
+    cp -rL /usr/local/lib/node_modules/* node_modules/ && \
+    chmod -R 755 bin lib node_modules
+
+# 创建启动脚本（使用直接安装的 pnpm）
+RUN printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/npm/bin/npm-cli.js" "$@"\n' > bin/npm && chmod +x bin/npm && \
+    printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/npm/bin/npx-cli.js" "$@"\n' > bin/npx && chmod +x bin/npx && \
+    printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/corepack/dist/corepack.js" "$@"\n' > bin/corepack && chmod +x bin/corepack && \
+    printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pnpm/bin/pnpm.cjs" "$@"\n' > bin/pnpm && chmod +x bin/pnpm && \
+    printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pnpm/bin/pnpx.cjs" "$@"\n' > bin/pnpx && chmod +x bin/pnpx && \
+    printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pm2/bin/pm2" "$@"\n' > bin/pm2 && chmod +x bin/pm2 && \
+    printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pm2/bin/pm2-runtime" "$@"\n' > bin/pm2-runtime && chmod +x bin/pm2-runtime
+
+# 收集依赖库
+RUN ldd /usr/local/bin/node 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do \
+        [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
+    done && \
+    cp /lib64/ld-linux-x86-64.so.2 lib/ 2>/dev/null || cp /lib/ld-linux-x86-64.so.2 lib/ 2>/dev/null || true
+
+# 确保所有文件都有正确权限
+RUN find /extract -type f -exec chmod 644 {} \; && \
+    find /extract -type d -exec chmod 755 {} \; && \
+    chmod 755 /extract/bin/node && \
+    find /extract/bin -type f -exec chmod 755 {} \;
+
+# 输出阶段 - 使用 alpine 以便容器可以运行
+FROM alpine:latest AS output
+COPY --from=builder /extract/ /output/
+CMD ["cp", "-r", "/output/.", "/dest/"]

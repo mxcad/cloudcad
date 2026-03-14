@@ -1,0 +1,39 @@
+# Node.js 完整验证 Dockerfile (glibc 版本)
+# 测试所有工具：node, npm, npx, pnpm, pm2
+
+FROM debian:bullseye-slim
+
+RUN mkdir -p /opt/node
+COPY --from=node / /opt/node/
+
+ENV PATH="/opt/node/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/node/lib"
+# 禁用 Corepack，使用本地安装的 pnpm
+ENV COREPACK_ENABLE=0
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN echo '#!/bin/sh' > /verify.sh && \
+    echo 'echo "=== Node.js 完整工具验证 (glibc) ==="' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "1. node --version:"' >> /verify.sh && \
+    echo '/opt/node/bin/node --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "2. npm --version:"' >> /verify.sh && \
+    echo '/opt/node/bin/npm --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "3. npx --version:"' >> /verify.sh && \
+    echo '/opt/node/bin/npx --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "4. pnpm --version:"' >> /verify.sh && \
+    echo '/opt/node/bin/pnpm --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "5. pm2 --version:"' >> /verify.sh && \
+    echo '/opt/node/bin/pm2 --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "6. 运行 JS 代码:"' >> /verify.sh && \
+    echo '/opt/node/bin/node -e "console.log('\''Hello portable Node.js!'\'');"' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "=== 所有工具验证通过! ==="' >> /verify.sh && \
+    chmod +x /verify.sh
+
+CMD ["/verify.sh"]

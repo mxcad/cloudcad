@@ -5338,37 +5338,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  },
-                  "hash": {
-                    "type": "string",
-                    "description": "文件 MD5 哈希值"
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "原始文件名"
-                  },
-                  "size": {
-                    "type": "number",
-                    "description": "文件总大小（字节）"
-                  },
-                  "chunk": {
-                    "type": "number",
-                    "description": "分片索引（分片上传时必填）"
-                  },
-                  "chunks": {
-                    "type": "number",
-                    "description": "总分片数量（分片上传时必填）"
-                  },
-                  "nodeId": {
-                    "type": "string",
-                    "description": "节点ID（项目根目录或文件夹的 FileSystemNode ID）"
-                  }
-                }
+                "$ref": "#/components/schemas/UploadFilesDto"
               }
             }
           }
@@ -5403,6 +5373,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMxwebDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "保存 mxweb 文件到指定节点",
@@ -5567,6 +5547,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadThumbnailDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "上传成功",
@@ -7682,7 +7672,6 @@
                 "FILE_DOWNLOAD",
                 "FILE_SHARE",
                 "CAD_SAVE",
-                "CAD_EXPORT",
                 "CAD_EXTERNAL_REFERENCE",
                 "GALLERY_ADD",
                 "VERSION_READ",
@@ -7833,7 +7822,6 @@
               "FILE_DOWNLOAD",
               "FILE_SHARE",
               "CAD_SAVE",
-              "CAD_EXPORT",
               "CAD_EXTERNAL_REFERENCE",
               "GALLERY_ADD",
               "VERSION_READ",
@@ -9180,6 +9168,61 @@
           "message"
         ]
       },
+      "UploadFilesDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "上传的文件",
+            "format": "binary"
+          },
+          "hash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值"
+          },
+          "name": {
+            "type": "string",
+            "description": "原始文件名"
+          },
+          "size": {
+            "type": "number",
+            "description": "文件总大小（字节）"
+          },
+          "chunk": {
+            "type": "number",
+            "description": "分片索引（分片上传时必填）"
+          },
+          "chunks": {
+            "type": "number",
+            "description": "总分片数量（分片上传时必填）"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "节点ID（项目根目录或文件夹的 FileSystemNode ID）"
+          },
+          "srcDwgNodeId": {
+            "type": "string",
+            "description": "源图纸节点 ID（外部参照上传时使用）"
+          },
+          "id": {
+            "type": "string",
+            "description": "文件ID（前端传递的标识符）"
+          },
+          "type": {
+            "type": "string",
+            "description": "文件类型（如 dwg、dxf）"
+          },
+          "lastModifiedDate": {
+            "type": "string",
+            "description": "文件最后修改日期"
+          }
+        },
+        "required": [
+          "hash",
+          "name",
+          "size"
+        ]
+      },
       "UploadFileResponseDto": {
         "type": "object",
         "properties": {
@@ -9192,6 +9235,24 @@
             "description": "是否为图纸文件"
           }
         }
+      },
+      "SaveMxwebDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "mxweb 文件",
+            "format": "binary"
+          },
+          "commitMessage": {
+            "type": "string",
+            "description": "提交信息",
+            "example": "保存图纸修改"
+          }
+        },
+        "required": [
+          "file"
+        ]
       },
       "SaveMxwebResponseDto": {
         "type": "object",
@@ -9235,6 +9296,7 @@
           }
         },
         "required": [
+          "file",
           "nodeId",
           "ext_ref_file"
         ]
@@ -9261,6 +9323,19 @@
           "code",
           "message",
           "exists"
+        ]
+      },
+      "UploadThumbnailDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "缩略图文件",
+            "format": "binary"
+          }
+        },
+        "required": [
+          "file"
         ]
       },
       "UploadThumbnailDataDto": {
@@ -9714,7 +9789,6 @@
           "FILE_DOWNLOAD",
           "FILE_SHARE",
           "CAD_SAVE",
-          "CAD_EXPORT",
           "CAD_EXTERNAL_REFERENCE",
           "GALLERY_ADD",
           "VERSION_READ",
@@ -9759,7 +9833,6 @@
           "FILE_DOWNLOAD",
           "FILE_SHARE",
           "CAD_SAVE",
-          "CAD_EXPORT",
           "CAD_EXTERNAL_REFERENCE",
           "GALLERY_ADD",
           "VERSION_READ",

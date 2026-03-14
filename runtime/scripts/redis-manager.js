@@ -5,6 +5,7 @@
  */
 
 const { spawn } = require('child_process');
+const net = require('net');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -22,6 +23,9 @@ const PLATFORM_DIR = IS_WINDOWS
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'offline-data');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
+
+// Redis 端口
+const REDIS_PORT = 6379;
 
 // 可执行文件路径
 const redisServer = USE_RUNTIME
@@ -45,51 +49,175 @@ function log(level, message) {
   console.log(`${colors[level] || ''}[REDIS-${level.toUpperCase()}]${colors.reset} ${message}`);
 }
 
-function main() {
-  log('info', '启动 Redis...');
-  
-  const redisProcess = spawn(redisServer, [
-    '--port', '6379',
-    '--dir', REDIS_DATA_DIR,
-    '--appendonly', 'yes'
-  ], {
-    stdio: 'inherit',
-    windowsHide: true,
-    shell: IS_WINDOWS,
-    detached: false
+// 检查 Redis 是否已在运行
+function isRunning() {
+  return new Promise((resolve) => {
+    const socket = net.connect(REDIS_PORT, 'localhost');
+    let resolved = false;
+    
+    socket.on('connect', () => {
+      if (!resolved) {
+        resolved = true;
+        socket.end();
+        resolve(true);
+      }
+    });
+    
+    socket.on('error', () => {
+      if (!resolved) {
+        resolved = true;
+        resolve(false);
+      }
+    });
+    
+    // 超时处理
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    }, 2000);
   });
-  
-  redisProcess.on('error', (err) => {
-    log('error', `启动失败: ${err.message}`);
-    process.exit(1);
-  });
-  
-  redisProcess.on('exit', (code, signal) => {
-    if (signal) {
-      log('info', `进程被信号 ${signal} 终止`);
-    } else if (code !== 0) {
-      log('error', `进程异常退出，退出码: ${code}`);
-      process.exit(code || 1);
-    } else {
-      log('info', '服务已正常停止');
+}
+
+// 启动 Redis
+function startRedis() {
+  return new Promise((resolve, reject) => {
+    log('info', '启动 Redis...');
+    
+    const redisProcess = spawn(redisServer, [
+      '--port', String(REDIS_PORT),
+      '--dir', REDIS_DATA_DIR,
+      '--appendonly', 'yes'
+    ], {
+      stdio: 'inherit',
+      windowsHide: true,
+      shell: IS_WINDOWS,
+      detached: false
+    });
+    
+    redisProcess.on('error', (err) => {
+      log('error', `启动失败: ${err.message}`);
+      reject(err);
+    });
+    
+    // 给 Redis 一点时间启动，然后检查端口
+    setTimeout(async () => {
+      if (await isRunning()) {
+        log('info', 'Redis 启动成功');
+        resolve(redisProcess);
+      } else {
+        reject(new Error('Redis 启动超时'));
+      }
+    }, 2000);
+    
+    redisProcess.on('exit', (code, signal) => {
+      if (signal) {
+        log('info', `进程被信号 ${signal} 终止`);
+      } else if (code !== 0) {
+        log('error', `进程异常退出，退出码: ${code}`);
+      } else {
+        log('info', '服务已正常停止');
+      }
+    });
+    
+    // 优雅退出
+    const shutdown = (signal) => {
+      log('info', `收到 ${signal} 信号，正在停止...`);
+      redisProcess.kill('SIGTERM');
+      setTimeout(() => {
+        redisProcess.kill('SIGKILL');
+        process.exit(0);
+      }, 5000);
+    };
+    
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    if (IS_WINDOWS) {
+      process.on('SIGBREAK', () => shutdown('SIGBREAK'));
     }
   });
-  
-  // 优雅退出
-  const shutdown = (signal) => {
-    log('info', `收到 ${signal} 信号，正在停止...`);
-    redisProcess.kill('SIGTERM');
-    setTimeout(() => {
-      redisProcess.kill('SIGKILL');
-      process.exit(0);
+}
+
+async function main() {
+  // 检查是否已在运行
+  if (await isRunning()) {
+    log('info', `Redis 已在运行（端口 ${REDIS_PORT}）`);
+    log('info', '保持进程存活以维持 PM2 状态...');
+    
+    // 保持进程存活，定期检查状态
+    const checkInterval = setInterval(async () => {
+      if (!await isRunning()) {
+        log('warn', 'Redis 进程已退出，尝试重启...');
+        clearInterval(checkInterval);
+        try {
+          await startRedis();
+          // 重启后重新设置检查
+        } catch (err) {
+          log('error', 'Redis 重启失败');
+          process.exit(1);
+        }
+      }
     }, 5000);
-  };
+    
+    // 防止进程退出
+    process.stdin.resume();
+    return;
+  }
   
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  if (IS_WINDOWS) {
-    process.on('SIGBREAK', () => shutdown('SIGBREAK'));
+  // 启动 Redis
+  try {
+    await startRedis();
+  } catch (err) {
+    process.exit(1);
   }
 }
 
-main();
+// 停止 Redis
+async function stopRedis() {
+  if (!await isRunning()) {
+    log('info', 'Redis 未运行');
+    return true;
+  }
+  
+  log('info', '停止 Redis...');
+  
+  const redisCli = USE_RUNTIME
+    ? (IS_WINDOWS
+        ? path.join(PLATFORM_DIR, 'redis', 'redis-cli.exe')
+        : path.join(PLATFORM_DIR, 'redis', 'redis-cli'))
+    : 'redis-cli';
+  
+  const result = spawnSync(redisCli, ['shutdown', 'nosave'], {
+    stdio: 'pipe',
+    shell: IS_WINDOWS,
+    timeout: 5000,
+  });
+  
+  // 等待一下再检查
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  if (!await isRunning()) {
+    log('info', 'Redis 已停止');
+    return true;
+  }
+  
+  log('warn', 'Redis 停止可能失败');
+  return false;
+}
+
+// 命令行支持
+const args = process.argv.slice(2);
+const command = args[0];
+
+if (command === 'status') {
+  isRunning().then(running => {
+    console.log(running ? 'running' : 'stopped');
+    process.exit(running ? 0 : 1);
+  });
+} else if (command === 'stop') {
+  stopRedis();
+} else {
+  main();
+}

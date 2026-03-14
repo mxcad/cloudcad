@@ -189,3 +189,31 @@ export function checkSvnAvailableSync(): SvnCheckResult;
  * @returns 平台信息对象
  */
 export function getPlatformInfo(): PlatformInfo;
+
+/**
+ * 设置 SVN 属性
+ * @param targetPath - 目标路径
+ * @param propertyName - 属性名称
+ * @param propertyValue - 属性值
+ * @param callback - 回调函数
+ */
+export function svnPropset(
+  targetPath: string,
+  propertyName: string,
+  propertyValue: string,
+  callback: SvnCallback
+): void;
+
+/**
+ * 更新 SVN 工作副本
+ * @param targetPath - 目标路径
+ * @param username - 用户名（可选）
+ * @param password - 密码（可选）
+ * @param callback - 回调函数
+ */
+export function svnUpdate(
+  targetPath: string,
+  username: string | null,
+  password: string | null,
+  callback: SvnCallback
+): void;

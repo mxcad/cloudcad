@@ -1,0 +1,55 @@
+# PostgreSQL 15 glibc 版本提取
+# 基于 Debian Bullseye (glibc 2.31)，兼容性强
+# 用途：提取 Linux 版本的 PostgreSQL 数据库及其所有依赖
+#
+# 构建命令：
+#   docker build -o ../linux/postgresql -f Dockerfile.postgres .
+
+FROM postgres:15-bullseye AS builder
+
+# 创建提取目录
+WORKDIR /extract
+
+# 收集所有依赖库
+RUN apt-get update && apt-get install -y binutils && \
+    # 创建目录结构
+    mkdir -p bin lib && \
+    # 复制 PostgreSQL 二进制文件 (在 postgres 镜像中位于 /usr/lib/postgresql/15/bin/)
+    cp /usr/lib/postgresql/15/bin/postgres bin/ && \
+    cp /usr/lib/postgresql/15/bin/pg_ctl bin/ && \
+    cp /usr/lib/postgresql/15/bin/pg_dump bin/ && \
+    cp /usr/lib/postgresql/15/bin/pg_restore bin/ && \
+    cp /usr/lib/postgresql/15/bin/pg_isready bin/ && \
+    cp /usr/lib/postgresql/15/bin/psql bin/ 2>/dev/null || true && \
+    cp /usr/lib/postgresql/15/bin/createdb bin/ 2>/dev/null || true && \
+    cp /usr/lib/postgresql/15/bin/dropdb bin/ 2>/dev/null || true && \
+    cp /usr/lib/postgresql/15/bin/initdb bin/ 2>/dev/null || true && \
+    cp /usr/lib/postgresql/15/bin/pg_basebackup bin/ 2>/dev/null || true && \
+    # 复制 PostgreSQL 库文件
+    cp -r /usr/lib/postgresql/15/lib lib/postgresql 2>/dev/null || true && \
+    cp /usr/lib/x86_64-linux-gnu/libpq.so* lib/ 2>/dev/null || true && \
+    # 使用 ldd 收集所有依赖库
+    for binfile in bin/*; do \
+        if [ -f "$binfile" ] && [ -x "$binfile" ]; then \
+            ldd "$binfile" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do \
+                [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
+            done; \
+        fi; \
+    done && \
+    # 收集 PostgreSQL 库的依赖
+    for libfile in lib/postgresql/*.so lib/*.so*; do \
+        if [ -f "$libfile" ]; then \
+            ldd "$libfile" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read dep; do \
+                [ -f "$dep" ] && cp -L "$dep" lib/ 2>/dev/null || true; \
+            done; \
+        fi; \
+    done && \
+    # 复制动态链接器
+    cp /lib64/ld-linux-x86-64.so.2 lib/ 2>/dev/null || cp /lib/ld-linux-x86-64.so.2 lib/ 2>/dev/null || true && \
+    # 设置权限
+    chmod -R 755 bin lib
+
+# 输出阶段 - 使用 alpine 以便容器可以运行
+FROM alpine:latest AS output
+COPY --from=builder /extract/ /output/
+CMD ["cp", "-r", "/output/.", "/dest/"]

@@ -17,9 +17,12 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// 首先设置离线环境（必须在其他模块加载前执行）
-const { setup: setupOffline } = require('./setup-offline');
-setupOffline(true); // 静默模式
+// 导入离线环境设置函数（异步）
+const { setup: setupOffline, checkPrismaClientExists } = require('./setup-offline');
+
+// 判断是否是部署模式
+const args = process.argv.slice(2);
+const isDeployMode = args[0] === 'deploy';
 
 // ==================== 配置 ====================
 
@@ -49,6 +52,13 @@ const PM2_JS = USE_RUNTIME
       ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2')
       : path.join(PLATFORM_DIR, 'node', 'bin', 'node_modules', 'pm2', 'bin', 'pm2'))
   : null;
+
+// PM2 包装脚本路径（确保 PM2 daemon 能找到 node）
+const PM2_CMD = USE_RUNTIME
+  ? (IS_WINDOWS
+      ? path.join(PROJECT_ROOT, 'pm2.cmd')
+      : path.join(PROJECT_ROOT, 'pm2'))
+  : 'pm2';
 
 const PNPM_JS = USE_RUNTIME
   ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'corepack', 'dist', 'pnpm.js')
@@ -109,15 +119,36 @@ function runPnpm(args, options = {}) {
 }
 
 function runPm2(args, options = {}) {
+  // 优先使用 pm2.cmd/pm2 包装脚本，确保 PM2 daemon 能找到 node
+  // 包装脚本会设置 PATH，daemon 继承后能正确 spawn('node', ...)
+  if (PM2_CMD && fs.existsSync(PM2_CMD)) {
+    return runCommand(PM2_CMD, args, {
+      ...options,
+      env: {
+        ...options.env,
+        PM2_HOME,
+      },
+    });
+  }
+
+  // 回退：直接使用 node 运行 pm2.js（需要手动设置 PATH）
   if (!PM2_JS || !fs.existsSync(PM2_JS)) {
     log('red', '[错误] PM2 不可用');
     return false;
   }
+
+  const nodeDir = path.dirname(NODE_EXE);
+  const existingPath = process.env.PATH || '';
+  const newPath = USE_RUNTIME
+    ? (IS_WINDOWS ? `${nodeDir};${existingPath}` : `${nodeDir}:${existingPath}`)
+    : existingPath;
+
   return runCommand(NODE_EXE, [PM2_JS, ...args], {
     ...options,
     env: {
       ...options.env,
       PM2_HOME,
+      PATH: newPath,
     },
   });
 }
@@ -149,23 +180,19 @@ function runInNewWindow(title, command, args) {
 async function startInfrastructure() {
   log('blue', '[1/3] 启动基础服务...');
   
+  if (!PM2_JS || !fs.existsSync(PM2_JS) || !USE_RUNTIME) {
+    log('red', '[错误] PM2 不可用，请确保 runtime 环境已正确安装');
+    return false;
+  }
+  
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
   
-  if (PM2_JS && fs.existsSync(PM2_JS) && USE_RUNTIME) {
-    // 先停止旧进程
-    runPm2(['delete', 'all'], { silent: true });
-    // 启动基础服务
-    if (!runPm2(['start', ecosystemPath, '--only', 'postgresql,redis,cooperate'])) {
-      log('red', '[错误] 基础服务启动失败');
-      return false;
-    }
-  } else {
-    // 传统模式
-    const startScript = path.join(RUNTIME_DIR, 'scripts', 'start.js');
-    if (!runCommand(NODE_EXE, [startScript])) {
-      log('red', '[错误] 基础服务启动失败');
-      return false;
-    }
+  // 先停止旧进程
+  runPm2(['delete', 'all'], { silent: true });
+  // 启动基础服务
+  if (!runPm2(['start', ecosystemPath, '--only', 'postgresql,redis,cooperate'])) {
+    log('red', '[错误] 基础服务启动失败');
+    return false;
   }
   
   log('green', '[✓] 基础服务已启动');
@@ -175,14 +202,59 @@ async function startInfrastructure() {
 async function stopInfrastructure() {
   log('blue', '停止所有服务...');
   
-  if (PM2_JS && fs.existsSync(PM2_JS)) {
-    runPm2(['stop', 'all']);
-    runPm2(['delete', 'all'], { silent: true });
+  // 1. 调用各管理脚本的 stop 命令
+  const pgManagerScript = path.join(RUNTIME_DIR, 'scripts', 'pg-manager.js');
+  const redisManagerScript = path.join(RUNTIME_DIR, 'scripts', 'redis-manager.js');
+  
+  if (fs.existsSync(pgManagerScript)) {
+    log('cyan', '停止 PostgreSQL...');
+    runCommand(NODE_EXE, [pgManagerScript, 'stop'], { silent: true });
   }
   
-  // 传统模式停止
-  const stopScript = path.join(RUNTIME_DIR, 'scripts', 'stop.js');
-  runCommand(NODE_EXE, [stopScript], { silent: true });
+  // Redis 没有独立的 stop 命令，后面通过进程名处理
+  
+  // 2. 停止 PM2 管理的进程
+  if (PM2_JS && fs.existsSync(PM2_JS)) {
+    runPm2(['stop', 'all'], { silent: true });
+    runPm2(['delete', 'all'], { silent: true });
+    // 停止 PM2 daemon
+    runPm2(['kill'], { silent: true });
+  }
+  
+  // 3. 通过进程名杀死残留进程（兜底）
+  if (IS_WINDOWS) {
+    const processNames = [
+      { exe: 'postgres.exe', name: 'PostgreSQL' },
+      { exe: 'redis-server.exe', name: 'Redis' },
+      { exe: 'mxcadassembly.exe', name: 'Cooperate' },
+      { exe: 'node.exe', name: 'Node.js' },
+    ];
+    
+    for (const proc of processNames) {
+      const result = spawnSync('tasklist', ['/FI', `IMAGENAME eq ${proc.exe}`, '/FO', 'CSV', '/NH'], {
+        encoding: 'utf8',
+        shell: true,
+      });
+      
+      const lines = result.stdout.split('\n').filter(line => line.includes(proc.exe));
+      for (const line of lines) {
+        const match = line.match(/"([^"]+)"/g);
+        if (match && match.length >= 2) {
+          const pid = match[1].replace(/"/g, '');
+          if (pid && pid !== 'PID') {
+            log('cyan', `停止 ${proc.name} (PID: ${pid})...`);
+            spawnSync('taskkill', ['/F', '/PID', pid], { shell: true, stdio: 'pipe' });
+          }
+        }
+      }
+    }
+  } else {
+    // Linux: 通过进程名杀死
+    const processNames = ['postgres', 'redis-server', 'mxcadassembly', 'node'];
+    for (const name of processNames) {
+      spawnSync('pkill', ['-f', name], { stdio: 'pipe' });
+    }
+  }
   
   log('green', '[✓] 服务已停止');
 }
@@ -190,10 +262,26 @@ async function stopInfrastructure() {
 async function runDatabaseMigration() {
   log('blue', '[2/3] 执行数据库迁移...');
   
-  // 生成 Prisma Client
-  if (!runPnpm(['--filter', 'backend', 'db:generate'])) {
-    log('red', '[错误] Prisma Client 生成失败');
+  // 检查 .env 文件是否存在
+  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  if (!fs.existsSync(envPath)) {
+    log('red', '[错误] packages/backend/.env 文件不存在');
+    log('cyan', '请先配置数据库连接信息');
     return false;
+  }
+  
+  // 检查 Prisma Client 是否已存在（部署包预生成）
+  const prismaReady = checkPrismaClientExists();
+  
+  if (prismaReady) {
+    log('cyan', '[跳过] Prisma Client 已就绪（来自部署包）');
+  } else {
+    // 生成 Prisma Client（离线模式，使用预下载的引擎）
+    log('cyan', '生成 Prisma Client...');
+    if (!runPnpm(['--filter', 'backend', 'db:generate'])) {
+      log('red', '[错误] Prisma Client 生成失败');
+      return false;
+    }
   }
   
   // 执行迁移
@@ -281,7 +369,7 @@ function isServiceRunning(serviceName) {
   return result.status === 0 && !result.stdout.includes('not found');
 }
 
-async function deployMode() {
+async function deployMode(skipBuild = false) {
   clearScreen();
   printHeader();
   log('bright', '>>> 部署模式');
@@ -295,32 +383,73 @@ async function deployMode() {
   // 等待服务就绪
   await new Promise(resolve => setTimeout(resolve, 3000));
   
-  // 2. 数据库迁移
+  // 2. 数据库迁移（依赖已在 setupOffline 中安装）
   if (!await runDatabaseMigration()) {
     return;
   }
   
-  // 3. 构建前后端
-  log('blue', '[3/5] 清理旧构建文件...');
-  
-  // 清理 dist 目录，避免 ENOTEMPTY 错误
+  // 3. 检测是否已有构建产物
   const backendDist = path.join(PROJECT_ROOT, 'packages', 'backend', 'dist');
   const frontendDist = path.join(PROJECT_ROOT, 'packages', 'frontend', 'dist');
   
-  rimdir(backendDist);
-  rimdir(frontendDist);
-  log('green', '[✓] 清理完成');
+  const hasBackendDist = fs.existsSync(backendDist) && fs.readdirSync(backendDist).length > 0;
+  const hasFrontendDist = fs.existsSync(frontendDist) && fs.readdirSync(frontendDist).length > 0;
+  const hasDist = hasBackendDist && hasFrontendDist;
   
-  log('blue', '[4/5] 构建前后端...');
+  let shouldBuild = true;
   
-  if (!runPnpm(['build'])) {
-    log('red', '[错误] 构建失败');
-    return;
+  if (skipBuild) {
+    if (!hasBackendDist) {
+      log('red', '[错误] 指定了 --skip-build 但构建产物不存在');
+      return;
+    }
+    log('green', '[3/5] 跳过构建，使用现有 dist');
+    shouldBuild = false;
+  } else if (hasDist) {
+    log('yellow', '[3/5] 检测到已有构建产物');
+    console.log('');
+    log('cyan', '  后端 dist: ' + (hasBackendDist ? '✓ 存在' : '✗ 不存在'));
+    log('cyan', '  前端 dist: ' + (hasFrontendDist ? '✓ 存在' : '✗ 不存在'));
+    console.log('');
+    
+    // 询问用户是否重新构建
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    
+    const answer = await new Promise((resolve) => {
+      rl.question(`${colors.yellow}是否重新构建？(y/N): ${colors.reset}`, (ans) => {
+        rl.close();
+        resolve(ans.trim().toLowerCase());
+      });
+    });
+    
+    shouldBuild = answer === 'y' || answer === 'yes';
+    
+    if (!shouldBuild) {
+      log('green', '[✓] 跳过构建，使用现有 dist');
+    }
   }
   
-  log('green', '[✓] 构建完成');
+  // 4. 构建前后端（如果需要）
+  if (shouldBuild) {
+    log('blue', '[3/5] 清理旧构建文件...');
+    rimdir(backendDist);
+    rimdir(frontendDist);
+    log('green', '[✓] 清理完成');
+    
+    log('blue', '[4/5] 构建前后端...');
+    
+    if (!runPnpm(['build'])) {
+      log('red', '[错误] 构建失败');
+      return;
+    }
+    
+    log('green', '[✓] 构建完成');
+  }
   
-  // 4. 启动/更新生产服务
+  // 5. 启动/更新生产服务
   log('blue', '[5/5] 启动生产服务...');
   
   // 检查服务是否已运行
@@ -377,6 +506,8 @@ async function deployMode() {
   log('green', '║  停止:  选择菜单 [停止服务]             ║');
   log('green', '╚════════════════════════════════════════╝');
 }
+
+
 
 async function startOnly() {
   clearScreen();
@@ -572,29 +703,60 @@ async function main() {
   }
 }
 
-// 命令行参数支持
-const args = process.argv.slice(2);
-if (args.length > 0) {
-  const commandMap = {
-    'dev': devMode,
-    'deploy': deployMode,
-    'start': startOnly,
-    'stop': stopInfrastructure,
-    'migrate': runDatabaseMigration,
-    'seed': runDatabaseSeed,
-    'init': linuxInit,
-    'status': viewStatus,
-    'logs': viewLogs,
-  };
+// ==================== 程序入口 ====================
+
+/**
+ * 异步入口函数
+ * 先完成离线环境设置，再执行后续逻辑
+ */
+async function bootstrap() {
+  // 首先设置离线环境（必须在其他操作前完成）
+  const success = await setupOffline({ 
+    silent: true, 
+    deployBackendOnly: isDeployMode,  // 部署模式只装后端依赖
+  });
   
-  const cmd = commandMap[args[0]];
-  if (cmd) {
-    cmd();
-  } else {
-    log('red', `未知命令: ${args[0]}`);
-    log('cyan', '可用命令: dev, deploy, start, stop, migrate, seed, init, status, logs');
+  if (!success) {
     process.exit(1);
   }
-} else {
-  main();
+
+  // 命令行参数支持
+  // args 已在文件开头定义
+  if (args.length > 0) {
+    const commandMap = {
+      'dev': devMode,
+      'deploy': deployMode,
+      'start': startOnly,
+      'stop': stopInfrastructure,
+      'migrate': runDatabaseMigration,
+      'seed': runDatabaseSeed,
+      'init': linuxInit,
+      'status': viewStatus,
+      'logs': viewLogs,
+    };
+    
+    const cmd = commandMap[args[0]];
+    if (cmd) {
+      // 支持 --skip-build 参数
+      if (args[0] === 'deploy' && args.includes('--skip-build')) {
+        await deployMode(true);
+      } else {
+        await cmd();
+      }
+    } else {
+      log('red', `未知命令: ${args[0]}`);
+      log('cyan', '可用命令: dev, deploy, start, stop, migrate, seed, init, status, logs');
+      log('cyan', '  deploy             : 交互式部署，询问是否构建');
+      log('cyan', '  deploy --skip-build: 跳过构建，使用现有 dist 并安装生产依赖');
+      process.exit(1);
+    }
+  } else {
+    await main();
+  }
 }
+
+// 启动程序
+bootstrap().catch(err => {
+  console.error('程序启动失败:', err);
+  process.exit(1);
+});

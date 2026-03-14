@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execSync, spawn } = require('child_process');
 
 // ==================== 平台配置 ====================
 
@@ -95,28 +96,34 @@ function createWindowsNodeWrapper(command, nodePath, scriptPath, scriptDir) {
   const relativeNodePath = getWindowsRelativePath(scriptDir, nodePath);
   const relativeScriptPath = getWindowsRelativePath(scriptDir, scriptPath);
 
+  // pnpm 需要禁用 Corepack，避免从网络下载
+  const extraEnv = command === 'pnpm'
+    ? `set "COREPACK_ENABLE=0"\nset "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"\n`
+    : '';
+
   return `@echo off
 REM Auto-generated wrapper for ${command}
 REM This script uses offline Node.js from CloudCAD runtime
 
 set "OFFLINE_NODE_DIR=${relativeNodeDir}"
 set "PATH=%OFFLINE_NODE_DIR%;%PATH%"
-
-"${relativeNodePath}" "${relativeScriptPath}" %*
+${extraEnv}"${relativeNodePath}" "${relativeScriptPath}" %*
 `;
 }
 
 /**
  * 创建 PM2 专用包装脚本（需要设置 PM2_HOME）
  * 使用相对路径，支持任意目录部署
+ * 注意：setlocal 确保环境变量只在此脚本会话中有效，不会污染用户系统
  */
 function createWindowsPm2Wrapper() {
   return `@echo off
 setlocal
 REM CloudCAD offline pm2 entry
-REM PM2_HOME is set locally and won't affect system pm2
+REM setlocal ensures PATH changes are isolated to this script session only
 
 set "PM2_HOME=%~dp0offline-data\\pm2"
+set "PATH=%~dp0runtime\\windows\\node;%PATH%"
 "%~dp0runtime\\windows\\node\\node.exe" "%~dp0runtime\\windows\\node\\node_modules\\pm2\\bin\\pm2" %*
 endlocal
 `;
@@ -124,14 +131,16 @@ endlocal
 
 /**
  * 创建 Linux PM2 专用包装脚本
+ * 注意：export PATH 只在此脚本会话中有效，不会污染用户系统
  */
 function createLinuxPm2Wrapper() {
   return `#!/bin/bash
 # CloudCAD offline pm2 entry
-# PM2_HOME is set locally and won't affect system pm2
+# PATH export is scoped to this script process only
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 export PM2_HOME="$SCRIPT_DIR/offline-data/pm2"
+export PATH="$SCRIPT_DIR/runtime/linux/node/bin:$PATH"
 exec "$SCRIPT_DIR/runtime/linux/node/bin/node" "$SCRIPT_DIR/runtime/linux/node/bin/node_modules/pm2/bin/pm2" "$@"
 `;
 }
@@ -164,6 +173,11 @@ function createLinuxNodeWrapper(command, nodePath, scriptPath, scriptDir) {
   const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
   const backPath = backLevels > 0 ? Array(backLevels).join('../') : '';
 
+  // pnpm 需要禁用 Corepack，避免从网络下载
+  const extraEnv = command === 'pnpm'
+    ? `export COREPACK_ENABLE=0\nexport COREPACK_ENABLE_DOWNLOAD_PROMPT=0\n`
+    : '';
+
   return `#!/bin/bash
 # Auto-generated wrapper for ${command}
 # This script uses offline Node.js from CloudCAD runtime
@@ -171,7 +185,7 @@ function createLinuxNodeWrapper(command, nodePath, scriptPath, scriptDir) {
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/${backPath}." && pwd)"
 export PATH="$PROJECT_ROOT/${relativeNodeDir}:$PATH"
-exec "$PROJECT_ROOT/${relativeNodePath}" "$PROJECT_ROOT/${relativeScriptPath}" "$@"
+${extraEnv}exec "$PROJECT_ROOT/${relativeNodePath}" "$PROJECT_ROOT/${relativeScriptPath}" "$@"
 `;
 }
 
@@ -219,6 +233,11 @@ function createWindowsPs1NodeWrapper(command, nodePath, scriptPath, scriptDir) {
   const relativeNodeExe = path.relative(PROJECT_ROOT, nodePath).replace(/\\/g, '\\');
   const relativeScriptPath = path.relative(PROJECT_ROOT, scriptPath).replace(/\\/g, '\\');
 
+  // pnpm 需要禁用 Corepack，避免从网络下载
+  const extraEnv = command === 'pnpm'
+    ? `$env:COREPACK_ENABLE = "0"\n$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"\n`
+    : '';
+
   return `# Auto-generated wrapper for ${command}
 # This script uses offline Node.js from CloudCAD runtime
 
@@ -229,21 +248,23 @@ $ProjectRoot = if ("${backPath}") { Join-Path $ScriptDir "${backPath}" } else { 
 $NodePath = Join-Path $ProjectRoot "${relativeNodeExe}"
 $ScriptPath = Join-Path $ProjectRoot "${relativeScriptPath}"
 
-& $NodePath $ScriptPath @Args
+${extraEnv}& $NodePath $ScriptPath @Args
 `;
 }
 
 /**
  * 创建 PM2 专用 PowerShell 包装脚本
+ * 注意：$env:PATH 只在此脚本会话中有效，不会污染用户系统
  */
 function createWindowsPs1Pm2Wrapper() {
   return `# CloudCAD offline pm2 entry
-# PM2_HOME is set locally and won't affect system pm2
+# PATH change is scoped to this PowerShell session only
 
 param([Parameter(ValueFromRemainingArguments)]$Args)
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $env:PM2_HOME = Join-Path $ScriptDir "offline-data\\pm2"
+$env:PATH = "$(Join-Path $ScriptDir 'runtime\\windows\\node');$env:PATH"
 $NodePath = Join-Path $ScriptDir "runtime\\windows\\node\\node.exe"
 $Pm2Path = Join-Path $ScriptDir "runtime\\windows\\node\\node_modules\\pm2\\bin\\pm2"
 
@@ -342,13 +363,51 @@ function createNodeWrapper(dir, command, scriptPath) {
 }
 
 /**
- * 查找 pnpm.js 路径（corepack 提供）
+ * 查找 pnpm.cjs 路径（本地安装的 pnpm）
+ * 优先使用本地安装的 pnpm，不需要 corepack 代理
  */
 function findPnpmJs() {
-  const pnpmJs = path.join(OFFLINE_NODE_DIR, 'node_modules', 'corepack', 'dist', 'pnpm.js');
-  if (fs.existsSync(pnpmJs)) {
-    return pnpmJs;
+  // Windows: runtime/windows/node/node_modules/pnpm/bin/pnpm.cjs
+  // Linux: runtime/linux/node/node_modules/pnpm/bin/pnpm.cjs (新结构)
+  //        runtime/linux/node/lib/node_modules/pnpm/bin/pnpm.cjs (旧结构)
+  const candidates = IS_WINDOWS
+    ? [
+        path.join(OFFLINE_NODE_DIR, 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+      ]
+    : [
+        // 新结构：runtime/linux/node/node_modules/pnpm/bin/pnpm.cjs
+        path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        // 旧结构：runtime/linux/node/lib/node_modules/pnpm/bin/pnpm.cjs
+        path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        // bin 同级的 node_modules
+        path.join(OFFLINE_NODE_DIR, '..', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+      ];
+  
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
   }
+  
+  // 回退到 corepack（不推荐，需要网络下载）
+  const corepackCandidates = IS_WINDOWS
+    ? [
+        path.join(OFFLINE_NODE_DIR, 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+        path.join(PLATFORM_DIR, 'node', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+      ]
+    : [
+        path.join(PLATFORM_DIR, 'node', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+        path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+        path.join(OFFLINE_NODE_DIR, '..', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+      ];
+  
+  for (const p of corepackCandidates) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  
   return null;
 }
 
@@ -356,10 +415,29 @@ function findPnpmJs() {
  * 查找 pm2.js 路径
  */
 function findPm2Js() {
-  const pm2Js = path.join(OFFLINE_NODE_DIR, 'node_modules', 'pm2', 'bin', 'pm2');
-  if (fs.existsSync(pm2Js)) {
-    return pm2Js;
+  // Windows: runtime/windows/node/node_modules/pm2/bin/pm2
+  // Linux: runtime/linux/node/node_modules/pm2/bin/pm2 (新结构)
+  //        runtime/linux/node/lib/node_modules/pm2/bin/pm2 (旧结构)
+  const candidates = IS_WINDOWS
+    ? [
+        path.join(OFFLINE_NODE_DIR, 'node_modules', 'pm2', 'bin', 'pm2'),
+        path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2'),
+      ]
+    : [
+        // 新结构：runtime/linux/node/node_modules/pm2/bin/pm2
+        path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2'),
+        // 旧结构：runtime/linux/node/lib/node_modules/pm2/bin/pm2
+        path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'pm2', 'bin', 'pm2'),
+        // bin 同级的 node_modules
+        path.join(OFFLINE_NODE_DIR, '..', 'node_modules', 'pm2', 'bin', 'pm2'),
+      ];
+  
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
   }
+  
   return null;
 }
 
@@ -376,15 +454,24 @@ function setupNodeModulesBin() {
   count++;
 
   // 2. 离线 node 目录中的其他命令
+  // Windows: runtime/windows/node/npm.cmd
+  // Linux: runtime/linux/node/bin/npm (或 runtime/linux/node/lib/node_modules/npm/bin/npm-cli.js)
   const offlineCommands = ['npm', 'npx', 'corepack'];
   for (const cmd of offlineCommands) {
-    const cmdPath = IS_WINDOWS
-      ? path.join(OFFLINE_NODE_DIR, `${cmd}.cmd`)
-      : path.join(OFFLINE_NODE_DIR, cmd);
-
-    if (fs.existsSync(cmdPath)) {
-      createWrapper(NODE_MODULES_BIN, cmd, cmdPath);
-      count++;
+    const cmdPathCandidates = IS_WINDOWS
+      ? [path.join(OFFLINE_NODE_DIR, `${cmd}.cmd`)]
+      : [
+          path.join(OFFLINE_NODE_DIR, cmd),
+          path.join(PLATFORM_DIR, 'node', 'bin', cmd),
+          path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'npm', 'bin', `${cmd}-cli.js`),
+        ];
+    
+    for (const cmdPath of cmdPathCandidates) {
+      if (fs.existsSync(cmdPath)) {
+        createWrapper(NODE_MODULES_BIN, cmd, cmdPath);
+        count++;
+        break;
+      }
     }
   }
 
@@ -590,7 +677,10 @@ exec "$SCRIPT_DIR/${path.relative(PROJECT_ROOT, npxPath)}" "$@"
       const pnpmCmdContent = `@echo off
 REM CloudCAD offline pnpm entry
 REM Only effective in project directory, does not affect system pnpm
+REM Disable Corepack to use local pnpm and avoid network download
 
+set "COREPACK_ENABLE=0"
+set "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
 "%~dp0${relativeNodeExe}" "%~dp0${relativePnpmJs}" %*
 `;
       fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
@@ -601,6 +691,7 @@ REM Only effective in project directory, does not affect system pnpm
       const pnpmPs1Path = path.join(PROJECT_ROOT, 'pnpm.ps1');
       const pnpmPs1Content = `# CloudCAD offline pnpm entry
 # Only effective in project directory, does not affect system pnpm
+# Disable Corepack to use local pnpm and avoid network download
 
 param([Parameter(ValueFromRemainingArguments)]$Args)
 
@@ -608,6 +699,8 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $NodePath = Join-Path $ScriptDir "${relativeNodeExe}"
 $PnpmPath = Join-Path $ScriptDir "${relativePnpmJs}"
 
+$env:COREPACK_ENABLE = "0"
+$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
 & $NodePath $PnpmPath @Args
 `;
       fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
@@ -860,42 +953,45 @@ exec "$PROJECT_ROOT/${rootRelativeNpxPath}" "$@"
     }
   }
 
-  // ========== 4. pnpm 入口脚本 ==========
-  const pnpmJs = findPnpmJs();
-  if (pnpmJs) {
-    const rootRelativePnpmJs = path.relative(PROJECT_ROOT, pnpmJs).replace(/\\/g, '\\');
-
-    if (IS_WINDOWS) {
-      // .cmd 文件
-      const pnpmCmdPath = path.join(targetDir, 'pnpm.cmd');
-      const pnpmCmdContent = `@echo off
-REM CloudCAD offline pnpm entry
-REM Only effective in project directory, does not affect system pnpm
-
-"%~dp0${backPath}\\${rootRelativeNodeExe}" "%~dp0${backPath}\\${rootRelativePnpmJs}" %*
-`;
-      fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
-      log(`创建子目录入口脚本: ${pnpmCmdPath}`);
-      count++;
-
-      // .ps1 文件
-      const pnpmPs1Path = path.join(targetDir, 'pnpm.ps1');
-      const pnpmPs1Content = `# CloudCAD offline pnpm entry
-# Only effective in project directory, does not affect system pnpm
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = Join-Path $ScriptDir "${backPath}"
-$NodePath = Join-Path $ProjectRoot "${rootRelativeNodeExe}"
-$PnpmPath = Join-Path $ProjectRoot "${rootRelativePnpmJs}"
-
-& $NodePath $PnpmPath @Args
-`;
-      fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
-      log(`创建子目录入口脚本: ${pnpmPs1Path}`);
-      count++;
-    } else {
+    // ========== 4. pnpm 入口脚本 ==========
+    const pnpmJs = findPnpmJs();
+    if (pnpmJs) {
+      const rootRelativePnpmJs = path.relative(PROJECT_ROOT, pnpmJs).replace(/\\/g, '\\');
+  
+      if (IS_WINDOWS) {
+              // .cmd 文件
+              const pnpmCmdPath = path.join(targetDir, 'pnpm.cmd');
+              const pnpmCmdContent = `@echo off
+        REM CloudCAD offline pnpm entry
+        REM Only effective in project directory, does not affect system pnpm
+        REM Disable Corepack to use local pnpm and avoid network download
+        
+        set "COREPACK_ENABLE=0"
+        set "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
+        "%~dp0${backPath}\\${rootRelativeNodeExe}" "%~dp0${backPath}\\${rootRelativePnpmJs}" %*
+        `;        fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
+        log(`创建子目录入口脚本: ${pnpmCmdPath}`);
+        count++;
+  
+              // .ps1 文件
+              const pnpmPs1Path = path.join(targetDir, 'pnpm.ps1');
+              const pnpmPs1Content = `# CloudCAD offline pnpm entry
+        # Only effective in project directory, does not affect system pnpm
+        # Disable Corepack to use local pnpm and avoid network download
+        
+        param([Parameter(ValueFromRemainingArguments)]$Args)
+        
+        $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+        $ProjectRoot = Join-Path $ScriptDir "${backPath}"
+        $NodePath = Join-Path $ProjectRoot "${rootRelativeNodeExe}"
+        $PnpmPath = Join-Path $ProjectRoot "${rootRelativePnpmJs}"
+        
+        $env:COREPACK_ENABLE = "0"
+        $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
+        & $NodePath $PnpmPath @Args
+        `;        fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
+        log(`创建子目录入口脚本: ${pnpmPs1Path}`);
+        count++;    } else {
       const pnpmCmdPath = path.join(targetDir, 'pnpm');
       const pnpmContent = `#!/bin/bash
 # CloudCAD offline pnpm entry
@@ -973,6 +1069,149 @@ exec "$PROJECT_ROOT/${rootRelativeNodeExe}" "$PROJECT_ROOT/${rootRelativePm2Js}"
 }
 
 /**
+ * 运行 pnpm install --offline 重建 node_modules
+ * 这是离线安装的关键步骤，从 .pnpm-store 创建硬链接
+ * 
+ * 注意：
+ * 1. 不需要 --ignore-scripts，postinstall 会自动执行
+ * 2. 需要在 PATH 中加入离线 node，让 postinstall 能找到 node 命令
+ * 3. env 修改只影响当前进程，不会影响系统环境
+ * 4. Linux 使用 .pnpm-store-linux，Windows 使用 .pnpm-store
+ * 
+ * @param {Object} options - 配置选项
+ * @param {boolean} options.deployBackendOnly - 只安装后端依赖（部署模式）
+ */
+function runPnpmInstallOffline(options = {}) {
+  const { deployBackendOnly = false } = options;
+  
+  // 检查 pnpm 是否可用
+  const pnpmJs = findPnpmJs();
+  if (!pnpmJs) {
+    error('找不到 pnpm.cjs，无法运行离线安装');
+    return false;
+  }
+
+  // 检查 node_modules 是否已存在（部署包可能已包含）
+  // pnpm 结构：根目录 node_modules/.pnpm 存储实际内容，packages/*/node_modules 是符号链接
+  const pnpmStoreExists = fs.existsSync(path.join(PROJECT_ROOT, 'node_modules', '.pnpm'));
+  const backendModulesExists = fs.existsSync(path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules'));
+  
+  if (pnpmStoreExists && backendModulesExists) {
+    log('  ✓ node_modules 已存在，跳过安装');
+    return true;
+  }
+  
+  if (pnpmStoreExists) {
+    log('  ✓ node_modules/.pnpm 已存在，只需重建符号链接');
+    // pnpm install 会重建符号链接，但不下载新包
+  }
+
+  // 查找 pnpm store
+  const storeCandidates = [
+    path.join(PROJECT_ROOT, '.pnpm-store-deploy'),
+    path.join(PROJECT_ROOT, IS_LINUX ? '.pnpm-store-linux' : '.pnpm-store'),
+  ];
+  let storePath = null;
+  for (const p of storeCandidates) {
+    if (fs.existsSync(p)) {
+      storePath = p;
+      break;
+    }
+  }
+  
+  if (!storePath) {
+    error('pnpm store 不存在，无法进行离线安装');
+    error('请确保离线包包含 .pnpm-store 或 .pnpm-store-deploy 目录');
+    return false;
+  }
+
+  // 构建安装命令参数
+  const installArgs = deployBackendOnly
+    ? ['--filter', 'backend', 'install', '--offline', '--prod']
+    : ['install', '--offline'];
+  
+  log(deployBackendOnly ? '安装后端依赖...' : '运行 pnpm install --offline 重建依赖...');
+  log(`  → 执行: pnpm ${installArgs.join(' ')}`);
+  
+  try {
+    const nodeDir = IS_LINUX ? path.join(PLATFORM_DIR, 'node', 'bin') : OFFLINE_NODE_DIR;
+    const env = {
+      ...process.env,
+      PATH: `${nodeDir}${path.delimiter}${process.env.PATH}`,
+      COREPACK_ENABLE: '0',
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+    };
+
+    execSync(`"${OFFLINE_NODE_EXE}" "${pnpmJs}" ${installArgs.join(' ')}`, {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit',
+      env,
+    });
+
+    log(deployBackendOnly ? '  ✓ 后端依赖安装完成' : '  ✓ pnpm install --offline 完成');
+    return true;
+  } catch (err) {
+    error(`pnpm ${installArgs.join(' ')} 失败`);
+    error('可能原因：pnpm store 不完整或损坏');
+    return false;
+  }
+}
+
+/**
+ * 将所有 .env.example 拷贝为对应的目标文件
+ * 离线包不包含 .env 文件，首次启动时需要从模板创建
+ * 注：前端使用 .env.local（Vite 项目约定）
+ */
+function copyEnvExampleToEnv() {
+  log('检查并创建 .env 配置文件...');
+
+  // 需要处理的配置列表
+  // target: 目标文件名，默认 .env（前端使用 .env.local）
+  const envConfigs = [
+    { dir: path.join(PROJECT_ROOT, 'packages', 'backend'), target: '.env' },
+    { dir: path.join(PROJECT_ROOT, 'packages', 'frontend'), target: '.env.local' },
+    { dir: path.join(PROJECT_ROOT, 'docker'), target: '.env' },
+  ];
+
+  let copied = 0;
+  let skipped = 0;
+
+  for (const config of envConfigs) {
+    const envExample = path.join(config.dir, '.env.example');
+    const envFile = path.join(config.dir, config.target);
+
+    // 检查 .env.example 是否存在
+    if (!fs.existsSync(envExample)) {
+      continue;
+    }
+
+    // 如果目标文件已存在，跳过
+    if (fs.existsSync(envFile)) {
+      skipped++;
+      continue;
+    }
+
+    // 拷贝 .env.example → 目标文件
+    try {
+      fs.copyFileSync(envExample, envFile);
+      log(`  ✓ 创建: ${path.relative(PROJECT_ROOT, envFile)}`);
+      copied++;
+    } catch (err) {
+      error(`  ✗ 创建失败: ${path.relative(PROJECT_ROOT, envFile)} - ${err.message}`);
+    }
+  }
+
+  if (copied > 0) {
+    log(`已创建 ${copied} 个 .env 配置文件`);
+  }
+  if (skipped > 0) {
+    log(`跳过 ${skipped} 个已存在的 .env 文件`);
+  }
+
+  return true;
+}
+
+/**
  * 设置所有包装脚本
  */
 function setupWrappers() {
@@ -983,14 +1222,62 @@ function setupWrappers() {
   return binCount + offlineCount + rootCount + pkgCount;
 }
 
+/**
+ * 检查 Prisma Client 是否已存在（来自部署包）
+ * 部署包会预生成 Prisma Client 和引擎二进制，无需再次生成
+ * @returns {boolean} true 表示已存在，无需生成
+ */
+function checkPrismaClientExists() {
+  const prismaClientDir = path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.prisma', 'client');
+  const indexPath = path.join(prismaClientDir, 'index.js');
+  
+  // 检查 Prisma Client 是否存在
+  if (!fs.existsSync(indexPath)) {
+    return false;
+  }
+  
+  // 检查引擎二进制是否存在（至少有一个平台的引擎）
+  // 引擎文件名格式：libquery_engine-{platform}.{ext}
+  const files = fs.existsSync(prismaClientDir) ? fs.readdirSync(prismaClientDir) : [];
+  const hasEngine = files.some(f => f.includes('query_engine'));
+  
+  return hasEngine;
+}
+
 // ==================== 主函数 ====================
 
-function setup(silent = false) {
+/**
+ * 设置离线环境
+ * @param {Object|boolean} options - 配置选项，或兼容旧版本的 silent 布尔值
+ * @param {boolean} options.silent - 静默模式
+ * @param {boolean} options.skipInstall - 跳过 pnpm install（用于 deploy --skip-build 场景）
+ */
+function setup(options = {}) {
+  // 兼容旧版本：setup(true) → setup({ silent: true })
+  if (typeof options === 'boolean') {
+    options = { silent: options };
+  }
+  
+  const { silent = false, deployBackendOnly = false } = options;
+
   if (!checkOfflineNode()) {
     return false;
   }
 
+  // 1. 运行 pnpm install --offline 重建依赖
+  // deployBackendOnly 时只安装后端依赖
+  if (!runPnpmInstallOffline({ deployBackendOnly })) {
+    return false;
+  }
+
+  // 2. 将 .env.example 拷贝为 .env（离线包不包含 .env 文件）
+  copyEnvExampleToEnv();
+
+  // 3. 设置包装脚本
   const count = setupWrappers();
+
+  // 4. 检查 Prisma Client 是否已存在（部署包预生成）
+  const prismaReady = checkPrismaClientExists();
 
   if (!silent) {
     console.log('');
@@ -1006,9 +1293,16 @@ function setup(silent = false) {
 
     log(`完成！已创建 ${count} 个包装脚本`);
     console.log('');
-    log('1. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
-    log('2. 这些命令会使用离线 Node.js，不影响系统环境');
-    log('3. npm scripts 也会自动使用离线 Node.js');
+    log('1. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
+    log('2. .env 配置文件已从 .env.example 自动创建');
+    log('3. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
+    log('4. 这些命令会使用离线 Node.js，不影响系统环境');
+    log('5. npm scripts 也会自动使用离线 Node.js');
+    if (prismaReady) {
+      log('6. Prisma Client 已就绪（来自部署包）');
+    } else {
+      log('6. Prisma Client 需要在启动时生成');
+    }
     console.log('');
   }
 
@@ -1033,15 +1327,20 @@ function main() {
 
   log('完成！');
   console.log('');
-  log('1. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
-  log('2. 这些命令会使用离线 Node.js，不影响系统环境');
-  log('3. npm scripts 也会自动使用离线 Node.js');
+  log('1. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
+  log('2. .env 配置文件已从 .env.example 自动创建');
+  log('3. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
+  log('4. 这些命令会使用离线 Node.js，不影响系统环境');
+  log('5. npm scripts 也会自动使用离线 Node.js');
   console.log('');
 }
 
 module.exports = {
   setup,
   setupWrappers,
+  runPnpmInstallOffline,
+  copyEnvExampleToEnv,
+  checkPrismaClientExists,
   OFFLINE_NODE_DIR,
   OFFLINE_NODE_EXE,
   NODE_MODULES_BIN,

@@ -6,7 +6,7 @@ node_modules/
 runtime/windows/
 runtime/linux/
 offline-data
-
+release
 # Generated entry scripts (use offline node only in project directory)
 node.cmd
 node.ps1

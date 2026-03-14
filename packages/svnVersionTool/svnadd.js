@@ -8,14 +8,21 @@ const svnPath = require('./svnpath');
  * @param {function} callback 回调函数
  */
 function svnAdd(targetPaths, isRecursive, callback) {
+  // 构建命令，给路径添加引号防止空格问题
   let command = `${svnPath} add`;
-  targetPaths.forEach((path) => {
-    command += ` ${path}`;
+  targetPaths.forEach((targetPath) => {
+    command += ` "${targetPath}"`;
   });
-  if (!isRecursive) {
-    command += ' --non-recursive';
+  
+  if (isRecursive) {
+    // 递归添加：使用 --depth infinity 明确指定递归深度
+    // 使用 --force 确保添加所有未版本控制的文件（即使目录已在版本控制中）
+    command += ' --depth infinity --force';
+  } else {
+    command += ' --depth empty';
   }
-  exec(command, { windowsHide: true }, (error, stdout) => {
+  
+  exec(command, { windowsHide: true }, (error, stdout, stderr) => {
     if (error) {
       callback(error);
     } else {

@@ -1,0 +1,71 @@
+# pnpm-store 离线安装验证 Dockerfile
+# 验证 .pnpm-store-linux 能否在离线环境下成功安装依赖
+#
+# 构建命令：
+#   docker build -f Dockerfile.pnpm-store-verify -t pnpm-store-verify --build-context store="D:\web\MxCADOnline\cloudcad\.pnpm-store-linux" --build-context project="D:\web\MxCADOnline\cloudcad" .
+#
+# 运行命令：
+#   docker run --rm pnpm-store-verify
+
+FROM node:20.19.5-alpine AS verifier
+
+# 安装 pnpm（与提取时版本一致）
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 store 到容器
+COPY --from=store / /store/
+
+# 复制项目文件（需要 pnpm-lock.yaml 和 package.json）
+COPY --from=project /package.json /app/package.json
+COPY --from=project /pnpm-lock.yaml /app/pnpm-lock.yaml
+COPY --from=project /pnpm-workspace.yaml /app/pnpm-workspace.yaml
+COPY --from=project /packages /app/packages
+
+# 创建验证脚本
+RUN echo '#!/bin/sh' > /verify.sh && \
+    echo 'echo "============================================"' >> /verify.sh && \
+    echo 'echo " pnpm-store 离线安装验证"' >> /verify.sh && \
+    echo 'echo "============================================"' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "[1/6] 检查 pnpm 版本:"' >> /verify.sh && \
+    echo 'pnpm --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "[2/6] 检查 store 目录结构:"' >> /verify.sh && \
+    echo 'ls -la /store/' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "[3/6] 统计 store 文件数量:"' >> /verify.sh && \
+    echo 'find /store/v3/files -type f 2>/dev/null | wc -l' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "[4/6] 配置 pnpm 使用本地 store:"' >> /verify.sh && \
+    echo 'echo "store-dir=/store" > /app/.npmrc' >> /verify.sh && \
+    echo 'echo "配置完成"' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "[5/6] 执行离线安装 (--offline --frozen-lockfile):"' >> /verify.sh && \
+    echo 'cd /app && pnpm install --offline --frozen-lockfile --ignore-scripts 2>&1' >> /verify.sh && \
+    echo 'INSTALL_EXIT_CODE=$?' >> /verify.sh && \
+    echo 'if [ $INSTALL_EXIT_CODE -ne 0 ]; then' >> /verify.sh && \
+    echo '  echo "ERROR: 离线安装失败，退出码: $INSTALL_EXIT_CODE"' >> /verify.sh && \
+    echo '  exit 1' >> /verify.sh && \
+    echo 'fi' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "[6/6] 验证 node_modules 是否创建:"' >> /verify.sh && \
+    echo 'if [ -d "/app/node_modules" ]; then' >> /verify.sh && \
+    echo '  echo "✓ node_modules 已创建"' >> /verify.sh && \
+    echo '  echo "  包数量: $(ls /app/node_modules 2>/dev/null | wc -l)"' >> /verify.sh && \
+    echo 'else' >> /verify.sh && \
+    echo '  echo "✗ node_modules 未创建"' >> /verify.sh && \
+    echo '  exit 1' >> /verify.sh && \
+    echo 'fi' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "============================================"' >> /verify.sh && \
+    echo 'echo " 验证通过!"' >> /verify.sh && \
+    echo 'echo "============================================"' >> /verify.sh && \
+    chmod +x /verify.sh
+
+# 设置 store 目录环境变量
+ENV PNPM_STORE_PATH=/store
+
+CMD ["/verify.sh"]

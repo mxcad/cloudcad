@@ -1,0 +1,57 @@
+# Subversion glibc 版本提取
+# 用途：提取 Linux 版本的 SVN 工具及其所有依赖
+# 基于 Debian Bullseye (glibc 2.31)，兼容性强
+#
+# 构建命令：
+#   docker build -o ../linux/subversion -f Dockerfile.svn .
+#
+# 目录结构：
+#   runtime/linux/subversion/
+#   ├── svn               # 直接放根目录，与代码期望一致
+#   ├── svnadmin
+#   ├── svnlook
+#   └── lib/
+
+FROM debian:bullseye-slim AS builder
+
+# 安装 Subversion 和工具
+RUN apt-get update && apt-get install -y subversion binutils && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 创建提取目录
+WORKDIR /extract
+
+# 收集所有依赖库（可执行文件直接放根目录）
+RUN mkdir -p lib && \
+    # 复制 SVN 二进制文件到根目录
+    cp /usr/bin/svn . && \
+    cp /usr/bin/svnadmin . && \
+    cp /usr/bin/svnlook . && \
+    cp /usr/bin/svnsync . && \
+    cp /usr/bin/svnversion . && \
+    cp /usr/bin/svnserve . && \
+    # 使用 ldd 收集所有依赖库（包括间接依赖）
+    for b in svn svnadmin svnlook svnsync svnversion svnserve; do \
+        if [ -f "$b" ]; then \
+            ldd "$b" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read l; do \
+                [ -f "$l" ] && cp -L "$l" lib/ 2>/dev/null || true; \
+            done; \
+        fi; \
+    done && \
+    # 检查 lib 目录中的 .so 文件的间接依赖
+    for l in lib/*.so*; do \
+        if [ -f "$l" ]; then \
+            ldd "$l" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read dep; do \
+                [ -f "$dep" ] && cp -L "$dep" lib/ 2>/dev/null || true; \
+            done; \
+        fi; \
+    done && \
+    # 复制动态链接器
+    cp /lib64/ld-linux-x86-64.so.2 lib/ 2>/dev/null || cp /lib/ld-linux-x86-64.so.2 lib/ 2>/dev/null || true && \
+    # 设置权限
+    chmod -R 755 . lib
+
+# 输出阶段 - 使用 alpine 以便容器可以运行
+FROM alpine:latest AS output
+COPY --from=builder /extract/ /output/
+CMD ["cp", "-r", "/output/.", "/dest/"]

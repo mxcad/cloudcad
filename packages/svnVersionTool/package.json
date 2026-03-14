@@ -28,6 +28,8 @@
     "svndelete.js",
     "svnlog.js",
     "svncat.js",
+    "svnpropset.js",
+    "svnupdate.js",
     "svnpath.js",
     "svnadminpath.js",
     "svncheck.js",

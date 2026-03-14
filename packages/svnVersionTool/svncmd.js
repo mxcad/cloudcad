@@ -7,6 +7,8 @@ const svnImport = require('./svnimport');
 const svnDelete = require('./svndelete');
 const svnLog = require('./svnlog');
 const svnCat = require('./svncat');
+const svnPropset = require('./svnpropset');
+const svnUpdate = require('./svnupdate');
 const {
   checkSvnAvailable,
   checkSvnAvailableSync,
@@ -24,6 +26,8 @@ module.exports = {
   svnDelete,
   svnLog,
   svnCat,
+  svnPropset,
+  svnUpdate,
   checkSvnAvailable,
   checkSvnAvailableSync,
   getPlatformInfo,

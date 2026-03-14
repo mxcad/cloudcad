@@ -1,0 +1,49 @@
+# PostgreSQL 验证 Dockerfile (glibc 版本)
+# 用途：验证从 Docker 提取的 PostgreSQL 是否能在新环境中正常工作
+#
+# 验证步骤：
+#   node scripts/verify-linux-runtime.js postgres
+
+FROM debian:bullseye-slim
+
+# 不安装 PostgreSQL，完全使用提取的文件
+RUN mkdir -p /opt/postgres
+
+# 从构建上下文复制提取的 PostgreSQL 文件
+COPY --from=pg / /opt/postgres/
+
+# 设置环境变量
+ENV PATH="/opt/postgres/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/postgres/lib:/opt/postgres/lib/postgresql"
+ENV PGDATA="/tmp/test-db"
+
+# 创建非 root 用户运行 PostgreSQL
+RUN useradd -m -s /bin/bash postgres && mkdir -p /tmp/test-db && chown postgres:postgres /tmp/test-db
+
+# 验证脚本
+RUN echo '#!/bin/sh' > /verify.sh && \
+    echo 'echo "=== PostgreSQL 验证测试 (glibc) ==="' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "1. 检查二进制文件:"' >> /verify.sh && \
+    echo 'ls -la /opt/postgres/bin/' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "2. 检查依赖库数量:"' >> /verify.sh && \
+    echo 'ls /opt/postgres/lib/*.so* 2>/dev/null | wc -l' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "3. 测试 postgres --version:"' >> /verify.sh && \
+    echo '/opt/postgres/bin/postgres --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "4. 测试 pg_ctl --version:"' >> /verify.sh && \
+    echo '/opt/postgres/bin/pg_ctl --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "5. 测试 initdb --version:"' >> /verify.sh && \
+    echo '/opt/postgres/bin/initdb --version' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "6. 初始化测试数据库:"' >> /verify.sh && \
+    echo 'su postgres -c "/opt/postgres/bin/initdb -D /tmp/test-db"' >> /verify.sh && \
+    echo 'echo "数据库初始化成功!"' >> /verify.sh && \
+    echo 'echo ""' >> /verify.sh && \
+    echo 'echo "=== 验证通过! ==="' >> /verify.sh && \
+    chmod +x /verify.sh
+
+CMD ["/verify.sh"]

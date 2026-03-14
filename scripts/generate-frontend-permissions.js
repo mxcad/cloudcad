@@ -330,9 +330,6 @@ function generatePermissionDependencies(
   if (projectPermissions.includes('CAD_SAVE')) {
     dependencies['CAD_SAVE'] = ['FILE_OPEN'];
   }
-  if (projectPermissions.includes('CAD_EXPORT')) {
-    dependencies['CAD_EXPORT'] = ['FILE_OPEN'];
-  }
   if (projectPermissions.includes('CAD_EXTERNAL_REFERENCE')) {
     dependencies['CAD_EXTERNAL_REFERENCE'] = ['FILE_OPEN'];
   }
@@ -510,7 +507,6 @@ function getPermissionLabel(permission) {
     FILE_MOVE: '移动文件',
     FILE_COPY: '复制文件',
     CAD_SAVE: '保存图纸',
-    CAD_EXPORT: '导出图纸',
     CAD_EXTERNAL_REFERENCE: '管理外部参照',
     GALLERY_ADD: '添加到图库',
     VERSION_READ: '查看版本',

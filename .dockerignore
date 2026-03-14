@@ -1,0 +1,66 @@
+# 依赖目录
+node_modules
+**/node_modules
+
+# 构建产物 (保留 dist 用于某些情况)
+packages/backend/dist
+packages/frontend/dist
+
+# 缓存目录
+.cache
+.parcel-cache
+.vite
+.turbo
+
+# 日志文件
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+docker/.env
+
+# IDE 配置
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker 相关 (保留 Dockerfile 和 docker-compose)
+docker/.env*
+
+# 测试相关
+coverage
+.nyc_output
+**/*.test.ts
+**/*.spec.ts
+
+# 临时文件
+temp
+tmp
+*.tmp
+*.temp
+
+# 文件数据 (运行时生成)
+filesData
+uploads
+svn-repo
+
+# 文档
+*.md
+!README.md
+
+# 其他
+.DS_Store
+Thumbs.db
+*.bak
+*.backup
+.iflow
