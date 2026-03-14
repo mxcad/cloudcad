@@ -32,6 +32,7 @@ import {
 } from './common/dto/permission.dto';
 import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
+import { RuntimeConfigModule } from './runtime-config/runtime-config.module';
 
 // env 文件查找路径：支持多种运行模式
 // 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
@@ -72,6 +73,7 @@ const envFilePaths = [
     AuditLogModule,
     VersionControlModule,
     PolicyEngineModule,
+    RuntimeConfigModule,
   ],
   controllers: [AppController],
   providers: [

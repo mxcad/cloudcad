@@ -42,6 +42,12 @@ export enum SystemPermission {
   SYSTEM_ADMIN = 'SYSTEM_ADMIN',
   /** 系统监控：查看系统状态和日志 */
   SYSTEM_MONITOR = 'SYSTEM_MONITOR',
+
+  // ========== 运行时配置管理 ==========
+  /** 查看运行时配置 */
+  CONFIG_READ = 'SYSTEM_CONFIG_READ',
+  /** 修改运行时配置 */
+  CONFIG_WRITE = 'SYSTEM_CONFIG_WRITE',
 }
 
 /**
