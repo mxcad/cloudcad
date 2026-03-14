@@ -33,11 +33,16 @@ import {
 import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 
-// env 文件查找路径：优先 backend 目录
-// 本地开发环境不应读取根目录的 .env（那是 Docker 生产配置）
-// 使用 __dirname 获取绝对路径，确保从任何目录运行都能正确加载
-const backendDir = join(__dirname, '..');
+// env 文件查找路径：支持多种运行模式
+// 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
+// 2. 开发模式：从 backend 目录查找 (__dirname)
+// 注意：pkg 打包后 __dirname 会变成虚拟路径 /snapshot/...
+const backendDir = join(__dirname, '..', '..');
 const envFilePaths = [
+  // 部署模式：优先从运行目录查找
+  join(process.cwd(), '.env.local'),
+  join(process.cwd(), '.env'),
+  // 开发模式：从 backend 目录查找
   join(backendDir, '.env.local'),
   join(backendDir, '.env'),
 ];

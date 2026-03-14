@@ -86,8 +86,6 @@ export enum ProjectPermission {
   // ========== CAD 图纸权限 ==========
   /** 保存图纸（DWG/MXWEB） */
   CAD_SAVE = 'CAD_SAVE',
-  /** 导出图纸（PDF/DXF） */
-  CAD_EXPORT = 'CAD_EXPORT',
   /** 管理外部参照 */
   CAD_EXTERNAL_REFERENCE = 'CAD_EXTERNAL_REFERENCE',
 

@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../config/app.config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
@@ -8,17 +9,13 @@ export class DatabaseService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  constructor(private configService: ConfigService) {
-    // 手动构建DATABASE_URL，确保格式正确
-    const dbHost = configService.get('DB_HOST', 'localhost');
-    const dbPort = configService.get('DB_PORT', '5432');
-    const dbUser = configService.get('DB_USERNAME', 'postgres');
-    const dbPassword = configService.get('DB_PASSWORD', 'password');
-    const dbDatabase = configService.get('DB_DATABASE', 'cloudcad');
+  constructor(private configService: ConfigService<AppConfig>) {
+    // 从 database 配置获取连接参数
+    const dbConfig = configService.get('database', { infer: true })!;
 
     // 确保密码是字符串类型并进行URL编码
-    const encodedPassword = encodeURIComponent(String(dbPassword));
-    const databaseUrl = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbDatabase}`;
+    const encodedPassword = encodeURIComponent(dbConfig.password);
+    const databaseUrl = `postgresql://${dbConfig.username}:${encodedPassword}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
 
     console.log('数据库连接URL:', databaseUrl.replace(/:[^:@]*@/, ':***@')); // 隐藏密码的日志
 

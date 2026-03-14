@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../../config/app.config';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
@@ -21,20 +22,15 @@ export class FileLockService {
   private readonly lockRetryInterval: number;
   private readonly maxRetries: number;
 
-  constructor(private configService: ConfigService) {
-    // 从 FILES_DATA_PATH 派生锁目录
-    const filesDataPath = this.configService.get(
-      'FILES_DATA_PATH',
-      '../../filesData'
-    );
-    this.lockDir = path.resolve(filesDataPath, '.lock');
-    // 增加锁超时时间到 5 分钟，以支持大文件拷贝
-    this.lockTimeout = this.configService.get('FILE_LOCK_TIMEOUT', 300000); // 5分钟
-    this.lockRetryInterval = this.configService.get(
-      'FILE_LOCK_RETRY_INTERVAL',
-      100
-    ); // 100ms
-    this.maxRetries = this.configService.get('FILE_LOCK_MAX_RETRIES', 3);
+  constructor(private configService: ConfigService<AppConfig>) {
+    // 从 filesDataPath 派生锁目录
+    const filesDataPath = this.configService.get('filesDataPath', { infer: true })!;
+    this.lockDir = path.join(filesDataPath, '.lock');
+    // 从 fileLock 配置获取锁参数
+    const fileLockConfig = this.configService.get('fileLock', { infer: true })!;
+    this.lockTimeout = fileLockConfig.timeout;
+    this.lockRetryInterval = fileLockConfig.retryInterval;
+    this.maxRetries = fileLockConfig.maxRetries;
     this.ensureLockDir();
   }
 

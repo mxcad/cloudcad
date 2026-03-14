@@ -169,7 +169,6 @@ describe('权限枚举', () => {
         DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.VIEWER];
       expect(viewerPermissions).toContain(ProjectPermission.FILE_OPEN);
       expect(viewerPermissions).toContain(ProjectPermission.FILE_DOWNLOAD);
-      expect(viewerPermissions).toContain(ProjectPermission.CAD_EXPORT);
       expect(viewerPermissions).not.toContain(ProjectPermission.FILE_EDIT);
       expect(viewerPermissions).not.toContain(ProjectPermission.FILE_DELETE);
     });

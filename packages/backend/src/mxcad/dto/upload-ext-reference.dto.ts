@@ -9,9 +9,8 @@ export class UploadExtReferenceDto {
     description: '上传的文件',
     type: 'string',
     format: 'binary',
-    required: false,
   })
-  file?: any;
+  file: any;
 
   @ApiProperty({
     description: '文件哈希值（用于 Multer 文件名生成）',

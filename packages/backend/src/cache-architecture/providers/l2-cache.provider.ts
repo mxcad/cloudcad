@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, RedisClientType } from 'redis';
+import type { AppConfig } from '../../config/app.config';
 import { IL2CacheManager } from '../interfaces/cache-manager.interface';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheStrategy } from '../enums/cache-strategy.enum';
@@ -25,13 +26,16 @@ export class L2CacheProvider<T = unknown>
   private hits = 0;
   private misses = 0;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(private readonly configService: ConfigService<AppConfig>) {
+    const redisConfig = this.configService.get('redis', { infer: true })!;
     this.client = createClient({
       socket: {
-        host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-        port: this.configService.get<number>('REDIS_PORT', 6379),
+        host: redisConfig.host,
+        port: redisConfig.port,
+        connectTimeout: redisConfig.connectTimeout,
       },
-      database: this.configService.get<number>('REDIS_DB', 0),
+      password: redisConfig.password,
+      database: redisConfig.db,
     });
 
     this.client.on('error', (err) => {

@@ -11,6 +11,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('健康检查')
 @Controller('health')
@@ -21,6 +22,14 @@ export class HealthController {
     private databaseService: DatabaseService,
     private storageService: StorageService
   ) {}
+
+  @Get('live')
+  @Public()
+  @ApiOperation({ summary: '存活检查（Docker 健康检查）' })
+  @ApiResponse({ status: 200, description: '服务存活' })
+  async liveness() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
 
   @Get()
   @HealthCheck()

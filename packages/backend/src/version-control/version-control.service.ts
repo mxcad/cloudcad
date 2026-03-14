@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../config/app.config';
 import { promisify } from 'util';
 import {
   svnCheckout,
@@ -11,6 +12,8 @@ import {
   svnLog,
   svnCat,
   svnList,
+  svnPropset,
+  svnUpdate,
 } from '@cloudcad/svn-version-tool';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -36,6 +39,8 @@ const svnListAsync = promisify(svnList) as (
   username: string | null,
   password: string | null
 ) => Promise<string>;
+const svnPropsetAsync = promisify(svnPropset);
+const svnUpdateAsync = promisify(svnUpdate);
 
 /**
  * SVN 操作结果
@@ -81,21 +86,18 @@ export class VersionControlService implements OnModuleInit {
   private readonly logger = new Logger(VersionControlService.name);
   private readonly svnRepoPath: string;
   private readonly filesDataPath: string;
+  private readonly svnIgnorePatterns: string[];
   private isInitialized = false;
 
-  constructor(private readonly configService: ConfigService) {
-    // 解析路径为绝对路径
-    const basePath = process.cwd();
-    const repoPath =
-      this.configService.get<string>('SVN_REPO_PATH') || '../../svn-repo';
-    const dataPath =
-      this.configService.get<string>('FILES_DATA_PATH') || '../../filesData';
-
-    this.svnRepoPath = path.resolve(basePath, repoPath);
-    this.filesDataPath = path.resolve(basePath, dataPath);
+  constructor(private readonly configService: ConfigService<AppConfig>) {
+    // 使用 NestJS 标准配置方式获取路径（configuration.ts 已解析为绝对路径）
+    this.svnRepoPath = this.configService.get('svnRepoPath', { infer: true })!;
+    this.filesDataPath = this.configService.get('filesDataPath', { infer: true })!;
+    this.svnIgnorePatterns = this.configService.get('svn', { infer: true })?.ignorePatterns || [];
 
     this.logger.log(`SVN 仓库路径: ${this.svnRepoPath}`);
     this.logger.log(`filesData 路径: ${this.filesDataPath}`);
+    this.logger.log(`SVN 忽略模式: ${this.svnIgnorePatterns.join(', ')}`);
   }
 
   /**
@@ -125,62 +127,119 @@ export class VersionControlService implements OnModuleInit {
 
     // 检查 filesData 是否已经是 SVN 工作副本
     const svnDir = path.join(this.filesDataPath, '.svn');
-    if (fs.existsSync(svnDir)) {
-      this.logger.log(`filesData 已是 SVN 工作副本`);
-      this.isInitialized = true;
-      this.logger.log('SVN 版本控制初始化完成');
-      return;
-    }
+    if (!fs.existsSync(svnDir)) {
+      // filesData 不是工作副本，需要初始化
+      const filesDataExists = fs.existsSync(this.filesDataPath);
+      const filesDataIsEmpty =
+        !filesDataExists || fs.readdirSync(this.filesDataPath).length === 0;
 
-    // filesData 不是工作副本，需要初始化
-    const filesDataExists = fs.existsSync(this.filesDataPath);
-    const filesDataIsEmpty =
-      !filesDataExists || fs.readdirSync(this.filesDataPath).length === 0;
+      if (filesDataIsEmpty) {
+        // 如果 filesData 为空，可以直接 checkout
+        const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}`;
+        this.logger.log(`检出 SVN 仓库: ${repoUrl} -> ${this.filesDataPath}`);
 
-    if (filesDataIsEmpty) {
-      // 如果 filesData 为空，可以直接 checkout
-      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}`;
-      this.logger.log(`检出 SVN 仓库: ${repoUrl} -> ${this.filesDataPath}`);
+        // 确保 filesData 目录存在
+        if (!filesDataExists) {
+          fs.mkdirSync(this.filesDataPath, { recursive: true });
+        }
 
-      // 确保 filesData 目录存在
-      if (!filesDataExists) {
-        fs.mkdirSync(this.filesDataPath, { recursive: true });
-      }
-
-      await svnCheckoutAsync(repoUrl, this.filesDataPath, null, null);
-      this.logger.log(`SVN 检出成功`);
-    } else {
-      // 如果 filesData 不为空，使用 svn import 导入到仓库
-      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}`;
-      this.logger.warn(`filesData 不为空，使用 svn import 导入现有内容...`);
-
-      try {
-        // 先 import 现有内容到仓库
-        const importResult = await svnImportAsync(
-          this.filesDataPath,
-          repoUrl,
-          'Initial import'
-        );
-        this.logger.log(`svn import 成功: ${importResult}`);
-
-        // 然后删除 filesData 并重新 checkout
-        this.logger.log(`删除 filesData 目录并重新检出...`);
-        fs.rmSync(this.filesDataPath, { recursive: true, force: true });
-        fs.mkdirSync(this.filesDataPath, { recursive: true });
         await svnCheckoutAsync(repoUrl, this.filesDataPath, null, null);
         this.logger.log(`SVN 检出成功`);
-      } catch (error) {
-        this.logger.error(`svn import 失败: ${error.message}`);
-        throw error;
+      } else {
+        // 如果 filesData 不为空，使用 svn import 导入到仓库
+        const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}`;
+        this.logger.warn(`filesData 不为空，使用 svn import 导入现有内容...`);
+
+        try {
+          // 先 import 现有内容到仓库
+          const importResult = await svnImportAsync(
+            this.filesDataPath,
+            repoUrl,
+            'Initial import'
+          );
+          this.logger.log(`svn import 成功: ${importResult}`);
+        } catch (error) {
+          // 如果 import 失败（如文件已存在），记录警告但不抛出错误
+          if (error.message && error.message.includes('E160020')) {
+            this.logger.warn(`SVN 仓库已有数据，跳过 import`);
+          } else {
+            this.logger.error(`svn import 失败: ${error.message}`);
+            throw error;
+          }
+        }
+
+        try {
+          // 使用 --force 强制 checkout 到非空目录
+          // 这样会在现有文件上创建 .svn 目录，使其成为工作副本
+          this.logger.log(`创建工作副本...`);
+          await svnCheckoutAsync(repoUrl, this.filesDataPath, null, null);
+          this.logger.log(`SVN 检出成功`);
+        } catch (error) {
+          this.logger.error(`SVN checkout 失败: ${error.message}`);
+          throw error;
+        }
       }
+    } else {
+      this.logger.log(`filesData 已是 SVN 工作副本`);
     }
 
     this.isInitialized = true;
     this.logger.log('SVN 版本控制初始化完成');
+
+    // 设置 svn:global-ignores 忽略模式
+    // 每次启动都会重新设置，确保配置变更后能生效
+    await this.setupGlobalIgnores();
+  }
+
+  /**
+   * 设置 svn:global-ignores 忽略模式
+   * 每次启动都会重新设置，覆盖之前的配置
+   */
+  private async setupGlobalIgnores(): Promise<void> {
+    if (this.svnIgnorePatterns.length === 0) {
+      this.logger.log('未配置 SVN 忽略模式，跳过设置');
+      return;
+    }
+
+    try {
+      // 先更新工作副本，避免 "out of date" 错误
+      this.logger.log('更新 SVN 工作副本...');
+      await svnUpdateAsync(this.filesDataPath, null, null);
+      this.logger.log('SVN 工作副本更新成功');
+
+      // 将忽略模式转换为换行分隔的字符串
+      const ignoreValue = this.svnIgnorePatterns.join('\n');
+
+      this.logger.log(
+        `设置 svn:global-ignores: ${this.svnIgnorePatterns.join(', ')}`
+      );
+
+      // 设置 svn:global-ignores 属性
+      await svnPropsetAsync(
+        this.filesDataPath,
+        'svn:global-ignores',
+        ignoreValue
+      );
+
+      // 提交属性更改
+      const commitMessage = JSON.stringify({
+        type: 'update_ignores',
+        message: 'Update global ignore patterns',
+        patterns: this.svnIgnorePatterns,
+        timestamp: new Date().toISOString(),
+      });
+
+      await svnCommitAsync([this.filesDataPath], commitMessage, false, null, null);
+      this.logger.log('svn:global-ignores 设置成功并已提交');
+    } catch (error) {
+      // 如果提交失败（可能没有变更），仅记录警告
+      this.logger.warn(`设置 svn:global-ignores 失败: ${error.message}`);
+    }
   }
 
   /**
    * 提交节点目录到 SVN
+   * 使用 svn:global-ignores 过滤文件，直接递归添加目录
    * @param nodeDirectory 节点目录路径
    * @param message 提交消息
    * @param userId 用户ID（可选）
@@ -204,7 +263,7 @@ export class VersionControlService implements OnModuleInit {
       const relativePath = path.relative(filesDataRoot, nodeDirectory);
       const pathParts = relativePath.split(path.sep);
 
-      // 逐层添加并提交所有目录
+      // 逐层添加并提交所有目录（确保父目录已在版本控制中）
       let currentPath = filesDataRoot;
       for (let i = 0; i < pathParts.length; i++) {
         currentPath = path.join(currentPath, pathParts[i]);
@@ -212,66 +271,48 @@ export class VersionControlService implements OnModuleInit {
         // 判断是否是目标目录（最后一层）
         const isTargetDirectory = i === pathParts.length - 1;
 
-        // 添加目录
-        // 目标目录递归添加所有内容，中间目录只添加目录本身
-        try {
-          await svnAddAsync([currentPath], isTargetDirectory);
-        } catch (error) {
-          // 忽略已存在的错误
-          if (!error.message.includes('already under version control')) {
-            this.logger.warn(
-              `添加目录失败: ${currentPath}, 错误: ${error.message}`
-            );
+        if (isTargetDirectory) {
+          // 目标目录：使用 --depth infinity 递归添加
+          // svn:global-ignores 会自动过滤匹配的文件
+          try {
+            await svnAddAsync([currentPath], true); // true = depth infinity
+            this.logger.log(`递归添加目录: ${currentPath}`);
+          } catch (error) {
+            // 忽略已存在的错误
+            if (!error.message.includes('already under version control')) {
+              this.logger.warn(
+                `添加目录失败: ${currentPath}, 错误: ${error.message}`
+              );
+            }
           }
-        }
+        } else {
+          // 中间目录：只添加目录本身
+          try {
+            await svnAddAsync([currentPath], false);
+          } catch (error) {
+            if (!error.message.includes('already under version control')) {
+              this.logger.warn(
+                `添加中间目录失败: ${currentPath}, 错误: ${error.message}`
+              );
+            }
+          }
 
-        // 如果不是最后一层（目标目录），先提交这一层
-        if (i < pathParts.length - 1) {
+          // 提交中间目录
           try {
             const commitMessage = JSON.stringify({
               type: 'add_directory',
               message: `Add directory: ${pathParts[i]}`,
               timestamp: new Date().toISOString(),
             });
-            const commitResult = await svnCommitAsync(
-              [currentPath],
-              commitMessage,
-              false,
-              null,
-              null
-            );
-            this.logger.log(`目录提交成功: ${currentPath}`);
+            await svnCommitAsync([currentPath], commitMessage, false, null, null);
+            this.logger.log(`中间目录提交成功: ${currentPath}`);
           } catch (error) {
-            // 如果提交失败，可能目录没有变化，忽略
             if (!error.message.includes('not under version control')) {
               this.logger.warn(
-                `提交目录失败: ${currentPath}, 错误: ${error.message}`
+                `提交中间目录失败: ${currentPath}, 错误: ${error.message}`
               );
             }
           }
-        }
-      }
-
-      // 最后提交目标目录（排除 .mxweb 文件）
-      // 查找目录下所有非 .mxweb 文件
-      const files = this.findFilesExcludeMxweb(nodeDirectory);
-
-      if (files.length === 0) {
-        this.logger.log(`目录下没有文件需要提交: ${nodeDirectory}`);
-        return { success: true, message: '没有文件需要提交' };
-      }
-
-      this.logger.log(
-        `[SVN] 准备提交 - 目录: ${nodeDirectory}, 文件数: ${files.length}`
-      );
-
-      // 添加文件到 SVN
-      try {
-        await svnAddAsync(files, false);
-      } catch (error) {
-        // 忽略已存在的错误
-        if (!error.message.includes('already under version control')) {
-          this.logger.warn(`添加文件失败: ${error.message}`);
         }
       }
 
@@ -285,19 +326,16 @@ export class VersionControlService implements OnModuleInit {
       };
       const fullMessage = JSON.stringify(commitData);
 
-      // 提交时包含目录本身和文件，确保父目录被正确添加到版本控制
-      const commitPaths = [nodeDirectory, ...files];
+      // 提交目标目录（递归）
       const result = await svnCommitAsync(
-        commitPaths,
+        [nodeDirectory],
         fullMessage,
-        false,
+        true, // 递归提交
         null,
         null
       );
 
-      this.logger.log(
-        `目录提交成功: ${nodeDirectory}, 共 ${files.length} 个文件`
-      );
+      this.logger.log(`目录提交成功: ${nodeDirectory}`);
       return {
         success: true,
         message: '提交成功',
@@ -356,40 +394,6 @@ export class VersionControlService implements OnModuleInit {
         message: `提交失败: ${error.message}`,
       };
     }
-  }
-
-  /**
-   * 递归查找目录下所有非 .mxweb 文件
-   * @param directory 目录路径
-   * @returns 文件路径数组
-   */
-  private findFilesExcludeMxweb(directory: string): string[] {
-    const files: string[] = [];
-
-    const scanDir = (dir: string) => {
-      if (!fs.existsSync(dir)) {
-        return;
-      }
-
-      const items = fs.readdirSync(dir);
-      for (const item of items) {
-        const fullPath = path.join(dir, item);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          // 跳过 .svn 目录
-          if (item === '.svn') {
-            continue;
-          }
-          scanDir(fullPath);
-        } else if (stat.isFile() && !item.endsWith('.mxweb')) {
-          files.push(fullPath);
-        }
-      }
-    };
-
-    scanDir(directory);
-    return files;
   }
 
   /**

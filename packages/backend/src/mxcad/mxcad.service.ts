@@ -971,6 +971,23 @@ export class MxCadService {
       // 目标文件路径
       const targetPath = nodeFullPath;
 
+      // 在保存新版本之前，检查是否需要备份初始版本的 mxweb
+      // 初始版本命名规则：{basename}_initial.mxweb
+      const mxwebBaseName = path.basename(targetPath);
+      const initialMxwebName = mxwebBaseName.replace(
+        /\.mxweb$/,
+        '_initial.mxweb'
+      );
+      const initialMxwebPath = path.join(nodeDir, initialMxwebName);
+
+      // 如果目标文件已存在，且没有初始版本备份，则先备份当前版本作为初始版本
+      if (fs.existsSync(targetPath) && !fs.existsSync(initialMxwebPath)) {
+        this.logger.log(
+          `[saveMxwebFile] 备份初始版本: ${targetPath} -> ${initialMxwebPath}`
+        );
+        await fsPromises.copyFile(targetPath, initialMxwebPath);
+      }
+
       // 拷贝文件到目标位置（覆盖原文件）
       await fsPromises.copyFile(file.path, targetPath);
       this.logger.log(

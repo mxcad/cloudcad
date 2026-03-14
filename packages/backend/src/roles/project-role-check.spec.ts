@@ -660,22 +660,6 @@ describe('ProjectPermissionService', () => {
       });
     });
 
-    describe('CAD_EXPORT - 导出图纸', () => {
-      it('所有角色都应该拥有 CAD_EXPORT 权限', () => {
-        const allRoles = [
-          ProjectRole.OWNER,
-          ProjectRole.ADMIN,
-          ProjectRole.MEMBER,
-          ProjectRole.EDITOR,
-          ProjectRole.VIEWER,
-        ];
-        allRoles.forEach((role) => {
-          const permissions = DEFAULT_PROJECT_ROLE_PERMISSIONS[role];
-          expect(permissions).toContain(ProjectPermission.CAD_EXPORT);
-        });
-      });
-    });
-
     describe('CAD_EXTERNAL_REFERENCE - 外部参照管理', () => {
       it('VIEWER 不应该拥有 CAD_EXTERNAL_REFERENCE 权限', () => {
         const permissions =

@@ -4,19 +4,34 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { ExtractJwt } from 'passport-jwt';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   private readonly logger = new Logger(JwtAuthGuard.name);
 
-  constructor(private tokenBlacklistService: TokenBlacklistService) {
+  constructor(
+    private tokenBlacklistService: TokenBlacklistService,
+    private reflector: Reflector
+  ) {
     super();
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // 检查是否为公开路由
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest();
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 

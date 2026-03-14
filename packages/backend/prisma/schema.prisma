@@ -1,6 +1,8 @@
 generator client {
   provider = "prisma-client-js"
   engineType = "library"
+  // 跨平台部署支持：包含 Windows 和 Linux 的 Prisma 引擎
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x", "linux-musl"]
 }
 
 datasource db {
@@ -361,7 +363,6 @@ enum ProjectPermission {
 
   // ========== CAD 图纸权限 ==========
   CAD_SAVE
-  CAD_EXPORT
   CAD_EXTERNAL_REFERENCE
 
   // ========== 图库权限 ==========

@@ -17,7 +17,7 @@ describe('StorageService', () => {
   const mockConfigService = {
     get: jest.fn((key: string) => {
       if (key === 'FILES_DATA_PATH') return '../filesData';
-      if (key === 'FILES_NODE_LIMIT') return 1000;
+      if (key === 'storage') return { nodeLimit: 1000 };
       return undefined;
     }),
   };

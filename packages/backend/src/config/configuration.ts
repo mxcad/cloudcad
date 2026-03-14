@@ -228,4 +228,17 @@ export default (): AppConfig => ({
     maxUsers: parseInt(process.env.CACHE_WARMUP_MAX_USERS || '100', 10) || 100,
     maxProjects: parseInt(process.env.CACHE_WARMUP_MAX_PROJECTS || '50', 10) || 50,
   },
+
+  // 存储配置
+  storage: {
+    nodeLimit: parseInt(process.env.FILES_NODE_LIMIT || '300000', 10) || 300000, // 单目录最大节点数
+  },
+
+  // SVN 配置
+  svn: {
+    ignorePatterns: parseStringArray(
+      process.env.SVN_IGNORE_PATTERNS,
+      ['*.mxweb', '*.dwg', '*.jpg']
+    ),
+  },
 });

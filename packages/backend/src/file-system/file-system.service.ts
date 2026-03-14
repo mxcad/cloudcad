@@ -2632,8 +2632,17 @@ export class FileSystemService {
         },
       });
 
-      // 如果 ProjectMember 表不为空，返回新系统的数据
-      return projectMembers;
+      // 映射为前端期望的 ProjectMemberDto 格式
+      return projectMembers.map((pm) => ({
+        id: pm.user.id,
+        email: pm.user.email,
+        username: pm.user.username,
+        nickname: pm.user.nickname,
+        avatar: pm.user.avatar,
+        projectRoleId: pm.projectRoleId,
+        projectRoleName: pm.projectRole.name,
+        joinedAt: pm.createdAt,
+      }));
     } catch (error) {
       this.logger.error(`获取项目成员失败: ${error.message}`, error.stack);
       throw error;

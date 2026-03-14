@@ -6,8 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
-import { SystemRole } from '../enums/permissions.enum';
-import * as bcrypt from 'bcrypt';
+import {
+  SystemRole,
+  ProjectRole,
+  DEFAULT_PROJECT_ROLE_PERMISSIONS,
+} from '../enums/permissions.enum';
+import * as bcrypt from 'bcryptjs';
 
 /**
  * 系统初始化服务
@@ -164,123 +168,30 @@ export class InitializationService implements OnModuleInit {
 
   /**
    * 创建项目默认角色
+   * 权限定义来源于 DEFAULT_PROJECT_ROLE_PERMISSIONS（唯一来源）
    */
   private async createProjectDefaultRoles(): Promise<void> {
     try {
-      // 项目角色权限定义 - 必须与 DEFAULT_PROJECT_ROLE_PERMISSIONS 保持一致
-      const defaultRoles = [
-        {
-          name: 'PROJECT_OWNER',
-          description: '项目所有者，拥有项目的完整管理权限',
-          permissions: [
-            // 项目管理权限
-            'PROJECT_UPDATE',
-            'PROJECT_DELETE',
-            'PROJECT_MEMBER_MANAGE',
-            'PROJECT_MEMBER_ASSIGN',
-            'PROJECT_TRANSFER',
-            'PROJECT_ROLE_MANAGE',
-            'PROJECT_ROLE_PERMISSION_MANAGE',
-            // 文件操作权限
-            'FILE_CREATE',
-            'FILE_UPLOAD',
-            'FILE_OPEN',
-            'FILE_EDIT',
-            'FILE_DELETE',
-            'FILE_TRASH_MANAGE',
-            'FILE_DOWNLOAD',
-            // CAD 图纸权限
-            'CAD_SAVE',
-            'CAD_EXPORT',
-            'CAD_EXTERNAL_REFERENCE',
-            // 图库权限
-            'GALLERY_ADD',
-            // 版本管理权限
-            'VERSION_READ',
-          ],
-        },
-        {
-          name: 'PROJECT_ADMIN',
-          description: '项目管理员，管理项目和团队成员',
-          permissions: [
-            // 项目管理权限（无删除和转让）
-            'PROJECT_UPDATE',
-            'PROJECT_MEMBER_MANAGE',
-            'PROJECT_MEMBER_ASSIGN',
-            // 文件操作权限
-            'FILE_CREATE',
-            'FILE_UPLOAD',
-            'FILE_OPEN',
-            'FILE_EDIT',
-            'FILE_DELETE',
-            'FILE_TRASH_MANAGE',
-            'FILE_DOWNLOAD',
-            // CAD 图纸权限
-            'CAD_SAVE',
-            'CAD_EXPORT',
-            'CAD_EXTERNAL_REFERENCE',
-            // 图库权限
-            'GALLERY_ADD',
-            // 版本管理权限
-            'VERSION_READ',
-          ],
-        },
-        {
-          name: 'PROJECT_MEMBER',
-          description: '项目成员，可以查看和编辑项目内容',
-          permissions: [
-            // 文件操作权限（无回收站管理）
-            'FILE_CREATE',
-            'FILE_UPLOAD',
-            'FILE_OPEN',
-            'FILE_EDIT',
-            'FILE_DELETE',
-            'FILE_DOWNLOAD',
-            // CAD 图纸权限（无外部参照管理）
-            'CAD_SAVE',
-            'CAD_EXPORT',
-            // 图库权限
-            'GALLERY_ADD',
-            // 版本管理权限
-            'VERSION_READ',
-          ],
-        },
-        {
-          name: 'PROJECT_EDITOR',
-          description: '项目编辑者，可以编辑项目文件',
-          permissions: [
-            // 文件操作权限（无创建和回收站管理）
-            'FILE_UPLOAD',
-            'FILE_OPEN',
-            'FILE_EDIT',
-            'FILE_DELETE',
-            'FILE_DOWNLOAD',
-            // CAD 图纸权限（无外部参照管理）
-            'CAD_SAVE',
-            'CAD_EXPORT',
-            // 版本管理权限
-            'VERSION_READ',
-          ],
-        },
-        {
-          name: 'PROJECT_VIEWER',
-          description: '项目查看者，仅能查看项目内容',
-          permissions: [
-            // 只读权限
-            'FILE_OPEN',
-            'FILE_DOWNLOAD',
-            // CAD 导出权限
-            'CAD_EXPORT',
-            // 版本管理权限
-            'VERSION_READ',
-          ],
-        },
-      ];
+      // 角色描述映射
+      const roleDescriptions: Record<ProjectRole, string> = {
+        [ProjectRole.OWNER]: '项目所有者，拥有项目的完整管理权限',
+        [ProjectRole.ADMIN]: '项目管理员，管理项目和团队成员',
+        [ProjectRole.MEMBER]: '项目成员，可以查看和编辑项目内容',
+        [ProjectRole.EDITOR]: '项目编辑者，可以编辑项目文件',
+        [ProjectRole.VIEWER]: '项目查看者，仅能查看项目内容',
+      };
 
-      for (const roleConfig of defaultRoles) {
+      // 遍历所有项目角色，使用 DEFAULT_PROJECT_ROLE_PERMISSIONS 作为唯一来源
+      for (const [roleKey, permissions] of Object.entries(
+        DEFAULT_PROJECT_ROLE_PERMISSIONS,
+      )) {
+        const roleName = roleKey as ProjectRole;
+        const description = roleDescriptions[roleName];
+        const permissionStrings = permissions.map((p) => p as string);
+
         const existingRole = await this.prisma.projectRole.findFirst({
           where: {
-            name: roleConfig.name,
+            name: roleName,
             isSystem: true,
           },
           include: {
@@ -291,11 +202,11 @@ export class InitializationService implements OnModuleInit {
         if (existingRole) {
           // 检查权限是否完整
           const existingPermissionCount = existingRole.permissions.length;
-          const expectedPermissionCount = roleConfig.permissions.length;
+          const expectedPermissionCount = permissions.length;
 
           if (existingPermissionCount !== expectedPermissionCount) {
             this.logger.warn(
-              `项目角色 ${roleConfig.name} 权限不完整（${existingPermissionCount}/${expectedPermissionCount}），正在更新...`
+              `项目角色 ${roleName} 权限不完整（${existingPermissionCount}/${expectedPermissionCount}），正在更新...`,
             );
 
             // 删除所有现有权限
@@ -305,7 +216,7 @@ export class InitializationService implements OnModuleInit {
 
             // 重新分配权限
             await this.prisma.projectRolePermission.createMany({
-              data: roleConfig.permissions.map((permission) => ({
+              data: permissionStrings.map((permission) => ({
                 projectRoleId: existingRole.id,
                 permission: permission as any,
               })),
@@ -313,25 +224,25 @@ export class InitializationService implements OnModuleInit {
             });
 
             this.logger.log(
-              `✅ 项目角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`
+              `✅ 项目角色 ${roleName} 权限更新成功，分配 ${permissions.length} 个权限`,
             );
           }
 
           continue;
         }
 
-        this.logger.log(`创建项目角色: ${roleConfig.name}`);
+        this.logger.log(`创建项目角色: ${roleName}`);
 
         const role = await this.prisma.projectRole.create({
           data: {
-            name: roleConfig.name,
-            description: roleConfig.description,
+            name: roleName,
+            description,
             isSystem: true,
           },
         });
 
         await this.prisma.projectRolePermission.createMany({
-          data: roleConfig.permissions.map((permission) => ({
+          data: permissionStrings.map((permission) => ({
             projectRoleId: role.id,
             permission: permission as any,
           })),
@@ -339,7 +250,7 @@ export class InitializationService implements OnModuleInit {
         });
 
         this.logger.log(
-          `✅ 项目角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`
+          `✅ 项目角色 ${roleName} 创建成功，分配 ${permissions.length} 个权限`,
         );
       }
     } catch (error) {

@@ -25,7 +25,6 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import * as os from 'os';
 
 import { ApiTags, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
@@ -43,7 +42,9 @@ import { RefreshExternalReferencesResponseDto } from './dto/refresh-external-ref
 import { UploadFileResponseDto } from './dto/upload-file-response.dto';
 import { CheckThumbnailResponseDto } from './dto/check-thumbnail-response.dto';
 import { UploadThumbnailResponseDto } from './dto/upload-thumbnail-response.dto';
+import { UploadThumbnailDto } from './dto/upload-thumbnail.dto';
 import { SaveMxwebResponseDto } from './dto/save-mxweb-response.dto';
+import { SaveMxwebDto } from './dto/save-mxweb.dto';
 import { MxCadRequest } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
@@ -55,6 +56,7 @@ import { ProjectPermission } from '../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
+
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -68,6 +70,9 @@ export class MxCadController {
     string,
     { data: PreloadingDataDto; timestamp: number }
   >();
+
+  // 历史版本转换锁（防止同一版本的并发请求重复转换）
+  private historyConversionLocks = new Map<string, Promise<unknown>>();
 
   constructor(
     private readonly mxCadService: MxCadService,
@@ -297,41 +302,7 @@ export class MxCadController {
   @UseInterceptors(AnyFilesInterceptor())
   @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
-        hash: {
-          type: 'string',
-          description: '文件 MD5 哈希值',
-        },
-        name: {
-          type: 'string',
-          description: '原始文件名',
-        },
-        size: {
-          type: 'number',
-          description: '文件总大小（字节）',
-        },
-        chunk: {
-          type: 'number',
-          description: '分片索引（分片上传时必填）',
-        },
-        chunks: {
-          type: 'number',
-          description: '总分片数量（分片上传时必填）',
-        },
-        nodeId: {
-          type: 'string',
-          description: '节点ID（项目根目录或文件夹的 FileSystemNode ID）',
-        },
-      },
-    },
-  })
+  @ApiBody({ type: UploadFilesDto })
   @ApiResponse({
     status: 200,
     description: '上传文件成功',
@@ -452,6 +423,7 @@ export class MxCadController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: SaveMxwebDto })
   @ApiResponse({
     status: 200,
     description: '保存 mxweb 文件到指定节点',
@@ -503,6 +475,7 @@ export class MxCadController {
   @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadExtReferenceDto })
   @ApiResponse({
     status: 200,
     description: '上传成功',
@@ -647,6 +620,7 @@ export class MxCadController {
   @Post('up_ext_reference_image')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadExtReferenceDto })
   @ApiResponse({
     status: 200,
     description: '上传成功',
@@ -863,6 +837,7 @@ export class MxCadController {
   @Post('thumbnail/:nodeId')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadThumbnailDto })
   @ApiResponse({
     status: 200,
     description: '上传成功',
@@ -1390,100 +1365,165 @@ export class MxCadController {
           );
           buffer = await fsPromises.readFile(historyMxwebPath);
         } else {
-          // 没有缓存，需要从 SVN 获取 bin 文件并转换
-          this.logger.log(
-            `历史版本 mxweb 不存在，从 SVN 获取 .bin 分片文件并转换`
-          );
+          // 检查是否有正在进行的转换（防止并发请求重复转换）
+          const lockKey = historyMxwebPath;
+          const existingLock = this.historyConversionLocks.get(lockKey);
 
-          // 列出目录内容，找到所有分片 bin 文件
-          const listResult =
-            await this.versionControlService.listDirectoryAtRevision(
-              fileDir,
-              parseInt(version, 10)
-            );
-
-          if (!listResult.success || !listResult.files) {
-            this.logger.error(`无法列出目录内容: ${fileDir} v${version}`);
-            return res.status(404).json({
-              code: -1,
-              message: '历史版本目录不存在',
-            });
-          }
-
-          // 筛选出匹配的分片 bin 文件：{basename}_{index}.mxweb.bin
-          const binPattern = new RegExp(
-            `^${mxwebBaseName.replace(/\./g, '\\.')}_\\d+\\.mxweb\\.bin$`
-          );
-          const binFiles = listResult.files.filter((f) => binPattern.test(f));
-
-          if (binFiles.length === 0) {
-            this.logger.error(`未找到分片 bin 文件，模式: ${binPattern}`);
-            return res.status(404).json({
-              code: -1,
-              message: '历史版本文件不存在',
-            });
-          }
-
-          this.logger.log(`找到 ${binFiles.length} 个分片 bin 文件`);
-
-          // 创建临时目录用于存放 bin 分片文件
-          const tempDir = path.join(
-            os.tmpdir(),
-            `mxcad-history-${version}-${Date.now()}`
-          );
-          await fsPromises.mkdir(tempDir, { recursive: true });
-
-          // 获取所有分片文件并保存到临时目录（保持原文件名，转换程序会自动处理分片）
-          for (const binFile of binFiles) {
-            const binFilePath = path.join(fileDir, binFile);
-            this.logger.log(`获取分片文件: ${binFile} v${version}`);
-
-            const binResult =
-              await this.versionControlService.getFileContentAtRevision(
-                binFilePath,
-                parseInt(version, 10)
-              );
-
-            if (!binResult.success || !binResult.content) {
-              this.logger.error(`获取分片文件失败: ${binFile} v${version}`);
-              await this.cleanupTempFiles(tempDir);
-              return res.status(404).json({
+          if (existingLock) {
+            // 等待正在进行的转换完成
+            this.logger.log(`等待正在进行的转换: ${historyMxwebName}`);
+            await existingLock;
+            // 转换完成后重新检查缓存文件
+            if (fs.existsSync(historyMxwebPath)) {
+              this.logger.log(`转换完成，返回缓存文件: ${historyMxwebName}`);
+              buffer = await fsPromises.readFile(historyMxwebPath);
+            } else {
+              // 等待完成但文件不存在，说明转换失败，返回错误
+              this.logger.error(`转换完成但文件不存在: ${historyMxwebName}`);
+              return res.status(500).json({
                 code: -1,
-                message: `分片文件获取失败: ${binFile}`,
+                message: '历史版本文件转换失败',
               });
             }
-
-            // 保存分片文件到临时目录，保持原文件名
-            const tempBinFile = path.join(tempDir, binFile);
-            await fsPromises.writeFile(tempBinFile, binResult.content);
-          }
-
-          // 转换 bin 文件为 mxweb
-          // srcpath 指向不带分片序号的 bin 文件名，转换程序会自动查找分片文件
-          // 输出到节点目录，命名为历史版本格式
-          const binSrcPath = path.join(tempDir, `${mxwebBaseName}.bin`);
-          const conversionResult =
-            await this.fileConversionService.convertBinToMxweb(
-              binSrcPath,
-              fileDir,
-              historyMxwebName
+          } else {
+            // 没有缓存，需要从 SVN 获取 bin 文件并转换
+            this.logger.log(
+              `历史版本 mxweb 不存在，从 SVN 获取 .bin 分片文件并转换`
             );
 
-          // 清理临时目录
-          await this.cleanupTempFiles(tempDir);
-
-          if (!conversionResult.success || !conversionResult.outputPath) {
-            this.logger.error(`bin→mxweb 转换失败: ${conversionResult.error}`);
-            return res.status(500).json({
-              code: -1,
-              message: `历史版本文件转换失败: ${conversionResult.error}`,
+            // 创建转换任务（先声明，后存入锁，再执行）
+            let resolveConversionTask: (value: string | null) => void;
+            let rejectConversionTask: (reason: Error) => void;
+            const conversionTask = new Promise<string | null>((resolve, reject) => {
+              resolveConversionTask = resolve;
+              rejectConversionTask = reject;
             });
+
+            // 立即存入锁 Map，防止竞态条件
+            this.historyConversionLocks.set(lockKey, conversionTask);
+
+            // 执行转换任务
+            (async () => {
+              try {
+                // 列出目录内容，找到所有分片 bin 文件
+                const listResult =
+                  await this.versionControlService.listDirectoryAtRevision(
+                    fileDir,
+                    parseInt(version, 10)
+                  );
+
+                if (!listResult.success || !listResult.files) {
+                  throw new Error('历史版本目录不存在');
+                }
+
+                const binFiles = listResult.files
+
+                if (binFiles.length === 0) {
+                  // 没有 bin 分片文件，说明这是第一个版本（上传时的原始版本）
+                  // 返回 null 表示需要使用初始版本逻辑（不生成缓存文件）
+                  resolveConversionTask!(null);
+                  return;
+                }
+
+                this.logger.log(`找到 ${binFiles.length} 个分片 bin 文件`);
+
+                // 创建临时目录用于存放 bin 分片文件
+                const mxcadTempPath = this.configService.get('mxcadTempPath', { infer: true });
+                const tempDir = path.join(
+                  mxcadTempPath,
+                  `mxcad-history-${version}-${Date.now()}`
+                );
+                await fsPromises.mkdir(tempDir, { recursive: true });
+
+                try {
+                  // 获取所有分片文件并保存到临时目录（保持原文件名，转换程序会自动处理分片）
+                  for (const binFile of binFiles) {
+                    const binFilePath = path.join(fileDir, binFile);
+                    this.logger.log(`获取分片文件: ${binFile} v${version}`);
+
+                    const binResult =
+                      await this.versionControlService.getFileContentAtRevision(
+                        binFilePath,
+                        parseInt(version, 10)
+                      );
+
+                    if (!binResult.success || !binResult.content) {
+                      throw new Error(`分片文件获取失败: ${binFile}`);
+                    }
+
+                    // 保存分片文件到临时目录，保持原文件名
+                    const tempBinFile = path.join(tempDir, binFile);
+                    await fsPromises.writeFile(tempBinFile, binResult.content);
+                  }
+
+
+                  // 转换 bin 文件为 mxweb
+                  const binSrcPath = path.join(tempDir, `${mxwebBaseName}.bin`);
+                  const conversionResult =
+                    await this.fileConversionService.convertBinToMxweb(
+                      binSrcPath,
+                      fileDir,
+                      historyMxwebName
+                    );
+
+                  if (!conversionResult.success || !conversionResult.outputPath) {
+                    throw new Error(`bin→mxweb 转换失败: ${conversionResult.error}`);
+                  }
+
+                  this.logger.log(`成功转换并保存历史版本 mxweb: ${historyMxwebName}`);
+
+                  resolveConversionTask!(conversionResult.outputPath);
+                } finally {
+                  // 清理临时目录
+                  await this.cleanupTempFiles(tempDir);
+                }
+              } catch (error) {
+                rejectConversionTask!(error as Error);
+              }
+            })();
+
+            try {
+              const resultPath = await conversionTask;
+              if (resultPath) {
+                // 有分片文件，读取转换后的 mxweb
+                buffer = await fsPromises.readFile(resultPath);
+              } else {
+                // 没有分片文件，使用初始版本逻辑
+                const initialMxwebName = mxwebBaseName.replace(
+                  /\.mxweb$/,
+                  '_initial.mxweb'
+                );
+                const initialMxwebPath = path.join(fileDir, initialMxwebName);
+
+                if (fs.existsSync(initialMxwebPath)) {
+                  buffer = await fsPromises.readFile(initialMxwebPath);
+                  this.logger.log(
+                    `成功返回初始版本 mxweb: ${initialMxwebName} (本地文件)`
+                  );
+                } else {
+                  const currentMxwebPath = path.join(fileDir, mxwebBaseName);
+                  if (!fs.existsSync(currentMxwebPath)) {
+                    return res.status(404).json({
+                      code: -1,
+                      message: '历史版本文件不存在',
+                    });
+                  }
+                  buffer = await fsPromises.readFile(currentMxwebPath);
+                  this.logger.log(`成功返回当前 mxweb 文件: ${mxwebBaseName}`);
+                }
+              }
+            } catch (error: unknown) {
+              const err = error as Error;
+              this.logger.error(`历史版本转换失败: ${err.message}`);
+              return res.status(500).json({
+                code: -1,
+                message: `历史版本文件转换失败: ${err.message}`,
+              });
+            } finally {
+              // 转换完成，清除锁
+              this.historyConversionLocks.delete(lockKey);
+            }
           }
-
-          // 读取转换后的 .mxweb 文件
-          buffer = await fsPromises.readFile(conversionResult.outputPath);
-
-          this.logger.log(`成功转换并保存历史版本 mxweb: ${historyMxwebName}`);
         }
       } else {
         // 非 .mxweb 文件（如 .dwg、.json 等），直接从 SVN 获取

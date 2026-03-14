@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../../config/app.config';
 import { FileLockService } from './file-lock.service';
 import { LocalStorageProvider } from '../../storage/local-storage.provider';
 
@@ -19,11 +20,11 @@ export class DirectoryAllocator {
   private readonly nodeLimit: number;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     private readonly fileLockService: FileLockService,
     private readonly localStorageProvider: LocalStorageProvider
   ) {
-    this.nodeLimit = this.configService.get('FILES_NODE_LIMIT', 300000);
+    this.nodeLimit = this.configService.get('storage', { infer: true })!.nodeLimit;
   }
 
   /**

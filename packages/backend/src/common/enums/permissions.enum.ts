@@ -163,7 +163,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_MOVE,
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
-    PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.CAD_EXTERNAL_REFERENCE,
     PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
@@ -183,7 +182,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_MOVE,
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
-    PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.CAD_EXTERNAL_REFERENCE,
     PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
@@ -199,7 +197,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_MOVE,
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
-    PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
   ],
@@ -213,14 +210,12 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_MOVE,
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
-    PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.VERSION_READ,
   ],
   [ProjectRole.VIEWER]: [
     // 项目查看者权限
     PrismaProjectPermission.FILE_OPEN,
     PrismaProjectPermission.FILE_DOWNLOAD,
-    PrismaProjectPermission.CAD_EXPORT,
     PrismaProjectPermission.VERSION_READ,
   ],
 };

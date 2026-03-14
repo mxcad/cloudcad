@@ -177,6 +177,22 @@ export interface CacheWarmupConfig {
   maxProjects: number;
 }
 
+/**
+ * 存储配置
+ */
+export interface StorageConfig {
+  /** 单目录最大节点数 */
+  nodeLimit: number;
+}
+
+/**
+ * SVN 配置
+ */
+export interface SvnConfig {
+  /** 忽略的文件模式列表（逗号分隔） */
+  ignorePatterns: string[];
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -201,4 +217,6 @@ export interface AppConfig {
   timeout: TimeoutConfig; // 超时配置
   product: ProductConfig; // 产品信息配置
   cacheWarmup: CacheWarmupConfig; // 缓存预热配置
+  storage: StorageConfig; // 存储配置
+  svn: SvnConfig; // SVN 配置
 }

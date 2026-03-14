@@ -1,24 +1,28 @@
 import { Module, Global } from '@nestjs/common';
 import { RedisModule as NestRedisModule } from '@nestjs-modules/ioredis';
 import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../config/app.config';
 
 @Global()
 @Module({
   imports: [
     NestRedisModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        type: 'single',
-        options: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-          password: configService.get<string>('REDIS_PASSWORD') || undefined,
-          db: configService.get<number>('REDIS_DB', 0),
-          enableReadyCheck: false,
-          maxRetriesPerRequest: 3,
-          retryDelayOnFailover: 100,
-          lazyConnect: true,
-        },
-      }),
+      useFactory: (configService: ConfigService<AppConfig>) => {
+        const redisConfig = configService.get('redis', { infer: true })!;
+        return {
+          type: 'single',
+          options: {
+            host: redisConfig.host,
+            port: redisConfig.port,
+            password: redisConfig.password,
+            db: redisConfig.db,
+            enableReadyCheck: false,
+            maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
+            retryDelayOnFailover: redisConfig.retryDelayOnFailover,
+            lazyConnect: true,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
