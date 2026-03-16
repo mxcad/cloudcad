@@ -21,7 +21,9 @@ import { UserManagement } from './pages/UserManagement';
 import FontLibrary from './pages/FontLibrary';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { SystemMonitorPage } from './pages/SystemMonitorPage';
+import { RuntimeConfigPage } from './pages/RuntimeConfigPage';
 import { useAuth } from './contexts/AuthContext';
+import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 
@@ -201,6 +203,18 @@ function AppContent() {
                       </PermissionRoute>
                     }
                   />
+
+                  {/* 运行时配置 - 需要 SYSTEM_CONFIG_READ 权限 */}
+                  <Route
+                    path="/runtime-config"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                      >
+                        <RuntimeConfigPage />
+                      </PermissionRoute>
+                    }
+                  />
                 </Routes>
               </Layout>
             </ProtectedRoute>
@@ -214,7 +228,9 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <RuntimeConfigProvider>
+        <AppContent />
+      </RuntimeConfigProvider>
     </Router>
   );
 }

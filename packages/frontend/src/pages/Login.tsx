@@ -7,6 +7,7 @@ import type { LoginDto } from '../types/api-client';
 
 interface LocationState {
   from?: string;
+  message?: string;
 }
 
 export const Login: React.FC = () => {
@@ -22,6 +23,17 @@ export const Login: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // 处理从注册页面传递的消息
+  useEffect(() => {
+    const state = location.state as LocationState | null;
+    if (state?.message) {
+      setSuccess(state.message);
+      // 清除 location state 中的 message，避免刷新后重复显示
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
@@ -112,6 +124,24 @@ export const Login: React.FC = () => {
         {/* 登录卡片 */}
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {success && (
+              <div className="rounded-xl bg-green-50 border border-green-200 p-4 animate-slide-up">
+                <div className="flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <div className="text-sm text-green-800">{success}</div>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="rounded-xl bg-error-50 border border-error-200 p-4 animate-slide-up">
                 <div className="flex items-start gap-3">

@@ -29,4 +29,11 @@ export const authApi = {
 
   resetPassword: (data: ResetPasswordDto) =>
     getApiClient().AuthController_resetPassword(null, data),
+
+  // 绑定邮箱
+  sendBindEmailCode: (email: string) =>
+    getApiClient().AuthController_sendBindEmailCode(null, { email }),
+
+  verifyBindEmail: (email: string, code: string) =>
+    getApiClient().AuthController_verifyBindEmail(null, { email, code }),
 };

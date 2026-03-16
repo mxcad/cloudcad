@@ -10,6 +10,7 @@ import { StorageModule } from '../storage/storage.module';
 import { AuditLogModule } from '../audit/audit-log.module';
 import { RolesModule } from '../roles/roles.module';
 import { VersionControlModule } from '../version-control/version-control.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 
 @Module({
@@ -20,6 +21,7 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
     AuditLogModule,
     RolesModule,
     VersionControlModule,
+    RuntimeConfigModule,
   ],
   controllers: [FileSystemController],
   providers: [

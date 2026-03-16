@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
@@ -58,6 +58,15 @@ export class ChangePasswordDto {
 export class ForgotPasswordResponseDto {
   @ApiProperty({ description: '消息' })
   message: string;
+
+  @ApiProperty({ description: '邮件服务是否启用' })
+  mailEnabled: boolean;
+
+  @ApiPropertyOptional({ description: '客服邮箱（邮件禁用时返回）', nullable: true })
+  supportEmail?: string;
+
+  @ApiPropertyOptional({ description: '客服电话（邮件禁用时返回）', nullable: true })
+  supportPhone?: string;
 }
 
 export class ResetPasswordResponseDto {
@@ -83,4 +92,34 @@ export class ResetPasswordApiResponseDto extends ApiResponseDto<ResetPasswordRes
 export class ChangePasswordApiResponseDto extends ApiResponseDto<ChangePasswordResponseDto> {
   @ApiProperty({ type: () => ChangePasswordResponseDto })
   declare data: ChangePasswordResponseDto;
+}
+
+// 绑定邮箱相关 DTO
+export class BindEmailDto {
+  @ApiProperty({ description: '要绑定的邮箱地址', example: 'user@example.com' })
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsNotEmpty({ message: '邮箱不能为空' })
+  email: string;
+}
+
+export class VerifyBindEmailDto {
+  @ApiProperty({ description: '邮箱地址', example: 'user@example.com' })
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsNotEmpty({ message: '邮箱不能为空' })
+  email: string;
+
+  @ApiProperty({ description: '验证码', example: '123456' })
+  @IsString({ message: '验证码必须是字符串' })
+  @IsNotEmpty({ message: '验证码不能为空' })
+  code: string;
+}
+
+export class BindEmailResponseDto {
+  @ApiProperty({ description: '消息' })
+  message: string;
+}
+
+export class BindEmailApiResponseDto extends ApiResponseDto<BindEmailResponseDto> {
+  @ApiProperty({ type: () => BindEmailResponseDto })
+  declare data: BindEmailResponseDto;
 }

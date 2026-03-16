@@ -154,6 +154,27 @@ if (USE_RUNTIME) {
   }
 }
 
+// 部署配置中心 - 独立服务，端口 3002
+// 用于管理 .env 配置文件，使用 INITIAL_ADMIN_PASSWORD 认证
+const configServiceScript = path.join(PROJECT_ROOT, 'packages', 'config-service', 'server.js');
+if (fs.existsSync(configServiceScript)) {
+  apps.push({
+    name: 'config-service',
+    script: configServiceScript,
+    interpreter: EXE.node || 'node',
+    cwd: PROJECT_ROOT,
+    autorestart: true,
+    watch: false,
+    max_restarts: 10,
+    min_uptime: '5s',
+    kill_timeout: 5000,
+    env: {
+      NODE_ENV: 'production',
+      CONFIG_SERVICE_PORT: 3002,
+    },
+  });
+}
+
 module.exports = {
   apps,
 };

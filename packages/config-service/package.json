@@ -1,0 +1,11 @@
+{
+  "name": "@cloudcad/config-service",
+  "version": "1.0.0",
+  "description": "CloudCAD 部署配置中心 - 0依赖独立服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["cloudcad", "config", "deployment"],
+  "license": "MIT"
+}

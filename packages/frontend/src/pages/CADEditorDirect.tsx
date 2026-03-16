@@ -43,7 +43,7 @@ declare global {
  */
 function parseCADEditorRoute(pathname: string): string | null {
   const match = pathname.match(/^\/cad-editor\/([^/]+)$/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 export const CADEditorDirect: React.FC = () => {

@@ -26,11 +26,11 @@ export interface RuntimeConfigDefinition {
 }
 
 /**
- * 运行时配置项（数据库模型）
+ * 运行时配置项（API 返回格式）
  */
 export interface RuntimeConfigItem {
   key: string;
-  value: string;
+  value: string | number | boolean;
   type: RuntimeConfigValueType;
   category: RuntimeConfigCategory;
   description: string | null;

@@ -1,0 +1,66 @@
+# CloudCAD Linux 部署包打包镜像
+# 用于在容器内执行打包脚本，生成 Linux 部署包
+#
+# 使用方式：
+#   方式 1: 使用入口脚本（推荐）
+#     node scripts/pack-linux-deploy.js
+#
+#   方式 2: 直接使用 Docker
+#     docker build -f runtime/docker/Dockerfile.linux-deploy -t cloudcad-pack-linux .
+#     docker run --rm -v ${PWD}/release:/app/release cloudcad-pack-linux
+#
+# 输出：
+#   release/cloudcad-deploy-*.tar.gz
+
+FROM node:20-bullseye-slim
+
+# 安装系统依赖
+# - curl, gnupg2, lsb-release: 用于添加 PostgreSQL 官方源
+# - binutils: 提供 ldd 工具，用于收集依赖库
+# - subversion: SVN 运行时
+# - redis-server: Redis 运行时（用于提取）
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg2 \
+    lsb-release \
+    binutils \
+    subversion \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 PostgreSQL 15（添加官方源）
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && \
+    apt-get install -y postgresql-15 && \
+    rm -rf /var/lib/apt/lists/*
+
+# 安装 pnpm 和 pm2
+RUN npm install -g pnpm@9.15.4 pm2
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 package 文件（用于缓存依赖层）
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
+
+# 安装依赖（利用 Docker 缓存）
+RUN pnpm install --frozen-lockfile
+
+# 复制源代码
+COPY packages/backend ./packages/backend
+COPY packages/frontend ./packages/frontend
+COPY packages/svnVersionTool ./packages/svnVersionTool
+COPY scripts ./scripts
+COPY runtime ./runtime
+COPY tsconfig.json ./
+COPY swagger_json.json ./
+
+# 默认命令：提取运行时 + 打包
+# 步骤：
+#   1. 使用 extract-linux-runtime.js 提取 Linux 运行时
+#   2. 使用 pack-offline.js 打包部署包
+CMD ["sh", "-c", "node scripts/extract-linux-runtime.js --output runtime/linux && node scripts/pack-offline.js --deploy --linux"]

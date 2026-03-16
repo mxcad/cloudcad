@@ -43,6 +43,8 @@ const SYSTEM_PERMISSIONS: Permission[] = [
   Permission.SYSTEM_FONT_DOWNLOAD,
   Permission.SYSTEM_ADMIN,
   Permission.SYSTEM_MONITOR,
+  Permission.SYSTEM_CONFIG_READ,
+  Permission.SYSTEM_CONFIG_WRITE,
 ];
 
 /**

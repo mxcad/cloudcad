@@ -7,7 +7,7 @@ export type Role = string | undefined | null;
 
 export interface User {
   id: string;
-  email: string;
+  email?: string | null;
   role?: {
     name?: Role;
   };

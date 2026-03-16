@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import * as path from 'path';
 import { FileUtils } from '../common/utils/file-utils';
 import { AppConfig } from '../config/app.config';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
 export interface FileTypeConfig {
   extension: string;
@@ -19,33 +20,35 @@ export class FileValidationService {
 
   // 从配置获取文件上传限制
   private readonly allowedExtensions: string[];
-  private readonly maxFileSize: number;
   private readonly maxFilesPerUpload: number;
   private readonly blockedExtensions: string[];
 
   // 可配置的文件类型（保持原有逻辑，但可扩展为配置化）
   private readonly configurableFileTypes: FileTypeConfig[];
 
-  constructor(private readonly configService: ConfigService<AppConfig>) {
+  constructor(
+    private readonly configService: ConfigService<AppConfig>,
+    private readonly runtimeConfigService: RuntimeConfigService,
+  ) {
     const uploadConfig = this.configService.get('upload', { infer: true });
     this.allowedExtensions = uploadConfig.allowedExtensions;
-    this.maxFileSize = uploadConfig.maxSize;
     this.maxFilesPerUpload = uploadConfig.maxFilesPerUpload;
     this.blockedExtensions = uploadConfig.blockedExtensions;
 
     // 文件类型配置（可根据需要扩展为从配置读取）
+    // 注意：maxSize 将在运行时动态获取
     this.configurableFileTypes = [
       {
         extension: '.dwg',
         mimeType: 'application/acad',
-        maxSize: this.maxFileSize,
+        maxSize: 0, // 将在运行时动态获取
         enabled: true,
         magicNumbers: [0x41, 0x43, 0x31, 0x30], // DWG 文件魔数
       },
       {
         extension: '.dxf',
         mimeType: 'application/dxf',
-        maxSize: this.maxFileSize,
+        maxSize: 0, // 将在运行时动态获取
         enabled: true,
         magicNumbers: [0x30, 0x0d, 0x0a], // DXF 文件通常以数字开头
       },
@@ -60,12 +63,23 @@ export class FileValidationService {
   }
 
   /**
+   * 获取最大文件大小（从运行时配置）
+   * 返回值为字节
+   */
+  private async getMaxFileSize(): Promise<number> {
+    // 运行时配置中的值是 MB，需要转换为字节
+    const maxFileSizeMB = await this.runtimeConfigService.getValue<number>('maxFileSize', 100);
+    return maxFileSizeMB * 1024 * 1024;
+  }
+
+  /**
    * 获取文件上传配置（供外部使用）
    */
-  getFileUploadConfig() {
+  async getFileUploadConfig() {
+    const maxFileSize = await this.getMaxFileSize();
     return {
       allowedExtensions: this.allowedExtensions,
-      maxFileSize: this.maxFileSize,
+      maxFileSize,
       maxFilesPerUpload: this.maxFilesPerUpload,
       blockedExtensions: this.blockedExtensions,
     };
@@ -118,10 +132,11 @@ export class FileValidationService {
    * 验证文件大小
    * @param file 文件对象
    */
-  validateFileSize(file: Express.Multer.File): void {
-    if (file.size > this.maxFileSize) {
+  async validateFileSize(file: Express.Multer.File): Promise<void> {
+    const maxFileSize = await this.getMaxFileSize();
+    if (file.size > maxFileSize) {
       throw new BadRequestException(
-        `文件大小超过限制: ${(file.size / 1024 / 1024).toFixed(2)}MB > ${(this.maxFileSize / 1024 / 1024).toFixed(2)}MB`
+        `文件大小超过限制: ${(file.size / 1024 / 1024).toFixed(2)}MB > ${(maxFileSize / 1024 / 1024).toFixed(2)}MB`
       );
     }
   }
@@ -410,10 +425,10 @@ export class FileValidationService {
    * 综合验证文件
    * @param file 文件对象
    */
-  validateFile(file: Express.Multer.File): void {
+  async validateFile(file: Express.Multer.File): Promise<void> {
     this.validateFilename(file.originalname);
     this.validateFileType(file);
-    this.validateFileSize(file);
+    await this.validateFileSize(file);
   }
 
   /**
@@ -421,11 +436,11 @@ export class FileValidationService {
    * @param filePath 文件路径
    * @param file 文件对象
    */
-  validateFileWithMagicNumber(
+  async validateFileWithMagicNumber(
     filePath: string,
     file: Express.Multer.File
-  ): void {
-    this.validateFile(file);
+  ): Promise<void> {
+    await this.validateFile(file);
 
     const extension = `.${file.originalname.split('.').pop()?.toLowerCase() || ''}`;
     this.validateFileMagicNumber(filePath, extension);

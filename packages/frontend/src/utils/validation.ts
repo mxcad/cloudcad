@@ -5,7 +5,6 @@
 
 export const ValidationRules = {
   email: {
-    required: true,
     isEmail: true
   },
   username: {
@@ -82,16 +81,27 @@ export function validateField(field: keyof typeof ValidationRules, value: string
 
 /**
  * 验证注册表单
+ * @param data 表单数据
+ * @param options 可选配置
+ * @param options.validateEmail 是否验证邮箱（默认 true），当邮件服务未启用时设为 false
  */
-export function validateRegisterForm(data: {
-  email: string;
-  username: string;
-  password: string;
-  confirmPassword: string;
-  nickname?: string;
-}): string | null {
-  const emailError = validateField('email', data.email);
-  if (emailError) return emailError;
+export function validateRegisterForm(
+  data: {
+    email?: string;
+    username: string;
+    password: string;
+    confirmPassword: string;
+    nickname?: string;
+  },
+  options?: { validateEmail?: boolean }
+): string | null {
+  const shouldValidateEmail = options?.validateEmail !== false;
+
+  // 仅在需要验证邮箱时才检查
+  if (shouldValidateEmail && data.email) {
+    const emailError = validateField('email', data.email);
+    if (emailError) return emailError;
+  }
 
   const usernameError = validateField('username', data.username);
   if (usernameError) return usernameError;

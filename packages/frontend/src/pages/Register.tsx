@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { validateField, validateRegisterForm } from '../utils/validation';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME, APP_LOGO } from '../constants/appConfig';
@@ -14,6 +15,11 @@ export const Register: React.FC = () => {
     isAuthenticated,
     loading: authLoading,
   } = useAuth();
+  const { config: runtimeConfig, loading: configLoading } = useRuntimeConfig();
+  
+  // 邮件服务是否启用
+  const mailEnabled = runtimeConfig.mailEnabled;
+  
   const [formData, setFormData] = useState<RegisterDto>({
     email: '',
     password: '',
@@ -25,6 +31,44 @@ export const Register: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // 检查注册开关
+  if (!configLoading && !runtimeConfig.allowRegister) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-hero py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* 背景装饰 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
+          <div
+            className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float"
+            style={{ animationDelay: '1s' }}
+          />
+        </div>
+
+        <div className="max-w-md w-full relative z-10 animate-scale-in">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">注册已关闭</h2>
+            <p className="text-slate-600 mb-6">
+              系统管理员已关闭新用户注册功能。如有疑问，请联系管理员。
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors"
+            >
+              返回登录
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
@@ -123,9 +167,14 @@ export const Register: React.FC = () => {
   };
 
   const validateForm = () => {
-    const error = validateRegisterForm({
+    const dataToValidate = {
       ...formData,
       confirmPassword,
+    };
+
+    // 传入 validateEmail 参数，当邮件服务未启用时跳过邮箱验证
+    const error = validateRegisterForm(dataToValidate, {
+      validateEmail: mailEnabled,
     });
 
     if (error) {
@@ -151,14 +200,28 @@ export const Register: React.FC = () => {
     setError(null);
 
     try {
-      console.log('[Register] 开始注册:', formData.email);
-      await registerUser(formData);
-      console.log('[Register] 注册成功，跳转到验证页面');
-      // 跳转到邮箱验证页面
-      navigate('/verify-email', {
-        state: { email: formData.email },
-        replace: true,
-      });
+      // 如果邮件服务未启用，不发送邮箱字段
+      const registerData = mailEnabled
+        ? formData
+        : { ...formData, email: undefined };
+
+      console.log('[Register] 开始注册:', registerData.email || '无邮箱');
+      const result = await registerUser(registerData as RegisterDto);
+      console.log('[Register] 注册成功:', result);
+
+      // 如果邮件服务启用，跳转到邮箱验证页面
+      if (mailEnabled && formData.email) {
+        navigate('/verify-email', {
+          state: { email: formData.email },
+          replace: true,
+        });
+      } else {
+        // 邮件服务未启用，直接跳转到登录页面，使用后端返回的消息
+        navigate('/login', {
+          state: { message: result?.message || '注册成功，请登录' },
+          replace: true,
+        });
+      }
     } catch (err) {
       console.error('[Register] 注册失败:', err);
       const axiosError = err as Error & {
@@ -347,47 +410,50 @@ export const Register: React.FC = () => {
                 )}
               </div>
 
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-semibold text-slate-700 mb-2"
-                >
-                  邮箱地址 <span className="text-error-500">*</span>
-                </label>
-                <div className="relative">
-                  <svg
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+              {/* 仅当邮件服务启用时显示邮箱字段 */}
+              {mailEnabled && (
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-semibold text-slate-700 mb-2"
                   >
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
-                      fieldErrors.email
-                        ? 'border-error-500'
-                        : 'border-slate-200'
-                    } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
-                    placeholder="请输入邮箱地址"
-                    value={formData.email}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                  />
+                    邮箱地址 <span className="text-error-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <svg
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${
+                        fieldErrors.email
+                          ? 'border-error-500'
+                          : 'border-slate-200'
+                      } rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
+                      placeholder="请输入邮箱地址"
+                      value={formData.email}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                  </div>
+                  {fieldErrors.email && (
+                    <p className="mt-1.5 text-sm text-error-600">
+                      {fieldErrors.email}
+                    </p>
+                  )}
                 </div>
-                {fieldErrors.email && (
-                  <p className="mt-1.5 text-sm text-error-600">
-                    {fieldErrors.email}
-                  </p>
-                )}
-              </div>
+              )}
 
               <div>
                 <label

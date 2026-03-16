@@ -7,6 +7,7 @@ import {
   Menu,
   Search,
   Settings,
+  Settings2,
   ShieldCheck,
   Type,
   Users,
@@ -19,6 +20,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { UserDto, StorageInfoDto } from '../types/api-client';
 import { projectsApi } from '../services/projectsApi';
 import { useAuth } from '../contexts/AuthContext';
+import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { APP_NAME, APP_LOGO } from '../constants/appConfig';
@@ -57,6 +59,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
   const { hasPermission, hasRole } = usePermission();
+  const { config: runtimeConfig } = useRuntimeConfig();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Interactions State
@@ -160,6 +163,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       label: '系统监控',
       visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
     },
+    {
+      to: '/runtime-config',
+      icon: Settings2,
+      label: '运行时配置',
+      visible: hasPermission(SystemPermission.SYSTEM_CONFIG_READ),
+    },
   ];
 
   return (
@@ -239,7 +248,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           </nav>
 
           <div className="p-4 border-t border-slate-200">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 overflow-hidden flex items-center justify-center shadow-sm">
                 {user?.avatar ? (
                   <img
@@ -323,7 +335,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               >
                 <LogOut size={18} />
               </button>
-            </div>
+            </Link>
           </div>
         </div>
       </aside>
@@ -383,9 +395,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   >
                     个人资料
                   </Link>
-                  <button className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary-600 transition-colors">
-                    系统设置
-                  </button>
+                  {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
+                    <Link
+                      to="/runtime-config"
+                      className="block w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary-600 transition-colors"
+                      onClick={() => setShowSettings(false)}
+                    >
+                      系统设置
+                    </Link>
+                  )}
                   <div className="h-px bg-slate-100 my-1"></div>
                   <button
                     className="w-full text-left px-4 py-2.5 text-sm text-error-600 hover:bg-error-50 transition-colors"
@@ -403,6 +421,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
           </div>
         </header>
+
+        {/* 系统公告横幅 */}
+        {runtimeConfig.systemNotice && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+              <svg className="w-5 h-5 text-amber-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="text-sm text-amber-800">{runtimeConfig.systemNotice}</span>
+            </div>
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>

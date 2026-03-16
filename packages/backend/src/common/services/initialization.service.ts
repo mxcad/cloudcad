@@ -65,6 +65,8 @@ export class InitializationService implements OnModuleInit {
             'SYSTEM_FONT_DOWNLOAD',
             'SYSTEM_ADMIN',
             'SYSTEM_MONITOR',
+            'SYSTEM_CONFIG_READ',
+            'SYSTEM_CONFIG_WRITE',
           ],
         },
         {
@@ -106,23 +108,21 @@ export class InitializationService implements OnModuleInit {
         });
 
         if (existingRole) {
-          // 检查权限是否完整
-          const existingPermissionCount = existingRole.permissions.length;
-          const expectedPermissionCount = roleConfig.permissions.length;
+          // 只添加缺失的权限，不删除已有权限
+          const existingPerms = new Set(
+            existingRole.permissions.map((p) => p.permission),
+          );
+          const missingPerms = roleConfig.permissions.filter(
+            (p) => !existingPerms.has(p as any),
+          );
 
-          if (existingPermissionCount !== expectedPermissionCount) {
+          if (missingPerms.length > 0) {
             this.logger.warn(
-              `系统角色 ${roleConfig.name} 权限不完整（${existingPermissionCount}/${expectedPermissionCount}），正在更新...`
+              `系统角色 ${roleConfig.name} 缺少 ${missingPerms.length} 个权限，正在补充...`,
             );
 
-            // 删除所有现有权限
-            await this.prisma.rolePermission.deleteMany({
-              where: { roleId: existingRole.id },
-            });
-
-            // 重新分配权限
             await this.prisma.rolePermission.createMany({
-              data: roleConfig.permissions.map((permission) => ({
+              data: missingPerms.map((permission) => ({
                 roleId: existingRole.id,
                 permission: permission as any,
               })),
@@ -130,7 +130,7 @@ export class InitializationService implements OnModuleInit {
             });
 
             this.logger.log(
-              `✅ 系统角色 ${roleConfig.name} 权限更新成功，分配 ${roleConfig.permissions.length} 个权限`
+              `✅ 系统角色 ${roleConfig.name} 已补充 ${missingPerms.length} 个权限`,
             );
           }
           continue;
@@ -200,23 +200,21 @@ export class InitializationService implements OnModuleInit {
         });
 
         if (existingRole) {
-          // 检查权限是否完整
-          const existingPermissionCount = existingRole.permissions.length;
-          const expectedPermissionCount = permissions.length;
+          // 只添加缺失的权限，不删除已有权限
+          const existingPerms = new Set(
+            existingRole.permissions.map((p) => p.permission),
+          );
+          const missingPerms = permissionStrings.filter(
+            (p) => !existingPerms.has(p as any),
+          );
 
-          if (existingPermissionCount !== expectedPermissionCount) {
+          if (missingPerms.length > 0) {
             this.logger.warn(
-              `项目角色 ${roleName} 权限不完整（${existingPermissionCount}/${expectedPermissionCount}），正在更新...`,
+              `项目角色 ${roleName} 缺少 ${missingPerms.length} 个权限，正在补充...`,
             );
 
-            // 删除所有现有权限
-            await this.prisma.projectRolePermission.deleteMany({
-              where: { projectRoleId: existingRole.id },
-            });
-
-            // 重新分配权限
             await this.prisma.projectRolePermission.createMany({
-              data: permissionStrings.map((permission) => ({
+              data: missingPerms.map((permission) => ({
                 projectRoleId: existingRole.id,
                 permission: permission as any,
               })),
@@ -224,7 +222,7 @@ export class InitializationService implements OnModuleInit {
             });
 
             this.logger.log(
-              `✅ 项目角色 ${roleName} 权限更新成功，分配 ${permissions.length} 个权限`,
+              `✅ 项目角色 ${roleName} 权限补充成功，添加 ${missingPerms.length} 个权限`,
             );
           }
 

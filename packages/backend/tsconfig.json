@@ -10,7 +10,9 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "isolatedModules": false,
-    "rootDir": null
+    "skipLibCheck": true,
+    "rootDir": null,
+    "strictPropertyInitialization": false
   },
   "exclude": [
     "node_modules",

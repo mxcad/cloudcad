@@ -1,16 +1,47 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import {
-  FileValidationService,
-  FILE_UPLOAD_CONFIG,
-} from './file-validation.service';
+import { ConfigService } from '@nestjs/config';
+import { FileValidationService } from './file-validation.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
+
+// 默认最大文件大小 (100MB)
+const DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+// Mock 配置
+const mockUploadConfig = {
+  allowedExtensions: ['.dwg', '.dxf', '.mxweb'],
+  maxSize: 100 * 1024 * 1024,
+  maxFilesPerUpload: 10,
+  blockedExtensions: ['.exe', '.bat', '.cmd', '.sh', '.ps1'],
+};
 
 describe('FileValidationService', () => {
   let service: FileValidationService;
+  let runtimeConfigService: jest.Mocked<RuntimeConfigService>;
 
   beforeEach(async () => {
+    // Mock RuntimeConfigService
+    const mockRuntimeConfigService = {
+      getValue: jest.fn().mockResolvedValue(100), // 默认返回 100MB
+    };
+
+    // Mock ConfigService
+    const mockConfigService = {
+      get: jest.fn().mockReturnValue(mockUploadConfig),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [FileValidationService],
+      providers: [
+        FileValidationService,
+        {
+          provide: RuntimeConfigService,
+          useValue: mockRuntimeConfigService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+      ],
     })
       .setLogger({
         log: jest.fn(),
@@ -22,6 +53,7 @@ describe('FileValidationService', () => {
       .compile();
 
     service = module.get<FileValidationService>(FileValidationService);
+    runtimeConfigService = module.get(RuntimeConfigService);
   });
 
   describe('validateFileType', () => {
@@ -126,92 +158,105 @@ describe('FileValidationService', () => {
   });
 
   describe('validateFileSize', () => {
-    it('应该通过小于限制的文件大小验证', () => {
+    it('应该通过小于限制的文件大小验证', async () => {
       const file = {
         originalname: 'test.dwg',
         size: 50 * 1024 * 1024,
       } as Express.Multer.File;
 
-      expect(() => service.validateFileSize(file)).not.toThrow();
+      await expect(service.validateFileSize(file)).resolves.not.toThrow();
     });
 
-    it('应该通过等于限制的文件大小验证', () => {
+    it('应该通过等于限制的文件大小验证', async () => {
       const file = {
         originalname: 'test.dwg',
-        size: FILE_UPLOAD_CONFIG.maxFileSize,
+        size: DEFAULT_MAX_FILE_SIZE,
       } as Express.Multer.File;
 
-      expect(() => service.validateFileSize(file)).not.toThrow();
+      await expect(service.validateFileSize(file)).resolves.not.toThrow();
     });
 
-    it('应该拒绝超过限制的文件大小', () => {
+    it('应该拒绝超过限制的文件大小', async () => {
       const file = {
         originalname: 'large.dwg',
-        size: FILE_UPLOAD_CONFIG.maxFileSize + 1,
+        size: DEFAULT_MAX_FILE_SIZE + 1,
       } as Express.Multer.File;
 
-      expect(() => service.validateFileSize(file)).toThrow(BadRequestException);
-      expect(() => service.validateFileSize(file)).toThrow('文件大小超过限制');
+      await expect(service.validateFileSize(file)).rejects.toThrow(BadRequestException);
+      await expect(service.validateFileSize(file)).rejects.toThrow('文件大小超过限制');
     });
 
-    it('应该拒绝远超限制的文件大小', () => {
+    it('应该拒绝远超限制的文件大小', async () => {
       const file = {
         originalname: 'huge.dwg',
         size: 500 * 1024 * 1024,
       } as Express.Multer.File;
 
-      expect(() => service.validateFileSize(file)).toThrow(BadRequestException);
+      await expect(service.validateFileSize(file)).rejects.toThrow(BadRequestException);
     });
 
-    it('应该通过零字节文件验证', () => {
+    it('应该通过零字节文件验证', async () => {
       const file = {
         originalname: 'empty.dwg',
         size: 0,
       } as Express.Multer.File;
 
-      expect(() => service.validateFileSize(file)).not.toThrow();
+      await expect(service.validateFileSize(file)).resolves.not.toThrow();
+    });
+
+    it('应该使用运行时配置的最大文件大小', async () => {
+      // 设置自定义的最大文件大小 (50MB)
+      runtimeConfigService.getValue.mockResolvedValueOnce(50);
+
+      const file = {
+        originalname: 'test.dwg',
+        size: 60 * 1024 * 1024, // 60MB
+      } as Express.Multer.File;
+
+      await expect(service.validateFileSize(file)).rejects.toThrow('文件大小超过限制');
+      expect(runtimeConfigService.getValue).toHaveBeenCalledWith('maxFileSize', 100);
     });
   });
 
   describe('validateFile', () => {
-    it('应该通过完整的文件验证', () => {
+    it('应该通过完整的文件验证', async () => {
       const file = {
         originalname: 'test.dwg',
         mimetype: 'application/acad',
         size: 10 * 1024 * 1024,
       } as Express.Multer.File;
 
-      expect(() => service.validateFile(file)).not.toThrow();
+      await expect(service.validateFile(file)).resolves.not.toThrow();
     });
 
-    it('应该拒绝类型错误的文件', () => {
+    it('应该拒绝类型错误的文件', async () => {
       const file = {
         originalname: 'test.pdf',
         mimetype: 'application/pdf',
         size: 1024,
       } as Express.Multer.File;
 
-      expect(() => service.validateFile(file)).toThrow(BadRequestException);
+      await expect(service.validateFile(file)).rejects.toThrow(BadRequestException);
     });
 
-    it('应该拒绝大小超限的文件', () => {
+    it('应该拒绝大小超限的文件', async () => {
       const file = {
         originalname: 'test.dwg',
         mimetype: 'application/acad',
-        size: FILE_UPLOAD_CONFIG.maxFileSize + 1,
+        size: DEFAULT_MAX_FILE_SIZE + 1,
       } as Express.Multer.File;
 
-      expect(() => service.validateFile(file)).toThrow(BadRequestException);
+      await expect(service.validateFile(file)).rejects.toThrow(BadRequestException);
     });
 
-    it('应该拒绝类型和大小都错误的文件', () => {
+    it('应该拒绝类型和大小都错误的文件', async () => {
       const file = {
         originalname: 'test.exe',
         mimetype: 'application/x-msdownload',
-        size: FILE_UPLOAD_CONFIG.maxFileSize + 1,
+        size: DEFAULT_MAX_FILE_SIZE + 1,
       } as Express.Multer.File;
 
-      expect(() => service.validateFile(file)).toThrow(BadRequestException);
+      await expect(service.validateFile(file)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -276,13 +321,13 @@ describe('FileValidationService', () => {
       expect(() => service.validateFileType(file)).not.toThrow();
     });
 
-    it('应该处理负数文件大小', () => {
+    it('应该处理负数文件大小', async () => {
       const file = {
         originalname: 'test.dwg',
         size: -1,
       } as Express.Multer.File;
 
-      expect(() => service.validateFileSize(file)).not.toThrow();
+      await expect(service.validateFileSize(file)).resolves.not.toThrow();
     });
   });
 
@@ -300,6 +345,27 @@ describe('FileValidationService', () => {
     it('应该处理禁用的文件类型', () => {
       const result = service['getExpectedMimeType']('disabled-type');
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getFileUploadConfig', () => {
+    it('应该返回文件上传配置', async () => {
+      const config = await service.getFileUploadConfig();
+
+      expect(config).toHaveProperty('allowedExtensions');
+      expect(config).toHaveProperty('maxFileSize');
+      expect(config).toHaveProperty('maxFilesPerUpload');
+      expect(config).toHaveProperty('blockedExtensions');
+      expect(config.maxFileSize).toBe(DEFAULT_MAX_FILE_SIZE);
+    });
+
+    it('应该使用运行时配置的最大文件大小', async () => {
+      // 设置自定义的最大文件大小 (200MB)
+      runtimeConfigService.getValue.mockResolvedValueOnce(200);
+
+      const config = await service.getFileUploadConfig();
+
+      expect(config.maxFileSize).toBe(200 * 1024 * 1024);
     });
   });
 });

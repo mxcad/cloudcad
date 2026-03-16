@@ -24,13 +24,14 @@ interface AuthContextType {
   token: string | null;
   login: (account: string, password: string) => Promise<void>;
   register: (data: {
-    email: string;
+    email?: string;
     password: string;
     username: string;
     nickname?: string;
-  }) => Promise<{ message: string; email: string }>;
+  }) => Promise<{ message: string; email?: string }>;
   verifyEmailAndLogin: (email: string, code: string) => Promise<unknown>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   loading: boolean;
   isAuthenticated: boolean;
 }
@@ -86,7 +87,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       getApiClient()
         .AuthController_getProfile()
         .then((response) => {
-          setUser(response.data as UserDto);
+          const userData = response.data as UserDto;
+          setUser(userData);
+          // 同步更新 localStorage 中的用户数据（包含最新权限）
+          localStorage.setItem('user', JSON.stringify(userData));
         })
         .catch((error) => {
           // Token 无效，清除本地存储
@@ -143,7 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = useCallback(
     async (data: {
-      email: string;
+      email?: string;
       password: string;
       username: string;
       nickname?: string;
@@ -180,6 +184,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await getApiClient().AuthController_getProfile();
+      const userData = response.data as UserDto;
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Refresh user error:', error);
+    }
+  }, []);
+
   const value = useMemo<AuthContextType>(
     () => ({
       user,
@@ -188,10 +203,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       register,
       verifyEmailAndLogin,
       logout,
+      refreshUser,
       loading,
       isAuthenticated: !!token && !!user,
     }),
-    [user, token, login, register, verifyEmailAndLogin, logout, loading]
+    [user, token, login, register, verifyEmailAndLogin, logout, refreshUser, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

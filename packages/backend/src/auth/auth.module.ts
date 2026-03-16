@@ -7,6 +7,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { AuthController } from './auth.controller';
 import { SessionController } from './session.controller';
 import { AuthService } from './auth.service';
@@ -24,11 +25,12 @@ import { AppConfig } from '../config/app.config';
     DatabaseModule,
     CommonModule,
     RedisModule,
+    RuntimeConfigModule,
     PassportModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<AppConfig>) => {
-        const mailConfig = configService.get('mail', { infer: true });
+        const mailConfig = configService.get('mail', { infer: true })!;
         return {
           transport: {
             host: mailConfig.host,

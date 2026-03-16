@@ -14,6 +14,7 @@ import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { InitializationService } from '../common/services/initialization.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import {
@@ -34,19 +35,29 @@ export class AuthService {
     private tokenBlacklistService: TokenBlacklistService,
     private emailVerificationService: EmailVerificationService,
     private initializationService: InitializationService,
+    private runtimeConfigService: RuntimeConfigService,
     @InjectRedis() private readonly redis: Redis
   ) {}
 
   async register(
     registerDto: RegisterDto
-  ): Promise<{ message: string; email: string }> {
+  ): Promise<{ message: string; email?: string }> {
     const { email, username, password, nickname } = registerDto;
 
-    const existingUserByEmail = await this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (existingUserByEmail) {
-      throw new ConflictException('邮箱已被注册');
+    // 检查是否允许注册
+    const allowRegister = await this.runtimeConfigService.getValue<boolean>('allowRegister', true);
+    if (!allowRegister) {
+      throw new BadRequestException('系统已关闭注册功能');
+    }
+
+    // 如果提供了邮箱，检查是否已被使用
+    if (email) {
+      const existingUserByEmail = await this.prisma.user.findUnique({
+        where: { email },
+      });
+      if (existingUserByEmail) {
+        throw new ConflictException('邮箱已被注册');
+      }
     }
 
     const existingUserByUsername = await this.prisma.user.findUnique({
@@ -56,6 +67,48 @@ export class AuthService {
       throw new ConflictException('用户名已被使用');
     }
 
+    // 获取邮件服务开关配置
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+
+    // 如果邮件服务未启用，直接创建用户
+    if (!mailEnabled) {
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // 获取默认角色（USER）
+      const defaultRole = await this.prisma.role.findFirst({
+        where: { name: 'USER' },
+      });
+
+      if (!defaultRole) {
+        throw new InternalServerErrorException('默认角色不存在');
+      }
+
+      await this.prisma.user.create({
+        data: {
+          email: email || null,
+          username,
+          password: hashedPassword,
+          nickname: nickname || username,
+          roleId: defaultRole.id,
+          status: 'ACTIVE',
+          emailVerified: false,
+        },
+      });
+
+      this.logger.log(`用户直接注册成功（邮件服务未启用）: ${username}`);
+
+      return {
+        message: '注册成功，请登录',
+        email: email,
+      };
+    }
+
+    // 邮件服务已启用，必须有邮箱
+    if (!email) {
+      throw new BadRequestException('邮件服务已启用，注册需要提供邮箱地址');
+    }
+
+    // 发送验证码
     const registerKey = `register:pending:${email}`;
     await this.redis.setex(
       registerKey,
@@ -192,17 +245,18 @@ export class AuthService {
     }
 
     if (user.status !== 'ACTIVE') {
-      if (user.status === 'INACTIVE' && !user.emailVerified) {
-        this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
-        throw new UnauthorizedException('请先验证邮箱后再登录');
-      }
       this.logger.warn(
         `登录失败 - 账号已禁用: ${account} (状态: ${user.status})`
       );
       throw new UnauthorizedException('账号已被禁用');
     }
 
-    if (!user.emailVerified) {
+    // 检查是否需要邮箱验证
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>('requireEmailVerification', false);
+
+    // 只有在邮件服务启用且要求邮箱验证时，才检查邮箱验证状态
+    if (mailEnabled && requireEmailVerification && !user.emailVerified) {
       this.logger.warn(`登录失败 - 邮箱未验证: ${account}`);
       throw new UnauthorizedException('请先验证邮箱后再登录');
     }
@@ -220,7 +274,7 @@ export class AuthService {
     if (req && req.session) {
       req.session.userId = user.id;
       req.session.userRole = user.role.name;
-      req.session.userEmail = user.email;
+      req.session.userEmail = user.email ?? undefined;
       this.logger.log(
         `Session 已设置: userId=${user.id}, role=${user.role.name}`
       );
@@ -507,9 +561,31 @@ export class AuthService {
     return null;
   }
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
+  async forgotPassword(email: string): Promise<{ 
+    message: string; 
+    mailEnabled: boolean;
+    supportEmail?: string;
+    supportPhone?: string;
+  }> {
     this.logger.log(`忘记密码请求: ${email}`);
 
+    // 检查邮件服务是否启用
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+
+    // 邮件服务未启用，返回客服联系信息
+    if (!mailEnabled) {
+      const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail', '');
+      const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone', '');
+
+      return {
+        message: '邮件服务未启用，请联系客服重置密码',
+        mailEnabled: false,
+        supportEmail,
+        supportPhone,
+      };
+    }
+
+    // 邮件服务已启用，发送验证码
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -527,6 +603,7 @@ export class AuthService {
 
     return {
       message: '密码重置验证码已发送到您的邮箱',
+      mailEnabled: true,
     };
   }
 
@@ -569,5 +646,103 @@ export class AuthService {
     return {
       message: '密码重置成功，请使用新密码登录',
     };
+  }
+
+  /**
+   * 发送绑定邮箱验证码
+   */
+  async sendBindEmailCode(
+    userId: string,
+    email: string
+  ): Promise<{ message: string }> {
+    // 检查邮件服务是否启用
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    if (!mailEnabled) {
+      throw new BadRequestException('邮件服务未启用，无法绑定邮箱');
+    }
+
+    // 检查用户是否已绑定邮箱
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (user?.email) {
+      throw new BadRequestException('您已绑定邮箱，如需更换请联系管理员');
+    }
+
+    // 检查邮箱是否已被其他用户使用
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('该邮箱已被其他用户绑定');
+    }
+
+    // 发送验证码
+    try {
+      await this.emailVerificationService.sendVerificationEmail(email);
+      this.logger.log(`绑定邮箱验证码已发送: ${email}`);
+      return { message: '验证码已发送到您的邮箱' };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`发送绑定邮箱验证码失败: ${err.message}`);
+      throw new InternalServerErrorException('发送验证码失败，请稍后重试');
+    }
+  }
+
+  /**
+   * 验证并绑定邮箱
+   */
+  async verifyBindEmail(
+    userId: string,
+    email: string,
+    code: string
+  ): Promise<{ message: string }> {
+    // 检查邮件服务是否启用
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    if (!mailEnabled) {
+      throw new BadRequestException('邮件服务未启用，无法绑定邮箱');
+    }
+
+    // 检查用户是否已绑定邮箱
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (user?.email) {
+      throw new BadRequestException('您已绑定邮箱，如需更换请联系管理员');
+    }
+
+    // 验证验证码
+    const isValid = await this.emailVerificationService.verifyEmail(email, code);
+    if (!isValid) {
+      throw new UnauthorizedException('验证码无效或已过期');
+    }
+
+    // 检查邮箱是否已被其他用户使用
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('该邮箱已被其他用户绑定');
+    }
+
+    // 绑定邮箱
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+      },
+    });
+
+    this.logger.log(`邮箱绑定成功: userId=${userId}, email=${email}`);
+
+    return { message: '邮箱绑定成功' };
   }
 }

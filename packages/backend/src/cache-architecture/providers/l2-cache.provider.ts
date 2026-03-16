@@ -212,7 +212,7 @@ export class L2CacheProvider<T = unknown>
           value !== undefined &&
           typeof value === 'string'
         ) {
-          result.set(keys[i], JSON.parse(value) as K);
+          result.set(keys[i]!, JSON.parse(value) as K);
           this.hits++;
         } else {
           this.misses++;

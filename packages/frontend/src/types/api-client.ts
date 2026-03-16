@@ -84,11 +84,11 @@ declare namespace Components {
                      */
                     id: string;
                     /**
-                     * 用户邮箱
+                     * 用户邮箱（可能未绑定）
                      * example:
                      * user@example.com
                      */
-                    email: string;
+                    email?: string | null;
                     /**
                      * 用户名
                      * example:
@@ -174,11 +174,11 @@ declare namespace Components {
                  */
                 id: string;
                 /**
-                 * 用户邮箱
+                 * 用户邮箱（可能未绑定）
                  * example:
                  * user@example.com
                  */
-                email: string;
+                email?: string | null;
                 /**
                  * 用户名
                  * example:
@@ -264,6 +264,49 @@ declare namespace Components {
              * 错误信息
              */
             errors?: string[];
+        }
+        export interface BindEmailApiResponseDto {
+            /**
+             * 响应状态码
+             * example:
+             * SUCCESS
+             */
+            code: "SUCCESS" | "ERROR";
+            /**
+             * 响应消息
+             * example:
+             * 操作成功
+             */
+            message: string;
+            /**
+             * 响应数据
+             */
+            data: {
+                /**
+                 * 消息
+                 */
+                message: string;
+            };
+            /**
+             * 响应时间戳
+             * example:
+             * 2025-12-12T03:34:55.801Z
+             */
+            timestamp: string;
+        }
+        export interface BindEmailDto {
+            /**
+             * 要绑定的邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
+        }
+        export interface BindEmailResponseDto {
+            /**
+             * 消息
+             */
+            message: string;
         }
         export interface CacheCleanupDto {
             /**
@@ -627,7 +670,7 @@ declare namespace Components {
              *   "SYSTEM_USER_DELETE"
              * ]
              */
-            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR")[];
+            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE")[];
             /**
              * 是否启用
              */
@@ -880,6 +923,18 @@ declare namespace Components {
                  * 消息
                  */
                 message: string;
+                /**
+                 * 邮件服务是否启用
+                 */
+                mailEnabled: boolean;
+                /**
+                 * 客服邮箱（邮件禁用时返回）
+                 */
+                supportEmail?: string | null;
+                /**
+                 * 客服电话（邮件禁用时返回）
+                 */
+                supportPhone?: string | null;
             };
             /**
              * 响应时间戳
@@ -901,6 +956,18 @@ declare namespace Components {
              * 消息
              */
             message: string;
+            /**
+             * 邮件服务是否启用
+             */
+            mailEnabled: boolean;
+            /**
+             * 客服邮箱（邮件禁用时返回）
+             */
+            supportEmail?: string | null;
+            /**
+             * 客服电话（邮件禁用时返回）
+             */
+            supportPhone?: string | null;
         }
         export interface GalleryFileListDto {
             /**
@@ -1121,7 +1188,7 @@ declare namespace Components {
         /**
          * 统一权限枚举
          */
-        export type Permission = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
+        export type Permission = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
         export interface PermissionCheckResponseDto {
             /**
              * 项目 ID
@@ -1178,7 +1245,7 @@ declare namespace Components {
             /**
              * 关联的权限
              */
-            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR")[];
+            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE")[];
             /**
              * 是否启用
              */
@@ -1431,11 +1498,11 @@ declare namespace Components {
         }
         export interface RegisterDto {
             /**
-             * 用户邮箱
+             * 用户邮箱（邮件服务启用时可选）
              * example:
              * user@example.com
              */
-            email: string; // email
+            email?: string; // email
             /**
              * 用户名
              * example:
@@ -1550,13 +1617,103 @@ declare namespace Components {
              *   "system:font:read"
              * ]
              */
-            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE")[];
+            permissions: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "GALLERY_ADD" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE")[];
             /**
              * 创建时间
              */
             createdAt: string; // date-time
             /**
              * 更新时间
+             */
+            updatedAt: string; // date-time
+        }
+        export interface RuntimeConfigDefinitionDto {
+            /**
+             * 配置键名
+             * example:
+             * mailEnabled
+             */
+            key: string;
+            /**
+             * 值类型
+             * example:
+             * boolean
+             */
+            type: "string" | "number" | "boolean";
+            /**
+             * 分类
+             * example:
+             * mail
+             */
+            category: string;
+            /**
+             * 配置说明
+             * example:
+             * 邮件服务开关
+             */
+            description: string;
+            /**
+             * 默认值（string | number | boolean）
+             * example:
+             * false
+             */
+            defaultValue: {
+                [key: string]: any;
+            };
+            /**
+             * 是否公开给前端
+             * example:
+             * true
+             */
+            isPublic: boolean;
+        }
+        export interface RuntimeConfigResponseDto {
+            /**
+             * 配置键名
+             * example:
+             * mailEnabled
+             */
+            key: string;
+            /**
+             * 配置值（string | number | boolean）
+             * example:
+             * false
+             */
+            value: {
+                [key: string]: any;
+            };
+            /**
+             * 值类型
+             * example:
+             * boolean
+             */
+            type: "string" | "number" | "boolean";
+            /**
+             * 分类
+             * example:
+             * mail
+             */
+            category: string;
+            /**
+             * 配置说明
+             * example:
+             * 邮件服务开关
+             */
+            description?: string;
+            /**
+             * 是否公开给前端
+             * example:
+             * true
+             */
+            isPublic: boolean;
+            /**
+             * 最后修改人 ID
+             */
+            updatedBy?: string;
+            /**
+             * 最后更新时间
+             * example:
+             * 2024-01-01T00:00:00.000Z
              */
             updatedAt: string; // date-time
         }
@@ -1705,7 +1862,7 @@ declare namespace Components {
         /**
          * 系统权限枚举
          */
-        export type SystemPermission = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR";
+        export type SystemPermission = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE";
         export interface TrashItemDto {
             /**
              * 节点 ID
@@ -1848,7 +2005,7 @@ declare namespace Components {
              *   "SYSTEM_USER_DELETE"
              * ]
              */
-            permissions?: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR")[];
+            permissions?: ("SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE")[];
             /**
              * 是否启用
              */
@@ -1920,6 +2077,16 @@ declare namespace Components {
              * ]
              */
             permissions?: string[];
+        }
+        export interface UpdateRuntimeConfigDto {
+            /**
+             * 配置值（string | number | boolean）
+             * example:
+             * false
+             */
+            value: {
+                [key: string]: any;
+            };
         }
         export interface UpdateUserDto {
             /**
@@ -2122,11 +2289,11 @@ declare namespace Components {
              */
             id: string;
             /**
-             * 用户邮箱
+             * 用户邮箱（可能未绑定）
              * example:
              * user@example.com
              */
-            email: string;
+            email?: string | null;
             /**
              * 用户名
              * example:
@@ -2380,6 +2547,20 @@ declare namespace Components {
              * 头像 URL
              */
             avatar?: string;
+        }
+        export interface VerifyBindEmailDto {
+            /**
+             * 邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
+            /**
+             * 验证码
+             * example:
+             * 123456
+             */
+            code: string;
         }
         export interface VerifyEmailApiResponseDto {
             code: VerifyEmailResponseDto;
@@ -2665,10 +2846,32 @@ declare namespace Paths {
             }
         }
     }
+    namespace AuthControllerSendBindEmailCode {
+        export type RequestBody = Components.Schemas.BindEmailDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.BindEmailApiResponseDto;
+            export interface $400 {
+            }
+            export interface $409 {
+            }
+        }
+    }
     namespace AuthControllerSendVerification {
         namespace Responses {
             export type $200 = Components.Schemas.SendVerificationApiResponseDto;
             export interface $400 {
+            }
+        }
+    }
+    namespace AuthControllerVerifyBindEmail {
+        export type RequestBody = Components.Schemas.VerifyBindEmailDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.BindEmailApiResponseDto;
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $409 {
             }
         }
     }
@@ -3787,6 +3990,12 @@ declare namespace Paths {
             }
         }
     }
+    namespace HealthControllerLiveness {
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
     namespace MxCadControllerCheckChunkExist {
         export type RequestBody = Components.Schemas.CheckChunkExistDto;
         namespace Responses {
@@ -4321,6 +4530,68 @@ declare namespace Paths {
             export type $200 = Components.Schemas.ProjectRoleDto;
         }
     }
+    namespace RuntimeConfigControllerGetAllConfigs {
+        namespace Responses {
+            export type $200 = Components.Schemas.RuntimeConfigResponseDto[];
+        }
+    }
+    namespace RuntimeConfigControllerGetConfig {
+        namespace Parameters {
+            export type Key = string;
+        }
+        export interface PathParameters {
+            key: Parameters.Key;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.RuntimeConfigResponseDto;
+        }
+    }
+    namespace RuntimeConfigControllerGetDefinitions {
+        namespace Responses {
+            export type $200 = Components.Schemas.RuntimeConfigDefinitionDto[];
+        }
+    }
+    namespace RuntimeConfigControllerGetPublicConfigs {
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
+    namespace RuntimeConfigControllerResetConfig {
+        namespace Parameters {
+            export type Key = string;
+        }
+        export interface PathParameters {
+            key: Parameters.Key;
+        }
+        namespace Responses {
+            export interface $201 {
+                /**
+                 * example:
+                 * true
+                 */
+                success?: boolean;
+            }
+        }
+    }
+    namespace RuntimeConfigControllerUpdateConfig {
+        namespace Parameters {
+            export type Key = string;
+        }
+        export interface PathParameters {
+            key: Parameters.Key;
+        }
+        export type RequestBody = Components.Schemas.UpdateRuntimeConfigDto;
+        namespace Responses {
+            export interface $200 {
+                /**
+                 * example:
+                 * true
+                 */
+                success?: boolean;
+            }
+        }
+    }
     namespace SessionControllerCreateSession {
         namespace Responses {
             export interface $201 {
@@ -4788,6 +5059,22 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerResetPassword.Responses.$200>
   /**
+   * AuthController_sendBindEmailCode - 发送绑定邮箱验证码
+   */
+  'AuthController_sendBindEmailCode'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.AuthControllerSendBindEmailCode.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
+  /**
+   * AuthController_verifyBindEmail - 验证并绑定邮箱
+   */
+  'AuthController_verifyBindEmail'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.AuthControllerVerifyBindEmail.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AuthControllerVerifyBindEmail.Responses.$200>
+  /**
    * SessionController_createSession
    */
   'SessionController_createSession'(
@@ -4883,6 +5170,54 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
+  /**
+   * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
+   */
+  'RuntimeConfigController_getPublicConfigs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
+  /**
+   * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
+   */
+  'RuntimeConfigController_getAllConfigs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
+  /**
+   * RuntimeConfigController_getDefinitions - 获取配置项定义
+   */
+  'RuntimeConfigController_getDefinitions'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
+  /**
+   * RuntimeConfigController_getConfig - 获取单个配置项
+   */
+  'RuntimeConfigController_getConfig'(
+    parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
+  /**
+   * RuntimeConfigController_updateConfig - 更新配置项
+   */
+  'RuntimeConfigController_updateConfig'(
+    parameters?: Parameters<Paths.RuntimeConfigControllerUpdateConfig.PathParameters> | null,
+    data?: Paths.RuntimeConfigControllerUpdateConfig.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
+  /**
+   * RuntimeConfigController_resetConfig - 重置配置为默认值
+   */
+  'RuntimeConfigController_resetConfig'(
+    parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   /**
    * UsersController_findAll - 获取用户列表
    */
@@ -5794,6 +6129,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminControllerGetUserPermissions.Responses.$200>
   /**
+   * HealthController_liveness - 存活检查（Docker 健康检查）
+   */
+  'HealthController_liveness'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
+  /**
    * HealthController_check - 系统健康检查
    */
   'HealthController_check'(
@@ -6188,6 +6531,26 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerResetPassword.Responses.$200>
   }
+  ['/api/auth/bind-email']: {
+    /**
+     * AuthController_sendBindEmailCode - 发送绑定邮箱验证码
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.AuthControllerSendBindEmailCode.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
+  }
+  ['/api/auth/verify-bind-email']: {
+    /**
+     * AuthController_verifyBindEmail - 验证并绑定邮箱
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.AuthControllerVerifyBindEmail.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AuthControllerVerifyBindEmail.Responses.$200>
+  }
   ['/api/session/create']: {
     /**
      * SessionController_createSession
@@ -6307,6 +6670,64 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
+  }
+  ['/api/runtime-config/public']: {
+    /**
+     * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
+  }
+  ['/api/runtime-config']: {
+    /**
+     * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
+  }
+  ['/api/runtime-config/definitions']: {
+    /**
+     * RuntimeConfigController_getDefinitions - 获取配置项定义
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
+  }
+  ['/api/runtime-config/{key}']: {
+    /**
+     * RuntimeConfigController_getConfig - 获取单个配置项
+     */
+    'get'(
+      parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
+    /**
+     * RuntimeConfigController_updateConfig - 更新配置项
+     */
+    'put'(
+      parameters?: Parameters<Paths.RuntimeConfigControllerUpdateConfig.PathParameters> | null,
+      data?: Paths.RuntimeConfigControllerUpdateConfig.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
+  }
+  ['/api/runtime-config/{key}/reset']: {
+    /**
+     * RuntimeConfigController_resetConfig - 重置配置为默认值
+     */
+    'post'(
+      parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   }
   ['/api/users']: {
     /**
@@ -7374,6 +7795,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerGetUserPermissions.Responses.$200>
   }
+  ['/api/health/live']: {
+    /**
+     * HealthController_liveness - 存活检查（Docker 健康检查）
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
+  }
   ['/api/health']: {
     /**
      * HealthController_check - 系统健康检查
@@ -7479,6 +7910,9 @@ export type AuthApiResponseDto = Components.Schemas.AuthApiResponseDto;
 export type AuthResponseDto = Components.Schemas.AuthResponseDto;
 export type BatchCacheOperationDto = Components.Schemas.BatchCacheOperationDto;
 export type BatchOperationResponseDto = Components.Schemas.BatchOperationResponseDto;
+export type BindEmailApiResponseDto = Components.Schemas.BindEmailApiResponseDto;
+export type BindEmailDto = Components.Schemas.BindEmailDto;
+export type BindEmailResponseDto = Components.Schemas.BindEmailResponseDto;
 export type CacheCleanupDto = Components.Schemas.CacheCleanupDto;
 export type CacheCleanupResponseDto = Components.Schemas.CacheCleanupResponseDto;
 export type CacheMonitoringSummaryDto = Components.Schemas.CacheMonitoringSummaryDto;
@@ -7539,6 +7973,8 @@ export type ResetPasswordApiResponseDto = Components.Schemas.ResetPasswordApiRes
 export type ResetPasswordDto = Components.Schemas.ResetPasswordDto;
 export type ResetPasswordResponseDto = Components.Schemas.ResetPasswordResponseDto;
 export type RoleDto = Components.Schemas.RoleDto;
+export type RuntimeConfigDefinitionDto = Components.Schemas.RuntimeConfigDefinitionDto;
+export type RuntimeConfigResponseDto = Components.Schemas.RuntimeConfigResponseDto;
 export type SaveMxwebDto = Components.Schemas.SaveMxwebDto;
 export type SaveMxwebResponseDto = Components.Schemas.SaveMxwebResponseDto;
 export type SendVerificationApiResponseDto = Components.Schemas.SendVerificationApiResponseDto;
@@ -7556,6 +7992,7 @@ export type UpdateNodeDto = Components.Schemas.UpdateNodeDto;
 export type UpdatePolicyDto = Components.Schemas.UpdatePolicyDto;
 export type UpdateProjectRoleDto = Components.Schemas.UpdateProjectRoleDto;
 export type UpdateRoleDto = Components.Schemas.UpdateRoleDto;
+export type UpdateRuntimeConfigDto = Components.Schemas.UpdateRuntimeConfigDto;
 export type UpdateUserDto = Components.Schemas.UpdateUserDto;
 export type UpdateWarmupConfigDto = Components.Schemas.UpdateWarmupConfigDto;
 export type UploadExtReferenceDto = Components.Schemas.UploadExtReferenceDto;
@@ -7575,6 +8012,7 @@ export type UserProfileResponseDto = Components.Schemas.UserProfileResponseDto;
 export type UserResponseDto = Components.Schemas.UserResponseDto;
 export type UserRoleDto = Components.Schemas.UserRoleDto;
 export type UserSearchResultDto = Components.Schemas.UserSearchResultDto;
+export type VerifyBindEmailDto = Components.Schemas.VerifyBindEmailDto;
 export type VerifyEmailApiResponseDto = Components.Schemas.VerifyEmailApiResponseDto;
 export type VerifyEmailDto = Components.Schemas.VerifyEmailDto;
 export type VerifyEmailResponseDto = Components.Schemas.VerifyEmailResponseDto;

@@ -189,8 +189,8 @@ async function startInfrastructure() {
   
   // 先停止旧进程
   runPm2(['delete', 'all'], { silent: true });
-  // 启动基础服务
-  if (!runPm2(['start', ecosystemPath, '--only', 'postgresql,redis,cooperate'])) {
+  // 启动基础服务（包含部署配置中心）
+  if (!runPm2(['start', ecosystemPath, '--only', 'postgresql,redis,cooperate,config-service'])) {
     log('red', '[错误] 基础服务启动失败');
     return false;
   }
@@ -338,6 +338,7 @@ async function devMode() {
   log('green', '║  后端:  http://localhost:3001           ║');
   log('green', '║  前端:  http://localhost:3000           ║');
   log('green', '║  API:   http://localhost:3001/api       ║');
+  log('green', '║  配置:  http://localhost:3002           ║');
   log('green', '╠════════════════════════════════════════╣');
   log('green', '║  停止:  选择菜单 [停止服务]             ║');
   log('green', '╚════════════════════════════════════════╝');
@@ -500,6 +501,7 @@ async function deployMode(skipBuild = false) {
   log('green', '║  后端:  http://localhost:3001           ║');
   log('green', '║  前端:  http://localhost:3000           ║');
   log('green', '║  API:   http://localhost:3001/api       ║');
+  log('green', '║  配置:  http://localhost:3002           ║');
   log('green', '╠════════════════════════════════════════╣');
   log('green', '║  状态:  选择菜单 [查看状态]             ║');
   log('green', '║  日志:  选择菜单 [查看日志]             ║');
@@ -524,6 +526,7 @@ async function startOnly() {
   log('cyan', '  PostgreSQL: localhost:5432');
   log('cyan', '  Redis:      localhost:6379');
   log('cyan', '  协同服务:   localhost:3091');
+  log('cyan', '  配置中心:   localhost:3002');
 }
 
 async function viewStatus() {
@@ -633,6 +636,282 @@ async function linuxInit() {
   }
 }
 
+// ==================== 部署引导配置 ====================
+
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+
+/**
+ * 检查密码强度
+ * @param {string} password 密码
+ * @returns {boolean} true 表示密码简单，需要警告
+ */
+function isPasswordWeak(password) {
+  if (!password || password.length < 8) return true;
+  
+  // 检查是否只有数字或只有字母
+  const hasDigit = /\d/.test(password);
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  
+  // 如果只有数字或只有字母，认为简单
+  if ((hasDigit && !hasLetter && !hasSpecial) || 
+      (hasLetter && !hasDigit && !hasSpecial)) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * 生成随机密码
+ * @param {number} length 密码长度，默认 12
+ * @returns {string} 随机密码
+ */
+function generateRandomPassword(length = 12) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
+/**
+ * 生成随机 JWT 密钥
+ * @param {number} length 密钥长度，默认 32
+ * @returns {string} 随机密钥
+ */
+function generateJwtSecret(length = 32) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?';
+  let secret = '';
+  for (let i = 0; i < length; i++) {
+    secret += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return secret;
+}
+
+/**
+ * 解析 .env 文件
+ * @param {string} filePath .env 文件路径
+ * @returns {Object} 键值对
+ */
+function parseEnvFile(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const result = {};
+  
+  content.split('\n').forEach(line => {
+    line = line.trim();
+    if (!line || line.startsWith('#')) return;
+    
+    const eqIndex = line.indexOf('=');
+    if (eqIndex > 0) {
+      const key = line.substring(0, eqIndex).trim();
+      let value = line.substring(eqIndex + 1).trim();
+      // 移除引号
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      result[key] = value;
+    }
+  });
+  
+  return result;
+}
+
+/**
+ * 写入 .env 文件（保留注释和格式）
+ * @param {string} filePath .env 文件路径
+ * @param {Object} updates 要更新的键值对
+ */
+function updateEnvFile(filePath, updates) {
+  let content = fs.readFileSync(filePath, 'utf8');
+  
+  Object.entries(updates).forEach(([key, value]) => {
+    // 匹配 key=value 或 key="value" 或 key='value'
+    const regex = new RegExp(`^${key}=.*$`, 'm');
+    if (regex.test(content)) {
+      content = content.replace(regex, `${key}=${value}`);
+    }
+  });
+  
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
+/**
+ * 隐藏输入密码
+ * @param {readline.Interface} rl readline 接口
+ * @param {string} prompt 提示信息
+ * @returns {Promise<string>} 用户输入
+ */
+function promptPassword(rl, promptText) {
+  return new Promise((resolve) => {
+    const stdout = process.stdout;
+    
+    // 保存原始 write 方法
+    const originalWrite = stdout.write.bind(stdout);
+    
+    // 替换 write 方法，隐藏输入
+    stdout.write = (chunk, encoding, callback) => {
+      if (typeof chunk === 'string' && chunk !== '\n' && chunk !== '\r\n') {
+        // 不输出任何内容（隐藏输入）
+        return true;
+      }
+      return originalWrite(chunk, encoding, callback);
+    };
+    
+    rl.question(promptText, (answer) => {
+      // 恢复原始 write 方法
+      stdout.write = originalWrite;
+      // 输出换行
+      originalWrite('\n');
+      resolve(answer);
+    });
+  });
+}
+
+/**
+ * 运行部署引导配置
+ */
+async function runSetupWizard() {
+  console.log('');
+  console.log(`${colors.cyan}╔════════════════════════════════════════╗`);
+  console.log(`║      CloudCAD 首次部署配置             ║`);
+  console.log(`╚════════════════════════════════════════╝${colors.reset}`);
+  console.log('');
+  
+  // 读取当前 .env 配置
+  const envConfig = parseEnvFile(BACKEND_ENV_PATH);
+  
+  // 获取默认值
+  const defaultDbPassword = envConfig.DB_PASSWORD || 'password';
+  const defaultAdminPassword = envConfig.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+  
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  
+  // 需要更新的配置
+  const updates = {};
+  
+  // JWT 密钥自动生成
+  const jwtSecret = generateJwtSecret(32);
+  updates.JWT_SECRET = jwtSecret;
+  
+  try {
+    // 1. 数据库密码
+    console.log(`${colors.cyan}[核心配置]${colors.reset}`);
+    const dbPassword = await promptPassword(rl, `数据库密码 [使用默认值]: `);
+    
+    if (dbPassword.trim()) {
+      updates.DB_PASSWORD = dbPassword.trim();
+      console.log(`  → 已设置自定义数据库密码`);
+    } else {
+      console.log(`  → 使用默认值`);
+    }
+    
+    // 2. Redis 密码
+    const redisPassword = await promptPassword(rl, `Redis 密码 [无密码]: `);
+    
+    if (redisPassword.trim()) {
+      updates.REDIS_PASSWORD = redisPassword.trim();
+      console.log(`  → 已设置 Redis 密码`);
+    } else {
+      console.log(`  → 无密码`);
+    }
+    
+    // 3. 管理员密码
+    console.log('');
+    console.log(`${colors.cyan}[安全配置]${colors.reset}`);
+    const adminPasswordRaw = await promptPassword(rl, `管理员密码 [自动生成]: `);
+    const adminPassword = adminPasswordRaw.trim();
+    
+    if (adminPassword) {
+      // 检查密码强度
+      if (isPasswordWeak(adminPassword)) {
+        console.log('');
+        console.log(`${colors.yellow}⚠️  警告: 密码过于简单，存在安全风险${colors.reset}`);
+        console.log(`   建议使用包含大小写字母、数字、特殊字符的密码`);
+        console.log('');
+        
+        const confirmWeak = await new Promise((resolve) => {
+          rl.question(`确认使用此密码? [y/N]: `, (ans) => {
+            resolve(ans.trim().toLowerCase());
+          });
+        });
+        
+        if (confirmWeak !== 'y' && confirmWeak !== 'yes') {
+          // 用户取消，自动生成
+          const generated = generateRandomPassword();
+          updates.INITIAL_ADMIN_PASSWORD = generated;
+          console.log(`  → 已自动生成密码: ${generated}`);
+        } else {
+          updates.INITIAL_ADMIN_PASSWORD = adminPassword;
+          console.log(`  → 已设置自定义管理员密码`);
+        }
+      } else {
+        updates.INITIAL_ADMIN_PASSWORD = adminPassword;
+        console.log(`  → 已设置自定义管理员密码`);
+      }
+    } else {
+      // 自动生成
+      const generated = generateRandomPassword();
+      updates.INITIAL_ADMIN_PASSWORD = generated;
+      console.log(`  → 已自动生成密码: ${generated}`);
+    }
+    
+    // 4. 配置摘要
+    console.log('');
+    console.log(`${colors.cyan}════════════════════════════════════════${colors.reset}`);
+    console.log(`${colors.bright}配置摘要${colors.reset}`);
+    console.log(`${colors.cyan}════════════════════════════════════════${colors.reset}`);
+    console.log(`数据库: localhost:5432/cloudcad (用户: postgres)`);
+    console.log(`Redis:  localhost:6379 (密码: ${updates.REDIS_PASSWORD ? '******' : '无密码'})`);
+    console.log(`管理员密码: ${updates.INITIAL_ADMIN_PASSWORD || defaultAdminPassword} ${adminPassword ? '' : '(自动生成)'}`);
+    console.log(`JWT密钥: ${jwtSecret} (自动生成)`);
+    console.log('');
+    
+    // 5. 确认配置
+    const confirm = await new Promise((resolve) => {
+      rl.question(`确认配置? [Y/n]: `, (ans) => {
+        resolve(ans.trim().toLowerCase());
+      });
+    });
+    
+    if (confirm === 'n' || confirm === 'no') {
+      rl.close();
+      console.log('');
+      log('yellow', '已取消配置，请重新运行');
+      process.exit(0);
+    }
+    
+    // 6. 写入配置
+    console.log('');
+    log('cyan', '正在写入配置文件...');
+    
+    // 如果任一数据库配置变更，同步更新 DATABASE_URL
+    const dbConfigKeys = ['DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE'];
+    const hasDbConfigChange = dbConfigKeys.some(key => updates[key]);
+    
+    if (hasDbConfigChange) {
+      const dbHost = updates.DB_HOST || envConfig.DB_HOST || 'localhost';
+      const dbPort = updates.DB_PORT || envConfig.DB_PORT || '5432';
+      const dbName = updates.DB_DATABASE || envConfig.DB_DATABASE || 'cloudcad';
+      const dbUser = updates.DB_USERNAME || envConfig.DB_USERNAME || 'postgres';
+      const dbPassword = updates.DB_PASSWORD || envConfig.DB_PASSWORD || 'password';
+      const encodedPassword = encodeURIComponent(dbPassword);
+      updates.DATABASE_URL = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}`;
+    }
+    
+    updateEnvFile(BACKEND_ENV_PATH, updates);
+    log('green', '[✓] 配置完成！');
+    
+  } finally {
+    rl.close();
+  }
+}
+
 // ==================== 交互式菜单 ====================
 
 const menuItems = [
@@ -710,7 +989,11 @@ async function main() {
  * 先完成离线环境设置，再执行后续逻辑
  */
 async function bootstrap() {
+  // 检测 .env 是否存在（用于判断是否首次部署）
+  const envExistedBefore = fs.existsSync(BACKEND_ENV_PATH);
+  
   // 首先设置离线环境（必须在其他操作前完成）
+  // 这会复制 .env.example → .env（如果 .env 不存在）
   const success = await setupOffline({ 
     silent: true, 
     deployBackendOnly: isDeployMode,  // 部署模式只装后端依赖
@@ -718,6 +1001,11 @@ async function bootstrap() {
   
   if (!success) {
     process.exit(1);
+  }
+
+  // 如果 .env 之前不存在，说明是首次部署，运行引导配置
+  if (!envExistedBefore) {
+    await runSetupWizard();
   }
 
   // 命令行参数支持

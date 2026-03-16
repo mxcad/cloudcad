@@ -59,9 +59,9 @@ export class RuntimeConfigService implements OnModuleInit {
   }
 
   /**
-   * 获取单个配置值
+   * 获取单个配置值（用于内部调用）
    */
-  async get<T = string | number | boolean>(
+  async getValue<T = string | number | boolean>(
     key: string,
     defaultValue?: T,
   ): Promise<T> {
@@ -88,6 +88,30 @@ export class RuntimeConfigService implements OnModuleInit {
     await this.redis.setex(`${CACHE_PREFIX}${key}`, CACHE_TTL, JSON.stringify(value));
 
     return value as T;
+  }
+
+  /**
+   * 获取单个配置项（用于 Controller 返回）
+   */
+  async get(key: string): Promise<RuntimeConfigItem> {
+    const config = await this.prisma.runtimeConfig.findUnique({
+      where: { key },
+    });
+
+    if (!config) {
+      throw new NotFoundException(`配置项不存在: ${key}`);
+    }
+
+    return {
+      key: config.key,
+      value: this.parseValue(config.value, config.type as RuntimeConfigValueType),
+      type: config.type as RuntimeConfigValueType,
+      category: config.category as RuntimeConfigItem['category'],
+      description: config.description,
+      isPublic: config.isPublic,
+      updatedBy: config.updatedBy,
+      updatedAt: config.updatedAt,
+    };
   }
 
   /**
@@ -184,7 +208,7 @@ export class RuntimeConfigService implements OnModuleInit {
 
     return configs.map((config) => ({
       key: config.key,
-      value: config.value,
+      value: this.parseValue(config.value, config.type as RuntimeConfigValueType),
       type: config.type as RuntimeConfigValueType,
       category: config.category as RuntimeConfigItem['category'],
       description: config.description,

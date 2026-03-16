@@ -40,6 +40,10 @@ import {
   ResetPasswordResponseDto,
   ForgotPasswordApiResponseDto,
   ResetPasswordApiResponseDto,
+  BindEmailDto,
+  VerifyBindEmailDto,
+  BindEmailResponseDto,
+  BindEmailApiResponseDto,
 } from './dto/password-reset.dto';
 import { UserProfileResponseDto } from '../users/dto/user-response.dto';
 
@@ -68,7 +72,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '请求参数错误' })
   async register(
     @Body() registerDto: RegisterDto
-  ): Promise<{ message: string; email: string }> {
+  ): Promise<{ message: string; email?: string }> {
     return this.authService.register(registerDto);
   }
 
@@ -212,5 +216,42 @@ export class AuthController {
     @Body() dto: ResetPasswordDto
   ): Promise<ResetPasswordResponseDto> {
     return this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
+  }
+
+  @Post('bind-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '发送绑定邮箱验证码' })
+  @ApiResponse({
+    status: 200,
+    description: '验证码已发送',
+    type: BindEmailApiResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '邮件服务未启用或已绑定邮箱' })
+  @ApiResponse({ status: 409, description: '邮箱已被其他用户绑定' })
+  @ApiBearerAuth()
+  async sendBindEmailCode(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: BindEmailDto
+  ): Promise<BindEmailResponseDto> {
+    return this.authService.sendBindEmailCode(req.user.id, dto.email);
+  }
+
+  @Post('verify-bind-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '验证并绑定邮箱' })
+  @ApiResponse({
+    status: 200,
+    description: '邮箱绑定成功',
+    type: BindEmailApiResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '邮件服务未启用或已绑定邮箱' })
+  @ApiResponse({ status: 401, description: '验证码无效或已过期' })
+  @ApiResponse({ status: 409, description: '邮箱已被其他用户绑定' })
+  @ApiBearerAuth()
+  async verifyBindEmail(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: VerifyBindEmailDto
+  ): Promise<BindEmailResponseDto> {
+    return this.authService.verifyBindEmail(req.user.id, dto.email, dto.code);
   }
 }

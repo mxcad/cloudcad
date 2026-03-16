@@ -12,7 +12,7 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
     const baseUrl = this.configService.get('frontendUrl', { infer: true });
-    const mailConfig = this.configService.get('mail', { infer: true });
+    const mailConfig = this.configService.get('mail', { infer: true })!;
     await this.mailerService.sendMail({
       to: email,
       subject: 'CloudCAD - 验证码',
@@ -29,7 +29,7 @@ export class EmailService {
 
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     const baseUrl = this.configService.get('frontendUrl', { infer: true });
-    const mailConfig = this.configService.get('mail', { infer: true });
+    const mailConfig = this.configService.get('mail', { infer: true })!;
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     await this.mailerService.sendMail({

@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/authApi';
+import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME, APP_LOGO } from '../constants/appConfig';
+import type { ForgotPasswordResponseDto } from '../types/api-client';
 
 export const ForgotPassword: React.FC = () => {
   useDocumentTitle('忘记密码');
   const navigate = useNavigate();
+  const { config: runtimeConfig } = useRuntimeConfig();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [supportInfo, setSupportInfo] = useState<{
+    supportEmail?: string;
+    supportPhone?: string;
+  } | null>(null);
+
+  const mailEnabled = runtimeConfig.mailEnabled;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,8 +27,19 @@ export const ForgotPassword: React.FC = () => {
     setError(null);
 
     try {
-      await authApi.forgotPassword(email);
-      setSuccess(true);
+      const response = await authApi.forgotPassword(email);
+      
+      // 检查邮件服务是否启用（响应拦截器已解包，response.data 是实际数据）
+      // 由于拦截器在运行时修改了响应结构，需要双重断言
+      const data = response.data as unknown as ForgotPasswordResponseDto;
+      if (data.mailEnabled === false) {
+        setSupportInfo({
+          supportEmail: data.supportEmail ?? undefined,
+          supportPhone: data.supportPhone ?? undefined,
+        });
+      } else {
+        setSuccess(true);
+      }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
@@ -31,6 +51,85 @@ export const ForgotPassword: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // 显示客服联系信息（邮件服务未启用）
+  if (supportInfo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-hero py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* 背景装饰 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-400/20 rounded-full blur-3xl animate-float" />
+          <div
+            className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-400/20 rounded-full blur-3xl animate-float"
+            style={{ animationDelay: '1s' }}
+          />
+        </div>
+
+        <div className="max-w-md w-full relative z-10 animate-scale-in">
+          {/* 提示图标 */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-amber-100 mb-6 animate-scale-in">
+              <svg
+                className="w-12 h-12 text-amber-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              邮件服务未启用
+            </h2>
+            <p className="text-slate-600">
+              无法通过邮件重置密码，请联系客服
+            </p>
+          </div>
+
+          {/* 客服联系信息卡片 */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-6 mb-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">客服联系方式</h3>
+              <div className="space-y-3">
+                {supportInfo.supportEmail && (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                    <a href={`mailto:${supportInfo.supportEmail}`} className="text-primary-600 hover:text-primary-700 transition-colors">
+                      {supportInfo.supportEmail}
+                    </a>
+                  </div>
+                )}
+                {supportInfo.supportPhone && (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+                    </svg>
+                    <a href={`tel:${supportInfo.supportPhone}`} className="text-primary-600 hover:text-primary-700 transition-colors">
+                      {supportInfo.supportPhone}
+                    </a>
+                  </div>
+                )}
+                {!supportInfo.supportEmail && !supportInfo.supportPhone && (
+                  <p className="text-slate-500">暂无客服联系方式，请联系系统管理员</p>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full flex justify-center py-3 px-4 border border-slate-200 text-sm font-semibold rounded-xl text-slate-700 hover:bg-slate-50 transition-all"
+            >
+              返回登录
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (

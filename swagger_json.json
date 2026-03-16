@@ -972,6 +972,95 @@
         ]
       }
     },
+    "/api/auth/bind-email": {
+      "post": {
+        "operationId": "AuthController_sendBindEmailCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "验证码已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BindEmailApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "邮件服务未启用或已绑定邮箱"
+          },
+          "409": {
+            "description": "邮箱已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "发送绑定邮箱验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-bind-email": {
+      "post": {
+        "operationId": "AuthController_verifyBindEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyBindEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "邮箱绑定成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BindEmailApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "邮件服务未启用或已绑定邮箱"
+          },
+          "401": {
+            "description": "验证码无效或已过期"
+          },
+          "409": {
+            "description": "邮箱已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "验证并绑定邮箱",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
     "/api/session/create": {
       "post": {
         "operationId": "SessionController_createSession",
@@ -1330,6 +1419,219 @@
         "summary": "清理旧审计日志",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/api/runtime-config/public": {
+      "get": {
+        "operationId": "RuntimeConfigController_getPublicConfigs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回公开配置键值对",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取公开配置（前端初始化使用）",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config": {
+      "get": {
+        "operationId": "RuntimeConfigController_getAllConfigs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回所有配置项列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeConfigResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有运行时配置",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config/definitions": {
+      "get": {
+        "operationId": "RuntimeConfigController_getDefinitions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回配置定义列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeConfigDefinitionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取配置项定义",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config/{key}": {
+      "get": {
+        "operationId": "RuntimeConfigController_getConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "配置键名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回配置项详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeConfigResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个配置项",
+        "tags": [
+          "runtime-config"
+        ]
+      },
+      "put": {
+        "operationId": "RuntimeConfigController_updateConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "配置键名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuntimeConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新配置项",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config/{key}/reset": {
+      "post": {
+        "operationId": "RuntimeConfigController_resetConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "配置键名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "重置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "重置配置为默认值",
+        "tags": [
+          "runtime-config"
         ]
       }
     },
@@ -5964,6 +6266,21 @@
         ]
       }
     },
+    "/api/health/live": {
+      "get": {
+        "operationId": "HealthController_liveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "服务存活"
+          }
+        },
+        "summary": "存活检查（Docker 健康检查）",
+        "tags": [
+          "健康检查"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "HealthController_check",
@@ -6779,7 +7096,7 @@
         "properties": {
           "email": {
             "type": "string",
-            "description": "用户邮箱",
+            "description": "用户邮箱（邮件服务启用时可选）",
             "example": "user@example.com",
             "format": "email"
           },
@@ -6806,7 +7123,6 @@
           }
         },
         "required": [
-          "email",
           "username",
           "password"
         ]
@@ -6840,8 +7156,9 @@
           },
           "email": {
             "type": "string",
-            "description": "用户邮箱",
-            "example": "user@example.com"
+            "description": "用户邮箱（可能未绑定）",
+            "example": "user@example.com",
+            "nullable": true
           },
           "username": {
             "type": "string",
@@ -6911,7 +7228,6 @@
         },
         "required": [
           "id",
-          "email",
           "username",
           "role",
           "status"
@@ -7193,10 +7509,25 @@
           "message": {
             "type": "string",
             "description": "消息"
+          },
+          "mailEnabled": {
+            "type": "boolean",
+            "description": "邮件服务是否启用"
+          },
+          "supportEmail": {
+            "type": "string",
+            "description": "客服邮箱（邮件禁用时返回）",
+            "nullable": true
+          },
+          "supportPhone": {
+            "type": "string",
+            "description": "客服电话（邮件禁用时返回）",
+            "nullable": true
           }
         },
         "required": [
-          "message"
+          "message",
+          "mailEnabled"
         ]
       },
       "ForgotPasswordApiResponseDto": {
@@ -7316,6 +7647,207 @@
           "message",
           "data",
           "timestamp"
+        ]
+      },
+      "BindEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "要绑定的邮箱地址",
+            "example": "user@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "BindEmailResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "消息"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "BindEmailApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BindEmailResponseDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "VerifyBindEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "email",
+          "code"
+        ]
+      },
+      "RuntimeConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "配置键名",
+            "example": "mailEnabled"
+          },
+          "value": {
+            "type": "object",
+            "description": "配置值（string | number | boolean）",
+            "example": false
+          },
+          "type": {
+            "type": "string",
+            "description": "值类型",
+            "enum": [
+              "string",
+              "number",
+              "boolean"
+            ],
+            "example": "boolean"
+          },
+          "category": {
+            "type": "string",
+            "description": "分类",
+            "example": "mail"
+          },
+          "description": {
+            "type": "string",
+            "description": "配置说明",
+            "example": "邮件服务开关"
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "是否公开给前端",
+            "example": true
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "最后修改人 ID"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "最后更新时间",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "type",
+          "category",
+          "isPublic",
+          "updatedAt"
+        ]
+      },
+      "RuntimeConfigDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "配置键名",
+            "example": "mailEnabled"
+          },
+          "type": {
+            "type": "string",
+            "description": "值类型",
+            "enum": [
+              "string",
+              "number",
+              "boolean"
+            ],
+            "example": "boolean"
+          },
+          "category": {
+            "type": "string",
+            "description": "分类",
+            "example": "mail"
+          },
+          "description": {
+            "type": "string",
+            "description": "配置说明",
+            "example": "邮件服务开关"
+          },
+          "defaultValue": {
+            "type": "object",
+            "description": "默认值（string | number | boolean）",
+            "example": false
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "是否公开给前端",
+            "example": true
+          }
+        },
+        "required": [
+          "key",
+          "type",
+          "category",
+          "description",
+          "defaultValue",
+          "isPublic"
+        ]
+      },
+      "UpdateRuntimeConfigDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "description": "配置值（string | number | boolean）",
+            "example": false
+          }
+        },
+        "required": [
+          "value"
         ]
       },
       "CreateUserDto": {
@@ -7656,6 +8188,8 @@
                 "SYSTEM_FONT_DOWNLOAD",
                 "SYSTEM_ADMIN",
                 "SYSTEM_MONITOR",
+                "SYSTEM_CONFIG_READ",
+                "SYSTEM_CONFIG_WRITE",
                 "PROJECT_UPDATE",
                 "PROJECT_DELETE",
                 "PROJECT_MEMBER_MANAGE",
@@ -9569,7 +10103,9 @@
                 "SYSTEM_FONT_DELETE",
                 "SYSTEM_FONT_DOWNLOAD",
                 "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR"
+                "SYSTEM_MONITOR",
+                "SYSTEM_CONFIG_READ",
+                "SYSTEM_CONFIG_WRITE"
               ]
             }
           },
@@ -9639,7 +10175,9 @@
                 "SYSTEM_FONT_DELETE",
                 "SYSTEM_FONT_DOWNLOAD",
                 "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR"
+                "SYSTEM_MONITOR",
+                "SYSTEM_CONFIG_READ",
+                "SYSTEM_CONFIG_WRITE"
               ]
             }
           },
@@ -9724,7 +10262,9 @@
                 "SYSTEM_FONT_DELETE",
                 "SYSTEM_FONT_DOWNLOAD",
                 "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR"
+                "SYSTEM_MONITOR",
+                "SYSTEM_CONFIG_READ",
+                "SYSTEM_CONFIG_WRITE"
               ]
             }
           },
@@ -9766,7 +10306,9 @@
           "SYSTEM_FONT_DELETE",
           "SYSTEM_FONT_DOWNLOAD",
           "SYSTEM_ADMIN",
-          "SYSTEM_MONITOR"
+          "SYSTEM_MONITOR",
+          "SYSTEM_CONFIG_READ",
+          "SYSTEM_CONFIG_WRITE"
         ],
         "description": "系统权限枚举"
       },
@@ -9817,6 +10359,8 @@
           "SYSTEM_FONT_DOWNLOAD",
           "SYSTEM_ADMIN",
           "SYSTEM_MONITOR",
+          "SYSTEM_CONFIG_READ",
+          "SYSTEM_CONFIG_WRITE",
           "PROJECT_UPDATE",
           "PROJECT_DELETE",
           "PROJECT_MEMBER_MANAGE",

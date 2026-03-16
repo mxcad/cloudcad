@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
@@ -11,14 +11,14 @@ import {
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 
 export class RegisterDto {
-  @ApiProperty({
-    description: '用户邮箱',
+  @ApiPropertyOptional({
+    description: '用户邮箱（邮件服务启用时可选）',
     example: 'user@example.com',
     format: 'email',
   })
+  @IsOptional()
   @IsEmail({}, { message: '请输入有效的邮箱地址' })
-  @IsNotEmpty({ message: '邮箱不能为空' })
-  email: string;
+  email?: string;
 
   @ApiProperty({
     type: String,
@@ -97,11 +97,12 @@ export class UserDto {
   })
   id: string;
 
-  @ApiProperty({
-    description: '用户邮箱',
+  @ApiPropertyOptional({
+    description: '用户邮箱（可能未绑定）',
     example: 'user@example.com',
+    nullable: true,
   })
-  email: string;
+  email?: string | null;
 
   @ApiProperty({
     description: '用户名',

@@ -22,7 +22,7 @@ export interface JwtRefreshPayload {
  */
 export interface UserForToken {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
   role?: {
     id: string;

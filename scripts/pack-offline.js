@@ -138,16 +138,69 @@ function copyDir(src, dest) {
  * 压缩目录
  * @param {string} sourceDir - 要压缩的目录
  * @param {string} outputPath - 输出文件路径
+ * @param {string} format - 压缩格式: '7z', 'tar.gz', 'zip'
  */
-async function createArchive(sourceDir, outputPath) {
+async function createArchive(sourceDir, outputPath, format = null) {
+  // 根据文件扩展名或参数确定格式
+  if (!format) {
+    if (outputPath.endsWith('.tar.gz') || outputPath.endsWith('.tgz')) {
+      format = 'tar.gz';
+    } else if (outputPath.endsWith('.7z')) {
+      format = '7z';
+    } else {
+      format = 'zip';
+    }
+  }
+  
+  if (format === 'tar.gz') {
+    return createTarGzArchive(sourceDir, outputPath);
+  }
+  
   const sevenZip = find7z();
   
-  if (sevenZip) {
+  if (sevenZip && format === '7z') {
     return create7zArchive(sevenZip, sourceDir, outputPath);
   } else {
-    log('未找到 7-Zip，使用 zip 格式...');
-    return createZipArchive(sourceDir, outputPath);
+    log('未找到 7-Zip 或使用 zip 格式...');
+    return createZipArchive(sourceDir, outputPath.replace(/\.7z$/, '.zip'));
   }
+}
+
+/**
+ * 创建 tar.gz 压缩包（Linux 默认格式，无需额外工具）
+ */
+function createTarGzArchive(sourceDir, outputPath) {
+  return new Promise((resolve, reject) => {
+    log('创建 tar.gz 压缩包...');
+    
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+    }
+    
+    // 使用 tar 命令（Windows 10+ 自带，Linux/macOS 原生支持）
+    const tarArgs = ['-czf', outputPath, '.'];
+    
+    const proc = spawn('tar', tarArgs, {
+      cwd: sourceDir,
+      stdio: 'inherit',
+      shell: true,
+    });
+    
+    proc.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const stat = fs.statSync(outputPath);
+          if (stat.size > 0) {
+            resolve(outputPath);
+            return;
+          }
+        } catch (e) {}
+      }
+      reject(new Error(`tar 退出码: ${code}`));
+    });
+    
+    proc.on('error', reject);
+  });
 }
 
 function create7zArchive(sevenZip, sourceDir, outputPath) {
@@ -437,6 +490,8 @@ function getDeployIncludeList(platform) {
     { src: 'packages/frontend/package.json', dest: 'packages/frontend/package.json' },
     // SVN 版本工具
     { src: 'packages/svnVersionTool', dest: 'packages/svnVersionTool', isDir: true },
+    // 部署配置中心（0 依赖独立服务）
+    { src: 'packages/config-service', dest: 'packages/config-service', isDir: true },
     // 运行时脚本
     { src: 'runtime/scripts', dest: 'runtime/scripts', isDir: true },
     { src: 'runtime/ecosystem.config.js', dest: 'runtime/ecosystem.config.js' },
@@ -692,24 +747,32 @@ async function packDeploy(platform) {
   try {
     const platformSuffix = platform === 'all' ? 'all-platforms' : (platform === 'win' ? 'windows' : 'linux');
     const baseName = `cloudcad-deploy-${VERSION}-${DATE}-${platformSuffix}`;
-    const output7z = path.join(OUTPUT_DIR, `${baseName}.7z`);
+    
+    // Linux 平台使用 tar.gz（Linux 默认支持，无需额外工具）
+    // Windows 平台使用 7z（压缩率更高，Windows 用户通常有 7-Zip）
+    const archiveExt = platform === 'linux' ? 'tar.gz' : '7z';
+    const outputPath = path.join(OUTPUT_DIR, `${baseName}.${archiveExt}`);
     
     ensureDir(OUTPUT_DIR);
     
-    await createArchive(tempDir, output7z);
+    await createArchive(tempDir, outputPath);
     
-    const stat = fs.statSync(output7z);
+    const stat = fs.statSync(outputPath);
     log('');
     log('============================================');
     log(' 打包完成');
     log('============================================');
-    log(`✓ ${output7z}`);
+    log(`✓ ${outputPath}`);
     log(`大小: ${formatSize(stat.size)}`);
     log('');
     log('使用说明:');
     log('  1. 解压到目标目录');
     log('  2. 配置 packages/backend/.env');
-    log('  3. 运行: start.bat');
+    if (platform === 'linux') {
+      log('  3. 运行: tar -xzf *.tar.gz && ./start.sh');
+    } else {
+      log('  3. 运行: start.bat');
+    }
     
   } finally {
     // 清理临时目录
