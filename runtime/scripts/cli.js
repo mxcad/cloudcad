@@ -748,6 +748,9 @@ function promptPassword(rl, promptText) {
   return new Promise((resolve) => {
     const stdout = process.stdout;
     
+    // 先输出提示文本（在隐藏输入之前）
+    process.stdout.write(promptText);
+    
     // 保存原始 write 方法
     const originalWrite = stdout.write.bind(stdout);
     
@@ -760,7 +763,8 @@ function promptPassword(rl, promptText) {
       return originalWrite(chunk, encoding, callback);
     };
     
-    rl.question(promptText, (answer) => {
+    // 使用空字符串作为 question 的提示，因为已经手动输出了
+    rl.question('', (answer) => {
       // 恢复原始 write 方法
       stdout.write = originalWrite;
       // 输出换行
@@ -881,6 +885,10 @@ async function runSetupWizard() {
     
     if (confirm === 'n' || confirm === 'no') {
       rl.close();
+      // 删除 .env 文件，以便下次运行时重新进入引导配置
+      if (fs.existsSync(BACKEND_ENV_PATH)) {
+        fs.unlinkSync(BACKEND_ENV_PATH);
+      }
       console.log('');
       log('yellow', '已取消配置，请重新运行');
       process.exit(0);

@@ -1,4 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
+// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -7,6 +18,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { DatabaseService } from '../database/database.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -19,7 +31,8 @@ export class UsersService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly permissionCacheService: PermissionCacheService
+    private readonly permissionCacheService: PermissionCacheService,
+    private readonly runtimeConfigService: RuntimeConfigService,
   ) {}
 
   /**
@@ -27,13 +40,23 @@ export class UsersService {
    */
   async create(createUserDto: CreateUserDto) {
     try {
-      // 检查邮箱是否已存在
-      const existingEmail = await this.prisma.user.findUnique({
-        where: { email: createUserDto.email },
-      });
+      // 获取运行时配置
+      const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
 
-      if (existingEmail) {
-        throw new ConflictException('邮箱已存在');
+      // 检查邮箱是否必填
+      if (mailEnabled && !createUserDto.email) {
+        throw new BadRequestException('邮件服务已启用，邮箱为必填项');
+      }
+
+      // 如果提供了邮箱，检查是否已存在
+      if (createUserDto.email) {
+        const existingEmail = await this.prisma.user.findUnique({
+          where: { email: createUserDto.email },
+        });
+
+        if (existingEmail) {
+          throw new ConflictException('邮箱已存在');
+        }
       }
 
       // 检查用户名是否已存在
@@ -62,15 +85,15 @@ export class UsersService {
 
       const user = await this.prisma.user.create({
         data: {
-          email: createUserDto.email,
+          email: createUserDto.email || null,
           username: createUserDto.username,
           password: hashedPassword,
           nickname: createUserDto.nickname,
           avatar: createUserDto.avatar,
           roleId: createUserDto.roleId || defaultRole.id, // 使用传入的角色ID，默认为普通用户
           status: 'ACTIVE', // 管理员创建的用户直接激活
-          emailVerified: true, // 视为已验证
-          emailVerifiedAt: new Date(),
+          emailVerified: createUserDto.email ? true : false, // 有邮箱视为已验证，无邮箱为未验证
+          emailVerifiedAt: createUserDto.email ? new Date() : null,
         },
         select: {
           id: true,
@@ -90,7 +113,7 @@ export class UsersService {
         },
       });
 
-      this.logger.log(`用户创建成功: ${user.email}`);
+      this.logger.log(`用户创建成功: ${user.username}${user.email ? ` (${user.email})` : ''}`);
       return user;
     } catch (error) {
       this.logger.error(`用户创建失败: ${error.message}`, error.stack);

@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.pnpm-store-deploy/
 
 # Runtime binaries (scripts are kept for version control)
 runtime/windows/
@@ -71,6 +72,7 @@ swagger_json.json
 *-errors.txt
 *-warnings.txt
 docker-build-*.txt
+config-service-login.jpg
 
 
 # Test files

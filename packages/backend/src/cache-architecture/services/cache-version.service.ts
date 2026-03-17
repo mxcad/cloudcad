@@ -1,3 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
+// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
@@ -80,9 +90,11 @@ export class CacheVersionService implements OnModuleInit {
       const info: CacheVersionInfo = JSON.parse(data);
       return info;
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `获取缓存版本失败: ${type}, ${key || 'global'} - ${error.message}`,
-        error.stack
+        `获取缓存版本失败: ${type}, ${key || 'global'} - ${message}`,
+        stack
       );
       return null;
     }
@@ -145,9 +157,11 @@ export class CacheVersionService implements OnModuleInit {
         }
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `创建缓存版本失败: ${type}, ${key || 'global'} - ${error.message}`,
-        error.stack
+        `创建缓存版本失败: ${type}, ${key || 'global'} - ${message}`,
+        stack
       );
       throw error;
     }
@@ -182,9 +196,11 @@ export class CacheVersionService implements OnModuleInit {
 
       this.logger.debug(`删除缓存版本: ${type}, ${key || 'global'}`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `删除缓存版本失败: ${type}, ${key || 'global'} - ${error.message}`,
-        error.stack
+        `删除缓存版本失败: ${type}, ${key || 'global'} - ${message}`,
+        stack
       );
     }
   }
@@ -202,9 +218,11 @@ export class CacheVersionService implements OnModuleInit {
 
       this.logger.debug(`批量删除缓存版本: ${type}, ${keys.length} 个`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `批量删除缓存版本失败: ${type} - ${error.message}`,
-        error.stack
+        `批量删除缓存版本失败: ${type} - ${message}`,
+        stack
       );
     }
   }
@@ -232,9 +250,11 @@ export class CacheVersionService implements OnModuleInit {
       const age = Date.now() - info.updatedAt;
       return age > maxAge;
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `检查缓存版本过期失败: ${type}, ${key || 'global'} - ${error.message}`,
-        error.stack
+        `检查缓存版本过期失败: ${type}, ${key || 'global'} - ${message}`,
+        stack
       );
       return true; // 出错时视为过期
     }
@@ -287,9 +307,11 @@ export class CacheVersionService implements OnModuleInit {
       // 检查版本是否匹配
       return versionedKey.endsWith(`:${info.version}`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `验证缓存键版本失败: ${versionedKey} - ${error.message}`,
-        error.stack
+        `验证缓存键版本失败: ${versionedKey} - ${message}`,
+        stack
       );
       return false;
     }
@@ -332,9 +354,11 @@ export class CacheVersionService implements OnModuleInit {
 
       return versions;
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `获取所有版本信息失败: ${type} - ${error.message}`,
-        error.stack
+        `获取所有版本信息失败: ${type} - ${message}`,
+        stack
       );
       return [];
     }
@@ -366,9 +390,11 @@ export class CacheVersionService implements OnModuleInit {
       this.logger.debug(`清理过期版本: ${type}, 清理了 ${cleaned} 个`);
       return cleaned;
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `清理过期版本失败: ${type} - ${error.message}`,
-        error.stack
+        `清理过期版本失败: ${type} - ${message}`,
+        stack
       );
       return 0;
     }

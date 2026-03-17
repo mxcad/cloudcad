@@ -1,3 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
+// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
 import { Module, forwardRef } from '@nestjs/common';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
@@ -48,7 +58,9 @@ import { AppConfig } from '../config/app.config';
       useFactory: async (configService: ConfigService<AppConfig>) => {
         const config = configService.get('mxcadUploadPath', { infer: true });
         const tempPath = configService.get('mxcadTempPath', { infer: true });
-        const maxFileSize = configService.get('upload.maxSize', { infer: true });
+        // Multer 层使用固定上限值 500MB
+        // 业务层的精确限制由 FileValidationService 使用运行时配置 maxFileSize 实现
+        const maxFileSize = 500 * 1024 * 1024; // 500MB
 
         return {
           storage: diskStorage({

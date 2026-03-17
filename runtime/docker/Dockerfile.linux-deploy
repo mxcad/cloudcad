@@ -46,6 +46,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
+COPY packages/config-service/package.json ./packages/config-service/
 
 # 安装依赖（利用 Docker 缓存）
 RUN pnpm install --frozen-lockfile
@@ -54,6 +55,7 @@ RUN pnpm install --frozen-lockfile
 COPY packages/backend ./packages/backend
 COPY packages/frontend ./packages/frontend
 COPY packages/svnVersionTool ./packages/svnVersionTool
+COPY packages/config-service ./packages/config-service
 COPY scripts ./scripts
 COPY runtime ./runtime
 COPY tsconfig.json ./

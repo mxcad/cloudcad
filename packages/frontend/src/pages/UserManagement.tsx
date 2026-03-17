@@ -14,6 +14,7 @@ import { Modal } from '../components/ui/Modal';
 import { TruncateText } from '../components/ui/TruncateText';
 import { usersApi } from '../services/usersApi';
 import { rolesApi } from '../services/rolesApi';
+import { runtimeConfigApi } from '../services/runtimeConfigApi';
 import { UpdateUserDto, UserResponseDto } from '../types/api-client';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '../constants/permissions';
@@ -62,6 +63,9 @@ export const UserManagement = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
+  // 运行时配置
+  const [mailEnabled, setMailEnabled] = useState(false);
+
   // 表单验证错误
   const [formErrors, setFormErrors] = useState({
     username: '',
@@ -76,7 +80,18 @@ export const UserManagement = () => {
   const initialize = async () => {
     const hasAccess = await checkAccess();
     if (hasAccess) {
-      await Promise.all([loadData(), loadRoles()]);
+      await Promise.all([loadData(), loadRoles(), loadRuntimeConfig()]);
+    }
+  };
+
+  const loadRuntimeConfig = async () => {
+    try {
+      const response = await runtimeConfigApi.getPublicConfigs();
+      setMailEnabled(response.data?.mailEnabled ?? false);
+    } catch (error) {
+      console.error('加载运行时配置失败:', error);
+      // 默认邮件服务未启用
+      setMailEnabled(false);
     }
   };
 
@@ -182,10 +197,10 @@ export const UserManagement = () => {
       errors.username = '用户名只能包含字母、数字和下划线';
     }
 
-    // 验证邮箱
-    if (!formData.email) {
+    // 验证邮箱（根据 mailEnabled 配置决定是否必填）
+    if (mailEnabled && !formData.email) {
       errors.email = '邮箱不能为空';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = '请输入有效的邮箱地址';
     }
 
@@ -517,7 +532,7 @@ export const UserManagement = () => {
                             </TruncateText>
                           </div>
                           <div className="text-sm text-slate-500">
-                            <TruncateText>{user.email}</TruncateText>
+                            <TruncateText>{user.email || '未设置邮箱'}</TruncateText>
                           </div>
                         </div>
                       </div>
@@ -629,7 +644,7 @@ export const UserManagement = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  邮箱 *
+                  邮箱 {mailEnabled && '*'}
                 </label>
                 <input
                   type="email"
@@ -645,7 +660,7 @@ export const UserManagement = () => {
                       ? 'border-red-300 bg-red-50'
                       : 'border-slate-300 focus:border-indigo-500'
                   }`}
-                  placeholder="请输入邮箱地址"
+                  placeholder={mailEnabled ? '请输入邮箱地址' : '可选，用于接收通知和找回密码'}
                 />
                 {formErrors.email && (
                   <p className="mt-1 text-sm text-red-600">
