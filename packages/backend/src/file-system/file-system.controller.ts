@@ -120,6 +120,19 @@ export class FileSystemController {
     return this.fileSystemService.getUserProjects(req.user.id, query);
   }
 
+  @Get('personal-space')
+  @ApiOperation({ summary: '获取当前用户的私人空间' })
+  @ApiResponse({
+    status: 200,
+    description: '获取私人空间成功',
+    type: FileSystemNodeDto,
+  })
+  async getPersonalSpace(
+    @Request() req: ExpressRequest & { user: { id: string } }
+  ) {
+    return this.fileSystemService.getPersonalSpace(req.user.id);
+  }
+
   @Get('projects/trash')
   @ApiOperation({ summary: '获取已删除项目列表' })
   @ApiResponse({

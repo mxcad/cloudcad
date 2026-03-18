@@ -2,8 +2,6 @@
 // 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 // 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
-// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
-// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
 // This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
@@ -13,6 +11,8 @@ import {
   Logger,
   OnModuleInit,
   InternalServerErrorException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
@@ -21,7 +21,8 @@ import {
   ProjectRole,
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
 } from '../enums/permissions.enum';
-import * as bcrypt from 'bcryptjs';
+import { UsersService } from '../../users/users.service';
+import { CreateUserDto } from '../../users/dto/create-user.dto';
 
 /**
  * 系统初始化服务
@@ -38,7 +39,9 @@ export class InitializationService implements OnModuleInit {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService
   ) {}
 
   /**
@@ -48,6 +51,7 @@ export class InitializationService implements OnModuleInit {
     await this.createSystemDefaultRoles();
     await this.createProjectDefaultRoles();
     await this.checkAndCreateInitialAdmin();
+    await this.ensureAllUsersHavePersonalSpace();
   }
 
   /**
@@ -306,20 +310,17 @@ export class InitializationService implements OnModuleInit {
         'INITIAL_ADMIN_PASSWORD',
         'Admin123!'
       );
-      const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
-      const adminUser = await this.prisma.user.create({
-        data: {
-          email: adminEmail,
-          username: adminUsername,
-          password: hashedPassword,
-          nickname: '系统管理员',
-          roleId: adminRole.id,
-          status: 'ACTIVE',
-          emailVerified: true,
-          emailVerifiedAt: new Date(),
-        },
-      });
+      // 使用 UsersService.create() 创建用户（会自动创建私人空间）
+      const createUserDto: CreateUserDto = {
+        email: adminEmail,
+        username: adminUsername,
+        password: adminPassword,
+        nickname: '系统管理员',
+        roleId: adminRole.id,
+      };
+
+      await this.usersService.create(createUserDto);
 
       this.logger.log(
         `✅ 初始管理员账户创建成功！\n` +
@@ -330,6 +331,94 @@ export class InitializationService implements OnModuleInit {
       );
     } catch (error) {
       this.logger.error('创建初始管理员账户失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 确保所有用户都有私人空间
+   * 用于处理历史数据迁移场景
+   */
+  private async ensureAllUsersHavePersonalSpace(): Promise<void> {
+    try {
+      // 查找所有已有私人空间的用户 ID
+      const personalSpaces = await this.prisma.fileSystemNode.findMany({
+        where: {
+          personalSpaceKey: { not: null },
+        },
+        select: {
+          personalSpaceKey: true,
+        },
+      });
+
+      const userIdsWithPersonalSpace = new Set(
+        personalSpaces.map((ps) => ps.personalSpaceKey)
+      );
+
+      // 查找所有用户
+      const allUsers = await this.prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+        },
+      });
+
+      // 过滤出没有私人空间的用户
+      const usersWithoutPersonalSpace = allUsers.filter(
+        (user) => !userIdsWithPersonalSpace.has(user.id)
+      );
+
+      if (usersWithoutPersonalSpace.length === 0) {
+        this.logger.log('所有用户都已有私人空间');
+        return;
+      }
+
+      this.logger.log(
+        `发现 ${usersWithoutPersonalSpace.length} 个用户没有私人空间，开始批量创建...`
+      );
+
+      // 获取 PROJECT_OWNER 角色
+      const ownerRole = await this.prisma.projectRole.findFirst({
+        where: { name: 'PROJECT_OWNER', isSystem: true },
+      });
+
+      if (!ownerRole) {
+        throw new InternalServerErrorException('PROJECT_OWNER 角色不存在');
+      }
+
+      // 批量创建私人空间
+      let createdCount = 0;
+      for (const user of usersWithoutPersonalSpace) {
+        try {
+          await this.prisma.fileSystemNode.create({
+            data: {
+              name: '我的图纸',
+              isFolder: true,
+              isRoot: true,
+              personalSpaceKey: user.id,
+              projectStatus: 'ACTIVE',
+              ownerId: user.id,
+              projectMembers: {
+                create: {
+                  userId: user.id,
+                  projectRoleId: ownerRole.id,
+                },
+              },
+            },
+          });
+          createdCount++;
+        } catch (error) {
+          this.logger.warn(
+            `为用户 ${user.username} 创建私人空间失败: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      }
+
+      this.logger.log(
+        `✅ 私人空间批量创建完成: ${createdCount}/${usersWithoutPersonalSpace.length}`
+      );
+    } catch (error) {
+      this.logger.error('批量创建私人空间失败', error);
       throw error;
     }
   }

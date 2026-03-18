@@ -12,6 +12,7 @@
 
 import { mxcadApi } from './mxcadApi';
 import { filesApi } from './filesApi';
+import { projectsApi } from './projectsApi';
 import { MxFun } from 'mxdraw';
 import { McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../utils/hashUtils';
@@ -532,15 +533,37 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
 
 /**
  * 获取上传目标节点 ID
- * @throws {Error} 如果无法确定上传目标位置
+ * 根据当前打开的文件所属空间决定上传目标：
+ * - 未打开任何文件 → 上传到私人空间根目录
+ * - 当前文件属于私人空间 → 上传到父目录（或根目录）
+ * - 当前文件属于项目 → 上传到私人空间根目录
+ * @throws {Error} 如果无法获取私人空间
  */
-function getUploadTargetNodeId(): string {
-  const uploadTargetNodeId =
-    currentFileInfo?.parentId || currentFileInfo?.projectId;
-  if (!uploadTargetNodeId) {
-    throw new Error('无法确定上传目标位置，请通过文件管理页面访问编辑器');
+async function getUploadTargetNodeId(): Promise<string> {
+  // 1. 获取私人空间
+  const personalSpaceResponse = await projectsApi.getPersonalSpace();
+  const personalSpace = personalSpaceResponse.data;
+
+  if (!personalSpace?.id) {
+    throw new Error('无法获取私人空间，请联系管理员');
   }
-  return uploadTargetNodeId;
+
+  // 2. 判断当前是否打开了文件
+  const currentProjectId = currentFileInfo?.projectId;
+
+  if (!currentProjectId) {
+    // 未打开任何文件 → 上传到私人空间根目录
+    return personalSpace.id;
+  }
+
+  // 3. 判断当前文件是否属于私人空间
+  if (currentProjectId === personalSpace.id) {
+    // 当前文件属于私人空间 → 上传到父目录（或根目录）
+    return currentFileInfo?.parentId || personalSpace.id;
+  } else {
+    // 当前文件属于项目 → 上传到私人空间根目录
+    return personalSpace.id;
+  }
 }
 
 /**
@@ -659,7 +682,7 @@ async function handleFileSelection(
  */
 MxFun.addCommand('openFile', async () => {
   try {
-    const uploadTargetNodeId = getUploadTargetNodeId();
+    const uploadTargetNodeId = await getUploadTargetNodeId();
 
     const picker = getFilePicker();
     picker.onchange = async (e) => {

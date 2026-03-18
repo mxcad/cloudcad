@@ -93,6 +93,7 @@ model FileSystemNode {
   // 项目专属字段（仅根节点使用）
   description    String?          // 项目描述
   projectStatus  ProjectStatus?   // 项目状态
+  personalSpaceKey String? @unique(map: "unique_personal_space")  // 私人空间标识（值为 ownerId）
 
   // 外部参照相关字段（仅文件使用）
   hasMissingExternalReferences  Boolean @default(false)  // 是否有缺失的外部参照
@@ -121,6 +122,7 @@ model FileSystemNode {
   @@index([isRoot])
   @@index([isFolder])
   @@index([deletedAt])
+  @@index([personalSpaceKey])
   @@map("file_system_nodes")
 }
 

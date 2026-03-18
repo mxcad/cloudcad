@@ -25,6 +25,7 @@ import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { InitializationService } from '../common/services/initialization.service';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
+import { UsersService } from '../users/users.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import {
@@ -46,6 +47,7 @@ export class AuthService {
     private emailVerificationService: EmailVerificationService,
     private initializationService: InitializationService,
     private runtimeConfigService: RuntimeConfigService,
+    private usersService: UsersService,
     @InjectRedis() private readonly redis: Redis
   ) {}
 
@@ -82,27 +84,11 @@ export class AuthService {
 
     // 如果邮件服务未启用，直接创建用户
     if (!mailEnabled) {
-      const hashedPassword = await bcrypt.hash(password, 12);
-
-      // 获取默认角色（USER）
-      const defaultRole = await this.prisma.role.findFirst({
-        where: { name: 'USER' },
-      });
-
-      if (!defaultRole) {
-        throw new InternalServerErrorException('默认角色不存在');
-      }
-
-      await this.prisma.user.create({
-        data: {
-          email: email || null,
-          username,
-          password: hashedPassword,
-          nickname: nickname || username,
-          roleId: defaultRole.id,
-          status: 'ACTIVE',
-          emailVerified: false,
-        },
+      await this.usersService.create({
+        email: email || undefined,
+        username,
+        password,
+        nickname: nickname || username,
       });
 
       this.logger.log(`用户直接注册成功（邮件服务未启用）: ${username}`);
@@ -178,29 +164,11 @@ export class AuthService {
     const registerData = JSON.parse(registerDataStr);
     this.logger.log(`解析注册信息成功: ${registerData.username}`);
 
-    const hashedPassword = await bcrypt.hash(registerData.password, 12);
-    this.logger.log(`密码加密完成`);
-
-    // 获取默认角色（USER）
-    const defaultRole = await this.prisma.role.findFirst({
-      where: { name: 'USER' },
-    });
-
-    if (!defaultRole) {
-      throw new InternalServerErrorException('默认角色不存在');
-    }
-
-    await this.prisma.user.create({
-      data: {
-        email: registerData.email,
-        username: registerData.username,
-        password: hashedPassword,
-        nickname: registerData.nickname,
-        roleId: defaultRole.id,
-        status: 'ACTIVE',
-        emailVerified: true,
-        emailVerifiedAt: new Date(),
-      },
+    await this.usersService.create({
+      email: registerData.email,
+      username: registerData.username,
+      password: registerData.password,
+      nickname: registerData.nickname,
     });
 
     this.logger.log(`用户创建成功: ${email}`);

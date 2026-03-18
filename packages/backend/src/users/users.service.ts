@@ -22,7 +22,7 @@ import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProjectStatus } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -36,7 +36,7 @@ export class UsersService {
   ) {}
 
   /**
-   * 创建用户
+   * 创建用户（包含私人空间创建）
    */
   async create(createUserDto: CreateUserDto) {
     try {
@@ -83,34 +83,67 @@ export class UsersService {
         this.saltRounds
       );
 
-      const user = await this.prisma.user.create({
-        data: {
-          email: createUserDto.email || null,
-          username: createUserDto.username,
-          password: hashedPassword,
-          nickname: createUserDto.nickname,
-          avatar: createUserDto.avatar,
-          roleId: createUserDto.roleId || defaultRole.id, // 使用传入的角色ID，默认为普通用户
-          status: 'ACTIVE', // 管理员创建的用户直接激活
-          emailVerified: createUserDto.email ? true : false, // 有邮箱视为已验证，无邮箱为未验证
-          emailVerifiedAt: createUserDto.email ? new Date() : null,
-        },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          nickname: true,
-          avatar: true,
-          role: {
-            select: {
-              id: true,
-              name: true,
+      // 使用事务创建用户和私人空间
+      const user = await this.prisma.$transaction(async (tx) => {
+        // 创建用户
+        const newUser = await tx.user.create({
+          data: {
+            email: createUserDto.email || null,
+            username: createUserDto.username,
+            password: hashedPassword,
+            nickname: createUserDto.nickname,
+            avatar: createUserDto.avatar,
+            roleId: createUserDto.roleId || defaultRole.id,
+            status: 'ACTIVE',
+            emailVerified: createUserDto.email ? true : false,
+            emailVerifiedAt: createUserDto.email ? new Date() : null,
+          },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            nickname: true,
+            avatar: true,
+            role: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+
+        // 获取 PROJECT_OWNER 角色
+        const ownerRole = await tx.projectRole.findFirst({
+          where: { name: 'PROJECT_OWNER', isSystem: true },
+        });
+
+        if (!ownerRole) {
+          throw new NotFoundException('PROJECT_OWNER 角色不存在');
+        }
+
+        // 创建私人空间
+        await tx.fileSystemNode.create({
+          data: {
+            name: '我的图纸',
+            isFolder: true,
+            isRoot: true,
+            personalSpaceKey: newUser.id,
+            projectStatus: ProjectStatus.ACTIVE,
+            ownerId: newUser.id,
+            projectMembers: {
+              create: {
+                userId: newUser.id,
+                projectRoleId: ownerRole.id,
+              },
             },
           },
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        });
+
+        return newUser;
       });
 
       this.logger.log(`用户创建成功: ${user.username}${user.email ? ` (${user.email})` : ''}`);
