@@ -1,24 +1,38 @@
 # CloudCAD Linux 部署包验证镜像
-# 在干净、断网环境中验证部署包可用性
+# 模拟用户 Linux 环境：解压部署包后直接运行
 #
 # 使用方式：
 #   docker build -f runtime/docker/Dockerfile.linux-deploy-verify \
 #       --build-arg PACKAGE=cloudcad-deploy-*.tar.gz \
+#       --build-arg BASE_IMAGE=rockylinux:9 \
 #       -t cloudcad-verify .
 #   docker run --rm --network none cloudcad-verify
 #
-# 验证流程：
-#   1. 解压部署包
-#   2. 启动 start.sh
-#   3. 等待服务启动
-#   4. 检查后端和前端是否可访问
+# 支持的 BASE_IMAGE（glibc 系统）：
+#   - node:20-bullseye-slim (Debian 11, 默认)
+#   - ubuntu:22.04, ubuntu:24.04
+#   - centos:7 (CentOS 7, 已 EOL)
+#   - rockylinux:8, rockylinux:9
+#
+# 设计原则：
+#   - Docker 只是模拟用户的干净 Linux 环境
+#   - 所有初始化工作由应用脚本内部处理
+#   - 用户解压后直接运行即可部署
 
-FROM debian:bullseye-slim
+ARG BASE_IMAGE=node:20-bullseye-slim
+FROM ${BASE_IMAGE}
 
-# 仅安装 curl（用于健康检查）
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# 安装最小依赖（curl 用于健康检查, procps 用于进程管理）
+# Debian/Ubuntu 使用 apt-get, CentOS/RHEL 使用 yum
+RUN if command -v apt-get &> /dev/null; then \
+      apt-get update && apt-get install -y curl procps && rm -rf /var/lib/apt/lists/*; \
+    elif command -v yum &> /dev/null; then \
+      if [ -f /etc/yum.repos.d/CentOS-Base.repo ]; then \
+        sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo && \
+        sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Base.repo; \
+      fi; \
+      yum install -y --allowerasing curl procps-ng && yum clean all; \
+    fi
 
 # 设置工作目录
 WORKDIR /app
@@ -30,9 +44,9 @@ ARG PACKAGE=cloudcad-deploy-linux.tar.gz
 COPY release/${PACKAGE} /tmp/
 RUN tar -xzf /tmp/${PACKAGE} -C /app && rm /tmp/${PACKAGE}
 
-# 复制验证脚本
-COPY scripts/verify-deploy-package.sh /verify.sh
-RUN chmod +x /verify.sh
+# 设置环境变量
+ENV PM2_HOME=/app/offline-data/pm2
 
-# 断网运行验证
-CMD ["/verify.sh"]
+# 运行验证脚本（使用内嵌的 Node.js）
+# 脚本内部处理所有初始化：创建目录、创建用户、启动服务等
+CMD ["./runtime/linux/node/bin/node", "runtime/scripts/verify-deploy.js"]

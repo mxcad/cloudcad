@@ -7,8 +7,12 @@
  * 3. 导出压缩包到 release/
  * 
  * 使用方式：
- *   node scripts/pack-linux-deploy.js              # 仅打包
- *   node scripts/pack-linux-deploy.js --verify     # 打包并验证
+ *   node scripts/pack-linux-deploy.js              # 打包
+ *   node scripts/pack-linux-deploy.js --help       显示帮助
+ * 
+ * 验证（独立脚本）：
+ *   node scripts/verify-linux-deploy.js            # 验证最新包
+ *   node scripts/verify-linux-deploy.js --package xxx.tar.gz  # 验证指定包
  */
 
 const fs = require('fs');
@@ -21,9 +25,7 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'release');
 const DOCKER_DIR = path.join(PROJECT_ROOT, 'runtime', 'docker');
 const DOCKERFILE = 'Dockerfile.linux-deploy';
-const DOCKERFILE_VERIFY = 'Dockerfile.linux-deploy-verify';
 const IMAGE_NAME = 'cloudcad-pack-linux';
-const VERIFY_IMAGE_NAME = 'cloudcad-verify';
 
 const PACKAGE_JSON = require(path.join(PROJECT_ROOT, 'package.json'));
 const VERSION = PACKAGE_JSON.version || '1.0.0';
@@ -135,36 +137,6 @@ function findDeployPackage() {
 }
 
 /**
- * 构建验证镜像
- */
-async function buildVerifyImage(packageFile) {
-  log('构建验证镜像...');
-  
-  const dockerfilePath = path.join(DOCKER_DIR, DOCKERFILE_VERIFY);
-  const packageName = path.basename(packageFile);
-  
-  if (!fs.existsSync(dockerfilePath)) {
-    throw new Error(`找不到 Dockerfile: ${dockerfilePath}`);
-  }
-  
-  await runCommand(`docker build -t ${VERIFY_IMAGE_NAME} -f "${dockerfilePath}" --build-arg PACKAGE=${packageName} "${PROJECT_ROOT}"`);
-  
-  log('✓ 验证镜像构建完成');
-}
-
-/**
- * 执行断网验证
- */
-async function runVerify() {
-  log('执行断网验证...');
-  log('注意: 验证容器将运行在 --network none 模式下');
-  
-  await runCommand(`docker run --rm --network none ${VERIFY_IMAGE_NAME}`);
-  
-  log('✓ 验证通过');
-}
-
-/**
  * 显示使用说明
  */
 function showHelp() {
@@ -172,8 +144,7 @@ function showHelp() {
 CloudCAD Linux 部署包打包入口
 
 使用方式：
-  node scripts/pack-linux-deploy.js              仅打包
-  node scripts/pack-linux-deploy.js --verify     打包并验证
+  node scripts/pack-linux-deploy.js              打包
   node scripts/pack-linux-deploy.js --help       显示帮助
 
 流程说明：
@@ -183,12 +154,9 @@ CloudCAD Linux 部署包打包入口
      - node scripts/pack-offline.js --deploy --linux
   3. 输出: release/cloudcad-deploy-*.tar.gz
 
-验证说明：
-  使用 --verify 参数时，会在独立的断网容器中验证部署包：
-  - 解压部署包
-  - 启动 PostgreSQL + Redis
-  - 启动应用
-  - 健康检查
+验证部署包（独立脚本）：
+  node scripts/verify-linux-deploy.js            验证最新包
+  node scripts/verify-linux-deploy.js --package xxx.tar.gz  验证指定包
 
 输出目录：
   ${OUTPUT_DIR}
@@ -206,13 +174,10 @@ async function main() {
     process.exit(0);
   }
   
-  const doVerify = args.includes('--verify');
-  
   log('============================================');
   log(' CloudCAD Linux 部署包打包工具');
   log('============================================');
   log(`版本: ${VERSION}`);
-  log(`验证: ${doVerify ? '是' : '否'}`);
   log('');
   
   // 检查 Docker
@@ -250,34 +215,15 @@ async function main() {
     log(`✓ ${packageFile}`);
     log(`大小: ${formatSize(stat.size)}`);
     
-    // 验证
-    if (doVerify) {
-      log('');
-      log('============================================');
-      log(' 开始验证');
-      log('============================================');
-      
-      // 构建验证镜像
-      log('[1/2] 构建验证镜像...');
-      await buildVerifyImage(packageFile);
-      
-      // 执行验证
-      log('');
-      log('[2/2] 执行断网验证...');
-      await runVerify();
-      
-      log('');
-      log('============================================');
-      log(' 验证完成');
-      log('============================================');
-    }
-    
     log('');
     log('使用说明:');
     log('  1. 复制部署包到目标服务器');
     log('  2. 解压: tar -xzf cloudcad-deploy-*.tar.gz');
     log('  3. 配置: 编辑 packages/backend/.env');
     log('  4. 启动: ./start.sh');
+    log('');
+    log('验证部署包:');
+    log('  node scripts/verify-linux-deploy.js');
     
   } catch (err) {
     error(err.message);

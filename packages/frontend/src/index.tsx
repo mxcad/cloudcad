@@ -7,7 +7,7 @@ import { initApiClient } from './services/apiClient';
 
 import './styles/transitions.css';
 import './styles/app.css';
-
+import './styles/icon.css';
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Could not find root element to mount to');

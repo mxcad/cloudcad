@@ -34,6 +34,11 @@ const redisServer = USE_RUNTIME
       : path.join(PLATFORM_DIR, 'redis', 'redis-server'))
   : 'redis-server';
 
+// Linux 下需要设置 LD_LIBRARY_PATH
+const REDIS_LIB_DIR = USE_RUNTIME && !IS_WINDOWS
+  ? path.join(PLATFORM_DIR, 'redis', 'lib')
+  : null;
+
 // 确保目录存在
 if (!fs.existsSync(REDIS_DATA_DIR)) {
   fs.mkdirSync(REDIS_DATA_DIR, { recursive: true });
@@ -94,7 +99,10 @@ function startRedis() {
       stdio: 'inherit',
       windowsHide: true,
       shell: IS_WINDOWS,
-      detached: false
+      detached: false,
+      env: REDIS_LIB_DIR
+        ? { ...process.env, LD_LIBRARY_PATH: `${REDIS_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` }
+        : process.env
     });
     
     redisProcess.on('error', (err) => {

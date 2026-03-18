@@ -1422,219 +1422,6 @@
         ]
       }
     },
-    "/api/runtime-config/public": {
-      "get": {
-        "operationId": "RuntimeConfigController_getPublicConfigs",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "返回公开配置键值对",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "获取公开配置（前端初始化使用）",
-        "tags": [
-          "runtime-config"
-        ]
-      }
-    },
-    "/api/runtime-config": {
-      "get": {
-        "operationId": "RuntimeConfigController_getAllConfigs",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "返回所有配置项列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RuntimeConfigResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取所有运行时配置",
-        "tags": [
-          "runtime-config"
-        ]
-      }
-    },
-    "/api/runtime-config/definitions": {
-      "get": {
-        "operationId": "RuntimeConfigController_getDefinitions",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "返回配置定义列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RuntimeConfigDefinitionDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取配置项定义",
-        "tags": [
-          "runtime-config"
-        ]
-      }
-    },
-    "/api/runtime-config/{key}": {
-      "get": {
-        "operationId": "RuntimeConfigController_getConfig",
-        "parameters": [
-          {
-            "name": "key",
-            "required": true,
-            "in": "path",
-            "description": "配置键名",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "返回配置项详情",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RuntimeConfigResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取单个配置项",
-        "tags": [
-          "runtime-config"
-        ]
-      },
-      "put": {
-        "operationId": "RuntimeConfigController_updateConfig",
-        "parameters": [
-          {
-            "name": "key",
-            "required": true,
-            "in": "path",
-            "description": "配置键名",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateRuntimeConfigDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "更新配置项",
-        "tags": [
-          "runtime-config"
-        ]
-      }
-    },
-    "/api/runtime-config/{key}/reset": {
-      "post": {
-        "operationId": "RuntimeConfigController_resetConfig",
-        "parameters": [
-          {
-            "name": "key",
-            "required": true,
-            "in": "path",
-            "description": "配置键名",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "重置成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "重置配置为默认值",
-        "tags": [
-          "runtime-config"
-        ]
-      }
-    },
     "/api/users": {
       "post": {
         "operationId": "UsersController_create",
@@ -2164,6 +1951,219 @@
         "summary": "修改密码",
         "tags": [
           "用户管理"
+        ]
+      }
+    },
+    "/api/runtime-config/public": {
+      "get": {
+        "operationId": "RuntimeConfigController_getPublicConfigs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回公开配置键值对",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取公开配置（前端初始化使用）",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config": {
+      "get": {
+        "operationId": "RuntimeConfigController_getAllConfigs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回所有配置项列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeConfigResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有运行时配置",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config/definitions": {
+      "get": {
+        "operationId": "RuntimeConfigController_getDefinitions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回配置定义列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeConfigDefinitionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取配置项定义",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config/{key}": {
+      "get": {
+        "operationId": "RuntimeConfigController_getConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "配置键名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回配置项详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeConfigResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个配置项",
+        "tags": [
+          "runtime-config"
+        ]
+      },
+      "put": {
+        "operationId": "RuntimeConfigController_updateConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "配置键名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuntimeConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新配置项",
+        "tags": [
+          "runtime-config"
+        ]
+      }
+    },
+    "/api/runtime-config/{key}/reset": {
+      "post": {
+        "operationId": "RuntimeConfigController_resetConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "配置键名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "重置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "重置配置为默认值",
+        "tags": [
+          "runtime-config"
         ]
       }
     },
@@ -2975,6 +2975,33 @@
           }
         ],
         "summary": "获取项目列表",
+        "tags": [
+          "文件系统"
+        ]
+      }
+    },
+    "/api/file-system/personal-space": {
+      "get": {
+        "operationId": "FileSystemController_getPersonalSpace",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取私人空间成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前用户的私人空间",
         "tags": [
           "文件系统"
         ]
@@ -7731,131 +7758,12 @@
           "code"
         ]
       },
-      "RuntimeConfigResponseDto": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "配置键名",
-            "example": "mailEnabled"
-          },
-          "value": {
-            "type": "object",
-            "description": "配置值（string | number | boolean）",
-            "example": false
-          },
-          "type": {
-            "type": "string",
-            "description": "值类型",
-            "enum": [
-              "string",
-              "number",
-              "boolean"
-            ],
-            "example": "boolean"
-          },
-          "category": {
-            "type": "string",
-            "description": "分类",
-            "example": "mail"
-          },
-          "description": {
-            "type": "string",
-            "description": "配置说明",
-            "example": "邮件服务开关"
-          },
-          "isPublic": {
-            "type": "boolean",
-            "description": "是否公开给前端",
-            "example": true
-          },
-          "updatedBy": {
-            "type": "string",
-            "description": "最后修改人 ID"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "最后更新时间",
-            "example": "2024-01-01T00:00:00.000Z"
-          }
-        },
-        "required": [
-          "key",
-          "value",
-          "type",
-          "category",
-          "isPublic",
-          "updatedAt"
-        ]
-      },
-      "RuntimeConfigDefinitionDto": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "配置键名",
-            "example": "mailEnabled"
-          },
-          "type": {
-            "type": "string",
-            "description": "值类型",
-            "enum": [
-              "string",
-              "number",
-              "boolean"
-            ],
-            "example": "boolean"
-          },
-          "category": {
-            "type": "string",
-            "description": "分类",
-            "example": "mail"
-          },
-          "description": {
-            "type": "string",
-            "description": "配置说明",
-            "example": "邮件服务开关"
-          },
-          "defaultValue": {
-            "type": "object",
-            "description": "默认值（string | number | boolean）",
-            "example": false
-          },
-          "isPublic": {
-            "type": "boolean",
-            "description": "是否公开给前端",
-            "example": true
-          }
-        },
-        "required": [
-          "key",
-          "type",
-          "category",
-          "description",
-          "defaultValue",
-          "isPublic"
-        ]
-      },
-      "UpdateRuntimeConfigDto": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "object",
-            "description": "配置值（string | number | boolean）",
-            "example": false
-          }
-        },
-        "required": [
-          "value"
-        ]
-      },
       "CreateUserDto": {
         "type": "object",
         "properties": {
           "email": {
             "type": "string",
-            "description": "用户邮箱",
+            "description": "用户邮箱（可选，当 mailEnabled=true 时建议填写）",
             "example": "user@example.com",
             "format": "email"
           },
@@ -7890,7 +7798,6 @@
           }
         },
         "required": [
-          "email",
           "username",
           "password"
         ]
@@ -8128,6 +8035,125 @@
           "message",
           "data",
           "timestamp"
+        ]
+      },
+      "RuntimeConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "配置键名",
+            "example": "mailEnabled"
+          },
+          "value": {
+            "type": "object",
+            "description": "配置值（string | number | boolean）",
+            "example": false
+          },
+          "type": {
+            "type": "string",
+            "description": "值类型",
+            "enum": [
+              "string",
+              "number",
+              "boolean"
+            ],
+            "example": "boolean"
+          },
+          "category": {
+            "type": "string",
+            "description": "分类",
+            "example": "mail"
+          },
+          "description": {
+            "type": "string",
+            "description": "配置说明",
+            "example": "邮件服务开关"
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "是否公开给前端",
+            "example": true
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "最后修改人 ID"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "最后更新时间",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "type",
+          "category",
+          "isPublic",
+          "updatedAt"
+        ]
+      },
+      "RuntimeConfigDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "配置键名",
+            "example": "mailEnabled"
+          },
+          "type": {
+            "type": "string",
+            "description": "值类型",
+            "enum": [
+              "string",
+              "number",
+              "boolean"
+            ],
+            "example": "boolean"
+          },
+          "category": {
+            "type": "string",
+            "description": "分类",
+            "example": "mail"
+          },
+          "description": {
+            "type": "string",
+            "description": "配置说明",
+            "example": "邮件服务开关"
+          },
+          "defaultValue": {
+            "type": "object",
+            "description": "默认值（string | number | boolean）",
+            "example": false
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "是否公开给前端",
+            "example": true
+          }
+        },
+        "required": [
+          "key",
+          "type",
+          "category",
+          "description",
+          "defaultValue",
+          "isPublic"
+        ]
+      },
+      "UpdateRuntimeConfigDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "description": "配置值（string | number | boolean）",
+            "example": false
+          }
+        },
+        "required": [
+          "value"
         ]
       },
       "RoleDto": {
@@ -8628,6 +8654,94 @@
           "totalPages"
         ]
       },
+      "FileSystemNodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "节点 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "节点名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "节点描述"
+          },
+          "isFolder": {
+            "type": "boolean",
+            "description": "是否为文件夹"
+          },
+          "isRoot": {
+            "type": "boolean",
+            "description": "是否为根节点"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "父节点 ID"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件路径"
+          },
+          "size": {
+            "type": "number",
+            "description": "文件大小"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "文件 MIME 类型"
+          },
+          "fileHash": {
+            "type": "string",
+            "description": "文件哈希"
+          },
+          "fileStatus": {
+            "type": "string",
+            "description": "文件状态",
+            "enum": [
+              "UPLOADING",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED",
+              "DELETED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "删除时间"
+          },
+          "ownerId": {
+            "type": "string",
+            "description": "所有者 ID"
+          },
+          "childrenCount": {
+            "type": "number",
+            "description": "子节点数量"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "isFolder",
+          "isRoot",
+          "createdAt",
+          "updatedAt",
+          "ownerId"
+        ]
+      },
       "UpdateNodeDto": {
         "type": "object",
         "properties": {
@@ -8817,94 +8931,6 @@
           "failedCount",
           "successIds",
           "failedIds"
-        ]
-      },
-      "FileSystemNodeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "节点 ID"
-          },
-          "name": {
-            "type": "string",
-            "description": "节点名称"
-          },
-          "description": {
-            "type": "string",
-            "description": "节点描述"
-          },
-          "isFolder": {
-            "type": "boolean",
-            "description": "是否为文件夹"
-          },
-          "isRoot": {
-            "type": "boolean",
-            "description": "是否为根节点"
-          },
-          "parentId": {
-            "type": "string",
-            "description": "父节点 ID"
-          },
-          "path": {
-            "type": "string",
-            "description": "文件路径"
-          },
-          "size": {
-            "type": "number",
-            "description": "文件大小"
-          },
-          "mimeType": {
-            "type": "string",
-            "description": "文件 MIME 类型"
-          },
-          "fileHash": {
-            "type": "string",
-            "description": "文件哈希"
-          },
-          "fileStatus": {
-            "type": "string",
-            "description": "文件状态",
-            "enum": [
-              "UPLOADING",
-              "PROCESSING",
-              "COMPLETED",
-              "FAILED",
-              "DELETED"
-            ]
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "创建时间"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "更新时间"
-          },
-          "deletedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "删除时间"
-          },
-          "ownerId": {
-            "type": "string",
-            "description": "所有者 ID"
-          },
-          "childrenCount": {
-            "type": "number",
-            "description": "子节点数量"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "isFolder",
-          "isRoot",
-          "createdAt",
-          "updatedAt",
-          "ownerId"
         ]
       },
       "CreateNodeDto": {

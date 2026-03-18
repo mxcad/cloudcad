@@ -175,4 +175,12 @@ export const projectsApi = {
     getApiClient().FileSystemController_restoreTrashItems(null, {
       itemIds: [projectId],
     }),
+
+  // ========== 私人空间 ==========
+
+  /**
+   * 获取当前用户的私人空间
+   */
+  getPersonalSpace: () =>
+    getApiClient().FileSystemController_getPersonalSpace(),
 };

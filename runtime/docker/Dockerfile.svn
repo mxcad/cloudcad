@@ -2,6 +2,9 @@
 # 用途：提取 Linux 版本的 SVN 工具及其所有依赖
 # 基于 Debian Bullseye (glibc 2.31)，兼容性强
 #
+# 重要：不打包 glibc 核心库（libc.so.6, ld-linux-x86-64.so.2 等）
+# 这些库必须使用目标系统的版本，否则会导致兼容性问题
+#
 # 构建命令：
 #   docker build -o ../linux/subversion -f Dockerfile.svn .
 #
@@ -21,8 +24,10 @@ RUN apt-get update && apt-get install -y subversion binutils && \
 # 创建提取目录
 WORKDIR /extract
 
-# 收集所有依赖库（可执行文件直接放根目录）
+# 收集所有依赖库（可执行文件直接放根目录，排除 glibc 核心库）
 RUN mkdir -p lib && \
+    # 系统核心库（不打包，使用目标系统版本）
+    SYSTEM_LIBS="libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2" && \
     # 复制 SVN 二进制文件到根目录
     cp /usr/bin/svn . && \
     cp /usr/bin/svnadmin . && \
@@ -30,24 +35,32 @@ RUN mkdir -p lib && \
     cp /usr/bin/svnsync . && \
     cp /usr/bin/svnversion . && \
     cp /usr/bin/svnserve . && \
-    # 使用 ldd 收集所有依赖库（包括间接依赖）
+    # 使用 ldd 收集所有依赖库（排除系统核心库）
     for b in svn svnadmin svnlook svnsync svnversion svnserve; do \
         if [ -f "$b" ]; then \
             ldd "$b" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read l; do \
-                [ -f "$l" ] && cp -L "$l" lib/ 2>/dev/null || true; \
+                libname=$(basename "$l"); \
+                skip=0; \
+                for syslib in $SYSTEM_LIBS; do \
+                    [ "$libname" = "$syslib" ] && skip=1 && break; \
+                done; \
+                [ $skip -eq 0 ] && [ -f "$l" ] && cp -L "$l" lib/ 2>/dev/null || true; \
             done; \
         fi; \
     done && \
-    # 检查 lib 目录中的 .so 文件的间接依赖
+    # 检查 lib 目录中的 .so 文件的间接依赖（排除系统核心库）
     for l in lib/*.so*; do \
         if [ -f "$l" ]; then \
             ldd "$l" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read dep; do \
-                [ -f "$dep" ] && cp -L "$dep" lib/ 2>/dev/null || true; \
+                depname=$(basename "$dep"); \
+                skip=0; \
+                for syslib in $SYSTEM_LIBS; do \
+                    [ "$depname" = "$syslib" ] && skip=1 && break; \
+                done; \
+                [ $skip -eq 0 ] && [ -f "$dep" ] && cp -L "$dep" lib/ 2>/dev/null || true; \
             done; \
         fi; \
     done && \
-    # 复制动态链接器
-    cp /lib64/ld-linux-x86-64.so.2 lib/ 2>/dev/null || cp /lib/ld-linux-x86-64.so.2 lib/ 2>/dev/null || true && \
     # 设置权限
     chmod -R 755 . lib
 

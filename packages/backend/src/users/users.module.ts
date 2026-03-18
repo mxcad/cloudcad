@@ -8,14 +8,14 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CommonModule } from '../common/common.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
-  imports: [CommonModule, RuntimeConfigModule],
+  imports: [forwardRef(() => CommonModule), RuntimeConfigModule],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

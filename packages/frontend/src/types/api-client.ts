@@ -1,13 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////
-// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
-// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
-// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
-// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
-// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
-// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
-// https://www.mxdraw.com/
-///////////////////////////////////////////////////////////////////////////////
-
 import type {
   OpenAPIClient,
   Parameters,
@@ -770,11 +760,11 @@ declare namespace Components {
         }
         export interface CreateUserDto {
             /**
-             * 用户邮箱
+             * 用户邮箱（可选，当 mailEnabled=true 时建议填写）
              * example:
              * user@example.com
              */
-            email: string; // email
+            email?: string; // email
             /**
              * 用户名
              * example:
@@ -3401,6 +3391,11 @@ declare namespace Paths {
             }
         }
     }
+    namespace FileSystemControllerGetPersonalSpace {
+        namespace Responses {
+            export type $200 = Components.Schemas.FileSystemNodeDto;
+        }
+    }
     namespace FileSystemControllerGetProject {
         namespace Parameters {
             export type ProjectId = string;
@@ -5181,54 +5176,6 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
   /**
-   * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
-   */
-  'RuntimeConfigController_getPublicConfigs'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
-  /**
-   * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
-   */
-  'RuntimeConfigController_getAllConfigs'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
-  /**
-   * RuntimeConfigController_getDefinitions - 获取配置项定义
-   */
-  'RuntimeConfigController_getDefinitions'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
-  /**
-   * RuntimeConfigController_getConfig - 获取单个配置项
-   */
-  'RuntimeConfigController_getConfig'(
-    parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
-  /**
-   * RuntimeConfigController_updateConfig - 更新配置项
-   */
-  'RuntimeConfigController_updateConfig'(
-    parameters?: Parameters<Paths.RuntimeConfigControllerUpdateConfig.PathParameters> | null,
-    data?: Paths.RuntimeConfigControllerUpdateConfig.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
-  /**
-   * RuntimeConfigController_resetConfig - 重置配置为默认值
-   */
-  'RuntimeConfigController_resetConfig'(
-    parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
-  /**
    * UsersController_findAll - 获取用户列表
    */
   'UsersController_findAll'(
@@ -5316,6 +5263,54 @@ export interface OperationMethods {
     data?: Paths.UsersControllerChangePassword.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerChangePassword.Responses.$200>
+  /**
+   * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
+   */
+  'RuntimeConfigController_getPublicConfigs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
+  /**
+   * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
+   */
+  'RuntimeConfigController_getAllConfigs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
+  /**
+   * RuntimeConfigController_getDefinitions - 获取配置项定义
+   */
+  'RuntimeConfigController_getDefinitions'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
+  /**
+   * RuntimeConfigController_getConfig - 获取单个配置项
+   */
+  'RuntimeConfigController_getConfig'(
+    parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
+  /**
+   * RuntimeConfigController_updateConfig - 更新配置项
+   */
+  'RuntimeConfigController_updateConfig'(
+    parameters?: Parameters<Paths.RuntimeConfigControllerUpdateConfig.PathParameters> | null,
+    data?: Paths.RuntimeConfigControllerUpdateConfig.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
+  /**
+   * RuntimeConfigController_resetConfig - 重置配置为默认值
+   */
+  'RuntimeConfigController_resetConfig'(
+    parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   /**
    * RolesController_findAll - 获取所有角色
    */
@@ -5484,6 +5479,14 @@ export interface OperationMethods {
     data?: Paths.FileSystemControllerCreateProject.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCreateProject.Responses.$201>
+  /**
+   * FileSystemController_getPersonalSpace - 获取当前用户的私人空间
+   */
+  'FileSystemController_getPersonalSpace'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   /**
    * FileSystemController_getDeletedProjects - 获取已删除项目列表
    */
@@ -6681,64 +6684,6 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
   }
-  ['/api/runtime-config/public']: {
-    /**
-     * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
-     */
-    'get'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
-  }
-  ['/api/runtime-config']: {
-    /**
-     * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
-     */
-    'get'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
-  }
-  ['/api/runtime-config/definitions']: {
-    /**
-     * RuntimeConfigController_getDefinitions - 获取配置项定义
-     */
-    'get'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
-  }
-  ['/api/runtime-config/{key}']: {
-    /**
-     * RuntimeConfigController_getConfig - 获取单个配置项
-     */
-    'get'(
-      parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
-    /**
-     * RuntimeConfigController_updateConfig - 更新配置项
-     */
-    'put'(
-      parameters?: Parameters<Paths.RuntimeConfigControllerUpdateConfig.PathParameters> | null,
-      data?: Paths.RuntimeConfigControllerUpdateConfig.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
-  }
-  ['/api/runtime-config/{key}/reset']: {
-    /**
-     * RuntimeConfigController_resetConfig - 重置配置为默认值
-     */
-    'post'(
-      parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
-  }
   ['/api/users']: {
     /**
      * UsersController_create - 创建用户
@@ -6840,6 +6785,64 @@ export interface PathsDictionary {
       data?: Paths.UsersControllerChangePassword.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerChangePassword.Responses.$200>
+  }
+  ['/api/runtime-config/public']: {
+    /**
+     * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
+  }
+  ['/api/runtime-config']: {
+    /**
+     * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
+  }
+  ['/api/runtime-config/definitions']: {
+    /**
+     * RuntimeConfigController_getDefinitions - 获取配置项定义
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
+  }
+  ['/api/runtime-config/{key}']: {
+    /**
+     * RuntimeConfigController_getConfig - 获取单个配置项
+     */
+    'get'(
+      parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
+    /**
+     * RuntimeConfigController_updateConfig - 更新配置项
+     */
+    'put'(
+      parameters?: Parameters<Paths.RuntimeConfigControllerUpdateConfig.PathParameters> | null,
+      data?: Paths.RuntimeConfigControllerUpdateConfig.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
+  }
+  ['/api/runtime-config/{key}/reset']: {
+    /**
+     * RuntimeConfigController_resetConfig - 重置配置为默认值
+     */
+    'post'(
+      parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   }
   ['/api/roles']: {
     /**
@@ -7030,6 +7033,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProjects.Responses.$200>
+  }
+  ['/api/file-system/personal-space']: {
+    /**
+     * FileSystemController_getPersonalSpace - 获取当前用户的私人空间
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   }
   ['/api/file-system/projects/trash']: {
     /**

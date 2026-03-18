@@ -125,6 +125,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
   const menuItems = [
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
+    { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true },
     {
       to: '/font-library',
       icon: Type,

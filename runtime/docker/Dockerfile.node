@@ -2,6 +2,9 @@
 # 基于 Debian Bullseye (glibc 2.31)，兼容性强
 # 保留完整目录结构，确保所有工具正常工作
 #
+# 重要：不打包 glibc 核心库（libc.so.6, ld-linux-x86-64.so.2 等）
+# 这些库必须使用目标系统的版本，否则会导致兼容性问题
+#
 # 构建命令：
 #   docker build -o ../linux/node -f Dockerfile.node .
 #
@@ -15,8 +18,10 @@ RUN npm install -g pnpm@9.15.4 pm2
 # 创建提取目录
 WORKDIR /extract
 
-# 收集所有依赖库
+# 收集所有依赖库（排除 glibc 核心库）
 RUN apt-get update && apt-get install -y binutils && \
+    # 系统核心库（不打包，使用目标系统版本）
+    SYSTEM_LIBS="libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2" && \
     mkdir -p bin lib node_modules && \
     cp /usr/local/bin/node bin/ && \
     cp -rL /usr/local/lib/node_modules/* node_modules/ && \
@@ -31,11 +36,16 @@ RUN printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIP
     printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pm2/bin/pm2" "$@"\n' > bin/pm2 && chmod +x bin/pm2 && \
     printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pm2/bin/pm2-runtime" "$@"\n' > bin/pm2-runtime && chmod +x bin/pm2-runtime
 
-# 收集依赖库
-RUN ldd /usr/local/bin/node 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do \
-        [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
-    done && \
-    cp /lib64/ld-linux-x86-64.so.2 lib/ 2>/dev/null || cp /lib/ld-linux-x86-64.so.2 lib/ 2>/dev/null || true
+# 收集依赖库（排除系统核心库）
+RUN SYSTEM_LIBS="libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2" && \
+    ldd /usr/local/bin/node 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do \
+        libname=$(basename "$lib"); \
+        skip=0; \
+        for syslib in $SYSTEM_LIBS; do \
+            [ "$libname" = "$syslib" ] && skip=1 && break; \
+        done; \
+        [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
+    done
 
 # 确保所有文件都有正确权限
 RUN find /extract -type f -exec chmod 644 {} \; && \

@@ -37,23 +37,64 @@ import { VersionHistoryModal } from '../components/modals/VersionHistoryModal';
 import { versionControlApi } from '../services/versionControlApi';
 import { ProjectPermission } from '../constants/permissions';
 
-export const FileSystemManager: React.FC = () => {
-  useDocumentTitle('项目管理');
+interface FileSystemManagerProps {
+  mode?: 'project' | 'personal-space';
+}
+
+export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
+  mode = 'project',
+}) => {
+  useDocumentTitle(mode === 'personal-space' ? '我的图纸' : '项目管理');
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; nodeId?: string }>();
   const location = useLocation();
   const { user } = useAuth();
 
+  // 私人空间状态
+  const [personalSpaceId, setPersonalSpaceId] = useState<string | null>(null);
+  const [personalSpaceLoading, setPersonalSpaceLoading] = useState(false);
+
   // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
   const urlProjectId = React.useMemo(() => {
+    // 私人空间模式下，使用私人空间 ID
+    if (mode === 'personal-space') {
+      return personalSpaceId || '';
+    }
     const match = location.pathname.match(/\/projects\/([^/]+)/);
     return match ? match[1] : '';
-  }, [location.pathname]);
+  }, [location.pathname, mode, personalSpaceId]);
 
   const urlNodeId = React.useMemo(() => {
+    // 私人空间模式下的 URL nodeId 解析
+    if (mode === 'personal-space') {
+      const match = location.pathname.match(/\/personal-space\/([^/]+)/);
+      return match ? match[1] : undefined;
+    }
     const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
     return match ? match[1] : undefined;
-  }, [location.pathname]);
+  }, [location.pathname, mode]);
+
+  // 获取私人空间 ID
+  useEffect(() => {
+    if (mode !== 'personal-space') return;
+
+    const fetchPersonalSpace = async () => {
+      setPersonalSpaceLoading(true);
+      try {
+        const response = await projectsApi.getPersonalSpace();
+        if (response.data?.id) {
+          setPersonalSpaceId(response.data.id);
+        }
+      } catch (error) {
+        console.error('获取私人空间失败:', error);
+        showToast('获取私人空间失败', 'error');
+      } finally {
+        setPersonalSpaceLoading(false);
+      }
+    };
+
+    fetchPersonalSpace();
+  }, [mode, showToast]);
 
   // 上传组件 ref
   const uploaderRef = useRef<MxCadUploaderRef>(null);
@@ -246,7 +287,11 @@ export const FileSystemManager: React.FC = () => {
   );
 
   // 是否在根级别（无 projectId）
-  const isAtRoot = !urlProjectId;
+  // 私人空间模式下始终为 false，因为有私人空间 ID 作为根目录
+  const isAtRoot = mode === 'personal-space' ? false : !urlProjectId;
+
+  // 是否为私人空间模式
+  const isPersonalSpaceMode = mode === 'personal-space';
 
   // 面包屑滚轮横向滚动处理
   useEffect(() => {
@@ -701,9 +746,21 @@ export const FileSystemManager: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <button
-            onClick={isAtRoot ? () => navigate('/projects') : handleGoBack}
+            onClick={
+              isAtRoot
+                ? () => navigate('/projects')
+                : isPersonalSpaceMode
+                  ? () => navigate('/personal-space')
+                  : handleGoBack
+            }
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
-            title={isAtRoot ? '返回项目列表' : '返回上一级'}
+            title={
+              isAtRoot
+                ? '返回项目列表'
+                : isPersonalSpaceMode
+                  ? '返回我的图纸根目录'
+                  : '返回上一级'
+            }
           >
             <svg
               width="18"
@@ -724,10 +781,20 @@ export const FileSystemManager: React.FC = () => {
             <BreadcrumbNavigation
               breadcrumbs={breadcrumbs}
               onNavigate={(crumb) => {
-                if (crumb.isRoot) {
-                  navigate(`/projects/${crumb.id}/files`);
+                if (isPersonalSpaceMode) {
+                  // 私人空间模式下的导航
+                  if (crumb.isRoot) {
+                    navigate('/personal-space');
+                  } else {
+                    navigate(`/personal-space/${crumb.id}`);
+                  }
                 } else {
-                  navigate(`/projects/${params.projectId}/files/${crumb.id}`);
+                  // 项目模式下的导航
+                  if (crumb.isRoot) {
+                    navigate(`/projects/${crumb.id}/files`);
+                  } else {
+                    navigate(`/projects/${params.projectId}/files/${crumb.id}`);
+                  }
                 }
               }}
             />
@@ -746,7 +813,8 @@ export const FileSystemManager: React.FC = () => {
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
 
-          {!isAtRoot && (
+          {/* 私人空间模式不显示回收站按钮 */}
+          {!isAtRoot && !isPersonalSpaceMode && (
             <Button
               variant={isTrashView ? 'primary' : 'ghost'}
               size="sm"
@@ -770,7 +838,8 @@ export const FileSystemManager: React.FC = () => {
 
           {isAtRoot ? (
             <>
-              {canCreateProject && (
+              {/* 私人空间模式不显示新建项目按钮 */}
+              {canCreateProject && !isPersonalSpaceMode && (
                 <Button
                   variant="ghost"
                   size="sm"

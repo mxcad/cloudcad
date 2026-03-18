@@ -2,6 +2,9 @@
 # 用途：提取 Linux 版本的 Redis 及其所有依赖
 # 基于 Debian Bullseye (glibc 2.31)，兼容性强
 #
+# 重要：不打包 glibc 核心库（libc.so.6, ld-linux-x86-64.so.2 等）
+# 这些库必须使用目标系统的版本，否则会导致兼容性问题
+#
 # 构建命令：
 #   docker build -o ../linux/redis -f Dockerfile.redis .
 #
@@ -20,24 +23,29 @@ RUN apt-get update && apt-get install -y redis-server binutils && \
 # 创建提取目录
 WORKDIR /extract
 
-# 收集所有依赖库（可执行文件直接放根目录）
+# 收集所有依赖库（可执行文件直接放根目录，排除 glibc 核心库）
 RUN mkdir -p lib && \
+    # 系统核心库（不打包，使用目标系统版本）
+    SYSTEM_LIBS="libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2" && \
     # 复制 Redis 二进制文件到根目录
     cp /usr/bin/redis-server . && \
     cp /usr/bin/redis-cli . && \
     cp /usr/bin/redis-benchmark . 2>/dev/null || true && \
     cp /usr/bin/redis-check-rdb . 2>/dev/null || true && \
     cp /usr/bin/redis-check-aof . 2>/dev/null || true && \
-    # 使用 ldd 收集所有依赖库
+    # 使用 ldd 收集所有依赖库（排除系统核心库）
     for binfile in redis-server redis-cli redis-benchmark redis-check-rdb redis-check-aof; do \
         if [ -f "$binfile" ]; then \
             ldd "$binfile" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do \
-                [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
+                libname=$(basename "$lib"); \
+                skip=0; \
+                for syslib in $SYSTEM_LIBS; do \
+                    [ "$libname" = "$syslib" ] && skip=1 && break; \
+                done; \
+                [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
             done; \
         fi; \
     done && \
-    # 复制动态链接器
-    cp /lib64/ld-linux-x86-64.so.2 lib/ 2>/dev/null || cp /lib/ld-linux-x86-64.so.2 lib/ 2>/dev/null || true && \
     # 设置权限
     chmod -R 755 . lib
 

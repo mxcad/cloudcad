@@ -61,6 +61,10 @@ COPY runtime ./runtime
 COPY tsconfig.json ./
 COPY swagger_json.json ./
 
+# 复制启动/停止脚本
+COPY start.sh stop.sh ./
+COPY start.bat start.ps1 stop.bat stop.ps1 ./
+
 # 默认命令：提取运行时 + 打包
 # 步骤：
 #   1. 使用 extract-linux-runtime.js 提取 Linux 运行时

@@ -35,6 +35,12 @@ const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
 
 // 可执行文件路径
+// Windows: runtime/windows/postgresql/pgsql/bin/
+// Linux:   runtime/linux/postgres/bin/ (extract-linux-runtime.js 创建的目录)
+const PG_DIR_NAME = IS_WINDOWS ? 'postgresql' : 'postgres';
+const PG_BIN_SUBDIR = IS_WINDOWS ? 'pgsql/bin' : 'bin';
+const PG_LIB_DIR = IS_WINDOWS ? null : path.join(PLATFORM_DIR, 'postgres', 'lib');
+
 const EXE = {
   node: USE_RUNTIME
     ? (IS_WINDOWS
@@ -42,14 +48,10 @@ const EXE = {
         : path.join(PLATFORM_DIR, 'node', 'bin', 'node'))
     : 'node',
   postgres: USE_RUNTIME
-    ? (IS_WINDOWS
-        ? path.join(PLATFORM_DIR, 'postgresql', 'pgsql', 'bin', 'postgres.exe')
-        : path.join(PLATFORM_DIR, 'postgresql', 'bin', 'postgres'))
+    ? path.join(PLATFORM_DIR, PG_DIR_NAME, PG_BIN_SUBDIR, IS_WINDOWS ? 'postgres.exe' : 'postgres')
     : 'postgres',
   pg_ctl: USE_RUNTIME
-    ? (IS_WINDOWS
-        ? path.join(PLATFORM_DIR, 'postgresql', 'pgsql', 'bin', 'pg_ctl.exe')
-        : path.join(PLATFORM_DIR, 'postgresql', 'bin', 'pg_ctl'))
+    ? path.join(PLATFORM_DIR, PG_DIR_NAME, PG_BIN_SUBDIR, IS_WINDOWS ? 'pg_ctl.exe' : 'pg_ctl')
     : 'pg_ctl',
   redisServer: USE_RUNTIME
     ? (IS_WINDOWS
@@ -81,23 +83,46 @@ const apps = [];
 if (USE_RUNTIME) {
   // PostgreSQL 初始化检查（启动前执行）
   const initdb = USE_RUNTIME
-    ? (IS_WINDOWS
-        ? path.join(PLATFORM_DIR, 'postgresql', 'pgsql', 'bin', 'initdb.exe')
-        : path.join(PLATFORM_DIR, 'postgresql', 'bin', 'initdb'))
+    ? path.join(PLATFORM_DIR, PG_DIR_NAME, PG_BIN_SUBDIR, IS_WINDOWS ? 'initdb.exe' : 'initdb')
     : 'initdb';
+  
+  // Linux 下需要设置 LD_LIBRARY_PATH
+  const pgEnv = PG_LIB_DIR
+    ? { ...process.env, LD_LIBRARY_PATH: `${PG_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` }
+    : process.env;
   
   // 检查数据目录是否已初始化
   if (!fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
     ensureDir(PG_DATA_DIR);
     const { spawnSync } = require('child_process');
     console.log('[PM2] 初始化 PostgreSQL 数据目录...');
-    spawnSync(initdb, [
-      '-D', PG_DATA_DIR,
-      '-U', 'postgres',
-      '-A', 'trust',
-      '-E', 'utf8',
-      '--locale=C'
-    ], { stdio: 'inherit', shell: IS_WINDOWS });
+    
+    // Linux 下 PostgreSQL 不允许以 root 运行，需要切换用户或使用 --allow-group-access
+    if (IS_LINUX && process.getuid() === 0) {
+      // 尝试创建 postgres 用户（如果不存在）
+      try {
+        spawnSync('useradd', ['-m', 'postgres'], { stdio: 'pipe' });
+      } catch (e) {
+        // 用户可能已存在，忽略错误
+      }
+      // 更改数据目录所有者
+      spawnSync('chown', ['-R', 'postgres:postgres', PG_DATA_DIR], { stdio: 'inherit' });
+      // 以 postgres 用户身份初始化
+      const result = spawnSync('su', ['-', 'postgres', '-c', 
+        `LD_LIBRARY_PATH=${PG_LIB_DIR} ${initdb} -D ${PG_DATA_DIR} -U postgres -A trust -E utf8 --locale=C`],
+        { stdio: 'inherit' });
+      if (result.status !== 0) {
+        console.log('[PM2] PostgreSQL 数据目录初始化失败');
+      }
+    } else {
+      spawnSync(initdb, [
+        '-D', PG_DATA_DIR,
+        '-U', 'postgres',
+        '-A', 'trust',
+        '-E', 'utf8',
+        '--locale=C'
+      ], { stdio: 'inherit', shell: IS_WINDOWS, env: pgEnv });
+    }
   }
 
   // PostgreSQL - 使用包装脚本管理（解决 Windows 下 postgres.exe 窗口问题）
@@ -118,6 +143,8 @@ if (USE_RUNTIME) {
     wait_ready: true,
     env: {
       PGDATA: PG_DATA_DIR,
+      // Linux 下设置 LD_LIBRARY_PATH
+      ...(PG_LIB_DIR ? { LD_LIBRARY_PATH: `${PG_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` } : {}),
     },
   });
 

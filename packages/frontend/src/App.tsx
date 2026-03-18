@@ -137,6 +137,16 @@ function AppContent() {
                     element={<FileSystemManager />}
                   />
 
+                  {/* 私人空间 */}
+                  <Route
+                    path="/personal-space"
+                    element={<FileSystemManager mode="personal-space" />}
+                  />
+                  <Route
+                    path="/personal-space/:nodeId"
+                    element={<FileSystemManager mode="personal-space" />}
+                  />
+
                   <Route
                     path="/files"
                     element={<Navigate to="/projects" replace />}

@@ -435,9 +435,11 @@ function extractPostgresNative(outputPath) {
   // 创建目录结构
   const binDir = path.join(outputPath, 'bin');
   const libDir = path.join(outputPath, 'lib');
+  const shareDir = path.join(outputPath, 'share');
   
   ensureDir(binDir);
   ensureDir(libDir);
+  ensureDir(shareDir);
   
   // 复制 PostgreSQL 二进制文件
   log('  → 复制 PostgreSQL 二进制文件...');
@@ -452,10 +454,27 @@ function extractPostgresNative(outputPath) {
   }
   
   // 复制 PostgreSQL 库文件
+  // 注意：PostgreSQL 的 $libdir 解析为 bin/ 的兄弟目录 lib/
+  // 所以扩展库必须直接放在 lib/ 目录下，而不是 lib/postgresql/ 子目录
   log('  → 复制 PostgreSQL 库文件...');
   const pgLibDir = '/usr/lib/postgresql/15/lib';
   if (fs.existsSync(pgLibDir)) {
-    execSync(`mkdir -p ${libDir}/postgresql && cp -r ${pgLibDir}/* ${libDir}/postgresql/`, { stdio: 'inherit' });
+    // 复制 .so 文件到 lib/ 根目录
+    execSync(`cp ${pgLibDir}/*.so ${libDir}/ 2>/dev/null || true`, { stdio: 'pipe' });
+    // 复制 bitcode 和 pgxs 子目录
+    if (fs.existsSync(path.join(pgLibDir, 'bitcode'))) {
+      execSync(`cp -r ${pgLibDir}/bitcode ${libDir}/`, { stdio: 'pipe' });
+    }
+    if (fs.existsSync(path.join(pgLibDir, 'pgxs'))) {
+      execSync(`cp -r ${pgLibDir}/pgxs ${libDir}/`, { stdio: 'pipe' });
+    }
+  }
+  
+  // 复制 PostgreSQL share 目录（initdb 需要模板文件）
+  log('  → 复制 PostgreSQL share 目录...');
+  const pgShareDir = '/usr/share/postgresql/15';
+  if (fs.existsSync(pgShareDir)) {
+    execSync(`mkdir -p ${shareDir}/postgresql && cp -r ${pgShareDir}/* ${shareDir}/postgresql/`, { stdio: 'inherit' });
   }
   
   // 复制 libpq
