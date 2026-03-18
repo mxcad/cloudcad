@@ -111,11 +111,9 @@ export const useFileSystemNavigation = ({
           cadExtensions.includes(node.extension.toLowerCase())
         ) {
           // CAD 文件在新标签页打开编辑器
+          // 不需要 mode 参数，编辑器会根据文件所属空间自动判断
           const queryParams = new URLSearchParams();
           queryParams.set('nodeId', node.parentId || '');
-          if (mode === 'personal-space') {
-            queryParams.set('mode', 'personal-space');
-          }
           const url = `/cad-editor/${node.id}?${queryParams.toString()}`;
           window.open(url, '_blank');
         } else {

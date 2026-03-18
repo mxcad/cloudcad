@@ -19,6 +19,7 @@ import {
 } from '../contexts/SidebarContext';
 import { ProjectPermission } from '../constants/permissions';
 import { filesApi } from '../services/filesApi';
+import { projectsApi } from '../services/projectsApi';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import CADEditorSidebar from '../components/CADEditorSidebar';
 import CollaborateSidebar from '../components/CollaborateSidebar';
@@ -93,11 +94,26 @@ export const CADEditorDirect: React.FC = () => {
     return searchParams.get('v');
   }, [location.search]);
 
-  // 从 URL 获取模式参数（用于返回导航）
-  const editorMode = React.useMemo(() => {
-    const searchParams = new URLSearchParams(location.search);
-    return searchParams.get('mode') as 'personal-space' | null;
-  }, [location.search]);
+  // 私人空间 ID（用于判断当前文件所属空间）
+  const [personalSpaceId, setPersonalSpaceId] = React.useState<string | null>(null);
+  // 当前文件所属项目 ID
+  const [currentProjectId, setCurrentProjectId] = React.useState<string | null>(null);
+
+  // 获取私人空间 ID
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    projectsApi.getPersonalSpace().then((res) => {
+      if (res.data?.id) {
+        setPersonalSpaceId(res.data.id);
+      }
+    }).catch(console.error);
+  }, [isAuthenticated]);
+
+  // 判断是否为私人空间模式（根据当前文件所属项目）
+  const isPersonalSpaceMode = React.useMemo(() => {
+    if (!personalSpaceId || !currentProjectId) return false;
+    return currentProjectId === personalSpaceId;
+  }, [personalSpaceId, currentProjectId]);
 
   // 加载 CAD 权限
   useEffect(() => {
@@ -318,6 +334,11 @@ export const CADEditorDirect: React.FC = () => {
         });
         setNavigateFunction(navigate);
 
+        // 设置当前项目 ID（用于判断是否为私人空间模式）
+        if (projectId) {
+          setCurrentProjectId(projectId);
+        }
+
         // 构造 mxweb 文件访问 URL
         // 历史版本使用 ?v= 参数，最新版本使用 ?t={updatedAt} 确保获取服务器最新
         let mxcadFileUrl!: string;
@@ -419,12 +440,15 @@ export const CADEditorDirect: React.FC = () => {
         projectId: string;
       }>
     ) => {
-      const { fileId, parentId } = event.detail;
-      // 更新浏览器 URL（保留 mode 参数）
-      const newUrl = `/cad-editor/${fileId}?nodeId=${parentId}${
-        editorMode === 'personal-space' ? '&mode=personal-space' : ''
-      }`;
-      window.history.replaceState(null, '', newUrl);
+      const { fileId, parentId, projectId } = event.detail;
+      // 更新当前项目 ID（用于判断是否为私人空间模式）
+      setCurrentProjectId(projectId);
+      // 更新浏览器 URL
+      window.history.replaceState(
+        null,
+        '',
+        `/cad-editor/${fileId}?nodeId=${parentId}`
+      );
       // 更新当前文件 ID
       currentFileIdRef.current = fileId;
     };
@@ -440,7 +464,7 @@ export const CADEditorDirect: React.FC = () => {
         handleFileOpened as EventListener
       );
     };
-  }, [editorMode]);
+  }, []);
 
   // 处理从图库插入文件
   const handleInsertFile = async (file: {
@@ -480,13 +504,11 @@ export const CADEditorDirect: React.FC = () => {
       const { openUploadedFile } = await import('../services/mxcadManager');
 
       // 更新浏览器 URL（不触发 React Router）
-      // 路径部分：新打开的文件 ID
-      // nodeId 参数：保持不变（所在目录）
-      // mode 参数：保留当前模式
-      const newUrl = `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}${
-        editorMode === 'personal-space' ? '&mode=personal-space' : ''
-      }`;
-      window.history.replaceState(null, '', newUrl);
+      window.history.replaceState(
+        null,
+        '',
+        `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}`
+      );
 
       // 调用 openUploadedFile 打开文件，保持与 openFile 命令完全一致的行为
       await openUploadedFile(file.nodeId, uploadTargetNodeId);
@@ -541,7 +563,7 @@ export const CADEditorDirect: React.FC = () => {
 
   // 错误处理：返回项目列表或私人空间
   const handleGoBack = () => {
-    if (editorMode === 'personal-space') {
+    if (isPersonalSpaceMode) {
       navigate('/personal-space');
     } else {
       navigate('/projects');
