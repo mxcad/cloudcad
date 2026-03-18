@@ -33,15 +33,15 @@ model FileSystemNode {
   isPersonal  Boolean  @default(false)  // 是否为私人空间
   
   // ... 其他字段
+  
+  // 添加复合唯一约束（在 model 末尾添加）
+  @@unique([ownerId, isPersonal], name: "unique_user_personal_space")
 }
-
-// 添加唯一约束（在 model 末尾添加）
-@@unique([ownerId], where: { isPersonal: true, isRoot: true })
 ```
 
 **说明**：
 - `isPersonal` 字段标识是否为私人空间
-- 唯一约束确保每个用户只能有一个私人空间
+- 复合唯一约束 `[ownerId, isPersonal]` 确保每个用户只能有一个私人空间（isPersonal=true 时唯一）
 
 ### 2.2 数据库迁移
 
@@ -87,8 +87,45 @@ async getProjects(userId: string) {
 
 // 新增：获取用户私人空间
 async getPersonalSpace(userId: string) {
-  return this.prisma.fileSystemNode.findFirst({
+  const personalSpace = await this.prisma.fileSystemNode.findFirst({
     where: { ownerId: userId, isPersonal: true, isRoot: true }
+  });
+  
+  // 理论上不应返回 null，因为用户创建时已自动创建私人空间
+  // 但为安全起见，如果不存在则自动创建
+  if (!personalSpace) {
+    this.logger.warn(`用户 ${userId} 没有私人空间，尝试创建`);
+    return this.createPersonalSpace(userId);
+  }
+  
+  return personalSpace;
+}
+
+// 新增：创建私人空间（内部方法）
+private async createPersonalSpace(userId: string) {
+  const ownerRole = await this.prisma.projectRole.findFirst({
+    where: { name: 'PROJECT_OWNER', isSystem: true }
+  });
+
+  if (!ownerRole) {
+    throw new InternalServerErrorException('PROJECT_OWNER 角色不存在');
+  }
+
+  return this.prisma.fileSystemNode.create({
+    data: {
+      name: '我的图纸',
+      isFolder: true,
+      isRoot: true,
+      isPersonal: true,
+      projectStatus: ProjectStatus.ACTIVE,
+      ownerId: userId,
+      projectMembers: {
+        create: {
+          userId,
+          projectRoleId: ownerRole.id,
+        }
+      }
+    }
   });
 }
 
@@ -201,32 +238,56 @@ async create(createUserDto: CreateUserDto) {
 
 ### 4.4 模块依赖调整
 
+由于 `AuthModule` 和 `UsersModule` 之间可能存在循环依赖，需要使用 `forwardRef()` 解决。
+
 **文件**: `packages/backend/src/auth/auth.module.ts`
 
 ```typescript
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     // ... 现有导入
-    UsersModule,  // 新增
+    forwardRef(() => UsersModule),  // 使用 forwardRef 解决循环依赖
   ],
   // ...
 })
+export class AuthModule {}
 ```
 
 **文件**: `packages/backend/src/common/common.module.ts`
 
 ```typescript
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     // ... 现有导入
-    UsersModule,  // 新增
+    forwardRef(() => UsersModule),  // 使用 forwardRef 解决循环依赖
   ],
   // ...
 })
+export class CommonModule {}
+```
+
+**文件**: `packages/backend/src/users/users.module.ts`
+
+如果 `UsersModule` 也依赖 `AuthModule` 或 `CommonModule`，同样需要使用 `forwardRef`：
+
+```typescript
+import { Module, forwardRef } from '@nestjs/common';
+
+@Module({
+  imports: [
+    // 如果有循环依赖，使用 forwardRef
+    forwardRef(() => AuthModule),
+    forwardRef(() => CommonModule),
+  ],
+  exports: [UsersService],
+})
+export class UsersModule {}
 ```
 
 ---
@@ -290,6 +351,65 @@ export const projectsApi = {
 )}
 ```
 
+### 5.5 CAD 编辑器上传逻辑调整
+
+**文件**: `packages/frontend/src/services/mxcadManager.ts`
+
+修改 `getUploadTargetNodeId()` 函数，实现以下逻辑：
+
+```typescript
+/**
+ * 获取上传目标节点 ID
+ * 
+ * 规则：
+ * 1. 如果当前文件属于项目 → 上传到私人空间根目录
+ * 2. 如果当前文件属于私人空间 → 上传到该文件的父目录
+ */
+async function getUploadTargetNodeId(): Promise<string> {
+  // 1. 获取私人空间
+  const personalSpace = await projectsApi.getPersonalSpace();
+  
+  if (!personalSpace) {
+    throw new Error('无法获取私人空间，请联系管理员');
+  }
+
+  // 2. 判断当前文件是否属于私人空间
+  const currentProjectId = currentFileInfo?.projectId;
+  
+  if (currentProjectId === personalSpace.id) {
+    // 当前文件属于私人空间 → 上传到父目录
+    const targetId = currentFileInfo?.parentId || personalSpace.id;
+    return targetId;
+  } else {
+    // 当前文件属于项目 → 上传到私人空间根目录
+    return personalSpace.id;
+  }
+}
+```
+
+**修改 `openFile` 命令**：
+
+```typescript
+MxFun.addCommand('openFile', async () => {
+  try {
+    // 改为异步获取上传目标节点 ID
+    const uploadTargetNodeId = await getUploadTargetNodeId();
+    
+    // ... 后续逻辑不变
+  } catch (error) {
+    // ... 错误处理
+  }
+});
+```
+
+### 5.6 API 客户端生成
+
+新增 API 后，需要重新生成前端 API 客户端：
+
+```bash
+pnpm run generate:api-types
+```
+
 ---
 
 ## 6. 现有用户数据处理
@@ -351,15 +471,16 @@ private async ensureAllUsersHavePersonalSpace(): Promise<void> {
 | 1 | `packages/backend/prisma/schema.prisma` | 修改 | 新增 `isPersonal` 字段和唯一约束 |
 | 2 | `packages/backend/src/users/users.service.ts` | 修改 | `create()` 方法加入私人空间创建 |
 | 3 | `packages/backend/src/auth/auth.service.ts` | 修改 | 改为调用 `usersService.create()` |
-| 4 | `packages/backend/src/auth/auth.module.ts` | 修改 | 导入 `UsersModule` |
+| 4 | `packages/backend/src/auth/auth.module.ts` | 修改 | 导入 `UsersModule`（使用 `forwardRef`） |
 | 5 | `packages/backend/src/common/services/initialization.service.ts` | 修改 | 改为调用 `usersService.create()`，添加现有用户检查 |
-| 6 | `packages/backend/src/common/common.module.ts` | 修改 | 导入 `UsersModule` |
-| 7 | `packages/backend/src/file-system/file-system.service.ts` | 修改 | 新增 `getPersonalSpace()`，`getProjects()` 过滤私人空间 |
+| 6 | `packages/backend/src/common/common.module.ts` | 修改 | 导入 `UsersModule`（使用 `forwardRef`） |
+| 7 | `packages/backend/src/file-system/file-system.service.ts` | 修改 | 新增 `getPersonalSpace()`、`createPersonalSpace()`，`getProjects()` 过滤私人空间 |
 | 8 | `packages/backend/src/file-system/file-system.controller.ts` | 修改 | 新增 `GET /personal-space` API |
 | 9 | `packages/frontend/src/services/projectsApi.ts` | 修改 | 新增 `getPersonalSpace()` 方法 |
-| 10 | `packages/frontend/src/router/` | 修改 | 新增私人空间路由 |
-| 11 | `packages/frontend/src/components/` | 修改 | 导航菜单新增入口 |
-| 12 | `packages/frontend/src/pages/` | 修改 | 项目详情页隐藏成员管理 UI |
+| 10 | `packages/frontend/src/services/mxcadManager.ts` | 修改 | 修改 `getUploadTargetNodeId()` 上传目标逻辑 |
+| 11 | `packages/frontend/src/router/` | 修改 | 新增私人空间路由 |
+| 12 | `packages/frontend/src/components/` | 修改 | 导航菜单新增入口 |
+| 13 | `packages/frontend/src/pages/` | 修改 | 项目详情页隐藏成员管理 UI |
 
 ---
 
@@ -387,17 +508,50 @@ private async ensureAllUsersHavePersonalSpace(): Promise<void> {
 
 ---
 
-## 9. 风险评估
+## 9. 权限检查
+
+### 9.1 私人空间权限机制
+
+私人空间的权限检查与普通项目**完全一致**：
+
+- 用户创建私人空间时，自动添加为 **PROJECT_OWNER** 角色
+- PROJECT_OWNER 拥有所有项目权限（22个），包括：
+  - 项目管理权限（PROJECT_UPDATE、PROJECT_DELETE 等）
+  - 文件操作权限（FILE_CREATE、FILE_EDIT、FILE_DELETE 等）
+  - CAD 图纸权限（CAD_SAVE、CAD_EXTERNAL_REFERENCE 等）
+
+### 9.2 权限检查无需特殊处理
+
+由于私人空间本质上就是一个项目，现有的权限检查机制无需修改：
+
+```typescript
+// 现有权限检查逻辑适用于私人空间
+@RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
+async uploadFile() { ... }
+
+@RequireProjectPermission(ProjectPermission.CAD_SAVE)
+async saveFile() { ... }
+```
+
+### 9.3 注意事项
+
+- **禁止删除**：在 `deleteNode()` 中检查 `isPersonal`，阻止删除
+- **禁止转让**：私人空间不能转让给其他用户
+- **禁止添加成员**：前端隐藏成员管理 UI，后端 API 可选检查
+
+---
+
+## 10. 风险评估
 
 | 风险 | 影响 | 缓解措施 |
 |------|------|----------|
-| 循环依赖 | AuthModule ⇄ UsersModule | 使用 `forwardRef()` 或模块重构 |
-| 现有用户无私人空间 | 功能异常 | 启动时自动补充 |
+| 循环依赖 | AuthModule ⇄ UsersModule | 使用 `forwardRef()` |
+| 现有用户无私人空间 | 功能异常 | 启动时自动补充，`getPersonalSpace()` 也自动创建 |
 | 数据库迁移失败 | 系统无法启动 | 提供回滚脚本 |
 
 ---
 
-## 10. 后续扩展
+## 11. 后续扩展
 
 - 支持私人空间名称自定义（可选）
 - 私人空间存储配额管理（可选）
