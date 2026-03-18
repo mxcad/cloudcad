@@ -2,9 +2,7 @@
 // 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 // 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
-// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
-// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
-// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
+// The application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -43,6 +41,7 @@ import { MxCadService } from '../mxcad/mxcad.service';
 import { ProjectRole } from '../common/enums/permissions.enum';
 import { VersionControlService } from '../version-control/version-control.service';
 import { CadDownloadFormat } from './dto/download-node.dto';
+import { PersonalSpaceService } from '../personal-space/personal-space.service';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as archiver from 'archiver';
@@ -78,7 +77,8 @@ export class FileSystemService {
     private readonly fileLockService: FileLockService,
     private readonly configService: ConfigService,
     private readonly moduleRef: ModuleRef,
-    private readonly versionControlService: VersionControlService
+    private readonly versionControlService: VersionControlService,
+    private readonly personalSpaceService: PersonalSpaceService
   ) {
     const limits = this.configService.get('fileLimits', { infer: true });
     this.fileLimits = {
@@ -297,6 +297,7 @@ export class FileSystemService {
     const where: any = {
       isRoot: true,
       deletedAt: null,
+      personalSpaceKey: null, // 排除私人空间
       OR: [
         // 用户拥有的项目
         { ownerId: userId },
@@ -386,6 +387,7 @@ export class FileSystemService {
     const where: any = {
       isRoot: true,
       deletedAt: { not: null },
+      personalSpaceKey: null, // 排除私人空间
       OR: [
         { ownerId: userId }, // 项目所有者
         {
@@ -470,6 +472,15 @@ export class FileSystemService {
       );
       throw error;
     }
+  }
+
+  /**
+   * 获取用户私人空间
+   * @param userId 用户 ID
+   * @returns 私人空间节点
+   */
+  async getPersonalSpace(userId: string) {
+    return this.personalSpaceService.getPersonalSpace(userId);
   }
 
   async getProject(projectId: string) {
@@ -1246,10 +1257,16 @@ export class FileSystemService {
     // 验证是项目节点
     const project = await this.prisma.fileSystemNode.findUnique({
       where: { id: projectId, isRoot: true },
+      select: { id: true, personalSpaceKey: true },
     });
 
     if (!project) {
       throw new NotFoundException('项目不存在');
+    }
+
+    // 私人空间不支持删除
+    if (project.personalSpaceKey) {
+      throw new BadRequestException('私人空间不支持删除操作');
     }
 
     return this.deleteNode(projectId, permanently);
@@ -2687,10 +2704,16 @@ export class FileSystemService {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
+        select: { id: true, personalSpaceKey: true },
       });
 
       if (!project) {
         throw new NotFoundException('项目不存在');
+      }
+
+      // 私人空间不支持添加成员
+      if (project.personalSpaceKey) {
+        throw new BadRequestException('私人空间不支持添加成员操作');
       }
 
       // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
@@ -2845,10 +2868,16 @@ export class FileSystemService {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
+        select: { id: true, ownerId: true, personalSpaceKey: true },
       });
 
       if (!project) {
         throw new NotFoundException('项目不存在');
+      }
+
+      // 私人空间不支持更新成员
+      if (project.personalSpaceKey) {
+        throw new BadRequestException('私人空间不支持更新成员操作');
       }
 
       if (project.ownerId === userId) {
@@ -2977,10 +3006,16 @@ export class FileSystemService {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
+        select: { id: true, ownerId: true, personalSpaceKey: true },
       });
 
       if (!project) {
         throw new NotFoundException('项目不存在');
+      }
+
+      // 私人空间不支持移除成员
+      if (project.personalSpaceKey) {
+        throw new BadRequestException('私人空间不支持移除成员操作');
       }
 
       // 注意：权限检查在 Controller 层通过 @RequireProjectPermission 装饰器完成
@@ -3058,10 +3093,16 @@ export class FileSystemService {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
+        select: { id: true, ownerId: true, personalSpaceKey: true },
       });
 
       if (!project) {
         throw new NotFoundException('项目不存在');
+      }
+
+      // 私人空间不支持转让
+      if (project.personalSpaceKey) {
+        throw new BadRequestException('私人空间不支持转让操作');
       }
 
       // 只有项目所有者可以转让项目
@@ -3199,10 +3240,16 @@ export class FileSystemService {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
+        select: { id: true, personalSpaceKey: true },
       });
 
       if (!project) {
         throw new NotFoundException('项目不存在');
+      }
+
+      // 私人空间不支持批量添加成员
+      if (project.personalSpaceKey) {
+        throw new BadRequestException('私人空间不支持批量添加成员操作');
       }
 
       let addedCount = 0;
@@ -3263,10 +3310,16 @@ export class FileSystemService {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
+        select: { id: true, personalSpaceKey: true },
       });
 
       if (!project) {
         throw new NotFoundException('项目不存在');
+      }
+
+      // 私人空间不支持批量更新成员
+      if (project.personalSpaceKey) {
+        throw new BadRequestException('私人空间不支持批量更新成员操作');
       }
 
       let updatedCount = 0;

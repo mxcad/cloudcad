@@ -18,6 +18,7 @@ import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
+import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { SessionController } from './session.controller';
 import { AuthService } from './auth.service';
@@ -36,6 +37,7 @@ import { AppConfig } from '../config/app.config';
     CommonModule,
     RedisModule,
     RuntimeConfigModule,
+    UsersModule,
     PassportModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
