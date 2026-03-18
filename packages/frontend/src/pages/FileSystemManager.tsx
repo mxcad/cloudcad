@@ -54,48 +54,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const [personalSpaceId, setPersonalSpaceId] = useState<string | null>(null);
   const [personalSpaceLoading, setPersonalSpaceLoading] = useState(false);
 
-  // 从 URL 路径直接解析 projectId 和 nodeId（更可靠的方式）
-  const urlProjectId = React.useMemo(() => {
-    // 私人空间模式下，使用私人空间 ID
-    if (mode === 'personal-space') {
-      return personalSpaceId || '';
-    }
-    const match = location.pathname.match(/\/projects\/([^/]+)/);
-    return match ? match[1] : '';
-  }, [location.pathname, mode, personalSpaceId]);
-
-  const urlNodeId = React.useMemo(() => {
-    // 私人空间模式下的 URL nodeId 解析
-    if (mode === 'personal-space') {
-      const match = location.pathname.match(/\/personal-space\/([^/]+)/);
-      return match ? match[1] : undefined;
-    }
-    const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
-    return match ? match[1] : undefined;
-  }, [location.pathname, mode]);
-
-  // 获取私人空间 ID
-  useEffect(() => {
-    if (mode !== 'personal-space') return;
-
-    const fetchPersonalSpace = async () => {
-      setPersonalSpaceLoading(true);
-      try {
-        const response = await projectsApi.getPersonalSpace();
-        if (response.data?.id) {
-          setPersonalSpaceId(response.data.id);
-        }
-      } catch (error) {
-        console.error('获取私人空间失败:', error);
-        showToast('获取私人空间失败', 'error');
-      } finally {
-        setPersonalSpaceLoading(false);
-      }
-    };
-
-    fetchPersonalSpace();
-  }, [mode, showToast]);
-
   // 上传组件 ref
   const uploaderRef = useRef<MxCadUploaderRef>(null);
 
@@ -120,6 +78,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     toasts,
     confirmDialog,
     showToast,
+    isProjectRootMode,
+    isFolderMode,
+    isPersonalSpaceMode,
+    urlProjectId,
+    urlNodeId,
     showCreateFolderModal,
     showRenameModal,
     showDownloadFormatModal,
@@ -163,7 +126,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleBatchRestore,
     isProjectTrashView,
     handleToggleProjectTrashView,
-  } = useFileSystem();
+  } = useFileSystem({
+    mode,
+    personalSpaceId,
+  });
 
   // 项目管理 hooks
   const {
@@ -189,6 +155,28 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     onProjectDeleted: handleRefresh,
     showToast,
   });
+
+  // 获取私人空间 ID
+  useEffect(() => {
+    if (mode !== 'personal-space') return;
+
+    const fetchPersonalSpace = async () => {
+      setPersonalSpaceLoading(true);
+      try {
+        const response = await projectsApi.getPersonalSpace();
+        if (response.data?.id) {
+          setPersonalSpaceId(response.data.id);
+        }
+      } catch (error) {
+        console.error('获取私人空间失败:', error);
+        showToast('获取私人空间失败', 'error');
+      } finally {
+        setPersonalSpaceLoading(false);
+      }
+    };
+
+    fetchPersonalSpace();
+  }, [mode, showToast]);
 
   // 权限管理 hook
   const { hasPermission } = usePermission();
@@ -289,9 +277,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   // 是否在根级别（无 projectId）
   // 私人空间模式下始终为 false，因为有私人空间 ID 作为根目录
   const isAtRoot = mode === 'personal-space' ? false : !urlProjectId;
-
-  // 是否为私人空间模式
-  const isPersonalSpaceMode = mode === 'personal-space';
 
   // 面包屑滚轮横向滚动处理
   useEffect(() => {
@@ -747,18 +732,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <button
             onClick={
-              isAtRoot
-                ? () => navigate('/projects')
-                : isPersonalSpaceMode
+              isPersonalSpaceMode
+                ? isAtRoot
                   ? () => navigate('/personal-space')
+                  : handleGoBack
+                : isAtRoot
+                  ? () => navigate('/projects')
                   : handleGoBack
             }
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
             title={
-              isAtRoot
-                ? '返回项目列表'
-                : isPersonalSpaceMode
-                  ? '返回我的图纸根目录'
+              isPersonalSpaceMode
+                ? isAtRoot
+                  ? '返回我的图纸'
+                  : '返回上一级'
+                : isAtRoot
+                  ? '返回项目列表'
                   : '返回上一级'
             }
           >

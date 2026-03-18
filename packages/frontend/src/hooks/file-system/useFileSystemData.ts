@@ -26,6 +26,7 @@ interface UseFileSystemDataProps {
   urlProjectId: string | undefined;
   urlNodeId: string | undefined;
   isProjectRootMode: boolean;
+  isPersonalSpaceMode?: boolean;
   searchQuery: string;
   paginationRef: React.MutableRefObject<{ page: number; limit: number }>;
   showToast: (
@@ -40,6 +41,7 @@ export const useFileSystemData = ({
   urlProjectId,
   urlNodeId,
   isProjectRootMode,
+  isPersonalSpaceMode = false,
   searchQuery,
   paginationRef,
   showToast,
@@ -171,6 +173,51 @@ export const useFileSystemData = ({
 
       if (searchQuery) {
         params.search = searchQuery;
+      }
+
+      // 私人空间模式：加载私人空间根目录或子目录
+      if (isPersonalSpaceMode) {
+        const currentNodeId = urlNodeId || urlProjectId || '';
+
+        if (currentNodeId) {
+          // 加载私人空间子目录
+          const [nodeResponse, childrenResponse] = await Promise.all([
+            projectsApi.getNode(currentNodeId, {
+              signal: abortController.signal,
+            }),
+            projectsApi.getChildren(currentNodeId, {
+              signal: abortController.signal,
+            }),
+          ]);
+
+          const nodeData = nodeResponse.data;
+          const childrenData = childrenResponse.data?.nodes || [];
+          setNodes(childrenData);
+          const childrenMeta = childrenResponse.data;
+          if (childrenMeta?.total !== undefined) {
+            setPaginationMeta({
+              total: childrenMeta.total,
+              page: childrenMeta.page,
+              limit: childrenMeta.limit,
+              totalPages: childrenMeta.totalPages,
+            });
+          } else {
+            setPaginationMeta({
+              total: childrenData.length,
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+              totalPages: Math.ceil(
+                childrenData.length / paginationRef.current.limit
+              ),
+            });
+          }
+
+          setCurrentNode(nodeData);
+          await buildBreadcrumbsFromNode(nodeData, abortController.signal);
+        }
+        // 如果没有 currentNodeId，等待 personalSpaceId 加载
+        setLoading(false);
+        return;
       }
 
       if (isProjectRootMode) {
@@ -357,6 +404,7 @@ export const useFileSystemData = ({
     urlProjectId,
     urlNodeId,
     isProjectRootMode,
+    isPersonalSpaceMode,
     isTrashView,
     searchQuery,
     showToast,

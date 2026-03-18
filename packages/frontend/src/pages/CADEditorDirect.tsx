@@ -93,6 +93,12 @@ export const CADEditorDirect: React.FC = () => {
     return searchParams.get('v');
   }, [location.search]);
 
+  // 从 URL 获取模式参数（用于返回导航）
+  const editorMode = React.useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get('mode') as 'personal-space' | null;
+  }, [location.search]);
+
   // 加载 CAD 权限
   useEffect(() => {
     if (!urlProjectId) {
@@ -501,9 +507,13 @@ export const CADEditorDirect: React.FC = () => {
     }
   };
 
-  // 错误处理：返回项目列表
+  // 错误处理：返回项目列表或私人空间
   const handleGoBack = () => {
-    navigate('/projects');
+    if (editorMode === 'personal-space') {
+      navigate('/personal-space');
+    } else {
+      navigate('/projects');
+    }
   };
 
   return (

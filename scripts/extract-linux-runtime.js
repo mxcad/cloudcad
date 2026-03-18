@@ -26,7 +26,6 @@ const { execSync, spawn } = require('child_process');
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_OUTPUT = path.join(PROJECT_ROOT, 'runtime', 'linux');
 const DOCKER_DIR = path.join(PROJECT_ROOT, 'runtime', 'docker');
-const COMPOSE_FILE = path.join(DOCKER_DIR, 'docker-compose.linux.yml');
 
 // 版本信息
 const VERSIONS = {
@@ -34,6 +33,10 @@ const VERSIONS = {
   postgres: '15',
   redis: '5',
 };
+
+// 系统核心库（不打包，使用目标系统版本）
+// 重要：glibc 核心库必须使用目标系统的版本，否则会导致兼容性问题
+const SYSTEM_LIBS = ['libc.so.6', 'libdl.so.2', 'libm.so.6', 'libpthread.so.0', 'librt.so.1', 'ld-linux-x86-64.so.2'];
 
 // ==================== 工具函数 ====================
 
@@ -410,9 +413,6 @@ function extractNodeNative(outputPath) {
   log('  → 收集依赖库...');
   collectDependencies(nodeBinary, libDir);
   
-  // 复制动态链接器
-  copyLdLinux(libDir);
-  
   // 设置权限
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
 }
@@ -491,13 +491,10 @@ function extractPostgresNative(outputPath) {
     }
   }
   
-  // 收集 PostgreSQL 库的依赖
+  // 收集 PostgreSQL 库的依赖（排除 glibc 核心库）
   if (fs.existsSync(path.join(libDir, 'postgresql'))) {
-    execSync(`for f in ${libDir}/postgresql/*.so; do ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do [ -f "$lib" ] && cp -L "$lib" ${libDir}/ 2>/dev/null; done; done`, { stdio: 'pipe' });
+    execSync(`for f in ${libDir}/postgresql/*.so; do ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do libname=$(basename "$lib"); skip=0; for syslib in ${SYSTEM_LIBS.join(' ')}; do [ "$libname" = "$syslib" ] && skip=1 && break; done; [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" ${libDir}/ 2>/dev/null; done; done`, { stdio: 'pipe' });
   }
-  
-  // 复制动态链接器
-  copyLdLinux(libDir);
   
   // 设置权限
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
@@ -533,9 +530,6 @@ function extractRedisNative(outputPath) {
     }
   }
   
-  // 复制动态链接器
-  copyLdLinux(libDir);
-  
   // 设置权限
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
 }
@@ -570,39 +564,38 @@ function extractSvnNative(outputPath) {
     }
   }
   
-  // 收集库文件的间接依赖
+  // 收集库文件的间接依赖（排除 glibc 核心库）
   log('  → 收集间接依赖库...');
-  execSync(`for f in ${libDir}/*.so*; do [ -f "$f" ] && ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do [ -f "$lib" ] && cp -L "$lib" ${libDir}/ 2>/dev/null; done; done`, { stdio: 'pipe' });
-  
-  // 复制动态链接器
-  copyLdLinux(libDir);
+  execSync(`for f in ${libDir}/*.so*; do [ -f "$f" ] && ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do libname=$(basename "$lib"); skip=0; for syslib in ${SYSTEM_LIBS.join(' ')}; do [ "$libname" = "$syslib" ] && skip=1 && break; done; [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" ${libDir}/ 2>/dev/null; done; done`, { stdio: 'pipe' });
   
   // 设置权限
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
 }
 
+// 系统核心库（不打包，使用目标系统版本）
+const SYSTEM_LIBS = ['libc.so.6', 'libdl.so.2', 'libm.so.6', 'libpthread.so.0', 'librt.so.1', 'ld-linux-x86-64.so.2'];
+
 /**
- * 收集二进制文件的依赖库
+ * 收集二进制文件的依赖库（排除 glibc 核心库）
+ * 
+ * 重要：不打包 glibc 核心库（libc.so.6, ld-linux-x86-64.so.2 等）
+ * 这些库必须使用目标系统的版本，否则会导致兼容性问题
  */
 function collectDependencies(binaryPath, libDir) {
   try {
-    const cmd = `ldd "${binaryPath}" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do [ -f "$lib" ] && cp -L "$lib" "${libDir}/" 2>/dev/null; done`;
+    // 构建排除列表
+    const excludePattern = SYSTEM_LIBS.join('|');
+    const cmd = `ldd "${binaryPath}" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do
+      libname=$(basename "$lib")
+      skip=0
+      for syslib in ${SYSTEM_LIBS.join(' ')}; do
+        [ "$libname" = "$syslib" ] && skip=1 && break
+      done
+      [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" "${libDir}/" 2>/dev/null
+    done`;
     execSync(cmd, { stdio: 'pipe' });
   } catch (e) {
     // 忽略错误
-  }
-}
-
-/**
- * 复制动态链接器
- */
-function copyLdLinux(libDir) {
-  const candidates = ['/lib64/ld-linux-x86-64.so.2', '/lib/ld-linux-x86-64.so.2'];
-  for (const src of candidates) {
-    if (fs.existsSync(src)) {
-      execSync(`cp -L ${src} ${libDir}/`, { stdio: 'pipe' });
-      break;
-    }
   }
 }
 
@@ -698,8 +691,7 @@ function main() {
   
   if (isWindows()) {
     log('\n下一步：');
-    log('  1. 运行 node scripts/extract-linux-pnpm.js 提取 Linux npm 依赖');
-    log('  2. 运行 node scripts/pack-offline.js --linux 打包 Linux 版本');
+    log('  运行 node scripts/pack-linux-deploy.js 打包 Linux 部署包');
   } else {
     log('\n下一步：');
     log('  运行 node scripts/pack-offline.js --deploy --linux 打包部署包');

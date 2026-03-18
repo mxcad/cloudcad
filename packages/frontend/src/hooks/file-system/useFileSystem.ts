@@ -35,7 +35,15 @@ import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
 import { trashApi } from '../../services/trashApi';
 
-export const useFileSystem = () => {
+interface UseFileSystemOptions {
+  mode?: 'project' | 'personal-space';
+  personalSpaceId?: string | null;
+}
+
+export const useFileSystem = (options?: UseFileSystemOptions) => {
+  const mode = options?.mode || 'project';
+  const personalSpaceId = options?.personalSpaceId;
+
   const navigate = useNavigate();
   const { projectId, nodeId } = useParams<{
     projectId: string;
@@ -45,18 +53,28 @@ export const useFileSystem = () => {
 
   // 从 URL 路径直接解析 projectId 和 nodeId
   const urlProjectId = useMemo(() => {
+    // 私人空间模式：使用私人空间 ID
+    if (mode === 'personal-space') {
+      return personalSpaceId || '';
+    }
     const match = location.pathname.match(/\/projects\/([^/]+)/);
     return match ? match[1] : '';
-  }, [location.pathname]);
+  }, [location.pathname, mode, personalSpaceId]);
 
   const urlNodeId = useMemo(() => {
+    // 私人空间模式的 URL nodeId 解析
+    if (mode === 'personal-space') {
+      const match = location.pathname.match(/\/personal-space\/([^/]+)/);
+      return match ? match[1] : undefined;
+    }
     const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
     return match ? match[1] : undefined;
-  }, [location.pathname]);
+  }, [location.pathname, mode]);
 
-  // 模式判断
-  const isProjectRootMode = !urlProjectId;
+  // 模式判断：私人空间模式或项目根目录模式
+  const isProjectRootMode = mode === 'project' && !urlProjectId;
   const isFolderMode = !!urlProjectId;
+  const isPersonalSpaceMode = mode === 'personal-space';
 
   // 从 Zustand store 获取视图模式
   const {
@@ -121,6 +139,7 @@ export const useFileSystem = () => {
     urlProjectId,
     urlNodeId,
     isProjectRootMode,
+    isPersonalSpaceMode,
     searchQuery,
     paginationRef,
     showToast,
@@ -163,6 +182,7 @@ export const useFileSystem = () => {
     urlProjectId,
     currentNode,
     showToast,
+    mode,
   });
 
   // CRUD Hook
@@ -314,6 +334,9 @@ export const useFileSystem = () => {
     // 模式状态
     isProjectRootMode,
     isFolderMode,
+    isPersonalSpaceMode,
+    urlProjectId,
+    urlNodeId,
 
     // 状态
     nodes,

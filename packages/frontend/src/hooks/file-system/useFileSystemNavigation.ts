@@ -22,6 +22,7 @@ interface UseFileSystemNavigationProps {
     message: string,
     type: 'success' | 'error' | 'info' | 'warning'
   ) => void;
+  mode?: 'project' | 'personal-space';
 }
 
 const sanitizeFileName = (fileName: string): string => {
@@ -41,6 +42,7 @@ export const useFileSystemNavigation = ({
   urlProjectId,
   currentNode,
   showToast,
+  mode = 'project',
 }: UseFileSystemNavigationProps) => {
   const navigate = useNavigate();
 
@@ -51,20 +53,34 @@ export const useFileSystemNavigation = ({
   );
 
   const handleGoBack = useCallback(() => {
-    if (currentNode?.parentId) {
-      navigate(`/projects/${urlProjectId}/files/${currentNode.parentId}`);
+    if (mode === 'personal-space') {
+      // 私人空间模式
+      if (currentNode?.parentId) {
+        navigate(`/personal-space/${currentNode.parentId}`);
+      } else {
+        navigate('/personal-space');
+      }
     } else {
-      navigate('/projects');
+      // 项目模式
+      if (currentNode?.parentId) {
+        navigate(`/projects/${urlProjectId}/files/${currentNode.parentId}`);
+      } else {
+        navigate('/projects');
+      }
     }
-  }, [currentNode, navigate, urlProjectId]);
+  }, [currentNode, navigate, urlProjectId, mode]);
 
   const handleEnterFolder = useCallback(
     (node: FileSystemNode) => {
       if (node.isFolder) {
-        navigate(`/projects/${urlProjectId}/files/${node.id}`);
+        if (mode === 'personal-space') {
+          navigate(`/personal-space/${node.id}`);
+        } else {
+          navigate(`/projects/${urlProjectId}/files/${node.id}`);
+        }
       }
     },
-    [navigate, urlProjectId]
+    [navigate, urlProjectId, mode]
   );
 
   const handleEnterProject = useCallback(
@@ -82,8 +98,12 @@ export const useFileSystemNavigation = ({
       }
 
       if (node.isFolder) {
-        const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
-        navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
+        if (mode === 'personal-space') {
+          navigate(`/personal-space/${node.id}`);
+        } else {
+          const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
+          navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
+        }
       } else {
         const cadExtensions = ['.dwg', '.dxf'];
         if (
@@ -93,6 +113,9 @@ export const useFileSystemNavigation = ({
           // CAD 文件在新标签页打开编辑器
           const queryParams = new URLSearchParams();
           queryParams.set('nodeId', node.parentId || '');
+          if (mode === 'personal-space') {
+            queryParams.set('mode', 'personal-space');
+          }
           const url = `/cad-editor/${node.id}?${queryParams.toString()}`;
           window.open(url, '_blank');
         } else {
@@ -100,7 +123,7 @@ export const useFileSystemNavigation = ({
         }
       }
     },
-    [navigate, urlProjectId]
+    [navigate, urlProjectId, mode]
   );
 
   const handleDownload = useCallback(
