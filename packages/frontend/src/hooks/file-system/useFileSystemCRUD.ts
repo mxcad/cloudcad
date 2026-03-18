@@ -34,6 +34,7 @@ interface UseFileSystemCRUDProps {
   nodes: FileSystemNode[];
   clearSelection: () => void;
   isProjectTrashViewRef: React.MutableRefObject<boolean>;
+  mode?: 'project' | 'personal-space';
 }
 
 const validateFolderName = (
@@ -81,6 +82,7 @@ export const useFileSystemCRUD = ({
   nodes,
   clearSelection,
   isProjectTrashViewRef,
+  mode = 'project',
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
 
@@ -208,7 +210,7 @@ export const useFileSystemCRUD = ({
             if (isProjectTrashViewRef.current && permanently) {
               loadData();
             } else if (permanently && node.isRoot) {
-              navigate('/projects');
+              navigate(mode === 'personal-space' ? '/personal-space' : '/projects');
             } else {
               loadData();
             }
@@ -273,7 +275,7 @@ export const useFileSystemCRUD = ({
                 return node?.isRoot;
               })
             ) {
-              navigate('/projects');
+              navigate(mode === 'personal-space' ? '/personal-space' : '/projects');
             } else {
               loadData();
             }

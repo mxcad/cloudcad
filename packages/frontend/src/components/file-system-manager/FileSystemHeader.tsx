@@ -26,6 +26,7 @@ interface FileSystemHeaderProps {
   onSelectAll: () => void;
   breadcrumbRef: React.RefObject<HTMLDivElement>;
   projectId: string;
+  isPersonalSpaceMode?: boolean;
 }
 
 export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
@@ -48,6 +49,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   onSelectAll,
   breadcrumbRef,
   projectId,
+  isPersonalSpaceMode = false,
 }) => {
   const navigate = useNavigate();
 
@@ -56,9 +58,25 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <button
-            onClick={isAtRoot ? () => navigate('/projects') : onGoBack}
+            onClick={
+              isPersonalSpaceMode
+                ? isAtRoot
+                  ? () => navigate('/personal-space')
+                  : onGoBack
+                : isAtRoot
+                  ? () => navigate('/projects')
+                  : onGoBack
+            }
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
-            title={isAtRoot ? '返回项目列表' : '返回上一级'}
+            title={
+              isPersonalSpaceMode
+                ? isAtRoot
+                  ? '返回我的图纸'
+                  : '返回上一级'
+                : isAtRoot
+                  ? '返回项目列表'
+                  : '返回上一级'
+            }
           >
             <svg
               width="18"
@@ -79,10 +97,18 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             <BreadcrumbNavigation
               breadcrumbs={breadcrumbs}
               onNavigate={(crumb) => {
-                if (crumb.isRoot) {
-                  navigate('/projects');
+                if (isPersonalSpaceMode) {
+                  if (crumb.isRoot) {
+                    navigate('/personal-space');
+                  } else {
+                    navigate(`/personal-space/${crumb.id}`);
+                  }
                 } else {
-                  navigate(`/projects/${projectId}/files/${crumb.id}`);
+                  if (crumb.isRoot) {
+                    navigate('/projects');
+                  } else {
+                    navigate(`/projects/${projectId}/files/${crumb.id}`);
+                  }
                 }
               }}
             />

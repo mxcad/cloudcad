@@ -572,9 +572,6 @@ function extractSvnNative(outputPath) {
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
 }
 
-// 系统核心库（不打包，使用目标系统版本）
-const SYSTEM_LIBS = ['libc.so.6', 'libdl.so.2', 'libm.so.6', 'libpthread.so.0', 'librt.so.1', 'ld-linux-x86-64.so.2'];
-
 /**
  * 收集二进制文件的依赖库（排除 glibc 核心库）
  * 
@@ -583,8 +580,6 @@ const SYSTEM_LIBS = ['libc.so.6', 'libdl.so.2', 'libm.so.6', 'libpthread.so.0', 
  */
 function collectDependencies(binaryPath, libDir) {
   try {
-    // 构建排除列表
-    const excludePattern = SYSTEM_LIBS.join('|');
     const cmd = `ldd "${binaryPath}" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do
       libname=$(basename "$lib")
       skip=0

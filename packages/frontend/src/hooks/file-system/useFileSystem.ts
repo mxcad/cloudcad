@@ -218,6 +218,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     nodes,
     clearSelection,
     isProjectTrashViewRef,
+    mode,
   });
 
   // 刷新操作

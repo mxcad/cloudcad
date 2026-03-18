@@ -236,16 +236,28 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
             {menuItems
               .filter((item) => item.visible)
-              .map((item) => (
-                <NavItem
-                  key={item.to}
-                  {...item}
-                  active={
+              .map((item) => {
+                // 精确匹配导航高亮逻辑
+                let isActive = false;
+                if (item.to === '/projects') {
+                  // 项目管理：匹配 /projects 及 /projects/:id/files...
+                  isActive =
+                    location.pathname === '/projects' ||
+                    location.pathname.startsWith('/projects/');
+                } else if (item.to === '/personal-space') {
+                  // 我的图纸：匹配 /personal-space 及 /personal-space/:id
+                  isActive =
+                    location.pathname === '/personal-space' ||
+                    location.pathname.startsWith('/personal-space/');
+                } else {
+                  // 其他菜单项
+                  isActive =
                     location.pathname === item.to ||
-                    (item.to !== '/' && location.pathname.startsWith(item.to))
-                  }
-                />
-              ))}
+                    (item.to !== '/' && location.pathname.startsWith(item.to));
+                }
+
+                return <NavItem key={item.to} {...item} active={isActive} />;
+              })}
           </nav>
 
           <div className="p-4 border-t border-slate-200">
