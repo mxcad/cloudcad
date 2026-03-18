@@ -651,6 +651,17 @@ export async function openUploadedFile(
 
   const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
   await mxcadManager.openFile(mxcadFileUrl);
+
+  // 派发文件打开事件，通知 URL 更新
+  window.dispatchEvent(
+    new CustomEvent('mxcad-file-opened', {
+      detail: {
+        fileId: newNodeId,
+        parentId: fileInfo.parentId || uploadTargetNodeId,
+        projectId,
+      },
+    })
+  );
 }
 
 /**

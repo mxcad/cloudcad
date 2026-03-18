@@ -410,6 +410,38 @@ export const CADEditorDirect: React.FC = () => {
     };
   }, [canExport, showToast]);
 
+  // 监听文件打开事件，更新 URL（保留 mode 参数）
+  useEffect(() => {
+    const handleFileOpened = (
+      event: CustomEvent<{
+        fileId: string;
+        parentId: string;
+        projectId: string;
+      }>
+    ) => {
+      const { fileId, parentId } = event.detail;
+      // 更新浏览器 URL（保留 mode 参数）
+      const newUrl = `/cad-editor/${fileId}?nodeId=${parentId}${
+        editorMode === 'personal-space' ? '&mode=personal-space' : ''
+      }`;
+      window.history.replaceState(null, '', newUrl);
+      // 更新当前文件 ID
+      currentFileIdRef.current = fileId;
+    };
+
+    window.addEventListener(
+      'mxcad-file-opened',
+      handleFileOpened as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'mxcad-file-opened',
+        handleFileOpened as EventListener
+      );
+    };
+  }, [editorMode]);
+
   // 处理从图库插入文件
   const handleInsertFile = async (file: {
     nodeId: string;
@@ -450,11 +482,11 @@ export const CADEditorDirect: React.FC = () => {
       // 更新浏览器 URL（不触发 React Router）
       // 路径部分：新打开的文件 ID
       // nodeId 参数：保持不变（所在目录）
-      window.history.replaceState(
-        null,
-        '',
-        `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}`
-      );
+      // mode 参数：保留当前模式
+      const newUrl = `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}${
+        editorMode === 'personal-space' ? '&mode=personal-space' : ''
+      }`;
+      window.history.replaceState(null, '', newUrl);
 
       // 调用 openUploadedFile 打开文件，保持与 openFile 命令完全一致的行为
       await openUploadedFile(file.nodeId, uploadTargetNodeId);
