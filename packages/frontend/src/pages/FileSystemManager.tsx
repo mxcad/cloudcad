@@ -14,6 +14,7 @@ import { useProjectManagement } from '../hooks/useProjectManagement';
 import { usePermission } from '../hooks/usePermission';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import { useAuth } from '../contexts/AuthContext';
+import { useFileSystemStore } from '../stores/fileSystemStore';
 import { projectsApi } from '../services/projectsApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
@@ -50,9 +51,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const location = useLocation();
   const { user } = useAuth();
 
-  // 私人空间状态
-  const [personalSpaceId, setPersonalSpaceId] = useState<string | null>(null);
-  const [personalSpaceLoading, setPersonalSpaceLoading] = useState(false);
+  // 私人空间状态 - 使用 store 缓存
+  const {
+    personalSpaceId,
+    personalSpaceIdLoading,
+    setPersonalSpaceId,
+    setPersonalSpaceIdLoading,
+  } = useFileSystemStore();
 
   // 上传组件 ref
   const uploaderRef = useRef<MxCadUploaderRef>(null);
@@ -156,12 +161,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     showToast,
   });
 
-  // 获取私人空间 ID
+  // 获取私人空间 ID（使用缓存，避免每次进入都重新获取）
   useEffect(() => {
     if (mode !== 'personal-space') return;
 
+    // 已有缓存，直接使用
+    if (personalSpaceId) {
+      return;
+    }
+
+    // 正在加载中，避免重复请求
+    if (personalSpaceIdLoading) {
+      return;
+    }
+
     const fetchPersonalSpace = async () => {
-      setPersonalSpaceLoading(true);
+      setPersonalSpaceIdLoading(true);
       try {
         const response = await projectsApi.getPersonalSpace();
         if (response.data?.id) {
@@ -171,12 +186,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         console.error('获取私人空间失败:', error);
         showToast('获取私人空间失败', 'error');
       } finally {
-        setPersonalSpaceLoading(false);
+        setPersonalSpaceIdLoading(false);
       }
     };
 
     fetchPersonalSpace();
-  }, [mode, showToast]);
+  }, [mode, personalSpaceId, personalSpaceIdLoading, setPersonalSpaceId, setPersonalSpaceIdLoading, showToast]);
 
   // 权限管理 hook
   const { hasPermission } = usePermission();
@@ -802,8 +817,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
 
-          {/* 私人空间模式不显示回收站按钮 */}
-          {!isAtRoot && !isPersonalSpaceMode && (
+          {/* 回收站按钮 */}
+          {!isAtRoot && (
             <Button
               variant={isTrashView ? 'primary' : 'ghost'}
               size="sm"
@@ -827,8 +842,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
           {isAtRoot ? (
             <>
-              {/* 私人空间模式不显示新建项目按钮 */}
-              {canCreateProject && !isPersonalSpaceMode && (
+              {/* 私人空间模式或回收站视图不显示新建项目按钮 */}
+              {canCreateProject && !isPersonalSpaceMode && !isProjectTrashView && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -842,69 +857,74 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             </>
           ) : (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCreateFolderModal(true)}
-                disabled={loading}
-                className="text-slate-600 hover:bg-slate-100"
-                title="新建文件夹"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                  <path d="M12 11v6M9 14h6" />
-                </svg>
-              </Button>
+              {/* 回收站视图不显示新建文件夹和上传文件按钮 */}
+              {!isTrashView && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCreateFolderModal(true)}
+                    disabled={loading}
+                    className="text-slate-600 hover:bg-slate-100"
+                    title="新建文件夹"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                      <path d="M12 11v6M9 14h6" />
+                    </svg>
+                  </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (!urlProjectId) {
-                    showToast('请先选择一个项目再上传文件', 'warning');
-                    return;
-                  }
-                  uploaderRef.current?.triggerUpload();
-                }}
-                disabled={loading}
-                className="text-slate-600 hover:bg-slate-100"
-                title="上传文件"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M17 8L12 3L7 8"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 3V15"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (!urlProjectId) {
+                        showToast('请先选择一个项目再上传文件', 'warning');
+                        return;
+                      }
+                      uploaderRef.current?.triggerUpload();
+                    }}
+                    disabled={loading}
+                    className="text-slate-600 hover:bg-slate-100"
+                    title="上传文件"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M17 8L12 3L7 8"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 3V15"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Button>
+                </>
+              )}
             </>
           )}
 
