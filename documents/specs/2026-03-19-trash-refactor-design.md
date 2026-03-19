@@ -108,17 +108,17 @@ const trashResponse = await trashApi.getProjectTrash(urlProjectId);
 )}
 ```
 
-### 4. 清空项目回收站
+### 4. 操作 API 调用
 
 **文件**: `packages/frontend/src/pages/FileSystemManager.tsx`
-
-清空操作调用正确的 API：
 
 | 操作 | 项目回收站 | 项目内回收站 |
 |------|------------|--------------|
 | 恢复 | `trashApi.restoreItems(itemIds)` | `trashApi.restoreNode(nodeId)` |
-| 彻底删除 | `trashApi.permanentlyDeleteItems(itemIds)` | 保持不变 |
+| 彻底删除 | `trashApi.permanentlyDeleteItems(itemIds)` | `trashApi.permanentlyDeleteItems([nodeId])` |
 | 清空 | `trashApi.clear()` | `trashApi.clearProjectTrash(projectId)` |
+
+说明：彻底删除操作复用现有批量接口，项目内回收站传单个 ID 数组即可。
 
 ## 涉及文件
 
