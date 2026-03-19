@@ -1,9 +1,8 @@
-import { Users, UserPlus, LogOut, RefreshCw, Loader2 } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Users, UserPlus, RefreshCw, Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { MxCpp } from 'mxcad';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { mxcadManager } from '../services/mxcadManager';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
 
 /**
@@ -11,7 +10,7 @@ import { APP_COOPERATE_URL } from '@/constants/appConfig';
  * 提供协同功能的创建、加入、退出和列表展示
  */
 export const CollaborateSidebar: React.FC = () => {
-  const { isActive, close } = useSidebar('collaborate');
+  const { isActive } = useSidebar('collaborate');
   const { showToast } = useNotification();
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
@@ -20,10 +19,6 @@ export const CollaborateSidebar: React.FC = () => {
     });
     return cooperate;
   };
-  // 侧边栏宽度状态
-  const [width, setWidth] = useState(300);
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // 协同数据状态
   const [works, setWorks] = useState<number[]>([]);
@@ -31,11 +26,6 @@ export const CollaborateSidebar: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [joiningWorkId, setJoiningWorkId] = useState<number | null>(null);
-
-  // 当侧边栏宽度变化时，调整CAD编辑器容器位置
-  useEffect(() => {
-    mxcadManager.adjustContainerPosition(isActive ? width : 0);
-  }, [width, isActive]);
 
   // 获取协同列表
   const fetchWorks = useCallback(async () => {
@@ -162,29 +152,6 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, [fetchWorks, showToast]);
 
-  // 调整宽度处理
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!sidebarRef.current) return;
-    const newWidth =
-      e.clientX - sidebarRef.current.getBoundingClientRect().left;
-    if (newWidth >= 200 && newWidth <= 600) {
-      setWidth(newWidth);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsResizing(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-
   // 未激活时不渲染
   if (!isActive) {
     return null;
@@ -193,24 +160,13 @@ export const CollaborateSidebar: React.FC = () => {
   return (
     <>
       {/* 侧边栏 */}
-      <div
-        ref={sidebarRef}
-        className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out"
-        style={{ width }}
-      >
+      <div className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out w-full h-full">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#4A5568]">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#4F46E5]" />
             <span className="font-semibold text-sm text-[#E2E8F0]">协同</span>
           </div>
-          <button
-            onClick={close}
-            className="p-1 hover:bg-[#333A47] rounded transition-colors"
-            title="关闭"
-          >
-            <LogOut className="w-4 h-4 text-[#94A3B8]" />
-          </button>
         </div>
 
         {/* 操作按钮 */}
@@ -324,15 +280,6 @@ export const CollaborateSidebar: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* 调整宽度手柄 */}
-      <div
-        onMouseDown={handleMouseDown}
-        className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${
-          isResizing ? 'bg-[#4F46E5]' : ''
-        }`}
-        style={{ left: width }}
-      />
     </>
   );
 };
