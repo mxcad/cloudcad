@@ -1,8 +1,7 @@
 import { BookOpen, Box, FileText, Loader2, Search, Trash2 } from 'lucide-react';
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { galleryApi } from '../services/galleryApi';
-import { mxcadManager } from '../services/mxcadManager';
 import { MxFun } from 'mxdraw';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -56,15 +55,9 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   onInsertFile,
 }) => {
   // 使用 SidebarContext 管理侧边栏状态
-  const { isActive, close } = useSidebar('gallery');
+  const { isActive } = useSidebar('gallery');
   // 使用 NotificationContext 显示消息
   const { showToast, showConfirm } = useNotification();
-
-  // 侧边栏宽度状态
-  const [width, setWidth] = useState(300);
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const resizerRef = useRef<HTMLDivElement>(null);
 
   // 图库数据状态
   const [galleryType, setGalleryType] = useState<GalleryType>('drawings');
@@ -77,34 +70,6 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   const [selectedThirdType, setSelectedThirdType] = useState<number>(-1);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
-
-  // 调整宽度处理
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!sidebarRef.current) return;
-    const newWidth =
-      e.clientX - sidebarRef.current.getBoundingClientRect().left;
-    if (newWidth >= 200 && newWidth <= 600) {
-      setWidth(newWidth);
-    }
-  };
-
-  // 当侧边栏宽度变化时，调整CAD编辑器容器位置
-  useEffect(() => {
-    mxcadManager.adjustContainerPosition(isActive ? width : 0);
-  }, [width, isActive]);
-
-  const handleMouseUp = () => {
-    setIsResizing(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
 
   // 获取分类列表
   const fetchTypes = useCallback(async () => {
@@ -314,11 +279,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   return (
     <>
       {/* 侧边栏 */}
-      <div
-        ref={sidebarRef}
-        className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out"
-        style={{ width }}
-      >
+      <div className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out w-full h-full">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#4A5568]">
           <div className="flex items-center gap-2">
@@ -561,16 +522,6 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
           )}
         </div>
       </div>
-
-      {/* 调整宽度手柄 */}
-      <div
-        ref={resizerRef}
-        onMouseDown={handleMouseDown}
-        className={`absolute top-0 w-1 h-full bg-transparent hover:bg-[#4F46E5] cursor-col-resize z-50 transition-colors ${
-          isResizing ? 'bg-[#4F46E5]' : ''
-        }`}
-        style={{ left: width }}
-      />
     </>
   );
 };
