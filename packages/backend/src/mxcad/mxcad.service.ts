@@ -88,6 +88,63 @@ export class MxCadService {
   }
 
   /**
+   * 检查目录中是否存在重复文件（相同文件名和hash）
+   * @param filename 文件名
+   * @param fileHash 文件hash
+   * @param nodeId 目标目录节点ID
+   * @param currentFileId 当前文件ID（可选，用于排除当前文件）
+   * @returns 重复文件信息，如果存在
+   */
+  async checkDuplicateFile(
+    filename: string,
+    fileHash: string,
+    nodeId: string,
+    currentFileId?: string
+  ): Promise<{
+    isDuplicate: boolean;
+    existingNodeId?: string;
+    existingFileName?: string;
+  }> {
+    try {
+      // 在目标目录下查找同名同hash的文件
+      const existingFile = await this.prisma.fileSystemNode.findFirst({
+        where: {
+          parentId: nodeId,
+          name: filename,
+          fileHash: fileHash,
+          isFolder: false,
+          deletedAt: null,
+          // 排除当前文件（如果是覆盖保存的情况）
+          ...(currentFileId && { id: { not: currentFileId } }),
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (existingFile) {
+        this.logger.log(
+          `发现重复文件: ${filename} (hash: ${fileHash}), 节点ID: ${existingFile.id}`
+        );
+        return {
+          isDuplicate: true,
+          existingNodeId: existingFile.id,
+          existingFileName: existingFile.name,
+        };
+      }
+
+      return { isDuplicate: false };
+    } catch (error) {
+      this.logger.error(
+        `检查重复文件失败: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
+  }
+
+  /**
    * 上传分片文件
    */
   async uploadChunk(

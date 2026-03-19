@@ -36,7 +36,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import { ApiTags, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { MxCadService } from './mxcad.service';
 import { DatabaseService } from '../database/database.service';
@@ -47,6 +47,8 @@ import { FileExistResponseDto } from './dto/file-exist-response.dto';
 import { ChunkExistResponseDto } from './dto/chunk-exist-response.dto';
 import { CheckFileExistDto } from './dto/check-file-exist.dto';
 import { CheckChunkExistDto } from './dto/check-chunk-exist.dto';
+import { CheckDuplicateFileDto } from './dto/check-duplicate-file.dto';
+import { CheckDuplicateFileResponseDto } from './dto/check-duplicate-file-response.dto';
 import { CheckReferenceResponseDto } from './dto/check-reference-response.dto';
 import { RefreshExternalReferencesResponseDto } from './dto/refresh-external-references-response.dto';
 import { UploadFileResponseDto } from './dto/upload-file-response.dto';
@@ -162,6 +164,34 @@ export class MxCadController {
       exists: result.ret === 'fileAlreadyExist',
       nodeId: result.nodeId,
     };
+  }
+
+  /**
+   * 检查目录中是否存在重复文件（相同文件名和hash）
+   */
+  @Post('files/checkDuplicate')
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '检查目录中是否存在重复文件' })
+  @ApiResponse({
+    status: 200,
+    description: '返回重复检查结果',
+    type: CheckDuplicateFileResponseDto,
+  })
+  async checkDuplicateFile(
+    @Body() body: CheckDuplicateFileDto,
+    @Req() request: MxCadRequest
+  ) {
+    this.logger.log(
+      `[checkDuplicateFile] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, nodeId=${body.nodeId}, currentFileId=${body.currentFileId}`
+    );
+    return this.mxCadService.checkDuplicateFile(
+      body.filename,
+      body.fileHash,
+      body.nodeId,
+      body.currentFileId
+    );
   }
 
   /**

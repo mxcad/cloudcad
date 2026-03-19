@@ -114,6 +114,38 @@ export const isNetworkError = (error: unknown): boolean => {
 };
 
 /**
+ * 检查是否为请求取消错误
+ * 用于检测 AbortController、Axios CancelToken、CanceledError 等取消类型
+ * @param error - 错误对象
+ * @returns boolean - 是否为请求取消错误
+ */
+export const isAbortError = (error: unknown): boolean => {
+  // 检查 apiClient 设置的标志
+  if (typeof error === 'object' && error !== null) {
+    if ('isAborted' in error && (error as { isAborted?: boolean }).isAborted) {
+      return true;
+    }
+  }
+
+  if (error instanceof Error) {
+    // AbortController 取消
+    if (error.name === 'AbortError') {
+      return true;
+    }
+    // Axios CanceledError
+    if (error.name === 'CanceledError') {
+      return true;
+    }
+    // Axios 取消消息（某些版本）
+    if (error.message === 'canceled') {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
  * 检查是否为认证错误
  * @param error - 错误对象
  * @returns boolean - 是否为认证错误

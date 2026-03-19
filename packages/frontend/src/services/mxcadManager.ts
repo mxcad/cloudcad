@@ -142,7 +142,18 @@ let currentFileInfo: {
   parentId: string | null | undefined;
   projectId: string | null | undefined;
   name: string;
+  personalSpaceId?: string | null; // 私人空间 ID，用于判断是否为私人空间模式
 } | null = null;
+
+// 私人空间 ID 缓存（用于判断文件是否属于私人空间）
+let cachedPersonalSpaceId: string | null = null;
+
+/**
+ * 设置私人空间 ID 缓存（由 CADEditorDirect 组件调用）
+ */
+export function setPersonalSpaceId(personalSpaceId: string | null) {
+  cachedPersonalSpaceId = personalSpaceId;
+}
 
 // 当前打开的 mxweb 文件 URL（用于重新加载）
 let currentMxwebUrl: string | null = null;
@@ -161,6 +172,7 @@ export function setCurrentFileInfo(fileInfo: {
   parentId: string | null | undefined;
   projectId: string | null | undefined;
   name: string;
+  personalSpaceId?: string | null;
 }) {
   currentFileInfo = fileInfo;
 }
@@ -189,6 +201,9 @@ const NAVIGATION_PATHS = {
   PROJECT_FILES: (projectId: string) => `/projects/${projectId}/files`,
   PROJECT_FOLDER: (projectId: string, parentId: string) =>
     `/projects/${projectId}/files/${parentId}`,
+  // 私人空间路径
+  PERSONAL_SPACE: '/personal-space',
+  PERSONAL_SPACE_FOLDER: (parentId: string) => `/personal-space/${parentId}`,
 } as const;
 
 // ==================== 导航辅助函数 ====================
@@ -209,8 +224,23 @@ function navigateToProjectsList(): void {
 
 function calculateReturnPath(
   parentId: string | null | undefined,
-  projectId: string | null | undefined
+  projectId: string | null | undefined,
+  personalSpaceId: string | null | undefined
 ): string {
+  // 判断是否为私人空间模式：projectId 等于 personalSpaceId
+  const isPersonalSpace = projectId && personalSpaceId && projectId === personalSpaceId;
+
+  if (isPersonalSpace) {
+    // 私人空间模式
+    if (parentId && parentId !== personalSpaceId) {
+      // 返回到私人空间的子文件夹
+      return NAVIGATION_PATHS.PERSONAL_SPACE_FOLDER(parentId);
+    }
+    // 返回到私人空间根目录
+    return NAVIGATION_PATHS.PERSONAL_SPACE;
+  }
+
+  // 项目模式
   if (parentId && projectId) {
     return NAVIGATION_PATHS.PROJECT_FOLDER(projectId, parentId);
   } else if (parentId) {
@@ -234,8 +264,8 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
     return;
   }
 
-  const { parentId, projectId } = currentFileInfo;
-  const targetPath = calculateReturnPath(parentId, projectId);
+  const { parentId, projectId, personalSpaceId } = currentFileInfo;
+  const targetPath = calculateReturnPath(parentId, projectId, personalSpaceId);
   navigateTo(targetPath);
 });
 
@@ -339,6 +369,191 @@ const updateLoadingMessage = (message: string): void => {
   if (messageEl) {
     messageEl.textContent = message;
   }
+};
+
+// ==================== 重复文件确认弹框 ====================
+
+/**
+ * 显示重复文件确认弹框
+ * @param filename 文件名
+ * @returns Promise<'open' | 'upload' | null> 用户选择：打开已有文件、继续上传、或取消
+ */
+const showDuplicateFileDialog = (filename: string): Promise<'open' | 'upload' | null> => {
+  return new Promise((resolve) => {
+    const dialogId = 'mxcad-duplicate-file-dialog';
+    let dialog = document.getElementById(dialogId) as HTMLElement;
+
+    if (dialog) {
+      document.body.removeChild(dialog);
+    }
+
+    dialog = document.createElement('div');
+    dialog.id = dialogId;
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    dialog.innerHTML = `
+      <div style="
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 450px;
+        overflow: hidden;
+      ">
+        <div style="
+          padding: 16px 20px;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        ">
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">发现相同文件</h3>
+          <button id="mxcad-duplicate-dialog-close" style="
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: #9ca3af;
+          ">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div style="padding: 20px;">
+          <div style="
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
+          ">
+            <div style="
+              width: 40px;
+              height: 40px;
+              border-radius: 50%;
+              background: #fef3c7;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            ">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+              </svg>
+            </div>
+            <div>
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #374151;">
+                当前目录中已存在相同的文件：
+              </p>
+              <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937; word-break: break-all;">
+                ${filename}
+              </p>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; color: #6b7280;">
+            您可以选择直接打开已存在的文件，或上传新文件。
+          </p>
+        </div>
+        <div style="
+          padding: 16px 20px;
+          background: #f9fafb;
+          border-top: 1px solid #e5e7eb;
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+        ">
+          <button id="mxcad-duplicate-dialog-cancel" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            取消
+          </button>
+          <button id="mxcad-duplicate-dialog-upload" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #6b7280;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            上传新文件
+          </button>
+          <button id="mxcad-duplicate-dialog-open" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #4f46e5;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            打开已有文件
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const closeBtn = dialog.querySelector('#mxcad-duplicate-dialog-close');
+    const cancelBtn = dialog.querySelector('#mxcad-duplicate-dialog-cancel');
+    const uploadBtn = dialog.querySelector('#mxcad-duplicate-dialog-upload');
+    const openBtn = dialog.querySelector('#mxcad-duplicate-dialog-open');
+
+    const cleanup = () => {
+      document.body.removeChild(dialog);
+    };
+
+    closeBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve(null);
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve(null);
+    });
+
+    uploadBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve('upload');
+    });
+
+    openBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve('open');
+    });
+
+    // 点击背景关闭
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) {
+        cleanup();
+        resolve(null);
+      }
+    });
+  });
 };
 
 // ==================== 保存确认弹框 ====================
@@ -647,6 +862,7 @@ export async function openUploadedFile(
     parentId: fileInfo.parentId || uploadTargetNodeId,
     projectId,
     name: fileInfo.name,
+    personalSpaceId: cachedPersonalSpaceId,
   });
 
   const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
@@ -674,9 +890,50 @@ async function handleFileSelection(
   uploadTargetNodeId: string
 ): Promise<void> {
   try {
+    showLoadingOverlay(DEFAULT_MESSAGES.CALCULATING_HASH);
+    const hash = await calculateFileHash(file);
+
+    // 检查目录中是否存在重复文件
+    const duplicateCheck = await mxcadApi.checkDuplicateFile({
+      fileHash: hash,
+      filename: file.name,
+      nodeId: uploadTargetNodeId,
+    });
+
+    if (duplicateCheck.isDuplicate && duplicateCheck.existingNodeId) {
+      // 隐藏加载动画
+      hideLoadingOverlay();
+
+      // 显示确认对话框
+      const userChoice = await showDuplicateFileDialog(file.name);
+
+      if (userChoice === 'open') {
+        // 用户选择打开已有文件
+        showLoadingOverlay(DEFAULT_MESSAGES.OPENING_FILE);
+        await openUploadedFile(duplicateCheck.existingNodeId, uploadTargetNodeId);
+        hideLoadingOverlay();
+        return;
+      } else if (userChoice === null) {
+        // 用户取消
+        return;
+      }
+      // userChoice === 'upload' 继续上传流程
+    }
+
+    // 继续上传流程
     showLoadingOverlay(DEFAULT_MESSAGES.UPLOADING);
-    const newNodeId = await uploadAndProcessFile(file, uploadTargetNodeId);
-    await openUploadedFile(newNodeId, uploadTargetNodeId);
+    const uploadResult = await uploadMxCadFile({
+      file,
+      hash,
+      nodeId: uploadTargetNodeId,
+      onProgress: (percentage) => {
+        updateLoadingMessage(
+          `${DEFAULT_MESSAGES.UPLOADING} ${percentage.toFixed(1)}%`
+        );
+      },
+    });
+
+    await openUploadedFile(uploadResult.nodeId, uploadTargetNodeId);
     hideLoadingOverlay();
   } catch (error) {
     hideLoadingOverlay();

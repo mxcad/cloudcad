@@ -1,5 +1,5 @@
 # CloudCAD Linux 部署包打包镜像
-# 用于在容器内执行打包脚本，生成 Linux 部署包
+# 基于 CentOS 7，确保所有组件兼容 glibc 2.17
 #
 # 使用方式：
 #   方式 1: 使用入口脚本（推荐）
@@ -12,31 +12,49 @@
 # 输出：
 #   release/cloudcad-deploy-*.tar.gz
 
-FROM node:20-bullseye-slim
+FROM centos:7
 
-# 安装系统依赖
-# - curl, gnupg2, lsb-release: 用于添加 PostgreSQL 官方源
-# - binutils: 提供 ldd 工具，用于收集依赖库
-# - subversion: SVN 运行时
-# - redis-server: Redis 运行时（用于提取）
-RUN apt-get update && apt-get install -y \
+# CentOS 7 已 EOL，需要切换到 vault 源
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
+# 安装 EPEL 和基本工具
+RUN yum install -y epel-release && \
+    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel* && \
+    sed -i 's|#baseurl=https://download.fedoraproject.org/pub|baseurl=https://archive.fedoraproject.org/pub|g' /etc/yum.repos.d/epel* && \
+    yum install -y \
     curl \
-    gnupg2 \
-    lsb-release \
-    binutils \
-    subversion \
-    redis-server \
-    && rm -rf /var/lib/apt/lists/*
+    wget \
+    git \
+    which \
+    && yum clean all
 
-# 安装 PostgreSQL 15（添加官方源）
-RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
-    apt-get update && \
-    apt-get install -y postgresql-15 && \
-    rm -rf /var/lib/apt/lists/*
+# 安装 Node.js 20.19.5（项目要求 >= 20.19.5）
+# 使用 unofficial builds 的 glibc-217 版本，兼容 CentOS 7 (glibc 2.17)
+# 使用 .tar.xz 格式（更小，下载更快）
+RUN curl -fsSL --retry 3 --retry-delay 5 \
+    https://unofficial-builds.nodejs.org/download/release/v20.19.5/node-v20.19.5-linux-x64-glibc-217.tar.xz \
+    -o /tmp/node.tar.xz && \
+    mkdir -p /usr/local && \
+    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
+    rm -f /tmp/node.tar.xz && \
+    node --version
 
-# 安装 pnpm 和 pm2
-RUN npm install -g pnpm@9.15.4 pm2
+# 安装 PostgreSQL 15（通过 PostgreSQL 官方源）
+RUN rpm -Uvh https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
+    yum install -y postgresql15-server postgresql15 && \
+    yum clean all
+
+# 安装 Redis（通过 EPEL）
+RUN yum install -y redis && \
+    yum clean all
+
+# 安装 Subversion（通过 CentOS Base）
+RUN yum install -y subversion && \
+    yum clean all
+
+# 安装 pnpm 9.15.9 和 pm2（项目要求 pnpm >= 9.15.9）
+RUN npm install -g pnpm@9.15.9 pm2
 
 # 设置工作目录
 WORKDIR /app

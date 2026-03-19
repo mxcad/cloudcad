@@ -25,6 +25,12 @@ export interface FileSystemState {
   selectedItems: string[]; // 改为数组，便于持久化
   currentParentId: string | null;
 
+  // Personal space cache (避免每次进入私人空间页面都重新获取)
+  personalSpaceId: string | null;
+  personalSpaceIdLoading: boolean;
+  setPersonalSpaceId: (id: string | null) => void;
+  setPersonalSpaceIdLoading: (loading: boolean) => void;
+
   // Navigation
   setCurrentPath: (path: FileSystemNode[]) => void;
   setSelectedItems: (items: string[]) => void;
@@ -63,6 +69,11 @@ export const useFileSystemStore = create<FileSystemState>()(
       sortBy: 'name',
       sortOrder: 'asc',
       searchTerm: '',
+      personalSpaceId: null,
+      personalSpaceIdLoading: false,
+
+      setPersonalSpaceId: (id) => set({ personalSpaceId: id }),
+      setPersonalSpaceIdLoading: (loading) => set({ personalSpaceIdLoading: loading }),
 
       setCurrentPath: (path) => set({ currentPath: path }),
       setSelectedItems: (items) => set({ selectedItems: items }),

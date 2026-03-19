@@ -99,14 +99,37 @@ function setupInterceptors(instance: AxiosInstance) {
       }
       return response;
     },
-    async (error: AxiosError) => {
-      const originalRequest = error.config as AxiosRequestConfig & {
+    async (error: unknown) => {
+      // 检测请求是否被取消（AbortController 或 axios CancelToken）
+      // 这是用户切换页面/项目时的正常行为，不应显示为"网络错误"
+      const axiosError = error as AxiosError;
+      const isError = error instanceof Error;
+
+      // 检测所有可能的取消错误类型：
+      // - axios.isCancel: Axios CancelToken 取消
+      // - AbortError: AbortController 取消
+      // - CanceledError: Axios 内部取消
+      // - message === 'canceled': Axios 某些版本的取消消息
+      if (axios.isCancel(error) ||
+          (isError && (
+            error.name === 'AbortError' ||
+            error.name === 'CanceledError' ||
+            error.message === 'canceled'
+          ))) {
+        // 保持原始错误类型，让调用方可以正确识别并静默处理
+        if (isError) {
+          (error as Error & { isAborted?: boolean }).isAborted = true;
+        }
+        return Promise.reject(error);
+      }
+
+      const originalRequest = axiosError.config as AxiosRequestConfig & {
         _retry?: boolean;
       };
       const isLoginEndpoint = originalRequest?.url?.includes('/auth/login');
 
       if (
-        error.response?.status === 401 &&
+        axiosError.response?.status === 401 &&
         !originalRequest._retry &&
         !isLoginEndpoint
       ) {
@@ -139,26 +162,28 @@ function setupInterceptors(instance: AxiosInstance) {
         }
       }
 
-      if (error.response?.status === 403) {
+      if (axiosError.response?.status === 403) {
         const message =
-          (error.response?.data as { message?: string })?.message || '权限不足';
+          (axiosError.response?.data as { message?: string })?.message || '权限不足';
         console.error('[apiClient] 权限错误:', message);
         (
-          error as Error & { isPermissionError?: boolean; statusCode?: number }
+          axiosError as Error & { isPermissionError?: boolean; statusCode?: number }
         ).isPermissionError = true;
         (
-          error as Error & { isPermissionError?: boolean; statusCode?: number }
+          axiosError as Error & { isPermissionError?: boolean; statusCode?: number }
         ).statusCode = 403;
       }
 
-      const responseData = error.response?.data as
+      const responseData = axiosError.response?.data as
         | { message?: string; error?: string; msg?: string }
         | undefined;
-      error.message =
-        responseData?.message ||
-        responseData?.error ||
-        responseData?.msg ||
-        (typeof responseData === 'string' ? responseData : '网络错误');
+      if (axiosError instanceof Error) {
+        axiosError.message =
+          responseData?.message ||
+          responseData?.error ||
+          responseData?.msg ||
+          (typeof responseData === 'string' ? responseData : '网络错误');
+      }
       return Promise.reject(error);
     }
   );

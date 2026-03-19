@@ -38,6 +38,21 @@ export const mxcadApi = {
   },
 
   /**
+   * 检查目录中是否存在重复文件（相同文件名和hash）
+   * @param params 检查参数
+   * @returns 重复检查结果
+   */
+  checkDuplicateFile: async (params: {
+    fileHash: string;
+    filename: string;
+    nodeId: string;
+    currentFileId?: string;
+  }) => {
+    const res = await getApiClient().MxCadController_checkDuplicateFile(undefined, params);
+    return res.data;
+  },
+
+  /**
    * 检查分片是否已存在
    */
   checkChunkExist: async (params: CheckChunkExistDto) => {

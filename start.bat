@@ -1,7 +1,10 @@
 @echo off
-title CloudCAD 运维管理中心
+title CloudCAD 二维绘图协同系统
 
 cd /d "%~dp0"
+
+REM 禁用 Corepack 严格检查，支持离线部署
+set COREPACK_ENABLE_STRICT=0
 
 REM 使用内嵌的 Node.js
 set "NODE_EXE=%~dp0runtime\windows\node\node.exe"

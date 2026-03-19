@@ -1,8 +1,11 @@
-# CloudCAD 启动脚本
+﻿# CloudCAD 启动脚本
 # 自动检测部署模式或交互式模式
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
+
+# 禁用 Corepack 严格检查，支持离线部署
+$env:COREPACK_ENABLE_STRICT = "0"
 
 # 使用内嵌的 Node.js
 $NODE_EXE = Join-Path $scriptDir "runtime\windows\node\node.exe"

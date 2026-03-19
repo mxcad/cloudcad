@@ -140,6 +140,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     urlNodeId,
     isProjectRootMode,
     isPersonalSpaceMode,
+    personalSpaceId,
     searchQuery,
     paginationRef,
     showToast,

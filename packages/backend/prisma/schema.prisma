@@ -2,7 +2,13 @@ generator client {
   provider = "prisma-client-js"
   engineType = "library"
   // 跨平台部署支持：包含 Windows 和 Linux 的 Prisma 引擎
-  binaryTargets = ["native", "windows", "debian-openssl-3.0.x", "linux-musl"]
+  // - native: 当前编译平台
+  // - windows: Windows 系统
+  // - debian-openssl-1.1.x: Debian 10/11, Ubuntu 20.04 (OpenSSL 1.1)
+  // - debian-openssl-3.0.x: Debian 12, Ubuntu 22.04+ (OpenSSL 3.0)
+  // - rhel-openssl-3.0.x: Rocky 9, RHEL 9, AlmaLinux 9 (OpenSSL 3.0)
+  // - linux-musl: Alpine Linux
+  binaryTargets = ["native", "windows", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "rhel-openssl-3.0.x", "linux-musl"]
 }
 
 datasource db {

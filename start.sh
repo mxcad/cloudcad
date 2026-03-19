@@ -4,6 +4,9 @@
 
 cd "$(dirname "$0")"
 
+# 禁用 Corepack 严格检查，支持离线部署
+export COREPACK_ENABLE_STRICT=0
+
 # 使用内嵌的 Node.js
 NODE_EXE="./runtime/linux/node/node"
 

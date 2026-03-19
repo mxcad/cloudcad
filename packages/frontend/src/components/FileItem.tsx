@@ -184,7 +184,11 @@ export const FileItem: React.FC<FileItemProps> = ({
       if (isMultiSelectMode) {
         const isCtrl = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
-        onSelect(node.id, isCtrl || isShift);
+        // 在多选模式下：
+        // - 直接点击：切换选中状态（isMulti=true, isShift=false）
+        // - Ctrl+点击：切换选中状态（isMulti=true, isShift=false）
+        // - Shift+点击：范围选择（isMulti=true, isShift=true）
+        onSelect(node.id, true, isShift);
       } else {
         if (isImageFile()) {
           handleImagePreview();
@@ -368,7 +372,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         <FileItemSelection
           isSelected={isSelected}
           isMultiSelectMode={isMultiSelectMode}
-          onSelect={(isMulti) => onSelect(node.id, isMulti)}
+          onSelect={(isShift) => onSelect(node.id, true, isShift)}
           isGrid
         />
 
@@ -479,7 +483,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       <FileItemSelection
         isSelected={isSelected}
         isMultiSelectMode={isMultiSelectMode}
-        onSelect={(isMulti) => onSelect(node.id, isMulti)}
+        onSelect={(isShift) => onSelect(node.id, true, isShift)}
       />
 
       <div className="w-10 h-10 flex-shrink-0">

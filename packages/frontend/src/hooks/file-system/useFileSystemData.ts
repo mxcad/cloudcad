@@ -21,7 +21,7 @@ import {
 import type { ProjectDto } from '../../types/api-client';
 import { PaginationMeta } from '../../components/ui/Pagination';
 
-import { handleError } from '../../utils/errorHandler';
+import { handleError, isAbortError } from '../../utils/errorHandler';
 
 interface UseFileSystemDataProps {
   urlProjectId: string | undefined;
@@ -102,7 +102,8 @@ export const useFileSystemData = ({
       try {
         while (traversalNode && !visited.has(traversalNode.id)) {
           if (signal?.aborted) {
-            throw new Error('Request aborted');
+            // 抛出 DOMException 以便被正确识别为 AbortError
+            throw new DOMException('The operation was aborted.', 'AbortError');
           }
 
           visited.add(traversalNode.id);
@@ -136,17 +137,8 @@ export const useFileSystemData = ({
 
         setBreadcrumbs(crumbs);
       } catch (err) {
-        // 检测所有类型的请求取消错误
-        const errorObj = err as Error & { isAborted?: boolean };
-        const isAborted =
-          errorObj?.isAborted ||
-          (err instanceof Error && (
-            err.name === 'AbortError' ||
-            err.name === 'CanceledError' ||
-            err.message === 'canceled'
-          ));
-
-        if (isAborted) {
+        // 检测请求取消错误
+        if (isAbortError(err)) {
           throw err;
         }
 
@@ -462,21 +454,8 @@ export const useFileSystemData = ({
         }
       }
     } catch (err) {
-      // 检测所有类型的请求取消错误
-      // - isAborted: apiClient 设置的标志
-      // - AbortError: AbortController 取消
-      // - CanceledError: Axios 内部取消
-      // - canceled: Axios CancelToken 取消（错误消息）
-      const errorObj = err as Error & { isAborted?: boolean };
-      const isAborted =
-        errorObj?.isAborted ||
-        (err instanceof Error && (
-          err.name === 'AbortError' ||
-          err.name === 'CanceledError' ||
-          err.message === 'canceled'
-        ));
-
-      if (isAborted) {
+      // 检测请求取消错误 - 使用统一的检测函数
+      if (isAbortError(err)) {
         console.info('[useFileSystemData] 请求被取消（正常行为）');
         return;
       }

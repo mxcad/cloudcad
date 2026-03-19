@@ -51,6 +51,12 @@ const PG_LIB_DIR = USE_RUNTIME && IS_LINUX
   ? path.join(PLATFORM_DIR, PG_DIR_NAME, 'lib')
   : null;
 
+// PostgreSQL share 目录（包含版本号）
+// initdb 查找 share/postgresql/15/postgres.bki
+const PG_SHARE_DIR = USE_RUNTIME
+  ? path.join(PLATFORM_DIR, PG_DIR_NAME, 'share', 'postgresql', '15')
+  : null;
+
 // 日志
 function log(level, message) {
   const colors = {
@@ -86,7 +92,8 @@ function initLinuxSystem() {
   }
   
   // 2. 创建 PostgreSQL share 目录符号链接（PostgreSQL 硬编码路径）
-  const pgShareTarget = path.join(PLATFORM_DIR, PG_DIR_NAME, 'share', 'postgresql');
+  // share 目录结构: share/postgresql/15/postgres.bki
+  const pgShareTarget = path.join(PLATFORM_DIR, PG_DIR_NAME, 'share', 'postgresql', '15');
   const pgShareLink = '/usr/share/postgresql/15';
   
   if (fs.existsSync(pgShareTarget) && !fs.existsSync(pgShareLink)) {
@@ -157,32 +164,61 @@ function initDatabase() {
   if (IS_LINUX && process.getuid() === 0) {
     // 尝试创建 postgres 用户（如果不存在）
     try {
-      spawnSync('useradd', ['-m', 'postgres'], { stdio: 'pipe' });
+      const checkUser = spawnSync('id', ['postgres'], { stdio: 'pipe' });
+      if (checkUser.status !== 0) {
+        spawnSync('useradd', ['-m', '-s', '/bin/bash', 'postgres'], { stdio: 'pipe' });
+        log('info', '创建 postgres 用户');
+      }
     } catch (e) {
       // 用户可能已存在，忽略
     }
     // 更改数据目录所有者
     spawnSync('chown', ['-R', 'postgres:postgres', PG_DATA_DIR], { stdio: 'pipe' });
-    // 以 postgres 用户身份初始化
-    const result = spawnSync('su', ['-', 'postgres', '-c',
-      `LD_LIBRARY_PATH=${PG_LIB_DIR} ${initdb} -D ${PG_DATA_DIR} -U postgres -A trust -E utf8 --locale=C`],
-      { stdio: 'inherit' });
     
-    if (result.status === 0) {
-      log('info', '数据目录初始化完成');
-      return true;
+    // 构建 initdb 命令参数
+    const initdbArgs = ['-D', PG_DATA_DIR, '-U', 'postgres', '-A', 'trust', '-E', 'utf8', '--locale=C'];
+    if (PG_SHARE_DIR) {
+      initdbArgs.push('-L', PG_SHARE_DIR);
     }
+    
+    // 尝试多种用户切换方式（优先 setpriv，不依赖 PAM）
+    const envStr = PG_LIB_DIR ? `LD_LIBRARY_PATH=${PG_LIB_DIR} ` : '';
+    const commands = [
+      // 方式1: setpriv（不依赖 PAM，推荐）
+      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', `${envStr}PATH=${process.env.PATH}`, initdb, ...initdbArgs],
+      // 方式2: su（传统方式）
+      ['su', '-', 'postgres', '-c', `${envStr}${initdb} ${initdbArgs.join(' ')}`],
+    ];
+    
+    for (const cmd of commands) {
+      const result = spawnSync(cmd[0], cmd.slice(1), { 
+        stdio: 'inherit',
+        env: getEnv(),
+      });
+      if (result.status === 0) {
+        log('info', '数据目录初始化完成');
+        return true;
+      }
+      log('warn', `${cmd[0]} 切换用户失败，尝试下一种方式...`);
+    }
+    
     log('error', '数据目录初始化失败');
     return false;
   }
   
-  const result = spawnSync(initdb, [
+  // 构建 initdb 参数
+  const initdbArgs = [
     '-D', PG_DATA_DIR,
     '-U', 'postgres',
     '-A', 'trust',
     '-E', 'utf8',
     '--locale=C'
-  ], {
+  ];
+  if (PG_SHARE_DIR) {
+    initdbArgs.push('-L', PG_SHARE_DIR);
+  }
+  
+  const result = spawnSync(initdb, initdbArgs, {
     stdio: 'inherit',
     shell: IS_WINDOWS,
     windowsHide: true,
@@ -235,14 +271,28 @@ function startPostgres() {
   if (IS_LINUX && process.getuid() === 0) {
     // 确保日志目录权限
     spawnSync('chown', ['-R', 'postgres:postgres', LOGS_DIR], { stdio: 'pipe' });
-    const result = spawnSync('su', ['-', 'postgres', '-c',
-      `LD_LIBRARY_PATH=${PG_LIB_DIR} ${pg_ctl} start -D ${PG_DATA_DIR} -l ${logFile} -w -t 30`],
-      { stdio: 'inherit' });
     
-    if (result.status === 0) {
-      log('info', 'PostgreSQL 启动成功');
-      return true;
+    // 尝试多种用户切换方式
+    const envStr = PG_LIB_DIR ? `LD_LIBRARY_PATH=${PG_LIB_DIR} ` : '';
+    const pgCtlArgs = ['start', '-D', PG_DATA_DIR, '-l', logFile, '-w', '-t', '30'];
+    
+    const commands = [
+      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', `${envStr}PATH=${process.env.PATH}`, pg_ctl, ...pgCtlArgs],
+      ['su', '-', 'postgres', '-c', `${envStr}${pg_ctl} start -D ${PG_DATA_DIR} -l ${logFile} -w -t 30`],
+    ];
+    
+    for (const cmd of commands) {
+      const result = spawnSync(cmd[0], cmd.slice(1), { 
+        stdio: 'inherit',
+        env: getEnv(),
+      });
+      if (result.status === 0) {
+        log('info', 'PostgreSQL 启动成功');
+        return true;
+      }
+      log('warn', `${cmd[0]} 切换用户失败，尝试下一种方式...`);
     }
+    
     log('error', 'PostgreSQL 启动失败');
     return false;
   }
@@ -280,14 +330,25 @@ function stopPostgres() {
   
   // Linux 下以 postgres 用户运行
   if (IS_LINUX && process.getuid() === 0) {
-    const result = spawnSync('su', ['-', 'postgres', '-c',
-      `LD_LIBRARY_PATH=${PG_LIB_DIR} ${pg_ctl} stop -D ${PG_DATA_DIR} -m fast -w -t 30`],
-      { stdio: 'inherit' });
+    const envStr = PG_LIB_DIR ? `LD_LIBRARY_PATH=${PG_LIB_DIR} ` : '';
+    const pgCtlArgs = ['stop', '-D', PG_DATA_DIR, '-m', 'fast', '-w', '-t', '30'];
     
-    if (result.status === 0) {
-      log('info', 'PostgreSQL 已停止');
-      return true;
+    const commands = [
+      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', `${envStr}PATH=${process.env.PATH}`, pg_ctl, ...pgCtlArgs],
+      ['su', '-', 'postgres', '-c', `${envStr}${pg_ctl} stop -D ${PG_DATA_DIR} -m fast -w -t 30`],
+    ];
+    
+    for (const cmd of commands) {
+      const result = spawnSync(cmd[0], cmd.slice(1), { 
+        stdio: 'inherit',
+        env: getEnv(),
+      });
+      if (result.status === 0) {
+        log('info', 'PostgreSQL 已停止');
+        return true;
+      }
     }
+    
     log('warn', 'PostgreSQL 停止可能失败');
     return false;
   }

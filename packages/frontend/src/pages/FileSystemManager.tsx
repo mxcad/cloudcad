@@ -37,6 +37,7 @@ import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '../components/modals/VersionHistoryModal';
 import { versionControlApi } from '../services/versionControlApi';
 import { ProjectPermission } from '../constants/permissions';
+import { isAbortError } from '../utils/errorHandler';
 
 interface FileSystemManagerProps {
   mode?: 'project' | 'personal-space';
@@ -183,6 +184,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           setPersonalSpaceId(response.data.id);
         }
       } catch (error) {
+        // 检测请求是否被取消（用户切换页面时正常行为）
+        if (isAbortError(error)) {
+          console.info('[FileSystemManager] 获取私人空间请求被取消（正常行为）');
+          return;
+        }
+
         console.error('获取私人空间失败:', error);
         showToast('获取私人空间失败', 'error');
       } finally {

@@ -1,11 +1,11 @@
 /**
  * CloudCAD Linux Runtime 提取工具
  * 
- * 功能：提取 Linux 运行时组件（Node.js, PostgreSQL, Redis, SVN）
+ * 功能：提取 Linux 运行时组件
  * 
  * 运行环境：
- *   - Windows: 通过 Docker 容器提取（需要 Docker）
- *   - Linux: 直接使用包管理器安装并收集（无需 Docker）
+ *   仅支持 Linux 环境（用于 Docker 容器内运行）
+ *   支持 CentOS/RHEL (yum) 和 Debian/Ubuntu (apt-get)
  * 
  * 使用方式：
  *   node scripts/extract-linux-runtime.js           # 提取所有组件
@@ -19,19 +19,19 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 
 // ==================== 配置 ====================
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_OUTPUT = path.join(PROJECT_ROOT, 'runtime', 'linux');
-const DOCKER_DIR = path.join(PROJECT_ROOT, 'runtime', 'docker');
 
 // 版本信息
 const VERSIONS = {
   node: '20.19.5',
   postgres: '15',
   redis: '5',
+  pnpm: '9.15.9',
 };
 
 // 系统核心库（不打包，使用目标系统版本）
@@ -50,25 +50,6 @@ function error(message) {
 
 function warn(message) {
   console.warn(`[Extract-Linux] WARN: ${message}`);
-}
-
-function isWindows() {
-  return os.platform() === 'win32';
-}
-
-function isLinux() {
-  return os.platform() === 'linux';
-}
-
-function checkDocker() {
-  try {
-    const result = execSync('docker --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    log(`Docker 版本: ${result.trim()}`);
-    return true;
-  } catch (err) {
-    error('Docker 未安装或未运行');
-    return false;
-  }
 }
 
 function ensureDir(dir) {
@@ -105,6 +86,24 @@ function getDirSize(dir) {
   
   scan(dir);
   return totalSize;
+}
+
+/**
+ * 检测包管理器类型
+ * @returns {'yum' | 'apt-get' | null}
+ */
+function detectPackageManager() {
+  try {
+    execSync('which yum', { stdio: 'pipe' });
+    return 'yum';
+  } catch (e) { /* ignore */ }
+  
+  try {
+    execSync('which apt-get', { stdio: 'pipe' });
+    return 'apt-get';
+  } catch (e) { /* ignore */ }
+  
+  return null;
 }
 
 /**
@@ -163,13 +162,14 @@ CloudCAD Linux Runtime 提取工具
   node scripts/extract-linux-runtime.js --output /path  指定输出目录
 
 运行环境：
-  - Windows: 使用 Docker 容器提取（需要 Docker）
-  - Linux: 直接使用 apt-get 安装并收集（无需 Docker）
+  仅支持 Linux（用于 Docker 容器内运行）
+  支持 CentOS/RHEL (yum) 和 Debian/Ubuntu (apt-get)
 
 组件版本：
   Node.js:    ${VERSIONS.node}
   PostgreSQL: ${VERSIONS.postgres}
   Redis:      ${VERSIONS.redis}
+  pnpm:       ${VERSIONS.pnpm}
 
 输出目录：
   默认: ${DEFAULT_OUTPUT}
@@ -177,99 +177,35 @@ CloudCAD Linux Runtime 提取工具
 `);
 }
 
-// ==================== Windows: Docker 提取 ====================
-
-/**
- * Windows 环境：使用 Docker 容器提取
- */
-function extractWithDocker(components, outputDir) {
-  log('运行环境: Windows (使用 Docker)');
-  
-  if (!checkDocker()) {
-    process.exit(1);
-  }
-  
-  if (!fs.existsSync(COMPOSE_FILE)) {
-    error(`找不到 docker-compose 文件: ${COMPOSE_FILE}`);
-    process.exit(1);
-  }
-  
-  for (const comp of components) {
-    log(`\n提取 ${comp}...`);
-    
-    const imageName = `cloudcad-${comp}`;
-    const dockerfile = `Dockerfile.${comp}`;
-    const outputSubdir = comp === 'svn' ? 'subversion' : comp;
-    const outputPath = path.join(outputDir, outputSubdir);
-    
-    ensureDir(outputPath);
-    
-    try {
-      // 1. 构建镜像
-      log(`  → 构建镜像 ${imageName}...`);
-      execSync(`docker build -t ${imageName} -f ${dockerfile} .`, {
-        cwd: DOCKER_DIR,
-        stdio: 'inherit',
-      });
-      
-      // 2. 创建临时容器
-      log(`  → 创建临时容器...`);
-      const containerName = `temp-${comp}-extract`;
-      
-      // 先删除可能存在的旧容器
-      try {
-        execSync(`docker rm -f ${containerName}`, { stdio: 'pipe' });
-      } catch (e) { /* ignore */ }
-      
-      // 创建新容器
-      execSync(`docker create --name ${containerName} ${imageName}`, {
-        stdio: 'pipe',
-      });
-      
-      // 3. 使用 docker cp 提取文件
-      log(`  → 复制文件到 ${outputPath}...`);
-      execSync(`docker cp ${containerName}:/output/. ${outputPath}`, {
-        stdio: 'inherit',
-      });
-      
-      // 4. 清理临时容器
-      execSync(`docker rm ${containerName}`, { stdio: 'pipe' });
-      
-      const size = getDirSize(outputPath);
-      if (size > 0) {
-        log(`  ✓ ${comp} 提取完成: ${formatSize(size)}`);
-      } else {
-        log(`  ⚠ ${comp} 提取结果为空，请检查 Dockerfile`);
-      }
-    } catch (err) {
-      error(`${comp} 提取失败: ${err.message}`);
-    }
-  }
-}
-
 // ==================== Linux: 原生提取 ====================
 
 /**
- * Linux 环境：使用 apt-get 安装并收集文件
+ * Linux 环境：使用包管理器安装并收集文件
  */
 function extractNative(components, outputDir) {
-  log('运行环境: Linux (原生 apt-get)');
+  const pkgManager = detectPackageManager();
   
-  // 检查是否有 apt-get
-  try {
-    execSync('which apt-get', { stdio: 'pipe' });
-  } catch (e) {
-    error('当前 Linux 发行版不支持 apt-get，仅支持 Debian/Ubuntu 系列');
+  if (!pkgManager) {
+    error('无法检测到支持的包管理器（yum 或 apt-get）');
     process.exit(1);
   }
   
-  // 更新包列表
-  log('更新包列表...');
-  try {
-    execSync('apt-get update', { stdio: 'inherit' });
-  } catch (e) {
-    warn('apt-get update 失败，继续尝试...');
+  log(`包管理器: ${pkgManager}`);
+  
+  if (pkgManager === 'yum') {
+    extractWithYum(components, outputDir);
+  } else {
+    extractWithApt(components, outputDir);
   }
+}
+
+// ==================== CentOS/RHEL: yum 提取 ====================
+
+/**
+ * CentOS/RHEL 环境：使用 yum 安装并收集文件
+ */
+function extractWithYum(components, outputDir) {
+  log('运行环境: CentOS/RHEL (yum)');
   
   for (const comp of components) {
     log(`\n提取 ${comp}...`);
@@ -282,16 +218,16 @@ function extractNative(components, outputDir) {
     try {
       switch (comp) {
         case 'node':
-          extractNodeNative(outputPath);
+          extractNodeYum(outputPath);
           break;
         case 'postgres':
-          extractPostgresNative(outputPath);
+          extractPostgresYum(outputPath);
           break;
         case 'redis':
-          extractRedisNative(outputPath);
+          extractRedisYum(outputPath);
           break;
         case 'svn':
-          extractSvnNative(outputPath);
+          extractSvnYum(outputPath);
           break;
       }
       
@@ -308,49 +244,28 @@ function extractNative(components, outputDir) {
 }
 
 /**
- * Linux 原生提取 Node.js
+ * CentOS/RHEL 提取 Node.js
  */
-function extractNodeNative(outputPath) {
+function extractNodeYum(outputPath) {
   // 检测 Node.js 是否已安装
-  let nodePath = '/usr/local/bin/node';
-  let nodejsAlreadyInstalled = false;
+  let nodeBinary = '/usr/bin/node';
+  let nodeModulesPath = '/usr/lib/node_modules';
   
   try {
     const nodeVersion = execSync('node --version', { encoding: 'utf8' }).trim();
     log(`  → 检测到已安装的 Node.js: ${nodeVersion}`);
     
-    // 检查版本是否以 v20 开头
-    if (nodeVersion.startsWith('v20')) {
-      nodejsAlreadyInstalled = true;
-      // 尝试找到 node 的实际路径
-      try {
-        const whichNode = execSync('which node', { encoding: 'utf8' }).trim();
-        if (whichNode) {
-          nodePath = path.dirname(whichNode);
-        }
-      } catch (e) {
-        // 使用默认路径
-      }
-      log('  → Node.js 20 已安装，跳过安装步骤');
-    } else {
-      log(`  → Node.js 版本不符合要求 (需要 v20.x)，将安装 Node.js 20`);
+    const whichNode = execSync('which node', { encoding: 'utf8' }).trim();
+    if (whichNode) {
+      nodeBinary = whichNode;
     }
   } catch (e) {
-    log('  → Node.js 未安装，将安装 Node.js 20');
-  }
-  
-  if (!nodejsAlreadyInstalled) {
-    log('  → 安装 Node.js 20...');
-    // 安装 Node.js 20 (NodeSource)
-    execSync('curl -fsSL https://deb.nodesource.com/setup_20.x | bash -', {
-      stdio: 'inherit',
-    });
-    execSync('apt-get install -y nodejs', { stdio: 'inherit' });
+    log('  → Node.js 未安装');
   }
   
   // 安装 pnpm 和 pm2
-  log('  → 安装 pnpm 和 pm2...');
-  execSync('npm install -g pnpm@9.15.4 pm2', { stdio: 'inherit' });
+  log(`  → 安装 pnpm@${VERSIONS.pnpm} 和 pm2...`);
+  execSync(`npm install -g pnpm@${VERSIONS.pnpm} pm2`, { stdio: 'inherit' });
   
   // 创建目录结构
   const binDir = path.join(outputPath, 'bin');
@@ -360,29 +275,6 @@ function extractNodeNative(outputPath) {
   ensureDir(binDir);
   ensureDir(libDir);
   ensureDir(nodeModulesDir);
-  
-  // 确定 node 二进制路径
-  let nodeBinary = '/usr/local/bin/node';
-  let nodeModulesPath = '/usr/local/lib/node_modules';
-  
-  if (nodejsAlreadyInstalled) {
-    try {
-      nodeBinary = execSync('which node', { encoding: 'utf8' }).trim();
-      // node_modules 可能在不同位置
-      const possiblePaths = [
-        '/usr/local/lib/node_modules',
-        '/usr/lib/node_modules',
-      ];
-      for (const p of possiblePaths) {
-        if (fs.existsSync(p)) {
-          nodeModulesPath = p;
-          break;
-        }
-      }
-    } catch (e) {
-      // 使用默认路径
-    }
-  }
   
   // 复制 Node.js 二进制
   log(`  → 复制 Node.js 二进制 (${nodeBinary})...`);
@@ -418,9 +310,271 @@ function extractNodeNative(outputPath) {
 }
 
 /**
- * Linux 原生提取 PostgreSQL
+ * CentOS/RHEL 提取 PostgreSQL
  */
-function extractPostgresNative(outputPath) {
+function extractPostgresYum(outputPath) {
+  log('  → 使用已安装的 PostgreSQL 15...');
+  
+  // 创建目录结构
+  const binDir = path.join(outputPath, 'bin');
+  const libDir = path.join(outputPath, 'lib');
+  const shareDir = path.join(outputPath, 'share');
+  
+  ensureDir(binDir);
+  ensureDir(libDir);
+  ensureDir(shareDir);
+  
+  // PostgreSQL 在 CentOS 7 上的路径
+  const pgBinDir = '/usr/pgsql-15/bin';
+  const pgLibDir = '/usr/pgsql-15/lib';
+  const pgShareDir = '/usr/pgsql-15/share';
+  
+  // 复制 PostgreSQL 二进制文件
+  log('  → 复制 PostgreSQL 二进制文件...');
+  const binaries = ['postgres', 'pg_ctl', 'pg_dump', 'pg_restore', 'pg_isready', 'psql', 'createdb', 'dropdb', 'initdb', 'pg_basebackup'];
+  
+  for (const bin of binaries) {
+    const src = path.join(pgBinDir, bin);
+    if (fs.existsSync(src)) {
+      execSync(`cp ${src} ${binDir}/`, { stdio: 'pipe' });
+    }
+  }
+  
+  // 复制 PostgreSQL 库文件
+  log('  → 复制 PostgreSQL 库文件...');
+  if (fs.existsSync(pgLibDir)) {
+    execSync(`cp ${pgLibDir}/*.so ${libDir}/ 2>/dev/null || true`, { stdio: 'pipe' });
+    // 复制子目录
+    const subdirs = ['bitcode', 'pgxs'];
+    for (const sub of subdirs) {
+      if (fs.existsSync(path.join(pgLibDir, sub))) {
+        execSync(`cp -r ${pgLibDir}/${sub} ${libDir}/`, { stdio: 'pipe' });
+      }
+    }
+  }
+  
+  // 复制 PostgreSQL share 目录
+  log('  → 复制 PostgreSQL share 目录...');
+  if (fs.existsSync(pgShareDir)) {
+    execSync(`mkdir -p ${shareDir}/postgresql && cp -r ${pgShareDir}/* ${shareDir}/postgresql/`, { stdio: 'inherit' });
+  }
+  
+  // 收集所有二进制文件的依赖库
+  log('  → 收集依赖库...');
+  for (const bin of binaries) {
+    const binPath = path.join(binDir, bin);
+    if (fs.existsSync(binPath)) {
+      collectDependencies(binPath, libDir);
+    }
+  }
+  
+  // 收集 PostgreSQL 库的依赖
+  collectLibDependencies(libDir);
+  
+  // 设置权限
+  execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
+}
+
+/**
+ * CentOS/RHEL 提取 Redis
+ */
+function extractRedisYum(outputPath) {
+  log('  → 使用已安装的 Redis...');
+  
+  const libDir = path.join(outputPath, 'lib');
+  ensureDir(libDir);
+  
+  // 复制 Redis 二进制文件
+  log('  → 复制 Redis 二进制文件...');
+  const binaries = ['redis-server', 'redis-cli', 'redis-benchmark', 'redis-check-rdb', 'redis-check-aof'];
+  
+  for (const bin of binaries) {
+    const src = `/usr/bin/${bin}`;
+    if (fs.existsSync(src)) {
+      execSync(`cp ${src} ${outputPath}/`, { stdio: 'pipe' });
+    }
+  }
+  
+  // 收集依赖库
+  log('  → 收集依赖库...');
+  for (const bin of binaries) {
+    const binPath = path.join(outputPath, bin);
+    if (fs.existsSync(binPath)) {
+      collectDependencies(binPath, libDir);
+    }
+  }
+  
+  // 设置权限
+  execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
+}
+
+/**
+ * CentOS/RHEL 提取 SVN
+ */
+function extractSvnYum(outputPath) {
+  log('  → 使用已安装的 Subversion...');
+  
+  const libDir = path.join(outputPath, 'lib');
+  ensureDir(libDir);
+  
+  // 复制 SVN 二进制文件
+  log('  → 复制 SVN 二进制文件...');
+  const binaries = ['svn', 'svnadmin', 'svnlook', 'svnsync', 'svnversion', 'svnserve'];
+  
+  for (const bin of binaries) {
+    const src = `/usr/bin/${bin}`;
+    if (fs.existsSync(src)) {
+      execSync(`cp ${src} ${outputPath}/`, { stdio: 'pipe' });
+    }
+  }
+  
+  // 收集依赖库
+  log('  → 收集依赖库...');
+  for (const bin of binaries) {
+    const binPath = path.join(outputPath, bin);
+    if (fs.existsSync(binPath)) {
+      collectDependencies(binPath, libDir);
+    }
+  }
+  
+  // 收集间接依赖
+  collectLibDependencies(libDir);
+  
+  // 设置权限
+  execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
+}
+
+// ==================== Debian/Ubuntu: apt-get 提取 ====================
+
+/**
+ * Debian/Ubuntu 环境：使用 apt-get 安装并收集文件
+ */
+function extractWithApt(components, outputDir) {
+  log('运行环境: Debian/Ubuntu (apt-get)');
+  
+  // 更新包列表
+  log('更新包列表...');
+  try {
+    execSync('apt-get update', { stdio: 'inherit' });
+  } catch (e) {
+    warn('apt-get update 失败，继续尝试...');
+  }
+  
+  for (const comp of components) {
+    log(`\n提取 ${comp}...`);
+    
+    const outputSubdir = comp === 'svn' ? 'subversion' : comp;
+    const outputPath = path.join(outputDir, outputSubdir);
+    
+    ensureDir(outputPath);
+    
+    try {
+      switch (comp) {
+        case 'node':
+          extractNodeApt(outputPath);
+          break;
+        case 'postgres':
+          extractPostgresApt(outputPath);
+          break;
+        case 'redis':
+          extractRedisApt(outputPath);
+          break;
+        case 'svn':
+          extractSvnApt(outputPath);
+          break;
+      }
+      
+      const size = getDirSize(outputPath);
+      if (size > 0) {
+        log(`  ✓ ${comp} 提取完成: ${formatSize(size)}`);
+      } else {
+        log(`  ⚠ ${comp} 提取结果为空`);
+      }
+    } catch (err) {
+      error(`${comp} 提取失败: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Debian/Ubuntu 提取 Node.js
+ */
+function extractNodeApt(outputPath) {
+  // 检测 Node.js 是否已安装
+  let nodeBinary = '/usr/local/bin/node';
+  let nodeModulesPath = '/usr/local/lib/node_modules';
+  
+  try {
+    const nodeVersion = execSync('node --version', { encoding: 'utf8' }).trim();
+    log(`  → 检测到已安装的 Node.js: ${nodeVersion}`);
+    
+    const whichNode = execSync('which node', { encoding: 'utf8' }).trim();
+    if (whichNode) {
+      nodeBinary = whichNode;
+    }
+    
+    // 检查 node_modules 位置
+    const possiblePaths = ['/usr/local/lib/node_modules', '/usr/lib/node_modules'];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        nodeModulesPath = p;
+        break;
+      }
+    }
+  } catch (e) {
+    log('  → Node.js 未安装');
+  }
+  
+  // 安装 pnpm 和 pm2
+  log(`  → 安装 pnpm@${VERSIONS.pnpm} 和 pm2...`);
+  execSync(`npm install -g pnpm@${VERSIONS.pnpm} pm2`, { stdio: 'inherit' });
+  
+  // 创建目录结构
+  const binDir = path.join(outputPath, 'bin');
+  const libDir = path.join(outputPath, 'lib');
+  const nodeModulesDir = path.join(outputPath, 'node_modules');
+  
+  ensureDir(binDir);
+  ensureDir(libDir);
+  ensureDir(nodeModulesDir);
+  
+  // 复制 Node.js 二进制
+  log(`  → 复制 Node.js 二进制 (${nodeBinary})...`);
+  execSync(`cp ${nodeBinary} ${binDir}/`, { stdio: 'inherit' });
+  
+  // 复制 node_modules
+  log(`  → 复制 node_modules (${nodeModulesPath})...`);
+  execSync(`cp -rL ${nodeModulesPath}/* ${nodeModulesDir}/`, { stdio: 'inherit' });
+  
+  // 创建启动脚本
+  log('  → 创建启动脚本...');
+  const scripts = {
+    npm: `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/npm/bin/npm-cli.js" "$@"\n`,
+    npx: `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/npm/bin/npx-cli.js" "$@"\n`,
+    corepack: `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/corepack/dist/corepack.js" "$@"\n`,
+    pnpm: `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pnpm/bin/pnpm.cjs" "$@"\n`,
+    pnpx: `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pnpm/bin/pnpx.cjs" "$@"\n`,
+    pm2: `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pm2/bin/pm2" "$@"\n`,
+    'pm2-runtime': `#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/node" "$SCRIPT_DIR/../node_modules/pm2/bin/pm2-runtime" "$@"\n`,
+  };
+  
+  for (const [name, content] of Object.entries(scripts)) {
+    const scriptPath = path.join(binDir, name);
+    fs.writeFileSync(scriptPath, content, { mode: 0o755 });
+  }
+  
+  // 收集依赖库
+  log('  → 收集依赖库...');
+  collectDependencies(nodeBinary, libDir);
+  
+  // 设置权限
+  execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
+}
+
+/**
+ * Debian/Ubuntu 提取 PostgreSQL
+ */
+function extractPostgresApt(outputPath) {
   log('  → 安装 PostgreSQL 15...');
   
   // 添加 PostgreSQL 官方源
@@ -454,23 +608,20 @@ function extractPostgresNative(outputPath) {
   }
   
   // 复制 PostgreSQL 库文件
-  // 注意：PostgreSQL 的 $libdir 解析为 bin/ 的兄弟目录 lib/
-  // 所以扩展库必须直接放在 lib/ 目录下，而不是 lib/postgresql/ 子目录
   log('  → 复制 PostgreSQL 库文件...');
   const pgLibDir = '/usr/lib/postgresql/15/lib';
   if (fs.existsSync(pgLibDir)) {
-    // 复制 .so 文件到 lib/ 根目录
     execSync(`cp ${pgLibDir}/*.so ${libDir}/ 2>/dev/null || true`, { stdio: 'pipe' });
-    // 复制 bitcode 和 pgxs 子目录
-    if (fs.existsSync(path.join(pgLibDir, 'bitcode'))) {
-      execSync(`cp -r ${pgLibDir}/bitcode ${libDir}/`, { stdio: 'pipe' });
-    }
-    if (fs.existsSync(path.join(pgLibDir, 'pgxs'))) {
-      execSync(`cp -r ${pgLibDir}/pgxs ${libDir}/`, { stdio: 'pipe' });
+    // 复制子目录
+    const subdirs = ['bitcode', 'pgxs'];
+    for (const sub of subdirs) {
+      if (fs.existsSync(path.join(pgLibDir, sub))) {
+        execSync(`cp -r ${pgLibDir}/${sub} ${libDir}/`, { stdio: 'pipe' });
+      }
     }
   }
   
-  // 复制 PostgreSQL share 目录（initdb 需要模板文件）
+  // 复制 PostgreSQL share 目录
   log('  → 复制 PostgreSQL share 目录...');
   const pgShareDir = '/usr/share/postgresql/15';
   if (fs.existsSync(pgShareDir)) {
@@ -491,26 +642,24 @@ function extractPostgresNative(outputPath) {
     }
   }
   
-  // 收集 PostgreSQL 库的依赖（排除 glibc 核心库）
-  if (fs.existsSync(path.join(libDir, 'postgresql'))) {
-    execSync(`for f in ${libDir}/postgresql/*.so; do ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do libname=$(basename "$lib"); skip=0; for syslib in ${SYSTEM_LIBS.join(' ')}; do [ "$libname" = "$syslib" ] && skip=1 && break; done; [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" ${libDir}/ 2>/dev/null; done; done`, { stdio: 'pipe' });
-  }
+  // 收集 PostgreSQL 库的依赖
+  collectLibDependencies(libDir);
   
   // 设置权限
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
 }
 
 /**
- * Linux 原生提取 Redis
+ * Debian/Ubuntu 提取 Redis
  */
-function extractRedisNative(outputPath) {
+function extractRedisApt(outputPath) {
   log('  → 安装 Redis...');
   execSync('apt-get install -y redis-server', { stdio: 'inherit' });
   
   const libDir = path.join(outputPath, 'lib');
   ensureDir(libDir);
   
-  // 复制 Redis 二进制文件（直接放根目录）
+  // 复制 Redis 二进制文件
   log('  → 复制 Redis 二进制文件...');
   const binaries = ['redis-server', 'redis-cli', 'redis-benchmark', 'redis-check-rdb', 'redis-check-aof'];
   
@@ -535,16 +684,16 @@ function extractRedisNative(outputPath) {
 }
 
 /**
- * Linux 原生提取 SVN
+ * Debian/Ubuntu 提取 SVN
  */
-function extractSvnNative(outputPath) {
+function extractSvnApt(outputPath) {
   log('  → 安装 Subversion...');
   execSync('apt-get install -y subversion', { stdio: 'inherit' });
   
   const libDir = path.join(outputPath, 'lib');
   ensureDir(libDir);
   
-  // 复制 SVN 二进制文件（直接放根目录）
+  // 复制 SVN 二进制文件
   log('  → 复制 SVN 二进制文件...');
   const binaries = ['svn', 'svnadmin', 'svnlook', 'svnsync', 'svnversion', 'svnserve'];
   
@@ -564,19 +713,17 @@ function extractSvnNative(outputPath) {
     }
   }
   
-  // 收集库文件的间接依赖（排除 glibc 核心库）
-  log('  → 收集间接依赖库...');
-  execSync(`for f in ${libDir}/*.so*; do [ -f "$f" ] && ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do libname=$(basename "$lib"); skip=0; for syslib in ${SYSTEM_LIBS.join(' ')}; do [ "$libname" = "$syslib" ] && skip=1 && break; done; [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" ${libDir}/ 2>/dev/null; done; done`, { stdio: 'pipe' });
+  // 收集间接依赖
+  collectLibDependencies(libDir);
   
   // 设置权限
   execSync(`chmod -R 755 ${outputPath}`, { stdio: 'pipe' });
 }
 
+// ==================== 依赖收集工具 ====================
+
 /**
  * 收集二进制文件的依赖库（排除 glibc 核心库）
- * 
- * 重要：不打包 glibc 核心库（libc.so.6, ld-linux-x86-64.so.2 等）
- * 这些库必须使用目标系统的版本，否则会导致兼容性问题
  */
 function collectDependencies(binaryPath, libDir) {
   try {
@@ -594,10 +741,30 @@ function collectDependencies(binaryPath, libDir) {
   }
 }
 
+/**
+ * 收集目录中所有库文件的间接依赖
+ */
+function collectLibDependencies(libDir) {
+  try {
+    const cmd = `for f in ${libDir}/*.so*; do
+      [ -f "$f" ] && ldd "$f" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do
+        libname=$(basename "$lib")
+        skip=0
+        for syslib in ${SYSTEM_LIBS.join(' ')}; do
+          [ "$libname" = "$syslib" ] && skip=1 && break
+        done
+        [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" "${libDir}/" 2>/dev/null
+      done
+    done`;
+    execSync(cmd, { stdio: 'pipe' });
+  } catch (e) {
+    // 忽略错误
+  }
+}
+
 // ==================== 入口脚本 ====================
 
 function createCloudcadSh(outputDir) {
-  // 找到 node 目录
   const nodeDir = path.join(outputDir, 'node');
   if (!fs.existsSync(nodeDir)) {
     return;
@@ -641,12 +808,18 @@ function main() {
     process.exit(0);
   }
   
+  // 检查运行环境
+  if (os.platform() !== 'linux') {
+    error(`此脚本仅支持 Linux 环境，当前: ${os.platform()}`);
+    error('请使用 Dockerfile.linux-deploy 进行打包');
+    process.exit(1);
+  }
+  
   const { outputDir, components } = args;
   
   log('============================================');
   log(' CloudCAD Linux Runtime 提取工具');
   log('============================================');
-  log(`运行环境: ${isWindows() ? 'Windows (Docker)' : 'Linux (原生)'}`);
   log(`输出目录: ${outputDir}`);
   log(`提取组件: ${components.join(', ')}`);
   log('');
@@ -654,15 +827,8 @@ function main() {
   // 确保输出目录存在
   ensureDir(outputDir);
   
-  // 根据运行环境选择提取方式
-  if (isWindows()) {
-    extractWithDocker(components, outputDir);
-  } else if (isLinux()) {
-    extractNative(components, outputDir);
-  } else {
-    error(`不支持的操作系统: ${os.platform()}`);
-    process.exit(1);
-  }
+  // 执行提取
+  extractNative(components, outputDir);
   
   // 创建入口脚本（如果提取了 node）
   if (components.includes('node')) {
@@ -684,13 +850,8 @@ function main() {
     }
   }
   
-  if (isWindows()) {
-    log('\n下一步：');
-    log('  运行 node scripts/pack-linux-deploy.js 打包 Linux 部署包');
-  } else {
-    log('\n下一步：');
-    log('  运行 node scripts/pack-offline.js --deploy --linux 打包部署包');
-  }
+  log('\n下一步：');
+  log('  运行 node scripts/pack-offline.js --deploy --linux 打包部署包');
 }
 
 main();

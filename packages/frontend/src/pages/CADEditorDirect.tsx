@@ -105,6 +105,10 @@ export const CADEditorDirect: React.FC = () => {
     projectsApi.getPersonalSpace().then((res) => {
       if (res.data?.id) {
         setPersonalSpaceId(res.data.id);
+        // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
+        import('../services/mxcadManager').then(({ setPersonalSpaceId: setCachedPersonalSpaceId }) => {
+          setCachedPersonalSpaceId(res.data?.id || null);
+        });
       }
     }).catch(console.error);
   }, [isAuthenticated]);
@@ -331,6 +335,7 @@ export const CADEditorDirect: React.FC = () => {
           parentId: file.parentId || null,
           projectId,
           name: file.name || '',
+          personalSpaceId,
         });
         setNavigateFunction(navigate);
 
