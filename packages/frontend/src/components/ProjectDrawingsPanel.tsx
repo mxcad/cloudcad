@@ -15,10 +15,10 @@
  * 用于侧边栏的项目图纸 Tab 内容。
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, FileImage } from 'lucide-react';
-import { useFileSystem } from '../hooks/file-system/useFileSystem';
-import { FileSystemNode } from '../types/filesystem';
+import { projectsApi } from '../services/projectsApi';
+import { FileSystemNode, toFileSystemNode } from '../types/filesystem';
 import { DrawingOpenMode } from '../types/sidebar';
 import styles from './sidebar/sidebar.module.css';
 
@@ -70,17 +70,34 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   onDrawingModified,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [nodes, setNodes] = useState<FileSystemNode[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // 使用 useFileSystem hook 获取文件节点
-  const { nodes, loading } = useFileSystem({
-    mode: 'project',
-    projectId,
-  });
+  // 加载项目下的文件节点
+  useEffect(() => {
+    const loadNodes = async () => {
+      if (!projectId) return;
+      
+      setLoading(true);
+      try {
+        const response = await projectsApi.getChildren(projectId);
+        const nodeList = response.data?.nodes || [];
+        setNodes(nodeList.map(toFileSystemNode));
+      } catch (error) {
+        console.error('加载项目文件失败:', error);
+        setNodes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNodes();
+  }, [projectId]);
 
   // 过滤图纸文件
   const drawingNodes = useMemo(() => {
     const drawings = nodes.filter(
-      (node) => node.type === 'file' && isDrawingFile(node.name)
+      (node) => !node.isFolder && isDrawingFile(node.name)
     );
 
     if (!searchQuery) return drawings;

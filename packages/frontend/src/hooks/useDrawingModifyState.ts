@@ -9,19 +9,19 @@ export function useDrawingModifyState() {
   const isModified = useRef(false);
 
   useEffect(() => {
-    const mxcad = mxcadManager.getCurrentMxCAD();
-    if (!mxcad) return;
+    const mxcadView = mxcadManager.getCurrentView();
+    if (!mxcadView?.mxcad) return;
 
     const handler = () => {
       isModified.current = true;
     };
 
     // 监听数据库修改事件
-    mxcad.on('databaseModify', handler);
+    mxcadView.mxcad.on('databaseModify', handler);
 
     // 组件卸载时清理事件监听，防止内存泄漏
     return () => {
-      mxcad.off('databaseModify', handler);
+      mxcadView.mxcad.off('databaseModify', handler);
     };
   }, []);
 
