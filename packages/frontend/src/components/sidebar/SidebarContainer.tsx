@@ -46,11 +46,17 @@ interface PendingDrawing {
   openMode: DrawingOpenMode;
 }
 
+/** 插入文件的参数类型 */
+export interface InsertFileParams {
+  nodeId: string;
+  filename: string;
+}
+
 interface SidebarContainerProps {
   /** 项目 ID */
   projectId: string;
   /** 插入文件回调（图库使用） */
-  onInsertFile?: (file: FileSystemNode) => void;
+  onInsertFile?: (file: InsertFileParams) => void | Promise<void>;
 }
 
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
@@ -344,12 +350,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const handleGalleryInsertFile = useCallback(
     (file: Pick<{ nodeId: string; filename: string }, 'nodeId' | 'filename'>) => {
       if (onInsertFile) {
-        // 转换为 FileSystemNode 格式
-        const node: Partial<FileSystemNode> = {
-          id: file.nodeId,
-          name: file.filename,
-        };
-        onInsertFile(node as FileSystemNode);
+        onInsertFile({
+          nodeId: file.nodeId,
+          filename: file.filename,
+        });
       }
     },
     [onInsertFile]
