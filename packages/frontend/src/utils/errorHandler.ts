@@ -125,6 +125,11 @@ export const isAbortError = (error: unknown): boolean => {
     if ('isAborted' in error && (error as { isAborted?: boolean }).isAborted) {
       return true;
     }
+    // 检查 axios 错误码
+    const axiosError = error as { code?: string };
+    if (axiosError.code === 'ERR_CANCELED' || axiosError.code === 'ERR_FR_TXN_CANCELLED') {
+      return true;
+    }
   }
 
   if (error instanceof Error) {
@@ -140,6 +145,11 @@ export const isAbortError = (error: unknown): boolean => {
     if (error.message === 'canceled') {
       return true;
     }
+  }
+
+  // 检查 DOMException (AbortController)
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return true;
   }
 
   return false;

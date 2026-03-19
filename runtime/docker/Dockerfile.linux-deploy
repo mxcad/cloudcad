@@ -31,17 +31,20 @@ RUN yum install -y epel-release && \
 
 # 安装 Node.js 20.19.5（项目要求 >= 20.19.5）
 # 使用 unofficial builds 的 glibc-217 版本，兼容 CentOS 7 (glibc 2.17)
-# 使用 .tar.xz 格式（更小，下载更快）
-RUN curl -fsSL --retry 3 --retry-delay 5 \
-    https://unofficial-builds.nodejs.org/download/release/v20.19.5/node-v20.19.5-linux-x64-glibc-217.tar.xz \
-    -o /tmp/node.tar.xz && \
-    mkdir -p /usr/local && \
+# 优先使用本地缓存，如果不存在则从网络下载
+COPY runtime/cache/node-v20.19.5-linux-x64-glibc-217.tar.xz /tmp/node.tar.xz
+
+RUN mkdir -p /usr/local && \
     tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
     rm -f /tmp/node.tar.xz && \
     node --version
 
 # 安装 PostgreSQL 15（通过 PostgreSQL 官方源）
+# 注意：PostgreSQL 官方源包含多个版本，旧版本仓库可能已下线，需要禁用
+# 重要：安装 repo 后必须在第一次 yum 操作时就禁用旧仓库，否则 yum 刷新元数据会因 404 失败
 RUN rpm -Uvh https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
+    yum install -y --disablerepo=pgdg12,pgdg13,pgdg14,pgdg15-common yum-utils && \
+    yum-config-manager --disable pgdg12 pgdg13 pgdg14 pgdg15-common 2>/dev/null || true && \
     yum install -y postgresql15-server postgresql15 && \
     yum clean all
 
