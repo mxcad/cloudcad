@@ -3464,7 +3464,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TrashListResponseDto"
+                  "$ref": "#/components/schemas/ProjectTrashResponseDto"
                 }
               }
             }
@@ -5537,6 +5537,38 @@
             }
           }
         },
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
+    "/api/mxcad/files/checkDuplicate": {
+      "post": {
+        "operationId": "MxCadController_checkDuplicateFile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckDuplicateFileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "返回重复检查结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckDuplicateFileResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "检查目录中是否存在重复文件",
         "tags": [
           "MxCAD 文件上传与转换"
         ]
@@ -8727,6 +8759,10 @@
             "type": "string",
             "description": "所有者 ID"
           },
+          "personalSpaceKey": {
+            "type": "string",
+            "description": "私人空间标识（非空表示为私人空间）"
+          },
           "childrenCount": {
             "type": "number",
             "description": "子节点数量"
@@ -8853,6 +8889,10 @@
             "type": "string",
             "description": "所有者 ID"
           },
+          "personalSpaceKey": {
+            "type": "string",
+            "description": "私人空间标识（非空表示为私人空间）"
+          },
           "childrenCount": {
             "type": "number",
             "description": "子节点数量"
@@ -8931,6 +8971,41 @@
           "failedCount",
           "successIds",
           "failedIds"
+        ]
+      },
+      "ProjectTrashResponseDto": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "description": "回收站节点列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileSystemNodeDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "总数"
+          },
+          "page": {
+            "type": "number",
+            "description": "当前页码"
+          },
+          "limit": {
+            "type": "number",
+            "description": "每页数量"
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "总页数"
+          }
+        },
+        "required": [
+          "nodes",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
         ]
       },
       "CreateNodeDto": {
@@ -9040,6 +9115,10 @@
           "ownerId": {
             "type": "string",
             "description": "所有者 ID"
+          },
+          "personalSpaceKey": {
+            "type": "string",
+            "description": "私人空间标识（非空表示为私人空间）"
           },
           "childrenCount": {
             "type": "number",
@@ -9637,6 +9716,63 @@
         },
         "required": [
           "exists"
+        ]
+      },
+      "CheckDuplicateFileDto": {
+        "type": "object",
+        "properties": {
+          "fileHash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值",
+            "example": "25e89b5adf19984330f4e68b0f99db64"
+          },
+          "filename": {
+            "type": "string",
+            "description": "原始文件名",
+            "example": "drawing.dwg"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "目标目录节点 ID",
+            "example": "clx1234567890"
+          },
+          "currentFileId": {
+            "type": "string",
+            "description": "当前打开的文件节点 ID（可选，用于排除当前文件）",
+            "example": "clx9876543210"
+          }
+        },
+        "required": [
+          "fileHash",
+          "filename",
+          "nodeId"
+        ]
+      },
+      "CheckDuplicateFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "isDuplicate": {
+            "type": "boolean",
+            "description": "是否存在重复文件",
+            "example": false
+          },
+          "existingNodeId": {
+            "type": "string",
+            "description": "重复文件节点 ID（如果存在）",
+            "example": "clx1234567890",
+            "nullable": true
+          },
+          "existingFileName": {
+            "type": "string",
+            "description": "重复文件名称（如果存在）",
+            "example": "drawing.dwg",
+            "nullable": true
+          }
+        },
+        "required": [
+          "isDuplicate",
+          "existingNodeId",
+          "existingFileName"
         ]
       },
       "PreloadingDataDto": {

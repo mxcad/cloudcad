@@ -136,7 +136,17 @@ export const useFileSystemData = ({
 
         setBreadcrumbs(crumbs);
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
+        // 检测所有类型的请求取消错误
+        const errorObj = err as Error & { isAborted?: boolean };
+        const isAborted =
+          errorObj?.isAborted ||
+          (err instanceof Error && (
+            err.name === 'AbortError' ||
+            err.name === 'CanceledError' ||
+            err.message === 'canceled'
+          ));
+
+        if (isAborted) {
           throw err;
         }
 
@@ -200,15 +210,15 @@ export const useFileSystemData = ({
           const trashResponse = await projectsApi.getProjectTrash(currentNodeId);
 
           const trashData = trashResponse.data;
-          const trashNodes = trashData?.items || [];
+          const trashNodes = trashData?.nodes || [];
           setNodes(trashNodes);
 
           if (trashData?.total !== undefined) {
             setPaginationMeta({
               total: trashData.total,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(trashData.total / paginationRef.current.limit),
+              page: trashData.page,
+              limit: trashData.limit,
+              totalPages: trashData.totalPages,
             });
           } else {
             setPaginationMeta({
@@ -337,18 +347,16 @@ export const useFileSystemData = ({
 
           const trashResponse = await projectsApi.getProjectTrash(urlProjectId);
 
-          // TrashListResponseDto 包含 items 和 total
+          // ProjectTrashResponseDto 包含 nodes, total, page, limit, totalPages
           const trashData = trashResponse.data;
-          const trashNodes = trashData?.items || [];
+          const trashNodes = trashData?.nodes || [];
           setNodes(trashNodes);
           if (trashData?.total !== undefined) {
             setPaginationMeta({
               total: trashData.total,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(
-                trashData.total / paginationRef.current.limit
-              ),
+              page: trashData.page,
+              limit: trashData.limit,
+              totalPages: trashData.totalPages,
             });
           } else {
             setPaginationMeta({
@@ -454,8 +462,22 @@ export const useFileSystemData = ({
         }
       }
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.info('请求被取消', 'useFileSystemData');
+      // 检测所有类型的请求取消错误
+      // - isAborted: apiClient 设置的标志
+      // - AbortError: AbortController 取消
+      // - CanceledError: Axios 内部取消
+      // - canceled: Axios CancelToken 取消（错误消息）
+      const errorObj = err as Error & { isAborted?: boolean };
+      const isAborted =
+        errorObj?.isAborted ||
+        (err instanceof Error && (
+          err.name === 'AbortError' ||
+          err.name === 'CanceledError' ||
+          err.message === 'canceled'
+        ));
+
+      if (isAborted) {
+        console.info('[useFileSystemData] 请求被取消（正常行为）');
         return;
       }
 

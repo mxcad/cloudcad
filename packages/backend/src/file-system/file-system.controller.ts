@@ -68,6 +68,7 @@ import {
   NodeTreeResponseDto,
   StorageInfoDto,
   TrashListResponseDto,
+  ProjectTrashResponseDto,
   OperationSuccessDto,
   BatchOperationResponseDto,
   ProjectUserPermissionsDto,
@@ -266,7 +267,7 @@ export class FileSystemController {
   @ApiResponse({
     status: 200,
     description: '成功获取项目回收站内容',
-    type: TrashListResponseDto,
+    type: ProjectTrashResponseDto,
   })
   async getProjectTrash(
     @Request() req,

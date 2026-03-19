@@ -60,6 +60,9 @@ export class FileSystemNodeDto {
   @ApiProperty({ description: '所有者 ID' })
   ownerId: string;
 
+  @ApiProperty({ description: '私人空间标识（非空表示为私人空间）', required: false })
+  personalSpaceKey?: string;
+
   @ApiProperty({ description: '子节点数量', required: false })
   childrenCount?: number;
 }
@@ -238,6 +241,26 @@ export class TrashListResponseDto {
 
   @ApiProperty({ description: '总数' })
   total: number;
+}
+
+/**
+ * 项目内回收站响应 DTO
+ */
+export class ProjectTrashResponseDto {
+  @ApiProperty({ description: '回收站节点列表', type: [FileSystemNodeDto] })
+  nodes: FileSystemNodeDto[];
+
+  @ApiProperty({ description: '总数' })
+  total: number;
+
+  @ApiProperty({ description: '当前页码' })
+  page: number;
+
+  @ApiProperty({ description: '每页数量' })
+  limit: number;
+
+  @ApiProperty({ description: '总页数' })
+  totalPages: number;
 }
 
 /**

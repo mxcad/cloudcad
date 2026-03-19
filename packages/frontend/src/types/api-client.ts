@@ -538,6 +538,52 @@ declare namespace Components {
              */
             size: number;
         }
+        export interface CheckDuplicateFileDto {
+            /**
+             * 文件 MD5 哈希值
+             * example:
+             * 25e89b5adf19984330f4e68b0f99db64
+             */
+            fileHash: string;
+            /**
+             * 原始文件名
+             * example:
+             * drawing.dwg
+             */
+            filename: string;
+            /**
+             * 目标目录节点 ID
+             * example:
+             * clx1234567890
+             */
+            nodeId: string;
+            /**
+             * 当前打开的文件节点 ID（可选，用于排除当前文件）
+             * example:
+             * clx9876543210
+             */
+            currentFileId?: string;
+        }
+        export interface CheckDuplicateFileResponseDto {
+            /**
+             * 是否存在重复文件
+             * example:
+             * false
+             */
+            isDuplicate: boolean;
+            /**
+             * 重复文件节点 ID（如果存在）
+             * example:
+             * clx1234567890
+             */
+            existingNodeId: string | null;
+            /**
+             * 重复文件名称（如果存在）
+             * example:
+             * drawing.dwg
+             */
+            existingFileName: string | null;
+        }
         export interface CheckFileExistDto {
             /**
              * 文件 MD5 哈希值
@@ -898,6 +944,10 @@ declare namespace Components {
              */
             ownerId: string;
             /**
+             * 私人空间标识（非空表示为私人空间）
+             */
+            personalSpaceKey?: string;
+            /**
              * 子节点数量
              */
             childrenCount?: number;
@@ -1148,6 +1198,10 @@ declare namespace Components {
              * 所有者 ID
              */
             ownerId: string;
+            /**
+             * 私人空间标识（非空表示为私人空间）
+             */
+            personalSpaceKey?: string;
             /**
              * 子节点数量
              */
@@ -1442,6 +1496,28 @@ declare namespace Components {
              * 创建时间
              */
             createdAt: string; // date-time
+        }
+        export interface ProjectTrashResponseDto {
+            /**
+             * 回收站节点列表
+             */
+            nodes: FileSystemNodeDto[];
+            /**
+             * 总数
+             */
+            total: number;
+            /**
+             * 当前页码
+             */
+            page: number;
+            /**
+             * 每页数量
+             */
+            limit: number;
+            /**
+             * 总页数
+             */
+            totalPages: number;
         }
         export interface ProjectUserPermissionsDto {
             /**
@@ -1924,6 +2000,10 @@ declare namespace Components {
              * 所有者 ID
              */
             ownerId: string;
+            /**
+             * 私人空间标识（非空表示为私人空间）
+             */
+            personalSpaceKey?: string;
             /**
              * 子节点数量
              */
@@ -3462,7 +3542,7 @@ declare namespace Paths {
             includeDeleted?: Parameters.IncludeDeleted;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.TrashListResponseDto;
+            export type $200 = Components.Schemas.ProjectTrashResponseDto;
         }
     }
     namespace FileSystemControllerGetProjects {
@@ -4005,6 +4085,12 @@ declare namespace Paths {
         export type RequestBody = Components.Schemas.CheckChunkExistDto;
         namespace Responses {
             export type $200 = Components.Schemas.ChunkExistResponseDto;
+        }
+    }
+    namespace MxCadControllerCheckDuplicateFile {
+        export type RequestBody = Components.Schemas.CheckDuplicateFileDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.CheckDuplicateFileResponseDto;
         }
     }
     namespace MxCadControllerCheckExternalReference {
@@ -5990,6 +6076,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerCheckFileExist.Responses.$200>
   /**
+   * MxCadController_checkDuplicateFile - 检查目录中是否存在重复文件
+   */
+  'MxCadController_checkDuplicateFile'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.MxCadControllerCheckDuplicateFile.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.MxCadControllerCheckDuplicateFile.Responses.$200>
+  /**
    * MxCadController_getPreloadingData
    */
   'MxCadController_getPreloadingData'(
@@ -7634,6 +7728,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerCheckFileExist.Responses.$200>
   }
+  ['/api/mxcad/files/checkDuplicate']: {
+    /**
+     * MxCadController_checkDuplicateFile - 检查目录中是否存在重复文件
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.MxCadControllerCheckDuplicateFile.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.MxCadControllerCheckDuplicateFile.Responses.$200>
+  }
   ['/api/mxcad/file/{nodeId}/preloading']: {
     /**
      * MxCadController_getPreloadingData
@@ -7949,6 +8053,8 @@ export type ChangePasswordApiResponseDto = Components.Schemas.ChangePasswordApiR
 export type ChangePasswordDto = Components.Schemas.ChangePasswordDto;
 export type ChangePasswordResponseDto = Components.Schemas.ChangePasswordResponseDto;
 export type CheckChunkExistDto = Components.Schemas.CheckChunkExistDto;
+export type CheckDuplicateFileDto = Components.Schemas.CheckDuplicateFileDto;
+export type CheckDuplicateFileResponseDto = Components.Schemas.CheckDuplicateFileResponseDto;
 export type CheckFileExistDto = Components.Schemas.CheckFileExistDto;
 export type CheckReferenceResponseDto = Components.Schemas.CheckReferenceResponseDto;
 export type CheckThumbnailResponseDto = Components.Schemas.CheckThumbnailResponseDto;
@@ -7988,6 +8094,7 @@ export type ProjectMemberDto = Components.Schemas.ProjectMemberDto;
 export type ProjectPermission = Components.Schemas.ProjectPermission;
 export type ProjectRoleDto = Components.Schemas.ProjectRoleDto;
 export type ProjectRolePermissionDto = Components.Schemas.ProjectRolePermissionDto;
+export type ProjectTrashResponseDto = Components.Schemas.ProjectTrashResponseDto;
 export type ProjectUserPermissionsDto = Components.Schemas.ProjectUserPermissionsDto;
 export type RefreshExternalReferencesResponseDto = Components.Schemas.RefreshExternalReferencesResponseDto;
 export type RefreshTokenDto = Components.Schemas.RefreshTokenDto;
