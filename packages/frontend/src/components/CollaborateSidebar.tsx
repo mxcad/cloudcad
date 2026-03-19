@@ -1,7 +1,6 @@
 import { Users, UserPlus, RefreshCw, Loader2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { MxCpp } from 'mxcad';
-import { useSidebar } from '../contexts/SidebarContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
 
@@ -10,7 +9,6 @@ import { APP_COOPERATE_URL } from '@/constants/appConfig';
  * 提供协同功能的创建、加入、退出和列表展示
  */
 export const CollaborateSidebar: React.FC = () => {
-  const { isActive } = useSidebar('collaborate');
   const { showToast } = useNotification();
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
@@ -47,16 +45,11 @@ export const CollaborateSidebar: React.FC = () => {
       setLoading(false);
     }
   }, []);
-  // 当侧边栏打开时，获取协同列表
+
+  // 组件加载时获取协同列表
   useEffect(() => {
-    if (isActive) {
-      fetchWorks();
-    } else {
-      // 关闭时重置状态
-      setWorks([]);
-      setCurrentWorkId(null);
-    }
-  }, [isActive, fetchWorks]);
+    fetchWorks();
+  }, [fetchWorks]);
 
   // 创建协同
   const handleCreateWork = useCallback(async () => {
@@ -151,11 +144,6 @@ export const CollaborateSidebar: React.FC = () => {
       showToast('退出协同失败', 'error');
     }
   }, [fetchWorks, showToast]);
-
-  // 未激活时不渲染
-  if (!isActive) {
-    return null;
-  }
 
   return (
     <>

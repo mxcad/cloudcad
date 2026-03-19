@@ -3,7 +3,6 @@ import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { galleryApi } from '../services/galleryApi';
 import { MxFun } from 'mxdraw';
-import { useSidebar } from '../contexts/SidebarContext';
 import { useNotification } from '../contexts/NotificationContext';
 import type { GalleryTypeDto } from '../types/api-client';
 import { GALLERY_CONFIG } from '../constants/appConfig';
@@ -54,8 +53,6 @@ interface CADEditorSidebarProps {
 export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   onInsertFile,
 }) => {
-  // 使用 SidebarContext 管理侧边栏状态
-  const { isActive } = useSidebar('gallery');
   // 使用 NotificationContext 显示消息
   const { showToast, showConfirm } = useNotification();
 
@@ -136,10 +133,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
     setSelectedFirstType(-1);
     setSelectedSecondType(-1);
     setPageIndex(0);
-    if (isActive) {
-      fetchTypes();
-    }
-  }, [galleryType, isActive, fetchTypes]);
+    fetchTypes();
+  }, [galleryType, fetchTypes]);
 
   // 当分类或搜索关键词变化时，重新获取文件列表
   useEffect(() => {
@@ -159,10 +154,8 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
     setSelectedFirstType(-1);
     setSelectedSecondType(-1);
     setPageIndex(0);
-    if (isActive) {
-      fetchTypes();
-    }
-  }, [galleryType, isActive, fetchTypes]);
+    fetchTypes();
+  }, [galleryType, fetchTypes]);
 
   // 当分类或搜索关键词变化时，重新获取文件列表
   useEffect(() => {
@@ -270,11 +263,6 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
       );
     }
   };
-
-  // 未激活时不渲染
-  if (!isActive) {
-    return null;
-  }
 
   return (
     <>

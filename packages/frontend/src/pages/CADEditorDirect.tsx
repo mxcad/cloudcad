@@ -12,17 +12,11 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import {
-  SidebarProvider,
-  useSidebarManager,
-  SidebarType,
-} from '../contexts/SidebarContext';
 import { ProjectPermission } from '../constants/permissions';
 import { filesApi } from '../services/filesApi';
 import { projectsApi } from '../services/projectsApi';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
-import CADEditorSidebar from '../components/CADEditorSidebar';
-import CollaborateSidebar from '../components/CollaborateSidebar';
+import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
@@ -604,84 +598,30 @@ export const CADEditorDirect: React.FC = () => {
       )}
 
       {!loading && !error && isActive && (
-        <SidebarProvider>
-          <CADEditorContent
-            onInsertFile={handleInsertFile}
-            showDownloadFormatModal={showDownloadFormatModal}
-            downloadingFileName={downloadingFileName}
-            downloading={downloading}
-            onCloseDownloadModal={() => setShowDownloadFormatModal(false)}
-            onDownloadWithFormat={handleDownloadWithFormat}
-          />
-        </SidebarProvider>
+        <div className="flex w-full h-screen relative">
+          {/* 侧边栏容器 */}
+          {currentProjectId && (
+            <SidebarContainer
+              projectId={currentProjectId}
+              onInsertFile={handleInsertFile}
+            />
+          )}
+
+          {/* CAD编辑器内容区域 */}
+          <div className="flex-1 relative">
+            {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
+
+            {/* 下载格式选择弹窗 */}
+            <DownloadFormatModal
+              isOpen={showDownloadFormatModal}
+              fileName={downloadingFileName}
+              onClose={() => setShowDownloadFormatModal(false)}
+              onDownload={handleDownloadWithFormat}
+              loading={downloading}
+            />
+          </div>
+        </div>
       )}
-    </div>
-  );
-};
-
-/**
- * CAD 编辑器内容组件
- * 在 SidebarProvider 内部，可以使用 useSidebarManager
- */
-interface CADEditorContentProps {
-  onInsertFile: (file: { nodeId: string; filename: string }) => void;
-  showDownloadFormatModal: boolean;
-  downloadingFileName: string;
-  downloading: boolean;
-  onCloseDownloadModal: () => void;
-  onDownloadWithFormat: (
-    format: DownloadFormat,
-    pdfOptions?: PdfOptions
-  ) => void;
-}
-
-const CADEditorContent: React.FC<CADEditorContentProps> = ({
-  onInsertFile,
-  showDownloadFormatModal,
-  downloadingFileName,
-  downloading,
-  onCloseDownloadModal,
-  onDownloadWithFormat,
-}) => {
-  const { openSidebar } = useSidebarManager();
-
-  // 监听 MxCAD 命令触发的侧边栏事件
-  useEffect(() => {
-    const handleOpenSidebar = (event: Event) => {
-      const customEvent = event as CustomEvent<{ type: SidebarType }>;
-      if (customEvent.detail?.type) {
-        openSidebar(customEvent.detail.type);
-      }
-    };
-
-    window.addEventListener('mxcad-open-sidebar', handleOpenSidebar);
-
-    return () => {
-      window.removeEventListener('mxcad-open-sidebar', handleOpenSidebar);
-    };
-  }, [openSidebar]);
-
-  return (
-    <div className="flex w-full h-screen relative">
-      {/* 图库侧边栏 */}
-      <CADEditorSidebar onInsertFile={onInsertFile} />
-
-      {/* 协同侧边栏 */}
-      <CollaborateSidebar />
-
-      {/* CAD编辑器内容区域 */}
-      <div className="flex-1 relative">
-        {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
-
-        {/* 下载格式选择弹窗 */}
-        <DownloadFormatModal
-          isOpen={showDownloadFormatModal}
-          fileName={downloadingFileName}
-          onClose={onCloseDownloadModal}
-          onDownload={onDownloadWithFormat}
-          loading={downloading}
-        />
-      </div>
     </div>
   );
 };
