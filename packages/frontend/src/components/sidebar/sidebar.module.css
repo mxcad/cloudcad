@@ -99,29 +99,55 @@
   top: 50%;
   left: 0;
   transform: translateY(-50%);
-  width: 24px;
-  height: 64px;
+  width: 36px;
+  padding: 8px 4px;
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-left: none;
   border-radius: 0 8px 8px 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  gap: 4px;
   z-index: 99;
   transition: all 0.2s ease;
 }
 
 .trigger:hover {
   background-color: #f9fafb;
-  width: 28px;
+  width: 40px;
 }
 
 .triggerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   color: #6b7280;
-  font-size: 12px;
+  background-color: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.triggerIcon:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.triggerIcon.active {
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
+.triggerDivider {
+  width: 20px;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 4px 0;
 }
 
 /* ==================== 宽度调整手柄 ==================== */
@@ -256,7 +282,14 @@
 /* ==================== 滑块 ==================== */
 
 .settingsSlider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
+}
+
+.settingsSlider input[type="range"] {
+  flex: 1;
   height: 6px;
   background-color: #e5e7eb;
   border-radius: 3px;
@@ -265,7 +298,7 @@
   -webkit-appearance: none;
 }
 
-.settingsSlider::-webkit-slider-thumb {
+.settingsSlider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
@@ -275,11 +308,11 @@
   transition: transform 0.15s ease;
 }
 
-.settingsSlider::-webkit-slider-thumb:hover {
+.settingsSlider input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.1);
 }
 
-.settingsSlider::-moz-range-thumb {
+.settingsSlider input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
   background-color: #3b82f6;
@@ -290,10 +323,10 @@
 
 .settingsSliderValue {
   display: inline-block;
-  margin-left: 12px;
   font-size: 13px;
   color: #6b7280;
   min-width: 50px;
+  text-align: right;
 }
 
 /* ==================== 复选框 ==================== */
