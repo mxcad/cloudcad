@@ -77,3 +77,8 @@ config-service-login.jpg
 
 # Test files
 test-sidebar.html
+
+# AI tool generated
+.agents/
+.qwen/
+runtime/cache/
