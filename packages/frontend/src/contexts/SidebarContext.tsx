@@ -10,7 +10,7 @@ import React, {
  * 侧边栏类型定义
  * 支持扩展：新增侧边栏只需在此添加类型
  */
-export type SidebarType = 'gallery' | 'collaborate';
+export type SidebarType = 'project' | 'gallery' | 'collaborate';
 
 /**
  * 侧边栏上下文类型
