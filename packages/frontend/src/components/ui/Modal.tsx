@@ -22,6 +22,15 @@ const sizeToMaxWidth: Record<string, string> = {
   full: 'max-w-4xl',
 };
 
+/**
+ * Modal 组件 - CloudCAD
+ * 
+ * 设计特色：
+ * - 支持主题变量适配深色/亮色主题
+ * - 毛玻璃遮罩效果
+ * - 流畅的进入/退出动画
+ * - 响应式尺寸支持
+ */
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -39,37 +48,113 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4 modal-enter"
       style={{ zIndex }}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* 遮罩层 - 使用主题变量 */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 transition-opacity duration-300"
+        style={{ 
+          background: 'var(--bg-overlay)',
+          backdropFilter: 'blur(4px)',
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onClose();
         }}
       />
+      
+      {/* 模态框内容 */}
       <div
-        className={`relative bg-white rounded-xl shadow-xl w-full ${effectiveMaxWidth} overflow-hidden transform transition-all scale-100`}
+        className={`relative w-full ${effectiveMaxWidth} overflow-hidden modal-content`}
+        style={{ 
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow-xl)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        {/* 头部 */}
+        <div 
+          className="flex items-center justify-between px-6 py-4"
+          style={{ 
+            borderBottom: '1px solid var(--border-default)',
+          }}
+        >
+          <h3 
+            className="text-lg font-semibold"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {title}
+          </h3>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+            style={{ 
+              color: 'var(--text-muted)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
           >
             <X size={20} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        
+        {/* 内容区域 */}
+        <div 
+          className="p-6"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {children}
+        </div>
+        
+        {/* 底部 */}
         {footer && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+          <div 
+            className="px-6 py-4 flex justify-end gap-3"
+            style={{ 
+              background: 'var(--bg-tertiary)',
+              borderTop: '1px solid var(--border-default)',
+            }}
+          >
             {footer}
           </div>
         )}
       </div>
+
+      <style>{`
+        .modal-enter {
+          animation: modalFadeIn 0.2s ease-out;
+        }
+        
+        .modal-content {
+          animation: modalScaleIn 0.25s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes modalScaleIn {
+          from { 
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+          }
+          to { 
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -121,17 +206,35 @@ export const PromptModal: React.FC<PromptModalProps> = ({
       }
     >
       <form onSubmit={handleSubmit}>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
+        <label 
+          className="block text-sm font-medium mb-2"
+          style={{ color: 'var(--text-secondary)' }}
+        >
           {label}
         </label>
         <input
           autoFocus
           type="text"
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full px-4 py-2.5 rounded-xl transition-all duration-200 outline-none"
+          style={{ 
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-primary)',
+          }}
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--primary-500)';
+            e.target.style.boxShadow = '0 0 0 3px var(--primary-100)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--border-default)';
+            e.target.style.boxShadow = 'none';
+          }}
         />
       </form>
     </Modal>
   );
 };
+
+export default Modal;
