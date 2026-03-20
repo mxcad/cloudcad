@@ -5,6 +5,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME } from '../constants/appConfig';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { AuthBackground } from '../components/AuthBackground';
 
 // Lucide 图标
 import MailIcon from 'lucide-react/dist/esm/icons/mail';
@@ -102,12 +103,7 @@ export const ResetPassword: React.FC = () => {
   if (success) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
-        <div className="auth-background">
-          <div className="gradient-orb orb-1" />
-          <div className="gradient-orb orb-2" />
-          <div className="gradient-orb orb-3" />
-          <div className="grid-overlay" />
-        </div>
+        <AuthBackground />
 
         <div className="theme-toggle-wrapper">
           <ThemeToggle />
@@ -129,13 +125,6 @@ export const ResetPassword: React.FC = () => {
 
         <style>{`
           .auth-page { min-height: 100vh; display: flex; position: relative; overflow: hidden; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-primary); }
-          .auth-background { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-          .gradient-orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; animation: float-orb 20s ease-in-out infinite; }
-          .orb-1 { width: 600px; height: 600px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); top: -200px; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-          .orb-2 { width: 400px; height: 400px; background: linear-gradient(135deg, var(--accent-400), var(--primary-400)); bottom: -100px; left: 20%; animation-delay: -7s; }
-          .orb-3 { width: 350px; height: 350px; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); bottom: -50px; right: 15%; animation-delay: -14s; }
-          @keyframes float-orb { 0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(30px, -30px) scale(1.05); } 50% { transform: translate(-20px, 20px) scale(0.95); } 75% { transform: translate(20px, 30px) scale(1.02); } }
-          .grid-overlay { position: absolute; inset: 0; background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.3; }
           .theme-toggle-wrapper { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; }
           .auth-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; position: relative; z-index: 1; min-height: 100vh; }
           .auth-card { width: 100%; max-width: 420px; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 24px; padding: 2.5rem; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; animation: card-appear 0.6s ease-out; }
@@ -154,12 +143,7 @@ export const ResetPassword: React.FC = () => {
 
   return (
     <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
-      <div className="auth-background">
-        <div className="gradient-orb orb-1" />
-        <div className="gradient-orb orb-2" />
-        <div className="gradient-orb orb-3" />
-        <div className="grid-overlay" />
-      </div>
+      <AuthBackground />
 
       <div className="theme-toggle-wrapper">
         <ThemeToggle />
@@ -325,13 +309,6 @@ export const ResetPassword: React.FC = () => {
 
       <style>{`
         .auth-page { min-height: 100vh; display: flex; position: relative; overflow: hidden; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-primary); }
-        .auth-background { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-        .gradient-orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; animation: float-orb 20s ease-in-out infinite; }
-        .orb-1 { width: 600px; height: 600px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); top: -200px; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-        .orb-2 { width: 400px; height: 400px; background: linear-gradient(135deg, var(--accent-400), var(--primary-400)); bottom: -100px; left: 20%; animation-delay: -7s; }
-        .orb-3 { width: 350px; height: 350px; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); bottom: -50px; right: 15%; animation-delay: -14s; }
-        @keyframes float-orb { 0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(30px, -30px) scale(1.05); } 50% { transform: translate(-20px, 20px) scale(0.95); } 75% { transform: translate(20px, 30px) scale(1.02); } }
-        .grid-overlay { position: absolute; inset: 0; background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.3; }
         .theme-toggle-wrapper { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; }
         .auth-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; position: relative; z-index: 1; min-height: 100vh; }
         .auth-card { width: 100%; max-width: 420px; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 24px; padding: 2.5rem; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; animation: card-appear 0.6s ease-out; }

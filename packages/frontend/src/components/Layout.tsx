@@ -15,6 +15,7 @@ import { formatFileSize } from '../utils/fileUtils';
 import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
+import { AuthBackground } from './AuthBackground';
 
 // Lucide 图标导入
 import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
@@ -241,7 +242,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }, [storageInfo]);
 
   return (
-    <div 
+    <div
       className="flex h-screen overflow-hidden font-[var(--font-family-base)]"
       style={{ background: 'var(--bg-primary)' }}
       onClick={() => {
@@ -249,6 +250,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         if (showUserMenu) setShowUserMenu(false);
       }}
     >
+      {/* 动态背景 */}
+      <AuthBackground />
       {/* 移动端侧边栏遮罩 */}
       {sidebarOpen && (
         <div
