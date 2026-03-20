@@ -1753,6 +1753,33 @@
         ]
       }
     },
+    "/api/users/stats/me": {
+      "get": {
+        "operationId": "UsersController_getDashboardStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取统计数据成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDashboardStatsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前用户仪表盘统计数据",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "operationId": "UsersController_findOne",
@@ -7960,6 +7987,95 @@
           "username"
         ]
       },
+      "FileTypeStatsDto": {
+        "type": "object",
+        "properties": {
+          "dwg": {
+            "type": "number",
+            "description": "DWG 文件数量"
+          },
+          "dxf": {
+            "type": "number",
+            "description": "DXF 文件数量"
+          },
+          "other": {
+            "type": "number",
+            "description": "其他文件数量"
+          }
+        },
+        "required": [
+          "dwg",
+          "dxf",
+          "other"
+        ]
+      },
+      "StorageInfoDto": {
+        "type": "object",
+        "properties": {
+          "used": {
+            "type": "number",
+            "description": "已使用空间（字节）"
+          },
+          "total": {
+            "type": "number",
+            "description": "总空间（字节）"
+          },
+          "remaining": {
+            "type": "number",
+            "description": "剩余空间（字节）"
+          },
+          "usagePercent": {
+            "type": "number",
+            "description": "使用率（百分比）"
+          }
+        },
+        "required": [
+          "used",
+          "total",
+          "remaining",
+          "usagePercent"
+        ]
+      },
+      "UserDashboardStatsDto": {
+        "type": "object",
+        "properties": {
+          "projectCount": {
+            "type": "number",
+            "description": "项目数量"
+          },
+          "totalFiles": {
+            "type": "number",
+            "description": "文件总数"
+          },
+          "todayUploads": {
+            "type": "number",
+            "description": "今日上传数量"
+          },
+          "fileTypeStats": {
+            "description": "文件类型统计",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FileTypeStatsDto"
+              }
+            ]
+          },
+          "storage": {
+            "description": "存储空间信息",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StorageInfoDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectCount",
+          "totalFiles",
+          "todayUploads",
+          "fileTypeStats",
+          "storage"
+        ]
+      },
       "UpdateUserDto": {
         "type": "object",
         "properties": {
@@ -9220,33 +9336,6 @@
         "required": [
           "fileName",
           "parentId"
-        ]
-      },
-      "StorageInfoDto": {
-        "type": "object",
-        "properties": {
-          "used": {
-            "type": "number",
-            "description": "已使用空间（字节）"
-          },
-          "total": {
-            "type": "number",
-            "description": "总空间（字节）"
-          },
-          "remaining": {
-            "type": "number",
-            "description": "剩余空间（字节）"
-          },
-          "usagePercent": {
-            "type": "number",
-            "description": "使用率（百分比）"
-          }
-        },
-        "required": [
-          "used",
-          "total",
-          "remaining",
-          "usagePercent"
         ]
       },
       "ProjectMemberDto": {

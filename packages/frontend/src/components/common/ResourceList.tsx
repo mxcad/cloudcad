@@ -19,6 +19,7 @@ import FileImage from 'lucide-react/dist/esm/icons/file-image';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import X from 'lucide-react/dist/esm/icons/x';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import styles from './ResourceList.module.css';
 
 /** 视图类型 */
@@ -92,6 +93,10 @@ interface ResourceListProps {
   onLoadMore?: () => void;
   /** 面包屑（显示在搜索框上方） */
   breadcrumb?: React.ReactNode;
+  /** 是否显示删除按钮 */
+  showDelete?: boolean;
+  /** 删除回调 */
+  onItemDelete?: (item: ResourceItem) => void;
 }
 
 /** 格式化文件大小 */
@@ -323,7 +328,15 @@ const CascadeCategorySelector: React.FC<{
 const ListItem: React.FC<{
   item: ResourceItem;
   onClick: () => void;
-}> = ({ item, onClick }) => {
+  showDelete?: boolean;
+  onDelete?: () => void;
+}> = ({ item, onClick, showDelete, onDelete }) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete?.();
+  };
+
   return (
     <div
       className={`${styles.listItem} ${item.isActive ? styles.active : ''}`}
@@ -364,6 +377,15 @@ const ListItem: React.FC<{
           ))}
         </div>
       </div>
+      {showDelete && onDelete && (
+        <button
+          className={styles.deleteButton}
+          onClick={handleDeleteClick}
+          title="删除"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
       {item.type === 'folder' && (
         <ChevronRight size={16} className={styles.itemArrow} />
       )}
@@ -375,8 +397,16 @@ const ListItem: React.FC<{
 const GridItem: React.FC<{
   item: ResourceItem;
   onClick: () => void;
-}> = ({ item, onClick }) => {
+  showDelete?: boolean;
+  onDelete?: () => void;
+}> = ({ item, onClick, showDelete, onDelete }) => {
   const [imageError, setImageError] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete?.();
+  };
 
   return (
     <div
@@ -402,6 +432,15 @@ const GridItem: React.FC<{
         )}
         {item.badge && (
           <div className={styles.gridBadge}>{item.badge}</div>
+        )}
+        {showDelete && onDelete && (
+          <button
+            className={styles.gridDeleteButton}
+            onClick={handleDeleteClick}
+            title="删除"
+          >
+            <Trash2 size={14} />
+          </button>
         )}
       </div>
       <div className={styles.gridItemInfo}>
@@ -443,6 +482,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   hasMore = false,
   onLoadMore,
   breadcrumb,
+  showDelete = false,
+  onItemDelete,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -556,6 +597,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                 key={item.id}
                 item={item}
                 onClick={() => onItemClick(item)}
+                showDelete={showDelete}
+                onDelete={onItemDelete ? () => onItemDelete(item) : undefined}
               />
             ))}
           </div>
@@ -566,6 +609,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                 key={item.id}
                 item={item}
                 onClick={() => onItemClick(item)}
+                showDelete={showDelete}
+                onDelete={onItemDelete ? () => onItemDelete(item) : undefined}
               />
             ))}
           </div>

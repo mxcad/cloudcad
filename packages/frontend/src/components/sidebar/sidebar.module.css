@@ -224,9 +224,13 @@
 /* 子 Tab 栏 */
 .subTabBar {
   display: flex;
-  gap: 0;
-  padding: 0 12px;
-  background-color: var(--bg-secondary);
+  gap: 4px;
+  padding: 8px 12px;
+  background: linear-gradient(
+    180deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
   border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
   container-type: inline-size;
@@ -234,7 +238,11 @@
 }
 
 [data-theme="dark"] .subTabBar {
-  background: var(--sidebar-bg, #212832);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    var(--sidebar-bg, #212832) 100%
+  );
   border-bottom-color: var(--sidebar-border, #3A4352);
 }
 
@@ -243,42 +251,79 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 12px 14px;
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
-  background-color: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex: 1;
   min-width: 0;
   position: relative;
+  overflow: hidden;
 }
 
 [data-theme="dark"] .subTab {
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* 子Tab悬停效果 */
+.subTab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(99, 102, 241, 0.02) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+}
+
+.subTab:hover::before {
+  opacity: 1;
+}
+
 .subTab:hover {
   color: var(--text-secondary);
   background-color: var(--bg-tertiary);
+  border-color: var(--border-default);
+  transform: translateY(-1px);
 }
 
 [data-theme="dark"] .subTab:hover {
-  color: rgba(255, 255, 255, 0.7);
-  background-color: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .subTab.active {
-  color: var(--primary-500);
-  border-bottom-color: var(--primary-500);
+  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
+  border-color: transparent;
+  box-shadow: 
+    0 2px 8px rgba(99, 102, 241, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] .subTab.active {
-  color: #60a5fa;
-  border-bottom-color: #60a5fa;
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.9) 0%,
+    rgba(59, 130, 246, 0.9) 100%
+  );
+  box-shadow: 
+    0 2px 8px rgba(96, 165, 250, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* 子 Tab 图标 */
@@ -286,11 +331,15 @@
   flex-shrink: 0;
   width: 14px;
   height: 14px;
-  transition: transform 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .subTab:hover svg {
-  transform: scale(1.1);
+  transform: scale(1.1) rotate(-3deg);
+}
+
+.subTab.active svg {
+  transform: scale(1.05);
 }
 
 .subTab span {
@@ -702,7 +751,7 @@
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 2px;
   padding: 10px 16px;
   background: linear-gradient(
     90deg,
@@ -715,49 +764,90 @@
 }
 
 [data-theme="dark"] .breadcrumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
   border-bottom-color: var(--sidebar-border, #3A4352);
 }
 
 .breadcrumbItem {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
+  gap: 4px;
+  padding: 5px 10px;
   color: var(--text-tertiary);
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+  position: relative;
 }
 
 [data-theme="dark"] .breadcrumbItem {
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* 面包屑项悬停效果 */
+.breadcrumbItem::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(99, 102, 241, 0.02) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+}
+
+.breadcrumbItem:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
 .breadcrumbItem:hover:not(:disabled) {
   color: var(--primary-500);
   background-color: var(--primary-50);
+  border-color: var(--primary-200);
+  transform: translateY(-1px);
 }
 
 [data-theme="dark"] .breadcrumbItem:hover:not(:disabled) {
   color: #60a5fa;
-  background-color: rgba(96, 165, 250, 0.1);
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.2);
 }
 
 .breadcrumbItem.active {
   color: var(--text-primary);
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 100%
+  );
+  border-color: var(--border-default);
   font-weight: 600;
   cursor: default;
+  box-shadow: var(--shadow-sm);
 }
 
 [data-theme="dark"] .breadcrumbItem.active {
   color: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .breadcrumbItem:disabled {
@@ -765,13 +855,19 @@
 }
 
 .breadcrumbSeparator {
-  color: var(--border-strong);
+  color: var(--text-muted);
   flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.4;
+  transition: all 0.2s ease;
 }
 
 [data-theme="dark"] .breadcrumbSeparator {
-  color: var(--sidebar-border, #3A4352);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* 悬停时分隔符高亮 */
+.breadcrumb:hover .breadcrumbSeparator {
+  opacity: 0.6;
 }
 
 /* ============================================
@@ -786,47 +882,87 @@
   margin: 2px 8px;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 悬停光效 */
+.folderItem::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.05) 0%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.folderItem:hover::before {
+  opacity: 1;
 }
 
 .folderItem:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--border-default);
-  transform: translateX(2px);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
 }
 
 [data-theme="dark"] .folderItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--sidebar-border, #3A4352);
+  background: linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.08) 0%,
+    rgba(245, 158, 11, 0.02) 100%
+  );
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 .folderIcon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: linear-gradient(
     135deg,
-    var(--warning-dim) 0%,
-    rgba(245, 158, 11, 0.2) 100%
+    rgba(245, 158, 11, 0.15) 0%,
+    rgba(245, 158, 11, 0.08) 100%
   );
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
 }
 
 [data-theme="dark"] .folderIcon {
   background: linear-gradient(
     135deg,
-    rgba(245, 158, 11, 0.15) 0%,
-    rgba(245, 158, 11, 0.25) 100%
+    rgba(245, 158, 11, 0.2) 0%,
+    rgba(245, 158, 11, 0.1) 100%
   );
+  border-color: rgba(245, 158, 11, 0.15);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .folderItem:hover .folderIcon {
-  transform: scale(1.05);
+  transform: scale(1.08) rotate(-3deg);
+  box-shadow: 
+    0 4px 12px rgba(245, 158, 11, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .folderItem:hover .folderIcon {
+  box-shadow: 
+    0 4px 12px rgba(245, 158, 11, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .folderInfo {
@@ -836,25 +972,43 @@
 
 .folderName {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+
+.folderItem:hover .folderName {
+  color: var(--warning);
 }
 
 [data-theme="dark"] .folderName {
   color: rgba(255, 255, 255, 0.9);
 }
 
+[data-theme="dark"] .folderItem:hover .folderName {
+  color: #fbbf24;
+}
+
 .folderMeta {
   font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+  transition: color 0.2s ease;
+}
+
+.folderItem:hover .folderMeta {
+  color: var(--text-secondary);
 }
 
 [data-theme="dark"] .folderMeta {
   color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="dark"] .folderItem:hover .folderMeta {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ============================================
@@ -1374,8 +1528,28 @@
   margin: 2px 8px;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 悬停光效 */
+.projectItem::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.06) 0%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.projectItem:hover::before {
+  opacity: 1;
 }
 
 .projectItem:hover {
@@ -1386,9 +1560,15 @@
 }
 
 [data-theme="dark"] .projectItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--sidebar-border, #3A4352);
-  box-shadow: none;
+  background: linear-gradient(
+    90deg,
+    rgba(96, 165, 250, 0.08) 0%,
+    rgba(96, 165, 250, 0.02) 100%
+  );
+  border-color: rgba(96, 165, 250, 0.2);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .projectItem:last-child {
@@ -1408,21 +1588,36 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
-  border: 1px solid var(--border-default);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--primary-200);
+  box-shadow: 
+    0 2px 8px rgba(99, 102, 241, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 [data-theme="dark"] .projectIcon {
   background: linear-gradient(
     135deg,
-    rgba(96, 165, 250, 0.12) 0%,
-    rgba(96, 165, 250, 0.2) 100%
+    rgba(96, 165, 250, 0.15) 0%,
+    rgba(96, 165, 250, 0.08) 100%
   );
-  border-color: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.2);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .projectItem:hover .projectIcon {
-  transform: scale(1.05);
+  transform: scale(1.08) rotate(2deg);
+  box-shadow: 
+    0 4px 12px rgba(99, 102, 241, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="dark"] .projectItem:hover .projectIcon {
+  box-shadow: 
+    0 4px 12px rgba(96, 165, 250, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .projectInfo {
@@ -1432,25 +1627,43 @@
 
 .projectName {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+
+.projectItem:hover .projectName {
+  color: var(--primary-600);
 }
 
 [data-theme="dark"] .projectName {
   color: rgba(255, 255, 255, 0.9);
 }
 
+[data-theme="dark"] .projectItem:hover .projectName {
+  color: #60a5fa;
+}
+
 .projectMeta {
   font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+  transition: color 0.2s ease;
+}
+
+.projectItem:hover .projectMeta {
+  color: var(--text-secondary);
 }
 
 [data-theme="dark"] .projectMeta {
   color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="dark"] .projectItem:hover .projectMeta {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ============================================

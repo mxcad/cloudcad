@@ -7,7 +7,6 @@ import { usersApi } from '../services/usersApi';
 import { authApi } from '../services/authApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
-import { AuthBackground } from '../components/AuthBackground';
 import { formatDateTime } from '../utils/dateUtils';
 
 // 导入 lucide 图标
@@ -221,9 +220,6 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="profile-page" data-theme={isDark ? 'dark' : 'light'}>
-      {/* 动态背景 */}
-      <AuthBackground />
-
       {/* 返回按钮 */}
       <button 
         className="back-button"
@@ -650,7 +646,7 @@ export const Profile: React.FC = () => {
           position: relative;
           overflow: hidden;
           font-family: var(--font-family-base);
-          background: var(--bg-primary);
+          background: transparent;
           padding: 2rem;
         }
 

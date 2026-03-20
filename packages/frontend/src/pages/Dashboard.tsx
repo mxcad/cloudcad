@@ -1,30 +1,26 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { projectsApi } from '../services/projectsApi';
-import type { ProjectDto, StorageInfoDto, FileSystemNodeDto } from '../types/api-client';
+import { usersApi } from '../services/usersApi';
+import type { ProjectDto, FileSystemNodeDto, UserDashboardStatsDto } from '../types/api-client';
 import { formatFileSize, formatRelativeTime } from '../utils/fileUtils';
 import { APP_NAME } from '../constants/appConfig';
+import { ProjectModal } from '../components/modals/ProjectModal';
 
 // Lucide 图标
 import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Users from 'lucide-react/dist/esm/icons/users';
 import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
-import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
-import Activity from 'lucide-react/dist/esm/icons/activity';
 import Layers from 'lucide-react/dist/esm/icons/layers';
-import Star from 'lucide-react/dist/esm/icons/star';
-import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
 import Upload from 'lucide-react/dist/esm/icons/upload';
-import Search from 'lucide-react/dist/esm/icons/search';
-import Cpu from 'lucide-react/dist/esm/icons/cpu';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
 /**
  * 仪表盘页面 - CloudCAD 登录后首页
@@ -176,16 +172,23 @@ const QuickAction: React.FC<QuickActionProps> = ({ icon: Icon, label, color, onC
 export const Dashboard: React.FC = () => {
   useDocumentTitle('仪表盘');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isDark } = useTheme();
   
   // 数据状态
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [personalFiles, setPersonalFiles] = useState<FileSystemNodeDto[]>([]);
-  const [storageInfo, setStorageInfo] = useState<StorageInfoDto | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<UserDashboardStatsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('');
+  
+  // 项目创建弹框状态
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [projectFormData, setProjectFormData] = useState({ name: '', description: '' });
+  const [projectCreating, setProjectCreating] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   
   // 计算问候语
   useEffect(() => {
@@ -198,6 +201,51 @@ export const Dashboard: React.FC = () => {
     else setGreeting('晚上好');
   }, []);
   
+  // 检测 URL 参数，自动打开创建弹框
+  useEffect(() => {
+    if (searchParams.get('action') === 'create-project') {
+      setIsProjectModalOpen(true);
+      // 清除 URL 参数
+      navigate('/dashboard', { replace: true });
+    }
+  }, [searchParams, navigate]);
+  
+  // 创建项目
+  const handleCreateProject = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectFormData.name.trim()) return;
+    
+    setProjectCreating(true);
+    try {
+      const response = await projectsApi.create({
+        name: projectFormData.name.trim(),
+        description: projectFormData.description.trim() || undefined,
+      });
+      
+      // 关闭弹框，重置表单
+      setIsProjectModalOpen(false);
+      setProjectFormData({ name: '', description: '' });
+      
+      // 显示成功提示
+      setCreateSuccess(response.data?.name || projectFormData.name);
+      setTimeout(() => setCreateSuccess(null), 3000);
+      
+      // 刷新项目列表
+      const projectsRes = await projectsApi.list();
+      if (projectsRes.data?.projects) {
+        const sortedProjects = projectsRes.data.projects
+          .filter((p: ProjectDto) => p.status !== 'DELETED')
+          .sort((a: ProjectDto, b: ProjectDto) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        setProjects(sortedProjects);
+      }
+    } catch (err) {
+      console.error('创建项目失败:', err);
+      setError('创建项目失败，请重试');
+    } finally {
+      setProjectCreating(false);
+    }
+  }, [projectFormData]);
+  
   // 加载真实数据
   useEffect(() => {
     const loadData = async () => {
@@ -206,9 +254,9 @@ export const Dashboard: React.FC = () => {
       
       try {
         // 并行加载多个数据源
-        const [projectsRes, storageRes, personalSpaceRes] = await Promise.all([
+        const [projectsRes, statsRes, personalSpaceRes] = await Promise.all([
           projectsApi.list(),
-          projectsApi.getStorageInfo(),
+          usersApi.getDashboardStats(),
           projectsApi.getPersonalSpace().catch(() => null), // 私人空间可能不存在
         ]);
         
@@ -220,14 +268,14 @@ export const Dashboard: React.FC = () => {
           setProjects(sortedProjects);
         }
         
-        // 处理存储信息
-        if (storageRes.data) {
-          setStorageInfo(storageRes.data);
+        // 处理统计数据
+        if (statsRes.data) {
+          setDashboardStats(statsRes.data);
         }
         
         // 处理个人空间文件
         if (personalSpaceRes?.data?.id) {
-          const childrenRes = await projectsApi.getChildren(personalSpaceRes.data.id, { limit: 5 });
+          const childrenRes = await projectsApi.getChildren(personalSpaceRes.data.id, { limit: 10 });
           if (childrenRes.data?.nodes) {
             setPersonalFiles(childrenRes.data.nodes);
           }
@@ -245,19 +293,32 @@ export const Dashboard: React.FC = () => {
   
   // 统计数据
   const stats = useMemo(() => {
-    const totalFiles = personalFiles.length;
-    const totalProjects = projects.length;
-    const storageUsed = storageInfo ? formatFileSize(storageInfo.used) : '-';
-    const storageTotal = storageInfo ? formatFileSize(storageInfo.total) : '-';
+    if (!dashboardStats) {
+      return {
+        projects: 0,
+        files: 0,
+        todayUploads: 0,
+        storage: '-',
+        storageTotal: '-',
+        usagePercent: 0,
+        dwgFiles: 0,
+        dxfFiles: 0,
+        otherFiles: 0,
+      };
+    }
     
     return {
-      projects: totalProjects,
-      files: totalFiles,
-      storage: storageUsed,
-      storageTotal,
-      usagePercent: storageInfo?.usagePercent || 0,
+      projects: dashboardStats.projectCount,
+      files: dashboardStats.totalFiles,
+      todayUploads: dashboardStats.todayUploads,
+      storage: formatFileSize(dashboardStats.storage.used),
+      storageTotal: formatFileSize(dashboardStats.storage.total),
+      usagePercent: dashboardStats.storage.usagePercent,
+      dwgFiles: dashboardStats.fileTypeStats.dwg,
+      dxfFiles: dashboardStats.fileTypeStats.dxf,
+      otherFiles: dashboardStats.fileTypeStats.other,
     };
-  }, [projects, personalFiles, storageInfo]);
+  }, [dashboardStats]);
   
   const userName = user?.nickname || user?.username || '用户';
   
@@ -295,7 +356,7 @@ export const Dashboard: React.FC = () => {
           {/* 快捷操作按钮 */}
           <div className="flex gap-3">
             <button
-              onClick={() => navigate('/projects')}
+              onClick={() => setIsProjectModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm text-white transition-all duration-200 hover:shadow-lg"
               style={{
                 background: 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
@@ -306,7 +367,7 @@ export const Dashboard: React.FC = () => {
               新建项目
             </button>
             <button
-              onClick={() => navigate('/personal-space')}
+              onClick={() => navigate('/personal-space?action=upload')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 hover:shadow-md"
               style={{
                 background: 'var(--bg-secondary)',
@@ -335,6 +396,20 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
       
+      {/* 成功提示 */}
+      {createSuccess && (
+        <div 
+          className="flex items-center gap-3 p-4 rounded-xl mb-6"
+          style={{ 
+            background: 'var(--success-light, rgba(34, 197, 94, 0.1))',
+            border: '1px solid var(--success-dim, rgba(34, 197, 94, 0.3))'
+          }}
+        >
+          <CheckCircle size={20} style={{ color: '#22c55e' }} />
+          <span className="text-sm" style={{ color: '#22c55e' }}>项目「{createSuccess}」创建成功！</span>
+        </div>
+      )}
+      
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
@@ -349,10 +424,18 @@ export const Dashboard: React.FC = () => {
         <StatCard
           title="图纸文件"
           value={stats.files}
-          subtitle="个人空间"
+          subtitle={`DWG ${stats.dwgFiles} / DXF ${stats.dxfFiles}`}
           icon={FileText}
           color="var(--accent-500)"
           onClick={() => navigate('/personal-space')}
+          loading={loading}
+        />
+        <StatCard
+          title="今日上传"
+          value={stats.todayUploads}
+          subtitle="个文件"
+          icon={Upload}
+          color="#8b5cf6"
           loading={loading}
         />
         <StatCard
@@ -360,14 +443,6 @@ export const Dashboard: React.FC = () => {
           value={stats.storage}
           subtitle={`共 ${stats.storageTotal}`}
           icon={HardDrive}
-          color="#22c55e"
-          loading={loading}
-        />
-        <StatCard
-          title="存储使用率"
-          value={`${stats.usagePercent.toFixed(1)}%`}
-          subtitle={stats.usagePercent > 90 ? '空间不足' : '空间充足'}
-          icon={Activity}
           color={stats.usagePercent > 90 ? '#ef4444' : '#22c55e'}
           loading={loading}
         />
@@ -414,7 +489,15 @@ export const Dashboard: React.FC = () => {
                   <FileItem
                     key={file.id}
                     file={file}
-                    onClick={() => navigate(`/personal-space/${file.id}`)}
+                    onClick={() => {
+                      if (file.isFolder) {
+                        // 文件夹：跳转到目录
+                        navigate(`/personal-space/${file.id}`);
+                      } else {
+                        // 文件：直接打开编辑器
+                        navigate(`/cad-editor/${file.id}`);
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -511,95 +594,32 @@ export const Dashboard: React.FC = () => {
                 icon={Plus}
                 label="新建项目"
                 color="var(--primary-500)"
-                onClick={() => navigate('/projects')}
+                onClick={() => setIsProjectModalOpen(true)}
               />
               <QuickAction
                 icon={Upload}
                 label="上传图纸"
                 color="var(--accent-500)"
-                onClick={() => navigate('/personal-space')}
-              />
-              <QuickAction
-                icon={Search}
-                label="查找图纸"
-                color="#8b5cf6"
-                onClick={() => navigate('/projects')}
-              />
-              <QuickAction
-                icon={Star}
-                label="收藏夹"
-                color="#f59e0b"
-                onClick={() => navigate('/projects')}
+                onClick={() => navigate('/personal-space?action=upload')}
               />
             </div>
-          </div>
-          
-          {/* 存储空间详情 */}
-          <div 
-            className="rounded-2xl p-5"
-            style={{ 
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)'
-            }}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <HardDrive size={18} style={{ color: 'var(--text-tertiary)' }} />
-              <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                存储空间
-              </h3>
-            </div>
-            
-            {loading ? (
-              <div className="space-y-3">
-                <div className="h-4 rounded-lg skeleton-theme" />
-                <div className="h-2 rounded-full skeleton-theme" />
-              </div>
-            ) : storageInfo ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                    {formatFileSize(storageInfo.used)}
-                  </span>
-                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    / {formatFileSize(storageInfo.total)}
-                  </span>
-                </div>
-                
-                {/* 进度条 */}
-                <div 
-                  className="h-2 rounded-full overflow-hidden mb-3"
-                  style={{ background: 'var(--bg-tertiary)' }}
-                >
-                  <div 
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${Math.min(storageInfo.usagePercent, 100)}%`,
-                      background: storageInfo.usagePercent > 90 
-                        ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                        : storageInfo.usagePercent > 70
-                          ? 'linear-gradient(90deg, #f59e0b, #d97706)'
-                          : 'linear-gradient(90deg, #22c55e, #16a34a)'
-                    }}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between text-xs">
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    已用 {storageInfo.usagePercent.toFixed(1)}%
-                  </span>
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    剩余 {formatFileSize(storageInfo.remaining)}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                无法加载存储信息
-              </p>
-            )}
           </div>
         </div>
       </div>
+      
+      {/* 项目创建弹框 */}
+      <ProjectModal
+        isOpen={isProjectModalOpen}
+        editingProject={null}
+        formData={projectFormData}
+        loading={projectCreating}
+        onClose={() => {
+          setIsProjectModalOpen(false);
+          setProjectFormData({ name: '', description: '' });
+        }}
+        onFormDataChange={setProjectFormData}
+        onSubmit={handleCreateProject}
+      />
     </div>
   );
 };

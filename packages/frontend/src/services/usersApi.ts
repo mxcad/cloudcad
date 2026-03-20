@@ -42,4 +42,6 @@ export const usersApi = {
 
   changePassword: (data: ChangePasswordDto) =>
     getApiClient().UsersController_changePassword(null, data),
+
+  getDashboardStats: () => getApiClient().UsersController_getDashboardStats(),
 };

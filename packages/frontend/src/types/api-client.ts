@@ -952,6 +952,20 @@ declare namespace Components {
              */
             childrenCount?: number;
         }
+        export interface FileTypeStatsDto {
+            /**
+             * DWG 文件数量
+             */
+            dwg: number;
+            /**
+             * DXF 文件数量
+             */
+            dxf: number;
+            /**
+             * 其他文件数量
+             */
+            other: number;
+        }
         export interface ForgotPasswordApiResponseDto {
             /**
              * 响应状态码
@@ -2360,6 +2374,58 @@ declare namespace Components {
              * 提示消息
              */
             message: string;
+        }
+        export interface UserDashboardStatsDto {
+            /**
+             * 项目数量
+             */
+            projectCount: number;
+            /**
+             * 文件总数
+             */
+            totalFiles: number;
+            /**
+             * 今日上传数量
+             */
+            todayUploads: number;
+            /**
+             * 文件类型统计
+             */
+            fileTypeStats: {
+                /**
+                 * DWG 文件数量
+                 */
+                dwg: number;
+                /**
+                 * DXF 文件数量
+                 */
+                dxf: number;
+                /**
+                 * 其他文件数量
+                 */
+                other: number;
+            };
+            /**
+             * 存储空间信息
+             */
+            storage: {
+                /**
+                 * 已使用空间（字节）
+                 */
+                used: number;
+                /**
+                 * 总空间（字节）
+                 */
+                total: number;
+                /**
+                 * 剩余空间（字节）
+                 */
+                remaining: number;
+                /**
+                 * 使用率（百分比）
+                 */
+                usagePercent: number;
+            };
         }
         export interface UserDto {
             /**
@@ -4757,6 +4823,11 @@ declare namespace Paths {
             }
         }
     }
+    namespace UsersControllerGetDashboardStats {
+        namespace Responses {
+            export type $200 = Components.Schemas.UserDashboardStatsDto;
+        }
+    }
     namespace UsersControllerGetProfile {
         namespace Responses {
             export type $200 = Components.Schemas.UserProfileResponseDto;
@@ -5309,6 +5380,14 @@ export interface OperationMethods {
     data?: Paths.UsersControllerUpdateProfile.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerUpdateProfile.Responses.$200>
+  /**
+   * UsersController_getDashboardStats - 获取当前用户仪表盘统计数据
+   */
+  'UsersController_getDashboardStats'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UsersControllerGetDashboardStats.Responses.$200>
   /**
    * UsersController_findOne - 根据 ID 获取用户
    */
@@ -6834,6 +6913,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerUpdateProfile.Responses.$200>
   }
+  ['/api/users/stats/me']: {
+    /**
+     * UsersController_getDashboardStats - 获取当前用户仪表盘统计数据
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UsersControllerGetDashboardStats.Responses.$200>
+  }
   ['/api/users/{id}']: {
     /**
      * UsersController_findOne - 根据 ID 获取用户
@@ -8071,6 +8160,7 @@ export type ExternalReferenceStatsDto = Components.Schemas.ExternalReferenceStat
 export type FileContentResponseDto = Components.Schemas.FileContentResponseDto;
 export type FileExistResponseDto = Components.Schemas.FileExistResponseDto;
 export type FileSystemNodeDto = Components.Schemas.FileSystemNodeDto;
+export type FileTypeStatsDto = Components.Schemas.FileTypeStatsDto;
 export type ForgotPasswordApiResponseDto = Components.Schemas.ForgotPasswordApiResponseDto;
 export type ForgotPasswordDto = Components.Schemas.ForgotPasswordDto;
 export type ForgotPasswordResponseDto = Components.Schemas.ForgotPasswordResponseDto;
@@ -8134,6 +8224,7 @@ export type UploadThumbnailDataDto = Components.Schemas.UploadThumbnailDataDto;
 export type UploadThumbnailDto = Components.Schemas.UploadThumbnailDto;
 export type UploadThumbnailResponseDto = Components.Schemas.UploadThumbnailResponseDto;
 export type UserCacheClearResponseDto = Components.Schemas.UserCacheClearResponseDto;
+export type UserDashboardStatsDto = Components.Schemas.UserDashboardStatsDto;
 export type UserDto = Components.Schemas.UserDto;
 export type UserListResponseDto = Components.Schemas.UserListResponseDto;
 export type UserPermissionInfoDto = Components.Schemas.UserPermissionInfoDto;

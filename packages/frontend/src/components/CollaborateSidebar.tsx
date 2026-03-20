@@ -2,8 +2,9 @@
 // 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 // 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
-// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// The code, documentation and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications containing this software must include the following copyright statement
 // 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation or related materials
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -11,21 +12,24 @@ import Users from 'lucide-react/dist/esm/icons/users';
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import React, { useCallback, useEffect, useState } from 'react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
+import styles from './CollaborateSidebar.module.css';
 
 /**
  * 协同侧边栏组件
  * 提供协同功能的创建、加入、退出和列表展示
- * 
- * 主题适配：使用 CSS 变量，支持深色/亮色主题
- * CloudCAD 完美主题系统 2.0
+ *
+ * 主题适配：完美主题系统 2.0
+ * - 深色主题：Midnight Engineering
+ * - 亮色主题：Daylight Clarity
  */
 export const CollaborateSidebar: React.FC = () => {
   const { showToast } = useNotification();
-  
+
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
     cooperate.init({
@@ -161,202 +165,139 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, [fetchWorks, showToast]);
 
+  // 计算会话数量
+  const sessionCount = useMemo(() => works.length, [works]);
+
   return (
-    <>
-      {/* 侧边栏 - 使用主题 CSS 变量 */}
-      <div
-        className="flex flex-col w-full h-full transition-all duration-200 ease-in-out"
-        style={{
-          backgroundColor: 'var(--sidebar-bg, #3A4352)',
-          color: 'var(--text-primary, #f0f4f8)'
-        }}
-      >
-        {/* 标题栏 */}
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{
-            borderBottom: '1px solid var(--sidebar-border, #212832)'
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <Users
-              className="w-5 h-5"
-              style={{ color: 'var(--primary-500, #818cf8)' }}
-            />
-            <span
-              className="font-semibold text-sm"
-              style={{ color: 'var(--text-primary, #f0f4f8)' }}
-            >
-              协同
+    <div className={styles.container}>
+      {/* 标题栏 */}
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerIcon}>
+            <Users size={18} />
+          </div>
+          <span className={styles.headerTitle}>协同</span>
+          {sessionCount > 0 && (
+            <span className={styles.headerBadge}>
+              {sessionCount} 个会话
             </span>
-          </div>
-        </div>
-
-        {/* 操作按钮 */}
-        <div
-          className="flex gap-2 p-3"
-          style={{
-            borderBottom: '1px solid var(--sidebar-border, #212832)'
-          }}
-        >
-          <button
-            onClick={handleCreateWork}
-            disabled={creating || currentWorkId !== null}
-            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-all"
-            style={{
-              background: creating || currentWorkId !== null
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'linear-gradient(135deg, var(--primary-600, #a5b4fc), var(--primary-500, #818cf8))',
-              color: creating || currentWorkId !== null
-                ? 'var(--text-muted, #5a6a7a)'
-                : 'white',
-              cursor: creating || currentWorkId !== null ? 'not-allowed' : 'pointer',
-              boxShadow: creating || currentWorkId !== null
-                ? 'none'
-                : '0 2px 8px rgba(0, 0, 0, 0.2)'
-            }}
-          >
-            {creating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <UserPlus className="w-4 h-4" />
-            )}
-            {creating ? '创建中...' : '创建协同'}
-          </button>
-
-          <button
-            onClick={fetchWorks}
-            disabled={loading}
-            className="p-2 rounded transition-colors"
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              color: 'var(--text-tertiary, #7a8a99)'
-            }}
-            title="刷新列表"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              style={{ color: 'var(--text-tertiary, #7a8a99)' }}
-            />
-          </button>
-        </div>
-
-        {/* 当前协同状态 */}
-        {currentWorkId !== null && (
-          <div
-            className="px-3 py-2"
-            style={{
-              borderBottom: '1px solid var(--sidebar-border, #212832)',
-              backgroundColor: 'rgba(99, 102, 241, 0.1)'
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: 'var(--success, #22c55e)' }}
-                />
-                <span className="text-sm" style={{ color: 'var(--text-primary, #f0f4f8)' }}>
-                  当前协同: <strong>{currentWorkId}</strong>
-                </span>
-              </div>
-              <button
-                onClick={handleExitWork}
-                className="px-2 py-1 text-xs rounded transition-colors"
-                style={{
-                  backgroundColor: 'var(--error, #ef4444)',
-                  color: 'white'
-                }}
-              >
-                退出
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 协同列表 */}
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 
-                className="w-6 h-6 animate-spin" 
-                style={{ color: 'var(--primary-500)' }} 
-              />
-            </div>
-          ) : works.length === 0 ? (
-            <div 
-              className="flex flex-col items-center justify-center py-8"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              <Users className="w-10 h-10 mb-2 opacity-50" />
-              <p className="text-xs text-center px-4">暂无协同会话</p>
-              <p className="text-xs text-center px-4 mt-1">
-                点击「创建协同」开始协作
-              </p>
-            </div>
-          ) : (
-            <div className="p-2 space-y-2">
-              {works.map((workId) => (
-                <div
-                  key={workId}
-                  className="flex items-center justify-between p-3 rounded transition-colors"
-                  style={{
-                    backgroundColor: currentWorkId === workId
-                      ? 'rgba(99, 102, 241, 0.1)'
-                      : 'rgba(255, 255, 255, 0.03)',
-                    border: currentWorkId === workId
-                      ? '1px solid rgba(99, 102, 241, 0.3)'
-                      : '1px solid transparent'
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Users
-                      className="w-4 h-4"
-                      style={{ color: 'var(--text-tertiary, #7a8a99)' }}
-                    />
-                    <span
-                      className="text-sm"
-                      style={{ color: 'var(--text-primary, #f0f4f8)' }}
-                    >
-                      协同 {workId}
-                    </span>
-                  </div>
-                  {currentWorkId === workId ? (
-                    <span
-                      className="text-xs"
-                      style={{ color: 'var(--success, #22c55e)' }}
-                    >
-                      已加入
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleJoinWork(workId)}
-                      disabled={joiningWorkId !== null || currentWorkId !== null}
-                      className="px-2 py-1 text-xs rounded transition-all"
-                      style={{
-                        background: joiningWorkId === workId || joiningWorkId !== null || currentWorkId !== null
-                          ? 'rgba(255, 255, 255, 0.05)'
-                          : 'linear-gradient(135deg, var(--primary-600, #a5b4fc), var(--primary-500, #818cf8))',
-                        color: joiningWorkId === workId || joiningWorkId !== null || currentWorkId !== null
-                          ? 'var(--text-muted, #5a6a7a)'
-                          : 'white',
-                        cursor: joiningWorkId !== null || currentWorkId !== null ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {joiningWorkId === workId ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        '加入'
-                      )}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
           )}
         </div>
       </div>
-    </>
+
+      {/* 操作按钮区 */}
+      <div className={styles.actionsBar}>
+        <button
+          onClick={handleCreateWork}
+          disabled={creating || currentWorkId !== null}
+          className={`${styles.primaryButton} ${styles.ripple}`}
+        >
+          {creating ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <UserPlus size={16} />
+          )}
+          <span>{creating ? '创建中...' : '创建协同'}</span>
+        </button>
+
+        <button
+          onClick={fetchWorks}
+          disabled={loading}
+          className={`${styles.iconButton} ${styles.ripple}`}
+          title="刷新列表"
+        >
+          <RefreshCw
+            size={18}
+            className={loading ? 'animate-spin' : ''}
+          />
+        </button>
+      </div>
+
+      {/* 当前协同状态 */}
+      {currentWorkId !== null && (
+        <div className={styles.currentSession}>
+          <div className={styles.sessionInfo}>
+            <div className={styles.sessionLeft}>
+              <div className={styles.statusIndicator}>
+                <div className={styles.statusDot} />
+              </div>
+              <span className={styles.sessionLabel}>
+                当前协同: <span className={styles.sessionId}>{currentWorkId}</span>
+              </span>
+            </div>
+            <button
+              onClick={handleExitWork}
+              className={`${styles.exitButton} ${styles.ripple}`}
+            >
+              退出
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 协同列表 */}
+      <div className={styles.sessionList}>
+        {loading ? (
+          <div className={styles.loadingState}>
+            <div className={styles.loadingSpinner} />
+            <span className={styles.loadingText}>加载中...</span>
+          </div>
+        ) : works.length === 0 ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>
+              <Users />
+            </div>
+            <div className={styles.emptyTitle}>暂无协同会话</div>
+            <div className={styles.emptyDescription}>
+              点击「创建协同」开始协作
+            </div>
+          </div>
+        ) : (
+          works.map((workId, index) => (
+            <div
+              key={workId}
+              className={`${styles.sessionCard} ${currentWorkId === workId ? styles.active : ''}`}
+              style={{ animationDelay: `${Math.min(index * 0.05, 0.35)}s` }}
+              onClick={() => currentWorkId !== workId && currentWorkId === null && handleJoinWork(workId)}
+            >
+              <div className={styles.sessionCardLeft}>
+                <div className={styles.sessionIcon}>
+                  <Users size={18} />
+                </div>
+                <div className={styles.sessionDetails}>
+                  <div className={styles.sessionName}>协同 {workId}</div>
+                  <div className={styles.sessionMeta}>
+                    <span>等待加入</span>
+                  </div>
+                </div>
+              </div>
+
+              {currentWorkId === workId ? (
+                <span className={styles.joinedBadge}>
+                  <Check size={12} />
+                  已加入
+                </span>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleJoinWork(workId);
+                  }}
+                  disabled={joiningWorkId !== null || currentWorkId !== null}
+                  className={`${styles.joinButton} ${styles.ripple}`}
+                >
+                  {joiningWorkId === workId ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    '加入'
+                  )}
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 };
 

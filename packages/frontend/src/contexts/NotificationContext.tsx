@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import type { ToastType } from '../components/ui/Toast';
@@ -186,20 +187,26 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     <NotificationContext.Provider value={{ showToast, showConfirm }}>
       {children}
 
-      {/* 全局 Toast 容器 */}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {/* 全局 Toast 容器 - 渲染到 body */}
+      {createPortal(
+        <ToastContainer toasts={toasts} onRemove={removeToast} />,
+        document.body
+      )}
 
-      {/* 全局确认对话框 */}
-      <ConfirmDialog
-        isOpen={confirmState.isOpen}
-        title={confirmState.title}
-        message={confirmState.message}
-        confirmText={confirmState.confirmText}
-        cancelText={confirmState.cancelText}
-        type={confirmState.type}
-        onConfirm={confirmState.onConfirm}
-        onCancel={confirmState.onCancel}
-      />
+      {/* 全局确认对话框 - 渲染到 body */}
+      {createPortal(
+        <ConfirmDialog
+          isOpen={confirmState.isOpen}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          cancelText={confirmState.cancelText}
+          type={confirmState.type}
+          onConfirm={confirmState.onConfirm}
+          onCancel={confirmState.onCancel}
+        />,
+        document.body
+      )}
     </NotificationContext.Provider>
   );
 };

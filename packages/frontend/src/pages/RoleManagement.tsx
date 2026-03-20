@@ -711,8 +711,7 @@ const roleManagementStyles = `
     padding: var(--space-6);
     animation: fadeIn 0.4s ease-out;
     min-height: 100vh;
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
-    background-attachment: fixed;
+    background: transparent;
   }
 
   @keyframes fadeIn {

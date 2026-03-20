@@ -263,7 +263,10 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
   };
 
   // 处理从图库中移除文件
-  const handleRemoveFromGallery = async (file: GalleryFile) => {
+  const handleRemoveFromGallery = async (item: ResourceItem) => {
+    const file = files.find((f) => f.uuid === item.id);
+    if (!file) return;
+
     const confirmed = await showConfirm({
       title: '确认移除',
       message: `确定要将 "${file.filename}" 从图库中移除吗？\n\n注意：文件本身不会被删除，只是从图库中移除。`,
@@ -395,6 +398,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         searchQuery={searchKeyword}
         onSearchChange={setSearchKeyword}
         onItemClick={handleItemClick}
+        onItemDelete={handleRemoveFromGallery}
         categories={categories}
         selectedCategory={selectedFirstType === -1 ? null : selectedFirstType}
         onCategoryChange={handleCategoryChange}
@@ -405,6 +409,7 @@ export const CADEditorSidebar: React.FC<CADEditorSidebarProps> = ({
         selectedThirdCategory={selectedThirdType === -1 ? null : selectedThirdType}
         onThirdCategoryChange={handleThirdCategoryChange}
         showCategoryFilter={true}
+        showDelete={true}
         emptyText={searchKeyword ? '未找到匹配的文件' : '暂无文件'}
         defaultViewMode="grid"
         actions={paginationActions}

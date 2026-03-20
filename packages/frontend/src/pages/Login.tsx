@@ -5,7 +5,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME } from '../constants/appConfig';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { AuthBackground } from '../components/AuthBackground';
+import { InteractiveBackground } from '../components/InteractiveBackground';
 import type { LoginDto } from '../types/api-client';
 
 // 导入 lucide 图标
@@ -93,8 +93,8 @@ export const Login: React.FC = () => {
 
   return (
     <div className="login-page" data-theme={isDark ? 'dark' : 'light'}>
-      {/* 动态背景 */}
-      <AuthBackground />
+      {/* 交互式动态背景 - 带鼠标视差效果 */}
+      <InteractiveBackground />
 
       {/* 主题切换按钮 */}
       <div className="theme-toggle-wrapper">
@@ -246,7 +246,7 @@ export const Login: React.FC = () => {
           position: relative;
           overflow: hidden;
           font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background: var(--bg-primary);
+          background: transparent;
         }
 
         /* ===== 主题切换按钮 ===== */

@@ -448,7 +448,7 @@ const styles = `
   .config-page {
     min-height: 100%;
     padding: var(--space-6);
-    background: var(--bg-primary);
+    background: transparent;
     color: var(--text-secondary);
     font-family: var(--font-family-base);
   }

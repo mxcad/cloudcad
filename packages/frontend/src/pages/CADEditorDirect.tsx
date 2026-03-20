@@ -196,9 +196,20 @@ export const CADEditorDirect: React.FC = () => {
             })
           );
 
-          // 双保险：直接更新 DOM 和 localStorage
-          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          // 双保险：直接更新 DOM 和 localStorage（与 ThemeContext.applyThemeToDOM 保持一致）
+          const theme = isDark ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          document.body.setAttribute('data-theme', theme);
+          
+          // 同时更新 body 的 class（向后兼容）
+          if (isDark) {
+            document.body.classList.add('dark-theme');
+            document.body.classList.remove('light-theme');
+          } else {
+            document.body.classList.add('light-theme');
+            document.body.classList.remove('dark-theme');
+          }
+          
           localStorage.setItem('mx-user-dark', String(isDark));
 
           console.log('[ThemeSync] 已派发 mxcad-theme-changed 事件并更新 DOM');

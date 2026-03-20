@@ -455,7 +455,7 @@ const baseStyles = `
   .monitor-page {
     min-height: 100%;
     padding: 2rem;
-    background: var(--bg-primary);
+    background: transparent;
     font-family: var(--font-family-base);
   }
 

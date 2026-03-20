@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import FolderPlus from 'lucide-react/dist/esm/icons/folder-plus';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { Button } from '../components/ui/Button';
@@ -51,6 +51,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; nodeId?: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   // 私人空间状态 - 使用 store 缓存

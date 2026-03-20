@@ -553,4 +553,122 @@ export class UsersService {
       throw error;
     }
   }
+
+  /**
+   * 获取用户仪表盘统计数据
+   */
+  async getDashboardStats(userId: string) {
+    try {
+      // 获取今日开始时间
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      // 并行查询所有统计数据
+      const [
+        projectCount,
+        totalFiles,
+        todayUploads,
+        fileTypeStats,
+        storageUsed,
+      ] = await Promise.all([
+        // 1. 项目数量（用户拥有的 + 作为成员的项目）
+        this.prisma.fileSystemNode.count({
+          where: {
+            isRoot: true,
+            deletedAt: null,
+            personalSpaceKey: null,
+            OR: [
+              { ownerId: userId },
+              { projectMembers: { some: { userId } } },
+            ],
+          },
+        }),
+
+        // 2. 文件总数（私人空间 + 项目中的文件）
+        this.prisma.fileSystemNode.count({
+          where: {
+            isFolder: false,
+            deletedAt: null,
+            OR: [
+              { ownerId: userId },
+              {
+                parent: {
+                  OR: [
+                    { ownerId: userId },
+                    { projectMembers: { some: { userId } } },
+                  ],
+                },
+              },
+            ],
+          },
+        }),
+
+        // 3. 今日上传数量
+        this.prisma.fileSystemNode.count({
+          where: {
+            isFolder: false,
+            deletedAt: null,
+            createdAt: { gte: todayStart },
+            ownerId: userId,
+          },
+        }),
+
+        // 4. 文件类型统计
+        this.prisma.fileSystemNode.groupBy({
+          by: ['extension'],
+          where: {
+            isFolder: false,
+            deletedAt: null,
+            ownerId: userId,
+          },
+          _count: { extension: true },
+        }),
+
+        // 5. 存储使用量（用户所有文件的总大小）
+        this.prisma.fileSystemNode.aggregate({
+          where: {
+            isFolder: false,
+            deletedAt: null,
+            ownerId: userId,
+          },
+          _sum: { size: true },
+        }),
+      ]);
+
+      // 处理文件类型统计
+      const fileTypeResult = { dwg: 0, dxf: 0, other: 0 };
+      for (const item of fileTypeStats) {
+        const ext = item.extension?.toLowerCase();
+        if (ext === 'dwg') {
+          fileTypeResult.dwg = item._count.extension;
+        } else if (ext === 'dxf') {
+          fileTypeResult.dxf = item._count.extension;
+        } else {
+          fileTypeResult.other += item._count.extension;
+        }
+      }
+
+      // 存储空间配置（默认 10GB）
+      const totalStorage = 10 * 1024 * 1024 * 1024; // 10GB
+      const usedStorage = storageUsed._sum.size || 0;
+      const remainingStorage = Math.max(0, totalStorage - usedStorage);
+      const usagePercent = totalStorage > 0 ? (usedStorage / totalStorage) * 100 : 0;
+
+      return {
+        projectCount,
+        totalFiles,
+        todayUploads,
+        fileTypeStats: fileTypeResult,
+        storage: {
+          used: usedStorage,
+          total: totalStorage,
+          remaining: remainingStorage,
+          usagePercent,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`获取仪表盘统计失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
 }

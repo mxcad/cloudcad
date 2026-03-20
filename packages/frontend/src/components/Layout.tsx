@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
-import { APP_NAME, APP_LOGO } from '../constants/appConfig';
+import { APP_NAME } from '../constants/appConfig';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TruncateText } from './ui/TruncateText';
@@ -15,7 +15,7 @@ import { formatFileSize } from '../utils/fileUtils';
 import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
-import { AuthBackground } from './AuthBackground';
+import { InteractiveBackground } from './InteractiveBackground';
 
 // Lucide 图标导入
 import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
@@ -30,11 +30,8 @@ import Settings2 from 'lucide-react/dist/esm/icons/settings-2';
 import LogOut from 'lucide-react/dist/esm/icons/log-out';
 import Menu from 'lucide-react/dist/esm/icons/menu';
 import X from 'lucide-react/dist/esm/icons/x';
-import Search from 'lucide-react/dist/esm/icons/search';
-import Bell from 'lucide-react/dist/esm/icons/bell';
 import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
-import Layers from 'lucide-react/dist/esm/icons/layers';
 
 interface NavItemProps {
   to: string;
@@ -128,11 +125,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [notifications] = useState(3); // 示例通知数
   
   // 存储空间状态
   const [storageInfo, setStorageInfo] = useState<StorageInfoDto | null>(null);
@@ -244,14 +239,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return (
     <div
       className="flex h-screen overflow-hidden font-[var(--font-family-base)]"
-      style={{ background: 'var(--bg-primary)' }}
+      style={{ background: 'transparent' }}
       onClick={() => {
         if (showSettings) setShowSettings(false);
         if (showUserMenu) setShowUserMenu(false);
       }}
     >
-      {/* 动态背景 */}
-      <AuthBackground />
+      {/* 交互式动态背景 - 带鼠标视差效果 */}
+      <InteractiveBackground />
       {/* 移动端侧边栏遮罩 */}
       {sidebarOpen && (
         <div
@@ -282,7 +277,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               title={APP_NAME}
             >
               {/* Logo 组件 - 仅图标模式 */}
-              <Logo size="sm" iconOnly={true} animated={false} />
+              <Logo size="md" iconOnly={true} animated={false} />
               
               {/* 品牌名称 */}
               <div className="flex flex-col">
@@ -510,7 +505,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             borderBottom: '1px solid var(--border-default)'
           }}
         >
-          {/* 左侧：菜单按钮 + 搜索 */}
+          {/* 左侧：菜单按钮 */}
           <div className="flex items-center gap-4 flex-1">
             {/* 移动端菜单按钮 */}
             <button
@@ -519,50 +514,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             >
               <Menu size={22} style={{ color: 'var(--text-secondary)' }} />
             </button>
-
-            {/* 搜索框 */}
-            <div className="flex-1 max-w-xl hidden sm:block">
-              <div 
-                className="relative group"
-              >
-                <Search
-                  size={18}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200"
-                  style={{ color: 'var(--text-muted)' }}
-                />
-                <input
-                  type="text"
-                  placeholder="搜索项目、图纸、图块..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl text-sm transition-all duration-200 outline-none"
-                  style={{ 
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid transparent',
-                    color: 'var(--text-primary)'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--primary-500)';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'transparent';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-                {/* 快捷键提示 */}
-                <kbd 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-xs hidden lg:block"
-                  style={{ 
-                    background: 'var(--bg-secondary)',
-                    color: 'var(--text-muted)',
-                    border: '1px solid var(--border-default)'
-                  }}
-                >
-                  ⌘K
-                </kbd>
-              </div>
-            </div>
           </div>
 
           {/* 右侧工具栏 */}
@@ -579,25 +530,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 {formattedDate}
               </span>
             </div>
-
-            {/* 通知按钮 */}
-            <button
-              className="relative p-2.5 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              <Bell size={20} />
-              {notifications > 0 && (
-                <span 
-                  className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-xs font-bold flex items-center justify-center"
-                  style={{ 
-                    background: 'var(--error)',
-                    color: 'white'
-                  }}
-                >
-                  {notifications > 9 ? '9+' : notifications}
-                </span>
-              )}
-            </button>
 
             {/* 主题切换 */}
             <div className="p-0.5">
@@ -707,7 +639,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* 页面内容 */}
         <main 
           className="flex-1 overflow-y-auto overflow-x-hidden"
-          style={{ background: 'var(--bg-primary)' }}
+          style={{ background: 'transparent' }}
         >
           <div className="animate-fade-in">
             {children}

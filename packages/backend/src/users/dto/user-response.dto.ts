@@ -139,3 +139,54 @@ export class UserProfileResponseDto {
   @ApiProperty({ description: '更新时间' })
   updatedAt: Date;
 }
+
+/**
+ * 存储空间信息 DTO
+ */
+export class StorageInfoDto {
+  @ApiProperty({ description: '已使用空间（字节）' })
+  used: number;
+
+  @ApiProperty({ description: '总空间（字节）' })
+  total: number;
+
+  @ApiProperty({ description: '剩余空间（字节）' })
+  remaining: number;
+
+  @ApiProperty({ description: '使用百分比' })
+  usagePercent: number;
+}
+
+/**
+ * 文件类型统计 DTO
+ */
+export class FileTypeStatsDto {
+  @ApiProperty({ description: 'DWG 文件数量' })
+  dwg: number;
+
+  @ApiProperty({ description: 'DXF 文件数量' })
+  dxf: number;
+
+  @ApiProperty({ description: '其他文件数量' })
+  other: number;
+}
+
+/**
+ * 用户仪表盘统计 DTO
+ */
+export class UserDashboardStatsDto {
+  @ApiProperty({ description: '项目数量' })
+  projectCount: number;
+
+  @ApiProperty({ description: '文件总数' })
+  totalFiles: number;
+
+  @ApiProperty({ description: '今日上传数量' })
+  todayUploads: number;
+
+  @ApiProperty({ description: '文件类型统计', type: FileTypeStatsDto })
+  fileTypeStats: FileTypeStatsDto;
+
+  @ApiProperty({ description: '存储空间信息', type: StorageInfoDto })
+  storage: StorageInfoDto;
+}

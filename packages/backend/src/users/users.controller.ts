@@ -42,6 +42,7 @@ import {
   UserListResponseDto,
   UserSearchResultDto,
   UserProfileResponseDto,
+  UserDashboardStatsDto,
 } from './dto/user-response.dto';
 import {
   ChangePasswordDto,
@@ -121,6 +122,18 @@ export class UsersController {
   })
   getProfile(@Request() req: AuthenticatedRequest) {
     return this.usersService.findOne(req.user.id);
+  }
+
+  @Get('stats/me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取当前用户仪表盘统计数据' })
+  @ApiResponse({
+    status: 200,
+    description: '获取统计数据成功',
+    type: UserDashboardStatsDto,
+  })
+  getDashboardStats(@Request() req: AuthenticatedRequest) {
+    return this.usersService.getDashboardStats(req.user.id);
   }
 
   @Patch('profile/me')

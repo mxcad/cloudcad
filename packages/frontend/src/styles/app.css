@@ -711,10 +711,23 @@
    深色主题覆盖 - 兼容现有 Tailwind 类名
    ============================================ */
 
-/* 深色主题下的背景色覆盖 */
+/* 主题背景设置 - body 透明，Canvas 背景在底层 */
+body {
+  background-color: transparent;
+  position: relative;
+}
+
 [data-theme="dark"] body {
-  background-color: var(--bg-primary);
+  background-color: transparent;
   color: var(--text-secondary);
+}
+
+/* #root 背景透明，让 Canvas 背景显示 */
+#root {
+  background-color: transparent;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
 [data-theme="dark"] .bg-white,
@@ -798,8 +811,8 @@
   color: var(--text-muted);
 }
 
-/* 深色主题下的模态框 */
-[data-theme="dark"] [role="dialog"] {
+/* 深色主题下的模态框 - 排除 mxcad-app 内部的对话框 */
+[data-theme="dark"] [role="dialog"]:not(#mxcad-global-container [role="dialog"]) {
   background-color: var(--bg-elevated);
   border-color: var(--border-default);
 }

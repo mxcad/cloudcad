@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { DynamicBackground } from './DynamicBackground';
+import { InteractiveBackground } from './InteractiveBackground';
 import { ThemeToggle } from './ThemeToggle';
 import { APP_NAME } from '../constants/appConfig';
 import { Link } from 'react-router-dom';
@@ -41,8 +41,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
   return (
     <div className="auth-layout" data-theme={isDark ? 'dark' : 'light'}>
-      {/* 动态背景 */}
-      <DynamicBackground />
+      {/* 交互式动态背景 - 带鼠标视差效果 */}
+      <InteractiveBackground />
 
       {/* 主题切换按钮 */}
       <div className="theme-toggle-wrapper">

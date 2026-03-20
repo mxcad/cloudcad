@@ -1,5 +1,5 @@
 /* ========================================
-   Logo 组件样式 - 玻璃态效果设计
+   Logo 组件样式 - 简洁设计
    适配深色/亮色双主题
    ======================================== */
 
@@ -35,7 +35,7 @@
   --font-size-subtitle: 0.875rem;
 }
 
-/* ---------- 图标容器 - 玻璃态效果 ---------- */
+/* ---------- 图标容器 - 无边框无背景 ---------- */
 .logo__icon-wrapper {
   position: relative;
   width: var(--icon-size);
@@ -47,29 +47,6 @@
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  
-  /* 玻璃态背景 */
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.15) 0%,
-    rgba(34, 211, 238, 0.15) 100%
-  );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  
-  /* 边框 */
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  
-  /* 内阴影增加深度 */
-  box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.1),
-    0 4px 15px rgba(0, 0, 0, 0.1);
-  
-  /* 渐变边框效果 */
-  position: relative;
   
   /* 居中内容 */
   display: flex;
@@ -77,105 +54,28 @@
   justify-content: center;
 }
 
-/* 渐变边框伪元素 */
-.logo__icon-bg::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: calc(var(--radius-xl) + 2px);
-  padding: 2px;
-  background: linear-gradient(
-    135deg,
-    var(--primary-500) 0%,
-    var(--accent-500) 50%,
-    var(--primary-400) 100%
-  );
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* ---------- 动态渐变背景 ---------- */
+/* 动态渐变背景 - 隐藏 */
 .logo__gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    var(--primary-600) 0%,
-    var(--accent-500) 50%,
-    var(--primary-500) 100%
-  );
-  opacity: 0.1;
-  animation: gradientShift 8s ease infinite;
-  background-size: 200% 200%;
+  display: none;
 }
 
-@keyframes gradientShift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-/* ---------- Logo 图片样式 ---------- */
+/* ---------- Logo 图片样式 - 占满容器 ---------- */
 .logo__image {
   position: relative;
   z-index: 1;
-  width: 60%;
-  height: 60%;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-  transition: transform 0.3s ease;
-}
-
-/* ---------- 光泽效果 ---------- */
-.logo__shine {
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
+  width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transform: skewX(-25deg);
-  animation: shine 6s ease-in-out infinite;
+  object-fit: contain;
 }
 
-@keyframes shine {
-  0%, 90%, 100% {
-    left: -100%;
-  }
-  40%, 50% {
-    left: 150%;
-  }
+/* 光泽效果 - 隐藏 */
+.logo__shine {
+  display: none;
 }
 
-/* ---------- 发光效果 ---------- */
+/* 发光效果 - 隐藏 */
 .logo__glow {
-  position: absolute;
-  inset: -20%;
-  background: radial-gradient(
-    circle,
-    var(--primary-500) 0%,
-    transparent 70%
-  );
-  opacity: 0;
-  filter: blur(15px);
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
-
-.logo:hover .logo__glow {
-  opacity: 0.3;
+  display: none;
 }
 
 /* ---------- 文字区域 ---------- */
@@ -260,9 +160,6 @@
 /* ---------- 悬停效果 ---------- */
 .logo:hover .logo__icon-bg {
   transform: scale(1.05);
-  box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.15),
-    0 8px 25px rgba(99, 102, 241, 0.25);
 }
 
 .logo:hover .logo__image {
@@ -277,43 +174,6 @@
   );
   -webkit-background-clip: text;
   background-clip: text;
-}
-
-/* ---------- 深色主题特殊调整 ---------- */
-[data-theme="dark"] .logo__icon-bg {
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.2) 0%,
-    rgba(34, 211, 238, 0.2) 100%
-  );
-  box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.08),
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    0 0 30px rgba(99, 102, 241, 0.1);
-}
-
-[data-theme="dark"] .logo__glow {
-  background: radial-gradient(
-    circle,
-    var(--accent-500) 0%,
-    transparent 70%
-  );
-}
-
-[data-theme="dark"] .logo:hover .logo__icon-bg {
-  box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.1),
-    0 8px 30px rgba(99, 102, 241, 0.3),
-    0 0 40px rgba(34, 211, 238, 0.15);
-}
-
-/* ---------- 亮色主题特殊调整 ---------- */
-[data-theme="light"] .logo__icon-bg {
-  background: linear-gradient(
-    135deg,
-    rgba(79, 70, 229, 0.1) 0%,
-    rgba(6, 182, 212, 0.1) 100%
-  );
 }
 
 /* ---------- 过渡动画 ---------- */

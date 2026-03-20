@@ -7,7 +7,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME } from '../constants/appConfig';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { AuthBackground } from '../components/AuthBackground';
+import { InteractiveBackground } from '../components/InteractiveBackground';
 import type { RegisterDto } from '../types/api-client';
 
 // 导入 lucide 图标
@@ -62,8 +62,6 @@ export const Register: React.FC = () => {
   if (!configLoading && !runtimeConfig.allowRegister) {
     return (
       <div className="register-page" data-theme={isDark ? 'dark' : 'light'}>
-        <AuthBackground />
-
         <div className="theme-toggle-wrapper">
           <ThemeToggle />
         </div>
@@ -89,7 +87,7 @@ export const Register: React.FC = () => {
         </div>
 
         <style>{`
-          .register-page { min-height: 100vh; display: flex; position: relative; overflow: hidden; background: var(--bg-primary); }
+          .register-page { min-height: 100vh; display: flex; position: relative; overflow: hidden; background: transparent; }
           .theme-toggle-wrapper { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; }
           .register-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; position: relative; z-index: 1; }
           .closed-card { background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 24px; padding: 3rem; text-align: center; max-width: 400px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2); }
@@ -281,9 +279,9 @@ export const Register: React.FC = () => {
   const passwordStrength = getPasswordStrength(formData.password);
 
   return (
-    <div className="register-page" data-theme={isDark ? 'dark' : 'light'}>
-      {/* 动态背景 */}
-      <AuthBackground />
+    <div className="relative z-[1] register-page" data-theme={isDark ? 'dark' : 'light'}>
+      {/* 交互式动态背景 - 带鼠标视差效果 */}
+      <InteractiveBackground />
 
       {/* 主题切换按钮 */}
       <div className="theme-toggle-wrapper">
@@ -554,7 +552,7 @@ export const Register: React.FC = () => {
           position: relative;
           overflow: hidden;
           font-family: var(--font-family-base);
-          background: var(--bg-primary);
+          background: transparent;
         }
 
         /* ===== 主题切换按钮 ===== */
