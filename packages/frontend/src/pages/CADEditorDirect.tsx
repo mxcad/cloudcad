@@ -154,6 +154,50 @@ export const CADEditorDirect: React.FC = () => {
     return { mxcadManager };
   };
 
+  /**
+   * 初始化主题同步 - 监听 mxcad-app 的 Vuetify 主题变化
+   * 当 mxcad-app 切换主题时，通过 CustomEvent 通知 React ThemeContext
+   */
+  const initThemeSync = async () => {
+    try {
+      const { mxcadApp } = await import('mxcad-app');
+      const vuetify = await mxcadApp.getVuetify();
+
+      // 动态导入 Vue 的 watch 函数
+      const { watch } = await import('vue');
+
+      console.log('[ThemeSync] 开始监听 mxcad-app 主题变化');
+
+      // 使用 Vue watch 监听 Vuetify 主题变化
+      watch(
+        () => vuetify.theme.global.name.value,
+        (themeName) => {
+          const isDark = themeName === 'dark';
+          console.log(`[ThemeSync] mxcad-app 主题变化: ${themeName} -> isDark: ${isDark}`);
+
+          // 派发事件通知 React ThemeContext
+          window.dispatchEvent(
+            new CustomEvent('mxcad-theme-changed', {
+              detail: { isDark },
+            })
+          );
+
+          // 双保险：直接更新 DOM
+          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          localStorage.setItem('mx-user-dark', String(isDark));
+
+          console.log('[ThemeSync] 已派发 mxcad-theme-changed 事件并更新 DOM');
+        },
+        { immediate: true }
+      );
+
+      console.log('[ThemeSync] 主题同步监听已设置完成');
+    } catch (error) {
+      console.warn('[ThemeSync] 主题同步初始化失败:', error);
+    }
+  };
+
   const initMxCADConfig = async (currentFile?: {
     parentId?: string | null;
     id?: string;
@@ -390,6 +434,9 @@ export const CADEditorDirect: React.FC = () => {
         // 第一次初始化时传入正确的 mxweb 文件 URL
         await deps.mxcadManager.initializeMxCADView(mxcadFileUrl);
         deps.mxcadManager.showMxCAD(true);
+
+        // 初始化主题同步 - 监听 mxcad-app 主题变化
+        await initThemeSync();
 
         // 标记为已初始化
         isInitializedRef.current = true;

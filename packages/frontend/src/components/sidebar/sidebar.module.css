@@ -1,10 +1,20 @@
 /**
- * 侧边栏样式 - 主题适配版
- * 包含容器、Tab栏、内容区域、设置面板、图纸列表等样式
- * 设计规范：CloudCAD 完美主题系统 2.0
+ * CAD编辑器侧边栏样式 - CloudCAD完美主题系统 2.0
+ * 
+ * 设计理念：专业工程美学
+ * - 深色主题：Midnight Engineering（午夜工程）
+ * - 亮色主题：Daylight Clarity（日光清晰）
+ * 
+ * 特色：
+ * - 精致的层次感和深度
+ * - 流畅的微交互动画
+ * - 清晰的视觉反馈
+ * - 专业的工程软件质感
  */
 
-/* ==================== 侧边栏容器 ==================== */
+/* ============================================
+   1. 侧边栏容器
+   ============================================ */
 
 .sidebarContainer {
   position: fixed;
@@ -15,37 +25,72 @@
   flex-direction: column;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border-default);
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.3s ease, width 0.2s ease;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s ease;
   z-index: 100;
   overflow: hidden;
+}
+
+/* 深色主题特殊处理 - 增强深度感 */
+[data-theme="dark"] .sidebarContainer {
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  border-right-color: rgba(255, 255, 255, 0.08);
 }
 
 .sidebarContainer.collapsed {
   transform: translateX(-100%);
   width: 0 !important;
+  box-shadow: none;
 }
 
-/* ==================== Tab 栏 ==================== */
+/* ============================================
+   2. Tab 栏 - 精致 pill 设计
+   ============================================ */
 
 .tabBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background-color: var(--bg-tertiary);
+  padding: 12px 16px;
+  background: linear-gradient(
+    180deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
   border-bottom: 1px solid var(--border-default);
-  min-height: 48px;
+  min-height: 56px;
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .tabBar {
+  background: linear-gradient(
+    180deg,
+    rgba(34, 38, 43, 0.8) 0%,
+    var(--bg-secondary) 100%
+  );
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .tabList {
   display: flex;
   gap: 4px;
+  padding: 4px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
 }
 
+[data-theme="dark"] .tabList {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Tab 按钮 - Pill 风格 */
 .tab {
-  padding: 6px 12px;
+  position: relative;
+  padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-tertiary);
@@ -53,42 +98,82 @@
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
 }
 
 .tab:hover {
-  background-color: var(--bg-secondary);
   color: var(--text-secondary);
+  background-color: var(--bg-secondary);
 }
 
 .tab.active {
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
   color: white;
   box-shadow: var(--shadow-sm);
 }
 
+.tab.active::before {
+  opacity: 1;
+}
+
+/* 深色主题激活态发光效果 */
+[data-theme="dark"] .tab.active {
+  box-shadow: 
+    0 2px 8px rgba(99, 102, 241, 0.4),
+    0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+/* Tab 文字层级 */
+.tab span,
+.tab {
+  position: relative;
+  z-index: 1;
+}
+
+/* 关闭按钮 */
 .tabBarButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  font-size: 14px;
   color: var(--text-tertiary);
   background-color: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
+  margin-left: 8px;
 }
 
 .tabBarButton:hover {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-tertiary);
   color: var(--text-secondary);
+  border-color: var(--border-default);
 }
 
-/* ==================== 内容区域 ==================== */
+.tabBarButton:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+   3. 内容区域
+   ============================================ */
 
 .content {
   flex: 1;
@@ -98,7 +183,9 @@
   background-color: var(--bg-secondary);
 }
 
-/* ==================== 图纸面板 ==================== */
+/* ============================================
+   4. 图纸面板 - 子 Tab 设计
+   ============================================ */
 
 .drawingsPanel {
   display: flex;
@@ -108,12 +195,11 @@
   background-color: var(--bg-secondary);
 }
 
-/* ==================== 子 Tab 栏 ==================== */
-
+/* 子 Tab 栏 - 简约线条风格 */
 .subTabBar {
   display: flex;
   gap: 0;
-  padding: 0 8px;
+  padding: 0 12px;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
@@ -126,17 +212,18 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 12px;
-  font-size: 13px;
+  padding: 12px 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
   background-color: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 .subTab:hover {
@@ -149,10 +236,22 @@
   border-bottom-color: var(--primary-500);
 }
 
+/* 深色主题子 Tab 激活态 */
+[data-theme="dark"] .subTab.active {
+  color: var(--accent-500);
+  border-bottom-color: var(--accent-500);
+}
+
+/* 子 Tab 图标 */
 .subTab svg {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.subTab:hover svg {
+  transform: scale(1.1);
 }
 
 .subTab span {
@@ -161,14 +260,19 @@
   text-overflow: ellipsis;
 }
 
-/* 当 Tab 栏宽度不足时，只显示图标 */
-@container subTabBar (max-width: 320px) {
+/* 响应式：窄宽度下只显示图标 */
+@container subTabBar (max-width: 340px) {
   .subTab {
-    padding: 10px 8px;
+    padding: 12px 10px;
   }
 
   .subTab span {
     display: none;
+  }
+  
+  .subTab svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -180,33 +284,59 @@
   background-color: var(--bg-secondary);
 }
 
-/* ==================== 收起状态触发条 ==================== */
+/* ============================================
+   5. 收起状态触发条 - 悬浮设计
+   ============================================ */
 
 .trigger {
   position: fixed;
   top: 50%;
   left: 0;
   transform: translateY(-50%);
-  width: 36px;
-  padding: 8px 4px;
-  background-color: var(--bg-secondary);
+  width: 40px;
+  padding: 10px 6px;
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 100%
+  );
   border: 1px solid var(--border-default);
   border-left: none;
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-  box-shadow: var(--shadow-sm);
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  box-shadow: 
+    var(--shadow-md),
+    2px 0 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   z-index: 110;
-  transition: all var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .trigger {
+  background: linear-gradient(
+    135deg,
+    rgba(26, 29, 33, 0.95) 0%,
+    rgba(34, 38, 43, 0.95) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    4px 0 20px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .trigger:hover {
-  background-color: var(--bg-tertiary);
-  width: 40px;
+  width: 44px;
+  padding-left: 8px;
+  background: linear-gradient(
+    135deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
 }
 
+/* 触发条图标按钮 */
 .triggerIcon {
   display: flex;
   align-items: center;
@@ -215,52 +345,129 @@
   height: 28px;
   color: var(--text-tertiary);
   background-color: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .triggerIcon:hover {
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-secondary);
   color: var(--text-secondary);
+  border-color: var(--border-default);
+  transform: scale(1.05);
 }
 
 .triggerIcon.active {
-  background-color: var(--primary-50);
-  color: var(--primary-500);
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
+  color: white;
+  border-color: transparent;
+  box-shadow: var(--shadow-sm);
 }
 
+/* 深色主题激活态发光 */
 [data-theme="dark"] .triggerIcon.active {
-  background-color: var(--primary-100);
+  box-shadow: 
+    0 0 12px rgba(99, 102, 241, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* 激活态脉冲动画 */
+.triggerIcon.active::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0;
+  animation: pulse-ring 2s ease-out infinite;
+  z-index: -1;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* 分隔线 */
 .triggerDivider {
   width: 20px;
   height: 1px;
-  background-color: var(--border-default);
-  margin: 4px 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border-default) 50%,
+    transparent 100%
+  );
+  margin: 2px 0;
 }
 
-/* ==================== 宽度调整手柄 ==================== */
+[data-theme="dark"] .triggerDivider {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+}
+
+/* ============================================
+   6. 宽度调整手柄
+   ============================================ */
 
 .resizeHandle {
   position: absolute;
   top: 0;
   right: 0;
-  width: 4px;
+  width: 5px;
   height: 100%;
   background-color: transparent;
   cursor: col-resize;
-  transition: background-color var(--transition-fast);
+  transition: all 0.2s ease;
+  z-index: 10;
 }
 
-.resizeHandle:hover,
-.resizeHandle.active {
+.resizeHandle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 40px;
+  background-color: var(--border-default);
+  border-radius: var(--radius-full);
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.resizeHandle:hover::before,
+.resizeHandle.active::before {
+  opacity: 1;
   background-color: var(--primary-500);
+  height: 60px;
 }
 
-/* ==================== 设置面板（内嵌式） ==================== */
+[data-theme="dark"] .resizeHandle:hover::before,
+[data-theme="dark"] .resizeHandle.active::before {
+  background-color: var(--accent-500);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+}
+
+/* ============================================
+   7. 设置面板
+   ============================================ */
 
 .settingsPanel {
   display: flex;
@@ -272,7 +479,7 @@
 .settingsPanelHeader {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
 }
@@ -289,7 +496,7 @@
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .backButton:hover {
@@ -318,7 +525,7 @@
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .resetButton:hover {
@@ -332,10 +539,12 @@
   padding: 16px;
 }
 
-/* ==================== 设置组 ==================== */
+/* ============================================
+   8. 设置组
+   ============================================ */
 
 .settingsGroup {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .settingsGroup:last-child {
@@ -344,10 +553,12 @@
 
 .settingsLabel {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .settingsOptions {
@@ -370,7 +581,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   text-align: center;
 }
 
@@ -380,25 +591,35 @@
 }
 
 .settingsOption.active {
-  background-color: var(--primary-50);
+  background: linear-gradient(
+    135deg,
+    var(--primary-50) 0%,
+    var(--primary-100) 100%
+  );
   border-color: var(--primary-500);
-  color: var(--primary-500);
+  color: var(--primary-600);
 }
 
 [data-theme="dark"] .settingsOption.active {
-  background-color: var(--primary-100);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.2) 0%,
+    rgba(99, 102, 241, 0.3) 100%
+  );
+  border-color: var(--primary-500);
+  color: var(--primary-400);
 }
 
 .settingsOptionFull {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px 14px;
+  padding: 14px;
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   text-align: left;
   width: 100%;
 }
@@ -409,31 +630,48 @@
 }
 
 .settingsOptionFull.active {
-  background-color: var(--primary-50);
+  background: linear-gradient(
+    135deg,
+    var(--primary-50) 0%,
+    var(--primary-100) 100%
+  );
   border-color: var(--primary-500);
 }
 
 [data-theme="dark"] .settingsOptionFull.active {
-  background-color: var(--primary-100);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    rgba(99, 102, 241, 0.25) 100%
+  );
 }
 
 .optionLabel {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
+  transition: color 0.2s ease;
 }
 
-.settingsOptionFull.active .optionLabel {
-  color: var(--primary-500);
+.settingsOptionFull.active .optionLabel,
+.settingsOption.active .optionLabel {
+  color: var(--primary-600);
+}
+
+[data-theme="dark"] .settingsOptionFull.active .optionLabel,
+[data-theme="dark"] .settingsOption.active .optionLabel {
+  color: var(--primary-400);
 }
 
 .optionDesc {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
-/* ==================== 下拉选择框 ==================== */
+/* ============================================
+   9. 表单控件
+   ============================================ */
 
 .settingsSelect {
   width: 100%;
@@ -445,7 +683,7 @@
   border-radius: var(--radius-lg);
   outline: none;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .settingsSelect:focus {
@@ -454,8 +692,11 @@
   box-shadow: 0 0 0 3px var(--primary-100);
 }
 
-/* ==================== 滑块 ==================== */
+[data-theme="dark"] .settingsSelect:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
 
+/* 滑块 */
 .settingsSlider {
   display: flex;
   align-items: center;
@@ -466,7 +707,11 @@
 .settingsSlider input[type="range"] {
   flex: 1;
   height: 6px;
-  background-color: var(--border-default);
+  background: linear-gradient(
+    90deg,
+    var(--border-default) 0%,
+    var(--border-default) 100%
+  );
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -475,42 +720,58 @@
 
 .settingsSlider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background-color: var(--primary-500);
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
   border-radius: 50%;
   cursor: pointer;
-  transition: transform var(--transition-fast);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .settingsSlider input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
+  transform: scale(1.15);
+  box-shadow: var(--shadow-md), var(--glow-primary);
 }
 
 .settingsSlider input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background-color: var(--primary-500);
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
   border: none;
   border-radius: 50%;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
 }
 
 .settingsSliderValue {
   display: inline-block;
   font-size: 13px;
-  color: var(--text-muted);
-  min-width: 50px;
+  font-weight: 500;
+  color: var(--primary-600);
+  min-width: 45px;
   text-align: right;
 }
 
-/* ==================== 复选框 ==================== */
+[data-theme="dark"] .settingsSliderValue {
+  color: var(--primary-400);
+}
 
+/* 复选框 */
 .settingsCheckbox {
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  padding: 4px 0;
 }
 
 .settingsCheckbox input[type="checkbox"] {
@@ -518,6 +779,7 @@
   height: 18px;
   accent-color: var(--primary-500);
   cursor: pointer;
+  border-radius: var(--radius-sm);
 }
 
 .settingsCheckbox span {
@@ -525,7 +787,9 @@
   color: var(--text-secondary);
 }
 
-/* ==================== 项目图纸面板 ==================== */
+/* ============================================
+   10. 项目图纸面板
+   ============================================ */
 
 .projectDrawingsPanel {
   display: flex;
@@ -535,7 +799,9 @@
   background-color: var(--bg-secondary);
 }
 
-/* ==================== 面包屑导航 ==================== */
+/* ============================================
+   11. 面包屑导航
+   ============================================ */
 
 .breadcrumb {
   display: flex;
@@ -543,26 +809,40 @@
   flex-wrap: nowrap;
   gap: 4px;
   padding: 10px 16px;
-  background-color: var(--bg-tertiary);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
   border-bottom: 1px solid var(--border-default);
   font-size: 12px;
   overflow: hidden;
 }
 
+[data-theme="dark"] .breadcrumb {
+  background: linear-gradient(
+    90deg,
+    rgba(34, 38, 43, 0.6) 0%,
+    var(--bg-secondary) 100%
+  );
+  border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
 .breadcrumbItem {
   display: inline-flex;
   align-items: center;
-  padding: 2px 6px;
+  padding: 4px 8px;
   color: var(--text-tertiary);
   background: none;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   white-space: nowrap;
-  max-width: 100px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 500;
 }
 
 .breadcrumbItem:hover:not(:disabled) {
@@ -571,12 +851,13 @@
 }
 
 [data-theme="dark"] .breadcrumbItem:hover:not(:disabled) {
-  background-color: var(--primary-100);
+  background-color: rgba(99, 102, 241, 0.15);
+  color: var(--accent-500);
 }
 
 .breadcrumbItem.active {
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: 600;
   cursor: default;
 }
 
@@ -587,35 +868,50 @@
 .breadcrumbSeparator {
   color: var(--border-strong);
   flex-shrink: 0;
+  opacity: 0.6;
 }
 
-/* ==================== 文件夹项 ==================== */
+/* ============================================
+   12. 文件夹项
+   ============================================ */
 
 .folderItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px;
+  margin: 2px 8px;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   border: 1px solid transparent;
 }
 
 .folderItem:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--border-default);
+  transform: translateX(2px);
 }
 
 .folderIcon {
   width: 40px;
   height: 40px;
-  background-color: var(--warning-dim);
+  background: linear-gradient(
+    135deg,
+    var(--warning-dim) 0%,
+    rgba(245, 158, 11, 0.2) 100%
+  );
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.folderItem:hover .folderIcon {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
 }
 
 .folderInfo {
@@ -638,7 +934,9 @@
   margin-top: 2px;
 }
 
-/* ==================== 搜索框 ==================== */
+/* ============================================
+   13. 搜索框
+   ============================================ */
 
 .searchBox {
   padding: 12px 16px;
@@ -658,19 +956,28 @@
   transform: translateY(-50%);
   color: var(--text-muted);
   font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.searchWrapper:focus-within .searchIcon {
+  color: var(--primary-500);
 }
 
 .searchInput {
   width: 100%;
-  padding: 10px 12px 10px 36px;
+  padding: 10px 12px 10px 38px;
   font-size: 13px;
   color: var(--text-primary);
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   outline: none;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   box-sizing: border-box;
+}
+
+.searchInput:hover {
+  border-color: var(--border-strong);
 }
 
 .searchInput:focus {
@@ -679,11 +986,17 @@
   box-shadow: 0 0 0 3px var(--primary-100);
 }
 
+[data-theme="dark"] .searchInput:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
 .searchInput::placeholder {
   color: var(--text-muted);
 }
 
-/* ==================== 图纸列表 ==================== */
+/* ============================================
+   14. 图纸列表
+   ============================================ */
 
 .drawingList {
   flex: 1;
@@ -697,43 +1010,65 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
+  margin: 2px 0;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   border: 1px solid transparent;
 }
 
 .drawingItem:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--border-default);
+  transform: translateX(2px);
 }
 
 .drawingItem.active {
-  background-color: var(--primary-50);
+  background: linear-gradient(
+    90deg,
+    var(--primary-50) 0%,
+    rgba(99, 102, 241, 0.05) 100%
+  );
   border-color: var(--primary-200);
 }
 
 [data-theme="dark"] .drawingItem.active {
-  background-color: var(--primary-100);
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    rgba(99, 102, 241, 0.05) 100%
+  );
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .drawingThumbnail {
-  width: 40px;
-  height: 40px;
-  background-color: var(--bg-tertiary);
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(
+    135deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  border: 1px solid var(--border-default);
+  transition: all 0.2s ease;
+}
+
+.drawingItem:hover .drawingThumbnail {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .drawingThumbnail img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-md);
+  border-radius: calc(var(--radius-md) - 1px);
 }
 
 /* 预览图样式 */
@@ -741,12 +1076,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-md);
-  transition: transform var(--transition-fast);
+  border-radius: calc(var(--radius-md) - 1px);
+  transition: transform 0.3s ease;
 }
 
 .drawingItem:hover .previewImage {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .drawingInfo {
@@ -767,6 +1102,9 @@
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .drawingStatus {
@@ -776,13 +1114,15 @@
 }
 
 .statusDot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
 }
 
 .statusDot.modified {
   background-color: var(--warning);
+  box-shadow: 0 0 6px var(--warning);
+  animation: pulse-soft 2s ease-in-out infinite;
 }
 
 .statusDot.saved {
@@ -791,14 +1131,16 @@
 
 /* 修改状态指示器 */
 .modifiedIndicator {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 6px;
   color: var(--warning);
-  font-size: 10px;
-  animation: pulse 2s infinite;
+  font-size: 8px;
+  animation: pulse-soft 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes pulse-soft {
   0%, 100% {
     opacity: 1;
   }
@@ -810,33 +1152,53 @@
 /* 当前文件标签 */
 .currentFileLabel {
   color: var(--primary-500);
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* ==================== 空状态 ==================== */
+[data-theme="dark"] .currentFileLabel {
+  color: var(--accent-500);
+}
+
+/* ============================================
+   15. 空状态
+   ============================================ */
 
 .emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 48px 24px;
   color: var(--text-muted);
-  background-color: var(--bg-secondary);
+  background: linear-gradient(
+    180deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 100%
+  );
+  min-height: 200px;
 }
 
 .emptyIcon {
   font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.5;
+  margin-bottom: 16px;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.emptyState:hover .emptyIcon {
+  opacity: 0.6;
+  transform: scale(1.05);
 }
 
 .emptyText {
   font-size: 13px;
   text-align: center;
+  line-height: 1.6;
 }
 
-/* ==================== 确认对话框 ==================== */
+/* ============================================
+   16. 确认对话框
+   ============================================ */
 
 .confirmOverlay {
   position: fixed;
@@ -850,33 +1212,56 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .confirmDialog {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px;
+  padding: 28px;
   text-align: center;
-  background-color: var(--bg-elevated);
-  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    135deg,
+    var(--bg-elevated) 0%,
+    var(--bg-secondary) 100%
+  );
+  border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--border-default);
-  width: 320px;
+  width: 340px;
   max-width: 90vw;
+  animation: scale-in 0.2s ease;
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .confirmIcon {
   font-size: 48px;
   color: var(--warning);
   margin-bottom: 16px;
+  opacity: 0.9;
 }
 
 .confirmMessage {
   font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 20px;
-  line-height: 1.5;
+  margin-bottom: 24px;
+  line-height: 1.6;
 }
 
 .confirmActions {
@@ -892,13 +1277,18 @@
   font-weight: 500;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .confirmActions button.primary {
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+  background: linear-gradient(
+    135deg,
+    var(--primary-600) 0%,
+    var(--primary-500) 100%
+  );
   color: white;
   border: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .confirmActions button.primary:hover {
@@ -918,46 +1308,72 @@
 }
 
 .confirmActions button.danger {
-  background-color: var(--error);
+  background: linear-gradient(
+    135deg,
+    var(--error) 0%,
+    #dc2626 100%
+  );
   color: white;
   border: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .confirmActions button.danger:hover {
-  background-color: #dc2626;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
 }
 
-/* ==================== 项目列表标题 ==================== */
+/* ============================================
+   17. 项目列表标题
+   ============================================ */
 
 .sectionTitle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  background-color: var(--bg-tertiary);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
   border-bottom: 1px solid var(--border-default);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* ==================== 项目项 ==================== */
+[data-theme="dark"] .sectionTitle {
+  background: linear-gradient(
+    90deg,
+    rgba(34, 38, 43, 0.6) 0%,
+    var(--bg-secondary) 100%
+  );
+}
+
+/* ============================================
+   18. 项目项
+   ============================================ */
 
 .projectItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 14px;
+  margin: 2px 8px;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  border-bottom: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .projectItem:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--border-default);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
 }
 
 .projectItem:last-child {
@@ -965,18 +1381,34 @@
 }
 
 .projectIcon {
-  width: 44px;
-  height: 44px;
-  background-color: var(--primary-50);
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-50) 0%,
+    var(--primary-100) 100%
+  );
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-default);
 }
 
 [data-theme="dark"] .projectIcon {
-  background-color: var(--primary-100);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    rgba(99, 102, 241, 0.25) 100%
+  );
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.projectItem:hover .projectIcon {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
 .projectInfo {
@@ -999,7 +1431,9 @@
   margin-top: 2px;
 }
 
-/* ==================== 项目选择器 ==================== */
+/* ============================================
+   19. 项目选择器
+   ============================================ */
 
 .projectSelector {
   position: relative;
@@ -1018,7 +1452,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .projectSelectorButton:hover {
@@ -1028,7 +1462,7 @@
 
 .projectSelectorButton svg {
   color: var(--text-muted);
-  transition: transform var(--transition-fast);
+  transition: transform 0.2s ease;
 }
 
 .projectSelectorButton.open svg {
@@ -1048,6 +1482,18 @@
   max-height: 200px;
   overflow-y: auto;
   z-index: 1000;
+  animation: slide-up 0.15s ease;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .projectOption {
@@ -1058,7 +1504,7 @@
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
 .projectOption:hover {
@@ -1066,10 +1512,155 @@
 }
 
 .projectOption.active {
-  background-color: var(--primary-50);
-  color: var(--primary-500);
+  background: linear-gradient(
+    90deg,
+    var(--primary-50) 0%,
+    transparent 100%
+  );
+  color: var(--primary-600);
 }
 
 [data-theme="dark"] .projectOption.active {
-  background-color: var(--primary-100);
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    transparent 100%
+  );
+  color: var(--primary-400);
+}
+
+/* ============================================
+   20. 滚动条样式优化
+   ============================================ */
+
+.drawingList::-webkit-scrollbar,
+.settingsPanelContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drawingList::-webkit-scrollbar-track,
+.settingsPanelContent::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.drawingList::-webkit-scrollbar-thumb,
+.settingsPanelContent::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: var(--radius-full);
+}
+
+.drawingList::-webkit-scrollbar-thumb:hover,
+.settingsPanelContent::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+[data-theme="dark"] .drawingList::-webkit-scrollbar-thumb,
+[data-theme="dark"] .settingsPanelContent::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .drawingList::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .settingsPanelContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================
+   21. 加载状态
+   ============================================ */
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+
+.loadingSpinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  font-size: 13px;
+}
+
+/* ============================================
+   22. 响应式优化
+   ============================================ */
+
+@media (max-width: 640px) {
+  .sidebarContainer {
+    width: 100vw !important;
+    max-width: 100vw;
+  }
+  
+  .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .subTab {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+  
+  .subTab span {
+    display: none;
+  }
+  
+  .subTab svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ============================================
+   23. 工具类
+   ============================================ */
+
+/* 视觉隐藏但可访问 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 文本截断 */
+.textTruncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* flex 工具 */
+.flexCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flexBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
