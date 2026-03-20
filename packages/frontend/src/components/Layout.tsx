@@ -1,21 +1,5 @@
-import {
-  Activity,
-  Box,
-  FileText,
-  FolderOpen,
-  LogOut,
-  Menu,
-  Search,
-  Settings,
-  Settings2,
-  ShieldCheck,
-  Type,
-  Users,
-  X,
-  HardDrive,
-} from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { UserDto, StorageInfoDto } from '../types/api-client';
 import { projectsApi } from '../services/projectsApi';
@@ -28,405 +12,661 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TruncateText } from './ui/TruncateText';
 import { formatFileSize } from '../utils/fileUtils';
+import { ThemeToggle } from './ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+import { Logo } from './Logo';
 
-type User = UserDto;
+// Lucide 图标导入
+import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
+import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Users from 'lucide-react/dist/esm/icons/users';
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
+import Type from 'lucide-react/dist/esm/icons/type';
+import Activity from 'lucide-react/dist/esm/icons/activity';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Settings2 from 'lucide-react/dist/esm/icons/settings-2';
+import LogOut from 'lucide-react/dist/esm/icons/log-out';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import X from 'lucide-react/dist/esm/icons/x';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import Layers from 'lucide-react/dist/esm/icons/layers';
+import History from 'lucide-react/dist/esm/icons/history';
+import Star from 'lucide-react/dist/esm/icons/star';
 
 interface NavItemProps {
   to: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   active: boolean;
+  badge?: number;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active }) => (
-  <Link
-    to={to}
-    className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-      active
-        ? 'bg-primary-50 text-primary-700 shadow-sm'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-    }`}
-  >
-    <Icon size={20} className={active ? 'text-primary-600' : ''} />
-    {label}
-  </Link>
-);
+/**
+ * 导航项组件 - 带有精美动画效果
+ */
+const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge }) => {
+  const { isDark } = useTheme();
+  
+  return (
+    <Link
+      to={to}
+      className={`
+        group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ease-out
+        relative overflow-hidden
+        ${active 
+          ? isDark 
+            ? 'text-white shadow-lg' 
+            : 'text-white shadow-md shadow-primary/30'
+          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+        }
+      `}
+      style={active ? {
+        background: 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+      } : {}}
+    >
+      {/* 悬停背景效果 */}
+      {!active && (
+        <div className="absolute inset-0 bg-[var(--bg-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+      )}
+      
+      {/* 活跃指示器 */}
+      {active && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white/50 rounded-r-full" />
+      )}
+      
+      {/* 图标 */}
+      <div className={`
+        relative z-10 p-2 rounded-lg transition-all duration-300
+        ${active 
+          ? 'bg-white/20' 
+          : 'bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-secondary)]'
+        }
+      `}>
+        <Icon size={18} className={active ? 'text-white' : 'text-[var(--text-tertiary)] group-hover:text-[var(--primary-500)]'} />
+      </div>
+      
+      {/* 标签 */}
+      <span className="relative z-10 font-medium text-sm">{label}</span>
+      
+      {/* 徽章 */}
+      {badge !== undefined && badge > 0 && (
+        <span className={`
+          relative z-10 ml-auto text-xs font-semibold px-2 py-0.5 rounded-full
+          ${active 
+            ? 'bg-white/30 text-white' 
+            : 'bg-[var(--primary-100)] text-[var(--primary-600)]'
+          }
+        `}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
+  );
+};
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+/**
+ * 主布局组件 - CloudCAD 登录后界面
+ * 
+ * 设计特色：
+ * - 专业侧边栏导航，带有用户存储信息
+ * - 沉浸式顶部导航栏，毛玻璃效果
+ * - 完美主题切换支持
+ * - 流畅的交互动画
+ */
+export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
-  const { hasPermission, hasRole } = usePermission();
+  const { hasPermission } = usePermission();
   const { config: runtimeConfig } = useRuntimeConfig();
+  const { isDark } = useTheme();
+  
+  // UI 状态
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Interactions State
   const [showSettings, setShowSettings] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [hookTest, setHookTest] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
+  const [notifications] = useState(3); // 示例通知数
+  
   // 存储空间状态
   const [storageInfo, setStorageInfo] = useState<StorageInfoDto | null>(null);
+  const [storageLoading, setStorageLoading] = useState(true);
 
   // 角色名称映射
-  const getRoleDisplayName = (roleName: string): string => {
+  const getRoleDisplayName = useCallback((roleName: string): string => {
     const roleMap: Record<string, string> = {
-      ADMIN: '管理员',
-      USER: '用户',
+      ADMIN: '系统管理员',
+      USER: '普通用户',
+      MANAGER: '项目经理',
+      GUEST: '访客',
     };
     return roleMap[roleName] || roleName;
-  };
+  }, []);
 
+  // 获取存储空间信息
   useEffect(() => {
-    // 只有在用户已认证且加载完成时才获取角色信息
     if (user && !loading) {
-      // 获取存储空间信息
+      setStorageLoading(true);
       projectsApi
         .getStorageInfo()
         .then((response) => {
-          // 静默：存储空间响应
-          // 静默：存储空间信息
           if (response.data) {
             setStorageInfo(response.data);
           }
         })
-        .catch((error) => {
-          // 静默：获取存储空间信息失败
-          // 静默：错误详情
+        .catch(() => {
+          // 静默处理错误
+        })
+        .finally(() => {
+          setStorageLoading(false);
         });
     }
   }, [user, loading]);
 
+  // 时钟更新
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // 处理登出
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await logout();
       navigate('/login');
-      // 静默：退出登录成功
-    } catch (error) {
-      // 静默：退出登录失败
     } finally {
       setIsLoggingOut(false);
       setShowLogoutConfirm(false);
     }
   };
 
-  const menuItems = [
-    { to: '/projects', icon: FolderOpen, label: '我的项目', visible: true },
+  // 格式化时间
+  const formattedTime = useMemo(() => {
+    return currentTime.toLocaleTimeString('zh-CN', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+  }, [currentTime]);
+
+  const formattedDate = useMemo(() => {
+    return currentTime.toLocaleDateString('zh-CN', { 
+      month: 'short', 
+      day: 'numeric',
+      weekday: 'short'
+    });
+  }, [currentTime]);
+
+  // 导航菜单项配置
+  const menuItems = useMemo(() => [
+    { to: '/dashboard', icon: LayoutDashboard, label: '仪表盘', visible: true },
+    { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
     { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true },
-    {
-      to: '/font-library',
-      icon: Type,
-      label: '字体库',
-      visible:
-        hasPermission(SystemPermission.SYSTEM_FONT_READ) ||
-        hasPermission(SystemPermission.SYSTEM_FONT_UPLOAD) ||
-        hasPermission(SystemPermission.SYSTEM_FONT_DELETE) ||
-        hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD),
-    },
-    {
-      to: '/users',
-      icon: Users,
-      label: '用户管理',
-      visible:
-        hasPermission(SystemPermission.SYSTEM_USER_READ) ||
-        hasPermission(SystemPermission.SYSTEM_USER_CREATE) ||
-        hasPermission(SystemPermission.SYSTEM_USER_UPDATE) ||
-        hasPermission(SystemPermission.SYSTEM_USER_DELETE),
-    },
-    {
-      to: '/roles',
-      icon: ShieldCheck,
-      label: '角色权限',
-      visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
-    },
-    {
-      to: '/audit-logs',
-      icon: FileText,
-      label: '审计日志',
-      visible: hasPermission(SystemPermission.SYSTEM_ADMIN),
-    },
-    {
-      to: '/system-monitor',
-      icon: Activity,
-      label: '系统监控',
-      visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
-    },
-    {
-      to: '/runtime-config',
-      icon: Settings2,
-      label: '运行时配置',
-      visible: hasPermission(SystemPermission.SYSTEM_CONFIG_READ),
-    },
-  ];
+    { to: '/recent', icon: History, label: '最近访问', visible: true },
+    { to: '/favorites', icon: Star, label: '收藏夹', visible: true },
+    { to: '/font-library', icon: Type, label: '字体库', visible: 
+      hasPermission(SystemPermission.SYSTEM_FONT_READ) },
+    { to: '/users', icon: Users, label: '用户管理', visible: 
+      hasPermission(SystemPermission.SYSTEM_USER_READ) },
+    { to: '/roles', icon: ShieldCheck, label: '角色权限', visible: 
+      hasPermission(SystemPermission.SYSTEM_ROLE_READ) },
+    { to: '/system-monitor', icon: Activity, label: '系统监控', visible: 
+      hasPermission(SystemPermission.SYSTEM_MONITOR) },
+  ], [hasPermission]);
+
+  // 判断当前导航项是否活跃
+  const isActiveRoute = useCallback((path: string): boolean => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard' || location.pathname === '/';
+    }
+    if (path === '/projects') {
+      return location.pathname === '/projects' || location.pathname.startsWith('/projects/');
+    }
+    if (path === '/personal-space') {
+      return location.pathname === '/personal-space' || location.pathname.startsWith('/personal-space/');
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  }, [location.pathname]);
+
+  // 存储空间使用率颜色
+  const storageColor = useMemo(() => {
+    if (!storageInfo) return 'from-emerald-500 to-emerald-600';
+    if (storageInfo.usagePercent > 90) return 'from-red-500 to-red-600';
+    if (storageInfo.usagePercent > 70) return 'from-amber-500 to-amber-600';
+    return 'from-emerald-500 to-emerald-600';
+  }, [storageInfo]);
 
   return (
-    <div
-      className="flex h-screen bg-slate-50 overflow-hidden"
+    <div 
+      className="flex h-screen overflow-hidden font-[var(--font-family-base)]"
+      style={{ background: 'var(--bg-primary)' }}
       onClick={() => {
         if (showSettings) setShowSettings(false);
+        if (showUserMenu) setShowUserMenu(false);
       }}
     >
-      {/* Mobile Sidebar Overlay */}
+      {/* 移动端侧边栏遮罩 */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden animate-fade-in"
+          className="fixed inset-0 z-40 lg:hidden animate-fade-in"
+          style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)' }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* 侧边栏 */}
       <aside
         className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-lg lg:shadow-none
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}
+          fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-all duration-300 ease-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+        style={{ 
+          background: 'var(--bg-secondary)',
+          borderRight: '1px solid var(--border-default)',
+          boxShadow: sidebarOpen ? 'var(--shadow-2xl)' : 'none'
+        }}
       >
         <div className="flex flex-col h-full">
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl gradient-primary shadow-primary-custom flex items-center justify-center overflow-hidden flex-shrink-0">
-                <img
-                  src={APP_LOGO}
-                  alt={APP_NAME}
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    // 图片加载失败时显示备用图标
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget
-                      .nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-                <Box
-                  className="text-white hidden"
-                  size={20}
-                  style={{ display: 'none' }}
-                />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-base font-bold text-gradient-primary">
-                  梦想网页CAD实时
+          {/* Logo 区域 */}
+          <div className="p-4">
+            <Link 
+              to="/dashboard" 
+              className="flex items-center gap-3 group p-2 -m-2 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)]"
+              title={APP_NAME}
+            >
+              {/* Logo 组件 - 仅图标模式 */}
+              <Logo size="sm" iconOnly={true} animated={false} />
+              
+              {/* 品牌名称 */}
+              <div className="flex flex-col">
+                {/* 主标题 */}
+                <span 
+                  className="text-[15px] font-bold tracking-tight leading-none"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  {APP_NAME}
                 </span>
-                <span className="text-sm font-semibold text-primary-600">
-                  协同平台
+                {/* 副标题 */}
+                <span 
+                  className="text-[11px] font-medium tracking-wide mt-0.5"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  CAD 协同平台
                 </span>
               </div>
-            </div>
+            </Link>
+            
+            {/* 移动端关闭按钮 */}
             <button
-              className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
               onClick={() => setSidebarOpen(false)}
             >
-              <X size={20} className="text-slate-500" />
+              <X size={20} style={{ color: 'var(--text-tertiary)' }} />
             </button>
           </div>
 
+          {/* 导航菜单 */}
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-            {menuItems
-              .filter((item) => item.visible)
-              .map((item) => {
-                // 精确匹配导航高亮逻辑
-                let isActive = false;
-                if (item.to === '/projects') {
-                  // 项目管理：匹配 /projects 及 /projects/:id/files...
-                  isActive =
-                    location.pathname === '/projects' ||
-                    location.pathname.startsWith('/projects/');
-                } else if (item.to === '/personal-space') {
-                  // 我的图纸：匹配 /personal-space 及 /personal-space/:id
-                  isActive =
-                    location.pathname === '/personal-space' ||
-                    location.pathname.startsWith('/personal-space/');
-                } else {
-                  // 其他菜单项
-                  isActive =
-                    location.pathname === item.to ||
-                    (item.to !== '/' && location.pathname.startsWith(item.to));
-                }
-
-                return <NavItem key={item.to} {...item} active={isActive} />;
-              })}
+            <div className="pb-4">
+              <p 
+                className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                主菜单
+              </p>
+              {menuItems
+                .filter((item) => item.visible)
+                .slice(0, 5)
+                .map((item) => (
+                  <NavItem 
+                    key={item.to} 
+                    {...item} 
+                    active={isActiveRoute(item.to)}
+                  />
+                ))}
+            </div>
+            
+            {/* 管理菜单 */}
+            {menuItems.some((item, idx) => idx >= 5 && item.visible) && (
+              <div className="pt-2 border-t" style={{ borderColor: 'var(--border-default)' }}>
+                <p 
+                  className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  系统管理
+                </p>
+                {menuItems
+                  .filter((item, idx) => idx >= 5 && item.visible)
+                  .map((item) => (
+                    <NavItem 
+                      key={item.to} 
+                      {...item} 
+                      active={isActiveRoute(item.to)}
+                    />
+                  ))}
+              </div>
+            )}
           </nav>
 
-          <div className="p-4 border-t border-slate-200">
-            <Link
-              to="/profile"
-              className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 overflow-hidden flex items-center justify-center shadow-sm">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="User"
-                    className="w-full h-full object-cover"
+          {/* 存储空间信息 */}
+          <div 
+            className="p-4 mx-4 mb-4 rounded-xl"
+            style={{ 
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-default)'
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <HardDrive size={16} style={{ color: 'var(--text-tertiary)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                存储空间
+              </span>
+            </div>
+            
+            {storageLoading ? (
+              <div className="space-y-2">
+                <div className="h-2 rounded-full skeleton-theme" />
+                <div className="h-3 w-20 rounded skeleton-theme" />
+              </div>
+            ) : storageInfo ? (
+              <>
+                {/* 进度条 */}
+                <div 
+                  className="h-2 rounded-full overflow-hidden mb-2"
+                  style={{ background: 'var(--bg-secondary)' }}
+                >
+                  <div 
+                    className={`h-full rounded-full bg-gradient-to-r ${storageColor} transition-all duration-500`}
+                    style={{ width: `${Math.min(storageInfo.usagePercent, 100)}%` }}
                   />
-                ) : (
-                  <span className="text-sm font-semibold text-white">
-                    {(user?.nickname || user?.username || user?.email || 'U')
-                      .charAt(0)
-                      .toUpperCase()}
+                </div>
+                
+                {/* 存储信息 */}
+                <div className="flex justify-between items-center text-xs">
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {formatFileSize(storageInfo.used)}
                   </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-900">
-                  <TruncateText>
-                    {user?.nickname || user?.username || user?.email || ''}
-                  </TruncateText>
-                </p>
-                <p className="text-xs text-slate-500">
-                  <TruncateText>
-                    {user?.role?.name
-                      ? getRoleDisplayName(user.role.name)
-                      : '加载中...'}
-                  </TruncateText>
-                </p>
+                  <span style={{ color: 'var(--text-tertiary)' }}>
+                    {storageInfo.usagePercent.toFixed(1)}%
+                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {formatFileSize(storageInfo.total)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                无法加载存储信息
+              </p>
+            )}
+          </div>
 
-                {/* 存储空间信息 */}
-                {storageInfo ? (
-                  <div className="mt-2">
-                    <div className="flex items-center gap-1 mb-1">
-                      <HardDrive size={12} className="text-slate-400" />
-                      <span className="text-xs text-slate-600">
-                        {formatFileSize(storageInfo.used)} /{' '}
-                        {formatFileSize(storageInfo.total)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          storageInfo.usagePercent > 90
-                            ? 'bg-gradient-to-r from-red-500 to-red-600'
-                            : storageInfo.usagePercent > 70
-                              ? 'bg-gradient-to-r from-yellow-500 to-yellow-600'
-                              : 'bg-gradient-to-r from-green-500 to-green-600'
-                        }`}
-                        style={{
-                          width: `${Math.min(storageInfo.usagePercent, 100)}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      剩余 {formatFileSize(storageInfo.remaining)}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-2">
-                    <div className="flex items-center gap-1 mb-1">
-                      <HardDrive size={12} className="text-slate-400" />
-                      <span className="text-xs text-slate-400">加载中...</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-1.5">
-                      <div
-                        className="h-1.5 rounded-full bg-slate-300 animate-pulse"
-                        style={{ width: '0%' }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* 用户信息区域 */}
+          <div 
+            className="p-4 border-t"
+            style={{ borderColor: 'var(--border-default)' }}
+          >
+            <div className="relative">
               <button
-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
                 onClick={(e) => {
-                  e.preventDefault();
                   e.stopPropagation();
-                  setShowLogoutConfirm(true);
+                  setShowUserMenu(!showUserMenu);
                 }}
-                title="退出登录"
               >
-                <LogOut size={18} />
+                {/* 头像 */}
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--primary-400), var(--accent-400))',
+                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
+                  }}
+                >
+                  {user?.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm font-semibold text-white">
+                      {(user?.nickname || user?.username || user?.email || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                
+                {/* 用户信息 */}
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    <TruncateText>
+                      {user?.nickname || user?.username || user?.email || '用户'}
+                    </TruncateText>
+                  </p>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                    {user?.role?.name ? getRoleDisplayName(user.role.name) : '加载中...'}
+                  </p>
+                </div>
+                
+                {/* 下拉箭头 */}
+                <ChevronDown 
+                  size={16} 
+                  className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--text-muted)' }}
+                />
               </button>
-            </Link>
+              
+              {/* 用户下拉菜单 */}
+              {showUserMenu && (
+                <div 
+                  className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden animate-scale-in"
+                  style={{ 
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    boxShadow: 'var(--shadow-xl)'
+                  }}
+                >
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <Settings size={16} />
+                    个人设置
+                  </Link>
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--error-dim)]"
+                    style={{ color: 'var(--error)' }}
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      setShowLogoutConfirm(true);
+                    }}
+                  >
+                    <LogOut size={16} />
+                    退出登录
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* 主内容区域 */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 h-16 flex items-center justify-between px-6 lg:px-8 relative z-30">
-          <button
-            className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
+        {/* 顶部导航栏 */}
+        <header 
+          className="h-16 flex items-center justify-between px-6 lg:px-8 relative z-30"
+          style={{ 
+            background: isDark ? 'rgba(26, 29, 33, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(12px)',
+            borderBottom: '1px solid var(--border-default)'
+          }}
+        >
+          {/* 左侧：菜单按钮 + 搜索 */}
+          <div className="flex items-center gap-4 flex-1">
+            {/* 移动端菜单按钮 */}
+            <button
+              className="lg:hidden p-2 -ml-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={22} style={{ color: 'var(--text-secondary)' }} />
+            </button>
 
-          <div className="flex-1 max-w-xl mx-4 hidden lg:block">
-            <div className="relative group">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="搜索项目、图纸、图块..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm transition-all shadow-sm hover:shadow-md"
-              />
+            {/* 搜索框 */}
+            <div className="flex-1 max-w-xl hidden sm:block">
+              <div 
+                className="relative group"
+              >
+                <Search
+                  size={18}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                  style={{ color: 'var(--text-muted)' }}
+                />
+                <input
+                  type="text"
+                  placeholder="搜索项目、图纸、图块..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 rounded-xl text-sm transition-all duration-200 outline-none"
+                  style={{ 
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid transparent',
+                    color: 'var(--text-primary)'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--primary-500)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'transparent';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                {/* 快捷键提示 */}
+                <kbd 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-xs hidden lg:block"
+                  style={{ 
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border-default)'
+                  }}
+                >
+                  ⌘K
+                </kbd>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Current Time Display */}
-            <div className="hidden sm:flex items-center px-3 py-1.5 bg-slate-50 rounded-lg text-sm text-slate-600 font-medium">
-              <span className="text-primary-600">
-                {currentTime.toLocaleTimeString()}
+          {/* 右侧工具栏 */}
+          <div className="flex items-center gap-2">
+            {/* 时间显示 */}
+            <div 
+              className="hidden md:flex flex-col items-end mr-4 px-3 py-1.5 rounded-lg"
+              style={{ background: 'var(--bg-tertiary)' }}
+            >
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {formattedTime}
+              </span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {formattedDate}
               </span>
             </div>
 
-            {/* Settings Dropdown */}
+            {/* 通知按钮 */}
+            <button
+              className="relative p-2.5 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              <Bell size={20} />
+              {notifications > 0 && (
+                <span 
+                  className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-xs font-bold flex items-center justify-center"
+                  style={{ 
+                    background: 'var(--error)',
+                    color: 'white'
+                  }}
+                >
+                  {notifications > 9 ? '9+' : notifications}
+                </span>
+              )}
+            </button>
+
+            {/* 主题切换 */}
+            <div className="p-0.5">
+              <ThemeToggle />
+            </div>
+
+            {/* 设置按钮 */}
             <div className="relative">
               <button
-                className={`p-2 hover:bg-slate-100 transition-all rounded-xl ${showSettings ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}
+                className={`
+                  p-2.5 rounded-xl transition-all duration-200
+                  ${showSettings 
+                    ? 'text-[var(--primary-500)] bg-[var(--primary-50)]' 
+                    : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]'
+                  }
+                `}
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowSettings(!showSettings);
                 }}
               >
-                <Settings size={20} />
+                <Settings2 size={20} />
               </button>
+              
+              {/* 设置下拉菜单 */}
               {showSettings && (
-                <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-100 py-1 z-50 animate-slide-in-right">
+                <div 
+                  className="absolute right-0 mt-2 w-52 rounded-xl overflow-hidden animate-slide-up z-50"
+                  style={{ 
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    boxShadow: 'var(--shadow-xl)'
+                  }}
+                >
                   <Link
                     to="/profile"
-                    className="block w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary-600 transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-secondary)' }}
                     onClick={() => setShowSettings(false)}
                   >
+                    <Settings size={16} />
                     个人资料
                   </Link>
                   {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
                     <Link
                       to="/runtime-config"
-                      className="block w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary-600 transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+                      style={{ color: 'var(--text-secondary)' }}
                       onClick={() => setShowSettings(false)}
                     >
+                      <Settings2 size={16} />
                       系统设置
                     </Link>
                   )}
-                  <div className="h-px bg-slate-100 my-1"></div>
+                  <div 
+                    className="h-px mx-4"
+                    style={{ background: 'var(--border-subtle)' }}
+                  />
                   <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-error-600 hover:bg-error-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--error-dim)]"
+                    style={{ color: 'var(--error)' }}
                     onClick={(e) => {
                       e.preventDefault();
-                      e.stopPropagation();
                       setShowLogoutConfirm(true);
                       setShowSettings(false);
                     }}
                   >
+                    <LogOut size={16} />
                     退出登录
                   </button>
                 </div>
@@ -437,18 +677,43 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
         {/* 系统公告横幅 */}
         {runtimeConfig.systemNotice && (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+          <div 
+            className="px-4 py-2.5 animate-slide-up"
+            style={{ 
+              background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
+              borderBottom: `1px solid ${isDark ? 'rgba(245, 158, 11, 0.3)' : '#fef3c7'}`
+            }}
+          >
             <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-              <svg className="w-5 h-5 text-amber-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg 
+                className="w-5 h-5 flex-shrink-0" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2"
+                style={{ color: isDark ? '#f59e0b' : '#d97706' }}
+              >
                 <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span className="text-sm text-amber-800">{runtimeConfig.systemNotice}</span>
+              <span 
+                className="text-sm"
+                style={{ color: isDark ? '#fbbf24' : '#92400e' }}
+              >
+                {runtimeConfig.systemNotice}
+              </span>
             </div>
           </div>
         )}
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>
+        {/* 页面内容 */}
+        <main 
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+          style={{ background: 'var(--bg-primary)' }}
+        >
+          <div className="animate-fade-in">
+            {children}
+          </div>
+        </main>
       </div>
 
       {/* 退出登录确认对话框 */}
@@ -470,23 +735,35 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               onClick={handleLogout}
               disabled={isLoggingOut}
             >
-              {isLoggingOut ? '退出中...' : '确认退出'}
+              {isLoggingOut ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  退出中...
+                </span>
+              ) : (
+                '确认退出'
+              )}
             </Button>
           </>
         }
       >
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl bg-error-100 mb-4">
-            <LogOut className="w-8 h-8 text-error-600" />
+        <div className="text-center py-4">
+          <div 
+            className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+            style={{ background: 'var(--error-light)' }}
+          >
+            <LogOut size={28} style={{ color: 'var(--error)' }} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">
+          <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
             确认退出登录
           </h3>
-          <p className="text-sm text-slate-500">
-            您确定要退出 CloudCAD 吗？退出后需要重新登录才能访问系统功能。
+          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+            您确定要退出 {APP_NAME} 吗？退出后需要重新登录才能访问系统功能。
           </p>
         </div>
       </Modal>
     </div>
   );
 };
+
+export default Layout;
