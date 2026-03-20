@@ -538,9 +538,9 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
-  background-color: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-default);
+  color: var(--text-muted, #5a6a7a);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
 }
 
 .cascadeColumnContent {
@@ -554,10 +554,10 @@
   justify-content: space-between;
   padding: 10px 12px;
   font-size: 0.8125rem;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #b8c5d1);
   cursor: pointer;
   transition: all var(--transition-fast);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .cascadeItem:last-child {
@@ -565,17 +565,13 @@
 }
 
 .cascadeItem:hover {
-  background-color: var(--bg-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .cascadeItem.selected {
-  color: var(--primary-500);
-  background-color: var(--primary-50);
+  color: var(--primary-500, #818cf8);
+  background-color: rgba(99, 102, 241, 0.1);
   font-weight: 500;
-}
-
-[data-theme="dark"] .cascadeItem.selected {
-  background-color: var(--primary-100);
 }
 
 .cascadeItem.hasChildren {
