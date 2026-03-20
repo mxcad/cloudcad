@@ -78,6 +78,16 @@ export interface MxCadConfig {
 }
 
 /**
+ * 字体配置
+ */
+export interface FontsConfig {
+  /** 后端字体目录（转换程序使用） */
+  backendPath: string;
+  /** 前端字体目录（Web 显示使用） */
+  frontendPath: string;
+}
+
+/**
  * 文件扩展名配置
  */
 export interface FileExtensionsConfig {
@@ -224,6 +234,7 @@ export interface AppConfig {
   fileLock: FileLockConfig;
   mail: MailConfig;
   mxcad: MxCadConfig;
+  fonts: FontsConfig; // 字体配置
   filesDataPath: string; // 本地存储路径
   svnRepoPath: string; // SVN 仓库存储路径
   mxcadUploadPath: string; // MxCAD 上传路径

@@ -71,30 +71,15 @@ export class FontsService {
   private readonly maxFileSize = 10 * 1024 * 1024;
 
   constructor(private configService: ConfigService) {
-    // 从环境变量获取目录路径
+    // 从配置服务获取字体目录路径
     this.backendFontsDir = this.configService.get<string>(
-      'MXCAD_FONTS_PATH',
-      path.join(
-        process.cwd(),
-        '..',
-        '..',
-        'runtime',
-        'windows',
-        'mxcad',
-        'fonts'
-      )
+      'fonts.backendPath',
+      path.join(process.cwd(), '..', '..', 'runtime', 'windows', 'mxcad', 'fonts')
     );
 
     this.frontendFontsDir = this.configService.get<string>(
-      'FRONTEND_FONTS_PATH',
-      path.join(
-        process.cwd(),
-        '..',
-        'frontend',
-        'dist',
-        'mxcadAppAssets',
-        'fonts'
-      )
+      'fonts.frontendPath',
+      path.join(process.cwd(), '..', '..', 'runtime', 'windows', 'mxcad', 'fonts')
     );
 
     this.logger.log(`后端字体目录: ${this.backendFontsDir}`);
@@ -387,19 +372,29 @@ export class FontsService {
       }> = [];
 
       for (const file of files) {
-        const filePath = path.join(dir, file);
-        const stat = await fs.stat(filePath);
+        try {
+          const filePath = path.join(dir, file);
+          const stat = await fs.stat(filePath);
 
-        if (stat.isFile()) {
-          const ext = path.extname(file).toLowerCase();
-          if (this.allowedExtensions.includes(ext)) {
-            fonts.push({
-              name: file,
-              size: stat.size,
-              extension: ext,
-              createdAt: stat.birthtime,
-            });
+          if (stat.isFile()) {
+            const ext = path.extname(file).toLowerCase();
+            if (this.allowedExtensions.includes(ext)) {
+              fonts.push({
+                name: file,
+                size: stat.size,
+                extension: ext,
+                createdAt: stat.birthtime,
+              });
+            }
           }
+        } catch (fileError) {
+          // 单个文件读取失败时记录日志但继续处理其他文件
+          if (fileError.code === 'EPERM' || fileError.code === 'EACCES') {
+            this.logger.warn(`无法访问字体文件(可能正被使用): ${file}`);
+          } else {
+            this.logger.warn(`读取字体文件信息失败: ${file}, ${fileError.message}`);
+          }
+          continue;
         }
       }
 

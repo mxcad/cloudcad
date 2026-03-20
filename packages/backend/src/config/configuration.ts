@@ -154,6 +154,16 @@ export default (): AppConfig => ({
     ),
   },
 
+  // 字体配置
+  fonts: {
+    backendPath: resolvePath(
+      process.env.MXCAD_FONTS_PATH || 'runtime/windows/mxcad/fonts'
+    ),
+    frontendPath: resolvePath(
+      process.env.FRONTEND_FONTS_PATH || 'frontend/dist/mxcadAppAssets/fonts'
+    ),
+  },
+
   // 存储路径配置
   filesDataPath: resolvePath(process.env.FILES_DATA_PATH || 'filesData'),
   svnRepoPath: resolvePath(process.env.SVN_REPO_PATH || 'svn-repo'),
