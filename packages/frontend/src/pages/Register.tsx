@@ -206,7 +206,13 @@ export const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const dataToValidate = { ...formData, confirmPassword };
+    const dataToValidate = {
+      email: formData.email ?? '',
+      username: formData.username,
+      password: formData.password,
+      confirmPassword,
+      nickname: formData.nickname,
+    };
     const validationError = validateRegisterForm(dataToValidate, {
       validateEmail: mailEnabled,
     });
@@ -268,7 +274,8 @@ export const Register: React.FC = () => {
       { label: '较强', color: '#22c55e' },
       { label: '很强', color: '#10b981' },
     ];
-    return { strength: score, label: levels[score].label, color: levels[score].color };
+    const level = levels[score] ?? levels[0]!;
+    return { strength: score, label: level.label, color: level.color };
   };
 
   const passwordStrength = getPasswordStrength(formData.password);

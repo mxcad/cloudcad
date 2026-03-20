@@ -6,6 +6,8 @@ import { FileSystemNode } from '../types/filesystem';
 interface IconProps {
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
+  color?: string;
 }
 
 // 文件夹图标 - 精致版本

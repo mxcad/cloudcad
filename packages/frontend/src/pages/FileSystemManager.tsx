@@ -1059,7 +1059,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           <SearchIcon
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
-            color="var(--text-muted)"
+            style={{ color: 'var(--text-muted)' }}
           />
           <input
             type="text"
@@ -1292,8 +1292,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     <div className="flex flex-col items-center justify-center py-16">
       <EmptyFolderIcon
         size={80}
-        className="mb-6 animate-float opacity-50"
-        color="var(--text-muted)"
+        className="mb-6 animate-float"
+        style={{ color: 'var(--text-muted)', opacity: 0.5 }}
       />
       <h3
         className="text-xl font-bold mb-2"

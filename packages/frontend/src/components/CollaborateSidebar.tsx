@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
+// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
 import Users from 'lucide-react/dist/esm/icons/users';
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
@@ -10,9 +19,13 @@ import { APP_COOPERATE_URL } from '@/constants/appConfig';
 /**
  * 协同侧边栏组件
  * 提供协同功能的创建、加入、退出和列表展示
+ * 
+ * 主题适配：使用 CSS 变量，支持深色/亮色主题
+ * CloudCAD 完美主题系统 2.0
  */
 export const CollaborateSidebar: React.FC = () => {
   const { showToast } = useNotification();
+  
   const getCooperate = () => {
     const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
     cooperate.init({
@@ -150,26 +163,58 @@ export const CollaborateSidebar: React.FC = () => {
 
   return (
     <>
-      {/* 侧边栏 */}
-      <div className="bg-[#1E2129] text-white flex flex-col transition-all duration-200 ease-in-out w-full h-full">
+      {/* 侧边栏 - 使用主题 CSS 变量 */}
+      <div 
+        className="flex flex-col w-full h-full transition-all duration-200 ease-in-out"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          color: 'var(--text-primary)'
+        }}
+      >
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#4A5568]">
+        <div 
+          className="flex items-center justify-between px-4 py-3"
+          style={{
+            borderBottom: '1px solid var(--border-default)'
+          }}
+        >
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#4F46E5]" />
-            <span className="font-semibold text-sm text-[#E2E8F0]">协同</span>
+            <Users 
+              className="w-5 h-5" 
+              style={{ color: 'var(--primary-500)' }} 
+            />
+            <span 
+              className="font-semibold text-sm"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              协同
+            </span>
           </div>
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex gap-2 p-3 border-b border-[#4A5568]">
+        <div 
+          className="flex gap-2 p-3"
+          style={{
+            borderBottom: '1px solid var(--border-default)'
+          }}
+        >
           <button
             onClick={handleCreateWork}
             disabled={creating || currentWorkId !== null}
-            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
-              creating || currentWorkId !== null
-                ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
-                : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
-            }`}
+            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-all"
+            style={{
+              background: creating || currentWorkId !== null
+                ? 'var(--bg-tertiary)'
+                : 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+              color: creating || currentWorkId !== null
+                ? 'var(--text-muted)'
+                : 'white',
+              cursor: creating || currentWorkId !== null ? 'not-allowed' : 'pointer',
+              boxShadow: creating || currentWorkId !== null
+                ? 'none'
+                : 'var(--shadow-sm)'
+            }}
           >
             {creating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -182,28 +227,46 @@ export const CollaborateSidebar: React.FC = () => {
           <button
             onClick={fetchWorks}
             disabled={loading}
-            className="p-2 bg-[#252B3A] hover:bg-[#333A47] rounded transition-colors"
+            className="p-2 rounded transition-colors"
+            style={{
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-tertiary)'
+            }}
             title="刷新列表"
           >
             <RefreshCw
-              className={`w-4 h-4 text-[#94A3B8] ${loading ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
+              style={{ color: 'var(--text-tertiary)' }}
             />
           </button>
         </div>
 
         {/* 当前协同状态 */}
         {currentWorkId !== null && (
-          <div className="px-3 py-2 border-b border-[#4A5568] bg-[#252B3A]">
+          <div 
+            className="px-3 py-2"
+            style={{
+              borderBottom: '1px solid var(--border-default)',
+              backgroundColor: 'var(--primary-50)'
+            }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm text-[#E2E8F0]">
+                <div 
+                  className="w-2 h-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: 'var(--success)' }}
+                />
+                <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
                   当前协同: <strong>{currentWorkId}</strong>
                 </span>
               </div>
               <button
                 onClick={handleExitWork}
-                className="px-2 py-1 text-xs bg-[#EF4444] hover:bg-[#DC2626] text-white rounded transition-colors"
+                className="px-2 py-1 text-xs rounded transition-colors"
+                style={{
+                  backgroundColor: 'var(--error)',
+                  color: 'white'
+                }}
               >
                 退出
               </button>
@@ -215,10 +278,16 @@ export const CollaborateSidebar: React.FC = () => {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-[#4F46E5] animate-spin" />
+              <Loader2 
+                className="w-6 h-6 animate-spin" 
+                style={{ color: 'var(--primary-500)' }} 
+              />
             </div>
           ) : works.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-[#94A3B8]">
+            <div 
+              className="flex flex-col items-center justify-center py-8"
+              style={{ color: 'var(--text-muted)' }}
+            >
               <Users className="w-10 h-10 mb-2 opacity-50" />
               <p className="text-xs text-center px-4">暂无协同会话</p>
               <p className="text-xs text-center px-4 mt-1">
@@ -230,33 +299,49 @@ export const CollaborateSidebar: React.FC = () => {
               {works.map((workId) => (
                 <div
                   key={workId}
-                  className={`flex items-center justify-between p-3 rounded transition-colors ${
-                    currentWorkId === workId
-                      ? 'bg-[#4F46E5]/20 border border-[#4F46E5]'
-                      : 'bg-[#252B3A] hover:bg-[#333A47]'
-                  }`}
+                  className="flex items-center justify-between p-3 rounded transition-colors"
+                  style={{
+                    backgroundColor: currentWorkId === workId
+                      ? 'var(--primary-50)'
+                      : 'var(--bg-tertiary)',
+                    border: currentWorkId === workId
+                      ? '1px solid var(--primary-300)'
+                      : '1px solid transparent'
+                  }}
                 >
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#94A3B8]" />
-                    <span className="text-sm text-[#E2E8F0]">
+                    <Users 
+                      className="w-4 h-4" 
+                      style={{ color: 'var(--text-tertiary)' }} 
+                    />
+                    <span 
+                      className="text-sm"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
                       协同 {workId}
                     </span>
                   </div>
                   {currentWorkId === workId ? (
-                    <span className="text-xs text-green-400">已加入</span>
+                    <span 
+                      className="text-xs"
+                      style={{ color: 'var(--success)' }}
+                    >
+                      已加入
+                    </span>
                   ) : (
                     <button
                       onClick={() => handleJoinWork(workId)}
-                      disabled={
-                        joiningWorkId !== null || currentWorkId !== null
-                      }
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        joiningWorkId === workId
-                          ? 'bg-[#4F46E5] text-white'
-                          : joiningWorkId !== null || currentWorkId !== null
-                            ? 'bg-[#2D3748] text-[#718096] cursor-not-allowed'
-                            : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
-                      }`}
+                      disabled={joiningWorkId !== null || currentWorkId !== null}
+                      className="px-2 py-1 text-xs rounded transition-all"
+                      style={{
+                        background: joiningWorkId === workId || joiningWorkId !== null || currentWorkId !== null
+                          ? 'var(--bg-secondary)'
+                          : 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+                        color: joiningWorkId === workId || joiningWorkId !== null || currentWorkId !== null
+                          ? 'var(--text-muted)'
+                          : 'white',
+                        cursor: joiningWorkId !== null || currentWorkId !== null ? 'not-allowed' : 'pointer'
+                      }}
                     >
                       {joiningWorkId === workId ? (
                         <Loader2 className="w-3 h-3 animate-spin" />

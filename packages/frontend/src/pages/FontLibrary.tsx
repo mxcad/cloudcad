@@ -41,7 +41,7 @@ const FONT_TYPES = [
 ];
 
 // 字体类型图标映射
-const getFontIcon = (extension: string): { color: string; label: string; Icon: React.ComponentType<{size?: number, className?: string}> } => {
+const getFontIcon = (extension: string): { color: string; label: string; Icon: React.ComponentType<{size?: number, className?: string, style?: React.CSSProperties}> } => {
   const type = FONT_TYPES.find(t => t.value === extension.toLowerCase());
   if (type) {
     return { color: type.color, label: type.label, Icon: type.Icon };
@@ -675,7 +675,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                                         backgroundColor: `${typeInfo.color}15`,
                                       }}
                                     >
-                                      <IconComponent size={32} color={typeInfo.color} />
+                                      <IconComponent size={32} style={{ color: typeInfo.color }} />
                                     </div>
                                     <h3 className="font-medium text-text-primary mb-1 truncate px-4" title={font.name}>
                                       <FileNameText>{font.name}</FileNameText>
@@ -771,7 +771,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                               className="w-10 h-10 rounded-lg flex items-center justify-center"
                               style={{ backgroundColor: `${typeInfo.color}15` }}
                             >
-                              <IconComponent size={20} color={typeInfo.color} />
+                              <IconComponent size={20} style={{ color: typeInfo.color }} />
                             </div>
                             <div>
                               <p className="font-medium text-text-primary">

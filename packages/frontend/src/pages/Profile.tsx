@@ -93,7 +93,7 @@ export const Profile: React.FC = () => {
       { label: '较强', color: '#22c55e' },
       { label: '很强', color: '#10b981' },
     ];
-    const level = levels[score] ?? levels[0];
+    const level = levels[score] ?? levels[0]!;
     return { strength: score, label: level.label, color: level.color };
   };
 

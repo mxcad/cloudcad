@@ -105,7 +105,9 @@ export const UserManagement = () => {
   const loadRuntimeConfig = async () => {
     try {
       const response = await runtimeConfigApi.getPublicConfigs();
-      setMailEnabled(response.data?.mailEnabled ?? false);
+      // 响应直接包含配置数据
+      const data = response.data as Record<string, string | number | boolean> | undefined;
+      setMailEnabled(data?.mailEnabled === true);
     } catch (error) {
       console.error('加载运行时配置失败:', error);
       setMailEnabled(false);
