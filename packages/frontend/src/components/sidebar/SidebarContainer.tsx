@@ -150,7 +150,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
   // 宽度变化时更新 CAD 容器位置
   useEffect(() => {
-    mxcadManager.adjustContainerPosition(settings.isVisible ? settings.width : 0);
+    // 侧边栏关闭时保留 48px 窄条，CAD 编辑器需要让出这部分空间
+    mxcadManager.adjustContainerPosition(settings.isVisible ? settings.width : 48);
   }, [settings.width, settings.isVisible]);
 
   // 监听 mxcad-open-sidebar 事件（Mx_ShowSidebar 和 Mx_ShowCollaborate 命令触发）
@@ -388,47 +389,45 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // ==================== 渲染 ====================
 
   const isVisible = settings.isVisible;
-  const showTrigger = !settings.isVisible;
 
   return (
-    <>
-      {/* 触发条（收起状态显示） */}
-      {showTrigger && (
-        <SidebarTrigger
-          activeTab={activeTab}
-          onTabClick={handleTriggerClick}
-        />
-      )}
-
-      {/* 侧边栏容器 */}
-      <div
-        ref={containerRef}
-        className={`${styles.sidebarContainer} ${!isVisible ? styles.collapsed : ''}`}
-        style={{ width: isVisible ? settings.width : 0 }}
-      >
-        {/* Tab 栏 */}
-        {isVisible && (
+    <div
+      ref={containerRef}
+      className={`${styles.sidebarContainer} ${!isVisible ? styles.collapsed : ''}`}
+      style={{ width: isVisible ? settings.width : 48 }}
+    >
+      {isVisible ? (
+        <>
+          {/* Tab 栏 */}
           <SidebarTabBar
             activeTab={activeTab}
             onTabChange={handleTabChange}
             onCloseClick={handleHideSidebar}
           />
-        )}
 
-        {/* 内容区域 */}
-        {isVisible && (
+          {/* 内容区域 */}
           <div className={styles.content}>{renderContent()}</div>
-        )}
 
-        {/* 宽度调整手柄 */}
-        {isVisible && (
+          {/* 宽度调整手柄 */}
           <div
             className={`${styles.resizeHandle} ${isResizing ? styles.active : ''}`}
             onMouseDown={handleResizeMouseDown}
           />
-        )}
-      </div>
-    </>
+        </>
+      ) : (
+        /* 收缩状态：显示触发条 */
+        <SidebarTrigger
+          activeTab={activeTab}
+          activeDrawingsSubTab={activeDrawingsSubTab}
+          onTabClick={(tab, subTab) => {
+            if (subTab) {
+              setActiveDrawingsSubTab(subTab);
+            }
+            handleTriggerClick(tab);
+          }}
+        />
+      )}
+    </div>
   );
 };
 

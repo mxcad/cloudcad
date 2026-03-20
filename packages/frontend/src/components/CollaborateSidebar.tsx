@@ -164,28 +164,28 @@ export const CollaborateSidebar: React.FC = () => {
   return (
     <>
       {/* 侧边栏 - 使用主题 CSS 变量 */}
-      <div 
+      <div
         className="flex flex-col w-full h-full transition-all duration-200 ease-in-out"
         style={{
-          backgroundColor: 'var(--bg-secondary)',
-          color: 'var(--text-primary)'
+          backgroundColor: 'var(--sidebar-bg, #3A4352)',
+          color: 'var(--text-primary, #f0f4f8)'
         }}
       >
         {/* 标题栏 */}
-        <div 
+        <div
           className="flex items-center justify-between px-4 py-3"
           style={{
-            borderBottom: '1px solid var(--border-default)'
+            borderBottom: '1px solid var(--sidebar-border, #212832)'
           }}
         >
           <div className="flex items-center gap-2">
-            <Users 
-              className="w-5 h-5" 
-              style={{ color: 'var(--primary-500)' }} 
+            <Users
+              className="w-5 h-5"
+              style={{ color: 'var(--primary-500, #818cf8)' }}
             />
-            <span 
+            <span
               className="font-semibold text-sm"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: 'var(--text-primary, #f0f4f8)' }}
             >
               协同
             </span>
@@ -193,10 +193,10 @@ export const CollaborateSidebar: React.FC = () => {
         </div>
 
         {/* 操作按钮 */}
-        <div 
+        <div
           className="flex gap-2 p-3"
           style={{
-            borderBottom: '1px solid var(--border-default)'
+            borderBottom: '1px solid var(--sidebar-border, #212832)'
           }}
         >
           <button
@@ -205,15 +205,15 @@ export const CollaborateSidebar: React.FC = () => {
             className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm font-medium transition-all"
             style={{
               background: creating || currentWorkId !== null
-                ? 'var(--bg-tertiary)'
-                : 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'linear-gradient(135deg, var(--primary-600, #a5b4fc), var(--primary-500, #818cf8))',
               color: creating || currentWorkId !== null
-                ? 'var(--text-muted)'
+                ? 'var(--text-muted, #5a6a7a)'
                 : 'white',
               cursor: creating || currentWorkId !== null ? 'not-allowed' : 'pointer',
               boxShadow: creating || currentWorkId !== null
                 ? 'none'
-                : 'var(--shadow-sm)'
+                : '0 2px 8px rgba(0, 0, 0, 0.2)'
             }}
           >
             {creating ? (
@@ -229,34 +229,34 @@ export const CollaborateSidebar: React.FC = () => {
             disabled={loading}
             className="p-2 rounded transition-colors"
             style={{
-              backgroundColor: 'var(--bg-tertiary)',
-              color: 'var(--text-tertiary)'
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              color: 'var(--text-tertiary, #7a8a99)'
             }}
             title="刷新列表"
           >
             <RefreshCw
               className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: 'var(--text-tertiary, #7a8a99)' }}
             />
           </button>
         </div>
 
         {/* 当前协同状态 */}
         {currentWorkId !== null && (
-          <div 
+          <div
             className="px-3 py-2"
             style={{
-              borderBottom: '1px solid var(--border-default)',
-              backgroundColor: 'var(--primary-50)'
+              borderBottom: '1px solid var(--sidebar-border, #212832)',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)'
             }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: 'var(--success)' }}
+                  style={{ backgroundColor: 'var(--success, #22c55e)' }}
                 />
-                <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-primary, #f0f4f8)' }}>
                   当前协同: <strong>{currentWorkId}</strong>
                 </span>
               </div>
@@ -264,7 +264,7 @@ export const CollaborateSidebar: React.FC = () => {
                 onClick={handleExitWork}
                 className="px-2 py-1 text-xs rounded transition-colors"
                 style={{
-                  backgroundColor: 'var(--error)',
+                  backgroundColor: 'var(--error, #ef4444)',
                   color: 'white'
                 }}
               >
@@ -302,29 +302,29 @@ export const CollaborateSidebar: React.FC = () => {
                   className="flex items-center justify-between p-3 rounded transition-colors"
                   style={{
                     backgroundColor: currentWorkId === workId
-                      ? 'var(--primary-50)'
-                      : 'var(--bg-tertiary)',
+                      ? 'rgba(99, 102, 241, 0.1)'
+                      : 'rgba(255, 255, 255, 0.03)',
                     border: currentWorkId === workId
-                      ? '1px solid var(--primary-300)'
+                      ? '1px solid rgba(99, 102, 241, 0.3)'
                       : '1px solid transparent'
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <Users 
-                      className="w-4 h-4" 
-                      style={{ color: 'var(--text-tertiary)' }} 
+                    <Users
+                      className="w-4 h-4"
+                      style={{ color: 'var(--text-tertiary, #7a8a99)' }}
                     />
-                    <span 
+                    <span
                       className="text-sm"
-                      style={{ color: 'var(--text-primary)' }}
+                      style={{ color: 'var(--text-primary, #f0f4f8)' }}
                     >
                       协同 {workId}
                     </span>
                   </div>
                   {currentWorkId === workId ? (
-                    <span 
+                    <span
                       className="text-xs"
-                      style={{ color: 'var(--success)' }}
+                      style={{ color: 'var(--success, #22c55e)' }}
                     >
                       已加入
                     </span>
@@ -335,10 +335,10 @@ export const CollaborateSidebar: React.FC = () => {
                       className="px-2 py-1 text-xs rounded transition-all"
                       style={{
                         background: joiningWorkId === workId || joiningWorkId !== null || currentWorkId !== null
-                          ? 'var(--bg-secondary)'
-                          : 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+                          ? 'rgba(255, 255, 255, 0.05)'
+                          : 'linear-gradient(135deg, var(--primary-600, #a5b4fc), var(--primary-500, #818cf8))',
                         color: joiningWorkId === workId || joiningWorkId !== null || currentWorkId !== null
-                          ? 'var(--text-muted)'
+                          ? 'var(--text-muted, #5a6a7a)'
                           : 'white',
                         cursor: joiningWorkId !== null || currentWorkId !== null ? 'not-allowed' : 'pointer'
                       }}
