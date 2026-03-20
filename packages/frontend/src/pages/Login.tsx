@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { APP_NAME } from '../constants/appConfig';
-import { useTheme } from '../contexts/ThemeContext';
-import { ThemeToggle } from '../components/ThemeToggle';
+import { AuthLayout } from '../components/AuthLayout';
 import type { LoginDto } from '../types/api-client';
 
 // 导入 lucide 图标
@@ -14,9 +13,6 @@ import ArrowRightIcon from 'lucide-react/dist/esm/icons/arrow-right';
 import Loader2Icon from 'lucide-react/dist/esm/icons/loader-2';
 import CheckCircleIcon from 'lucide-react/dist/esm/icons/check-circle';
 import AlertCircleIcon from 'lucide-react/dist/esm/icons/alert-circle';
-import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
-import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
-import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
 
 interface LocationState {
   from?: string;
@@ -26,19 +22,13 @@ interface LocationState {
 /**
  * 登录页面 - CloudCAD
  * 
- * 设计特色：
- * - 居中卡片布局
- * - 统一渐变网格背景
- * - 玻璃态效果
- * - 流畅动画
- * - 完美主题适配
+ * 使用 AuthLayout 统一布局
  */
 export const Login: React.FC = () => {
   useDocumentTitle('登录');
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
-  const { isDark } = useTheme();
 
   const [formData, setFormData] = useState<LoginDto>({
     account: '',
@@ -91,271 +81,126 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="login-page" data-theme={isDark ? 'dark' : 'light'}>
-      {/* 动态背景 */}
-      <div className="login-background">
-        <div className="gradient-orb orb-1" />
-        <div className="gradient-orb orb-2" />
-        <div className="gradient-orb orb-3" />
-        <div className="grid-overlay" />
+    <AuthLayout showFeatures={true}>
+      {/* Logo 区域 */}
+      <div className="login-logo-section">
+        <div className="logo-wrapper">
+          <div className="logo-glow" />
+          <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+        </div>
+        <h1 className="app-title">{APP_NAME}</h1>
+        <p className="app-tagline">专业云端 CAD 图纸管理平台</p>
       </div>
 
-      {/* 主题切换按钮 */}
-      <div className="theme-toggle-wrapper">
-        <ThemeToggle />
+      {/* 表单头部 */}
+      <div className="form-header">
+        <h2 className="form-title">欢迎回来</h2>
+        <p className="form-subtitle">登录您的账户以继续</p>
       </div>
 
-      {/* 居中内容 */}
-      <div className="login-container">
-        <div className="login-card">
-          {/* Logo 区域 */}
-          <div className="logo-section">
-            <div className="logo-wrapper">
-              <div className="logo-glow" />
-              <img src="/logo.png" alt={APP_NAME} className="logo-image" />
-            </div>
-            <h1 className="app-title">{APP_NAME}</h1>
-            <p className="app-tagline">专业云端 CAD 图纸管理平台</p>
-          </div>
+      {/* 消息提示 */}
+      {success && (
+        <div className="login-alert alert-success">
+          <CheckCircleIcon size={18} className="alert-icon" />
+          <span>{success}</span>
+        </div>
+      )}
 
-          {/* 表单头部 */}
-          <div className="form-header">
-            <h2 className="form-title">欢迎回来</h2>
-            <p className="form-subtitle">登录您的账户以继续</p>
-          </div>
+      {error && (
+        <div className="login-alert alert-error">
+          <AlertCircleIcon size={18} className="alert-icon" />
+          <span>{error}</span>
+        </div>
+      )}
 
-          {/* 消息提示 */}
-          {success && (
-            <div className="alert alert-success">
-              <CheckCircleIcon size={18} className="alert-icon" />
-              <span>{success}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="alert alert-error">
-              <AlertCircleIcon size={18} className="alert-icon" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* 登录表单 */}
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div className={`input-group ${focusedField === 'account' ? 'focused' : ''}`}>
-              <label htmlFor="account" className="input-label">邮箱或用户名</label>
-              <div className="input-wrapper">
-                <MailIcon 
-                  size={18} 
-                  className={`input-icon ${focusedField === 'account' ? 'active' : ''}`} 
-                />
-                <input
-                  id="account"
-                  name="account"
-                  type="text"
-                  autoComplete="email username"
-                  required
-                  className="input-field"
-                  placeholder="请输入邮箱或用户名"
-                  value={formData.account}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('account')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <div className="input-glow" />
-              </div>
-            </div>
-
-            <div className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}>
-              <label htmlFor="password" className="input-label">密码</label>
-              <div className="input-wrapper">
-                <LockIcon 
-                  size={18} 
-                  className={`input-icon ${focusedField === 'password' ? 'active' : ''}`} 
-                />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="input-field"
-                  placeholder="请输入密码"
-                  value={formData.password}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <div className="input-glow" />
-              </div>
-            </div>
-
-            <div className="form-options">
-              <button 
-                type="button" 
-                onClick={() => navigate('/forgot-password')} 
-                className="forgot-password-link"
-              >
-                忘记密码？
-              </button>
-            </div>
-
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
-                <>
-                  <Loader2Icon size={18} className="animate-spin" />
-                  <span>登录中...</span>
-                </>
-              ) : (
-                <>
-                  <span>立即登录</span>
-                  <ArrowRightIcon size={18} className="button-arrow" />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* 注册链接 */}
-          <div className="form-footer">
-            <p className="register-text">
-              还没有账户？
-              <button onClick={() => navigate('/register')} className="register-link">
-                立即注册
-              </button>
-            </p>
-          </div>
-
-          {/* 特性图标 */}
-          <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
-              <CpuIcon size={14} />
-            </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
-              <BoxesIcon size={14} />
-            </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
-              <ShieldCheckIcon size={14} />
-            </div>
+      {/* 登录表单 */}
+      <form className="login-form" onSubmit={handleSubmit}>
+        <div className={`input-group ${focusedField === 'account' ? 'focused' : ''}`}>
+          <label htmlFor="account" className="input-label">邮箱或用户名</label>
+          <div className="input-wrapper">
+            <MailIcon 
+              size={18} 
+              className={`input-icon ${focusedField === 'account' ? 'active' : ''}`} 
+            />
+            <input
+              id="account"
+              name="account"
+              type="text"
+              autoComplete="email username"
+              required
+              className="input-field"
+              placeholder="请输入邮箱或用户名"
+              value={formData.account}
+              onChange={handleChange}
+              onFocus={() => setFocusedField('account')}
+              onBlur={() => setFocusedField(null)}
+            />
+            <div className="input-glow" />
           </div>
         </div>
 
-        {/* 版权信息 */}
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <div className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}>
+          <label htmlFor="password" className="input-label">密码</label>
+          <div className="input-wrapper">
+            <LockIcon 
+              size={18} 
+              className={`input-icon ${focusedField === 'password' ? 'active' : ''}`} 
+            />
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className="input-field"
+              placeholder="请输入密码"
+              value={formData.password}
+              onChange={handleChange}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
+            />
+            <div className="input-glow" />
+          </div>
+        </div>
+
+        <div className="form-options">
+          <button 
+            type="button" 
+            onClick={() => navigate('/forgot-password')} 
+            className="forgot-password-link"
+          >
+            忘记密码？
+          </button>
+        </div>
+
+        <button type="submit" disabled={loading} className="submit-button">
+          {loading ? (
+            <>
+              <Loader2Icon size={18} className="animate-spin" />
+              <span>登录中...</span>
+            </>
+          ) : (
+            <>
+              <span>立即登录</span>
+              <ArrowRightIcon size={18} className="button-arrow" />
+            </>
+          )}
+        </button>
+      </form>
+
+      {/* 注册链接 */}
+      <div className="form-footer">
+        <p className="register-text">
+          还没有账户？
+          <button onClick={() => navigate('/register')} className="register-link">
+            立即注册
+          </button>
+        </p>
       </div>
 
       <style>{`
-        /* ===== 基础布局 ===== */
-        .login-page {
-          min-height: 100vh;
-          display: flex;
-          position: relative;
-          overflow: hidden;
-          font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background: var(--bg-primary);
-        }
-
-        /* ===== 动态背景 ===== */
-        .login-background {
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .gradient-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(100px);
-          opacity: 0.4;
-          animation: float-orb 20s ease-in-out infinite;
-        }
-
-        .orb-1 {
-          width: 600px;
-          height: 600px;
-          background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
-          top: -200px;
-          left: 50%;
-          transform: translateX(-50%);
-          animation-delay: 0s;
-        }
-
-        .orb-2 {
-          width: 400px;
-          height: 400px;
-          background: linear-gradient(135deg, var(--accent-400), var(--primary-400));
-          bottom: -100px;
-          left: 20%;
-          animation-delay: -7s;
-        }
-
-        .orb-3 {
-          width: 350px;
-          height: 350px;
-          background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
-          bottom: -50px;
-          right: 15%;
-          animation-delay: -14s;
-        }
-
-        @keyframes float-orb {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(30px, -30px) scale(1.05); }
-          50% { transform: translate(-20px, 20px) scale(0.95); }
-          75% { transform: translate(20px, 30px) scale(1.02); }
-        }
-
-        .grid-overlay {
-          position: absolute;
-          inset: 0;
-          background-image: 
-            linear-gradient(var(--border-subtle) 1px, transparent 1px),
-            linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
-          background-size: 50px 50px;
-          opacity: 0.3;
-        }
-
-        /* ===== 主题切换按钮 ===== */
-        .theme-toggle-wrapper {
-          position: fixed;
-          top: 1.5rem;
-          right: 1.5rem;
-          z-index: 100;
-        }
-
-        /* ===== 主容器 - 居中布局 ===== */
-        .login-container {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 2rem;
-          position: relative;
-          z-index: 1;
-          min-height: 100vh;
-        }
-
-        /* ===== 登录卡片 ===== */
-        .login-card {
-          width: 100%;
-          max-width: 420px;
-          background: var(--bg-secondary);
-          border: 1px solid var(--border-default);
-          border-radius: 24px;
-          padding: 2.5rem;
-          box-shadow: 
-            0 25px 60px -15px rgba(0, 0, 0, 0.15),
-            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-          animation: card-appear 0.6s ease-out;
-        }
-
-        @keyframes card-appear {
-          from { opacity: 0; transform: translateY(30px) scale(0.96); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
         /* ===== Logo 区域 ===== */
-        .logo-section {
+        .login-logo-section {
           text-align: center;
           margin-bottom: 1.5rem;
         }
@@ -433,7 +278,7 @@ export const Login: React.FC = () => {
         }
 
         /* ===== 消息提示 ===== */
-        .alert {
+        .login-alert {
           display: flex;
           align-items: center;
           gap: 0.75rem;
@@ -587,6 +432,9 @@ export const Login: React.FC = () => {
         .submit-button:active:not(:disabled) { transform: translateY(0); }
         .submit-button:disabled { opacity: 0.7; cursor: not-allowed; }
 
+        .animate-spin { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .button-arrow { transition: transform 0.2s; }
         .submit-button:hover:not(:disabled) .button-arrow { transform: translateX(4px); }
 
@@ -618,107 +466,7 @@ export const Login: React.FC = () => {
           text-decoration: underline;
         }
 
-        /* ===== 特性图标栏 ===== */
-        .features-bar {
-          display: flex;
-          justify-content: center;
-          gap: 1rem;
-          margin-top: 1.5rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid var(--border-subtle);
-        }
-
-        .feature-dot {
-          position: relative;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: var(--bg-tertiary);
-          border: 1px solid var(--border-default);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--text-tertiary);
-          transition: all 0.2s;
-          cursor: pointer;
-        }
-
-        .feature-dot:hover {
-          background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
-          border-color: transparent;
-          color: white;
-          transform: translateY(-2px);
-        }
-
-        /* Tooltip 样式 */
-        .feature-dot::before {
-          content: attr(data-tooltip);
-          position: absolute;
-          bottom: calc(100% + 8px);
-          left: 50%;
-          transform: translateX(-50%) scale(0.9);
-          padding: 0.375rem 0.625rem;
-          background: var(--bg-elevated);
-          border: 1px solid var(--border-default);
-          border-radius: 6px;
-          font-size: 0.6875rem;
-          font-weight: 500;
-          color: var(--text-secondary);
-          white-space: nowrap;
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.2s ease;
-          box-shadow: var(--shadow-md);
-          z-index: 10;
-        }
-
-        /* Tooltip 箭头 */
-        .feature-dot::after {
-          content: '';
-          position: absolute;
-          bottom: calc(100% + 3px);
-          left: 50%;
-          transform: translateX(-50%) scale(0.9);
-          border: 4px solid transparent;
-          border-top-color: var(--border-default);
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.2s ease;
-          z-index: 10;
-        }
-
-        .feature-dot:hover::before,
-        .feature-dot:hover::after {
-          opacity: 1;
-          visibility: visible;
-          transform: translateX(-50%) scale(1);
-        }
-
-        /* ===== 版权信息 ===== */
-        .copyright {
-          margin-top: 2rem;
-          font-size: 0.75rem;
-          color: var(--text-muted);
-        }
-
-        /* ===== 响应式设计 ===== */
-        @media (max-width: 480px) {
-          .login-container { padding: 1rem; }
-          .login-card { padding: 1.75rem; border-radius: 20px; }
-          .logo-wrapper { width: 64px; height: 64px; }
-          .app-title { font-size: 1.375rem; }
-          .theme-toggle-wrapper { top: 1rem; right: 1rem; }
-        }
-
         /* ===== 深色主题特殊处理 ===== */
-        [data-theme="dark"] .login-card {
-          background: rgba(26, 29, 33, 0.9);
-          backdrop-filter: blur(20px);
-          box-shadow: 
-            0 25px 60px -15px rgba(0, 0, 0, 0.4),
-            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-        }
-
         [data-theme="dark"] .input-field {
           background: var(--bg-primary);
         }
@@ -726,8 +474,14 @@ export const Login: React.FC = () => {
         [data-theme="dark"] .logo-glow {
           opacity: 0.4;
         }
+
+        /* ===== 响应式设计 ===== */
+        @media (max-width: 480px) {
+          .logo-wrapper { width: 64px; height: 64px; }
+          .app-title { font-size: 1.375rem; }
+        }
       `}</style>
-    </div>
+    </AuthLayout>
   );
 };
 

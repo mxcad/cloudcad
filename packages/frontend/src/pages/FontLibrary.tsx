@@ -11,6 +11,14 @@ import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
 import Type from 'lucide-react/dist/esm/icons/type';
 import X from 'lucide-react/dist/esm/icons/x';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import FileCode from 'lucide-react/dist/esm/icons/file-code';
+import FileDigit from 'lucide-react/dist/esm/icons/file-digit';
+import FileBox from 'lucide-react/dist/esm/icons/file-box';
+import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
+import Layers from 'lucide-react/dist/esm/icons/layers';
+import Palette from 'lucide-react/dist/esm/icons/palette';
+import Shapes from 'lucide-react/dist/esm/icons/shapes';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/filesystem';
 import { usePermission } from '../hooks/usePermission';
@@ -20,25 +28,25 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface FontLibraryProps {}
 
-// 字体文件类型配置
+// 字体文件类型配置 - 使用颜色和 lucide 图标
 const FONT_TYPES = [
-  { value: '', label: '全部格式', icon: '📁' },
-  { value: '.ttf', label: 'TTF', icon: '🔤', color: '#22c55e' },
-  { value: '.otf', label: 'OTF', icon: '🔤', color: '#3b82f6' },
-  { value: '.woff', label: 'WOFF', icon: '🌐', color: '#f59e0b' },
-  { value: '.woff2', label: 'WOFF2', icon: '🌐', color: '#f97316' },
-  { value: '.eot', label: 'EOT', icon: '🔤', color: '#8b5cf6' },
-  { value: '.ttc', label: 'TTC', icon: '🔤', color: '#ec4899' },
-  { value: '.shx', label: 'SHX', icon: '📐', color: '#06b6d4' },
+  { value: '', label: '全部格式', color: '#6366f1', Icon: FolderOpen },
+  { value: '.ttf', label: 'TTF', color: '#22c55e', Icon: Type },
+  { value: '.otf', label: 'OTF', color: '#3b82f6', Icon: FileText },
+  { value: '.woff', label: 'WOFF', color: '#f59e0b', Icon: FileBox },
+  { value: '.woff2', label: 'WOFF2', color: '#f97316', Icon: FileBox },
+  { value: '.eot', label: 'EOT', color: '#8b5cf6', Icon: FileDigit },
+  { value: '.ttc', label: 'TTC', color: '#ec4899', Icon: Layers },
+  { value: '.shx', label: 'SHX', color: '#06b6d4', Icon: Shapes },
 ];
 
 // 字体类型图标映射
-const getFontIcon = (extension: string): { icon: string; color: string; label: string } => {
+const getFontIcon = (extension: string): { color: string; label: string; Icon: React.ComponentType<{size?: number, className?: string}> } => {
   const type = FONT_TYPES.find(t => t.value === extension.toLowerCase());
   if (type) {
-    return { icon: type.icon, color: type.color, label: type.label };
+    return { color: type.color, label: type.label, Icon: type.Icon };
   }
-  return { icon: '🔤', color: '#6366f1', label: extension.toUpperCase() };
+  return { color: '#6366f1', label: extension.toUpperCase(), Icon: FileType };
 };
 
 export default function FontLibrary(props: FontLibraryProps) {
@@ -90,12 +98,14 @@ export default function FontLibrary(props: FontLibraryProps) {
     setLoading(true);
     try {
       const response = await fontsApi.getFonts(activeTab);
+      console.log('字体API响应:', response);
 
       let fontsData = response.data || [];
       if (fontsData && typeof fontsData === 'object' && 'data' in fontsData) {
         fontsData = fontsData.data || [];
       }
 
+      console.log('解析后的字体数据:', fontsData, '数量:', Array.isArray(fontsData) ? fontsData.length : 0);
       setAllFonts(Array.isArray(fontsData) ? fontsData : []);
     } catch (error) {
       console.error('获取字体列表失败:', error);
@@ -168,7 +178,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       <div className="page-content-theme min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-bg-tertiary flex items-center justify-center">
-            <Type size={40} className="text-text-muted" />
+            <FileCode size={40} className="text-text-muted" />
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">无访问权限</h2>
           <p className="text-text-tertiary">您没有查看字体库的权限</p>
@@ -349,17 +359,17 @@ export default function FontLibrary(props: FontLibraryProps) {
 
           {/* 统计卡片 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="card-theme flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
-                <Type size={24} className="text-primary-600" />
+            <div className="card-theme flex items-center gap-4 group">
+              <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Palette size={24} className="text-primary-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-text-primary">{stats.count}</p>
                 <p className="text-sm text-text-tertiary">字体总数</p>
               </div>
             </div>
-            <div className="card-theme flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-accent-100 flex items-center justify-center">
+            <div className="card-theme flex items-center gap-4 group">
+              <div className="w-12 h-12 rounded-xl bg-accent-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <HardDrive size={24} className="text-accent-600" />
               </div>
               <div>
@@ -367,9 +377,9 @@ export default function FontLibrary(props: FontLibraryProps) {
                 <p className="text-sm text-text-tertiary">总存储</p>
               </div>
             </div>
-            <div className="card-theme flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-success-dim flex items-center justify-center">
-                <FileType size={24} className="text-success" />
+            <div className="card-theme flex items-center gap-4 group">
+              <div className="w-12 h-12 rounded-xl bg-success-dim flex items-center justify-center group-hover:scale-110 transition-transform">
+                <FileCode size={24} className="text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-text-primary">{stats.typeCount}</p>
@@ -412,13 +422,13 @@ export default function FontLibrary(props: FontLibraryProps) {
           <div className="flex flex-wrap items-center gap-4">
             {/* 搜索框 */}
             <div className="flex-1 min-w-[240px] relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none z-10" />
               <input
                 type="text"
                 placeholder="搜索字体名称..."
                 value={filters.name}
                 onChange={(e) => handleFilterChange('name', e.target.value)}
-                className="input-theme pl-10"
+                className="input-theme !pl-12"
               />
             </div>
 
@@ -431,7 +441,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               >
                 {FONT_TYPES.map(type => (
                   <option key={type.value} value={type.value}>
-                    {type.icon} {type.label}
+                    {type.label}
                   </option>
                 ))}
               </select>
@@ -594,7 +604,12 @@ export default function FontLibrary(props: FontLibraryProps) {
             ) : fonts.length === 0 ? (
               <div className="col-span-full py-16 text-center">
                 <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-bg-tertiary flex items-center justify-center">
-                  <Type size={48} className="text-text-muted" />
+                  <div className="relative">
+                    <FolderOpen size={40} className="text-text-muted" />
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center">
+                      <Type size={14} className="text-primary-600" />
+                    </div>
+                  </div>
                 </div>
                 <h3 className="text-lg font-medium text-text-primary mb-1">暂无字体</h3>
                 <p className="text-text-tertiary text-sm mb-4">
@@ -610,80 +625,80 @@ export default function FontLibrary(props: FontLibraryProps) {
                 )}
               </div>
             ) : (
-              fonts.map((font, index) => {
-                const typeInfo = getFontIcon(font.extension);
-                const isSelected = selectedFonts.has(font.name);
-                return (
-                  <div
-                    key={font.name}
-                    className={`card-theme relative group animate-fade-in ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    {/* 选择框 */}
-                    <div className="absolute top-3 left-3 z-10">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelect(font.name)}
-                        className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
-                      />
-                    </div>
-
-                    {/* 操作按钮 */}
-                    <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {canDownloadFonts && (
-                        <button
-                          onClick={() => handleDownload(font.name)}
-                          className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-primary-600 shadow-sm transition-all"
-                          title="下载"
-                        >
-                          <Download size={16} />
-                        </button>
-                      )}
-                      {canDeleteFonts && (
-                        <button
-                          onClick={() => handleDelete(font.name)}
-                          className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-error shadow-sm transition-all"
-                          title="删除"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* 内容 */}
-                    <div className="pt-8 pb-4 text-center">
-                      <div 
-                        className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center text-3xl"
-                        style={{ 
-                          backgroundColor: `${typeInfo.color}15`,
-                        }}
-                      >
-                        <span style={{ color: typeInfo.color }}>{typeInfo.icon}</span>
-                      </div>
-                      <h3 className="font-medium text-text-primary mb-1 truncate px-4" title={font.name}>
-                        <FileNameText>{font.name}</FileNameText>
-                      </h3>
-                      <div className="flex items-center justify-center gap-3 text-xs text-text-tertiary">
-                        <span 
-                          className="px-2 py-0.5 rounded-full font-medium"
-                          style={{ 
-                            backgroundColor: `${typeInfo.color}20`,
-                            color: typeInfo.color 
-                          }}
-                        >
-                          {typeInfo.label}
-                        </span>
-                        <span>{formatFileSize(font.size)}</span>
-                      </div>
-                      <p className="text-xs text-text-muted mt-3">
-                        {formatDate(font.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                              fonts.map((font, index) => {
+                              const typeInfo = getFontIcon(font.extension);
+                              const isSelected = selectedFonts.has(font.name);
+                              const IconComponent = typeInfo.Icon;
+                              return (
+                                <div
+                                  key={font.name}
+                                  className={`card-theme relative group animate-fade-in ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+                                  style={{ animationDelay: `${index * 50}ms` }}
+                                >
+                                  {/* 选择框 */}
+                                  <div className="absolute top-3 left-3 z-10">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleSelect(font.name)}
+                                      className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
+                                    />
+                                  </div>
+              
+                                  {/* 操作按钮 */}
+                                  <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {canDownloadFonts && (
+                                      <button
+                                        onClick={() => handleDownload(font.name)}
+                                        className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-primary-600 shadow-sm transition-all"
+                                        title="下载"
+                                      >
+                                        <Download size={16} />
+                                      </button>
+                                    )}
+                                    {canDeleteFonts && (
+                                      <button
+                                        onClick={() => handleDelete(font.name)}
+                                        className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-error shadow-sm transition-all"
+                                        title="删除"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    )}
+                                  </div>
+              
+                                  {/* 内容 */}
+                                  <div className="pt-8 pb-4 text-center">
+                                    <div 
+                                      className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                                      style={{ 
+                                        backgroundColor: `${typeInfo.color}15`,
+                                      }}
+                                    >
+                                      <IconComponent size={32} style={{ color: typeInfo.color }} />
+                                    </div>
+                                    <h3 className="font-medium text-text-primary mb-1 truncate px-4" title={font.name}>
+                                      <FileNameText>{font.name}</FileNameText>
+                                    </h3>
+                                    <div className="flex items-center justify-center gap-3 text-xs text-text-tertiary">
+                                      <span 
+                                        className="px-2 py-0.5 rounded-full font-medium"
+                                        style={{ 
+                                          backgroundColor: `${typeInfo.color}20`,
+                                          color: typeInfo.color 
+                                        }}
+                                      >
+                                        {typeInfo.label}
+                                      </span>
+                                      <span>{formatFileSize(font.size)}</span>
+                                    </div>
+                                    <p className="text-xs text-text-muted mt-3">
+                                      {formatDate(font.createdAt)}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })            )}
           </div>
         )}
 
@@ -722,7 +737,12 @@ export default function FontLibrary(props: FontLibraryProps) {
                   <tr>
                     <td colSpan={6} className="py-16 text-center">
                       <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-bg-tertiary flex items-center justify-center">
-                        <Type size={32} className="text-text-muted" />
+                        <div className="relative">
+                          <FolderOpen size={32} className="text-text-muted" />
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center">
+                            <Type size={10} className="text-primary-600" />
+                          </div>
+                        </div>
                       </div>
                       <p className="text-text-tertiary">暂无数据</p>
                     </td>
@@ -731,6 +751,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                   fonts.map((font) => {
                     const typeInfo = getFontIcon(font.extension);
                     const isSelected = selectedFonts.has(font.name);
+                    const IconComponent = typeInfo.Icon;
                     return (
                       <tr 
                         key={font.name}
@@ -747,10 +768,10 @@ export default function FontLibrary(props: FontLibraryProps) {
                         <td>
                           <div className="flex items-center gap-3">
                             <div 
-                              className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+                              className="w-10 h-10 rounded-lg flex items-center justify-center"
                               style={{ backgroundColor: `${typeInfo.color}15` }}
                             >
-                              <span style={{ color: typeInfo.color }}>{typeInfo.icon}</span>
+                              <IconComponent size={20} style={{ color: typeInfo.color }} />
                             </div>
                             <div>
                               <p className="font-medium text-text-primary">
@@ -960,7 +981,7 @@ function UploadFontModal({
             {file ? (
               <div className="animate-scale-in">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success/20 flex items-center justify-center">
-                  <FileType size={32} className="text-success" />
+                  <Palette size={32} className="text-success" />
                 </div>
                 <h3 className="font-medium text-text-primary mb-1">
                   <FileNameText>{file.name}</FileNameText>
@@ -981,7 +1002,12 @@ function UploadFontModal({
             ) : (
               <div>
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-bg-tertiary flex items-center justify-center">
-                  <Upload size={32} className="text-text-muted" />
+                  <div className="relative">
+                    <Upload size={32} className="text-text-muted" />
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold">T</span>
+                    </div>
+                  </div>
                 </div>
                 <h3 className="font-medium text-text-primary mb-1">
                   点击或拖拽文件到此处

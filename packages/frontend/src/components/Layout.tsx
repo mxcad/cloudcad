@@ -34,8 +34,6 @@ import Bell from 'lucide-react/dist/esm/icons/bell';
 import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import Layers from 'lucide-react/dist/esm/icons/layers';
-import History from 'lucide-react/dist/esm/icons/history';
-import Star from 'lucide-react/dist/esm/icons/star';
 
 interface NavItemProps {
   to: string;
@@ -210,15 +208,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { to: '/dashboard', icon: LayoutDashboard, label: '仪表盘', visible: true },
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
     { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true },
-    { to: '/recent', icon: History, label: '最近访问', visible: true },
-    { to: '/favorites', icon: Star, label: '收藏夹', visible: true },
-    { to: '/font-library', icon: Type, label: '字体库', visible: 
+    { to: '/font-library', icon: Type, label: '字体库', visible:
       hasPermission(SystemPermission.SYSTEM_FONT_READ) },
-    { to: '/users', icon: Users, label: '用户管理', visible: 
+    { to: '/users', icon: Users, label: '用户管理', visible:
       hasPermission(SystemPermission.SYSTEM_USER_READ) },
-    { to: '/roles', icon: ShieldCheck, label: '角色权限', visible: 
+    { to: '/roles', icon: ShieldCheck, label: '角色权限', visible:
       hasPermission(SystemPermission.SYSTEM_ROLE_READ) },
-    { to: '/system-monitor', icon: Activity, label: '系统监控', visible: 
+    { to: '/system-monitor', icon: Activity, label: '系统监控', visible:
       hasPermission(SystemPermission.SYSTEM_MONITOR) },
   ], [hasPermission]);
 
@@ -324,7 +320,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </p>
               {menuItems
                 .filter((item) => item.visible)
-                .slice(0, 5)
+                .slice(0, 3)
                 .map((item) => (
                   <NavItem 
                     key={item.to} 
@@ -335,16 +331,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
             
             {/* 管理菜单 */}
-            {menuItems.some((item, idx) => idx >= 5 && item.visible) && (
+            {menuItems.some((item, idx) => idx >= 3 && item.visible) && (
               <div className="pt-2 border-t" style={{ borderColor: 'var(--border-default)' }}>
-                <p 
+                <p
                   className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   系统管理
                 </p>
                 {menuItems
-                  .filter((item, idx) => idx >= 5 && item.visible)
+                  .filter((item, idx) => idx >= 3 && item.visible)
                   .map((item) => (
                     <NavItem 
                       key={item.to} 
