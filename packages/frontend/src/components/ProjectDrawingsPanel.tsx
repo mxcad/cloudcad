@@ -214,8 +214,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handleBreadcrumbClick = useCallback((index: number) => {
     const newBreadcrumb = breadcrumb.slice(0, index + 1);
     setBreadcrumb(newBreadcrumb);
-    const targetId = newBreadcrumb[newBreadcrumb.length - 1].id;
-    loadNodes(targetId);
+    const lastItem = newBreadcrumb[newBreadcrumb.length - 1];
+    if (lastItem) {
+      loadNodes(lastItem.id);
+    }
     setSearchQuery('');
     setCurrentPage(1);
   }, [breadcrumb, loadNodes]);
@@ -273,30 +275,30 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // 分页操作按钮
   const handlePreviousPage = () => {
-    if (currentPage > 1 && breadcrumb.length > 0) {
+    const lastBreadcrumb = breadcrumb[breadcrumb.length - 1];
+    if (currentPage > 1 && lastBreadcrumb) {
       const newPage = currentPage - 1;
       setCurrentPage(newPage);
-      const currentNodeId = breadcrumb[breadcrumb.length - 1].id;
-      loadNodes(currentNodeId, newPage);
+      loadNodes(lastBreadcrumb.id, newPage);
     }
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages && breadcrumb.length > 0) {
+    const lastBreadcrumb = breadcrumb[breadcrumb.length - 1];
+    if (currentPage < totalPages && lastBreadcrumb) {
       const newPage = currentPage + 1;
       setCurrentPage(newPage);
-      const currentNodeId = breadcrumb[breadcrumb.length - 1].id;
-      loadNodes(currentNodeId, newPage);
+      loadNodes(lastBreadcrumb.id, newPage);
     }
   };
 
   // 滚动加载更多
   const handleLoadMore = useCallback(() => {
-    if (breadcrumb.length > 0 && hasMore && !loading) {
+    const lastBreadcrumb = breadcrumb[breadcrumb.length - 1];
+    if (lastBreadcrumb && hasMore && !loading) {
       const newPage = currentPage + 1;
       setCurrentPage(newPage);
-      const currentNodeId = breadcrumb[breadcrumb.length - 1].id;
-      loadNodes(currentNodeId, newPage, searchQuery, true);
+      loadNodes(lastBreadcrumb.id, newPage, searchQuery, true);
     }
   }, [breadcrumb, currentPage, hasMore, loading, loadNodes, searchQuery]);
 
@@ -428,8 +430,9 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         onSearchChange={(query) => {
           setSearchQuery(query);
           setCurrentPage(1); // 搜索时重置到第一页
-          if (breadcrumb.length > 0) {
-            loadNodes(breadcrumb[breadcrumb.length - 1].id, 1, query);
+          const lastBreadcrumb = breadcrumb[breadcrumb.length - 1];
+          if (lastBreadcrumb) {
+            loadNodes(lastBreadcrumb.id, 1, query);
           }
         }}
         onItemClick={handleItemClick}

@@ -93,7 +93,8 @@ export const Profile: React.FC = () => {
       { label: '较强', color: '#22c55e' },
       { label: '很强', color: '#10b981' },
     ];
-    return { strength: score, label: levels[score].label, color: levels[score].color };
+    const level = levels[score] ?? levels[0];
+    return { strength: score, label: level.label, color: level.color };
   };
 
   const passwordStrength = getPasswordStrength(passwordForm.newPassword);
@@ -363,7 +364,7 @@ export const Profile: React.FC = () => {
                     </div>
                     <div className="info-content">
                       <label>创建时间</label>
-                      <span>{user?.createdAt ? formatDateTime(user.createdAt) : '-'}</span>
+                      <span>-</span>
                     </div>
                   </div>
 
@@ -373,7 +374,7 @@ export const Profile: React.FC = () => {
                     </div>
                     <div className="info-content">
                       <label>最后登录</label>
-                      <span>{user?.lastLoginAt ? formatDateTime(user.lastLoginAt) : '-'}</span>
+                      <span>-</span>
                     </div>
                   </div>
                 </div>

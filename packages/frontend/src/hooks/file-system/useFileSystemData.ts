@@ -246,7 +246,7 @@ export const useFileSystemData = ({
           projectsApi.getNode(currentNodeId, {
             signal: abortController.signal,
           }),
-          projectsApi.getChildren(currentNodeId, {
+          projectsApi.getChildren(currentNodeId, undefined, {
             signal: abortController.signal,
           }),
         ]);
@@ -388,7 +388,7 @@ export const useFileSystemData = ({
             projectsApi.getNode(currentNodeId, {
               signal: abortController.signal,
             }),
-            projectsApi.getChildren(currentNodeId, {
+            projectsApi.getChildren(currentNodeId, undefined, {
               signal: abortController.signal,
             }),
           ]);

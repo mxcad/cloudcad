@@ -36,7 +36,7 @@ interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: number; className?: string; color?: string }>;
   color: string;
   onClick?: () => void;
   loading?: boolean;
@@ -86,7 +86,7 @@ const StatCard: React.FC<StatCardProps> = ({
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: `${color}15` }}
         >
-          <Icon size={20} style={{ color }} />
+          <Icon size={20} color={color} />
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@ interface FileItemProps {
 }
 
 const FileItem: React.FC<FileItemProps> = ({ file, onClick }) => {
-  const isFile = file.nodeType === 'file';
+  const isFile = !file.isFolder;
   
   return (
     <div
@@ -116,9 +116,9 @@ const FileItem: React.FC<FileItemProps> = ({ file, onClick }) => {
         }}
       >
         {isFile ? (
-          <FileText size={18} style={{ color: 'var(--accent-600)' }} />
+          <FileText size={18} color="var(--accent-600)" />
         ) : (
-          <FolderOpen size={18} style={{ color: 'var(--primary-600)' }} />
+          <FolderOpen size={18} color="var(--primary-600)" />
         )}
       </div>
       
@@ -145,7 +145,7 @@ const FileItem: React.FC<FileItemProps> = ({ file, onClick }) => {
 };
 
 interface QuickActionProps {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: number; className?: string; color?: string }>;
   label: string;
   color: string;
   onClick?: () => void;
@@ -160,7 +160,7 @@ const QuickAction: React.FC<QuickActionProps> = ({ icon: Icon, label, color, onC
       className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
       style={{ background: `${color}15` }}
     >
-      <Icon size={18} style={{ color }} />
+      <Icon size={18} color={color} />
     </div>
     <span className="font-medium text-sm flex-1" style={{ color: 'var(--text-secondary)' }}>
       {label}
@@ -168,7 +168,7 @@ const QuickAction: React.FC<QuickActionProps> = ({ icon: Icon, label, color, onC
     <ArrowRight 
       size={14} 
       className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-x-1" 
-      style={{ color: 'var(--text-muted)' }}
+      color="var(--text-muted)"
     />
   </button>
 );
@@ -213,10 +213,10 @@ export const Dashboard: React.FC = () => {
         ]);
         
         // 处理项目数据
-        if (projectsRes.data?.data) {
-          const sortedProjects = projectsRes.data.data
-            .filter(p => p.isActive !== false)
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        if (projectsRes.data?.projects) {
+          const sortedProjects = projectsRes.data.projects
+            .filter((p: ProjectDto) => p.status !== 'DELETED')
+            .sort((a: ProjectDto, b: ProjectDto) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
           setProjects(sortedProjects);
         }
         
@@ -228,8 +228,8 @@ export const Dashboard: React.FC = () => {
         // 处理个人空间文件
         if (personalSpaceRes?.data?.id) {
           const childrenRes = await projectsApi.getChildren(personalSpaceRes.data.id, { limit: 5 });
-          if (childrenRes.data?.data) {
-            setPersonalFiles(childrenRes.data.data);
+          if (childrenRes.data?.nodes) {
+            setPersonalFiles(childrenRes.data.nodes);
           }
         }
       } catch (err) {
@@ -467,7 +467,14 @@ export const Dashboard: React.FC = () => {
                 {recentProjects.map((project) => (
                   <FileItem
                     key={project.id}
-                    file={{ ...project, nodeType: 'folder' } as FileSystemNodeDto}
+                    file={{
+                      id: project.id,
+                      name: project.name,
+                      description: project.description,
+                      isFolder: true,
+                      isRoot: project.isRoot,
+                      updatedAt: project.updatedAt,
+                    } as FileSystemNodeDto}
                     onClick={() => navigate(`/projects/${project.id}/files`)}
                   />
                 ))}
@@ -477,7 +484,7 @@ export const Dashboard: React.FC = () => {
                 className="text-center py-8 rounded-xl"
                 style={{ background: 'var(--bg-tertiary)' }}
               >
-                <FolderOpen size={32} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-2" />
+                <FolderOpen size={32} color="var(--text-muted)" className="mx-auto mb-2" />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   暂无项目，创建您的第一个项目
                 </p>
