@@ -168,6 +168,20 @@ export const CADEditorDirect: React.FC = () => {
 
       console.log('[ThemeSync] 开始监听 mxcad-app 主题变化');
 
+      // 从 localStorage 读取用户设置的主题
+      const storedTheme = localStorage.getItem('mx-user-dark');
+      const userThemeIsDark = storedTheme ? storedTheme === 'true' : true; // 默认暗色
+      const currentMxcadTheme = vuetify.theme.global.name.value;
+      const mxcadIsDark = currentMxcadTheme === 'dark';
+
+      console.log(`[ThemeSync] localStorage 主题: ${userThemeIsDark ? 'dark' : 'light'}, mxcad-app 主题: ${currentMxcadTheme}`);
+
+      // 如果主题不一致，同步 localStorage 的主题到 mxcad-app
+      if (userThemeIsDark !== mxcadIsDark) {
+        console.log(`[ThemeSync] 同步主题到 mxcad-app: ${userThemeIsDark ? 'dark' : 'light'}`);
+        vuetify.theme.change(userThemeIsDark ? 'dark' : 'light');
+      }
+
       // 使用 Vue watch 监听 Vuetify 主题变化
       watch(
         () => vuetify.theme.global.name.value,
@@ -182,14 +196,13 @@ export const CADEditorDirect: React.FC = () => {
             })
           );
 
-          // 双保险：直接更新 DOM
+          // 双保险：直接更新 DOM 和 localStorage
           document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
           document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
           localStorage.setItem('mx-user-dark', String(isDark));
 
           console.log('[ThemeSync] 已派发 mxcad-theme-changed 事件并更新 DOM');
-        },
-        { immediate: true }
+        }
       );
 
       console.log('[ThemeSync] 主题同步监听已设置完成');
@@ -646,13 +659,11 @@ export const CADEditorDirect: React.FC = () => {
 
       {!loading && !error && isActive && (
         <div className="flex w-full h-screen relative">
-          {/* 侧边栏容器 */}
-          {currentProjectId && (
-            <SidebarContainer
-              projectId={currentProjectId}
-              onInsertFile={handleInsertFile}
-            />
-          )}
+          {/* 侧边栏容器 - 始终渲染 */}
+          <SidebarContainer
+            projectId={currentProjectId || ''}
+            onInsertFile={handleInsertFile}
+          />
 
           {/* CAD编辑器内容区域 */}
           <div className="flex-1 relative">

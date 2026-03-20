@@ -110,27 +110,68 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback(async () => {
     const newTheme = !isDark;
+    
+    // 尝试通过 mxcad-app 切换主题（双向同步）
+    try {
+      const win = window as unknown as {
+        mxcadApp?: {
+          getVuetify?: () => Promise<{
+            theme: {
+              toggle: (themes: string[]) => void;
+              change: (name: string) => void;
+            };
+          }>;
+        };
+      };
+      
+      if (win.mxcadApp?.getVuetify) {
+        const vuetify = await win.mxcadApp.getVuetify();
+        // 调用 Vuetify 切换主题，Vue watch 会派发事件通知 React
+        vuetify.theme.toggle(['light', 'dark']);
+        console.log('[ThemeContext] 通过 mxcad-app 切换主题:', newTheme ? 'dark' : 'light');
+        return; // Vue watch 会派发事件，React 会收到更新
+      }
+    } catch (error) {
+      console.warn('[ThemeContext] mxcad-app 不可用，直接切换:', error);
+    }
+    
+    // mxcad-app 不可用时，直接切换
     setIsDark(newTheme);
     applyThemeToDOM(newTheme);
     storeTheme(newTheme);
-
-    // 触发事件通知 CAD 编辑器主题变化
-    window.dispatchEvent(new CustomEvent('cloudcad-theme-changed', {
-      detail: { isDark: newTheme }
-    }));
   }, [isDark]);
 
-  const setTheme = useCallback((dark: boolean) => {
+  const setTheme = useCallback(async (dark: boolean) => {
+    // 尝试通过 mxcad-app 设置主题（双向同步）
+    try {
+      const win = window as unknown as {
+        mxcadApp?: {
+          getVuetify?: () => Promise<{
+            theme: {
+              toggle: (themes: string[]) => void;
+              change: (name: string) => void;
+            };
+          }>;
+        };
+      };
+      
+      if (win.mxcadApp?.getVuetify) {
+        const vuetify = await win.mxcadApp.getVuetify();
+        // 调用 Vuetify 设置主题，Vue watch 会派发事件通知 React
+        vuetify.theme.change(dark ? 'dark' : 'light');
+        console.log('[ThemeContext] 通过 mxcad-app 设置主题:', dark ? 'dark' : 'light');
+        return; // Vue watch 会派发事件，React 会收到更新
+      }
+    } catch (error) {
+      console.warn('[ThemeContext] mxcad-app 不可用，直接设置:', error);
+    }
+    
+    // mxcad-app 不可用时，直接设置
     setIsDark(dark);
     applyThemeToDOM(dark);
     storeTheme(dark);
-
-    // 触发事件通知 CAD 编辑器主题变化
-    window.dispatchEvent(new CustomEvent('cloudcad-theme-changed', {
-      detail: { isDark: dark }
-    }));
   }, []);
 
   const value: ThemeContextType = {
