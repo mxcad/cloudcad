@@ -63,7 +63,7 @@ const ProjectItem: React.FC<{
       title={project.name}
     >
       <div className={styles.projectIcon}>
-        <FolderOpen size={28} color="#3b82f6" />
+        <FolderOpen size={28} style={{ color: 'var(--primary-500)' }} />
       </div>
       <div className={styles.projectInfo}>
         <div className={styles.projectName}>{project.name}</div>
@@ -75,7 +75,7 @@ const ProjectItem: React.FC<{
           })}
         </div>
       </div>
-      <ChevronRight size={16} color="#9ca3af" />
+      <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
     </div>
   );
 };
