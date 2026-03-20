@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 import React from 'react';
 import { Button } from './Button';
 
@@ -10,6 +10,8 @@ interface ModalProps {
   footer?: React.ReactNode;
   maxWidth?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  /** z-index 层级，默认 50。CAD 编辑器环境下需要设置为更高值（如 10000） */
+  zIndex?: number;
 }
 
 const sizeToMaxWidth: Record<string, string> = {
@@ -28,6 +30,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth,
   size,
+  zIndex = 50,
 }) => {
   const effectiveMaxWidth =
     maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
@@ -36,7 +39,8 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex }}
       onClick={(e) => e.stopPropagation()}
     >
       <div

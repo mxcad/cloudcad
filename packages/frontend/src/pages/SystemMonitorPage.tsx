@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Activity,
-  Database,
-  HardDrive,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-} from 'lucide-react';
+import Activity from 'lucide-react/dist/esm/icons/activity';
+import Database from 'lucide-react/dist/esm/icons/database';
+import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { healthApi } from '../services/healthApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';

@@ -1,13 +1,11 @@
-import {
-  BookOpen,
-  Box,
-  FileText,
-  Loader2,
-  Search,
-  Settings,
-  Trash2,
-  X,
-} from 'lucide-react';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open';
+import Box from 'lucide-react/dist/esm/icons/box';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import X from 'lucide-react/dist/esm/icons/x';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';

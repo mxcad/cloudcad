@@ -2,13 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { FileNameText } from '../ui/TruncateText';
-import {
-  Folder,
-  ChevronRight,
-  ChevronDown,
-  Check,
-  Loader2,
-} from 'lucide-react';
+import Folder from 'lucide-react/dist/esm/icons/folder';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { projectsApi } from '../../services/projectsApi';
 import { FileSystemNode } from '../../types/filesystem';
 

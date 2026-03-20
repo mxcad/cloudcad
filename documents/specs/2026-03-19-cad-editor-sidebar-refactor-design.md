@@ -2,15 +2,13 @@
 
 ## 概述
 
-重构CAD编辑器侧边栏，实现统一的侧边栏容器组件，支持Tab切换、多种显示模式和项目图纸快速访问功能。
+重构CAD编辑器侧边栏，实现统一的侧边栏容器组件，支持Tab切换和项目图纸快速访问功能。
 
 ## 目标
 
 1. 新增"项目图纸"Tab，方便用户快速访问当前项目的图纸文件
 2. 整合现有侧边栏（图库、协同）为统一的Tab切换模式
-3. 支持三种显示模式：手动控制、自动隐藏、可收起
-4. 支持三种图纸打开方式：直接切换、确认后切换、新标签打开
-5. 检测图纸修改状态，提供智能提示
+3. 简化交互设计，用户手动控制侧边栏的显示和隐藏
 
 ## 架构设计
 
@@ -33,17 +31,16 @@ SidebarContainer (新组件)
 
 ```typescript
 // 类型定义
-type SidebarTab = 'project' | 'gallery' | 'collaborate';
-type SidebarDisplayMode = 'manual' | 'auto-hide' | 'collapse';
-type DrawingOpenMode = 'direct' | 'confirm' | 'new-tab';
+type SidebarTab = 'drawings' | 'gallery' | 'collaborate';
+type DrawingsSubTab = 'my-project' | 'my-drawings';
 
 interface SidebarSettings {
-  displayMode: SidebarDisplayMode;
-  openMode: DrawingOpenMode;
   defaultTab: SidebarTab;
+  defaultDrawingsSubTab: DrawingsSubTab;
   width: number;
   rememberState: boolean;
   lastActiveTab: SidebarTab | null;
+  lastDrawingsSubTab: DrawingsSubTab | null;
   isVisible: boolean;
 }
 ```
@@ -96,134 +93,7 @@ const STORAGE_KEY = 'cad-editor-sidebar-settings';
 - **图库**：现有的图纸库/图块库功能
 - **协同**：现有的协同会话管理功能
 
-Tab栏同时显示设置按钮（齿轮图标）和关闭按钮。
-
-### 3. 显示模式
-
-#### 手动控制 (manual)
-- 用户手动点击Tab或关闭按钮切换
-- 侧边栏保持当前状态不变
-- 默认行为
-
-#### 自动隐藏 (auto-hide)
-- 侧边栏默认收起为边缘触发条（宽度约40px）
-- 鼠标悬停触发条时展开完整侧边栏
-- 鼠标移出侧边栏区域后延迟300ms自动收起
-- 展开状态下有明确的收起按钮
-
-#### 可收起 (collapse)
-- 侧边栏收起为边缘垂直触发条
-- 触发条显示所有Tab的图标
-- 点击触发条展开侧边栏
-- 点击关闭按钮收起
-
-### 4. 图纸打开方式
-
-#### 直接切换 (direct)
-- 直接关闭当前图纸，打开新选择的图纸
-
-#### 确认后切换 (confirm)
-- 检测当前图纸是否有未保存修改
-- 如有修改，弹出确认对话框
-- 用户确认后再切换
-
-#### 新标签打开 (new-tab)
-- 支持多图纸同时打开
-- 类似浏览器标签页模式
-- 当前设计阶段暂不实现完整多标签，预留接口
-
-### 5. 图纸修改状态检测
-
-使用 MxCAD API 检测图纸修改状态：
-
-```typescript
-// useDrawingModifyState.ts
-export function useDrawingModifyState() {
-  const isModified = useRef(false);
-
-  useEffect(() => {
-    const mxcad = mxcadManager.getCurrentMxCAD();
-    if (!mxcad) return;
-
-    const handler = () => {
-      isModified.current = true;
-    };
-
-    mxcad.on("databaseModify", handler);
-
-    // 组件卸载时清理事件监听，防止内存泄漏
-    return () => {
-      mxcad.off("databaseModify", handler);
-    };
-  }, []);
-
-  const resetModified = useCallback(() => {
-    isModified.current = false;
-  }, []);
-
-  return { isModified, resetModified };
-}
-```
-
-**事件特点**：
-- 每打开一个新图纸，第一次修改会触发事件
-- 后续修改不再触发
-- 打开新图纸后重置检测状态
-- 组件卸载时必须清理事件监听，防止内存泄漏
-
-### 6. 设置弹窗
-
-配置项：
-- 显示模式：手动控制 | 自动隐藏 | 可收起
-- 图纸打开方式：直接切换 | 确认后切换 | 新标签打开
-- 默认Tab：项目图纸 | 图库 | 协同
-- 侧边栏宽度：滑块调整（200px - 600px）
-- 记住状态：记住上次打开的Tab和显示状态
-- 重置按钮：恢复默认设置
-
-**UI布局**：
-```
-┌─────────────────────────────────────┐
-│ 侧边栏设置                      ✕   │
-├─────────────────────────────────────┤
-│ 显示模式                            │
-│ ○ 手动控制  ○ 自动隐藏  ○ 可收起    │
-│                                     │
-│ 图纸打开方式                        │
-│ ○ 直接切换  ○ 确认后切换  ○ 新标签  │
-│                                     │
-│ 默认Tab                             │
-│ [项目图纸 ▼]                        │
-│                                     │
-│ 侧边栏宽度                          │
-│ [━━━━━━━━●━━━━━━━] 300px           │
-│                                     │
-│ ☑ 记住上次状态                      │
-│                                     │
-│      [恢复默认]  [确定]  [取消]      │
-└─────────────────────────────────────┘
-```
-
-### 7. 确认对话框
-
-"确认后切换"模式下，检测到图纸已修改时显示：
-
-**UI布局**：
-```
-┌─────────────────────────────────────┐
-│ 提示                            ✕   │
-├─────────────────────────────────────┤
-│                                     │
-│   ⚠ 当前图纸已修改，是否保存？       │
-│                                     │
-│      [不保存]  [保存]  [取消]        │
-└─────────────────────────────────────┘
-```
-
-**按钮行为**：
-- 不保存：直接切换到新图纸，丢弃修改
-- 保存：保存当前图纸后切换到新图纸
-- 取消：取消操作，继续编辑当前图纸
+Tab栏显示关闭按钮。
 
 ## UI设计
 
@@ -231,9 +101,7 @@ export function useDrawingModifyState() {
 
 ```
 ┌──┐
-│项│ ← 项目图纸图标
-│目│
-│图│
+│图│ ← 图纸图标
 │纸│
 │──│
 │图│ ← 图库图标
@@ -241,8 +109,6 @@ export function useDrawingModifyState() {
 │──│
 │协│ ← 协同图标
 │同│
-│──│
-│⚙│ ← 设置图标
 └──┘
 ```
 
@@ -250,13 +116,13 @@ export function useDrawingModifyState() {
 
 ```
 ┌─────────────────────────────┐
-│ [项目图纸] [图库] [协同]  ⚙ ✕ │
+│ [图纸] [图库] [协同]     ✕  │
 ├─────────────────────────────┤
 │ 🔍 搜索图纸...               │
 ├─────────────────────────────┤
 │ ┌───┐ drawing1.dwg          │
 │ │缩 │ 2024-03-19 10:30      │
-│ │略 │ ● 已修改               │
+│ │略 │                       │
 │ │图 │                       │
 │ └───┘                       │
 │ ┌───┐ drawing2.dwg          │
@@ -281,13 +147,11 @@ packages/frontend/src/
 │   ├── sidebar/
 │   │   ├── SidebarContainer.tsx      # 统一侧边栏容器
 │   │   ├── SidebarTabBar.tsx         # Tab切换栏
-│   │   ├── SidebarSettingsModal.tsx  # 设置弹窗
 │   │   ├── SidebarTrigger.tsx        # 收起状态触发条
 │   │   └── sidebar.module.css        # 侧边栏样式
 │   └── ProjectDrawingsPanel.tsx      # 项目图纸面板
 ├── hooks/
-│   ├── useSidebarSettings.ts         # 侧边栏设置管理
-│   └── useDrawingModifyState.ts      # 图纸修改状态检测
+│   └── useSidebarSettings.ts         # 侧边栏设置管理
 └── types/
     └── sidebar.ts                    # 侧边栏相关类型定义
 ```
@@ -330,59 +194,41 @@ packages/frontend/src/
 
 | Key | 中文 | 英文 |
 |-----|------|------|
-| sidebar.tab.project | 项目图纸 | Project Drawings |
+| sidebar.tab.drawings | 图纸 | Drawings |
 | sidebar.tab.gallery | 图库 | Gallery |
 | sidebar.tab.collaborate | 协同 | Collaborate |
-| sidebar.settings.title | 侧边栏设置 | Sidebar Settings |
-| sidebar.settings.displayMode | 显示模式 | Display Mode |
-| sidebar.settings.openMode | 图纸打开方式 | Drawing Open Mode |
-| sidebar.settings.manual | 手动控制 | Manual |
-| sidebar.settings.autoHide | 自动隐藏 | Auto Hide |
-| sidebar.settings.collapse | 可收起 | Collapsible |
-| sidebar.confirm.title | 提示 | Confirm |
-| sidebar.confirm.modified | 当前图纸已修改，是否保存？ | Current drawing has been modified. Save? |
 
 ## 测试策略
 
 ### 单元测试
 - `useSidebarSettings` hook：设置读写、默认值、持久化
-- `useDrawingModifyState` hook：事件监听、状态检测、清理
 
 ### 集成测试
-- 侧边栏显示模式切换
 - Tab切换功能
 - 设置保存与恢复
 
 ### E2E测试
 - 完整的图纸打开流程
-- 修改检测与确认对话框
-- 三种显示模式的用户体验
 
 ## 实现步骤
 
 1. 创建类型定义 `types/sidebar.ts`
 2. 创建设置管理 hook `useSidebarSettings.ts`
-3. 创建图纸修改状态检测 hook `useDrawingModifyState.ts`
-4. 创建 `SidebarContainer` 核心容器组件
-5. 创建 `SidebarTabBar` Tab切换组件
-6. 创建 `SidebarTrigger` 触发条组件
-7. 创建 `ProjectDrawingsPanel` 项目图纸面板
-8. 创建 `SidebarSettingsModal` 设置弹窗
-9. 重构 `CADEditorSidebar` 为Tab内容组件
-10. 重构 `CollaborateSidebar` 为Tab内容组件
-11. 扩展 `SidebarContext` 添加设置管理
-12. 集成到 `CADEditorDirect`
-13. 测试三种显示模式
-14. 测试三种图纸打开方式
-15. 测试图纸修改状态检测
+3. 创建 `SidebarContainer` 核心容器组件
+4. 创建 `SidebarTabBar` Tab切换组件
+5. 创建 `SidebarTrigger` 触发条组件
+6. 创建 `ProjectDrawingsPanel` 项目图纸面板
+7. 重构 `CADEditorSidebar` 为Tab内容组件
+8. 重构 `CollaborateSidebar` 为Tab内容组件
+9. 扩展 `SidebarContext` 添加设置管理
+10. 集成到 `CADEditorDirect`
+11. 测试Tab切换功能
+12. 测试图纸打开流程
 
 ## 风险与缓解
 
 | 风险 | 影响 | 缓解措施 |
 |------|------|----------|
 | 现有侧边栏逻辑复杂 | 重构可能引入bug | 保持现有组件核心逻辑，仅调整显示控制 |
-| 自动隐藏模式性能 | 频繁触发影响体验 | 添加防抖延迟，优化触发区域检测 |
-| 多图纸状态管理 | 状态同步复杂 | 第一版暂不支持完整多标签，预留接口 |
 | 状态同步不一致 | Context与localStorage不同步 | 使用单一数据源，Context从localStorage初始化 |
 | 大量图纸渲染性能 | 文件数量多时卡顿 | 使用虚拟列表、防抖搜索 |
-| 事件监听器泄漏 | 内存占用增加 | useEffect cleanup 确保清理 |

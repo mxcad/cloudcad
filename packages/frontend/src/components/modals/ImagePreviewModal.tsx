@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import ZoomIn from 'lucide-react/dist/esm/icons/zoom-in';
+import ZoomOut from 'lucide-react/dist/esm/icons/zoom-out';
+import RotateCw from 'lucide-react/dist/esm/icons/rotate-cw';
 
 interface ImagePreviewModalProps {
   isOpen: boolean;

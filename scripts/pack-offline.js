@@ -591,10 +591,24 @@ async function prepareDeployStore() {
   
   cleanNodeModules();
   
+  // Prisma 7.x schema engine 仍然是 Rust 二进制，需要为每个目标平台下载
+  // binaryTargets 配置只在当前平台生效，需要通过环境变量强制下载所有平台
+  // 参考：https://www.prisma.io/docs/orm/reference/prisma-schema-reference#binary-targets
+  // 注意：PRISMA_CLI_BINARY_TARGETS 不支持 "native"，必须指定具体平台
+  const PRISMA_BINARY_TARGETS = [
+    'windows',                   // Windows 系统
+    'debian-openssl-1.1.x',      // Debian 10/11, Ubuntu 20.04 (OpenSSL 1.1)
+    'debian-openssl-3.0.x',      // Debian 12, Ubuntu 22.04+ (OpenSSL 3.0)
+    'rhel-openssl-1.0.x',        // CentOS 7 (OpenSSL 1.0) - 打包环境
+    'rhel-openssl-3.0.x',        // Rocky 9, RHEL 9, AlmaLinux 9 (OpenSSL 3.0)
+    'linux-musl',                // Alpine Linux
+  ].join(',');
+  
   // 使用环境变量设置 store 目录（比修改 .npmrc 更可靠）
   const env = {
     ...process.env,
     NPM_CONFIG_STORE_DIR: storePath,
+    PRISMA_CLI_BINARY_TARGETS: PRISMA_BINARY_TARGETS,
   };
   
   // 1. 先安装后端完整依赖（不使用 --ignore-scripts，让 Prisma postinstall 正常运行）
@@ -606,8 +620,8 @@ async function prepareDeployStore() {
   });
   
   // 2. 显式生成 Prisma Client 和下载引擎二进制
-  // schema.prisma 已配置 binaryTargets 包含 windows/linux，一次生成所有平台引擎
-  log('生成 Prisma Client 并下载引擎二进制...');
+  // PRISMA_CLI_BINARY_TARGETS 确保下载所有平台的 schema engine
+  log('生成 Prisma Client 并下载所有平台引擎二进制...');
   execSync('pnpm --filter backend db:generate', {
     cwd: PROJECT_ROOT,
     stdio: 'inherit',

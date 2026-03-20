@@ -1,4 +1,7 @@
-import { Users, UserPlus, RefreshCw, Loader2 } from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import React, { useCallback, useEffect, useState } from 'react';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Filter, RefreshCw } from 'lucide-react';
+import Filter from 'lucide-react/dist/esm/icons/filter';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { auditApi } from '../services/auditApi';

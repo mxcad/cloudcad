@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { EmptyFolderIcon, RefreshIcon } from '../FileIcons';
-import { AlertCircle } from 'lucide-react';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { FileItem } from '../FileItem';
 import { FileSystemNode } from '../../types/filesystem';
 import { Pagination } from '../ui/Pagination';

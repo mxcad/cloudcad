@@ -1,6 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fontsApi } from '../services';
-import { Trash2, Download, Upload } from 'lucide-react';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Download from 'lucide-react/dist/esm/icons/download';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Filter from 'lucide-react/dist/esm/icons/filter';
+import FileType from 'lucide-react/dist/esm/icons/file-type';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
+import Type from 'lucide-react/dist/esm/icons/type';
+import X from 'lucide-react/dist/esm/icons/x';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/filesystem';
 import { usePermission } from '../hooks/usePermission';
@@ -9,6 +19,27 @@ import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface FontLibraryProps {}
+
+// 字体文件类型配置
+const FONT_TYPES = [
+  { value: '', label: '全部格式', icon: '📁' },
+  { value: '.ttf', label: 'TTF', icon: '🔤', color: '#22c55e' },
+  { value: '.otf', label: 'OTF', icon: '🔤', color: '#3b82f6' },
+  { value: '.woff', label: 'WOFF', icon: '🌐', color: '#f59e0b' },
+  { value: '.woff2', label: 'WOFF2', icon: '🌐', color: '#f97316' },
+  { value: '.eot', label: 'EOT', icon: '🔤', color: '#8b5cf6' },
+  { value: '.ttc', label: 'TTC', icon: '🔤', color: '#ec4899' },
+  { value: '.shx', label: 'SHX', icon: '📐', color: '#06b6d4' },
+];
+
+// 字体类型图标映射
+const getFontIcon = (extension: string): { icon: string; color: string; label: string } => {
+  const type = FONT_TYPES.find(t => t.value === extension.toLowerCase());
+  if (type) {
+    return { icon: type.icon, color: type.color, label: type.label };
+  }
+  return { icon: '🔤', color: '#6366f1', label: extension.toUpperCase() };
+};
 
 export default function FontLibrary(props: FontLibraryProps) {
   useDocumentTitle('字体库');
@@ -20,7 +51,7 @@ export default function FontLibrary(props: FontLibraryProps) {
   const [fonts, setFonts] = useState<FontInfo[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 当前标签页：'backend' 或 'frontend'
+  // 当前标签页
   const [activeTab, setActiveTab] = useState<'backend' | 'frontend'>('backend');
 
   // 筛选条件
@@ -32,14 +63,20 @@ export default function FontLibrary(props: FontLibraryProps) {
   });
 
   // 排序
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'name' | 'size' | 'createdAt'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // 视图模式
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // 上传模态框
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   // 选中的字体
   const [selectedFonts, setSelectedFonts] = useState<Set<string>>(new Set());
+
+  // 展开/收起筛选
+  const [showFilters, setShowFilters] = useState(false);
 
   // 权限检查
   const canReadFonts = hasPermission(SystemPermission.SYSTEM_FONT_READ);
@@ -54,7 +91,6 @@ export default function FontLibrary(props: FontLibraryProps) {
     try {
       const response = await fontsApi.getFonts(activeTab);
 
-      // 获取所有字体数据 - 响应拦截器应该已经解包，但如果没有解包则手动解包
       let fontsData = response.data || [];
       if (fontsData && typeof fontsData === 'object' && 'data' in fontsData) {
         fontsData = fontsData.data || [];
@@ -82,7 +118,7 @@ export default function FontLibrary(props: FontLibraryProps) {
 
     if (filters.extension) {
       filtered = filtered.filter(
-        (font) => font.extension === filters.extension
+        (font) => font.extension.toLowerCase() === filters.extension.toLowerCase()
       );
     }
 
@@ -93,6 +129,7 @@ export default function FontLibrary(props: FontLibraryProps) {
 
     if (filters.endTime) {
       const end = new Date(filters.endTime);
+      end.setHours(23, 59, 59, 999);
       filtered = filtered.filter((font) => new Date(font.createdAt) <= end);
     }
 
@@ -111,10 +148,6 @@ export default function FontLibrary(props: FontLibraryProps) {
           comparison =
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
-        case 'updatedAt':
-          comparison =
-            new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-          break;
         default:
           comparison = a.name.localeCompare(b.name);
       }
@@ -129,14 +162,16 @@ export default function FontLibrary(props: FontLibraryProps) {
     fetchFonts();
   }, [fetchFonts]);
 
-  // 如果没有查看权限，返回无权限提示（在所有 Hooks 调用之后）
+  // 如果没有查看权限，返回无权限提示
   if (!canReadFonts) {
     return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <p className="text-gray-500">您没有查看字体库的权限</p>
+      <div className="page-content-theme min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-bg-tertiary flex items-center justify-center">
+            <Type size={40} className="text-text-muted" />
           </div>
+          <h2 className="text-xl font-semibold text-text-primary mb-2">无访问权限</h2>
+          <p className="text-text-tertiary">您没有查看字体库的权限</p>
         </div>
       </div>
     );
@@ -158,12 +193,12 @@ export default function FontLibrary(props: FontLibraryProps) {
   };
 
   // 处理排序
-  const handleSort = (field: string) => {
+  const handleSort = (field: 'name' | 'size' | 'createdAt') => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(field);
-      setSortOrder('asc');
+      setSortOrder('desc');
     }
   };
 
@@ -196,13 +231,16 @@ export default function FontLibrary(props: FontLibraryProps) {
       message: `确定要删除字体 "${fontName}" 吗？`,
       type: 'danger',
     });
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       await fontsApi.deleteFont(fontName, activeTab);
       await fetchFonts();
+      setSelectedFonts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fontName);
+        return newSet;
+      });
       showToast('删除成功', 'success');
     } catch (error) {
       console.error('删除字体失败:', error);
@@ -222,9 +260,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       message: `确定要删除选中的 ${selectedFonts.size} 个字体吗？`,
       type: 'danger',
     });
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       await Promise.all(
@@ -255,6 +291,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      showToast('下载成功', 'success');
     } catch (error) {
       console.error('下载字体失败:', error);
       showToast('下载字体失败', 'error');
@@ -279,291 +316,499 @@ export default function FontLibrary(props: FontLibraryProps) {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
     });
   };
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        {/* 页面标题 */}
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">字体管理</h1>
+  // 统计信息
+  const stats = useMemo(() => {
+    const totalSize = fonts.reduce((sum, f) => sum + f.size, 0);
+    const typeCount = new Set(fonts.map(f => f.extension.toLowerCase())).size;
+    return { count: fonts.length, totalSize, typeCount };
+  }, [fonts]);
 
-        {/* 标签页切换 */}
-        <div className="bg-white rounded-lg shadow-sm mb-4">
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => {
-                setActiveTab('backend');
-                setSelectedFonts(new Set());
-              }}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'backend'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              后端字体（转换程序）
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('frontend');
-                setSelectedFonts(new Set());
-              }}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'frontend'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              前端字体（资源目录）
-            </button>
+  return (
+    <div className="page-content-theme min-h-screen p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* 页面头部 */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-text-primary mb-1">字体库管理</h1>
+              <p className="text-text-tertiary text-sm">管理和维护 CAD 字体文件</p>
+            </div>
+            {canUploadFonts && (
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Upload size={18} />
+                上传字体
+              </button>
+            )}
+          </div>
+
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            <div className="card-theme flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
+                <Type size={24} className="text-primary-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">{stats.count}</p>
+                <p className="text-sm text-text-tertiary">字体总数</p>
+              </div>
+            </div>
+            <div className="card-theme flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-accent-100 flex items-center justify-center">
+                <HardDrive size={24} className="text-accent-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">{formatFileSize(stats.totalSize)}</p>
+                <p className="text-sm text-text-tertiary">总存储</p>
+              </div>
+            </div>
+            <div className="card-theme flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-success-dim flex items-center justify-center">
+                <FileType size={24} className="text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">{stats.typeCount}</p>
+                <p className="text-sm text-text-tertiary">格式种类</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* 筛选区 */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            {/* 字体名称 */}
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                字体名称
-              </label>
+        {/* 标签页切换 */}
+        <div className="tabs-theme mb-6 inline-flex">
+          <button
+            onClick={() => {
+              setActiveTab('backend');
+              setSelectedFonts(new Set());
+            }}
+            className={`tab-theme ${activeTab === 'backend' ? 'active' : ''}`}
+          >
+            <div className="flex items-center gap-2">
+              <HardDrive size={16} />
+              后端字体（转换程序）
+            </div>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('frontend');
+              setSelectedFonts(new Set());
+            }}
+            className={`tab-theme ${activeTab === 'frontend' ? 'active' : ''}`}
+          >
+            <div className="flex items-center gap-2">
+              <Type size={16} />
+              前端字体（资源目录）
+            </div>
+          </button>
+        </div>
+
+        {/* 筛选和搜索栏 */}
+        <div className="card-theme mb-6">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* 搜索框 */}
+            <div className="flex-1 min-w-[240px] relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
               <input
                 type="text"
-                placeholder="请输入"
+                placeholder="搜索字体名称..."
                 value={filters.name}
                 onChange={(e) => handleFilterChange('name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-theme pl-10"
               />
             </div>
 
-            {/* 文件格式 */}
+            {/* 格式筛选 */}
             <div className="w-40">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                文件格式
-              </label>
               <select
                 value={filters.extension}
-                onChange={(e) =>
-                  handleFilterChange('extension', e.target.value)
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => handleFilterChange('extension', e.target.value)}
+                className="input-theme"
               >
-                <option value="">全部</option>
-                <option value=".ttf">TTF</option>
-                <option value=".otf">OTF</option>
-                <option value=".woff">WOFF</option>
-                <option value=".woff2">WOFF2</option>
-                <option value=".eot">EOT</option>
-                <option value=".ttc">TTC</option>
-                <option value=".shx">SHX</option>
+                {FONT_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.icon} {type.label}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* 修改时间 */}
-            <div className="flex-1 min-w-[300px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                修改时间
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={filters.startTime}
-                  onChange={(e) =>
-                    handleFilterChange('startTime', e.target.value)
-                  }
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="self-center text-gray-500">-</span>
-                <input
-                  type="date"
-                  value={filters.endTime}
-                  onChange={(e) =>
-                    handleFilterChange('endTime', e.target.value)
-                  }
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* 查询按钮 */}
+            {/* 展开筛选按钮 */}
             <button
-              onClick={fetchFonts}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`btn-secondary flex items-center gap-2 ${showFilters ? 'bg-bg-tertiary' : ''}`}
             >
-              查询
+              <Filter size={16} />
+              筛选
+              <ChevronDown size={14} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
 
             {/* 重置按钮 */}
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
-            >
-              重置
-            </button>
+            {(filters.name || filters.extension || filters.startTime || filters.endTime) && (
+              <button
+                onClick={handleReset}
+                className="btn-ghost flex items-center gap-1"
+              >
+                <X size={14} />
+                清除
+              </button>
+            )}
+
+            {/* 视图切换 */}
+            <div className="flex items-center gap-1 bg-bg-tertiary rounded-lg p-1 ml-auto">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
+                title="网格视图"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <rect x="1" y="1" width="6" height="6" rx="1" />
+                  <rect x="9" y="1" width="6" height="6" rx="1" />
+                  <rect x="1" y="9" width="6" height="6" rx="1" />
+                  <rect x="9" y="9" width="6" height="6" rx="1" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
+                title="列表视图"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <rect x="1" y="2" width="14" height="2" rx="1" />
+                  <rect x="1" y="7" width="14" height="2" rx="1" />
+                  <rect x="1" y="12" width="14" height="2" rx="1" />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* 操作按钮区 */}
-        <div className="flex justify-between items-center mb-4">
-          {canUploadFonts && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2"
-            >
-              <Upload size={16} />
-              上传字体
-            </button>
-          )}
-
-          {canDeleteFonts && selectedFonts.size > 0 && (
-            <button
-              onClick={handleBatchDelete}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              批量删除 ({selectedFonts.size})
-            </button>
-          )}
-        </div>
-
-        {/* 表格 */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">
+          {/* 展开的筛选条件 */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-border-subtle animate-slide-up">
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                    <Calendar size={14} className="inline mr-1" />
+                    开始日期
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={
-                      selectedFonts.size === fonts.length && fonts.length > 0
-                    }
-                    onChange={handleSelectAll}
-                    className="rounded border-gray-300"
+                    type="date"
+                    value={filters.startTime}
+                    onChange={(e) => handleFilterChange('startTime', e.target.value)}
+                    className="input-theme w-40"
                   />
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  字体文件名
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  操作
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  字体类型
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  创建者
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('size')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                    <Calendar size={14} className="inline mr-1" />
+                    结束日期
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.endTime}
+                    onChange={(e) => handleFilterChange('endTime', e.target.value)}
+                    className="input-theme w-40"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 批量操作栏 */}
+        {selectedFonts.size > 0 && (
+          <div className="card-theme mb-4 flex items-center justify-between animate-slide-up">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={selectedFonts.size === fonts.length && fonts.length > 0}
+                onChange={handleSelectAll}
+                className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-text-secondary">
+                已选择 <span className="font-semibold text-text-primary">{selectedFonts.size}</span> 个字体
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedFonts(new Set())}
+                className="btn-ghost text-sm"
+              >
+                取消选择
+              </button>
+              {canDeleteFonts && (
+                <button
+                  onClick={handleBatchDelete}
+                  className="btn-danger flex items-center gap-2 text-sm"
                 >
-                  文件大小
-                  {sortBy === 'size' && (
-                    <span className="ml-1">
-                      {sortOrder === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('createdAt')}
-                >
-                  修改时间
-                  {sortBy === 'createdAt' && (
-                    <span className="ml-1">
-                      {sortOrder === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  创建时间
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-8 text-center text-gray-500"
+                  <Trash2 size={14} />
+                  批量删除
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 排序选项 */}
+        <div className="flex items-center gap-4 mb-4 text-sm">
+          <span className="text-text-tertiary">排序：</span>
+          {[
+            { key: 'createdAt', label: '修改时间' },
+            { key: 'name', label: '名称' },
+            { key: 'size', label: '大小' },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => handleSort(key as 'name' | 'size' | 'createdAt')}
+              className={`flex items-center gap-1 transition-colors ${
+                sortBy === key 
+                  ? 'text-primary-600 font-medium' 
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {label}
+              {sortBy === key && (
+                <ChevronDown 
+                  size={14} 
+                  className={`transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* 字体列表 - 网格视图 */}
+        {viewMode === 'grid' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {loading ? (
+              // 骨架屏
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="card-theme h-40">
+                  <div className="skeleton-theme w-full h-full rounded-lg" />
+                </div>
+              ))
+            ) : fonts.length === 0 ? (
+              <div className="col-span-full py-16 text-center">
+                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-bg-tertiary flex items-center justify-center">
+                  <Type size={48} className="text-text-muted" />
+                </div>
+                <h3 className="text-lg font-medium text-text-primary mb-1">暂无字体</h3>
+                <p className="text-text-tertiary text-sm mb-4">
+                  {filters.name || filters.extension ? '没有找到匹配的字体' : '当前位置没有字体文件'}
+                </p>
+                {canUploadFonts && !filters.name && !filters.extension && (
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="btn-primary"
                   >
-                    加载中...
-                  </td>
-                </tr>
-              ) : fonts.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-8 text-center text-gray-500"
+                    上传第一个字体
+                  </button>
+                )}
+              </div>
+            ) : (
+              fonts.map((font, index) => {
+                const typeInfo = getFontIcon(font.extension);
+                const isSelected = selectedFonts.has(font.name);
+                return (
+                  <div
+                    key={font.name}
+                    className={`card-theme relative group animate-fade-in ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    暂无数据
-                  </td>
-                </tr>
-              ) : (
-                fonts.map((font) => (
-                  <tr key={font.name} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
+                    {/* 选择框 */}
+                    <div className="absolute top-3 left-3 z-10">
                       <input
                         type="checkbox"
-                        checked={selectedFonts.has(font.name)}
+                        checked={isSelected}
                         onChange={() => handleSelect(font.name)}
-                        className="rounded border-gray-300"
+                        className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
                       />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">📝</span>
-                        {font.name}
+                    </div>
+
+                    {/* 操作按钮 */}
+                    <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {canDownloadFonts && (
+                        <button
+                          onClick={() => handleDownload(font.name)}
+                          className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-primary-600 shadow-sm transition-all"
+                          title="下载"
+                        >
+                          <Download size={16} />
+                        </button>
+                      )}
+                      {canDeleteFonts && (
+                        <button
+                          onClick={() => handleDelete(font.name)}
+                          className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-error shadow-sm transition-all"
+                          title="删除"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 内容 */}
+                    <div className="pt-8 pb-4 text-center">
+                      <div 
+                        className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center text-3xl"
+                        style={{ 
+                          backgroundColor: `${typeInfo.color}15`,
+                        }}
+                      >
+                        <span style={{ color: typeInfo.color }}>{typeInfo.icon}</span>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        {canDownloadFonts && (
-                          <button
-                            onClick={() => handleDownload(font.name)}
-                            className="text-gray-500 hover:text-blue-500 focus:outline-none"
-                            title="下载"
-                          >
-                            <Download size={16} />
-                          </button>
-                        )}
-                        {canDeleteFonts && (
-                          <button
-                            onClick={() => handleDelete(font.name)}
-                            className="text-gray-500 hover:text-red-500 focus:outline-none"
-                            title="删除"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
+                      <h3 className="font-medium text-text-primary mb-1 truncate px-4" title={font.name}>
+                        <FileNameText>{font.name}</FileNameText>
+                      </h3>
+                      <div className="flex items-center justify-center gap-3 text-xs text-text-tertiary">
+                        <span 
+                          className="px-2 py-0.5 rounded-full font-medium"
+                          style={{ 
+                            backgroundColor: `${typeInfo.color}20`,
+                            color: typeInfo.color 
+                          }}
+                        >
+                          {typeInfo.label}
+                        </span>
+                        <span>{formatFileSize(font.size)}</span>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {font.extension}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {font.creator || '系统管理员'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {formatFileSize(font.size)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {formatDate(font.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {formatDate(font.createdAt)}
+                      <p className="text-xs text-text-muted mt-3">
+                        {formatDate(font.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* 字体列表 - 列表视图 */}
+        {viewMode === 'list' && (
+          <div className="table-container-theme">
+            <table className="table-theme">
+              <thead>
+                <tr>
+                  <th className="w-10 px-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedFonts.size === fonts.length && fonts.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
+                    />
+                  </th>
+                  <th>字体文件</th>
+                  <th className="w-24">格式</th>
+                  <th className="w-28">大小</th>
+                  <th className="w-36">修改时间</th>
+                  <th className="w-24 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <div className="flex items-center justify-center gap-3 text-text-tertiary">
+                        <div className="animate-spin w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full" />
+                        加载中...
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : fonts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-16 text-center">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-bg-tertiary flex items-center justify-center">
+                        <Type size={32} className="text-text-muted" />
+                      </div>
+                      <p className="text-text-tertiary">暂无数据</p>
+                    </td>
+                  </tr>
+                ) : (
+                  fonts.map((font) => {
+                    const typeInfo = getFontIcon(font.extension);
+                    const isSelected = selectedFonts.has(font.name);
+                    return (
+                      <tr 
+                        key={font.name}
+                        className={`transition-colors ${isSelected ? 'bg-primary-50/50' : ''}`}
+                      >
+                        <td className="px-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleSelect(font.name)}
+                            className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
+                          />
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+                              style={{ backgroundColor: `${typeInfo.color}15` }}
+                            >
+                              <span style={{ color: typeInfo.color }}>{typeInfo.icon}</span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-text-primary">
+                                <FileNameText>{font.name}</FileNameText>
+                              </p>
+                              <p className="text-xs text-text-muted">{font.creator || '系统管理员'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span 
+                            className="inline-flex px-2 py-1 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: `${typeInfo.color}20`,
+                              color: typeInfo.color 
+                            }}
+                          >
+                            {typeInfo.label}
+                          </span>
+                        </td>
+                        <td className="text-text-secondary">{formatFileSize(font.size)}</td>
+                        <td className="text-text-tertiary text-sm">{formatDate(font.createdAt)}</td>
+                        <td className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {canDownloadFonts && (
+                              <button
+                                onClick={() => handleDownload(font.name)}
+                                className="p-2 rounded-lg text-text-tertiary hover:text-primary-600 hover:bg-primary-50 transition-all"
+                                title="下载"
+                              >
+                                <Download size={16} />
+                              </button>
+                            )}
+                            {canDeleteFonts && (
+                              <button
+                                onClick={() => handleDelete(font.name)}
+                                className="p-2 rounded-lg text-text-tertiary hover:text-error hover:bg-error-dim transition-all"
+                                title="删除"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {/* 字体总数 */}
-        <div className="flex justify-between items-center mt-4">
-          <div className="text-sm text-gray-600">共 {fonts.length} 条</div>
+        {/* 底部统计 */}
+        <div className="mt-6 text-center text-sm text-text-tertiary">
+          共 <span className="text-text-primary font-medium">{fonts.length}</span> 个字体文件
+          {filters.name && ` · 搜索 "${filters.name}"`}
+          {filters.extension && ` · 格式 ${filters.extension}`}
         </div>
 
         {/* 上传模态框 */}
@@ -600,35 +845,29 @@ function UploadFontModal({
     defaultTarget
   );
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      // 验证文件类型
-      const validExtensions = [
-        '.ttf',
-        '.otf',
-        '.woff',
-        '.woff2',
-        '.eot',
-        '.ttc',
-        '.shx',
-      ];
-      const ext = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
+  const handleFileChange = (selectedFile: File | null) => {
+    if (!selectedFile) return;
 
-      if (!validExtensions.includes(ext)) {
-        showToast('不支持的文件类型，请上传字体文件', 'warning');
-        return;
-      }
+    // 验证文件类型
+    const validExtensions = [
+      '.ttf', '.otf', '.woff', '.woff2', '.eot', '.ttc', '.shx',
+    ];
+    const ext = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
 
-      // 验证文件大小（10MB）
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        showToast('文件大小不能超过 10MB', 'warning');
-        return;
-      }
-
-      setFile(selectedFile);
+    if (!validExtensions.includes(ext)) {
+      showToast('不支持的文件类型，请上传字体文件', 'warning');
+      return;
     }
+
+    // 验证文件大小（10MB）
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      showToast('文件大小不能超过 10MB', 'warning');
+      return;
+    }
+
+    setFile(selectedFile);
   };
 
   const handleUpload = async () => {
@@ -650,63 +889,171 @@ function UploadFontModal({
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const droppedFile = e.dataTransfer.files[0];
+    handleFileChange(droppedFile);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">上传字体</h2>
-
-        {/* 文件选择 */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            选择文件
-          </label>
-          <input
-            type="file"
-            onChange={handleFileChange}
-            accept=".ttf,.otf,.woff,.woff2,.eot,.ttc,.shx"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          />
-          {file && (
-            <p className="mt-2 text-sm text-gray-600">
-              已选择: <FileNameText>{file.name}</FileNameText> (
-              {(file.size / 1024 / 1024).toFixed(2)} MB)
-            </p>
-          )}
-        </div>
-
-        {/* 上传目标 */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            上传位置
-          </label>
-          <select
-            value={target}
-            onChange={(e) =>
-              setTarget(e.target.value as 'backend' | 'frontend' | 'both')
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="both">后端和前端（同时上传）</option>
-            <option value="backend">仅后端（转换程序使用）</option>
-            <option value="frontend">仅前端（Web 显示使用）</option>
-          </select>
-        </div>
-
-        {/* 按钮 */}
-        <div className="flex justify-end gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-theme animate-fade-in">
+      <div 
+        className="absolute inset-0"
+        onClick={onClose}
+      />
+      <div 
+        className="relative w-full max-w-lg modal-theme animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 头部 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-default">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
+              <Upload size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">上传字体</h2>
+              <p className="text-sm text-text-tertiary">支持 TTF、OTF、WOFF 等格式</p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className="p-2 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary transition-all"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* 内容 */}
+        <div className="p-6 space-y-6">
+          {/* 文件上传区域 */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+              dragOver 
+                ? 'border-primary-500 bg-primary-50' 
+                : file 
+                  ? 'border-success bg-success-light' 
+                  : 'border-border-default hover:border-border-strong bg-bg-tertiary/50'
+            }`}
+          >
+            <input
+              type="file"
+              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+              accept=".ttf,.otf,.woff,.woff2,.eot,.ttc,.shx"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            
+            {file ? (
+              <div className="animate-scale-in">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success/20 flex items-center justify-center">
+                  <FileType size={32} className="text-success" />
+                </div>
+                <h3 className="font-medium text-text-primary mb-1">
+                  <FileNameText>{file.name}</FileNameText>
+                </h3>
+                <p className="text-sm text-text-tertiary">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFile(null);
+                  }}
+                  className="mt-3 text-sm text-error hover:underline"
+                >
+                  移除文件
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-bg-tertiary flex items-center justify-center">
+                  <Upload size={32} className="text-text-muted" />
+                </div>
+                <h3 className="font-medium text-text-primary mb-1">
+                  点击或拖拽文件到此处
+                </h3>
+                <p className="text-sm text-text-tertiary">
+                  支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX
+                </p>
+                <p className="text-xs text-text-muted mt-2">最大 10MB</p>
+              </div>
+            )}
+          </div>
+
+          {/* 上传目标选择 */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-3">
+              上传位置
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: 'both', label: '同时上传', desc: '后端和前端', icon: <HardDrive size={16} /> },
+                { value: 'backend', label: '仅后端', desc: '转换程序', icon: <HardDrive size={16} /> },
+                { value: 'frontend', label: '仅前端', desc: 'Web 显示', icon: <Type size={16} /> },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setTarget(option.value as 'backend' | 'frontend' | 'both')}
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    target === option.value
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-border-default hover:border-border-strong bg-bg-secondary'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${
+                    target === option.value ? 'bg-primary-100 text-primary-600' : 'bg-bg-tertiary text-text-tertiary'
+                  }`}>
+                    {option.icon}
+                  </div>
+                  <p className={`font-medium text-sm ${target === option.value ? 'text-text-primary' : 'text-text-secondary'}`}>
+                    {option.label}
+                  </p>
+                  <p className="text-xs text-text-muted mt-0.5">{option.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 底部按钮 */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default">
+          <button
+            onClick={onClose}
             disabled={uploading}
+            className="btn-secondary"
           >
             取消
           </button>
           <button
             onClick={handleUpload}
             disabled={!file || uploading}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {uploading ? '上传中...' : '上传'}
+            {uploading ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                上传中...
+              </>
+            ) : (
+              <>
+                <Upload size={18} />
+                上传
+              </>
+            )}
           </button>
         </div>
       </div>

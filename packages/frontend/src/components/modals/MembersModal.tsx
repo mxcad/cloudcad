@@ -1,12 +1,10 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {
-  RefreshCw,
-  X,
-  UserPlus,
-  AlertCircle,
-  Loader2,
-  ArrowUpRight,
-} from 'lucide-react';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import X from 'lucide-react/dist/esm/icons/x';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { TruncateText } from '../ui/TruncateText';

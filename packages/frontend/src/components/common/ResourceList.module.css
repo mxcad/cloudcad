@@ -1,0 +1,645 @@
+/* ==================== 资源列表组件 - 主题适配版 ==================== */
+
+.resourceList {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-default);
+}
+
+/* ==================== 标题栏 ==================== */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+/* ==================== 面包屑包装器 ==================== */
+
+.breadcrumbWrapper {
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* ==================== 工具栏 ==================== */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.searchBox {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  outline: none;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  background-color: var(--bg-secondary);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.viewToggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.viewButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--text-tertiary);
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.viewButton:hover {
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+}
+
+.viewButton.active {
+  color: var(--primary-500);
+  background-color: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==================== 分类筛选 ==================== */
+
+.categoryFilter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+  background-color: var(--bg-secondary);
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.categorySelect {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  outline: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.categorySelect:focus {
+  background-color: var(--bg-secondary);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.categorySelect.disabled {
+  background-color: var(--bg-tertiary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* ==================== 内容区域 ==================== */
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  background-color: var(--bg-secondary);
+}
+
+/* ==================== 加载状态 ==================== */
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.loadingIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--primary-500);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== 空状态 ==================== */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.emptyIcon {
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.emptyText {
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+/* ==================== 列表视图 ==================== */
+
+.listView {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.listItem:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-default);
+}
+
+.listItem.active {
+  background-color: var(--primary-50);
+  border-color: var(--primary-200);
+}
+
+[data-theme="dark"] .listItem.active {
+  background-color: var(--primary-100);
+  border-color: var(--primary-200);
+}
+
+.itemIcon {
+  width: 40px;
+  height: 40px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.itemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemNameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.itemName {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.itemArrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ==================== 网格视图 ==================== */
+
+.gridView {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-secondary);
+}
+
+.gridItem:hover {
+  border-color: var(--primary-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.gridItem.active {
+  border-color: var(--primary-500);
+  background-color: var(--primary-50);
+  box-shadow: 0 0 0 2px var(--primary-100), var(--shadow-md);
+}
+
+[data-theme="dark"] .gridItem.active {
+  background-color: var(--primary-100);
+  box-shadow: 0 0 0 2px var(--primary-200), var(--shadow-md);
+}
+
+.gridItemPreview {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background-color: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.gridThumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.gridFolderIcon,
+.gridFileIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.gridItem:hover .gridThumbnail {
+  transform: scale(1.05);
+}
+
+.gridBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.gridItemInfo {
+  padding: var(--space-2);
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.gridItemName {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gridItemMeta {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ==================== 底部分页栏 ==================== */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-default);
+  flex-shrink: 0;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* ==================== 滚动加载 ==================== */
+
+.loadMoreTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  min-height: 60px;
+}
+
+.loadingMore {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+}
+
+.loadingMoreIcon {
+  animation: spin 1s linear infinite;
+}
+
+.noMore {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: var(--space-2) 0;
+}
+
+/* ==================== 级联分类选择器 ==================== */
+
+.cascadeSelector {
+  position: relative;
+  width: 100%;
+}
+
+.cascadeButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cascadeButton:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-strong);
+}
+
+.cascadeButton.open {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.cascadeButton.active {
+  color: var(--text-secondary);
+  background-color: var(--primary-50);
+  border-color: var(--primary-200);
+}
+
+[data-theme="dark"] .cascadeButton.active {
+  background-color: var(--primary-100);
+  border-color: var(--primary-200);
+}
+
+.cascadeButtonText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.arrowIcon {
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.cascadeButton.open .arrowIcon {
+  transform: rotate(90deg);
+}
+
+.clearIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-2);
+  color: var(--text-muted);
+  background-color: var(--bg-tertiary);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.clearIcon:hover {
+  color: var(--error);
+  background-color: var(--error-dim);
+}
+
+/* 级联面板 */
+.cascadePanel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  display: flex;
+  min-width: 400px;
+  max-width: 600px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.cascadeColumn {
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+  border-right: 1px solid var(--border-default);
+}
+
+.cascadeColumn:last-child {
+  border-right: none;
+}
+
+.cascadeColumnTitle {
+  padding: 10px 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background-color: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.cascadeColumnContent {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.cascadeItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cascadeItem:last-child {
+  border-bottom: none;
+}
+
+.cascadeItem:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.cascadeItem.selected {
+  color: var(--primary-500);
+  background-color: var(--primary-50);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .cascadeItem.selected {
+  background-color: var(--primary-100);
+}
+
+.cascadeItem.hasChildren {
+  padding-right: var(--space-2);
+}
+
+.itemArrow {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.cascadeItem.selected .itemArrow {
+  color: var(--primary-500);
+}
+
+/* 响应式：小屏幕时垂直排列 */
+@media (max-width: 480px) {
+  .cascadePanel {
+    flex-direction: column;
+    min-width: 200px;
+    max-width: 280px;
+  }
+
+  .cascadeColumn {
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .cascadeColumn:last-child {
+    border-bottom: none;
+  }
+
+  .gridView {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-2);
+  }
+}
+
+/* ==================== 深色主题特定覆盖 ==================== */
+
+[data-theme="dark"] .resourceList {
+  background-color: var(--bg-secondary);
+}
+
+[data-theme="dark"] .itemIcon {
+  background-color: var(--bg-secondary);
+}
+
+[data-theme="dark"] .gridItemPreview {
+  background-color: var(--bg-tertiary);
+}

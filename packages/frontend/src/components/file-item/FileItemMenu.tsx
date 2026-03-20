@@ -152,13 +152,13 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, true);
+      window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     }, 100);
 
     return () => {
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
     };
   }, [showMenu, menuButtonRef, menuContainerRef, onCloseMenu, onToggleMenu]);
 
@@ -184,7 +184,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                 {action.icon}
                 {action.label}
               </button>
-              {isDividerAfter && <hr className="my-1 border-slate-100" />}
+              {isDividerAfter ? <hr className="my-1 border-slate-100" /> : null}
             </React.Fragment>
           );
         })}

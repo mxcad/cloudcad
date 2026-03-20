@@ -1,25 +1,22 @@
 import React from 'react';
-import { Settings, X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 import { SidebarTab } from '../../types/sidebar';
 import styles from './sidebar.module.css';
 
 interface SidebarTabBarProps {
   activeTab: SidebarTab;
   onTabChange: (tab: SidebarTab) => void;
-  onSettingsClick: () => void;
   onCloseClick: () => void;
 }
 
 const TABS: { id: SidebarTab; label: string }[] = [
-  { id: 'project', label: '项目图纸' },
-  { id: 'gallery', label: '图库' },
+  { id: 'drawings', label: '图纸' },
   { id: 'collaborate', label: '协同' },
 ];
 
 export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   activeTab,
   onTabChange,
-  onSettingsClick,
   onCloseClick,
 }) => {
   return (
@@ -35,13 +32,6 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
           </button>
         ))}
       </div>
-      <button
-        className={styles.tabBarButton}
-        onClick={onSettingsClick}
-        title="设置"
-      >
-        <Settings size={18} />
-      </button>
       <button
         className={styles.tabBarButton}
         onClick={onCloseClick}

@@ -2,40 +2,89 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   SidebarSettings,
   DEFAULT_SIDEBAR_SETTINGS,
-  SIDEBAR_SETTINGS_STORAGE_KEY,
   SidebarTab,
-  SidebarDisplayMode,
-  DrawingOpenMode,
+  DrawingsSubTab,
 } from '../types/sidebar';
+
+// localStorage 版本控制
+const STORAGE_VERSION = 'v1';
+const SIDEBAR_SETTINGS_STORAGE_KEY = `sidebarSettings:${STORAGE_VERSION}`;
+
+/**
+ * 安全的 localStorage 操作工具
+ */
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      // 隐私模式或 storage 被禁用时返回 null
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): boolean => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch {
+      // quota exceeded 或 storage 被禁用时返回 false
+      return false;
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // 忽略错误
+    }
+  },
+};
+
+/**
+ * 最小化设置数据，只存储必要字段
+ */
+const minimizeSettings = (settings: SidebarSettings): Partial<SidebarSettings> => ({
+  defaultTab: settings.defaultTab,
+  defaultDrawingsSubTab: settings.defaultDrawingsSubTab,
+  width: settings.width,
+  isVisible: settings.isVisible,
+  lastActiveTab: settings.lastActiveTab,
+  lastDrawingsSubTab: settings.lastDrawingsSubTab,
+});
 
 /**
  * 侧边栏设置管理 Hook
  * 负责设置的读取、保存和更新
+ * - 使用版本控制避免 schema 冲突
+ * - 最小化存储数据
+ * - 安全处理 localStorage 错误
  */
 export function useSidebarSettings() {
   const [settings, setSettings] = useState<SidebarSettings>(() => {
     // 从 localStorage 读取设置
-    try {
-      const stored = localStorage.getItem(SIDEBAR_SETTINGS_STORAGE_KEY);
-      if (stored) {
+    const stored = safeStorage.getItem(SIDEBAR_SETTINGS_STORAGE_KEY);
+    if (stored) {
+      try {
         const parsed = JSON.parse(stored);
         return { ...DEFAULT_SIDEBAR_SETTINGS, ...parsed };
+      } catch (error) {
+        console.error('Failed to parse sidebar settings:', error);
+        // 解析失败时清除损坏的数据
+        safeStorage.removeItem(SIDEBAR_SETTINGS_STORAGE_KEY);
       }
-    } catch (error) {
-      console.error('Failed to parse sidebar settings:', error);
     }
     return DEFAULT_SIDEBAR_SETTINGS;
   });
 
   // 保存设置到 localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        SIDEBAR_SETTINGS_STORAGE_KEY,
-        JSON.stringify(settings)
-      );
-    } catch (error) {
-      console.error('Failed to save sidebar settings:', error);
+    const minimized = minimizeSettings(settings);
+    const success = safeStorage.setItem(
+      SIDEBAR_SETTINGS_STORAGE_KEY,
+      JSON.stringify(minimized)
+    );
+    if (!success) {
+      console.warn('Failed to save sidebar settings to localStorage');
     }
   }, [settings]);
 
@@ -49,19 +98,14 @@ export function useSidebarSettings() {
     setSettings(DEFAULT_SIDEBAR_SETTINGS);
   }, []);
 
-  // 设置显示模式
-  const setDisplayMode = useCallback((mode: SidebarDisplayMode) => {
-    updateSettings({ displayMode: mode });
-  }, [updateSettings]);
-
-  // 设置打开方式
-  const setOpenMode = useCallback((mode: DrawingOpenMode) => {
-    updateSettings({ openMode: mode });
-  }, [updateSettings]);
-
   // 设置默认 Tab
   const setDefaultTab = useCallback((tab: SidebarTab) => {
     updateSettings({ defaultTab: tab });
+  }, [updateSettings]);
+
+  // 设置默认图纸子 Tab
+  const setDefaultDrawingsSubTab = useCallback((tab: DrawingsSubTab) => {
+    updateSettings({ defaultDrawingsSubTab: tab });
   }, [updateSettings]);
 
   // 设置宽度
@@ -81,15 +125,20 @@ export function useSidebarSettings() {
     updateSettings({ lastActiveTab: tab });
   }, [updateSettings]);
 
+  // 设置上次激活的图纸子 Tab
+  const setLastDrawingsSubTab = useCallback((tab: DrawingsSubTab | null) => {
+    updateSettings({ lastDrawingsSubTab: tab });
+  }, [updateSettings]);
+
   return {
     settings,
     updateSettings,
     resetSettings,
-    setDisplayMode,
-    setOpenMode,
     setDefaultTab,
+    setDefaultDrawingsSubTab,
     setWidth,
     setIsVisible,
     setLastActiveTab,
+    setLastDrawingsSubTab,
   };
 }

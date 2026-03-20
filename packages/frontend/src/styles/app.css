@@ -468,6 +468,16 @@
       transform: scale(1);
     }
   }
+
+  /* Shimmer 动画 */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
 }
 
 /* Tailwind 颜色映射 - 确保 error 颜色类可用 */
@@ -695,4 +705,172 @@
 
 .focus\:ring-accent-500:focus {
   --tw-ring-color: var(--color-accent-500, #06b6d4);
+}
+
+/* ============================================
+   深色主题覆盖 - 兼容现有 Tailwind 类名
+   ============================================ */
+
+/* 深色主题下的背景色覆盖 */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-slate-50 {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .bg-slate-100 {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .bg-slate-200 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* 深色主题下的边框覆盖 */
+[data-theme="dark"] .border-slate-200 {
+  border-color: var(--border-default) !important;
+}
+
+[data-theme="dark"] .border-slate-100 {
+  border-color: var(--border-subtle) !important;
+}
+
+/* 深色主题下的文字覆盖 */
+[data-theme="dark"] .text-slate-900 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-slate-700,
+[data-theme="dark"] .text-slate-600 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-slate-500,
+[data-theme="dark"] .text-slate-400 {
+  color: var(--text-tertiary) !important;
+}
+
+/* 深色主题下的主色按钮 */
+[data-theme="dark"] .bg-primary-50 {
+  background-color: var(--primary-100) !important;
+}
+
+[data-theme="dark"] .text-primary-600 {
+  color: var(--primary-500) !important;
+}
+
+/* 深色主题下的侧边栏 */
+[data-theme="dark"] aside {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-default) !important;
+}
+
+/* 深色主题下的导航项 */
+[data-theme="dark"] .bg-primary-50.text-primary-700 {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-500)) !important;
+  color: white !important;
+}
+
+/* 深色主题下的悬停效果 */
+[data-theme="dark"] .hover\:bg-slate-100:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .hover\:bg-slate-50:hover {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* 深色主题下的输入框 */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* 深色主题下的模态框 */
+[data-theme="dark"] [role="dialog"] {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+}
+
+/* 深色主题下的下拉菜单 */
+[data-theme="dark"] .absolute.w-48,
+[data-theme="dark"] .absolute.w-56 {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+}
+
+/* 深色主题下的卡片 */
+[data-theme="dark"] .rounded-2xl.bg-white,
+[data-theme="dark"] .rounded-xl.bg-white {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-default);
+}
+
+/* 深色主题下的表格 */
+[data-theme="dark"] table {
+  background-color: var(--bg-secondary);
+}
+
+[data-theme="dark"] th {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] td {
+  border-color: var(--border-subtle);
+}
+
+/* 深色主题下的警告横幅 */
+[data-theme="dark"] .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+[data-theme="dark"] .border-amber-200 {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+[data-theme="dark"] .text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .text-amber-600 {
+  color: #f59e0b !important;
+}
+
+/* 深色主题下的错误/成功状态 */
+[data-theme="dark"] .bg-error-50 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-success-50 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+/* 深色主题下的滚动条 */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 深色主题下的 glass 效果 */
+[data-theme="dark"] .backdrop-blur-xl {
+  background: rgba(26, 29, 33, 0.8) !important;
 }

@@ -1,4 +1,6 @@
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';

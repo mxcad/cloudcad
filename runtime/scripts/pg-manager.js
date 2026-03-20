@@ -51,10 +51,11 @@ const PG_LIB_DIR = USE_RUNTIME && IS_LINUX
   ? path.join(PLATFORM_DIR, PG_DIR_NAME, 'lib')
   : null;
 
-// PostgreSQL share 目录（包含版本号）
-// initdb 查找 share/postgresql/15/postgres.bki
+// PostgreSQL share 目录
+// PostgreSQL 基于二进制位置动态计算 share 路径
+// bin/postgres -> ../share/postgres.bki
 const PG_SHARE_DIR = USE_RUNTIME
-  ? path.join(PLATFORM_DIR, PG_DIR_NAME, 'share', 'postgresql', '15')
+  ? path.join(PLATFORM_DIR, PG_DIR_NAME, 'share')
   : null;
 
 // 日志
@@ -140,12 +141,22 @@ function initLinuxSystem() {
   return true;
 }
 
-// 获取带 LD_LIBRARY_PATH 的环境变量（Linux 下需要）
+// 获取环境变量
+// 设置 LD_LIBRARY_PATH 以确保 PostgreSQL 能找到打包的库文件
+// Rocky Linux 8/9 等新系统使用 OpenSSL 3.x，没有 libssl.so.10
+// 必须使用打包的 CentOS 7 版本库
 function getEnv(extra = {}) {
-  const base = PG_LIB_DIR
-    ? { ...process.env, LD_LIBRARY_PATH: `${PG_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` }
-    : process.env;
-  return { ...base, ...extra };
+  const env = { ...process.env, ...extra };
+  
+  // Linux 下设置 LD_LIBRARY_PATH
+  if (PG_LIB_DIR && fs.existsSync(PG_LIB_DIR)) {
+    const existingLdPath = env.LD_LIBRARY_PATH || '';
+    env.LD_LIBRARY_PATH = existingLdPath 
+      ? `${PG_LIB_DIR}:${existingLdPath}`
+      : PG_LIB_DIR;
+  }
+  
+  return env;
 }
 
 // 初始化数据目录
@@ -181,13 +192,22 @@ function initDatabase() {
       initdbArgs.push('-L', PG_SHARE_DIR);
     }
     
+    // 获取默认 PATH（如果 process.env.PATH 为空）
+    const defaultPath = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+    const currentPath = process.env.PATH || defaultPath;
+    
+    // 构建环境变量参数（用于 setpriv/env 命令）
+    const envVars = [`PATH=${currentPath}`];
+    if (PG_LIB_DIR) {
+      envVars.unshift(`LD_LIBRARY_PATH=${PG_LIB_DIR}`);
+    }
+    
     // 尝试多种用户切换方式（优先 setpriv，不依赖 PAM）
-    const envStr = PG_LIB_DIR ? `LD_LIBRARY_PATH=${PG_LIB_DIR} ` : '';
     const commands = [
       // 方式1: setpriv（不依赖 PAM，推荐）
-      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', `${envStr}PATH=${process.env.PATH}`, initdb, ...initdbArgs],
+      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', ...envVars, initdb, ...initdbArgs],
       // 方式2: su（传统方式）
-      ['su', '-', 'postgres', '-c', `${envStr}${initdb} ${initdbArgs.join(' ')}`],
+      ['su', '-', 'postgres', '-c', `LD_LIBRARY_PATH=${PG_LIB_DIR || ''} ${initdb} ${initdbArgs.join(' ')}`],
     ];
     
     for (const cmd of commands) {
@@ -272,13 +292,21 @@ function startPostgres() {
     // 确保日志目录权限
     spawnSync('chown', ['-R', 'postgres:postgres', LOGS_DIR], { stdio: 'pipe' });
     
-    // 尝试多种用户切换方式
-    const envStr = PG_LIB_DIR ? `LD_LIBRARY_PATH=${PG_LIB_DIR} ` : '';
+    // 获取默认 PATH（如果 process.env.PATH 为空）
+    const defaultPath = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+    const currentPath = process.env.PATH || defaultPath;
+    
+    // 构建环境变量参数（用于 setpriv/env 命令）
+    const envVars = [`PATH=${currentPath}`];
+    if (PG_LIB_DIR) {
+      envVars.unshift(`LD_LIBRARY_PATH=${PG_LIB_DIR}`);
+    }
+    
     const pgCtlArgs = ['start', '-D', PG_DATA_DIR, '-l', logFile, '-w', '-t', '30'];
     
     const commands = [
-      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', `${envStr}PATH=${process.env.PATH}`, pg_ctl, ...pgCtlArgs],
-      ['su', '-', 'postgres', '-c', `${envStr}${pg_ctl} start -D ${PG_DATA_DIR} -l ${logFile} -w -t 30`],
+      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', ...envVars, pg_ctl, ...pgCtlArgs],
+      ['su', '-', 'postgres', '-c', `LD_LIBRARY_PATH=${PG_LIB_DIR || ''} ${pg_ctl} start -D ${PG_DATA_DIR} -l ${logFile} -w -t 30`],
     ];
     
     for (const cmd of commands) {
@@ -330,12 +358,21 @@ function stopPostgres() {
   
   // Linux 下以 postgres 用户运行
   if (IS_LINUX && process.getuid() === 0) {
-    const envStr = PG_LIB_DIR ? `LD_LIBRARY_PATH=${PG_LIB_DIR} ` : '';
+    // 获取默认 PATH（如果 process.env.PATH 为空）
+    const defaultPath = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+    const currentPath = process.env.PATH || defaultPath;
+    
+    // 构建环境变量参数（用于 setpriv/env 命令）
+    const envVars = [`PATH=${currentPath}`];
+    if (PG_LIB_DIR) {
+      envVars.unshift(`LD_LIBRARY_PATH=${PG_LIB_DIR}`);
+    }
+    
     const pgCtlArgs = ['stop', '-D', PG_DATA_DIR, '-m', 'fast', '-w', '-t', '30'];
     
     const commands = [
-      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', `${envStr}PATH=${process.env.PATH}`, pg_ctl, ...pgCtlArgs],
-      ['su', '-', 'postgres', '-c', `${envStr}${pg_ctl} stop -D ${PG_DATA_DIR} -m fast -w -t 30`],
+      ['setpriv', '--reuid=postgres', '--regid=postgres', '--init-groups', 'env', ...envVars, pg_ctl, ...pgCtlArgs],
+      ['su', '-', 'postgres', '-c', `LD_LIBRARY_PATH=${PG_LIB_DIR || ''} ${pg_ctl} stop -D ${PG_DATA_DIR} -m fast -w -t 30`],
     ];
     
     for (const cmd of commands) {
@@ -398,6 +435,11 @@ function main() {
   // 启动
   if (!startPostgres()) {
     process.exit(1);
+  }
+  
+  // 通知 PM2 进程已就绪
+  if (process.send) {
+    process.send('ready');
   }
   
   // 保持进程运行，定期检查状态

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { File, Download } from 'lucide-react';
+import File from 'lucide-react/dist/esm/icons/file';
+import Download from 'lucide-react/dist/esm/icons/download';
 
 export type DownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
 

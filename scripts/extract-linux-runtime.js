@@ -259,6 +259,19 @@ function extractNodeYum(outputPath) {
     if (whichNode) {
       nodeBinary = whichNode;
     }
+    
+    // 检测 node_modules 实际位置
+    const possiblePaths = [
+      '/usr/local/lib/node_modules',  // 预编译二进制解压位置
+      '/usr/lib/node_modules',        // 包管理器安装位置
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p) && fs.readdirSync(p).length > 0) {
+        nodeModulesPath = p;
+        log(`  → 检测到 node_modules: ${p}`);
+        break;
+      }
+    }
   } catch (e) {
     log('  → Node.js 未安装');
   }
@@ -354,9 +367,13 @@ function extractPostgresYum(outputPath) {
   }
   
   // 复制 PostgreSQL share 目录
+  // PostgreSQL 基于二进制位置动态计算 share 路径：
+  // bin/postgres -> ../share/
+  // 所以文件应该直接在 share/ 目录下，不是 share/postgresql/15/
   log('  → 复制 PostgreSQL share 目录...');
   if (fs.existsSync(pgShareDir)) {
-    execSync(`mkdir -p ${shareDir}/postgresql && cp -r ${pgShareDir}/* ${shareDir}/postgresql/`, { stdio: 'inherit' });
+    // 直接复制到 share/ 目录
+    execSync(`cp -r ${pgShareDir}/* ${shareDir}/`, { stdio: 'inherit' });
   }
   
   // 收集所有二进制文件的依赖库
@@ -622,10 +639,13 @@ function extractPostgresApt(outputPath) {
   }
   
   // 复制 PostgreSQL share 目录
+  // PostgreSQL 基于二进制位置动态计算 share 路径
+  // 所以文件应该直接在 share/ 目录下
   log('  → 复制 PostgreSQL share 目录...');
   const pgShareDir = '/usr/share/postgresql/15';
   if (fs.existsSync(pgShareDir)) {
-    execSync(`mkdir -p ${shareDir}/postgresql && cp -r ${pgShareDir}/* ${shareDir}/postgresql/`, { stdio: 'inherit' });
+    // 直接复制到 share/ 目录
+    execSync(`cp -r ${pgShareDir}/* ${shareDir}/`, { stdio: 'inherit' });
   }
   
   // 复制 libpq

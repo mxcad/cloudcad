@@ -99,7 +99,7 @@ async function bootstrap() {
     AppModule,
     new ExpressAdapter(server),
     {
-      logger: ['error', 'warn', 'log'],
+      logger: config.log.levels,
     }
   );
 

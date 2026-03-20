@@ -12,10 +12,35 @@ import { FileSystemNode } from '@/types/filesystem';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// localStorage 版本控制
+const VIEW_MODE_VERSION = 'v1';
+const VIEW_MODE_KEY = `fileViewMode:${VIEW_MODE_VERSION}`;
+
+/**
+ * 安全的 localStorage 操作
+ */
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): boolean => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+};
+
 // 从 localStorage 读取保存的视图模式
 const getInitialViewMode = (): 'grid' | 'list' => {
   if (typeof window === 'undefined') return 'grid';
-  const saved = localStorage.getItem('fileViewMode');
+  const saved = safeStorage.getItem(VIEW_MODE_KEY);
   return saved === 'grid' || saved === 'list' ? saved : 'grid';
 };
 
@@ -94,9 +119,7 @@ export const useFileSystemStore = create<FileSystemState>()(
       setViewMode: (mode) => {
         set({ viewMode: mode });
         // 持久化到 localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('fileViewMode', mode);
-        }
+        safeStorage.setItem(VIEW_MODE_KEY, mode);
       },
       setSortBy: (by) => set({ sortBy: by }),
       setSortOrder: (order) => set({ sortOrder: order }),

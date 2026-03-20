@@ -25,8 +25,11 @@ const PLATFORM_DIR = IS_WINDOWS
   ? path.join(RUNTIME_DIR, 'windows')
   : path.join(RUNTIME_DIR, 'linux');
 
-// 检测是否使用内嵌 runtime
-const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
+// 检测是否使用内嵌 runtime（需要 node 目录存在才算完整）
+const NODE_RUNTIME_PATH = IS_WINDOWS
+  ? path.join(RUNTIME_DIR, 'windows', 'node', 'node.exe')
+  : path.join(RUNTIME_DIR, 'linux', 'node', 'bin', 'node');
+const USE_RUNTIME = fs.existsSync(NODE_RUNTIME_PATH);
 
 // 数据目录
 const DATA_DIR = path.join(PROJECT_ROOT, 'offline-data');
@@ -79,17 +82,17 @@ ensureDir(REDIS_DATA_DIR);
 // PM2 应用配置
 const apps = [];
 
+// 检测 PostgreSQL runtime 是否存在
+const PG_RUNTIME_EXISTS = IS_WINDOWS
+  ? fs.existsSync(path.join(RUNTIME_DIR, 'windows', 'postgresql', 'pgsql', 'bin', 'postgres.exe'))
+  : fs.existsSync(path.join(RUNTIME_DIR, 'linux', 'postgres', 'bin', 'postgres'));
+
 // PostgreSQL（仅内嵌 runtime 模式）
-if (USE_RUNTIME) {
+if (PG_RUNTIME_EXISTS) {
   // PostgreSQL 初始化检查（启动前执行）
-  const initdb = USE_RUNTIME
-    ? path.join(PLATFORM_DIR, PG_DIR_NAME, PG_BIN_SUBDIR, IS_WINDOWS ? 'initdb.exe' : 'initdb')
-    : 'initdb';
-  
-  // Linux 下需要设置 LD_LIBRARY_PATH
-  const pgEnv = PG_LIB_DIR
-    ? { ...process.env, LD_LIBRARY_PATH: `${PG_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` }
-    : process.env;
+  const initdb = IS_WINDOWS
+    ? path.join(RUNTIME_DIR, 'windows', 'postgresql', 'pgsql', 'bin', 'initdb.exe')
+    : path.join(RUNTIME_DIR, 'linux', 'postgres', 'bin', 'initdb');
   
   // 检查数据目录是否已初始化
   if (!fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
@@ -107,9 +110,9 @@ if (USE_RUNTIME) {
       }
       // 更改数据目录所有者
       spawnSync('chown', ['-R', 'postgres:postgres', PG_DATA_DIR], { stdio: 'inherit' });
-      // 以 postgres 用户身份初始化
+      // 以 postgres 用户身份初始化（不设置 LD_LIBRARY_PATH）
       const result = spawnSync('su', ['-', 'postgres', '-c', 
-        `LD_LIBRARY_PATH=${PG_LIB_DIR} ${initdb} -D ${PG_DATA_DIR} -U postgres -A trust -E utf8 --locale=C`],
+        `${initdb} -D ${PG_DATA_DIR} -U postgres -A trust -E utf8 --locale=C`],
         { stdio: 'inherit' });
       if (result.status !== 0) {
         console.log('[PM2] PostgreSQL 数据目录初始化失败');
@@ -121,7 +124,7 @@ if (USE_RUNTIME) {
         '-A', 'trust',
         '-E', 'utf8',
         '--locale=C'
-      ], { stdio: 'inherit', shell: IS_WINDOWS, env: pgEnv });
+      ], { stdio: 'inherit', shell: IS_WINDOWS });
     }
   }
 
@@ -143,8 +146,6 @@ if (USE_RUNTIME) {
     wait_ready: true,
     env: {
       PGDATA: PG_DATA_DIR,
-      // Linux 下设置 LD_LIBRARY_PATH
-      ...(PG_LIB_DIR ? { LD_LIBRARY_PATH: `${PG_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` } : {}),
     },
   });
 

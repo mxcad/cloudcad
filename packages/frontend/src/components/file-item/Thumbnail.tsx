@@ -1,7 +1,7 @@
 import React, { useState, memo, useMemo } from 'react';
 import { getFileIconComponent } from '../FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
-import { Eye } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
 import {
   getCadThumbnailUrl,
   getThumbnailUrl,

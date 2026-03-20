@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  X,
-  FileText,
-  Box,
-  Check,
-  Search,
-  Edit2,
-  Trash2,
-  Plus,
-  ChevronDown,
-} from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Box from 'lucide-react/dist/esm/icons/box';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import { galleryApi } from '../../services/galleryApi';
 import { useNotification } from '../../contexts/NotificationContext';
 import { GALLERY_CONFIG } from '../../constants/appConfig';

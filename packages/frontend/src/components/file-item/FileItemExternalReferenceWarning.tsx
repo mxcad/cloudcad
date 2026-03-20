@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface FileItemExternalReferenceWarningProps {

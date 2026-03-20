@@ -1,5 +1,6 @@
 import React from 'react';
-import { Check, Info } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Info from 'lucide-react/dist/esm/icons/info';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import {

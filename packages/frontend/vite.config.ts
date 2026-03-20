@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       mxcadAssetsPlugin({
-        libraryNames: ['axios'],
+        libraryNames: ['axios', 'vuetify', 'vue'],
       }),
     ],
     define: {

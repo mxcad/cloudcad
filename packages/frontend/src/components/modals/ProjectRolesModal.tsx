@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Plus,
-  Trash2,
-  Settings,
-  Shield,
-  Users,
-  Edit,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { DescriptionText } from '../ui/TruncateText';

@@ -1,5 +1,8 @@
 import React from 'react';
-import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Info from 'lucide-react/dist/esm/icons/info';
+import X from 'lucide-react/dist/esm/icons/x';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 

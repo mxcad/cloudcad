@@ -9,6 +9,7 @@ import {
 import { Layout } from './components/Layout';
 
 import { CADEditorDirect } from './pages/CADEditorDirect';
+import { Dashboard } from './pages/Dashboard';
 import { EmailVerification } from './pages/EmailVerification';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
@@ -123,10 +124,14 @@ function AppContent() {
               <Layout>
                 <Routes>
                   <Route
-                    path="/"
-                    element={<Navigate to="/projects" replace />}
-                  />
-                  {/* 统一使用 FileSystemManager 组件：项目根目录模式（无 projectId）和文件夹模式（有 projectId） */}
+                                    path="/"
+                                    element={<Navigate to="/dashboard" replace />}
+                                  />
+                                    <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/recent" element={<Navigate to="/projects" replace />} />
+                  <Route path="/favorites" element={<Navigate to="/projects" replace />} />
+
+                  {/* 项目管理和我的图纸 - 使用 FileSystemManager */}
                   <Route path="/projects" element={<FileSystemManager />} />
                   <Route
                     path="/projects/:projectId/files"

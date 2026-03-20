@@ -203,6 +203,14 @@ export interface SvnConfig {
   ignorePatterns: string[];
 }
 
+/**
+ * 日志配置
+ */
+export interface LogConfig {
+  /** 日志级别列表 */
+  levels: ('error' | 'warn' | 'log' | 'debug' | 'verbose')[];
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -229,4 +237,5 @@ export interface AppConfig {
   cacheWarmup: CacheWarmupConfig; // 缓存预热配置
   storage: StorageConfig; // 存储配置
   svn: SvnConfig; // SVN 配置
+  log: LogConfig; // 日志配置
 }

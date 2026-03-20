@@ -120,6 +120,16 @@ function runNode(scriptPath, args = [], options = {}) {
   return runCommand(NODE_EXE, [scriptPath, ...args], options);
 }
 
+// Prisma 二进制目标平台（必须与 pack-offline.js 中的 prepareDeployStore 一致）
+const PRISMA_BINARY_TARGETS = [
+  'windows',                   // Windows 系统
+  'debian-openssl-1.1.x',      // Debian 10/11, Ubuntu 20.04 (OpenSSL 1.1)
+  'debian-openssl-3.0.x',      // Debian 12, Ubuntu 22.04+ (OpenSSL 3.0)
+  'rhel-openssl-1.0.x',        // CentOS 7 (OpenSSL 1.0)
+  'rhel-openssl-3.0.x',        // Rocky 9, RHEL 9, AlmaLinux 9 (OpenSSL 3.0)
+  'linux-musl',                // Alpine Linux
+].join(',');
+
 function runPnpm(args, options = {}) {
   // 设置环境变量：PATH 包含 node bin 目录，禁用 corepack
   const nodeBinDir = IS_LINUX ? path.join(PLATFORM_DIR, 'node', 'bin') : path.join(PLATFORM_DIR, 'node');
@@ -129,6 +139,8 @@ function runPnpm(args, options = {}) {
     PATH: `${nodeBinDir}${path.delimiter}${process.env.PATH || ''}`,
     COREPACK_ENABLE: '0',
     COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+    // Prisma: 使用已下载的二进制，不要联网下载
+    PRISMA_CLI_BINARY_TARGETS: PRISMA_BINARY_TARGETS,
   };
   
   if (PNPM_JS && fs.existsSync(PNPM_JS)) {
@@ -289,6 +301,8 @@ async function step2_InstallDeps() {
     COREPACK_ENABLE: '0',
     COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
     NPM_CONFIG_STORE_DIR: storePath,
+    // Prisma: 使用已下载的二进制，不要联网下载
+    PRISMA_CLI_BINARY_TARGETS: PRISMA_BINARY_TARGETS,
   };
   
   // 只安装后端生产依赖（部署包只包含后端依赖）

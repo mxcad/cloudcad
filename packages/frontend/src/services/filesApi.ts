@@ -9,6 +9,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { getApiClient } from './apiClient';
+import { API_BASE_URL } from '../config/apiConfig';
 import type {
   UpdateNodeDto,
   MoveNodeDto,
@@ -94,4 +95,9 @@ export const filesApi = {
 
   copyNode: (id: string, data: CopyNodeDto) =>
     getApiClient().FileSystemController_copyNode({ nodeId: id }, data),
+
+  /** 获取文件缩略图 URL */
+  getThumbnailUrl: (nodeId: string): string => {
+    return `${API_BASE_URL}/file-system/nodes/${nodeId}/thumbnail`;
+  },
 };

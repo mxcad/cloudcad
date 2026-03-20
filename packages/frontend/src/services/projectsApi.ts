@@ -68,8 +68,16 @@ export const projectsApi = {
   getNode: (nodeId: string, config?: { signal?: AbortSignal }) =>
     getApiClient().FileSystemController_getNode({ nodeId }, null, config),
 
-  getChildren: (nodeId: string, config?: { signal?: AbortSignal }) =>
-    getApiClient().FileSystemController_getChildren({ nodeId }, null, config),
+  getChildren: (
+    nodeId: string,
+    params?: { page?: number; limit?: number; search?: string; nodeType?: 'folder' | 'file' },
+    config?: { signal?: AbortSignal }
+  ) =>
+    getApiClient().FileSystemController_getChildren(
+      { nodeId, page: params?.page, limit: params?.limit, search: params?.search, nodeType: params?.nodeType },
+      null,
+      config
+    ),
 
   updateNode: (nodeId: string, data: UpdateNodeDto) =>
     getApiClient().FileSystemController_updateNode({ nodeId }, data),

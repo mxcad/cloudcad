@@ -5,9 +5,12 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { initApiClient } from './services/apiClient';
 
+
 import './styles/transitions.css';
+import './styles/theme.css';
 import './styles/app.css';
 import './styles/icon.css';
+import { ThemeProvider } from './contexts/ThemeContext';
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Could not find root element to mount to');
@@ -62,11 +65,13 @@ const AppInitializer: React.FC = () => {
 
   return (
     <Suspense fallback={<GlobalLoading />}>
-      <NotificationProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </NotificationProvider>
+      <ThemeProvider>
+        <NotificationProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </NotificationProvider>
+      </ThemeProvider>
     </Suspense>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { FolderPlus, AlertCircle } from 'lucide-react';
+import FolderPlus from 'lucide-react/dist/esm/icons/folder-plus';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ToastContainer } from '../components/ui/Toast';
@@ -749,7 +750,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   // ========== 渲染函数 ==========
 
   const renderHeader = () => (
-    <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+    <div
+      className="backdrop-blur-xl rounded-2xl p-4 shadow-sm space-y-3"
+      style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-default)',
+      }}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <button
@@ -762,7 +769,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   ? () => navigate('/projects')
                   : handleGoBack
             }
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
+            className="p-2 rounded-xl transition-all flex-shrink-0"
+            style={{ color: 'var(--text-tertiary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--text-tertiary)';
+              e.currentTarget.style.background = 'transparent';
+            }}
             title={
               isPersonalSpaceMode
                 ? isAtRoot
@@ -818,7 +834,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
-            className="text-slate-600 hover:bg-slate-100"
+            style={{ color: 'var(--text-tertiary)' }}
+            className="hover:bg-[var(--bg-tertiary)]"
             title="刷新"
           >
             <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
@@ -831,7 +848,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               size="sm"
               onClick={handleToggleTrashView}
               disabled={loading}
-              className={isTrashView ? '' : 'text-slate-600 hover:bg-slate-100'}
+              className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
+              style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
               title={isTrashView ? '返回文件列表' : '回收站'}
             >
               <svg
@@ -855,7 +873,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={openCreateProject}
-                  className="text-slate-600 hover:bg-slate-100"
+                  className="hover:bg-[var(--bg-tertiary)]"
+                  style={{ color: 'var(--text-tertiary)' }}
                   title="新建项目"
                 >
                   <FolderPlus size={16} />
@@ -872,7 +891,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     size="sm"
                     onClick={() => setShowCreateFolderModal(true)}
                     disabled={loading}
-                    className="text-slate-600 hover:bg-slate-100"
+                    className="hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-tertiary)' }}
                     title="新建文件夹"
                   >
                     <svg
@@ -899,7 +919,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                       uploaderRef.current?.triggerUpload();
                     }}
                     disabled={loading}
-                    className="text-slate-600 hover:bg-slate-100"
+                    className="hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-tertiary)' }}
                     title="上传文件"
                   >
                     <svg
@@ -954,14 +975,32 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
       {/* 项目回收站标签页 - 仅在项目根目录模式下显示 */}
       {isAtRoot && (
-        <div className="flex items-center gap-2 border-b border-slate-200">
+        <div
+          className="flex items-center gap-2 border-b"
+          style={{ borderColor: 'var(--border-default)' }}
+        >
           <button
             onClick={() => isProjectTrashView && handleToggleProjectTrashView()}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
               !isProjectTrashView
-                ? 'text-primary-600 border-primary-600'
-                : 'text-slate-500 border-transparent hover:text-slate-700'
+                ? 'border-primary-600'
+                : 'border-transparent'
             }`}
+            style={{
+              color: !isProjectTrashView
+                ? 'var(--primary-500)'
+                : 'var(--text-tertiary)',
+            }}
+            onMouseEnter={(e) => {
+              if (isProjectTrashView) {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (isProjectTrashView) {
+                e.currentTarget.style.color = 'var(--text-tertiary)';
+              }
+            }}
           >
             我的项目
           </button>
@@ -971,9 +1010,24 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             }
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
               isProjectTrashView
-                ? 'text-primary-600 border-primary-600'
-                : 'text-slate-500 border-transparent hover:text-slate-700'
+                ? 'border-primary-600'
+                : 'border-transparent'
             }`}
+            style={{
+              color: isProjectTrashView
+                ? 'var(--primary-500)'
+                : 'var(--text-tertiary)',
+            }}
+            onMouseEnter={(e) => {
+              if (!isProjectTrashView) {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isProjectTrashView) {
+                e.currentTarget.style.color = 'var(--text-tertiary)';
+              }
+            }}
           >
             回收站
           </button>
@@ -983,7 +1037,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               size="sm"
               onClick={handleRefresh}
               disabled={loading}
-              className="ml-auto text-slate-600"
+              className="ml-auto"
+              style={{ color: 'var(--text-tertiary)' }}
               title="刷新"
             >
               <RefreshIcon
@@ -996,11 +1051,15 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
+      <div
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2"
+        style={{ borderTop: '1px solid var(--border-subtle)' }}
+      >
         <div className="relative group flex-1 max-w-xs">
           <SearchIcon
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors"
+            className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
+            style={{ color: 'var(--text-muted)' }}
           />
           <input
             type="text"
@@ -1016,13 +1075,33 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 handleSearchSubmit();
               }
             }}
-            className="w-full pl-9 pr-20 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            className="w-full pl-9 pr-20 py-2 text-sm rounded-xl transition-all outline-none"
+            style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--primary-500)';
+              e.target.style.boxShadow = '0 0 0 2px var(--primary-100)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--border-default)';
+              e.target.style.boxShadow = 'none';
+            }}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                className="transition-colors p-1"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
                 title="清除搜索"
               >
                 <svg
@@ -1067,9 +1146,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 selectedNodes.clear();
               }
             }}
-            className={
-              isMultiSelectMode ? '' : 'text-slate-600 hover:bg-slate-100'
-            }
+            className={isMultiSelectMode ? '' : 'hover:bg-[var(--bg-tertiary)]'}
+            style={isMultiSelectMode ? {} : { color: 'var(--text-tertiary)' }}
             title="多选模式"
           >
             <svg
@@ -1090,7 +1168,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleSelectAll}
-              className="text-slate-600 hover:bg-slate-100"
+              className="hover:bg-[var(--bg-tertiary)]"
+              style={{ color: 'var(--text-tertiary)' }}
               title={selectedNodes.size === nodes.length ? '取消全选' : '全选'}
             >
               {selectedNodes.size === nodes.length ? (
@@ -1121,17 +1200,62 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             </Button>
           )}
 
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div
+            className="flex items-center rounded-xl overflow-hidden"
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-default)',
+            }}
+          >
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 transition-colors ${viewMode === 'grid' ? 'bg-primary-50 text-primary-600' : 'text-slate-500 hover:bg-slate-50'}`}
+              className="p-2 transition-colors"
+              style={{
+                background:
+                  viewMode === 'grid' ? 'var(--primary-50)' : 'transparent',
+                color:
+                  viewMode === 'grid'
+                    ? 'var(--primary-600)'
+                    : 'var(--text-tertiary)',
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'grid') {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'grid') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
               <GridIcon size={14} />
             </button>
-            <div className="w-px h-4 bg-slate-200" />
+            <div
+              className="w-px h-4"
+              style={{ background: 'var(--border-default)' }}
+            />
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 transition-colors ${viewMode === 'list' ? 'bg-primary-50 text-primary-600' : 'text-slate-500 hover:bg-slate-50'}`}
+              className="p-2 transition-colors"
+              style={{
+                background:
+                  viewMode === 'list' ? 'var(--primary-50)' : 'transparent',
+                color:
+                  viewMode === 'list'
+                    ? 'var(--primary-600)'
+                    : 'var(--text-tertiary)',
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'list') {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'list') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
               <ListIcon size={14} />
             </button>
@@ -1143,7 +1267,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               variant="outline"
               size="sm"
               onClick={handleClearProjectTrash}
-              className="text-red-600 border-red-200 hover:bg-red-50"
+              style={{ color: 'var(--error)', borderColor: 'var(--error-dim)' }}
+              className="hover:bg-[var(--error-dim)]"
               title="清空回收站"
             >
               <svg
@@ -1167,9 +1292,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     <div className="flex flex-col items-center justify-center py-16">
       <EmptyFolderIcon
         size={80}
-        className="text-slate-300 mb-6 animate-float"
+        className="mb-6 animate-float"
+        style={{ color: 'var(--text-muted)', opacity: 0.5 }}
       />
-      <h3 className="text-xl font-bold text-slate-900 mb-2">
+      <h3
+        className="text-xl font-bold mb-2"
+        style={{ color: 'var(--text-primary)' }}
+      >
         {isProjectTrashView
           ? '回收站是空的'
           : isTrashView
@@ -1178,7 +1307,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               ? '暂无项目'
               : '这个文件夹是空的'}
       </h3>
-      <p className="text-slate-500 text-sm mb-6">
+      <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
         {isProjectTrashView
           ? '删除的项目会出现在这里'
           : isTrashView
@@ -1214,8 +1343,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           className={
             viewMode === 'grid'
               ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6'
-              : 'divide-y divide-slate-100'
+              : 'divide-y'
           }
+          style={viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}}
         >
           {displayNodes.map((node) => {
             // 获取节点权限信息
@@ -1355,7 +1485,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
         {/* 分页组件 */}
         {paginationMeta && (
-          <div className="px-6 py-4 border-t border-slate-100">
+          <div
+            className="px-6 py-4"
+            style={{ borderTop: '1px solid var(--border-subtle)' }}
+          >
             <Pagination
               meta={paginationMeta}
               onPageChange={handlePageChange}
@@ -1384,24 +1517,46 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
       {renderHeader()}
 
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 relative min-h-[400px] shadow-sm overflow-visible">
+      <div
+        className="rounded-2xl relative min-h-[400px] shadow-sm overflow-visible"
+        style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-default)',
+        }}
+      >
         <div className="overflow-hidden h-full rounded-2xl">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="relative">
-                <div className="w-16 h-16 rounded-full border-4 border-slate-200" />
-                <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
+                <div
+                  className="w-16 h-16 rounded-full border-4"
+                  style={{ borderColor: 'var(--border-default)' }}
+                />
+                <div
+                  className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-t-transparent animate-spin"
+                  style={{ borderColor: 'var(--primary-600)' }}
+                />
               </div>
-              <p className="mt-4 text-slate-500 font-medium">加载中...</p>
+              <p
+                className="mt-4 font-medium"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                加载中...
+              </p>
             </div>
           )}
 
           {!loading && error && (
             <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-16 h-16 rounded-full bg-error-100 flex items-center justify-center mb-4">
-                <AlertCircle size={32} className="text-error-600" />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                style={{ background: 'var(--error-dim)' }}
+              >
+                <AlertCircle size={32} style={{ color: 'var(--error)' }} />
               </div>
-              <p className="text-error-600 font-medium mb-4">{error}</p>
+              <p className="font-medium mb-4" style={{ color: 'var(--error)' }}>
+                {error}
+              </p>
               <Button onClick={handleRefresh} variant="outline">
                 <RefreshIcon size={16} className="mr-2" />
                 重试
@@ -1413,11 +1568,21 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         </div>
 
         {isMultiSelectMode && selectedNodes.size > 0 && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up">
+          <div
+            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up"
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+            }}
+          >
             <span className="text-sm font-semibold">
               已选中 {selectedNodes.size} 项
             </span>
-            <div className="w-px h-4 bg-slate-700" />
+            <div
+              className="w-px h-4"
+              style={{ background: 'var(--border-default)' }}
+            />
 
             {/* 回收站视图显示恢复按钮 */}
             {(isTrashView || isProjectTrashView) && (
@@ -1438,7 +1603,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     setCopySourceNode(null);
                     setShowSelectFolderModal(true);
                   }}
-                  className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                  className="text-sm font-medium transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--primary-500)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
                 >
                   移动
                 </button>
@@ -1448,7 +1620,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     setCopySourceNode({ id: 'batch' });
                     setShowSelectFolderModal(true);
                   }}
-                  className="text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                  className="text-sm font-medium transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--primary-500)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
                 >
                   复制
                 </button>
@@ -1458,7 +1637,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             {(isTrashView || isProjectTrashView) && (
               <button
                 onClick={() => handleBatchDelete(true)}
-                className="text-error-400 hover:text-white text-sm font-medium transition-colors"
+                className="text-sm font-medium transition-colors"
+                style={{ color: 'var(--error)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
               >
                 彻底删除
               </button>
@@ -1468,7 +1654,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             {!isTrashView && !isProjectTrashView && (
               <button
                 onClick={() => handleBatchDelete(false)}
-                className="text-error-400 hover:text-white text-sm font-medium transition-colors"
+                className="text-sm font-medium transition-colors"
+                style={{ color: 'var(--error)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
               >
                 删除
               </button>
@@ -1478,7 +1671,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 selectedNodes.clear();
                 setIsMultiSelectMode(false);
               }}
-              className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
+              className="text-sm font-medium transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-muted)';
+              }}
             >
               取消
             </button>
@@ -1545,34 +1745,55 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         }
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div
+            className="flex items-start gap-3 p-4 rounded-lg"
+            style={{
+              background: 'var(--warning-dim)',
+              border: '1px solid var(--warning)',
+            }}
+          >
             <AlertCircle
               size={20}
-              className="text-amber-600 flex-shrink-0 mt-0.5"
+              className="flex-shrink-0 mt-0.5"
+              style={{ color: 'var(--warning)' }}
             />
-            <div className="text-sm text-amber-900">
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               <p className="font-semibold mb-1">重要提示</p>
-              <p className="text-amber-800">
+              <p style={{ color: 'var(--text-tertiary)' }}>
                 删除项目后，项目中的所有文件和数据可能无法恢复。
               </p>
             </div>
           </div>
           {projectToDelete && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">删除项目：</p>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-sm font-medium text-slate-900">
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                删除项目：
+              </p>
+              <div
+                className="p-3 rounded-lg"
+                style={{ background: 'var(--bg-tertiary)' }}
+              >
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
                   {projectToDelete.name}
                 </p>
                 {projectToDelete.description && (
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
                     {projectToDelete.description}
                   </p>
                 )}
               </div>
             </div>
           )}
-          <p className="text-sm text-slate-600">
+          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
             确定要删除该项目吗？此操作不可恢复。
           </p>
         </div>

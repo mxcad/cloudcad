@@ -148,6 +148,243 @@ let currentFileInfo: {
 // 私人空间 ID 缓存（用于判断文件是否属于私人空间）
 let cachedPersonalSpaceId: string | null = null;
 
+// 文档修改状态跟踪
+let documentModified = false;
+
+/**
+ * 检查文档是否有未保存的修改
+ * 尝试从 MxCAD SDK 获取修改状态，如果不可用则使用本地跟踪状态
+ */
+export function isDocumentModified(): boolean {
+  try {
+    const mxcad = MxCpp.getCurrentMxCAD();
+    // MxCAD SDK 可能提供 isModified 属性
+    if (mxcad && typeof (mxcad as unknown as { isModified?: boolean }).isModified === 'boolean') {
+      return (mxcad as unknown as { isModified: boolean }).isModified;
+    }
+  } catch {
+    // 静默处理：SDK 不支持 isModified 属性
+  }
+  // 回退到本地跟踪状态
+  return documentModified;
+}
+
+/**
+ * 设置文档修改状态
+ * @param modified 是否已修改
+ */
+export function setDocumentModified(modified: boolean): void {
+  documentModified = modified;
+}
+
+/**
+ * 重置文档修改状态（打开新文件或保存后调用）
+ */
+export function resetDocumentModified(): void {
+  documentModified = false;
+}
+
+/**
+ * 显示未保存更改确认对话框
+ * @returns Promise<'save' | 'discard' | 'cancel'> 用户选择：保存、放弃更改、取消
+ */
+export function showUnsavedChangesDialog(): Promise<'save' | 'discard' | 'cancel'> {
+  return new Promise((resolve) => {
+    const dialogId = 'mxcad-unsaved-changes-dialog';
+    let dialog = document.getElementById(dialogId) as HTMLElement;
+
+    if (dialog) {
+      document.body.removeChild(dialog);
+    }
+
+    dialog = document.createElement('div');
+    dialog.id = dialogId;
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100001;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    dialog.innerHTML = `
+      <div style="
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 420px;
+        overflow: hidden;
+      ">
+        <div style="
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+        ">
+          <div style="
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #fef3c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+          ">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+          </div>
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">
+            未保存的更改
+          </h3>
+          <p style="margin: 0; font-size: 14px; color: #6b7280;">
+            当前图纸有未保存的更改，是否保存？
+          </p>
+        </div>
+        <div style="
+          padding: 16px 20px;
+          background: #f9fafb;
+          border-top: 1px solid #e5e7eb;
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+        ">
+          <button id="mxcad-unsaved-cancel" style="
+            padding: 10px 20px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            取消
+          </button>
+          <button id="mxcad-unsaved-discard" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #ef4444;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            不保存
+          </button>
+          <button id="mxcad-unsaved-save" style="
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #4f46e5;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          ">
+            保存
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    const cancelBtn = dialog.querySelector('#mxcad-unsaved-cancel');
+    const discardBtn = dialog.querySelector('#mxcad-unsaved-discard');
+    const saveBtn = dialog.querySelector('#mxcad-unsaved-save');
+
+    const cleanup = () => {
+      if (dialog && dialog.parentNode) {
+        dialog.parentNode.removeChild(dialog);
+      }
+    };
+
+    cancelBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve('cancel');
+    });
+
+    discardBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve('discard');
+    });
+
+    saveBtn?.addEventListener('click', () => {
+      cleanup();
+      resolve('save');
+    });
+
+    // 点击背景关闭
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) {
+        cleanup();
+        resolve('cancel');
+      }
+    });
+
+    // ESC 键关闭
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        document.removeEventListener('keydown', handleKeyDown);
+        cleanup();
+        resolve('cancel');
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+  });
+}
+
+/**
+ * 检查是否有未保存的更改并提示用户
+ * @returns Promise<boolean> 是否可以继续操作（true=可以继续，false=用户取消）
+ */
+export async function checkAndConfirmUnsavedChanges(): Promise<boolean> {
+  if (!isDocumentModified()) {
+    return true;
+  }
+
+  const choice = await showUnsavedChangesDialog();
+
+  if (choice === 'cancel') {
+    return false;
+  }
+
+  if (choice === 'save') {
+    // 触发保存命令
+    try {
+      await MxFun.sendStringToExecute('Mx_Save');
+      // 等待保存完成
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // 保存后检查是否还有未保存的更改
+      if (isDocumentModified()) {
+        // 保存可能失败或被取消
+        return false;
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      return false;
+    }
+  }
+
+  // 选择"不保存"时，重置修改状态
+  if (choice === 'discard') {
+    resetDocumentModified();
+  }
+
+  return true;
+}
+
 /**
  * 设置私人空间 ID 缓存（由 CADEditorDirect 组件调用）
  */
@@ -1136,6 +1373,9 @@ MxFun.addCommand('Mx_Save', async () => {
       console.warn('更新本地缓存失败', cacheError);
     }
 
+    // 保存成功后重置修改状态
+    resetDocumentModified();
+
     hideLoadingOverlay();
     globalShowToast('文件保存成功', 'success');
   } catch (error) {
@@ -1204,7 +1444,7 @@ class MxCADContainerManager {
     if (this.globalContainer) {
       // 使用 visibility + z-index 方案，保护 WebGL 上下文不被销毁
       // visibility: hidden 保持元素在渲染树中，WebGL 上下文不会丢失
-      // z-index 控制层级，隐藏时放到最底层避免遮挡其他元素
+      // z-index 只在隐藏时设置为 -1，显示时不设置
       // pointer-events 禁用交互
       if (show) {
         this.globalContainer.style.visibility = 'visible';
@@ -1362,6 +1602,9 @@ class MxCADInstanceManager {
    */
   private setupFileOpenListener(): void {
     const onOpen = async () => {
+      // 文件打开完成后，重置修改状态
+      resetDocumentModified();
+
       if (currentFileInfo) {
         globalThis.MxPluginContext.useFileName().fileName.value =
           ' - ' + currentFileInfo.name;
@@ -1422,7 +1665,27 @@ class MxCADInstanceManager {
   private setupInitializationListener(): void {
     MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
       this.isInitialized = true;
+      // 应用创建完成后，设置文档修改事件监听
+      this.setupDocumentModifyListener();
     });
+  }
+
+  /**
+   * 监听文档修改事件
+   * MxCAD SDK 在文档被修改时会触发 'databaseModify' 事件
+   */
+  private setupDocumentModifyListener(): void {
+    try {
+      const mxcad = MxCpp.getCurrentMxCAD();
+      if (mxcad) {
+        // 监听数据库修改事件
+        mxcad.on('databaseModify', () => {
+          setDocumentModified(true);
+        });
+      }
+    } catch (error) {
+      // 静默处理：MxCAD 可能尚未初始化
+    }
   }
 
   /**

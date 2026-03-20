@@ -4,13 +4,11 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { FileNameText } from '../ui/TruncateText';
 import { ExternalReferenceFile } from '../../types/filesystem';
-import {
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Upload,
-  AlertTriangle,
-} from 'lucide-react';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 
 interface ExternalReferenceModalProps {
   /** 模态框是否打开 */

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { RefreshIcon, SearchIcon, GridIcon, ListIcon } from '../FileIcons';
-import { FolderPlus } from 'lucide-react';
+import FolderPlus from 'lucide-react/dist/esm/icons/folder-plus';
 import { BreadcrumbNavigation } from '../BreadcrumbNavigation';
 import { BreadcrumbItem } from '../../types/filesystem';
 

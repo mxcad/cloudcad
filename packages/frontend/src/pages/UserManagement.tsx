@@ -1,13 +1,11 @@
-﻿import {
-  AlertCircle,
-  Edit,
-  Shield,
-  Trash2,
-  User as UserIcon,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+﻿import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import UserIcon from 'lucide-react/dist/esm/icons/user';
+import Search from 'lucide-react/dist/esm/icons/search';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';

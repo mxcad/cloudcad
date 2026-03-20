@@ -252,4 +252,30 @@ export default (): AppConfig => ({
       ['*.mxweb', '*.dwg', '*.jpg']
     ),
   },
+
+  // 日志配置
+  log: {
+    levels: parseLogLevels(process.env.LOG_LEVELS, process.env.NODE_ENV || 'development'),
+  },
 });
+
+/**
+ * 解析日志级别配置
+ * @param value 环境变量值
+ * @param nodeEnv 运行环境
+ * @returns 日志级别数组
+ */
+function parseLogLevels(
+  value: string | undefined,
+  nodeEnv: string
+): ('error' | 'warn' | 'log' | 'debug' | 'verbose')[] {
+  if (value) {
+    return value.split(',').map((l) => l.trim() as 'error' | 'warn' | 'log' | 'debug' | 'verbose');
+  }
+  // 开发环境默认启用全部级别
+  if (nodeEnv === 'development') {
+    return ['error', 'warn', 'log', 'debug', 'verbose'];
+  }
+  // 生产环境默认只启用基础级别
+  return ['error', 'warn', 'log'];
+}
