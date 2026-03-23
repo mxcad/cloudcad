@@ -486,6 +486,28 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     loadPermissions();
   }, [user, isAtRoot, urlProjectId, nodes.length]);
 
+  // 处理从仪表盘点击"上传图纸"跳转过来的 action=upload 参数
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action !== 'upload' || isAtRoot || loading) return;
+
+    // 延迟触发上传，确保组件已完全渲染
+    const timer = setTimeout(() => {
+      if (uploaderRef.current) {
+        uploaderRef.current.triggerUpload();
+        // 清除 URL 参数，避免刷新后重复触发
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('action');
+        navigate(
+          { search: newSearchParams.toString() },
+          { replace: true }
+        );
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchParams, isAtRoot, loading, navigate]);
+
   // 打开成员管理模态框
   const handleShowMembers = useCallback((project: FileSystemNode) => {
     setEditingProject(project);
