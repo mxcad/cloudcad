@@ -778,9 +778,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           step={resolvedCurrentStep}
           isActive={isTourActive}
           onSkip={skipTour}
-          onElementReady={() => {
-            // 元素准备就绪后的回调
-          }}
+          onSkipStep={nextStep}
           onInteractionComplete={nextStep}
         >
           {({ targetRect, hasTarget }) => (

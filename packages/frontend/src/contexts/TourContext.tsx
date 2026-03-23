@@ -86,9 +86,15 @@ function checkUICondition(condition: UICondition): boolean {
       }
       return false;
     case 'view-mode':
-      // viewMode 条件需要根据具体业务实现
-      // 这里暂时返回 true，实际使用时需要传入当前视图模式
-      return true;
+      // 通过检查文件列表容器的 data-view-mode 属性来检测视图模式
+      if (condition.viewMode) {
+        const container = document.querySelector('[data-view-mode]');
+        if (container) {
+          const currentMode = container.getAttribute('data-view-mode');
+          return currentMode === condition.viewMode;
+        }
+      }
+      return false;
     case 'custom':
       if (condition.customCheck) {
         return condition.customCheck();

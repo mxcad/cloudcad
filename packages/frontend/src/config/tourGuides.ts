@@ -59,7 +59,11 @@ export const tourGuides: TourGuide[] = [
         placement: 'bottom',
         mode: 'display',
         waitForElement: 3000,
-        fallbackContent: '创建项目按钮在项目列表页面的顶部工具栏中。点击可以创建新项目。',
+        skipCondition: {
+          type: 'element-not-exists',
+          selector: '[data-tour="create-project-btn"]',
+        },
+        fallbackContent: '创建项目按钮在项目列表页面的顶部工具栏中。点击可以创建新项目。如果您在私人空间或没有创建权限，此按钮可能不显示。',
       },
       {
         target: 'file-item',
@@ -80,7 +84,11 @@ export const tourGuides: TourGuide[] = [
         placement: 'bottom',
         mode: 'display',
         waitForElement: 3000,
-        fallbackContent: '上传文件功能需要在项目内部使用。请先从项目列表中点击进入一个项目，然后重新开始此引导。',
+        skipCondition: {
+          type: 'element-not-exists',
+          selector: '[data-tour="upload-btn"]',
+        },
+        fallbackContent: '上传文件功能需要在项目内部使用。请先从项目列表中点击进入一个项目，然后重新开始此引导。如果在回收站视图，此按钮不会显示。',
       },
       {
         target: 'create-folder-btn',
@@ -89,7 +97,11 @@ export const tourGuides: TourGuide[] = [
         placement: 'bottom',
         mode: 'display',
         waitForElement: 2000,
-        fallbackContent: '创建文件夹功能需要在项目内部使用。请先进入一个项目。',
+        skipCondition: {
+          type: 'element-not-exists',
+          selector: '[data-tour="create-folder-btn"]',
+        },
+        fallbackContent: '创建文件夹功能需要在项目内部使用。请先进入一个项目。如果在回收站视图，此按钮不会显示。',
       },
       {
         target: 'file-item',
@@ -503,7 +515,11 @@ export const tourGuides: TourGuide[] = [
         actionHint: '请点击侧边栏中的"角色权限"入口',
         highlight: true,
         waitForElement: 3000,
-        fallbackContent: '请点击左侧侧边栏中的"角色权限"入口进入系统角色管理页面。',
+        skipCondition: {
+          type: 'element-not-exists',
+          selector: '[data-tour="sidebar-roles"]',
+        },
+        fallbackContent: '请点击左侧侧边栏中的"角色权限"入口进入系统角色管理页面。如果您没有看到此入口，可能是因为您没有系统角色管理权限。',
       },
       {
         target: 'role-list',

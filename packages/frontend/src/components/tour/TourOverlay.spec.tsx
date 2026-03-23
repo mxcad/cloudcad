@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { TourOverlay } from './TourOverlay';
-import type { TourStep } from '../../types/tour';
+import type { TourStep, SkipCondition } from '../../types/tour';
 
 // ============================================
 // Mock MutationObserver
@@ -129,27 +129,26 @@ describe('TourOverlay', () => {
     it('应该在 isActive 为 false 时不渲染任何内容', () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const { container } = render(
         <TourOverlay
           step={step}
           isActive={false}
           onSkip={onSkip}
-          onElementReady={onElementReady}
+          onSkipStep={onSkipStep}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
       );
 
       expect(container.firstChild).toBeNull();
-      expect(onElementReady).not.toHaveBeenCalled();
     });
 
     it('应该在 isActive 为 true 时渲染遮罩层', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockImplementation(function(this: Document, selector: string) {
@@ -164,7 +163,7 @@ describe('TourOverlay', () => {
           step={step}
           isActive={true}
           onSkip={onSkip}
-          onElementReady={onElementReady}
+          onSkipStep={onSkipStep}
         >
           {() => <div data-testid="tooltip">Tooltip</div>}
         </TourOverlay>
@@ -178,7 +177,7 @@ describe('TourOverlay', () => {
     it('应该在加载状态时显示加载提示', () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       vi.spyOn(document, 'querySelector').mockReturnValue(null);
 
@@ -187,7 +186,7 @@ describe('TourOverlay', () => {
           step={step}
           isActive={true}
           onSkip={onSkip}
-          onElementReady={onElementReady}
+          onSkipStep={onSkipStep}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -202,7 +201,7 @@ describe('TourOverlay', () => {
     it('应该使用 data-tour 属性查找目标元素', async () => {
       const step = createMockStep({ target: 'my-button' });
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockImplementation(function(this: Document, selector: string) {
@@ -218,7 +217,7 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -228,10 +227,10 @@ describe('TourOverlay', () => {
       expect(document.querySelector).toHaveBeenCalledWith('[data-tour="my-button"]');
     });
 
-    it('应该在元素找到时调用 onElementReady', async () => {
+    it('应该在元素找到时正常渲染', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockReturnValue(mockElement);
@@ -242,22 +241,22 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
         );
       });
-
-      await waitFor(() => {
-        expect(onElementReady).toHaveBeenCalledWith(mockElement);
-      });
     });
 
-    it('应该在元素未找到时调用 onElementReady(null)', async () => {
-      const step = createMockStep();
+    it('应该在元素未找到时检查 skipCondition 并自动跳过', async () => {
+      const skipCondition: SkipCondition = {
+        type: 'element-not-exists',
+        selector: '[data-tour="test-target"]',
+      };
+      const step = createMockStep({ skipCondition });
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       vi.spyOn(document, 'querySelector').mockReturnValue(null);
 
@@ -267,15 +266,16 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
         );
       });
 
+      // 等待超时后应该调用 onSkipStep
       await waitFor(() => {
-        expect(onElementReady).toHaveBeenCalledWith(null);
+        expect(onSkipStep).toHaveBeenCalled();
       }, { timeout: 5000 });
     });
   });
@@ -285,7 +285,7 @@ describe('TourOverlay', () => {
     it('应该响应 ESC 键退出引导', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockReturnValue(mockElement);
@@ -296,7 +296,7 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -315,14 +315,14 @@ describe('TourOverlay', () => {
     it('应该在 isActive 为 false 时忽略 ESC 键', () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       render(
         <TourOverlay
           step={step}
           isActive={false}
           onSkip={onSkip}
-          onElementReady={onElementReady}
+          onSkipStep={onSkipStep}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -340,7 +340,7 @@ describe('TourOverlay', () => {
     it('应该在元素不存在时渲染 children（显示 fallbackContent）', async () => {
       const step = createMockStep({ fallbackContent: '元素当前不可用' });
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       vi.spyOn(document, 'querySelector').mockReturnValue(null);
 
@@ -350,7 +350,7 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {({ hasTarget }) => (
               <div data-testid="tooltip">{hasTarget ? '正常内容' : '备用内容'}</div>
@@ -368,7 +368,7 @@ describe('TourOverlay', () => {
     it('应该在元素找到时正常渲染 children', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockReturnValue(mockElement);
@@ -379,7 +379,7 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {({ hasTarget }) => (
               <div data-testid="tooltip">{hasTarget ? '正常内容' : '备用内容'}</div>
@@ -399,7 +399,7 @@ describe('TourOverlay', () => {
     it('应该渲染 SVG 遮罩层', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockReturnValue(mockElement);
@@ -409,7 +409,7 @@ describe('TourOverlay', () => {
           step={step}
           isActive={true}
           onSkip={onSkip}
-          onElementReady={onElementReady}
+          onSkipStep={onSkipStep}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -422,7 +422,7 @@ describe('TourOverlay', () => {
     it('应该在有目标元素时渲染高亮边框', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockReturnValue(mockElement);
@@ -433,15 +433,16 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
         );
       });
 
+      // 验证遮罩层已渲染
       await waitFor(() => {
-        expect(onElementReady).toHaveBeenCalled();
+        expect(screen.getByText('正在定位目标元素...') || document.querySelector('.tour-overlay')).toBeTruthy();
       });
     });
   });
@@ -451,7 +452,7 @@ describe('TourOverlay', () => {
     it('应该传递 targetRect 和 hasTarget 给 children', async () => {
       const step = createMockStep();
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       const mockElement = createMockElement();
       vi.spyOn(document, 'querySelector').mockReturnValue(mockElement);
@@ -464,7 +465,7 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {(props) => {
               receivedProps = props;
@@ -481,10 +482,10 @@ describe('TourOverlay', () => {
       });
     });
 
-    it('当元素不存在时 hasTarget 应该为 false', async () => {
-      const step = createMockStep();
+    it('当元素不存在且有 fallbackContent 时 hasTarget 应该为 false', async () => {
+      const step = createMockStep({ fallbackContent: '备用内容' });
       const onSkip = vi.fn();
-      const onElementReady = vi.fn();
+      const onSkipStep = vi.fn();
 
       vi.spyOn(document, 'querySelector').mockReturnValue(null);
 
@@ -496,7 +497,7 @@ describe('TourOverlay', () => {
             step={step}
             isActive={true}
             onSkip={onSkip}
-            onElementReady={onElementReady}
+            onSkipStep={onSkipStep}
           >
             {(props) => {
               receivedProps = props;

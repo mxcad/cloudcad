@@ -23,8 +23,8 @@ interface TourOverlayProps {
   children: (props: { targetRect: DOMRect | null; hasTarget: boolean }) => React.ReactNode;
   /** 跳过引导 */
   onSkip: () => void;
-  /** 元素准备就绪回调 */
-  onElementReady: (element: HTMLElement | null) => void;
+  /** 跳过当前步骤（自动跳到下一步） */
+  onSkipStep: () => void;
   /** 用户完成交互操作回调（交互模式） */
   onInteractionComplete?: () => void;
 }
@@ -177,6 +177,38 @@ async function waitForTargetElement(
 }
 
 /**
+ * 检查跳过条件是否满足
+ */
+function checkSkipCondition(step: TourStep): boolean {
+  const { skipCondition } = step;
+  if (!skipCondition) return false;
+
+  switch (skipCondition.type) {
+    case 'element-not-exists':
+      if (!skipCondition.selector) return false;
+      return !document.querySelector(skipCondition.selector);
+    
+    case 'element-count-zero':
+      if (!skipCondition.selector) return false;
+      return document.querySelectorAll(skipCondition.selector).length === 0;
+    
+    case 'feature-disabled':
+      if (!skipCondition.featureFlag) return false;
+      // 检查功能开关状态（可根据实际业务扩展）
+      return false;
+    
+    case 'custom':
+      if (skipCondition.customCheck) {
+        return skipCondition.customCheck();
+      }
+      return false;
+    
+    default:
+      return false;
+  }
+}
+
+/**
  * 高亮区域状态
  */
 interface HighlightState {
@@ -195,7 +227,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
   isActive,
   children,
   onSkip,
-  onElementReady,
+  onSkipStep,
   onInteractionComplete,
 }) => {
   const [highlight, setHighlight] = useState<HighlightState>({
@@ -245,12 +277,20 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
           element: result.element,
           isLoading: false,
         });
-        onElementReady(result.element);
         
         // 重置交互完成状态
         interactionCompletedRef.current = false;
       } else {
-        // 元素未找到，检查是否有 fallbackContent
+        // 元素未找到
+        // 1. 先检查 skipCondition 是否满足
+        if (checkSkipCondition(step)) {
+          // 跳过条件满足，自动跳到下一步
+          console.log(`[Tour] Step "${step.target}" skipped by condition: ${step.skipCondition?.type}`);
+          onSkipStep();
+          return;
+        }
+        
+        // 2. 检查是否有 fallbackContent
         if (step.fallbackContent) {
           setHighlight({
             rect: null,
@@ -258,16 +298,15 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
             isLoading: false,
             error: result.reason,
           });
-          onElementReady(null);
         } else {
-          // 执行跳过条件检查
+          // 3. 没有任何处理方式，显示错误状态
+          console.warn(`[Tour] Element "${step.target}" not found and no fallback/skipCondition defined`);
           setHighlight({
             rect: null,
             element: null,
             isLoading: false,
             error: result.reason,
           });
-          onElementReady(null);
         }
       }
     };
@@ -277,7 +316,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isActive, step, onElementReady]);
+  }, [isActive, step, onSkipStep]);
 
   /** 监听 resize 和 scroll 事件 */
   useEffect(() => {
