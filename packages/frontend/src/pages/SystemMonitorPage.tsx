@@ -10,19 +10,12 @@ import Activity from 'lucide-react/dist/esm/icons/activity';
 import Database from 'lucide-react/dist/esm/icons/database';
 import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
 import Server from 'lucide-react/dist/esm/icons/server';
-import Cpu from 'lucide-react/dist/esm/icons/cpu';
-import MemoryStick from 'lucide-react/dist/esm/icons/memory-stick';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import Clock from 'lucide-react/dist/esm/icons/clock';
-import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
-import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
-import Minus from 'lucide-react/dist/esm/icons/minus';
 import Shield from 'lucide-react/dist/esm/icons/shield';
-import Globe from 'lucide-react/dist/esm/icons/globe';
-import Zap from 'lucide-react/dist/esm/icons/zap';
 import Info from 'lucide-react/dist/esm/icons/info';
 
 // 健康状态接口
@@ -36,16 +29,6 @@ interface HealthStatus {
 interface SystemHealth {
   database: HealthStatus;
   storage: HealthStatus;
-}
-
-// 系统指标接口
-interface SystemMetric {
-  name: string;
-  value: number;
-  unit: string;
-  status: 'good' | 'warning' | 'critical';
-  trend: 'up' | 'down' | 'stable';
-  icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
 /**
@@ -69,14 +52,6 @@ export const SystemMonitorPage: React.FC = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [refreshCountdown, setRefreshCountdown] = useState(30);
-  
-  // 模拟系统指标数据
-  const [systemMetrics] = useState<SystemMetric[]>([
-    { name: 'CPU 使用率', value: 32, unit: '%', status: 'good', trend: 'stable', icon: Cpu },
-    { name: '内存使用', value: 4.2, unit: 'GB', status: 'good', trend: 'up', icon: MemoryStick },
-    { name: '网络延迟', value: 12, unit: 'ms', status: 'good', trend: 'down', icon: Globe },
-    { name: '活跃连接', value: 127, unit: '', status: 'good', trend: 'up', icon: Zap },
-  ]);
 
   // 检查权限
   useEffect(() => {
@@ -271,27 +246,6 @@ export const SystemMonitorPage: React.FC = () => {
           </div>
         </section>
 
-        {/* 性能指标 */}
-        <section className="section">
-          <div className="section-header">
-            <h2>性能指标</h2>
-            <span className="auto-refresh-hint">
-              自动刷新: {refreshCountdown}s
-            </span>
-          </div>
-          
-          <div className="metrics-grid">
-            {systemMetrics.map((metric, index) => (
-              <MetricCard
-                key={metric.name}
-                metric={metric}
-                delay={index * 0.1}
-                isDark={isDark}
-              />
-            ))}
-          </div>
-        </section>
-
         {/* 系统信息 */}
         <section className="section">
           <div className="section-header">
@@ -399,53 +353,6 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       
       {/* 背景装饰 */}
       <div className="card-bg-pattern" />
-    </div>
-  );
-};
-
-// 指标卡片组件
-interface MetricCardProps {
-  metric: SystemMetric;
-  delay: number;
-  isDark: boolean;
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ metric, delay, isDark }) => {
-  const { name, value, unit, status, trend, icon: Icon } = metric;
-  
-  const statusColors = {
-    good: 'var(--success)',
-    warning: 'var(--warning)',
-    critical: 'var(--error)',
-  };
-  
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-  
-  return (
-    <div 
-      className="metric-card"
-      style={{ animationDelay: `${delay}s` }}
-    >
-      <div className="metric-icon-wrapper">
-        <Icon size={20} />
-      </div>
-      
-      <div className="metric-content">
-        <span className="metric-name">{name}</span>
-        <div className="metric-value-row">
-          <span 
-            className="metric-value"
-            style={{ color: statusColors[status] }}
-          >
-            {value}
-          </span>
-          <span className="metric-unit">{unit}</span>
-        </div>
-      </div>
-      
-      <div className={`metric-trend ${trend}`}>
-        <TrendIcon size={14} />
-      </div>
     </div>
   );
 };
@@ -739,13 +646,6 @@ const baseStyles = `
     gap: 1.25rem;
   }
 
-  /* 指标网格 */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
   /* 信息网格 */
   .info-grid {
     display: grid;
@@ -814,17 +714,7 @@ const baseStyles = `
       grid-template-columns: 1fr;
     }
 
-    .metrics-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
     .info-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .metrics-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -978,99 +868,6 @@ const componentStyles = `
     pointer-events: none;
   }
 
-  /* 指标卡片 */
-  .metric-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-default);
-    border-radius: 12px;
-    transition: all 0.3s;
-    animation: slideIn 0.5s ease-out backwards;
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .metric-card:hover {
-    border-color: var(--border-strong);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .metric-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    flex-shrink: 0;
-  }
-
-  .metric-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .metric-name {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    display: block;
-    margin-bottom: 0.25rem;
-  }
-
-  .metric-value-row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.25rem;
-  }
-
-  .metric-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .metric-unit {
-    font-size: 0.875rem;
-    color: var(--text-tertiary);
-  }
-
-  .metric-trend {
-    padding: 0.375rem;
-    border-radius: 6px;
-  }
-
-  .metric-trend.up {
-    background: var(--success-dim);
-    color: var(--success);
-  }
-
-  .metric-trend.down {
-    background: var(--info-dim);
-    color: var(--info);
-  }
-
-  .metric-trend.stable {
-    background: var(--bg-tertiary);
-    color: var(--text-muted);
-  }
-
   /* 深色主题服务卡片增强 */
   [data-theme="dark"] .service-card {
     background: rgba(26, 29, 33, 0.8);
@@ -1079,14 +876,6 @@ const componentStyles = `
 
   [data-theme="dark"] .service-card:hover {
     box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
-  }
-
-  [data-theme="dark"] .metric-card {
-    background: rgba(26, 29, 33, 0.6);
-  }
-
-  [data-theme="dark"] .metric-icon-wrapper {
-    box-shadow: 0 4px 12px -2px rgba(34, 211, 238, 0.3);
   }
 `;
 
