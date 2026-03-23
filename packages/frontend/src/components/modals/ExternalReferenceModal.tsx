@@ -134,7 +134,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       onClose={onClose}
       title="管理外部参照文件"
       footer={
-        <>
+        <div data-tour="xref-actions">
           <Button
             variant="ghost"
             onClick={() => {
@@ -171,7 +171,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           >
             {allSuccess ? '完成' : '关闭'}
           </Button>
-        </>
+        </div>
       }
     >
       <div className="space-y-4">
@@ -214,7 +214,10 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         )}
 
         {/* 文件列表 */}
-        <div className="border border-slate-200 rounded-lg overflow-hidden">
+        <div
+          className="border border-slate-200 rounded-lg overflow-hidden"
+          data-tour="xref-list"
+        >
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>

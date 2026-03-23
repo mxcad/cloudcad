@@ -275,7 +275,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                       项目专属角色，可自定义创建
                     </span>
                     {canManageRoles && (
-                      <Button size="sm" icon={Plus} onClick={handleCreateRole}>
+                      <Button size="sm" icon={Plus} onClick={handleCreateRole} data-tour="create-role-btn">
                         新建角色
                       </Button>
                     )}

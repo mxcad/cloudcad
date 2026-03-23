@@ -316,7 +316,7 @@ export default function Gallery() {
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             {/* 搜索框 */}
-            <div className="relative flex-1 w-full">
+            <div data-tour="gallery-search" className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
@@ -329,7 +329,7 @@ export default function Gallery() {
             </div>
 
             {/* 分类筛选 */}
-            <div className="flex flex-col lg:flex-row gap-2 w-full lg:w-auto">
+            <div data-tour="gallery-categories" className="flex flex-col lg:flex-row gap-2 w-full lg:w-auto">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 whitespace-nowrap">
                   分类:
@@ -478,7 +478,7 @@ export default function Gallery() {
                       />
 
                       {/* 悬停操作按钮 */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <div data-tour="gallery-item-actions" className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <Button
                           size="sm"
                           variant="secondary"

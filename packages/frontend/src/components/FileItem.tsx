@@ -346,6 +346,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
     return (
       <div
+        data-tour="file-item"
         className={`group relative rounded-xl transition-all duration-200 cursor-pointer pointer-events-auto
           ${isPreviewOpen ? 'pointer-events-none' : ''}
           ${
@@ -460,6 +461,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   return (
     <div
+      data-tour="file-item"
       className={`group flex items-center gap-4 p-3 rounded-lg transition-all duration-200 cursor-pointer
         ${
           showListSelection
@@ -501,7 +503,10 @@ export const FileItem: React.FC<FileItemProps> = ({
 
       <FileItemTypeTag node={node} />
 
-      <div className="flex items-center gap-1 opacity-100 transition-opacity duration-200">
+      <div 
+        data-tour="file-item-actions"
+        className="flex items-center gap-1 opacity-100 transition-opacity duration-200"
+      >
         {availableActions.map((action) => (
           <button
             key={action.type}

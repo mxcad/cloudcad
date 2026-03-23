@@ -460,7 +460,7 @@ export const RoleManagement = () => {
             )}
           </div>
 
-          <div className="roles-grid">
+          <div className="roles-grid" data-tour="role-list">
             {filteredProjectRoles.map((role, index) => (
               <div
                 key={role.id}

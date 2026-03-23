@@ -899,6 +899,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   className="hover:bg-[var(--bg-tertiary)]"
                   style={{ color: 'var(--text-tertiary)' }}
                   title="新建项目"
+                  data-tour="create-project-btn"
                 >
                   <FolderPlus size={16} />
                 </Button>
@@ -917,6 +918,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     className="hover:bg-[var(--bg-tertiary)]"
                     style={{ color: 'var(--text-tertiary)' }}
                     title="新建文件夹"
+                    data-tour="create-folder-btn"
                   >
                     <svg
                       width="16"
@@ -945,6 +947,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     className="hover:bg-[var(--bg-tertiary)]"
                     style={{ color: 'var(--text-tertiary)' }}
                     title="上传文件"
+                    data-tour="upload-btn"
                   >
                     <svg
                       width="16"
@@ -1078,7 +1081,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2"
         style={{ borderTop: '1px solid var(--border-subtle)' }}
       >
-        <div className="relative group flex-1 max-w-xs">
+        <div className="relative group flex-1 max-w-xs" data-tour="search-input">
           <SearchIcon
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
@@ -1225,6 +1228,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
           <div
             className="flex items-center rounded-xl overflow-hidden"
+            data-tour="view-toggle"
             style={{
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-default)',
@@ -1363,6 +1367,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     return (
       <>
         <div
+          data-view-mode={viewMode}
           className={
             viewMode === 'grid'
               ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6'

@@ -72,7 +72,7 @@ export const InteractiveBackground: React.FC = () => {
             baseX,
             baseY,
             radius: 180 + Math.random() * 220, // 180-400
-            color: colors[Math.floor(Math.random() * colors.length)],
+            color: colors[Math.floor(Math.random() * colors.length)]!,
             opacity: 0.1 + Math.random() * 0.15, // 0.1-0.25
             phase: Math.random() * Math.PI * 2,
             speedX: 0.0008 + Math.random() * 0.0012, // 更快的速度

@@ -324,6 +324,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           {!showAddForm ? (
             canManageMembers ? (
               <button
+                data-tour="invite-member-btn"
                 onClick={() => setShowAddForm(true)}
                 className="w-full py-2 px-4 border-2 border-dashed border-slate-300 rounded-lg
                          text-slate-500 hover:border-indigo-400 hover:text-indigo-600
@@ -460,6 +461,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 {/* 角色选择和添加按钮 */}
                 <div className="flex gap-2">
                   <select
+                    data-tour="member-role-select"
                     value={newRoleId}
                     onChange={(e) => setNewRoleId(e.target.value)}
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"

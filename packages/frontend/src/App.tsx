@@ -25,6 +25,7 @@ import { SystemMonitorPage } from './pages/SystemMonitorPage';
 import { RuntimeConfigPage } from './pages/RuntimeConfigPage';
 import { useAuth } from './contexts/AuthContext';
 import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
+import { TourProvider } from './contexts/TourContext';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 
@@ -244,7 +245,9 @@ function App() {
   return (
     <Router>
       <RuntimeConfigProvider>
-        <AppContent />
+        <TourProvider>
+          <AppContent />
+        </TourProvider>
       </RuntimeConfigProvider>
     </Router>
   );

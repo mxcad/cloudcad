@@ -1,8 +1,191 @@
 # 用户引导功能设计文档
 
-> 版本: 1.0.0
+> 版本: 1.4.0
 > 日期: 2026-03-23
-> 状态: 草案
+> 状态: 开发中
+
+### 实现进度
+
+| Phase | 内容 | 状态 |
+|-------|------|------|
+| Phase 1 | 基础框架（类型定义、TourContext、useTour Hook） | ✅ 已完成 |
+| Phase 2 | 核心组件（TourOverlay、TourTooltip） | ✅ 已完成 |
+| Phase 3 | 引导中心（TourCenter、TourStartModal、入口按钮） | ✅ 已完成 |
+| Phase 4 | 流程配置（tourGuides.ts） | ✅ 已完成 |
+| Phase 5 | 元素标记（data-tour 属性） | ✅ 已完成 |
+| Phase 6 | 单元测试 | ✅ 已完成 |
+| Phase 7 | 跨页面引导 + 交互模式改进 | ✅ 已完成 |
+| Phase 8 | 交互模式修复 + 起始页面配置 + UI 条件分支 | ✅ 已完成 |
+
+### Phase 8 改进说明
+
+**问题修复：**
+
+| 问题 | 解决方案 |
+|------|----------|
+| 交互模式点击无反应 | 修改遮罩层 pointer-events，使用捕获阶段事件监听 |
+| 引导跳过必要步骤 | 添加侧边栏导航步骤，每个操作步骤不可省略 |
+| 起始页面不灵活 | 新增 startPage 参数，支持 'dashboard'/'current'/自定义路由 |
+| UI 多状态定位不准 | 新增 UI 条件分支，支持 view-mode 检测和 alternatives |
+
+**新增功能：**
+
+1. **起始页面配置 (startPage)**
+   - `'dashboard'`: 从首页仪表盘开始（默认值）
+   - `'current'`: 保持当前页面（适用于 CAD 编辑器等新标签场景）
+   - `string`: 自定义路由路径
+
+2. **UI 条件分支 (uiCondition + alternatives)**
+   - `uiCondition`: 检测当前 UI 状态
+   - `alternatives`: 条件不满足时使用的替代步骤配置
+   - 支持视图模式检测 (`view-mode`: 'grid' | 'list')
+
+3. **视图模式指示器**
+   - 在文件列表容器添加 `data-view-mode` 属性
+   - 用于 UI 条件检测判断当前视图模式
+
+4. **交互模式事件改进**
+   - 使用捕获阶段在 document 上监听事件
+   - 检测点击是否在目标元素或其子元素上
+   - 遮罩层和高亮边框 pointer-events 设为 none
+
+**类型定义更新：**
+
+```typescript
+// 新增类型
+export type TourStartPage = 'dashboard' | 'current' | string;
+
+export type UIConditionType = 'element-exists' | 'view-mode' | 'custom';
+
+export interface UICondition {
+  type: UIConditionType;
+  selector?: string;
+  viewMode?: 'grid' | 'list';
+  customCheck?: () => boolean;
+}
+
+export interface TourStepAlternative {
+  condition: UICondition;
+  step: Partial<TourStep>;
+}
+
+// TourStep 新增属性
+interface TourStep {
+  // ... 原有属性
+  uiCondition?: UICondition;
+  alternatives?: TourStepAlternative[];
+}
+
+// TourGuide 新增属性
+interface TourGuide {
+  // ... 原有属性
+  startPage?: TourStartPage;
+}
+```
+
+**新增 data-tour 属性：**
+
+| 文件 | data-tour 值 | 说明 |
+|------|--------------|------|
+| Layout.tsx | `sidebar-projects` | 侧边栏项目管理入口 |
+| FileItem.tsx | `file-item-menu-btn` | 网格视图菜单按钮 |
+| FileItem.tsx | `file-item-actions` | 列表视图操作按钮区域 |
+| FileSystemManager.tsx | `data-view-mode` | 视图模式指示器（grid/list） |
+
+### Phase 7 改进说明
+
+**问题修复：**
+
+| 问题 | 解决方案 |
+|------|----------|
+| 不在目标页面时卡在"正在定位目标元素" | 添加路由匹配检查，先跳转后激活引导 |
+| 引导流程不完整 | 在 startTour 和 nextStep 时检查路由，自动跳转 |
+| 引导区域无法点击元素 | 实现交互模式，高亮区域可点击 |
+| 缺少展示/操作模式区分 | 添加 mode 属性区分 display/interactive 模式 |
+
+**新增功能：**
+
+1. **步骤模式 (StepMode)**
+   - `display`: 展示模式，用户点击"下一步"按钮继续
+   - `interactive`: 交互模式，用户需完成指定操作才能继续
+
+2. **交互操作类型 (actionType)**
+   - `click`: 点击目标元素
+   - `right-click`: 右键点击
+   - `input`: 输入内容
+   - `select`: 选择选项
+
+3. **路由跳转机制**
+   - `initialRoute`: 引导流程的初始路由
+   - `route`: 步骤级别的路由跳转
+   - 动态路由参数支持
+
+4. **高亮强调**
+   - `highlight`: 布尔值，为目标元素添加脉冲动画效果
+
+**类型定义更新：**
+
+```typescript
+// 新增类型
+export type StepMode = 'display' | 'interactive';
+
+// TourStep 新增属性
+interface TourStep {
+  // ... 原有属性
+  mode?: StepMode;
+  actionType?: 'click' | 'input' | 'select' | 'right-click';
+  actionHint?: string;
+  highlight?: boolean;
+}
+
+// TourGuide 新增属性
+interface TourGuide {
+  // ... 原有属性
+  initialRoute?: string;
+}
+```
+
+### Phase 5 实现说明
+
+**已添加的 data-tour 属性（22个）：**
+
+| 文件 | data-tour 值 | 说明 |
+|------|--------------|------|
+| FileSystemManager.tsx | `create-project-btn` | 新建项目按钮 |
+| FileSystemManager.tsx | `create-folder-btn` | 新建文件夹按钮 |
+| FileSystemManager.tsx | `upload-btn` | 上传文件按钮 |
+| FileSystemManager.tsx | `search-input` | 搜索输入框 |
+| FileSystemManager.tsx | `view-toggle` | 视图切换按钮 |
+| FileItem.tsx | `file-item` | 文件/项目卡片（网格+列表视图） |
+| MembersModal.tsx | `invite-member-btn` | 添加成员按钮 |
+| MembersModal.tsx | `member-role-select` | 成员角色选择 |
+| ProjectRolesModal.tsx | `create-role-btn` | 新建角色按钮 |
+| Gallery.tsx | `gallery-search` | 图库搜索框 |
+| Gallery.tsx | `gallery-categories` | 图库分类选择器 |
+| Gallery.tsx | `gallery-item-actions` | 图库项目操作按钮 |
+| AddToGalleryModal.tsx | `gallery-category-select` | 添加到图库分类选择 |
+| AddToGalleryModal.tsx | `gallery-submit-btn` | 添加到图库提交按钮 |
+| ExternalReferenceModal.tsx | `xref-list` | 外部参照列表 |
+| ExternalReferenceModal.tsx | `xref-actions` | 外部参照操作按钮 |
+| CollaborateSidebar.tsx | `collaborators-panel` | 协作者面板 |
+| SidebarContainer.tsx | `sidebar-gallery` | 侧边栏图库入口 |
+| Layout.tsx | `sidebar-roles` | 侧边栏角色权限入口 |
+| RoleManagement.tsx | `role-list` | 角色列表 |
+
+**无法添加 data-tour 的元素及原因：**
+
+| 元素 | 原因 | 处理建议 |
+|------|------|----------|
+| `cad-editor-toolbar` | MxCAD 库渲染，非 React 组件 | 使用 fallbackContent 居中显示提示 |
+| `annotation-btn` | MxCAD 库渲染 | 使用 fallbackContent |
+| `xref-panel-btn` | MxCAD 库渲染 | 使用 fallbackContent |
+| `project-settings-btn` | 实际是右键菜单项，非独立按钮 | 使用 file-item + fallbackContent |
+| `file-context-menu` | 动态生成的右键菜单 | 引导步骤指向 file-item |
+| `context-menu-add-gallery` | 右键菜单项 | 引导步骤指向 file-item + 说明操作 |
+| `context-menu-version` | 右键菜单项 | 引导步骤指向 file-item + 说明操作 |
+| `gallery-tags-input` | 功能未实现 | 步骤中移除或使用 fallbackContent |
+| `gallery-description` | 功能未实现 | 步骤中移除或使用 fallbackContent |
+| `role-permissions` | 权限配置弹窗需动态触发 | 使用 fallbackContent 或跳过 |
 
 ## 1. 概述
 
@@ -81,12 +264,54 @@ src/
 | TourContext | 引导状态管理（当前引导、步骤、完成状态） |
 | useTour | 提供引导操作的 Hook |
 
+### 3.3 Context 提供层级
+
+TourProvider 应放置在 App.tsx 中，与 RuntimeConfigProvider 同级：
+
+```tsx
+// App.tsx
+import { TourProvider } from './contexts/TourContext';
+
+function App() {
+  return (
+    <Router>
+      <RuntimeConfigProvider>
+        <TourProvider>
+          <AppContent />
+        </TourProvider>
+      </RuntimeConfigProvider>
+    </Router>
+  );
+}
+```
+
+这样可以确保：
+- 引导状态在所有页面可用
+- 引导遮罩层在所有组件之上（包括 Layout）
+- 可在 CAD 编辑器中恢复引导状态
+
 ## 4. 数据结构
 
 ### 4.1 类型定义
 
 ```typescript
 // types/tour.ts
+
+/** 跳过条件类型（声明式配置，支持序列化） */
+interface SkipCondition {
+  /** 条件类型 */
+  type: 'element-not-exists' | 'element-count-zero' | 'feature-disabled' | 'custom';
+  /** 
+   * 目标选择器
+   * - type=element-not-exists: 检查元素是否存在
+   * - type=element-count-zero: 检查元素数量是否为 0
+   */
+  selector?: string;
+  /** 功能开关名称（type=feature-disabled 时使用） */
+  featureFlag?: string;
+  /** 自定义条件函数（仅运行时使用，不参与序列化） */
+  customCheck?: () => boolean;
+}
 
 /** 引导步骤 */
 interface TourStep {
@@ -98,7 +323,7 @@ interface TourStep {
   content: string;
   /** 气泡位置 */
   placement?: 'top' | 'bottom' | 'left' | 'right';
-  /** 跨页面时跳转的路由 */
+  /** 跨页面时跳转的路由（支持动态参数，如 /cad-editor/:fileId） */
   route?: string;
   /** 
    * 元素等待策略
@@ -107,10 +332,10 @@ interface TourStep {
    */
   waitForElement?: number | 'auto';
   /** 
-   * 跳过条件：当目标元素不存在或不可见时自动跳过
-   * 返回 true 时跳过此步骤
+   * 跳过条件（声明式配置）
+   * 当条件满足时自动跳过此步骤
    */
-  skipCondition?: () => boolean;
+  skipCondition?: SkipCondition;
   /** 
    * 当目标元素不存在时显示的替代内容
    * 设置后，即使元素不存在也会显示提示气泡（居中显示）
@@ -132,6 +357,11 @@ interface TourGuide {
   steps: TourStep[];
   /** 预计时长 */
   estimatedTime: string;
+  /** 
+   * 动态路由参数（用于跨页面引导）
+   * 如 { fileId: 'xxx' }，用于替换 route 中的 :fileId 占位符
+   */
+  routeParams?: Record<string, string>;
 }
 
 /** 引导存储状态 */
@@ -187,22 +417,114 @@ interface TourState {
 4. 点击遮罩层不关闭引导（需点击"跳过"按钮）
 5. ESC 键可退出引导
 6. 支持自定义滚动容器（非 window 滚动）
+7. 处理目标元素隐藏状态
+
+**获取滚动容器**：
+```typescript
+/**
+ * 获取元素的最近滚动容器
+ * @param element 目标元素
+ * @returns 滚动容器元素，如果没有则返回 document.body
+ */
+function getScrollParent(element: HTMLElement): HTMLElement | Document {
+  const style = getComputedStyle(element);
+  const excludeStaticParent = style.position === 'absolute';
+  const overflowRegex = /(auto|scroll)/;
+
+  let parent = element.parentElement;
+
+  while (parent) {
+    const parentStyle = getComputedStyle(parent);
+    
+    // 跳过静态定位的父元素（当目标元素为 absolute 时）
+    if (excludeStaticParent && parentStyle.position === 'static') {
+      parent = parent.parentElement;
+      continue;
+    }
+
+    // 检查 overflow 属性
+    if (overflowRegex.test(parentStyle.overflow + parentStyle.overflowY + parentStyle.overflowX)) {
+      return parent;
+    }
+
+    parent = parent.parentElement;
+  }
+
+  return document.body;
+}
+```
+
+**元素可见性检查**：
+```typescript
+/**
+ * 检查元素是否可见
+ * @param element 目标元素
+ * @returns 是否可见
+ */
+function isElementVisible(element: HTMLElement): boolean {
+  // 检查 display 和 visibility
+  const style = getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden') {
+    return false;
+  }
+
+  // 检查 opacity
+  if (parseFloat(style.opacity) === 0) {
+    return false;
+  }
+
+  // 检查元素是否在视口内（至少部分可见）
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    return false;
+  }
+
+  // 检查是否被祖先元素的 overflow:hidden 裁剪
+  let parent = element.parentElement;
+  while (parent && parent !== document.body) {
+    const parentStyle = getComputedStyle(parent);
+    if (parentStyle.overflow === 'hidden') {
+      const parentRect = parent.getBoundingClientRect();
+      // 检查元素是否完全在父元素外部
+      if (
+        rect.bottom < parentRect.top ||
+        rect.top > parentRect.bottom ||
+        rect.right < parentRect.left ||
+        rect.left > parentRect.right
+      ) {
+        return false;
+      }
+    }
+    parent = parent.parentElement;
+  }
+
+  return true;
+}
+```
 
 **滚动到目标元素**：
 ```typescript
-function scrollIntoView(element: Element): void {
+function scrollIntoView(element: HTMLElement): void {
+  // 先检查可见性
+  if (!isElementVisible(element)) {
+    // 元素不可见，可能需要展开父容器等操作
+    console.warn('[Tour] Target element is not visible');
+    return;
+  }
+
   // 检查元素是否在自定义滚动容器内
   const scrollParent = getScrollParent(element);
   
-  if (scrollParent === document.body) {
+  if (scrollParent === document.body || scrollParent === document.documentElement) {
     // window 滚动
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
     // 自定义滚动容器
-    const containerRect = scrollParent.getBoundingClientRect();
+    const container = scrollParent as HTMLElement;
+    const containerRect = container.getBoundingClientRect();
     const elementRect = element.getBoundingClientRect();
-    const scrollTop = elementRect.top - containerRect.top + scrollParent.scrollTop - containerRect.height / 2;
-    scrollParent.scrollTo({ top: scrollTop, behavior: 'smooth' });
+    const scrollTop = elementRect.top - containerRect.top + container.scrollTop - containerRect.height / 2;
+    container.scrollTo({ top: scrollTop, behavior: 'smooth' });
   }
 }
 ```
@@ -211,16 +533,17 @@ function scrollIntoView(element: Element): void {
 ```css
 .tour-highlight {
   position: relative;
-  z-index: 10001;
+  z-index: 10003;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
 }
 ```
 
 **z-index 层级规划**：
-- 项目现有层级：Modal(1000)、Drawer(900)、Toast(1100)
-- 引导层级：Overlay(10000)、Tooltip(10001)
-- 确保引导组件在所有现有组件之上
+- 项目现有层级：Modal(50)、Drawer(900)、Toast(1100)
+- CAD 编辑器层级：CADEditorDirect(9999)
+- 引导层级：Overlay(10002)、Tooltip(10003)
+- 确保引导组件在所有现有组件之上（包括 CAD 编辑器）
 
 ### 5.2 TourTooltip
 
@@ -271,6 +594,25 @@ interface TourTooltipProps {
 └─────────────────────────────────────────┘
 ```
 
+**组件复用**：
+TourCenter 复用现有的 Modal 组件，设置 size="full" 实现大尺寸弹窗：
+
+```tsx
+import Modal from '@/components/ui/Modal';
+
+<TourCenter>
+  <Modal 
+    isOpen={isOpen} 
+    onClose={onClose} 
+    title="引导中心" 
+    size="full" 
+    zIndex={10002}
+  >
+    {/* 引导流程列表内容 */}
+  </Modal>
+</TourCenter>
+```
+
 ### 5.4 TourStartModal
 
 **职责**：首次登录时提示用户有引导功能可用。
@@ -317,7 +659,7 @@ useEffect(() => {
 ```
 
 **入口按钮样式**：
-- 图标：HelpCircle（lucide-react）
+- 图标：HelpCircle（直接导入：`import HelpCircle from 'lucide-react/dist/esm/icons/help-circle'`）
 - 文字："帮助引导"
 - 点击打开引导中心弹窗
 
@@ -326,6 +668,10 @@ useEffect(() => {
 - 鼠标悬停显示提示："当前有引导进行中"
 
 ```tsx
+import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+
+// ...
+
 <button className="flex items-center gap-2 ...">
   <div className="relative">
     <HelpCircle size={18} />
@@ -363,73 +709,327 @@ useEffect(() => {
 2. **动态路由支持**：`route` 支持参数占位符，如 `/cad-editor/:fileId`
 3. **路由参数传递**：引导上下文中保存必要的路由参数
 
-### 8.2 元素等待策略
+**动态路由参数处理流程**：
 
 ```typescript
-// 等待策略实现
+// 1. 参数来源优先级
+type RouteParamSource = 
+  | 'guide-config'   // 优先级最高：TourGuide.routeParams
+  | 'current-route'  // 次优先级：当前路由中已存在的参数
+  | 'user-action';   // 最低优先级：用户操作过程中动态获取
+
+// 2. 参数解析器
+interface RouteParamResolver {
+  /** 从引导配置获取参数 */
+  fromGuideConfig(guide: TourGuide): Record<string, string>;
+  /** 从当前路由获取参数 */
+  fromCurrentRoute(): Record<string, string>;
+  /** 合并参数（优先级高的覆盖低的） */
+  merge(...sources: Record<string, string>[]): Record<string, string>;
+}
+
+// 3. 参数解析实现
+function resolveRouteParams(
+  guide: TourGuide,
+  route: string
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  
+  // 提取路由中的占位符
+  const placeholders = route.match(/:(\w+)/g)?.map(s => s.slice(1)) || [];
+  
+  // 从当前路由获取已存在的参数
+  const currentParams = extractCurrentRouteParams(placeholders);
+  Object.assign(result, currentParams);
+  
+  // 从引导配置获取参数（覆盖当前路由参数）
+  if (guide.routeParams) {
+    Object.assign(result, guide.routeParams);
+  }
+  
+  // 验证所有占位符都有对应值
+  const missingParams = placeholders.filter(p => !result[p]);
+  if (missingParams.length > 0) {
+    console.warn(`[Tour] Missing route params: ${missingParams.join(', ')}`);
+  }
+  
+  return result;
+}
+
+// 4. 替换路由占位符
+function buildRoute(route: string, params: Record<string, string>): string {
+  let result = route;
+  for (const [key, value] of Object.entries(params)) {
+    result = result.replace(`:${key}`, value);
+  }
+  return result;
+}
+
+// 5. 从当前路由提取参数
+function extractCurrentRouteParams(placeholders: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  const currentPath = window.location.pathname;
+  
+  // 匹配常见路由模式
+  // 例如：/projects/:projectId/files/:fileId
+  const commonPatterns = [
+    /\/projects\/([^/]+)/,       // projectId
+    /\/files\/([^/]+)/,          // fileId
+    /\/cad-editor\/([^/]+)/,     // fileId
+    /\/gallery\/([^/]+)/,        // galleryId
+  ];
+  
+  // 根据占位符名称映射提取
+  if (placeholders.includes('projectId')) {
+    const match = currentPath.match(/\/projects\/([^/]+)/);
+    if (match) result.projectId = match[1];
+  }
+  
+  if (placeholders.includes('fileId')) {
+    const match = currentPath.match(/\/(files|cad-editor)\/([^/]+)/);
+    if (match) result.fileId = match[2];
+  }
+  
+  return result;
+}
+```
+
+**使用示例**：
+
+```typescript
+// 引导配置
+const guide: TourGuide = {
+  id: 'cad-editor-basics',
+  routeParams: { projectId: 'default-project' },
+  steps: [
+    {
+      target: 'file-list',
+      route: '/projects/:projectId/files',
+      // 最终跳转: /projects/default-project/files
+    },
+    {
+      target: 'cad-toolbar',
+      route: '/cad-editor/:fileId',
+      // fileId 需要在步骤执行时动态获取
+    },
+  ],
+};
+
+// 步骤执行时动态设置参数
+function executeStep(step: TourStep, guide: TourGuide) {
+  if (step.route) {
+    let params = resolveRouteParams(guide, step.route);
+    
+    // 如果是 cad-editor 步骤，需要动态获取 fileId
+    if (step.route.includes(':fileId') && !params.fileId) {
+      // 从用户选择或上下文获取
+      params.fileId = getSelectedFileId() || getLastOpenedFileId();
+    }
+    
+    const finalRoute = buildRoute(step.route, params);
+    navigate(finalRoute);
+  }
+}
+```
+
+### 8.2 元素等待策略
+
+**完整实现（包含可见性检查）**：
+
+```typescript
+interface WaitForElementOptions {
+  /** 超时时间（ms） */
+  timeout: number;
+  /** 检测策略 */
+  strategy: 'polling' | 'observer';
+  /** 是否要求元素可见（默认 true） */
+  requireVisible?: boolean;
+}
+
+interface WaitForElementResult {
+  /** 找到的元素 */
+  element: HTMLElement | null;
+  /** 未找到的原因 */
+  reason?: 'timeout' | 'not-visible' | 'not-exists';
+}
+
+/**
+ * 等待目标元素出现并可见
+ * @param selector 元素选择器
+ * @param options 配置选项
+ */
 async function waitForTargetElement(
-  selector: string, 
-  options: { timeout: number; strategy: 'polling' | 'observer' }
-): Promise<Element | null> {
-  if (options.strategy === 'observer') {
-    // 使用 MutationObserver 监听 DOM 变化
+  selector: string,
+  options: WaitForElementOptions
+): Promise<WaitForElementResult> {
+  const { timeout, strategy, requireVisible = true } = options;
+  
+  // 检查元素的辅助函数
+  const checkElement = (): HTMLElement | null => {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (!el) return null;
+    
+    // 如果不要求可见，直接返回
+    if (!requireVisible) return el;
+    
+    // 检查可见性
+    return isElementVisible(el) ? el : null;
+  };
+
+  if (strategy === 'observer') {
     return new Promise((resolve) => {
+      let found = false;
+      
       const observer = new MutationObserver(() => {
-        const el = document.querySelector(selector);
+        const el = checkElement();
         if (el) {
+          found = true;
           observer.disconnect();
-          resolve(el);
+          resolve({ element: el });
         }
       });
-      observer.observe(document.body, { childList: true, subtree: true });
+      
+      observer.observe(document.body, { 
+        childList: true, 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class', 'hidden']
+      });
+      
+      // 立即检查一次（元素可能已存在）
+      const existingEl = checkElement();
+      if (existingEl) {
+        found = true;
+        observer.disconnect();
+        resolve({ element: existingEl });
+        return;
+      }
       
       // 超时处理
       setTimeout(() => {
-        observer.disconnect();
-        resolve(null);
-      }, options.timeout);
+        if (!found) {
+          observer.disconnect();
+          const el = document.querySelector<HTMLElement>(selector);
+          resolve({
+            element: null,
+            reason: el ? 'not-visible' : 'timeout'
+          });
+        }
+      }, timeout);
     });
   } else {
     // 轮询检测
     const startTime = Date.now();
-    while (Date.now() - startTime < options.timeout) {
-      const el = document.querySelector(selector);
-      if (el) return el;
+    while (Date.now() - startTime < timeout) {
+      const el = checkElement();
+      if (el) return { element: el };
       await new Promise(r => setTimeout(r, 100));
     }
-    return null;
+    
+    // 超时后检查原因
+    const el = document.querySelector<HTMLElement>(selector);
+    return {
+      element: null,
+      reason: el ? 'not-visible' : 'timeout'
+    };
   }
+}
+
+/**
+ * 检查元素是否可见（复用 5.1 节实现）
+ */
+function isElementVisible(element: HTMLElement): boolean {
+  // 参见 5.1 节完整实现
+  const style = getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden') {
+    return false;
+  }
+  if (parseFloat(style.opacity) === 0) {
+    return false;
+  }
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 ```
 
 ### 8.3 目标元素不存在时的降级处理
 
+**声明式跳过条件检查**：
+
 ```typescript
-async function handleStep(step: TourStep): Promise<void> {
-  const element = await waitForTargetElement(step.target, { 
-    timeout: typeof step.waitForElement === 'number' ? step.waitForElement : 5000,
-    strategy: step.waitForElement === 'auto' ? 'observer' : 'polling'
+/**
+ * 评估跳过条件
+ * @param condition 声明式跳过条件
+ * @returns 是否应该跳过
+ */
+function evaluateSkipCondition(condition: SkipCondition): boolean {
+  switch (condition.type) {
+    case 'element-not-exists':
+      if (!condition.selector) return false;
+      return !document.querySelector(condition.selector);
+    
+    case 'element-count-zero':
+      if (!condition.selector) return false;
+      return document.querySelectorAll(condition.selector).length === 0;
+    
+    case 'feature-disabled':
+      if (!condition.featureFlag) return false;
+      // 检查功能开关状态
+      return !isFeatureEnabled(condition.featureFlag);
+    
+    case 'custom':
+      // 自定义检查函数（运行时注入）
+      return condition.customCheck?.() ?? false;
+    
+    default:
+      return false;
+  }
+}
+
+/**
+ * 处理步骤执行
+ */
+async function handleStep(step: TourStep, guide: TourGuide): Promise<void> {
+  const timeout = typeof step.waitForElement === 'number' ? step.waitForElement : 5000;
+  const strategy = step.waitForElement === 'auto' ? 'observer' : 'polling';
+  
+  const result = await waitForTargetElement(step.target, { 
+    timeout,
+    strategy,
+    requireVisible: true
   });
   
-  if (!element) {
-    // 检查是否设置了跳过条件
-    if (step.skipCondition?.()) {
+  if (!result.element) {
+    // 1. 检查声明式跳过条件
+    if (step.skipCondition && evaluateSkipCondition(step.skipCondition)) {
+      console.log(`[Tour] Step skipped by condition: ${step.skipCondition.type}`);
       nextStep();
       return;
     }
     
-    // 检查是否有替代内容
+    // 2. 检查是否有替代内容
     if (step.fallbackContent) {
       // 居中显示替代提示
       showCenteredTooltip(step.title, step.fallbackContent);
       return;
     }
     
-    // 默认：提示用户并跳过
-    showToast('当前页面状态不适合此步骤，已自动跳过');
+    // 3. 根据失败原因提供不同提示
+    const reasonMessage = {
+      'timeout': '元素加载超时',
+      'not-visible': '目标元素当前不可见',
+      'not-exists': '目标元素不存在'
+    };
+    
+    showToast(`${reasonMessage[result.reason || 'timeout']}，已自动跳过此步骤`);
     nextStep();
+  } else {
+    // 元素存在且可见，正常执行步骤
+    highlightElement(result.element);
+    showTooltip(result.element, step);
   }
 }
+```
 ```
 
 ### 8.4 状态持久化与恢复
@@ -458,12 +1058,66 @@ useEffect(() => {
   content: '打开图纸后，侧边栏会显示图库内容...',
   route: '/projects',  // 先跳转到项目列表
   waitForElement: 'auto',  // 自动检测元素
-  skipCondition: () => {
-    // 如果侧边栏被禁用，跳过此步骤
-    return !isGalleryFeatureEnabled();
+  // 使用声明式跳过条件
+  skipCondition: {
+    type: 'feature-disabled',
+    featureFlag: 'gallery'
   },
 }
 ```
+
+**更多示例**：
+
+```typescript
+// 示例 1：元素不存在时跳过
+{
+  target: 'file-item',
+  title: '选择文件',
+  content: '点击文件进行操作',
+  skipCondition: {
+    type: 'element-count-zero',
+    selector: '[data-tour="file-item"]'
+  },
+  fallbackContent: '当前项目暂无文件，请先上传文件后再继续引导'
+}
+
+// 示例 2：使用自定义检查函数
+{
+  target: 'advanced-settings',
+  title: '高级设置',
+  content: '配置高级选项...',
+  skipCondition: {
+    type: 'custom',
+    customCheck: () => {
+      // 运行时注入的检查逻辑
+      return !window.currentUser?.isPremium;
+    }
+  },
+  fallbackContent: '高级设置仅对高级用户开放'
+}
+```
+
+### 8.6 CAD 编辑器场景处理
+
+CADEditorDirect 作为独立全局组件存在（z-index: 9999），引导组件需特殊处理：
+
+1. **z-index 调整**：引导组件层级需高于 CAD 编辑器（见 5.1 节 z-index 规划）
+2. **元素标记兼容**：CAD 编辑器内的元素由 mxcad-app 渲染，需确认是否支持 `data-tour` 属性
+3. **侧边栏引导**：`SidebarContainer` 组件在 CAD 编辑器内渲染，可正常添加 `data-tour` 属性
+4. **跨编辑器引导**：若引导步骤需在 CAD 编辑器和主界面间切换，需额外处理状态恢复
+
+**CAD 编辑器内可引导的元素**：
+
+| 元素 | data-tour 值 | 说明 |
+|------|-------------|------|
+| 侧边栏容器 | `cad-sidebar` | SidebarContainer 组件 |
+| 图库标签 | `cad-gallery-tab` | 侧边栏图库标签 |
+| 图块标签 | `cad-block-tab` | 侧边栏图块标签 |
+| 外部参照面板 | `cad-xref-panel` | 外部参照管理面板 |
+
+**限制说明**：
+- CAD 编辑器画布区域由 mxcad-app 控制，无法添加 `data-tour` 属性
+- 如需引导画布区域操作，应使用 `fallbackContent` 提供文字说明
 
 ## 9. 引导流程配置示例
 
@@ -471,6 +1125,94 @@ useEffect(() => {
 // config/tourGuides.ts
 
 export const tourGuides: TourGuide[] = [
+  // ==================== P0 级别 ====================
+  
+  {
+    id: 'file-upload',
+    name: '文件上传与管理',
+    description: '学习如何上传图纸文件、创建文件夹、移动和删除文件',
+    category: '项目管理',
+    estimatedTime: '4分钟',
+    steps: [
+      {
+        target: 'projects-nav',
+        title: '进入项目管理',
+        content: '首先，点击左侧导航栏的"项目管理"进入项目列表页面',
+        placement: 'right',
+      },
+      {
+        target: 'project-card',
+        title: '选择或创建项目',
+        content: '点击已有项目卡片进入，或点击"新建项目"创建一个新项目',
+        placement: 'bottom',
+        route: '/projects',
+        waitForElement: 'auto',
+      },
+      {
+        target: 'upload-btn',
+        title: '上传文件',
+        content: '点击工具栏的"上传"按钮，可以上传 DWG/DXF 格式的图纸文件。支持拖拽上传和点击选择文件。',
+        placement: 'bottom',
+        waitForElement: 'auto',
+      },
+      {
+        target: 'new-folder-btn',
+        title: '创建文件夹',
+        content: '点击"新建文件夹"按钮，可以创建文件夹来组织管理图纸文件',
+        placement: 'bottom',
+      },
+      {
+        target: 'file-item',
+        title: '文件管理操作',
+        content: '右键点击文件，可以进行重命名、移动、删除、下载等操作。也可以拖拽文件到文件夹中进行移动。',
+        placement: 'right',
+        skipCondition: {
+          type: 'element-count-zero',
+          selector: '[data-tour="file-item"]'
+        },
+        fallbackContent: '请先上传一个图纸文件，然后继续学习文件管理功能',
+      },
+    ],
+  },
+
+  {
+    id: 'project-members',
+    name: '项目成员管理',
+    description: '学习如何邀请新成员加入项目、设置成员权限、移除成员',
+    category: '项目管理',
+    estimatedTime: '3分钟',
+    steps: [
+      {
+        target: 'projects-nav',
+        title: '进入项目管理',
+        content: '点击左侧导航栏的"项目管理"进入项目列表',
+        placement: 'right',
+      },
+      {
+        target: 'project-card',
+        title: '选择项目',
+        content: '点击要管理成员的项目卡片',
+        placement: 'bottom',
+        route: '/projects',
+        waitForElement: 'auto',
+      },
+      {
+        target: 'project-settings-btn',
+        title: '打开项目设置',
+        content: '点击项目工具栏的"设置"按钮，打开项目设置面板',
+        placement: 'bottom',
+      },
+      {
+        target: 'member-management-tab',
+        title: '成员管理',
+        content: '在设置面板中选择"成员"标签页，可以查看当前项目所有成员。点击"邀请成员"按钮邀请新成员加入，可以设置成员的角色权限（管理员/编辑者/查看者）。',
+        placement: 'left',
+      },
+    ],
+  },
+
+  // ==================== P1 级别 ====================
+  
   {
     id: 'add-to-gallery',
     name: '添加图纸到图库',
@@ -489,7 +1231,6 @@ export const tourGuides: TourGuide[] = [
         title: '选择项目',
         content: '点击要操作的项目卡片，进入项目文件列表',
         placement: 'bottom',
-        // 跳转到项目文件列表页面
         route: '/projects',  
         waitForElement: 'auto',
       },
@@ -498,9 +1239,9 @@ export const tourGuides: TourGuide[] = [
         title: '找到图纸文件',
         content: '在文件列表中找到要添加到图库的图纸文件',
         placement: 'right',
-        skipCondition: () => {
-          // 如果项目为空，提示用户先上传文件
-          return document.querySelectorAll('[data-tour="file-item"]').length === 0;
+        skipCondition: {
+          type: 'element-count-zero',
+          selector: '[data-tour="file-item"]'
         },
         fallbackContent: '当前项目暂无文件，请先上传一个图纸文件后再继续引导',
       },
@@ -524,7 +1265,263 @@ export const tourGuides: TourGuide[] = [
       },
     ],
   },
-  // ...其他 9 个引导流程
+  
+  {
+    id: 'project-roles',
+    name: '项目角色管理',
+    description: '学习如何创建和编辑项目角色，自定义权限配置',
+    category: '项目管理',
+    estimatedTime: '4分钟',
+    steps: [
+      {
+        target: 'projects-nav',
+        title: '进入项目管理',
+        content: '点击左侧导航栏的"项目管理"',
+        placement: 'right',
+      },
+      {
+        target: 'project-card',
+        title: '选择项目',
+        content: '点击要配置角色的项目卡片',
+        placement: 'bottom',
+        route: '/projects',
+        waitForElement: 'auto',
+      },
+      {
+        target: 'project-settings-btn',
+        title: '打开项目设置',
+        content: '点击项目工具栏的"设置"按钮',
+        placement: 'bottom',
+      },
+      {
+        target: 'role-management-tab',
+        title: '角色管理',
+        content: '在设置面板中选择"角色"标签页。可以创建自定义角色，为角色分配具体的权限（如查看、编辑、下载、上传、删除等）。',
+        placement: 'left',
+      },
+    ],
+  },
+
+  // ==================== P2 级别 ====================
+  
+  {
+    id: 'collaboration',
+    name: '协作功能',
+    description: '学习如何与他人实时协作编辑图纸',
+    category: '协作功能',
+    estimatedTime: '2分钟',
+    steps: [
+      {
+        target: 'projects-nav',
+        title: '打开图纸',
+        content: '进入项目后，双击图纸文件打开编辑器',
+        placement: 'right',
+        route: '/projects',
+        waitForElement: 'auto',
+      },
+      {
+        target: 'collaborators-panel',
+        title: '查看协作者',
+        content: '右上角显示当前正在编辑此图纸的其他用户头像，点击可以查看详细信息',
+        placement: 'bottom',
+      },
+      {
+        target: 'cursor-indicator',
+        title: '实时光标',
+        content: '其他用户的编辑位置会以不同颜色的光标显示，方便协同工作',
+        placement: 'right',
+        skipCondition: {
+          type: 'element-count-zero',
+          selector: '[data-tour="cursor-indicator"]'
+        },
+        fallbackContent: '当前没有其他用户正在编辑此图纸，邀请成员后可以看到实时协作效果',
+      },
+    ],
+  },
+
+  {
+    id: 'external-reference',
+    name: '外部参照管理',
+    description: '学习如何添加和管理图纸的外部参照',
+    category: '项目管理',
+    estimatedTime: '3分钟',
+    steps: [
+      {
+        target: 'cad-editor-canvas',
+        title: '进入图纸编辑器',
+        content: '打开任意图纸文件进入编辑器',
+        placement: 'right',
+        route: '/projects',
+      },
+      {
+        target: 'xref-panel',
+        title: '打开外部参照面板',
+        content: '点击右侧工具栏的"外部参照"按钮打开管理面板',
+        placement: 'left',
+      },
+      {
+        target: 'xref-add-btn',
+        title: '添加外部参照',
+        content: '点击"添加参照"按钮，从项目文件或图库中选择要参照的图纸',
+        placement: 'bottom',
+      },
+      {
+        target: 'xref-list',
+        title: '管理参照',
+        content: '在参照列表中可以重新加载、卸载、绑定或移除外部参照',
+        placement: 'left',
+      },
+    ],
+  },
+
+  {
+    id: 'gallery-manage',
+    name: '图库浏览与管理',
+    description: '学习如何浏览图库内容、管理分类和删除图块',
+    category: '图库管理',
+    estimatedTime: '3分钟',
+    steps: [
+      {
+        target: 'gallery-nav',
+        title: '进入图库',
+        content: '点击左侧导航栏的"图库"进入图库页面',
+        placement: 'right',
+      },
+      {
+        target: 'gallery-category-tree',
+        title: '分类浏览',
+        content: '左侧是分类树，点击分类可以筛选查看对应的图纸或图块',
+        placement: 'right',
+      },
+      {
+        target: 'gallery-search',
+        title: '搜索功能',
+        content: '在搜索框输入关键词，可以快速查找需要的图纸或图块',
+        placement: 'bottom',
+      },
+      {
+        target: 'gallery-item',
+        title: '管理操作',
+        content: '右键点击图库项目，可以移动分类、重命名或删除',
+        placement: 'right',
+        skipCondition: {
+          type: 'element-count-zero',
+          selector: '[data-tour="gallery-item"]'
+        },
+        fallbackContent: '图库暂无内容，请先添加图纸到图库',
+      },
+    ],
+  },
+
+  // ==================== P3 级别 ====================
+  
+  {
+    id: 'version-history',
+    name: '版本历史查看',
+    description: '学习如何查看图纸的版本历史和恢复历史版本',
+    category: '项目管理',
+    estimatedTime: '2分钟',
+    steps: [
+      {
+        target: 'file-item',
+        title: '选择文件',
+        content: '在项目文件列表中找到要查看历史的文件',
+        placement: 'right',
+        route: '/projects',
+        skipCondition: {
+          type: 'element-count-zero',
+          selector: '[data-tour="file-item"]'
+        },
+        fallbackContent: '当前项目暂无文件',
+      },
+      {
+        target: 'file-context-menu',
+        title: '打开右键菜单',
+        content: '右键点击文件，选择"版本历史"',
+        placement: 'bottom',
+      },
+      {
+        target: 'version-list',
+        title: '查看和恢复',
+        content: '在版本历史面板中可以查看所有历史版本，点击"恢复"可以将文件恢复到指定版本',
+        placement: 'left',
+      },
+    ],
+  },
+
+  {
+    id: 'system-roles',
+    name: '系统角色管理',
+    description: '学习如何管理系统级角色（需要管理员权限）',
+    category: '系统管理',
+    estimatedTime: '3分钟',
+    steps: [
+      {
+        target: 'settings-nav',
+        title: '进入系统设置',
+        content: '点击左侧导航栏底部的"系统设置"（需要管理员权限）',
+        placement: 'right',
+        skipCondition: {
+          type: 'custom',
+          customCheck: () => !window.currentUser?.isAdmin
+        },
+        fallbackContent: '系统角色管理需要管理员权限',
+      },
+      {
+        target: 'system-roles-nav',
+        title: '角色管理',
+        content: '在设置菜单中选择"角色管理"',
+        placement: 'right',
+      },
+      {
+        target: 'role-list',
+        title: '角色列表',
+        content: '查看所有系统角色，包括内置角色和自定义角色',
+        placement: 'right',
+      },
+      {
+        target: 'role-edit-btn',
+        title: '编辑角色权限',
+        content: '点击角色后的"编辑"按钮，可以修改角色的权限配置',
+        placement: 'bottom',
+      },
+    ],
+  },
+
+  {
+    id: 'project-create',
+    name: '项目管理',
+    description: '学习如何创建新项目、配置项目设置',
+    category: '项目管理',
+    estimatedTime: '2分钟',
+    steps: [
+      {
+        target: 'projects-nav',
+        title: '进入项目管理',
+        content: '点击左侧导航栏的"项目管理"',
+        placement: 'right',
+      },
+      {
+        target: 'new-project-btn',
+        title: '创建项目',
+        content: '点击"新建项目"按钮，输入项目名称、描述，选择项目模板',
+        placement: 'bottom',
+        route: '/projects',
+        waitForElement: 'auto',
+      },
+      {
+        target: 'project-settings-btn',
+        title: '项目设置',
+        content: '进入项目后，可以点击设置按钮配置项目信息、成员权限、存储配额等',
+        placement: 'bottom',
+        skipCondition: {
+          type: 'element-not-exists',
+          selector: '[data-tour="project-settings-btn"]'
+        },
+        fallbackContent: '请先创建一个项目',
+      },
+    ],
+  },
 ];
 ```
 
@@ -598,6 +1595,34 @@ function useTour(): TourContextValue;
 ### Phase 5：元素标记
 12. 在相关组件添加 `data-tour` 属性
 
+### Phase 6：单元测试
+13. 测试工具函数
+    - `getScrollParent()` 测试
+    - `isElementVisible()` 测试
+    - `evaluateSkipCondition()` 测试
+    - `resolveRouteParams()` 测试
+    - `buildRoute()` 测试
+14. 测试 Hook 逻辑
+    - `useTour` 状态管理测试
+    - localStorage 持久化测试
+15. 测试组件渲染
+    - `TourOverlay` 渲染测试
+    - `TourTooltip` 定位测试
+    - `TourCenter` 列表渲染测试
+
+**测试文件结构**：
+```
+src/
+├── components/tour/__tests__/
+│   ├── TourOverlay.test.tsx
+│   ├── TourTooltip.test.tsx
+│   └── TourCenter.test.tsx
+├── hooks/__tests__/
+│   └── useTour.test.ts
+└── utils/__tests__/
+    └── tour.test.ts
+```
+
 ## 13. 错误边界处理
 
 ### 13.1 组件级错误边界
@@ -667,6 +1692,89 @@ function logTourError(error: Error, context: string) {
 3. **性能验收**
    - 滚动/resize 时高亮位置实时更新，无卡顿
    - 引导组件对页面性能无显著影响
+
+4. **边界情况测试用例**
+
+| 测试场景 | 预期行为 | 优先级 |
+|----------|----------|--------|
+| 目标元素 `display: none` | 跳过步骤或显示 fallbackContent | P0 |
+| 目标元素 `visibility: hidden` | 跳过步骤或显示 fallbackContent | P0 |
+| 目标元素 `opacity: 0` | 跳过步骤或显示 fallbackContent | P1 |
+| 目标元素被 `overflow: hidden` 裁剪 | 正确检测并跳过 | P1 |
+| 引导过程中浏览器刷新 | 恢复到上次步骤 | P0 |
+| 引导过程中关闭标签页 | 下次打开恢复状态 | P1 |
+| localStorage 不可用（隐私模式） | 使用内存状态，不崩溃 | P0 |
+| 引导步骤数为 0 | 不启动引导，显示提示 | P2 |
+| 步骤索引越界（手动修改 localStorage） | 重置到有效范围 | P2 |
+| 动态路由参数缺失 | 显示警告，使用空字符串 | P1 |
+| 路由跳转失败（网络错误） | 显示错误提示，结束引导 | P1 |
+| 连续跳过超过 3 步 | 提示环境不匹配，结束引导 | P1 |
+| 用户快速点击下一步 | 防抖处理，不跳过多个步骤 | P2 |
+| 窗口 resize 过程中 | 高亮位置实时更新 | P1 |
+| 目标元素在 iframe 内 | 跨域时无法高亮，跳过提示 | P2 |
+| 多个引导同时启动（并发问题） | 只执行一个，其他排队 | P2 |
+| ESC 键与 Modal 冲突 | ESC 优先关闭 Modal，不退出引导 | P1 |
+| 移动端触摸事件 | 点击遮罩不关闭引导 | P2 |
+
+**边界测试代码示例**：
+
+```typescript
+// 测试用例：元素隐藏状态
+describe('TourOverlay - hidden elements', () => {
+  it('should skip step when target has display:none', async () => {
+    render(<div data-tour="test" style={{ display: 'none' }}>Hidden</div>);
+    const result = await waitForTargetElement('[data-tour="test"]', {
+      timeout: 1000,
+      strategy: 'polling',
+      requireVisible: true
+    });
+    expect(result.element).toBeNull();
+    expect(result.reason).toBe('not-visible');
+  });
+
+  it('should show fallback content when element is hidden', () => {
+    const step = {
+      target: 'hidden-element',
+      fallbackContent: '元素当前不可见'
+    };
+    // ... 验证 fallbackContent 显示
+  });
+});
+
+// 测试用例：localStorage 不可用
+describe('TourContext - storage unavailable', () => {
+  beforeEach(() => {
+    // 模拟 localStorage 不可用
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+  });
+
+  it('should use in-memory state when localStorage fails', () => {
+    const { result } = renderHook(() => useTour());
+    act(() => {
+      result.current.startTour('test-guide');
+    });
+    expect(result.current.isActive).toBe(true);
+  });
+});
+
+// 测试用例：连续跳过
+describe('Tour - consecutive skips', () => {
+  it('should end tour after 3 consecutive skips', async () => {
+    const guide = {
+      id: 'test',
+      steps: [
+        { target: 'non-existent-1', skipCondition: { type: 'element-not-exists' } },
+        { target: 'non-existent-2', skipCondition: { type: 'element-not-exists' } },
+        { target: 'non-existent-3', skipCondition: { type: 'element-not-exists' } },
+        { target: 'non-existent-4', skipCondition: { type: 'element-not-exists' } },
+      ]
+    };
+    // ... 验证第 3 次跳过后引导结束
+  });
+});
+```
 
 ## 15. 后续扩展
 

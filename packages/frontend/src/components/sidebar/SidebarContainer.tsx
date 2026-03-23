@@ -331,6 +331,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
               <button
                 className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
                 onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
+                data-tour="sidebar-gallery"
               >
                 <Box size={14} />
                 <span>图纸库</span>

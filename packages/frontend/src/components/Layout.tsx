@@ -16,6 +16,8 @@ import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
+import { useTour } from '../contexts/TourContext';
+import { TourCenter, TourStartModal, TourOverlay, TourTooltip } from './tour';
 
 // Lucide 图标导入
 import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
@@ -32,6 +34,7 @@ import Menu from 'lucide-react/dist/esm/icons/menu';
 import X from 'lucide-react/dist/esm/icons/x';
 import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
 
 interface NavItemProps {
   to: string;
@@ -39,17 +42,19 @@ interface NavItemProps {
   label: string;
   active: boolean;
   badge?: number;
+  dataTour?: string;
 }
 
 /**
  * 导航项组件 - 带有精美动画效果
  */
-const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge }) => {
+const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge, dataTour }) => {
   const { isDark } = useTheme();
   
   return (
     <Link
       to={to}
+      data-tour={dataTour}
       className={`
         group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ease-out
         relative overflow-hidden
@@ -120,6 +125,21 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { hasPermission } = usePermission();
   const { config: runtimeConfig } = useRuntimeConfig();
   const { isDark } = useTheme();
+  const { 
+    isActive: isTourActive, 
+    currentGuide,
+    currentStep,
+    resolvedCurrentStep,
+    isTourCenterOpen, 
+    isStartModalOpen,
+    openTourCenter, 
+    closeTourCenter, 
+    dismissStartModal,
+    nextStep,
+    prevStep,
+    skipTour,
+    completeTour,
+  } = useTour();
   
   // UI 状态
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -202,14 +222,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // 导航菜单项配置
   const menuItems = useMemo(() => [
     { to: '/dashboard', icon: LayoutDashboard, label: '仪表盘', visible: true },
-    { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true },
+    { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true, dataTour: 'sidebar-projects' },
     { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true },
     { to: '/font-library', icon: Type, label: '字体库', visible:
       hasPermission(SystemPermission.SYSTEM_FONT_READ) },
     { to: '/users', icon: Users, label: '用户管理', visible:
       hasPermission(SystemPermission.SYSTEM_USER_READ) },
     { to: '/roles', icon: ShieldCheck, label: '角色权限', visible:
-      hasPermission(SystemPermission.SYSTEM_ROLE_READ) },
+      hasPermission(SystemPermission.SYSTEM_ROLE_READ), dataTour: 'sidebar-roles' },
     { to: '/system-monitor', icon: Activity, label: '系统监控', visible:
       hasPermission(SystemPermission.SYSTEM_MONITOR) },
   ], [hasPermission]);
@@ -401,6 +421,48 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 无法加载存储信息
               </p>
             )}
+          </div>
+
+          {/* 帮助引导入口 */}
+          <div className="px-4 mb-2">
+            <button
+              onClick={openTourCenter}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)] group"
+              style={{ border: '1px solid var(--border-default)' }}
+              title="查看引导中心"
+            >
+              <div className="relative">
+                <HelpCircle 
+                  size={18} 
+                  className="transition-colors group-hover:text-[var(--primary-500)]"
+                  style={{ color: 'var(--text-tertiary)' }}
+                />
+                {/* 引导进行中指示器 */}
+                {isTourActive && (
+                  <span 
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse"
+                    style={{ background: 'var(--primary-500)' }}
+                  />
+                )}
+              </div>
+              <span 
+                className="text-sm font-medium transition-colors group-hover:text-[var(--text-primary)]"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                帮助引导
+              </span>
+              {isTourActive && (
+                <span
+                  className="ml-auto text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: 'var(--primary-100)',
+                    color: 'var(--primary-600)',
+                  }}
+                >
+                  进行中
+                </span>
+              )}
+            </button>
           </div>
 
           {/* 用户信息区域 */}
@@ -693,6 +755,48 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </p>
         </div>
       </Modal>
+
+      {/* 引导中心弹窗 */}
+      <TourCenter
+        isOpen={isTourCenterOpen}
+        onClose={closeTourCenter}
+      />
+
+      {/* 首次登录引导提示弹窗 */}
+      <TourStartModal
+        isOpen={isStartModalOpen}
+        onDismiss={dismissStartModal}
+        onViewNow={() => {
+          dismissStartModal();
+          openTourCenter();
+        }}
+      />
+
+      {/* 引导遮罩层和提示气泡 */}
+      {resolvedCurrentStep && currentGuide && (
+        <TourOverlay
+          step={resolvedCurrentStep}
+          isActive={isTourActive}
+          onSkip={skipTour}
+          onElementReady={() => {
+            // 元素准备就绪后的回调
+          }}
+          onInteractionComplete={nextStep}
+        >
+          {({ targetRect, hasTarget }) => (
+            <TourTooltip
+              step={resolvedCurrentStep}
+              currentStep={currentStep}
+              totalSteps={currentGuide.steps.length}
+              targetRect={targetRect}
+              hasTarget={hasTarget}
+              onNext={nextStep}
+              onPrev={prevStep}
+              onSkip={skipTour}
+            />
+          )}
+        </TourOverlay>
+      )}
     </div>
   );
 };

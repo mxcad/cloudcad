@@ -22,6 +22,15 @@ const sizeToMaxWidth: Record<string, string> = {
   full: 'max-w-4xl',
 };
 
+/** 尺寸对应的最大高度 */
+const sizeToMaxHeight: Record<string, string> = {
+  sm: 'max-h-[60vh]',
+  md: 'max-h-[70vh]',
+  lg: 'max-h-[75vh]',
+  xl: 'max-h-[80vh]',
+  full: 'max-h-[85vh]',
+};
+
 /**
  * Modal 组件 - CloudCAD
  * 
@@ -43,6 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const effectiveMaxWidth =
     maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
+  const effectiveMaxHeight = size ? sizeToMaxHeight[size] : 'max-h-[70vh]';
 
   if (!isOpen) return null;
 
@@ -67,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
       
       {/* 模态框内容 */}
       <div
-        className={`relative w-full ${effectiveMaxWidth} overflow-hidden modal-content`}
+        className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col`}
         style={{ 
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border-default)',
@@ -110,7 +120,7 @@ export const Modal: React.FC<ModalProps> = ({
         
         {/* 内容区域 */}
         <div 
-          className="p-6"
+          className="p-6 overflow-y-auto flex-1"
           style={{ color: 'var(--text-secondary)' }}
         >
           {children}

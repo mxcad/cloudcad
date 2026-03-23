@@ -169,7 +169,7 @@ export const CollaborateSidebar: React.FC = () => {
   const sessionCount = useMemo(() => works.length, [works]);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} data-tour="collaborators-panel">
       {/* 标题栏 */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>

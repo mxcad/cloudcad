@@ -201,6 +201,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     <>
       <button
         ref={menuButtonRef}
+        data-tour="file-item-menu-btn"
         onClick={onToggleMenu}
         className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
       >

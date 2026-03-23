@@ -556,7 +556,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
           </div>
 
           {/* 分类选择 */}
-          <div>
+          <div data-tour="gallery-category-select">
             <label className="block text-sm font-medium text-gray-700 mb-3">
               选择分类
             </label>
@@ -635,6 +635,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
           <button
             onClick={handleSubmit}
             disabled={selectedFirstType === -1 || submitting}
+            data-tour="gallery-submit-btn"
             className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
