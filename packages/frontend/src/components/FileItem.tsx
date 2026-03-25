@@ -349,22 +349,38 @@ export const FileItem: React.FC<FileItemProps> = ({
         data-tour="file-item"
         className={`group relative rounded-xl transition-all duration-200 cursor-pointer pointer-events-auto
           ${isPreviewOpen ? 'pointer-events-none' : ''}
-          ${
-            showSelection
-              ? 'bg-indigo-50 border-2 border-indigo-500 shadow-md'
-              : isDropTarget
-                ? 'bg-green-50 border-2 border-green-500 shadow-md'
-                : 'bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
-          }
+          ${showSelection ? 'shadow-md' : ''}
+          ${isDropTarget ? 'shadow-md' : ''}
+          ${!showSelection && !isDropTarget ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
         `}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => {
+        style={{
+          background: showSelection
+            ? 'var(--primary-50)'
+            : isDropTarget
+              ? 'var(--success-light)'
+              : 'var(--bg-secondary)',
+          border: showSelection
+            ? '2px solid var(--primary-500)'
+            : isDropTarget
+              ? '2px solid var(--success)'
+              : '1px solid var(--border-default)',
+        }}
+        onMouseEnter={(e) => {
+          setIsHovered(true);
+          if (!showSelection && !isDropTarget) {
+            e.currentTarget.style.borderColor = 'var(--primary-400)';
+          }
+        }}
+        onMouseLeave={(e) => {
           setIsHovered(false);
           setShowMenu(false);
           onDragLeave?.();
+          if (!showSelection && !isDropTarget) {
+            e.currentTarget.style.borderColor = 'var(--border-default)';
+          }
         }}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         draggable={!!onDragStart && !node.isRoot}
         onDragStart={(e) => onDragStart?.(e, node)}
         onDragOver={(e) => onDragOver?.(e, node)}
@@ -463,20 +479,28 @@ export const FileItem: React.FC<FileItemProps> = ({
     <div
       data-tour="file-item"
       className={`group flex items-center gap-4 p-3 rounded-lg transition-all duration-200 cursor-pointer
-        ${
-          showListSelection
-            ? 'bg-indigo-50 border border-indigo-200'
-            : 'hover:bg-slate-50 border border-transparent hover:border-slate-200'
-        }
+        ${showListSelection ? '' : 'hover:border-[var(--border-default)]'}
       `}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
+      style={{
+        background: showListSelection ? 'var(--primary-50)' : 'transparent',
+        border: showListSelection ? '1px solid var(--primary-200)' : '1px solid transparent',
+      }}
+      onMouseEnter={(e) => {
+        setIsHovered(true);
+        if (!showListSelection) {
+          e.currentTarget.style.background = 'var(--bg-tertiary)';
+        }
+      }}
+      onMouseLeave={(e) => {
         setIsHovered(false);
         setShowMenu(false);
         onDragLeave?.();
+        if (!showListSelection) {
+          e.currentTarget.style.background = 'transparent';
+        }
       }}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       draggable={!!onDragStart && !node.isRoot}
       onDragStart={(e) => onDragStart?.(e, node)}
       onDragOver={(e) => onDragOver?.(e, node)}

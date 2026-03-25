@@ -477,6 +477,25 @@ export const useFileSystemCRUD = ({
     );
   }, [urlProjectId, showConfirm, showToast, loadData]);
 
+  // 清空项目回收站（项目列表页的回收站）
+  const handleClearTrash = useCallback(() => {
+    showConfirm(
+      '确认清空回收站',
+      '确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。',
+      async () => {
+        try {
+          await trashApi.clear();
+          showToast('回收站已清空', 'success');
+          loadData();
+        } catch (error) {
+          const appError = handleError(error, '清空回收站', 'medium');
+          showToast(appError.message, 'error');
+        }
+      },
+      'danger'
+    );
+  }, [showConfirm, showToast, loadData]);
+
   return {
     showCreateFolderModal,
     setShowCreateFolderModal,
@@ -499,5 +518,6 @@ export const useFileSystemCRUD = ({
     handlePermanentlyDeleteProject,
     handleRestoreNode,
     handleClearProjectTrash,
+    handleClearTrash,
   };
 };

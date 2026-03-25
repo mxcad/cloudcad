@@ -7,6 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { TourContextValue, TourGuide, TourStep, UICondition } from '../types/tour';
 import { tourGuides as defaultGuides } from '../config/tourGuides';
+import { useAuth } from './AuthContext';
 
 /** localStorage 存储键名（仅用于 dismissed 状态） */
 const TOUR_DISMISSED_KEY = 'cloudcad_tour_dismissed';
@@ -203,20 +204,31 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   // 等待路由跳转后激活引导
   const pendingActivationRef = useRef(false);
   
-  // 防止重复初始化
-  const initializedRef = useRef(false);
+  // 防止重复初始化（登录后只检查一次）
+  const initializedAfterLoginRef = useRef(false);
+  
+  // 获取用户登录状态
+  const { isAuthenticated } = useAuth();
 
-  // 初始化：检查是否需要显示欢迎提示（dismissed 状态持久化）
+  // 登录后检查是否需要显示欢迎提示（dismissed 状态持久化）
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    // 只有登录后才检查
+    if (!isAuthenticated) {
+      return;
+    }
+    
+    // 防止重复检查
+    if (initializedAfterLoginRef.current) {
+      return;
+    }
+    initializedAfterLoginRef.current = true;
     
     // 从 localStorage 检查 dismissed 状态
     const dismissed = loadDismissedState();
     if (!dismissed) {
       setIsStartModalOpen(true);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // 监听路由变化，在跳转完成后激活引导
   useEffect(() => {

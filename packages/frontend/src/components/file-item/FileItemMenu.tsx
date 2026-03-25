@@ -170,6 +170,26 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
           const isDividerAfter =
             isLast && action.isDestructive && availableActions.length > 1;
 
+          // 根据操作类型确定颜色
+          const getColorStyle = () => {
+            if (action.type === 'delete' || action.type === 'permanently_delete') {
+              return 'text-[var(--error)] hover:bg-[rgba(239,68,68,0.1)]';
+            }
+            if (action.type === 'restore') {
+              return 'text-[var(--success)] hover:bg-[rgba(34,197,94,0.1)]';
+            }
+            if (action.type === 'view_version_history') {
+              return 'text-[var(--info)] hover:bg-[rgba(59,130,246,0.1)]';
+            }
+            if (action.type === 'add_to_gallery') {
+              return 'text-[var(--primary-500)] hover:bg-[var(--bg-tertiary)]';
+            }
+            if (action.type === 'upload_external_reference') {
+              return 'text-[var(--warning)] hover:bg-[rgba(245,158,11,0.1)]';
+            }
+            return 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]';
+          };
+
           return (
             <React.Fragment key={action.type}>
               <button
@@ -178,14 +198,12 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                   e.stopPropagation();
                   handleMenuAction(() => actionHandlers[action.type]?.());
                 }}
-                className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
-                  action.colorClass || 'text-slate-700'
-                } ${action.hoverClass || 'hover:bg-slate-50'}`}
+                className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${getColorStyle()}`}
               >
                 {action.icon}
                 {action.label}
               </button>
-              {isDividerAfter ? <hr className="my-1 border-slate-100" /> : null}
+              {isDividerAfter ? <hr className="my-1 border-[var(--border-subtle)]" /> : null}
             </React.Fragment>
           );
         })}
@@ -204,7 +222,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
         data-tour="file-item-menu-btn"
         ref={menuButtonRef}
         onClick={onToggleMenu}
-        className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-sm border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
+        className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] hover:bg-[var(--bg-tertiary)] shadow-sm border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
       >
         <MoreIcon size={16} />
       </button>
@@ -214,7 +232,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
         createPortal(
           <div
             ref={menuContainerRef}
-            className="fixed bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[120px] z-[99999] animate-scale-in origin-top-right pointer-events-auto"
+            className="fixed bg-[var(--bg-elevated)] rounded-lg shadow-xl border border-[var(--border-default)] py-1 min-w-[120px] z-[99999] animate-scale-in origin-top-right pointer-events-auto"
             style={{
               top: `${menuPosition.top}px`,
               left: `${menuPosition.left}px`,

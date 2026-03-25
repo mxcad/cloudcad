@@ -60,8 +60,9 @@ const PM2_CMD = USE_RUNTIME
       : path.join(PROJECT_ROOT, 'pm2'))
   : 'pm2';
 
+// 使用真正的 pnpm.cjs，而不是 corepack 代理（离线环境下 corepack 会尝试联网）
 const PNPM_JS = USE_RUNTIME
-  ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'corepack', 'dist', 'pnpm.js')
+  ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs')
   : null;
 
 // ==================== 工具函数 ====================

@@ -36,6 +36,7 @@ export const GlobalTourRenderer: React.FC = () => {
     dismissStartModal,
     nextStep,
     skipTour,
+    startTour,
   } = useTour();
 
   // 确保 Portal 容器在客户端渲染时才创建
@@ -71,7 +72,8 @@ export const GlobalTourRenderer: React.FC = () => {
         onDismiss={dismissStartModal}
         onViewNow={() => {
           dismissStartModal();
-          openTourCenter();
+          // 直接启动项目管理完整流程引导
+          startTour('project-management-full');
         }}
       />
 

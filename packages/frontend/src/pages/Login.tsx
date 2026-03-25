@@ -18,6 +18,8 @@ import AlertCircleIcon from 'lucide-react/dist/esm/icons/alert-circle';
 import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
 import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
 import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
+import EyeIcon from 'lucide-react/dist/esm/icons/eye';
+import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
 
 interface LocationState {
   from?: string;
@@ -49,6 +51,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const state = location.state as LocationState | null;
@@ -171,16 +174,24 @@ export const Login: React.FC = () => {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
-                  className="input-field"
+                  className="input-field has-toggle"
                   placeholder="请输入密码"
                   value={formData.password}
                   onChange={handleChange}
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                 />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                </button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -460,6 +471,10 @@ export const Login: React.FC = () => {
           box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
+        .input-field.has-toggle {
+          padding-right: 2.75rem;
+        }
+
         .input-glow {
           position: absolute;
           inset: -2px;
@@ -472,6 +487,26 @@ export const Login: React.FC = () => {
         }
 
         .input-group.focused .input-glow { opacity: 0.3; }
+
+        /* ===== 密码显示/隐藏按钮 ===== */
+        .password-toggle {
+          position: absolute;
+          right: 1rem;
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.2s;
+          z-index: 2;
+        }
+
+        .password-toggle:hover {
+          color: var(--text-secondary);
+        }
 
         /* ===== 表单选项 ===== */
         .form-options {

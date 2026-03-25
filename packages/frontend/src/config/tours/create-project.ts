@@ -81,7 +81,7 @@ export const createProjectGuide: TourGuide = {
       title: '创建项目',
       content: '点击"创建"按钮完成创建。',
       placement: 'bottom',
-      mode: 'display',
+      mode: 'interactive',
       actionType: 'click',
       actionHint: '请点击"创建"按钮',
       highlight: true,

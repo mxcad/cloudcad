@@ -209,6 +209,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     handlePermanentlyDeleteProject,
     handleRestoreNode,
     handleClearProjectTrash,
+    handleClearTrash,
   } = useFileSystemCRUD({
     urlProjectId,
     currentNode,
@@ -417,6 +418,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     handleToggleTrashView,
     handleRestoreNode,
     handleClearProjectTrash,
+    handleClearTrash,
     isProjectTrashView,
     handleToggleProjectTrashView,
     trashApi,

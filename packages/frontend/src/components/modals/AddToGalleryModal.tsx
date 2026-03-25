@@ -210,30 +210,30 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
         disabled={disabled}
         className={`w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between ${
           disabled
-            ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+            ? 'bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-muted)] cursor-not-allowed'
             : isOpen
-              ? 'bg-gray-50 border border-gray-300 ring-2 ring-indigo-500'
-              : 'bg-gray-50 border border-gray-200 hover:border-gray-300'
+              ? 'bg-[var(--bg-secondary)] border border-[var(--border-strong)] ring-2 ring-[var(--primary-500)]'
+              : 'bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-[var(--border-strong)]'
         }`}
       >
-        <span className={selectedType ? 'text-gray-900' : 'text-gray-400'}>
+        <span className={selectedType ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}>
           {selectedType ? selectedType.name : placeholder}
         </span>
         <ChevronDown
           size={16}
-          className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`text-[var(--text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {/* 下拉面板 */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+        <div className="absolute z-10 w-full mt-2 bg-[var(--bg-elevated)] rounded-lg shadow-lg border border-[var(--border-default)] overflow-hidden">
           {/* 搜索栏 */}
-          <div className="p-3 border-b border-gray-100">
+          <div className="p-3 border-b border-[var(--border-subtle)]">
             <div className="relative">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
               />
               <input
                 ref={inputRef}
@@ -241,20 +241,20 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索分类"
-                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 text-sm bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)] focus:border-transparent"
               />
             </div>
           </div>
 
           {/* 提示文本 */}
-          <div className="px-4 py-2 text-xs text-gray-500">
+          <div className="px-4 py-2 text-xs text-[var(--text-tertiary)]">
             选择分类或创建新分类
           </div>
 
           {/* 选项列表 */}
           <div className="max-h-48 overflow-y-auto">
             {isCreating ? (
-              <div className="p-3 bg-indigo-50 border-b border-indigo-100">
+              <div className="p-3 bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)]">
                 <input
                   data-tour="category-name-input"
                   ref={createInputRef}
@@ -265,7 +265,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                     e.key === 'Enter' && !isSubmitting && handleSaveCreate()
                   }
                   placeholder="输入分类名称"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-sm bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)]"
                   disabled={isSubmitting}
                 />
                 <div className="flex gap-2 mt-2">
@@ -273,14 +273,14 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                     data-tour="category-save-btn"
                     onClick={handleSaveCreate}
                     disabled={isSubmitting || !newTypeName.trim()}
-                    className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 text-xs bg-[var(--primary-600)] text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? '保存中...' : '保存'}
                   </button>
                   <button
                     onClick={() => setIsCreating(false)}
                     disabled={isSubmitting}
-                    className="px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 text-xs border border-[var(--border-default)] rounded text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     取消
                   </button>
@@ -289,15 +289,15 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
             ) : (
               <>
                 {filteredTypes.length === 0 ? (
-                  <div className="p-4 text-center text-gray-400 text-sm">
+                  <div className="p-4 text-center text-[var(--text-muted)] text-sm">
                     {searchQuery ? '未找到匹配的分类' : '暂无分类'}
                   </div>
                 ) : (
                   filteredTypes.map((type) => (
                     <div
                       key={type.id}
-                      className={`group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors ${
-                        value === type.id ? 'bg-blue-50' : ''
+                      className={`group flex items-center justify-between px-4 py-2.5 hover:bg-[var(--bg-tertiary)] transition-colors ${
+                        value === type.id ? 'bg-[var(--bg-tertiary)]' : ''
                       }`}
                     >
                       {editingType?.id === type.id ? (
@@ -310,7 +310,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                             !isSubmitting &&
                             handleSaveEdit()
                           }
-                          className="flex-1 px-2 py-1 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="flex-1 px-2 py-1 text-sm bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)]"
                           autoFocus
                           disabled={isSubmitting}
                         />
@@ -320,7 +320,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                             onChange(type.id);
                             setIsOpen(false);
                           }}
-                          className={`flex-1 text-left text-sm ${value === type.id ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
+                          className={`flex-1 text-left text-sm ${value === type.id ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'}`}
                         >
                           {type.name}
                         </button>
@@ -332,7 +332,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                             <button
                               onClick={handleSaveEdit}
                               disabled={isSubmitting}
-                              className="p-1 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
+                              className="p-1 text-[var(--text-secondary)] hover:text-[var(--primary-500)] hover:bg-[var(--bg-tertiary)] rounded transition-colors disabled:opacity-50"
                             >
                               <Check size={14} />
                             </button>
@@ -342,7 +342,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                                 setEditingName('');
                               }}
                               disabled={isSubmitting}
-                              className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                              className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded transition-colors disabled:opacity-50"
                             >
                               <X size={14} />
                             </button>
@@ -352,7 +352,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                             {value === type.id && (
                               <Check
                                 size={14}
-                                className="text-green-600 mr-1"
+                                className="text-[var(--success)] mr-1"
                               />
                             )}
                             <button
@@ -360,7 +360,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                                 e.stopPropagation();
                                 handleEdit(type);
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors group-hover:opacity-100 opacity-0"
+                              className="p-1 text-[var(--text-muted)] hover:text-[var(--info)] hover:bg-[var(--bg-tertiary)] rounded transition-colors group-hover:opacity-100 opacity-0"
                             >
                               <Edit2 size={14} />
                             </button>
@@ -369,7 +369,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                                 e.stopPropagation();
                                 handleDelete(type);
                               }}
-                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors group-hover:opacity-100 opacity-0"
+                              className="p-1 text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--bg-tertiary)] rounded transition-colors group-hover:opacity-100 opacity-0"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -385,11 +385,11 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
 
           {/* 创建新分类按钮 */}
           {!isCreating && level < MAX_LEVEL && (
-            <div className="p-2 border-t border-gray-100 bg-gray-50">
+            <div className="p-2 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
               <button
                 data-tour="create-category-btn"
                 onClick={handleCreate}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-[var(--primary-500)] hover:bg-[var(--bg-tertiary)] rounded transition-colors"
               >
                 <Plus size={16} />
                 创建新分类
@@ -504,17 +504,17 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+    <div className="fixed inset-0 bg-[var(--bg-overlay)] flex items-center justify-center z-50 p-4">
+      <div className="bg-[var(--bg-elevated)] rounded-xl shadow-lg max-w-md w-full border border-[var(--border-default)]">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--border-default)]">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">添加到图库</h2>
-            <p className="text-sm text-gray-500 mt-1">{fileName}</p>
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">添加到图库</h2>
+            <p className="text-sm text-[var(--text-tertiary)] mt-1">{fileName}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
           >
             <X size={20} />
           </button>
@@ -524,7 +524,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         <div className="p-6 space-y-6">
           {/* 图库类型选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">
               选择图库类型
             </label>
             <div className="flex gap-2">
@@ -535,8 +535,8 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
                 }}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                   galleryType === 'drawings'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-[var(--primary-500)] bg-[var(--bg-tertiary)] text-[var(--primary-500)]'
+                    : 'border-[var(--border-default)] hover:border-[var(--border-strong)] text-[var(--text-secondary)]'
                 }`}
               >
                 <FileText size={16} />
@@ -549,8 +549,8 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
                 }}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                   galleryType === 'blocks'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-[var(--primary-500)] bg-[var(--bg-tertiary)] text-[var(--primary-500)]'
+                    : 'border-[var(--border-default)] hover:border-[var(--border-strong)] text-[var(--text-secondary)]'
                 }`}
               >
                 <Box size={16} />
@@ -561,7 +561,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
           {/* 分类选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">
               选择分类
             </label>
             <div className="space-y-3">
@@ -620,8 +620,8 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
           </div>
 
           {/* 提示信息 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-700">
+          <div className="bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg p-4">
+            <p className="text-sm text-[var(--text-tertiary)]">
               💡
               提示：点击分类名称选择，点击铅笔图标编辑，点击垃圾桶图标删除，点击「创建新分类」添加新分类。
             </p>
@@ -629,11 +629,11 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         </div>
 
         {/* 底部按钮 */}
-        <div className="flex gap-3 p-6 border-t border-gray-200">
+        <div className="flex gap-3 p-6 border-t border-[var(--border-default)]">
           <button
             data-tour="modal-close-btn"
             onClick={onClose}
-            className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex-1 px-4 py-3 border border-[var(--border-default)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
           >
             取消
           </button>
@@ -641,7 +641,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
             onClick={handleSubmit}
             disabled={selectedFirstType === -1 || submitting}
             data-tour="gallery-submit-btn"
-            className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-3 bg-[var(--primary-600)] text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>

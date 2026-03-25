@@ -134,6 +134,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleBatchRestore,
     isProjectTrashView,
     handleToggleProjectTrashView,
+    handleClearTrash,
   } = useFileSystem({
     mode,
     personalSpaceId,
@@ -1058,21 +1059,43 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             回收站
           </button>
           {isProjectTrashView && nodes.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="ml-auto"
-              style={{ color: 'var(--text-tertiary)' }}
-              title="刷新"
-            >
-              <RefreshIcon
-                size={14}
-                className={loading ? 'animate-spin mr-1' : 'mr-1'}
-              />
-              刷新
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearTrash}
+                style={{ color: 'var(--error)', borderColor: 'var(--error-dim)' }}
+                className="hover:bg-[var(--error-dim)]"
+                title="清空回收站"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="mr-1"
+                >
+                  <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                </svg>
+                清空回收站
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={loading}
+                style={{ color: 'var(--text-tertiary)' }}
+                title="刷新"
+              >
+                <RefreshIcon
+                  size={14}
+                  className={loading ? 'animate-spin mr-1' : 'mr-1'}
+                />
+                刷新
+              </Button>
+            </div>
           )}
         </div>
       )}

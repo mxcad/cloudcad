@@ -26,11 +26,15 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
           isGrid ? 'absolute top-3 left-3' : ''
         } w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all duration-200 cursor-pointer z-10 ${
           isSelected
-            ? 'bg-indigo-500 border-indigo-500'
+            ? 'border-transparent'
             : isGrid
-              ? 'bg-white/80 border-slate-300 group-hover:border-indigo-400'
-              : 'border-slate-300 group-hover:border-indigo-400'
+              ? 'group-hover:border-[var(--primary-500)]'
+              : 'group-hover:border-[var(--primary-500)]'
         }`}
+        style={{
+          background: isSelected ? 'var(--primary-500)' : isGrid ? 'var(--bg-secondary)' : 'transparent',
+          borderColor: isSelected ? 'var(--primary-500)' : 'var(--border-default)',
+        }}
         onClick={handleClick}
         title={isSelected ? '单击取消选择' : '单击选择'}
       >

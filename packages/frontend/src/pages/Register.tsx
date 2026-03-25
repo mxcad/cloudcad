@@ -23,6 +23,8 @@ import CheckCircleIcon from 'lucide-react/dist/esm/icons/check-circle';
 import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
 import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
 import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
+import EyeIcon from 'lucide-react/dist/esm/icons/eye';
+import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
 
 /**
  * 注册页面 - CloudCAD
@@ -57,6 +59,8 @@ export const Register: React.FC = () => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // 检查注册开关
   if (!configLoading && !runtimeConfig.allowRegister) {
@@ -435,16 +439,24 @@ export const Register: React.FC = () => {
                     <input
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       required
-                      className="input-field"
+                      className="input-field has-toggle"
                       placeholder="至少8位，包含大小写字母、数字和特殊字符"
                       value={formData.password}
                       onChange={handleChange}
                       onFocus={() => setFocusedField('password')}
                       onBlur={handleBlur}
                     />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                    </button>
                     <div className="input-glow" />
                   </div>
                   {formData.password && (
@@ -477,16 +489,24 @@ export const Register: React.FC = () => {
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       required
-                      className="input-field"
+                      className="input-field has-toggle"
                       placeholder="请再次输入密码"
                       value={confirmPassword}
                       onChange={handleChange}
                       onFocus={() => setFocusedField('confirmPassword')}
                       onBlur={handleBlur}
                     />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                    </button>
                     <div className="input-glow" />
                   </div>
                   {fieldErrors.confirmPassword && (
@@ -836,6 +856,30 @@ export const Register: React.FC = () => {
         .input-field:focus {
           border-color: var(--primary-500);
           box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .input-field.has-toggle {
+          padding-right: 2.75rem;
+        }
+
+        /* 密码显示/隐藏按钮 */
+        .password-toggle {
+          position: absolute;
+          right: 1rem;
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.2s;
+          z-index: 2;
+        }
+
+        .password-toggle:hover {
+          color: var(--text-secondary);
         }
 
         .input-glow {
