@@ -1228,7 +1228,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
           <div
             className="flex items-center rounded-xl overflow-hidden"
-            data-tour="view-toggle"
+      
             style={{
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-default)',
@@ -1265,6 +1265,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             <button
               onClick={() => setViewMode('list')}
               className="p-2 transition-colors"
+              data-tour="view-toggle-list"
               style={{
                 background:
                   viewMode === 'list' ? 'var(--primary-50)' : 'transparent',

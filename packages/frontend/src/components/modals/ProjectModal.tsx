@@ -40,6 +40,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           <Button
             onClick={onSubmit}
             disabled={loading || !formData.name.trim()}
+            data-tour="project-create-submit"
           >
             {loading ? '处理中...' : editingProject ? '保存' : '创建'}
           </Button>
@@ -62,6 +63,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             placeholder="请输入名称"
             autoFocus
             maxLength={100}
+            data-tour="project-name-input"
           />
           <p className="text-xs text-slate-500 mt-1">
             {formData.name.length}/100
@@ -80,6 +82,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none overflow-hidden"
             placeholder="请输入描述（可选）"
             maxLength={500}
+            data-tour="project-desc-input"
           />
           <p className="text-xs text-slate-500 mt-1">
             {formData.description.length}/500

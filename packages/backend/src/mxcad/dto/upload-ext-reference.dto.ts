@@ -20,6 +20,7 @@ export class UploadExtReferenceDto {
     type: 'string',
     format: 'binary',
   })
+  @IsOptional()
   file: any;
 
   @ApiProperty({

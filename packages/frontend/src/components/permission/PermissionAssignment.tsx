@@ -214,7 +214,7 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             取消
           </Button>
-          <Button onClick={onSave} disabled={loading}>
+          <Button onClick={onSave} disabled={loading} data-tour="role-save-btn">
             {loading ? (
               <>
                 <RefreshCw size={16} className="animate-spin" />
@@ -235,6 +235,7 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
             <div className="form-field">
               <label className="field-label">角色名称</label>
               <input
+                data-tour="role-name-input"
                 type="text"
                 placeholder="请输入角色名称"
                 className="field-input"
@@ -264,7 +265,7 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
         </div>
 
         {/* 权限分配区域 */}
-        <div className="permissions-section">
+        <div className="permissions-section" data-tour="role-permissions">
           <div className="permissions-header">
             <h4 className="section-label">权限分配</h4>
             <span className="permissions-count">

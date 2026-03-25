@@ -1,615 +1,443 @@
-# 用户引导前置条件系统设计文档
+# 项目管理引导前置条件与完整流程设计
 
 > 版本: 1.0.0
 > 日期: 2026-03-24
-> 状态: 设计完成
+> 状态: 设计中
 
-## 1. 概述
+## 1. 需求概述
 
-### 1.1 背景
+### 1.1 问题背景
 
-现有用户引导系统缺少前置条件检测机制，导致用户在不满足条件时无法顺利完成引导流程。例如：
-- 用户想学"添加图纸到图库"，但没有项目或图纸文件
-- 用户想学"协作功能"，但没有打开图纸文件
-- 用户没有相应权限，却看到不该看到的引导
+当前项目引导存在以下问题：
+1. **引导流程分散**：项目管理相关的引导拆分成多个独立引导（project-create、project-members、project-roles），用户需要手动启动多个引导
+2. **打开图纸方式**：CAD 文件默认在新标签页打开，引导模式下无法在同一流程中继续
+3. **侧边栏状态**：CAD 编辑器侧边栏默认可能打开，干扰引导流程
 
 ### 1.2 目标
 
-1. **前置条件系统**：引导开始前自动检测条件，不满足则自动执行前置引导
-2. **权限过滤**：根据用户权限过滤可见的引导流程
-3. **自动化测试**：Playwright 配置驱动的端到端测试
-4. **文档生成**：CDP 截图生成用户手册
+将项目管理完整流程整合为一个引导，实现：
+- 从项目管理入口开始
+- 完整覆盖：创建项目 → 角色管理 → 成员管理 → 创建目录 → 上传文件 → 添加图库 → 打开图纸 → 侧边栏功能
 
-### 1.3 核心设计原则
+## 2. 完整引导流程设计
 
-- **链式引导**：前置条件不满足 → 自动执行前置引导 → 完成后继续原引导
-- **权限控制**：缺少权限的引导直接不显示，不给用户错误期望
-- **配置驱动**：测试和文档都基于引导配置自动生成
+### 2.1 流程图
 
----
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        项目管理完整引导流程                               │
+└─────────────────────────────────────────────────────────────────────────┘
 
-## 2. 类型定义扩展
+[首页仪表盘]
+    │
+    ▼
+[步骤1] 点击侧边栏"项目管理" ─────────────────────────────────────────────►
+    │
+    ▼
+[项目列表页]
+    │
+    ├─► [步骤2] 点击"新建项目"按钮
+    │       │
+    │       ▼
+    │   [步骤3] 填写项目名称（交互模式）
+    │       │
+    │       ▼
+    │   [步骤4] 填写项目描述（可选）
+    │       │
+    │       ▼
+    │   [步骤5] 点击"创建"按钮（交互模式）
+    │       │
+    │       ▼
+    │   [项目创建成功，自动进入项目]
+    │
+    ├─► [步骤6] 介绍列表/卡片模式切换
+    │       │
+    │       ▼
+    │   [步骤7] 介绍项目编辑按钮
+    │
+    └─► [已有项目，继续以下流程]
 
-### 2.1 前置条件类型
+    │
+    ▼
+[步骤8] 点击项目菜单按钮（三个点）────────────────────────────────────────►
+    │
+    ▼
+[步骤9] 点击"角色管理"选项
+    │
+    ▼
+[角色管理弹窗]
+    │
+    ├─► [步骤10] 点击"创建角色"按钮
+    │       │
+    │       ▼
+    │   [步骤11] 填写角色名称（交互模式）
+    │       │
+    │       ▼
+    │   [步骤12] 介绍权限配置
+    │       │
+    │       ▼
+    │   [步骤13] 点击保存（交互模式）
+    │
+    └─► [步骤14] 介绍系统角色
+            │
+            ▼
+        [步骤15] 关闭角色管理弹窗（交互模式）
+    │
+    ▼
+[步骤16] 再次点击项目菜单按钮
+    │
+    ▼
+[步骤17] 点击"成员管理"选项
+    │
+    ▼
+[成员管理弹窗]
+    │
+    ├─► [步骤18] 点击"添加成员"按钮
+    │       │
+    │       ▼
+    │   [步骤19] 输入成员用户名（交互模式，预填测试账号）
+    │       │
+    │       ▼
+    │   [步骤20] 选择用户名
+    │       │
+    │       ▼
+    │   [步骤21] 选择项目角色（交互模式）
+    │       │
+    │       ▼
+    │   [步骤22] 点击添加按钮（交互模式）
+    │
+    └─► [步骤23] 关闭成员管理弹窗（交互模式）
+    │
+    ▼
+[步骤24] 点击"进入项目"按钮（或点击项目卡片）
+    │
+    ▼
+[项目文件列表页]
+    │
+    ├─► [步骤25] 点击"创建目录"按钮
+    │       │
+    │       ▼
+    │   [步骤26] 输入目录名称（交互模式）
+    │       │
+    │       ▼
+    │   [步骤27] 点击创建（交互模式）
+    │       │
+    │       ▼
+    │   [步骤28] 双击进入目录（交互模式）
+    │
+    └─► [已在目录中，继续]
+    │
+    ▼
+[步骤29] 点击"上传文件"按钮
+    │
+    ▼
+[步骤30] 等待文件上传完成（轮询检测文件存在）
+    │
+    ▼
+[文件已存在]
+    │
+    ├─► [步骤31] 右键点击文件
+    │       │
+    │       ▼
+    │   [步骤32] 点击"添加到图库"
+    │       │
+    │       ▼
+    │   [添加到图库弹窗]
+    │       │
+    │       ├─► [步骤33] 选择分类
+    │       │       │
+    │       │       ▼
+    │       │   [步骤34] 点击"创建新分类"
+    │       │       │
+    │       │       ▼
+    │       │   [步骤35] 输入分类名称（交互模式）
+    │       │       │
+    │       │       ▼
+    │       │   [步骤36] 点击保存（交互模式）
+    │       │       │
+    │       │       ▼
+    │       │   [步骤37] 选择刚创建的分类（交互模式）
+    │       │       │
+    │       │       ▼
+    │       │   [步骤38] 点击添加按钮（交互模式）
+    │
+    └─► [步骤39] 介绍复制和移动功能
+    │
+    ▼
+[步骤40] 点击打开图纸（引导模式下不新标签页打开）
+    │
+    ▼
+[CAD 编辑器页面]
+    │
+    ├─► [步骤41] 介绍侧边栏（引导模式下侧边栏关闭）
+    │       │
+    │       ▼
+    │   [步骤42] 点击侧边栏窄条中的"图纸库"按钮
+    │       │
+    │       ▼
+    │   [步骤43] 介绍图纸库功能
+    │       │
+    │       ▼
+    │   [步骤44] 介绍图块库功能（类似图纸库）
+    │
+    └─► [步骤45] 介绍"我的项目"
+            │
+            ▼
+        [步骤46] 介绍"我的图纸"
+    │
+    ▼
+[引导完成]
+```
+
+### 2.2 步骤详细配置
+
+| 步骤编号 | 目标元素 | 标题 | 内容 | 模式 | 路由 |
+|---------|---------|------|------|------|------|
+| 1 | sidebar-projects | 进入项目管理 | 点击侧边栏的"项目管理"进入项目列表 | interactive | / |
+| 2 | create-project-btn | 新建项目 | 点击"新建项目"按钮创建项目 | display | /projects |
+| 3 | project-name-input | 项目名称 | 输入项目名称，如"我的第一个项目" | interactive | - |
+| 4 | project-desc-input | 项目描述 | 填写项目描述（可选） | display | - |
+| 5 | project-create-submit | 创建项目 | 点击"创建"按钮完成创建 | interactive | - |
+| 6 | view-toggle | 视图切换 | 可以切换卡片模式和列表模式查看项目 | display | /projects |
+| 7 | file-item-menu-btn | 项目操作 | 点击项目卡片的菜单按钮可进行编辑、归档等操作 | display | - |
+| 8 | file-item-menu-btn | 打开菜单 | 点击项目菜单按钮 | interactive | - |
+| 9 | menu-show-roles | 角色管理 | 点击"角色管理"选项 | interactive | - |
+| 10 | create-role-btn | 创建角色 | 点击"创建角色"按钮创建自定义角色 | display | - |
+| 11 | role-name-input | 角色名称 | 输入角色名称 | interactive | - |
+| 12 | role-permissions | 权限配置 | 为角色配置具体的权限 | display | - |
+| 13 | role-save-btn | 保存角色 | 点击保存完成创建 | interactive | - |
+| 14 | system-roles-list | 系统角色 | 系统预置的角色可以直接使用 | display | - |
+| 15 | modal-close-btn | 关闭弹窗 | 关闭角色管理弹窗 | interactive | - |
+| 16 | file-item-menu-btn | 打开菜单 | 再次点击项目菜单按钮 | interactive | /projects |
+| 17 | menu-show-members | 成员管理 | 点击"成员"选项 | interactive | - |
+| 18 | invite-member-btn | 添加成员 | 点击"添加成员"按钮邀请新成员 | display | - |
+| 19 | member-search-input | 搜索用户 | 输入要添加的用户名 | interactive | - |
+| 20 | member-search-result | 选择用户 | 从搜索结果中选择用户 | interactive | - |
+| 21 | member-role-select | 选择角色 | 为成员选择角色权限 | interactive | - |
+| 22 | member-add-btn | 确认添加 | 点击添加按钮完成邀请 | interactive | - |
+| 23 | modal-close-btn | 关闭弹窗 | 关闭成员管理弹窗 | interactive | - |
+| 24 | file-item | 进入项目 | 点击项目进入文件管理 | interactive | - |
+| 25 | create-folder-btn | 创建目录 | 点击"新建文件夹"按钮 | display | - |
+| 26 | folder-name-input | 目录名称 | 输入文件夹名称 | interactive | - |
+| 27 | folder-create-btn | 创建 | 点击创建按钮 | interactive | - |
+| 28 | file-item-folder | 进入目录 | 双击进入刚创建的文件夹 | interactive | - |
+| 29 | upload-btn | 上传文件 | 点击"上传文件"按钮上传 CAD 图纸 | display | - |
+| 30 | file-item | 等待上传 | 等待文件上传完成... | display | - |
+| 31 | file-item | 右键菜单 | 右键点击文件打开菜单 | interactive | - |
+| 32 | context-menu-add-gallery | 添加到图库 | 选择"添加到图库"选项 | interactive | - |
+| 33 | gallery-category-select | 选择分类 | 选择图纸分类 | display | - |
+| 34 | create-category-btn | 创建分类 | 点击"创建新分类" | display | - |
+| 35 | category-name-input | 分类名称 | 输入分类名称 | interactive | - |
+| 36 | category-save-btn | 保存分类 | 点击保存 | interactive | - |
+| 37 | category-item | 选择分类 | 选择刚创建的分类 | interactive | - |
+| 38 | gallery-submit-btn | 确认添加 | 点击添加到图库 | interactive | - |
+| 39 | file-item-menu-btn | 更多操作 | 右键菜单还支持复制和移动功能 | display | - |
+| 40 | file-item | 打开图纸 | 点击打开 CAD 图纸文件 | interactive | - |
+| 41 | cad-sidebar-trigger | 侧边栏 | 侧边栏包含图纸库、图块库等功能 | display | /cad-editor/:fileId |
+| 42 | sidebar-gallery-btn | 图纸库 | 点击图纸库按钮 | interactive | - |
+| 43 | gallery-panel | 图纸库功能 | 可以浏览和插入已添加的图纸 | display | - |
+| 44 | sidebar-blocks-btn | 图块库 | 图块库功能类似，用于插入图块 | display | - |
+| 45 | my-project-tab | 我的项目 | 可以快速访问项目中的图纸 | display | - |
+| 46 | my-drawings-tab | 我的图纸 | 可以访问私人空间的图纸 | display | - |
+
+## 3. 技术实现方案
+
+### 3.1 引导模式全局状态
+
+在 `TourContext` 中增加 `isTourMode` 状态，用于标识当前是否处于引导模式：
 
 ```typescript
 // types/tour.ts
+interface TourContextValue {
+  // ... 现有属性
+  /** 是否处于引导模式 */
+  isTourMode: boolean;
+}
+```
 
-import type { Permission } from '../constants/permissions';
+### 3.2 文件打开逻辑修改
 
-/** 前置条件配置 */
-export interface TourPrecondition {
-  /** 条件描述（显示给用户） */
+修改 `useFileSystemNavigation.ts` 中的 `handleFileOpen`：
+
+```typescript
+// hooks/file-system/useFileSystemNavigation.ts
+const handleFileOpen = useCallback(
+  (node: FileSystemNode) => {
+    // ... 现有检查逻辑
+
+    if (node.isFolder) {
+      // 文件夹处理...
+    } else {
+      const cadExtensions = ['.dwg', '.dxf'];
+      if (node.extension && cadExtensions.includes(node.extension.toLowerCase())) {
+        // 检查是否处于引导模式
+        const isTourMode = localStorage.getItem('cloudcad_tour_mode') === 'true';
+        
+        if (isTourMode) {
+          // 引导模式：使用 navigate 在当前页面跳转
+          const queryParams = new URLSearchParams();
+          queryParams.set('nodeId', node.parentId || '');
+          navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
+        } else {
+          // 正常模式：新标签页打开
+          const queryParams = new URLSearchParams();
+          queryParams.set('nodeId', node.parentId || '');
+          const url = `/cad-editor/${node.id}?${queryParams.toString()}`;
+          window.open(url, '_blank');
+        }
+      }
+    }
+  },
+  [navigate, /* ... */]
+);
+```
+
+### 3.3 CAD 编辑器侧边栏控制
+
+修改 `useSidebarSettings.ts` 或 `SidebarContainer.tsx`：
+
+```typescript
+// components/sidebar/SidebarContainer.tsx
+import { useTour } from '../../contexts/TourContext';
+
+export const SidebarContainer: React.FC<SidebarContainerProps> = (props) => {
+  const { isActive: isTourActive, currentGuide } = useTour();
+  
+  // 引导模式下侧边栏默认关闭
+  useEffect(() => {
+    if (isTourActive && currentGuide?.id === 'project-management-full') {
+      setIsVisible(false);
+    }
+  }, [isTourActive, currentGuide]);
+  
+  // ... 其余代码
+};
+```
+
+### 3.4 引导配置文件结构
+
+```
+src/config/tours/
+├── index.ts                    # 导出入口
+├── project-management-full.ts  # 新增：项目管理完整引导
+├── project-management.ts       # 保留：独立子引导（可选）
+├── gallery.ts
+├── collaboration.ts
+└── ...
+```
+
+## 4. 实现步骤
+
+### Phase 1: 基础设施
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| 1.1 | `types/tour.ts` | 添加 `isTourMode` 到 `TourContextValue` |
+| 1.2 | `contexts/TourContext.tsx` | 实现 `isTourMode` 状态管理 |
+
+### Phase 2: 文件打开逻辑
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| 2.1 | `hooks/file-system/useFileSystemNavigation.ts` | 引导模式下使用 navigate |
+| 2.2 | `pages/FileSystemManager.tsx` | 版本历史打开逻辑（如需要） |
+
+### Phase 3: 侧边栏控制
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| 3.1 | `components/sidebar/SidebarContainer.tsx` | 引导模式下默认关闭 |
+| 3.2 | `hooks/useSidebarSettings.ts` | 可选：添加强制关闭状态 |
+
+### Phase 4: 引导配置
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| 4.1 | `config/tours/project-management-full.ts` | 创建完整引导配置 |
+| 4.2 | `config/tours/index.ts` | 导出新引导 |
+
+### Phase 5: 测试验证
+
+| 任务 | 说明 |
+|------|------|
+| 5.1 | 使用 Chrome DevTools MCP 测试完整流程 |
+| 5.2 | 验证各步骤元素定位正确 |
+| 5.3 | 验证交互模式功能正常 |
+
+## 5. 风险与应对
+
+| 风险 | 影响 | 应对措施 |
+|------|------|----------|
+| 步骤过多导致用户疲劳 | 高 | 设置合理的预计时间，允许用户跳过非必要步骤 |
+| 动态内容定位失败 | 中 | 使用 `waitForElement` 和 `fallbackContent` |
+| 用户操作与引导冲突 | 中 | 交互模式确保用户完成必要操作 |
+| 测试账号不存在 | 中 | 使用 `skipCondition` 跳过成员管理部分 |
+
+## 6. 后续优化
+
+1. **引导进度保存**：支持中途退出后恢复
+2. **步骤分组**：将长流程分为多个阶段
+3. **智能跳过**：检测用户已完成的操作，自动跳过
+4. **多语言支持**：引导内容国际化
+
+## 7. 附录：前置条件设计
+
+### 7.1 前置条件类型
+
+```typescript
+interface TourPrecondition {
   description: string;
-  
-  /** 
-   * 检测函数
-   * 返回 true 表示条件满足
-   */
   check: () => boolean | Promise<boolean>;
-  
-  /** 
-   * 解决方式
-   */
   resolve?: {
-    /** 引导 ID（跳转到其他引导） */
-    guideId?: string;
-    /** 直接插入的步骤 */
-    steps?: TourStep[];
-    /** 自定义处理函数 */
-    handler?: () => void | Promise<void>;
+    guideId?: string;      // 跳转到其他引导
+    steps?: TourStep[];    // 插入步骤
+    handler?: () => void;  // 自定义处理
   };
 }
 ```
 
-### 2.2 可见性配置
+### 7.2 常用前置条件
+
+| 条件 | 检测逻辑 | 解决方式 |
+|------|----------|----------|
+| 有项目 | 检查项目列表非空 | 引导创建项目 |
+| 有 CAD 文件 | 检查文件列表中有 .dwg/.dxf 文件 | 引导上传文件 |
+| 有测试账号 | 检查系统用户列表 | 跳过成员管理步骤 |
+| 有图库分类 | 检查图库分类列表 | 引导创建分类 |
+
+### 7.3 使用示例
 
 ```typescript
-/** 引导可见性配置 */
-export interface TourVisibility {
-  /** 
-   * 所需权限列表
-   * 用户需要拥有所有列出的权限才能看到此引导
-   */
-  permissions?: Permission[];
-  
-  /** 
-   * 自定义可见性检测
-   * 返回 true 表示可见
-   */
-  check?: () => boolean | Promise<boolean>;
-}
-```
-
-### 2.3 TourGuide 接口扩展
-
-```typescript
-export interface TourGuide {
-  // ... 现有属性
-  
-  /** 可见性配置 */
-  visibility?: TourVisibility;
-  
-  /** 前置条件列表（按顺序检测） */
-  preconditions?: TourPrecondition[];
-}
-```
-
----
-
-## 3. 执行流程
-
-### 3.1 引导启动流程
-
-```
-用户点击引导
-     ↓
-检测 visibility（权限过滤）
-     ↓
-┌────┴────┐
-│         │
-无权限    有权限
-│         │
-不显示    检测 preconditions
-          ↓
-     ┌────┴────┐
-     │         │
-     满足     不满足
-     │         │
-     开始引导  执行 resolve
-               ↓
-          ┌────┴────┐
-          │         │
-       guideId   steps/handler
-          │         │
-       递归执行   直接执行
-          │         │
-          └────┬────┘
-               ↓
-          继续检测下一个条件
-               ↓
-          所有条件满足
-               ↓
-          开始原引导
-```
-
-### 3.2 核心逻辑实现
-
-```typescript
-// contexts/TourContext.tsx 中的核心逻辑
-
-/** 开始引导（带前置条件处理） */
-async function startTourWithPreconditions(guideId: string): Promise<void> {
-  const guide = getTourGuideById(guideId);
-  
-  if (!guide) {
-    console.error(`[Tour] Guide not found: ${guideId}`);
-    return;
-  }
-
-  // 检测前置条件
-  for (const condition of guide.preconditions || []) {
-    const met = await condition.check();
-    
-    if (!met) {
-      console.log(`[Tour] Precondition not met: ${condition.description}`);
-      
-      // 执行 resolve
-      if (condition.resolve?.guideId) {
-        // 递归执行前置引导
-        await startTourWithPreconditions(condition.resolve.guideId);
-      } else if (condition.resolve?.steps) {
-        // 直接插入步骤执行
-        await executeInsertedSteps(condition.resolve.steps);
-      } else if (condition.resolve?.handler) {
-        // 执行自定义处理
-        await condition.resolve.handler();
-      }
-      
-      // 重新检测条件
-      const recheck = await condition.check();
-      if (!recheck) {
-        console.warn(`[Tour] Precondition still not met after resolve`);
-        return;
-      }
-    }
-  }
-  
-  // 所有条件满足，开始原引导
-  startTour(guide);
-}
-```
-
----
-
-## 4. 权限过滤集成
-
-### 4.1 集成现有权限系统
-
-项目已有完善的权限系统：
-- `SystemPermission`：系统级权限
-- `ProjectPermission`：项目级权限
-- `projectsApi.checkPermission()`：权限检查 API
-
-### 4.2 可见性检测 Hook
-
-```typescript
-// hooks/useTourVisibility.ts
-
-import { useMemo } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import type { TourGuide } from '../types/tour';
-import type { Permission } from '../constants/permissions';
-
-/**
- * 检查用户是否有指定权限
- */
-async function checkPermissions(permissions: Permission[]): Promise<boolean> {
-  // 根据项目现有权限检查逻辑实现
-  // 系统权限：检查 user.role.permissions
-  // 项目权限：调用 projectsApi.checkPermission
-}
-
-/**
- * 获取可见的引导列表
- */
-export function useVisibleGuides(guides: TourGuide[]): TourGuide[] {
-  const { user, isAuthenticated } = useAuth();
-  
-  return useMemo(async () => {
-    if (!isAuthenticated) return [];
-    
-    const results: TourGuide[] = [];
-    
-    for (const guide of guides) {
-      const visibility = guide.visibility;
-      
-      // 无配置 = 所有人可见
-      if (!visibility) {
-        results.push(guide);
-        continue;
-      }
-      
-      // 权限检查
-      if (visibility.permissions) {
-        const hasPerms = await checkPermissions(visibility.permissions);
-        if (!hasPerms) continue;
-      }
-      
-      // 自定义检查
-      if (visibility.check) {
-        const visible = await visibility.check();
-        if (!visible) continue;
-      }
-      
-      results.push(guide);
-    }
-    
-    return results;
-  }, [guides, user, isAuthenticated]);
-}
-```
-
----
-
-## 5. 各引导流程配置
-
-### 5.1 配置映射表
-
-| 引导 ID | 所需权限 | 前置条件 | 解决方式 |
-|---------|---------|---------|---------|
-| `project-create` | `FILE_CREATE` | 无 | - |
-| `file-upload` | `FILE_UPLOAD` | 有项目 | → `project-create` |
-| `project-members` | `PROJECT_MEMBER_MANAGE` | 有项目 | → `project-create` |
-| `add-to-gallery` | `FILE_OPEN`, `GALLERY_ADD` | 有项目 + 有 DWG/DXF 文件 | → `project-create` → `file-upload` |
-| `project-roles` | `PROJECT_ROLE_MANAGE` | 有项目 | → `project-create` |
-| `collaboration` | 自定义检测（CAD 编辑器） | 已打开图纸 | 内置步骤 |
-| `external-reference` | `CAD_EXTERNAL_REFERENCE` | 已打开图纸 | 内置步骤 |
-| `version-history` | `VERSION_READ` | 有项目 + 有文件 | → `project-create` → `file-upload` |
-| `system-roles` | `SYSTEM_ROLE_READ` | 无 | - |
-| `gallery-manage` | 无 | 无 | - |
-
-### 5.2 配置示例
-
-```typescript
-// 文件上传引导（有前置条件）
-{
-  id: 'file-upload',
-  name: '文件上传与管理',
-  visibility: {
-    permissions: [ProjectPermission.FILE_UPLOAD],
-  },
+const projectManagementFullGuide: TourGuide = {
+  id: 'project-management-full',
+  name: '项目管理完整流程',
+  description: '从创建项目到使用 CAD 编辑器的完整教程',
+  category: '项目管理',
+  estimatedTime: '15 分钟',
+  startPage: 'dashboard',
   preconditions: [
     {
-      description: '有项目',
-      check: () => useProjectStore.getState().projects.length > 0,
-      resolve: { guideId: 'project-create' },
-    },
-  ],
-  steps: [/* ... */],
-}
-
-// 添加图纸到图库（多前置条件链）
-{
-  id: 'add-to-gallery',
-  name: '添加图纸到图库',
-  visibility: {
-    permissions: [ProjectPermission.FILE_OPEN, ProjectPermission.GALLERY_ADD],
-  },
-  preconditions: [
-    {
-      description: '有项目',
-      check: () => useProjectStore.getState().projects.length > 0,
-      resolve: { guideId: 'project-create' },
-    },
-    {
-      description: '有 DWG/DXF 文件',
-      check: () => {
-        const files = useFileStore.getState().files;
-        return files.some(f => 
-          f.name.toLowerCase().endsWith('.dwg') || 
-          f.name.toLowerCase().endsWith('.dxf')
-        );
+      description: '有测试账号可用于成员管理演示',
+      check: async () => {
+        // 检查是否存在测试账号
+        const users = await usersApi.list();
+        return users.data?.some(u => u.username === 'test_user');
       },
-      resolve: { guideId: 'file-upload' },
-    },
-  ],
-  steps: [/* ... */],
-}
-
-// 协作功能（内置步骤解决）
-{
-  id: 'collaboration',
-  name: '协作功能',
-  visibility: {
-    check: () => window.location.pathname.startsWith('/cad-editor'),
-  },
-  preconditions: [
-    {
-      description: '已打开图纸文件',
-      check: () => !!getCurrentFileId(),
       resolve: {
+        // 没有测试账号时跳过成员管理相关步骤
         steps: [
           {
-            target: 'sidebar-projects',
-            title: '选择项目',
-            content: '请先选择一个包含图纸文件的项目。',
-            mode: 'interactive',
-            actionType: 'click',
-          },
-          {
-            target: 'file-item',
-            title: '打开图纸',
-            content: '点击 DWG 或 DXF 文件在 CAD 编辑器中打开。',
-            mode: 'interactive',
-            actionType: 'click',
-          },
-        ],
-      },
-    },
-  ],
-  steps: [/* ... */],
-}
-
-// 系统角色管理（仅管理员可见）
-{
-  id: 'system-roles',
-  name: '系统角色管理',
-  visibility: {
-    permissions: [SystemPermission.SYSTEM_ROLE_READ],
-  },
-  preconditions: [],
-  steps: [/* ... */],
-}
-```
-
----
-
-## 6. Playwright 测试系统
-
-### 6.1 文件结构
-
-```
-packages/frontend/
-├── e2e/
-│   ├── playwright.config.ts          # Playwright 配置
-│   ├── auth.setup.ts                 # 认证状态设置
-│   ├── fixtures/
-│   │   └── auth.ts                   # 登录 fixture
-│   ├── utils/
-│   │   ├── tour-test-runner.ts       # 配置驱动的测试运行器
-│   │   └── screenshot-helper.ts      # 截图辅助函数
-│   └── tours/
-│       └── tour-guides.spec.ts       # 统一测试入口
-```
-
-### 6.2 登录方式
-
-使用 **Cookie/Token 状态复用**：
-- 首次运行时自动登录并保存状态到 `.auth/user.json`
-- 后续测试复用已保存的认证状态
-
-```typescript
-// e2e/auth.setup.ts
-
-import { test as setup, expect } from '@playwright/test';
-
-const AUTH_FILE = 'e2e/.auth/user.json';
-
-setup('authenticate', async ({ page }) => {
-  await page.goto('/login');
-  await page.fill('input[name="account"]', process.env.E2E_TEST_USER_EMAIL!);
-  await page.fill('input[name="password"]', process.env.E2E_TEST_USER_PASSWORD!);
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL('/');
-  await page.context().storageState({ path: AUTH_FILE });
-});
-```
-
-### 6.3 配置驱动的测试运行器
-
-```typescript
-// e2e/utils/tour-test-runner.ts
-
-import { Page, test } from '@playwright/test';
-import type { TourGuide, TourStep } from '../../src/types/tour';
-
-/**
- * 执行单个引导步骤
- */
-async function executeStep(page: Page, step: TourStep): Promise<void> {
-  const selector = `[data-tour="${step.target}"]`;
-  
-  if (step.route) {
-    await page.goto(step.route);
-  }
-  
-  await page.waitForSelector(selector, { 
-    state: 'visible', 
-    timeout: (step.waitForElement as number) || 5000 
-  });
-  
-  if (step.mode === 'interactive') {
-    const element = page.locator(selector);
-    switch (step.actionType) {
-      case 'click':
-        await element.click();
-        break;
-      case 'right-click':
-        await element.click({ button: 'right' });
-        break;
-      // ... 其他操作
+            target: 'member-management-skip-hint',
+            title: '跳过成员管理',
+            content: '暂无测试账号，将跳过成员管理演示',
+            placement: 'bottom',
+          }
+        ]
+      }
     }
-  }
-}
-
-/**
- * 执行完整引导流程测试
- */
-export async function runTourGuideTest(page: Page, guide: TourGuide): Promise<void> {
-  const startUrl = guide.startPage === 'dashboard' ? '/' : 
-                   guide.startPage === 'current' ? page.url() : 
-                   guide.startPage;
-  
-  await page.goto(startUrl);
-  
-  for (let i = 0; i < guide.steps.length; i++) {
-    const step = guide.steps[i];
-    await test.step(`步骤 ${i + 1}/${guide.steps.length}: ${step.title}`, async () => {
-      await executeStep(page, step);
-    });
-  }
-}
-```
-
-### 6.4 统一测试入口
-
-```typescript
-// e2e/tours/tour-guides.spec.ts
-
-import { test } from '@playwright/test';
-import { tourGuides } from '../../src/config/tourGuides';
-import { runTourGuideTest } from '../utils/tour-test-runner';
-
-// 为每个引导生成测试
-for (const guide of tourGuides) {
-  test(`引导流程: ${guide.name}`, async ({ page }) => {
-    await runTourGuideTest(page, guide);
-  });
-}
-```
-
----
-
-## 7. CDP 文档截图系统
-
-### 7.1 文件结构
-
-```
-scripts/
-├── generate-tour-docs.ts       # 文档生成主脚本
-└── tour-docs-config.ts         # 文档生成配置
-
-documents/user-guide/           # 输出目录
-├── file-upload/
-│   ├── index.md
-│   ├── step-1-projects.png
-│   └── ...
-```
-
-### 7.2 核心实现
-
-```typescript
-// scripts/generate-tour-docs.ts
-
-import { chromium, Page, Browser, CDPSession } from 'playwright';
-import * as fs from 'fs';
-import { tourGuides } from '../packages/frontend/src/config/tourGuides';
-
-class TourDocGenerator {
-  private browser: Browser | null = null;
-  private page: Page | null = null;
-  private cdp: CDPSession | null = null;
-
-  async init() {
-    this.browser = await chromium.launch({ headless: false });
-    const context = await this.browser.newContext({
-      storageState: './e2e/.auth/user.json',
-      viewport: null,
-    });
-    this.page = await context.newPage();
-    this.cdp = await this.page.context().newCDPSession(this.page);
-  }
-
-  /**
-   * CDP 高质量截图
-   */
-  private async takeScreenshot(outputPath: string): Promise<void> {
-    const result = await this.cdp!.send('Page.captureScreenshot', {
-      format: 'png',
-      captureBeyondViewport: true,
-    });
-    const buffer = Buffer.from((result as any).data, 'base64');
-    fs.writeFileSync(outputPath, buffer);
-  }
-
-  /**
-   * 生成 Markdown 文档
-   */
-  private generateMarkdown(guide: TourGuide, screenshots: string[], outputDir: string): void {
-    const lines = [
-      `# ${guide.name}`,
-      '',
-      `> 预计时长：${guide.estimatedTime}`,
-      '',
-      guide.description,
-      '',
-      '## 操作步骤',
-      '',
-    ];
-
-    guide.steps.forEach((step, i) => {
-      lines.push(`### ${i + 1}. ${step.title}`);
-      lines.push('');
-      lines.push(`![${step.title}](${screenshots[i]})`);
-      lines.push('');
-      lines.push(step.content);
-      lines.push('');
-    });
-
-    fs.writeFileSync(`${outputDir}/index.md`, lines.join('\n'));
-  }
-}
-```
-
----
-
-## 8. 实现计划
-
-### Phase 1: 类型定义与核心逻辑
-
-1. 扩展 `types/tour.ts` 添加前置条件和可见性类型
-2. 实现 `hooks/useTourVisibility.ts` 权限过滤
-3. 修改 `contexts/TourContext.tsx` 添加前置条件检测
-
-### Phase 2: 配置更新
-
-1. 更新 `config/tourGuides.ts` 添加 `visibility` 和 `preconditions`
-2. 验证所有引导流程配置正确
-
-### Phase 3: 测试系统
-
-1. 添加 Playwright 依赖
-2. 创建 `e2e/` 目录和测试文件
-3. 实现配置驱动的测试运行器
-
-### Phase 4: 文档生成
-
-1. 创建 `scripts/generate-tour-docs.ts`
-2. 实现 CDP 截图和 Markdown 生成
-3. 生成所有引导的用户手册
-
----
-
-## 9. 文件变更清单
-
-**新增文件：**
-```
-packages/frontend/src/hooks/useTourVisibility.ts
-packages/frontend/e2e/playwright.config.ts
-packages/frontend/e2e/auth.setup.ts
-packages/frontend/e2e/fixtures/auth.ts
-packages/frontend/e2e/utils/tour-test-runner.ts
-packages/frontend/e2e/tours/tour-guides.spec.ts
-scripts/generate-tour-docs.ts
-scripts/tour-docs-config.ts
-documents/user-guide/  (自动生成)
-```
-
-**修改文件：**
-```
-packages/frontend/src/types/tour.ts
-packages/frontend/src/config/tourGuides.ts
-packages/frontend/src/contexts/TourContext.tsx
-packages/frontend/package.json  (添加 Playwright 依赖和脚本)
+  ],
+  steps: [
+    // ... 完整步骤列表
+  ]
+};
 ```

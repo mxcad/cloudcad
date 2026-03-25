@@ -509,6 +509,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       >
         {availableActions.map((action) => (
           <button
+            {...action.props}
             key={action.type}
             onClick={(e) => {
               e.stopPropagation();

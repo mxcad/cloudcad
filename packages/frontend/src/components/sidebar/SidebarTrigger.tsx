@@ -35,6 +35,8 @@ interface ToolButtonConfig {
   icon: React.ReactNode;
   label: string;
   color: string;
+  /** 引导定位标识 */
+  dataTour: string;
 }
 
 const TOOL_BUTTONS: ToolButtonConfig[] = [
@@ -45,6 +47,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     icon: <FolderOpen size={18} />,
     label: '我的项目',
     color: '#3b82f6',
+    dataTour: 'trigger-my-project',
   },
   {
     id: 'my-drawings',
@@ -53,6 +56,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     icon: <FileText size={18} />,
     label: '我的图纸',
     color: '#06b6d4',
+    dataTour: 'trigger-my-drawings',
   },
   {
     id: 'drawings-gallery',
@@ -61,6 +65,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     icon: <Box size={18} />,
     label: '图纸库',
     color: '#8b5cf6',
+    dataTour: 'trigger-drawings-gallery',
   },
   {
     id: 'blocks-gallery',
@@ -69,6 +74,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     icon: <LayoutGrid size={18} />,
     label: '图块库',
     color: '#ec4899',
+    dataTour: 'trigger-blocks-gallery',
   },
   {
     id: 'collaborate',
@@ -76,6 +82,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     icon: <Users size={18} />,
     label: '协同',
     color: '#f59e0b',
+    dataTour: 'trigger-collaborate',
   },
 ];
 
@@ -98,7 +105,7 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   };
 
   return (
-    <div className={styles.narrowSidebar} role="toolbar" aria-label="侧边栏工具条">
+    <div className={styles.narrowSidebar} role="toolbar" aria-label="侧边栏工具条" data-tour="cad-sidebar-trigger">
       {/* 顶部装饰线 */}
       <div className={styles.sidebarAccentLine} />
       
@@ -128,6 +135,7 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
                 title={button.label}
                 aria-label={`打开${button.label}`}
                 aria-pressed={isActive}
+                data-tour={button.dataTour}
               >
                 {/* 玻璃背景 */}
                 <div className={styles.buttonGlass} />

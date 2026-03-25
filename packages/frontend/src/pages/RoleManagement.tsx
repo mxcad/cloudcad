@@ -435,6 +435,7 @@ export const RoleManagement = () => {
           <button
             onClick={() => setActiveTab('system')}
             className={`tab-button ${activeTab === 'system' ? 'active' : ''}`}
+            data-tour="system-roles-tab"
           >
             <Shield size={16} />
             系统角色
@@ -531,7 +532,7 @@ export const RoleManagement = () => {
               </p>
             </div>
             {canCreateRoles && (
-              <Button onClick={handleCreateSystemRole} disabled={loading}>
+              <Button onClick={handleCreateSystemRole} disabled={loading} data-tour="create-role-btn">
                 <Plus size={18} />
                 新建角色
               </Button>

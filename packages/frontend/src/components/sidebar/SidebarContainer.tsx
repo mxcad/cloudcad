@@ -21,6 +21,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import Box from 'lucide-react/dist/esm/icons/box';
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
 import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { useSidebarSettings } from '../../hooks/useSidebarSettings';
@@ -32,6 +33,7 @@ import {
   resetDocumentModified,
   checkAndConfirmUnsavedChanges,
 } from '../../services/mxcadManager';
+import { isTourModeActive } from '../../contexts/TourContext';
 import { filesApi } from '../../services/filesApi';
 import { projectsApi } from '../../services/projectsApi';
 import { SidebarTabBar } from './SidebarTabBar';
@@ -94,6 +96,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // 当前打开的文件 ID
   const [currentOpenFileId, setCurrentOpenFileId] = useState<string | null>(null);
 
+  // 当前打开文件的父目录 ID
+  const [currentOpenFileParentId, setCurrentOpenFileParentId] = useState<string | null>(null);
+
   // 文档修改状态
   const [isModified, setIsModified] = useState(false);
 
@@ -102,6 +107,13 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ==================== Effects ====================
+
+  // 引导模式下默认关闭侧边栏
+  useEffect(() => {
+    if (isTourModeActive()) {
+      setIsVisible(false);
+    }
+  }, [setIsVisible]);
 
   // 获取私人空间 ID
   useEffect(() => {
@@ -117,6 +129,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     const updateFileInfo = () => {
       const fileInfo = mxcadManager.getCurrentFileInfo();
       setCurrentOpenFileId(fileInfo?.fileId || null);
+      setCurrentOpenFileParentId(fileInfo?.parentId || null);
       setIsModified(isDocumentModified());
     };
 
@@ -331,7 +344,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
               <button
                 className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
                 onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
-                data-tour="sidebar-gallery"
               >
                 <Box size={14} />
                 <span>图纸库</span>
@@ -339,8 +351,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
               <button
                 className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
                 onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
+                data-tour="sidebar-blocks-btn"
               >
-                <Box size={14} />
+                <LayoutGrid size={14} />
                 <span>图块库</span>
               </button>
             </div>
@@ -353,6 +366,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   onDrawingOpen={handleDrawingOpen}
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
+                  parentId={currentOpenFileParentId}
                 />
               )}
               {activeDrawingsSubTab === 'my-drawings' && (
@@ -363,15 +377,18 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   isPersonalSpace={true}
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
+                  parentId={currentOpenFileParentId}
                 />
               )}
               {(activeDrawingsSubTab === 'drawings-gallery' || activeDrawingsSubTab === 'blocks-gallery') && (
-                <CADEditorSidebar
-                  key="gallery"
-                  defaultGalleryType={activeDrawingsSubTab === 'blocks-gallery' ? 'blocks' : 'drawings'}
-                  onInsertFile={handleGalleryInsertFile}
-                  showHeader={false}
-                />
+                <div data-tour="gallery-panel">
+                  <CADEditorSidebar
+                    key="gallery"
+                    defaultGalleryType={activeDrawingsSubTab === 'blocks-gallery' ? 'blocks' : 'drawings'}
+                    onInsertFile={handleGalleryInsertFile}
+                    showHeader={false}
+                  />
+                </div>
               )}
             </div>
           </div>

@@ -40,6 +40,7 @@ export interface FileAction {
   visibilityCheck?: (props: FileActionCheckProps) => boolean;
   /** 操作是否为危险操作 */
   isDestructive?: boolean;
+  props?: Record<string, any>; // 其他可能需要的属性
 }
 
 /**
@@ -268,6 +269,9 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isFolder, onAddToGallery }) =>
       !isFolder && !!onAddToGallery,
     permissionCheck: ({ canAddToGallery }) => canAddToGallery !== false,
+    props: {
+      'data-tour': 'context-menu-add-gallery'
+    }
   },
   rename: {
     type: 'rename',
@@ -359,6 +363,9 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-slate-50',
     visibilityCheck: ({ isRoot, isTrash, onShowMembers }) =>
       isRoot && !isTrash && !!onShowMembers,
+    props: {
+      'data-tour': 'menu-show-members'
+    }
   },
   show_roles: {
     type: 'show_roles',
@@ -369,6 +376,9 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-slate-50',
     visibilityCheck: ({ isRoot, isTrash, onShowRoles }) =>
       isRoot && !isTrash && !!onShowRoles,
+    props: {
+      'data-tour': 'menu-show-roles'
+    }
   },
 };
 

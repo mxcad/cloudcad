@@ -92,6 +92,7 @@ const defaultTourContext = {
   currentGuide: null as TourGuide | null,
   currentStep: 0,
   resolvedCurrentStep: null as import('../../types/tour').TourStep | null,
+  isTourMode: false,
 };
 
 vi.mock('../../contexts/TourContext', () => ({

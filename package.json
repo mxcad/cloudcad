@@ -17,6 +17,7 @@
     "cooperate": "node runtime/scripts/cooperate-manager.js",
     "generate:frontend-permissions": "node scripts/generate-frontend-permissions.js",
     "generate:api-types": "node scripts/generate-api-types.js",
+    "generate:tour-docs": "tsx scripts/generate-tour-docs.ts",
     "pack:offline": "node scripts/pack-offline.js --deploy",
     "pack:offline:win": "node scripts/pack-offline.js --win --deploy",
     "pack:offline:linux": "node scripts/pack-offline.js --linux --deploy",

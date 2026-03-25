@@ -26,6 +26,7 @@ import { RuntimeConfigPage } from './pages/RuntimeConfigPage';
 import { useAuth } from './contexts/AuthContext';
 import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
 import { TourProvider } from './contexts/TourContext';
+import { GlobalTourRenderer } from './components/tour';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 
@@ -98,8 +99,8 @@ function AppContent() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* CAD 编辑器路由 - 仅用于 URL 导航，实际渲染由全局覆盖层处理 */}
-        {/* 当用户直接访问 /cad-editor/:fileId 时，需要重定向到受保护的路由 */}
+        {/* CAD 编辑器路由 - 实际渲染由全局 CADEditorDirect 覆盖层处理 */}
+        {/* 这个路由只需要通过 ProtectedRoute 进行认证检查，不需要渲染实际内容 */}
         <Route
           path="/cad-editor"
           element={
@@ -112,7 +113,8 @@ function AppContent() {
           path="/cad-editor/:fileId"
           element={
             <ProtectedRoute>
-              <div />
+              {/* CADEditorDirect 全局覆盖层会根据 URL 自动显示 */}
+              <div style={{ display: 'none' }} />
             </ProtectedRoute>
           }
         />
@@ -247,6 +249,8 @@ function App() {
       <RuntimeConfigProvider>
         <TourProvider>
           <AppContent />
+          {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
+          <GlobalTourRenderer />
         </TourProvider>
       </RuntimeConfigProvider>
     </Router>

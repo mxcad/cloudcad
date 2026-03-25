@@ -13,7 +13,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { TourStep, TooltipPlacement, StepMode } from '../../types/tour';
 import { Button } from '../ui/Button';
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import X from 'lucide-react/dist/esm/icons/x';
 import MousePointerClick from 'lucide-react/dist/esm/icons/mouse-pointer-click';
@@ -31,8 +30,6 @@ interface TourTooltipProps {
   hasTarget: boolean;
   /** 下一步 */
   onNext: () => void;
-  /** 上一步 */
-  onPrev: () => void;
   /** 跳过引导 */
   onSkip: () => void;
 }
@@ -217,7 +214,6 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
   targetRect,
   hasTarget,
   onNext,
-  onPrev,
   onSkip,
 }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -267,7 +263,6 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
   }, [updatePosition]);
 
   const isLastStep = currentStep >= totalSteps - 1;
-  const isFirstStep = currentStep === 0;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   /** 获取显示内容 */
@@ -307,6 +302,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
         boxShadow: 'var(--shadow-xl)',
         overflow: 'hidden',
         animation: 'tooltipFadeIn 0.2s ease-out',
+        pointerEvents: 'auto', // 确保在交互模式下 Tooltip 可以点击
       }}
     >
       {/* 箭头 */}
@@ -454,16 +450,6 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
           跳过引导
         </Button>
         <div style={{ display: 'flex', gap: 8 }}>
-          {!isFirstStep && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon={ChevronLeft}
-              onClick={onPrev}
-            >
-              上一步
-            </Button>
-          )}
           {/* 交互模式不显示下一步按钮，用户需要完成操作 */}
           {!isInteractiveMode && (
             <Button

@@ -14,7 +14,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
 } from 'class-validator';
 
 export class CreateProjectRoleDto {
@@ -25,7 +24,6 @@ export class CreateProjectRoleDto {
   })
   @IsString()
   @IsOptional()
-  @IsUUID()
   projectId?: string;
 
   @ApiProperty({ description: '角色名称', example: '项目经理' })

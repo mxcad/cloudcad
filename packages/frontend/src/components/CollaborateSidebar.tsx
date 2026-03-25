@@ -191,6 +191,7 @@ export const CollaborateSidebar: React.FC = () => {
           onClick={handleCreateWork}
           disabled={creating || currentWorkId !== null}
           className={`${styles.primaryButton} ${styles.ripple}`}
+          data-tour="create-collaborate-btn"
         >
           {creating ? (
             <Loader2 size={16} className="animate-spin" />
@@ -236,7 +237,7 @@ export const CollaborateSidebar: React.FC = () => {
       )}
 
       {/* 协同列表 */}
-      <div className={styles.sessionList}>
+      <div className={styles.sessionList} data-tour="collaborate-list">
         {loading ? (
           <div className={styles.loadingState}>
             <div className={styles.loadingSpinner} />

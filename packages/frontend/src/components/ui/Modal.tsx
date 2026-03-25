@@ -1,6 +1,7 @@
 import X from 'lucide-react/dist/esm/icons/x';
 import React from 'react';
 import { Button } from './Button';
+import { isTourModeActive } from '../../contexts/TourContext';
 
 interface ModalProps {
   isOpen: boolean;
@@ -71,6 +72,8 @@ export const Modal: React.FC<ModalProps> = ({
         }}
         onClick={(e) => {
           e.stopPropagation();
+          // 引导模式下禁止点击外部关闭弹框
+          if (isTourModeActive()) return;
           onClose();
         }}
       />
@@ -100,6 +103,7 @@ export const Modal: React.FC<ModalProps> = ({
             {title}
           </h3>
           <button
+            data-tour="modal-close-btn"
             onClick={onClose}
             className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
             style={{ 

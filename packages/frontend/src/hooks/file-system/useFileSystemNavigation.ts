@@ -14,6 +14,7 @@ import { filesApi } from '../../services/filesApi';
 import { FileSystemNode } from '../../types/filesystem';
 
 import { handleError } from '../../utils/errorHandler';
+import { isTourModeActive } from '../../contexts/TourContext';
 
 interface UseFileSystemNavigationProps {
   urlProjectId?: string;
@@ -110,12 +111,19 @@ export const useFileSystemNavigation = ({
           node.extension &&
           cadExtensions.includes(node.extension.toLowerCase())
         ) {
-          // CAD 文件在新标签页打开编辑器
-          // 不需要 mode 参数，编辑器会根据文件所属空间自动判断
+          // 检查是否处于引导模式
+        if (isTourModeActive()) {
+          // 引导模式：使用 navigate 在当前页面跳转
+          const queryParams = new URLSearchParams();
+          queryParams.set('nodeId', node.parentId || '');
+          navigate(`/cad-editor/${node.id}?${queryParams.toString()}`);
+        } else {
+          // 正常模式：新标签页打开
           const queryParams = new URLSearchParams();
           queryParams.set('nodeId', node.parentId || '');
           const url = `/cad-editor/${node.id}?${queryParams.toString()}`;
           window.open(url, '_blank');
+        }
         } else {
           handleDownload(node);
         }

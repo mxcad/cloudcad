@@ -17,7 +17,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
 import { useTour } from '../contexts/TourContext';
-import { TourCenter, TourStartModal, TourOverlay, TourTooltip } from './tour';
 
 // Lucide 图标导入
 import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
@@ -111,7 +110,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge,
 
 /**
  * 主布局组件 - CloudCAD 登录后界面
- * 
+ *
  * 设计特色：
  * - 专业侧边栏导航，带有用户存储信息
  * - 沉浸式顶部导航栏，毛玻璃效果
@@ -120,25 +119,20 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge,
  */
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+
+  // 如果是 CAD 编辑器页面，不渲染布局（CAD 编辑器有自己的全屏布局）
+  // 返回一个空的占位符，避免 React Router 认为没有匹配到路由
+  if (location.pathname.startsWith('/cad-editor/')) {
+    return <div style={{ display: 'none' }} />;
+  }
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
   const { hasPermission } = usePermission();
   const { config: runtimeConfig } = useRuntimeConfig();
   const { isDark } = useTheme();
-  const { 
-    isActive: isTourActive, 
-    currentGuide,
-    currentStep,
-    resolvedCurrentStep,
-    isTourCenterOpen, 
-    isStartModalOpen,
-    openTourCenter, 
-    closeTourCenter, 
-    dismissStartModal,
-    nextStep,
-    prevStep,
-    skipTour,
-    completeTour,
+  const {
+    isActive: isTourActive,
+    openTourCenter,
   } = useTour();
   
   // UI 状态
@@ -223,7 +217,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const menuItems = useMemo(() => [
     { to: '/dashboard', icon: LayoutDashboard, label: '仪表盘', visible: true },
     { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true, dataTour: 'sidebar-projects' },
-    { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true },
+    { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true, dataTour: 'sidebar-personal-space' },
     { to: '/font-library', icon: Type, label: '字体库', visible:
       hasPermission(SystemPermission.SYSTEM_FONT_READ) },
     { to: '/users', icon: Users, label: '用户管理', visible:
@@ -755,46 +749,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </p>
         </div>
       </Modal>
-
-      {/* 引导中心弹窗 */}
-      <TourCenter
-        isOpen={isTourCenterOpen}
-        onClose={closeTourCenter}
-      />
-
-      {/* 首次登录引导提示弹窗 */}
-      <TourStartModal
-        isOpen={isStartModalOpen}
-        onDismiss={dismissStartModal}
-        onViewNow={() => {
-          dismissStartModal();
-          openTourCenter();
-        }}
-      />
-
-      {/* 引导遮罩层和提示气泡 */}
-      {resolvedCurrentStep && currentGuide && (
-        <TourOverlay
-          step={resolvedCurrentStep}
-          isActive={isTourActive}
-          onSkip={skipTour}
-          onSkipStep={nextStep}
-          onInteractionComplete={nextStep}
-        >
-          {({ targetRect, hasTarget }) => (
-            <TourTooltip
-              step={resolvedCurrentStep}
-              currentStep={currentStep}
-              totalSteps={currentGuide.steps.length}
-              targetRect={targetRect}
-              hasTarget={hasTarget}
-              onNext={nextStep}
-              onPrev={prevStep}
-              onSkip={skipTour}
-            />
-          )}
-        </TourOverlay>
-      )}
     </div>
   );
 };

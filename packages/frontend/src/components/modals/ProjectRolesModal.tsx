@@ -206,7 +206,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
         title="项目角色管理"
         maxWidth="max-w-4xl"
         footer={
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-tour="modal-close-btn">
             关闭
           </Button>
         }
@@ -231,6 +231,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
               </div>
             </button>
             <button
+              data-tour="system-roles-tab-btn"
               onClick={() => setActiveTab('system')}
               className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
                 activeTab === 'system'

@@ -205,6 +205,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
     <div className="relative" ref={dropdownRef}>
       {/* 触发按钮 */}
       <button
+        data-tour={`category-select-btn-level-${level}`} // 添加 data-tour 属性
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between ${
@@ -255,6 +256,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
             {isCreating ? (
               <div className="p-3 bg-indigo-50 border-b border-indigo-100">
                 <input
+                  data-tour="category-name-input"
                   ref={createInputRef}
                   type="text"
                   value={newTypeName}
@@ -268,6 +270,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
                 />
                 <div className="flex gap-2 mt-2">
                   <button
+                    data-tour="category-save-btn"
                     onClick={handleSaveCreate}
                     disabled={isSubmitting || !newTypeName.trim()}
                     className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -384,6 +387,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
           {!isCreating && level < MAX_LEVEL && (
             <div className="p-2 border-t border-gray-100 bg-gray-50">
               <button
+                data-tour="create-category-btn"
                 onClick={handleCreate}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
               >
@@ -556,7 +560,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
           </div>
 
           {/* 分类选择 */}
-          <div data-tour="gallery-category-select">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
               选择分类
             </label>
@@ -627,6 +631,7 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
         {/* 底部按钮 */}
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <button
+            data-tour="modal-close-btn"
             onClick={onClose}
             className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
           >

@@ -4,7 +4,7 @@
  * 
  * 设计要点：
  * - 复用 Modal 组件实现弹窗
- * - 分类展示引导流程
+ * - 分类展示引导流程（动态从引导配置生成）
  * - 显示完成状态和进度
  * - 支持搜索筛选
  */
@@ -21,23 +21,12 @@ import Circle from 'lucide-react/dist/esm/icons/circle';
 import PlayCircle from 'lucide-react/dist/esm/icons/play-circle';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
-import Image from 'lucide-react/dist/esm/icons/image';
-import Users from 'lucide-react/dist/esm/icons/users';
-import Settings from 'lucide-react/dist/esm/icons/settings';
 
 /** z-index 层级（与引导遮罩层一致） */
 const TOUR_CENTER_Z_INDEX = 10002;
 
-/** 分类图标映射 */
-const categoryIcons: Record<TourCategory, React.ComponentType<{ size?: number; className?: string }>> = {
-  '项目管理': FolderOpen,
-  '图库管理': Image,
-  '协作功能': Users,
-  '系统管理': Settings,
-};
-
-/** 分类排序顺序 */
-const categoryOrder: TourCategory[] = ['项目管理', '图库管理', '协作功能', '系统管理'];
+/** 默认分类图标 */
+const DefaultCategoryIcon = FolderOpen;
 
 interface TourCenterProps {
   /** 是否打开 */
@@ -54,8 +43,6 @@ const TourCard: React.FC<{
   isCompleted: boolean;
   onStart: () => void;
 }> = ({ guide, isCompleted, onStart }) => {
-  const CategoryIcon = categoryIcons[guide.category] || FolderOpen;
-  
   return (
     <div
       className="group relative p-4 rounded-xl transition-all duration-300 cursor-pointer"
@@ -94,7 +81,7 @@ const TourCard: React.FC<{
             : 'linear-gradient(135deg, var(--primary-100), var(--primary-50))',
         }}
       >
-        <CategoryIcon 
+        <DefaultCategoryIcon 
           size={20} 
           className={isCompleted ? 'text-[var(--success)]' : 'text-[var(--primary-500)]'}
         />
@@ -164,19 +151,30 @@ export const TourCenter: React.FC<TourCenterProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TourCategory | 'all'>('all');
 
-  /** 按分类分组 */
-  const guidesByCategory = useMemo(() => {
-    const result: Record<TourCategory, TourGuide[]> = {
-      '项目管理': [],
-      '图库管理': [],
-      '协作功能': [],
-      '系统管理': [],
-    };
+  /** 从引导配置动态提取分类列表（保持首次出现的顺序） */
+  const categories = useMemo(() => {
+    const seen = new Set<TourCategory>();
+    const result: TourCategory[] = [];
     
     guides.forEach(guide => {
-      if (result[guide.category]) {
-        result[guide.category].push(guide);
+      if (!seen.has(guide.category)) {
+        seen.add(guide.category);
+        result.push(guide.category);
       }
+    });
+    
+    return result;
+  }, [guides]);
+
+  /** 按分类分组 */
+  const guidesByCategory = useMemo(() => {
+    const result: Record<TourCategory, TourGuide[]> = {};
+    
+    guides.forEach(guide => {
+      if (!result[guide.category]) {
+        result[guide.category] = [];
+      }
+      result[guide.category]!.push(guide);
     });
     
     return result;
@@ -224,14 +222,14 @@ export const TourCenter: React.FC<TourCenterProps> = ({
     }
     
     const result: Partial<Record<TourCategory, TourGuide[]>> = {};
-    categoryOrder.forEach(category => {
+    categories.forEach(category => {
       const categoryGuides = filteredGuides.filter(g => g.category === category);
       if (categoryGuides.length > 0) {
         result[category] = categoryGuides;
       }
     });
     return result;
-  }, [filteredGuides, selectedCategory]);
+  }, [filteredGuides, selectedCategory, categories]);
 
   return (
     <Modal
@@ -325,7 +323,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
           >
             全部
           </button>
-          {categoryOrder.map(category => {
+          {categories.map(category => {
             const count = guidesByCategory[category]?.length || 0;
             if (count === 0) return null;
             return (
@@ -358,13 +356,12 @@ export const TourCenter: React.FC<TourCenterProps> = ({
         <div className="space-y-6">
           {Object.entries(categorizedGuides).map(([category, categoryGuides]) => {
             if (!categoryGuides || categoryGuides.length === 0) return null;
-            const CategoryIcon = categoryIcons[category as TourCategory] || FolderOpen;
             
             return (
               <div key={category}>
                 {/* 分类标题 */}
                 <div className="flex items-center gap-2 mb-3">
-                  <CategoryIcon size={18} className="text-[var(--primary-500)]" />
+                  <DefaultCategoryIcon size={18} className="text-[var(--primary-500)]" />
                   <h3
                     className="text-sm font-semibold"
                     style={{ color: 'var(--text-secondary)' }}

@@ -1,10 +1,51 @@
 /**
  * 用户引导系统类型定义
- * @version 1.3.0
+ * @version 1.4.0
  */
 
+import type { Permission } from '../constants/permissions';
+
+/** 前置条件配置 */
+export interface TourPrecondition {
+  /** 条件描述（显示给用户） */
+  description: string;
+  
+  /** 
+   * 检测函数
+   * 返回 true 表示条件满足
+   */
+  check: () => boolean | Promise<boolean>;
+  
+  /** 
+   * 解决方式
+   */
+  resolve?: {
+    /** 引导 ID（跳转到其他引导） */
+    guideId?: string;
+    /** 直接插入的步骤 */
+    steps?: TourStep[];
+    /** 自定义处理函数 */
+    handler?: () => void | Promise<void>;
+  };
+}
+
+/** 引导可见性配置 */
+export interface TourVisibility {
+  /** 
+   * 所需权限列表
+   * 用户需要拥有所有列出的权限才能看到此引导
+   */
+  permissions?: Permission[];
+  
+  /** 
+   * 自定义可见性检测
+   * 返回 true 表示可见
+   */
+  check?: () => boolean | Promise<boolean>;
+}
+
 /** 跳过条件类型 */
-export type SkipConditionType = 'element-not-exists' | 'element-count-zero' | 'feature-disabled' | 'custom';
+export type SkipConditionType = 'element-exists' | 'element-not-exists' | 'element-count-zero' | 'feature-disabled' | 'custom';
 
 /** 跳过条件（声明式配置，支持序列化） */
 export interface SkipCondition {
@@ -12,7 +53,8 @@ export interface SkipCondition {
   type: SkipConditionType;
   /** 
    * 目标选择器
-   * - type=element-not-exists: 检查元素是否存在
+   * - type=element-exists: 当元素存在时跳过
+   * - type=element-not-exists: 当元素不存在时跳过
    * - type=element-count-zero: 检查元素数量是否为 0
    */
   selector?: string;
@@ -122,14 +164,16 @@ export interface TourStepAlternative {
   step: Partial<TourStep>;
 }
 
-/** 引导流程分类 */
-export type TourCategory = '项目管理' | '图库管理' | '协作功能' | '系统管理';
+/** 引导流程分类（动态，由引导配置决定） */
+export type TourCategory = string;
 
 /** 引导起始页面配置 */
 export type TourStartPage = 'dashboard' | 'current' | string;
 
 /** 引导流程 */
 export interface TourGuide {
+  /** 是否隐藏 */
+  isHide?: boolean
   /** 唯一标识 */
   id: string;
   /** 流程名称 */
@@ -159,6 +203,10 @@ export interface TourGuide {
    * 如 { fileId: 'xxx' }，用于替换 route 中的 :fileId 占位符
    */
   routeParams?: Record<string, string>;
+  /** 可见性配置 */
+  visibility?: TourVisibility;
+  /** 前置条件列表（按顺序检测） */
+  preconditions?: TourPrecondition[];
 }
 
 /** 引导存储状态 */
@@ -189,12 +237,10 @@ export interface TourState {
 
 /** 引导上下文值 */
 export interface TourContextValue extends TourState {
-  /** 开始引导 */
-  startTour: (guideId: string) => void;
+  /** 开始引导（带前置条件检测） */
+  startTour: (guideId: string) => Promise<void>;
   /** 下一步 */
   nextStep: () => void;
-  /** 上一步 */
-  prevStep: () => void;
   /** 跳过引导 */
   skipTour: () => void;
   /** 完成引导 */
@@ -216,6 +262,13 @@ export interface TourContextValue extends TourState {
    * 根据 UI 条件选择正确的步骤配置
    */
   resolvedCurrentStep: TourStep | null;
+  /** 
+   * 是否处于引导模式
+   * 用于控制特定行为：
+   * - CAD 文件在当前页面打开（而非新标签页）
+   * - CAD 编辑器侧边栏默认关闭
+   */
+  isTourMode: boolean;
 }
 
 /** 元素等待结果 */

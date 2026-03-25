@@ -367,6 +367,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 {/* 用户搜索输入框 */}
                 <div className="relative">
                   <input
+                    data-tour="member-search-input"
                     ref={searchInputRef}
                     type="text"
                     value={newEmail}
@@ -477,6 +478,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       ))}
                   </select>
                   <Button
+                    data-tour="member-add-btn"
                     type="submit"
                     size="sm"
                     disabled={adding || !selectedUser || !newRoleId}

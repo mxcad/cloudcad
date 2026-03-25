@@ -5,3 +5,4 @@ export { TourOverlay } from './TourOverlay';
 export { TourTooltip } from './TourTooltip';
 export { TourCenter } from './TourCenter';
 export { TourStartModal } from './TourStartModal';
+export { GlobalTourRenderer } from './GlobalTourRenderer';

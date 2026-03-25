@@ -131,8 +131,10 @@ async function waitForTargetElement(
     let found = false;
     
     const checkElement = (): HTMLElement | null => {
-      const el = document.querySelector<HTMLElement>(selector);
-      if (!el) return null;
+      const elements = document.querySelectorAll<HTMLElement>(selector);
+      if (elements.length === 0) return null;
+      // 始终取最后一个匹配的元素
+      const el = elements[elements.length - 1]!;
       if (!requireVisible) return el;
       return isElementVisible(el) ? el : null;
     };
@@ -166,7 +168,8 @@ async function waitForTargetElement(
     setTimeout(() => {
       if (!found) {
         observer.disconnect();
-        const el = document.querySelector<HTMLElement>(selector);
+        const elements = document.querySelectorAll<HTMLElement>(selector);
+        const el = elements.length > 0 ? elements[elements.length - 1]! : null;
         resolve({
           element: null,
           reason: el ? 'not-visible' : 'timeout'
@@ -184,6 +187,10 @@ function checkSkipCondition(step: TourStep): boolean {
   if (!skipCondition) return false;
 
   switch (skipCondition.type) {
+    case 'element-exists':
+      if (!skipCondition.selector) return false;
+      return document.querySelector(skipCondition.selector) !== null;
+    
     case 'element-not-exists':
       if (!skipCondition.selector) return false;
       return !document.querySelector(skipCondition.selector);
@@ -361,6 +368,10 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     const targetElement = highlight.element;
     const actionType = step.actionType ?? 'click';
 
+    // 防抖计时器（用于 input 类型）
+    let inputDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const INPUT_DEBOUNCE_DELAY = 1500; // 用户停止输入 1.5 秒后触发完成
+
     /**
      * 检查事件是否发生在目标元素或其子元素上
      */
@@ -375,6 +386,12 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     const handleInteractionComplete = (e: Event) => {
       // 标记交互已完成
       interactionCompletedRef.current = true;
+      
+      // 清除防抖计时器
+      if (inputDebounceTimer) {
+        clearTimeout(inputDebounceTimer);
+        inputDebounceTimer = null;
+      }
       
       // 通知父组件交互完成
       if (onInteractionComplete) {
@@ -404,13 +421,21 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     };
 
     /**
-     * 输入事件处理器
+     * 输入事件处理器 - 使用防抖机制
+     * 用户输入时重置计时器，停止输入 1.5 秒后触发完成
      */
     const handleInput = (e: Event) => {
       if (isEventOnTarget(e)) {
         const target = e.target as HTMLInputElement;
         if (target.value.length > 0) {
-          handleInteractionComplete(e);
+          // 清除之前的计时器
+          if (inputDebounceTimer) {
+            clearTimeout(inputDebounceTimer);
+          }
+          // 设置新的计时器
+          inputDebounceTimer = setTimeout(() => {
+            handleInteractionComplete(e);
+          }, INPUT_DEBOUNCE_DELAY);
         }
       }
     };
@@ -442,6 +467,11 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     }
 
     return () => {
+      // 清理防抖计时器
+      if (inputDebounceTimer) {
+        clearTimeout(inputDebounceTimer);
+      }
+      
       // 清理事件监听器
       switch (actionType) {
         case 'click':
@@ -467,10 +497,11 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
   const hasTarget = highlightRect !== null;
 
   // 交互模式下，需要让点击穿透到目标元素
-  // 遮罩层和高亮边框都设置 pointer-events: 'none'
-  // 目标元素本身的事件监听器会正常工作
-  const overlayPointerEvents = isInteractiveMode ? 'none' : 'auto';
-  const highlightPointerEvents = 'none'; // 始终让高亮边框不拦截事件
+  // TourTooltip 本身也是 fixed 定位，z-index 比容器高
+  // 但 TourTooltip 是定位在目标元素附近的，通常不会遮挡目标
+  // 解决方案：容器在交互模式下也设置 pointer-events: none，让点击穿透
+  // ESC 键监听是通过 document 全局事件处理的，不依赖容器
+  const highlightPointerEvents = 'none'; // 高亮边框始终不拦截事件
 
   return (
     <div
@@ -480,7 +511,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: OVERLAY_Z_INDEX,
-        pointerEvents: overlayPointerEvents,
+        pointerEvents: isInteractiveMode ? 'none' : 'auto', // 交互模式下让点击穿透到目标元素
       }}
     >
       {/* 遮罩层 - 使用 SVG 绘制镂空效果 */}
@@ -490,7 +521,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
           inset: 0,
           width: '100%',
           height: '100%',
-          pointerEvents: 'none',
+          pointerEvents: isInteractiveMode ? 'none' : 'auto', // 交互模式下让点击穿透
         }}
       >
         <defs>

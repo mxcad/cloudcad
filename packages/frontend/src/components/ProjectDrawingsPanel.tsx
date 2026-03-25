@@ -10,9 +10,10 @@
  * 用于侧边栏的图纸 Tab 内容。
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { projectsApi } from '../services/projectsApi';
 import { filesApi } from '../services/filesApi';
 import { ResourceList, ResourceItem } from './common';
@@ -30,6 +31,8 @@ interface ProjectDrawingsPanelProps {
   currentOpenFileId?: string | null;
   /** 当前文档是否已修改 */
   isModified?: boolean;
+  /** 要显示的父目录 ID（如果提供，则直接显示该目录内容） */
+  parentId?: string | null;
 }
 
 interface BreadcrumbItem {
@@ -86,6 +89,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   isPersonalSpace = false,
   currentOpenFileId,
   isModified = false,
+  parentId: initialParentId,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
@@ -170,6 +174,42 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     }
   }, []);
 
+  // 构建面包屑路径（带最大深度限制防止无限循环）
+  const buildBreadcrumbPath = useCallback(async (nodeId: string) => {
+    try {
+      const path: BreadcrumbItem[] = [];
+      let currentId: string | null = nodeId;
+      let depth = 0;
+      const MAX_DEPTH = 20; // 最大深度限制
+
+      while (currentId && depth < MAX_DEPTH) {
+        try {
+          const response = await projectsApi.getNode(currentId);
+          const node = response.data;
+          if (node) {
+            path.unshift({ id: node.id, name: node.name });
+            currentId = node.parentId || null;
+            depth++;
+          } else {
+            break;
+          }
+        } catch (err) {
+          console.error(`获取节点 ${currentId} 失败:`, err);
+          break;
+        }
+      }
+
+      if (path.length === 0) {
+        return [{ id: nodeId, name: '根目录' }];
+      }
+
+      return path;
+    } catch (error) {
+      console.error('构建面包屑路径失败:', error);
+      return [{ id: nodeId, name: '根目录' }];
+    }
+  }, []);
+
   // 初始化：加载项目根目录
   useEffect(() => {
     if (!selectedProjectId) {
@@ -202,6 +242,54 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     }
   }, [isPersonalSpace, projectId, selectedProjectId]);
 
+  // 使用 ref 存储函数，避免 useEffect 依赖问题
+  const buildBreadcrumbPathRef = useRef(buildBreadcrumbPath);
+  const loadNodesRef = useRef(loadNodes);
+
+  // 同步更新 ref
+  useEffect(() => {
+    buildBreadcrumbPathRef.current = buildBreadcrumbPath;
+  }, [buildBreadcrumbPath]);
+
+  useEffect(() => {
+    loadNodesRef.current = loadNodes;
+  }, [loadNodes]);
+
+  // 当 external parentId 变化时，导航到对应目录
+  useEffect(() => {
+    const navigateToParentId = async () => {
+      // 严格检查 parentId（排除 null, undefined, 空字符串）
+      if (!initialParentId || initialParentId.trim() === '') {
+        console.log('[ProjectDrawingsPanel] 没有提供有效的 parentId，跳过导航');
+        return;
+      }
+
+      console.log('[ProjectDrawingsPanel] 开始导航到 parentId:', initialParentId);
+
+      try {
+        // 构建面包屑路径
+        const path = await buildBreadcrumbPathRef.current(initialParentId);
+        console.log('[ProjectDrawingsPanel] 构建的面包屑路径:', path);
+
+        if (path.length > 0) {
+          // 设置面包屑和项目ID
+          setBreadcrumb(path);
+          const rootId = path[0]?.id || initialParentId;
+          console.log('[ProjectDrawingsPanel] 设置项目ID:', rootId);
+          setSelectedProjectId(rootId);
+
+          // 加载目标目录的节点
+          console.log('[ProjectDrawingsPanel] 加载目录节点:', initialParentId);
+          await loadNodesRef.current(initialParentId);
+        }
+      } catch (error) {
+        console.error('[ProjectDrawingsPanel] 导航到 parentId 失败:', error);
+      }
+    };
+
+    navigateToParentId();
+  }, [initialParentId]);
+
   // 点击进入文件夹
   const handleEnterFolder = useCallback((folder: FileSystemNode) => {
     setBreadcrumb(prev => [...prev, { id: folder.id, name: folder.name }]);
@@ -221,6 +309,26 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     setSearchQuery('');
     setCurrentPage(1);
   }, [breadcrumb, loadNodes]);
+
+  // 返回上一级
+  const handleGoBack = useCallback(() => {
+    if (breadcrumb.length > 1) {
+      // 返回面包屑的上一级
+      const newBreadcrumb = breadcrumb.slice(0, -1);
+      setBreadcrumb(newBreadcrumb);
+      const lastItem = newBreadcrumb[newBreadcrumb.length - 1];
+      if (lastItem) {
+        loadNodes(lastItem.id);
+      }
+    } else if (breadcrumb.length === 1 && !isPersonalSpace) {
+      // 返回项目列表
+      setSelectedProjectId(null);
+      setBreadcrumb([]);
+      setNodes([]);
+    }
+    setSearchQuery('');
+    setCurrentPage(1);
+  }, [breadcrumb, isPersonalSpace, loadNodes]);
 
   // 转换为 ResourceItem 格式
   const resourceItems: ResourceItem[] = useMemo(() => {
@@ -387,9 +495,24 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     );
   }
 
-  // 面包屑导航
+  // 面包屑导航 - 添加返回上一级按钮
   const breadcrumbElement = (
     <div className={styles.breadcrumb}>
+      {/* 返回上一级按钮 */}
+      {(breadcrumb.length > 1 || (!isPersonalSpace && breadcrumb.length > 0)) && (
+        <>
+          <button
+            className={styles.breadcrumbItem}
+            onClick={handleGoBack}
+            title="返回上一级"
+          >
+            <ArrowLeft size={14} />
+            <span>返回</span>
+          </button>
+          <ChevronRight size={14} className={styles.breadcrumbSeparator} />
+        </>
+      )}
+      
       {!isPersonalSpace && (
         <>
           <button

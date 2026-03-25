@@ -44,6 +44,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
             名称 *
           </label>
           <input
+            data-tour="folder-name-input"
             type="text"
             value={folderName}
             onChange={(e) => onFolderNameChange(e.target.value)}
