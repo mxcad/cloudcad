@@ -1,5 +1,6 @@
 import X from 'lucide-react/dist/esm/icons/x';
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import { isTourModeActive } from '../../contexts/TourContext';
 
@@ -49,7 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth,
   size,
-  zIndex = 50,
+  zIndex = 10000,
 }) => {
   const effectiveMaxWidth =
     maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
@@ -57,7 +58,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 modal-enter"
       style={{ zIndex }}
@@ -171,6 +172,8 @@ export const Modal: React.FC<ModalProps> = ({
       `}</style>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 interface PromptModalProps {

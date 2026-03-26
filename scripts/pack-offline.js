@@ -511,6 +511,8 @@ function getDeployIncludeList(platform) {
     { src: 'stop.bat', dest: 'stop.bat' },
     { src: 'stop.ps1', dest: 'stop.ps1' },
     { src: 'stop.sh', dest: 'stop.sh' },
+    // 部署说明文档
+    { src: '部署说明.txt', dest: '部署说明.txt' },
   ];
 }
 

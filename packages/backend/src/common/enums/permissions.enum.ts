@@ -112,6 +112,7 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
     PrismaPermission.SYSTEM_MONITOR,
     PrismaPermission.SYSTEM_CONFIG_READ,
     PrismaPermission.SYSTEM_CONFIG_WRITE,
+    PrismaPermission.SYSTEM_TEMPLATE_READ,
   ],
   [SystemRole.USER_MANAGER]: [
     // 用户管理员权限

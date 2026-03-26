@@ -1110,6 +1110,25 @@ export const Register: React.FC = () => {
           .back-button-step { order: 2; }
         }
 
+        /* 隐藏浏览器自带的密码显示按钮 */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+          display: none;
+        }
+
+        input[type="password"]::-webkit-credentials-auto-fill-button {
+          visibility: hidden;
+          display: none !important;
+          pointer-events: none;
+          position: absolute;
+          right: 0;
+        }
+
+        /* 针对 Edge 浏览器的密码显示按钮 */
+        input[type="password"]::-webkit-textfield-decoration-container {
+          display: none;
+        }
+
         /* 深色主题特殊处理 */
         [data-theme="dark"] .register-card {
           background: rgba(26, 29, 33, 0.85);

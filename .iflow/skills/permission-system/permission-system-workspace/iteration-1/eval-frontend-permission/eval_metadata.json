@@ -1,0 +1,31 @@
+{
+  "eval_id": 3,
+  "eval_name": "frontend-permission-check",
+  "prompt": "前端有个删除按钮，需要根据用户的项目权限来控制显示隐藏。项目 ID 是 projectId，需要检查 FILE_DELETE 权限。",
+  "assertions": [
+    {
+      "name": "使用了正确的 Hook",
+      "description": "应该使用 useProjectPermission Hook",
+      "check_type": "output_contains",
+      "expected": "useProjectPermission"
+    },
+    {
+      "name": "使用了正确的权限常量",
+      "description": "应该使用 ProjectPermission.FILE_DELETE 常量",
+      "check_type": "output_contains",
+      "expected": "ProjectPermission.FILE_DELETE"
+    },
+    {
+      "name": "正确处理异步检查",
+      "description": "应该使用 state 存储 checkPermission 的异步结果",
+      "check_type": "output_contains",
+      "expected": "useState"
+    },
+    {
+      "name": "提到了缓存机制",
+      "description": "应该提到权限检查有缓存",
+      "check_type": "output_contains",
+      "expected": "缓存"
+    }
+  ]
+}

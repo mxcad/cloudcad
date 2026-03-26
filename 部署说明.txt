@@ -1,0 +1,111 @@
+CloudCAD 一键部署说明
+======================
+
+【系统要求】
+- Windows 10/11 或 Linux (CentOS 7+/Ubuntu 20.04+)
+- 4核CPU / 8G内存 / 20G磁盘空间
+- 确保端口 3000、3001、3002、5432、6379 未被占用
+
+【快速开始】
+
+1. 解压部署包到任意目录（如 C:\CloudCAD 或 /opt/cloudcad）
+
+2. 启动系统：
+   Windows: 双击 start.bat
+   Linux:   ./start.sh
+
+3. 首次启动时按提示设置密码：
+   - 数据库密码：PostgreSQL数据库密码
+   - 管理员密码：同时用于 3002配置中心 和 项目admin管理员账号
+
+4. 访问系统：
+   前端: http://localhost:3000
+   配置: http://localhost:3002
+   账号: admin / 你设置的密码
+
+【服务说明】
+
+端口      服务名称        作用
+--------------------------------------------------------------------------------
+3000      前端服务        Web页面访问入口
+3001      后端API         业务接口服务
+3002      配置中心        服务管理控制台（PM2管理界面）
+5432      PostgreSQL      数据库
+6379      Redis           缓存服务
+3091      图纸协同服务    MXCAD转换程序启动的协同服务（内部服务）
+
+【MXCAD图纸转换程序】
+
+CAD文件转换依赖MXCAD程序，位于：
+   Windows: runtime/windows/mxcad/
+   Linux:   runtime/linux/mxcad/
+【服务管理】
+
+方式1 - 通过3002配置中心（推荐）：
+   访问 http://localhost:3002
+   可查看状态、启停服务、查看日志、修改配置
+
+方式2 - 命令行：
+   Windows: .\pm2.cmd status    查看状态
+            .\pm2.cmd logs      查看日志
+            .\pm2.cmd restart   重启服务
+   
+   Linux:   ./pm2 status
+            ./pm2 logs
+            ./pm2 restart
+
+【停止系统】
+   Windows: .\stop.bat
+   Linux:   ./stop.sh
+
+【日志位置】
+   offline-data/pm2/logs/     PM2服务日志
+   offline-data/logs/         应用日志
+
+【部署包目录】
+
+解压后主要目录结构：
+
+cloudcad/
+├── packages/               应用程序
+│   ├── backend/           后端服务（dist/构建产物、prisma/数据库配置）
+│   ├── frontend/          前端页面（dist/构建产物）
+│   └── config-service/    3002配置中心服务
+├── runtime/               运行时环境
+│   ├── windows/ 或 linux/ 平台相关运行时
+│   │   ├── node/         Node.js运行时
+│   │   ├── postgresql/   数据库（Windows）或 postgres/（Linux）
+│   │   ├── redis/        Redis缓存
+│   │   └── mxcad/        CAD转换程序及依赖
+│   ├── scripts/          启动管理脚本
+│   └── ecosystem.config.js  PM2进程配置
+├── offline-data/          运行数据（自动创建）
+│   ├── postgres/         数据库文件
+│   └── pm2/logs/         服务日志
+├── 部署说明.txt           本文件
+├── start.bat / start.sh   启动脚本
+├── stop.bat / stop.sh     停止脚本
+└── pm2.cmd / pm2          PM2命令工具
+
+【常见问题】
+
+Q1: 3002配置中心无法访问？
+   执行 .\pm2.cmd status 确认 config-service 状态为 online
+   如未运行，执行 .\pm2.cmd start config-service
+
+Q2: 忘记服务管理控制台密码？
+   1. 执行 stop.bat 停止服务
+   2. 编辑 packages/backend/.env 修改 INITIAL_ADMIN_PASSWORD
+   3. 重新执行 start.bat
+
+【重要文件】
+   packages/backend/.env      主配置文件（密码、端口等）
+   start.bat / start.sh       启动脚本
+   stop.bat / stop.sh         停止脚本
+   pm2.cmd / pm2              PM2命令工具
+
+【注意事项】
+1. 首次启动会自动初始化数据库，请耐心等待,启动完成后需要等待一段时间才可以正常访问页面
+2. 首次部署时管理员密码同时设置admin管理员账号密码和服务管理控制台密码
+3. 如需修改配置，请通过3002配置中心或编辑 .env 文件后重启服务
+4. 如果命令行运行期间卡住了，请将重新点击命令行按下回车或者空格

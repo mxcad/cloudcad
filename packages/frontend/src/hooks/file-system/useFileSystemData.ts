@@ -22,6 +22,7 @@ import type { ProjectDto } from '../../types/api-client';
 import { PaginationMeta } from '../../components/ui/Pagination';
 
 import { handleError, isAbortError } from '../../utils/errorHandler';
+import type { ProjectFilterType } from '../../services/projectsApi';
 
 interface UseFileSystemDataProps {
   urlProjectId: string | undefined;
@@ -37,6 +38,8 @@ interface UseFileSystemDataProps {
   ) => void;
   clearSelection: () => void;
   setIsMultiSelectMode: (value: boolean) => void;
+  /** 项目过滤类型：all-全部，owned-我创建的，joined-我加入的 */
+  projectFilter?: ProjectFilterType;
 }
 
 export const useFileSystemData = ({
@@ -50,6 +53,7 @@ export const useFileSystemData = ({
   showToast,
   clearSelection,
   setIsMultiSelectMode,
+  projectFilter,
 }: UseFileSystemDataProps) => {
   const navigate = useNavigate();
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
@@ -289,8 +293,8 @@ export const useFileSystemData = ({
             signal: abortController.signal,
           });
         } else {
-          // 加载正常项目列表
-          response = await projectsApi.list({
+          // 加载正常项目列表，支持按类型过滤
+          response = await projectsApi.list(projectFilter, {
             signal: abortController.signal,
           });
         }
@@ -483,6 +487,7 @@ export const useFileSystemData = ({
     clearSelection,
     setIsMultiSelectMode,
     navigate,
+    projectFilter,
   ]);
 
   return {

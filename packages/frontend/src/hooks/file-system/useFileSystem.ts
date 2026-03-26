@@ -34,15 +34,28 @@ import { useFileSystemSearch } from './useFileSystemSearch';
 import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
 import { trashApi } from '../../services/trashApi';
+import type { ProjectFilterType } from '../../services/projectsApi';
 
 interface UseFileSystemOptions {
   mode?: 'project' | 'personal-space';
   personalSpaceId?: string | null;
+  /** 外部传入的项目 ID（优先于 URL 解析，用于侧边栏等独立导航场景） */
+  externalProjectId?: string | null;
+  /** 外部传入的节点 ID（优先于 URL 解析，用于侧边栏等独立导航场景） */
+  externalNodeId?: string | null;
+  /** 是否禁用自动导航（侧边栏模式） */
+  disableNavigation?: boolean;
+  /** 项目过滤类型：all-全部，owned-我创建的，joined-我加入的 */
+  projectFilter?: ProjectFilterType;
 }
 
 export const useFileSystem = (options?: UseFileSystemOptions) => {
   const mode = options?.mode || 'project';
   const personalSpaceId = options?.personalSpaceId;
+  const externalProjectId = options?.externalProjectId;
+  const externalNodeId = options?.externalNodeId;
+  const disableNavigation = options?.disableNavigation || false;
+  const externalProjectFilter = options?.projectFilter;
 
   const navigate = useNavigate();
   const { projectId, nodeId } = useParams<{
@@ -51,17 +64,25 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   }>();
   const location = useLocation();
 
-  // 从 URL 路径直接解析 projectId 和 nodeId
+  // 从 URL 路径直接解析 projectId 和 nodeId（支持外部覆盖）
   const urlProjectId = useMemo(() => {
+    // 外部传入优先
+    if (externalProjectId !== undefined && externalProjectId !== null) {
+      return externalProjectId;
+    }
     // 私人空间模式：使用私人空间 ID
     if (mode === 'personal-space') {
       return personalSpaceId || '';
     }
     const match = location.pathname.match(/\/projects\/([^/]+)/);
     return match ? match[1] : '';
-  }, [location.pathname, mode, personalSpaceId]);
+  }, [location.pathname, mode, personalSpaceId, externalProjectId]);
 
   const urlNodeId = useMemo(() => {
+    // 外部传入优先
+    if (externalNodeId !== undefined && externalNodeId !== null) {
+      return externalNodeId || undefined;
+    }
     // 私人空间模式的 URL nodeId 解析
     if (mode === 'personal-space') {
       const match = location.pathname.match(/\/personal-space\/([^/]+)/);
@@ -69,7 +90,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     }
     const match = location.pathname.match(/\/projects\/[^/]+\/files\/([^/]+)/);
     return match ? match[1] : undefined;
-  }, [location.pathname, mode]);
+  }, [location.pathname, mode, externalNodeId]);
 
   // 模式判断：私人空间模式或项目根目录模式
   const isProjectRootMode = mode === 'project' && !urlProjectId;
@@ -146,6 +167,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     showToast,
     clearSelection: selectionClearFn,
     setIsMultiSelectMode: setMultiSelectModeFn,
+    projectFilter: externalProjectFilter,
   });
 
   // Selection Hook
@@ -266,6 +288,17 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
       prevIsProjectTrashViewRef.current = isProjectTrashView;
     }
   }, [isProjectTrashView, setStoreSearchTerm, setPagination]);
+
+  // 监听 projectFilter 变化（项目过滤：全部/我创建的/我加入的）
+  const prevProjectFilterRef = useRef(externalProjectFilter);
+  useEffect(() => {
+    if (prevProjectFilterRef.current !== externalProjectFilter) {
+      setStoreSearchTerm('');
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      setRefreshCount((prev) => prev + 1);
+      prevProjectFilterRef.current = externalProjectFilter;
+    }
+  }, [externalProjectFilter, setStoreSearchTerm, setPagination]);
 
   // 初始加载和参数变化监听
   useEffect(() => {

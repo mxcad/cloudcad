@@ -70,6 +70,8 @@ export interface FileActionCheckProps {
   onRestore?: boolean;
   onPermanentlyDelete?: boolean;
   onDeleteNode?: boolean;
+  /** 排除移动和复制操作（用于侧边栏） */
+  excludeMoveCopy?: boolean;
 }
 
 /**
@@ -399,6 +401,11 @@ export const getAvailableActions = (
   }
 
   return Object.values(FILE_ACTIONS).filter((action) => {
+    // 排除移动和复制操作（用于侧边栏）
+    if (props.excludeMoveCopy && (action.type === 'move' || action.type === 'copy')) {
+      return false;
+    }
+
     // 检查可见性
     if (action.visibilityCheck && !action.visibilityCheck(props)) {
       return false;

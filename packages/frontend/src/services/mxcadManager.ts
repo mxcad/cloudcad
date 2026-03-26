@@ -8,7 +8,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-﻿import { MxCADView } from 'mxcad-app';
+import { MxCADView } from 'mxcad-app';
 
 import { mxcadApi } from './mxcadApi';
 import { filesApi } from './filesApi';
@@ -197,6 +197,10 @@ export function showUnsavedChangesDialog(): Promise<'save' | 'discard' | 'cancel
       document.body.removeChild(dialog);
     }
 
+    // 获取当前主题
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const isDark = currentTheme === 'dark';
+
     dialog = document.createElement('div');
     dialog.id = dialogId;
     dialog.style.cssText = `
@@ -205,7 +209,8 @@ export function showUnsavedChangesDialog(): Promise<'save' | 'discard' | 'cancel
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--bg-overlay, ${isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.5)'});
+      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -215,9 +220,10 @@ export function showUnsavedChangesDialog(): Promise<'save' | 'discard' | 'cancel
 
     dialog.innerHTML = `
       <div style="
-        background: white;
+        background: var(--bg-elevated, ${isDark ? '#2a2f35' : '#ffffff'});
+        border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
         border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-lg, 0 10px 15px ${isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)'});
         width: 90%;
         max-width: 420px;
         overflow: hidden;
@@ -233,65 +239,70 @@ export function showUnsavedChangesDialog(): Promise<'save' | 'discard' | 'cancel
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: #fef3c7;
+            background: ${isDark ? 'rgba(245, 158, 11, 0.2)' : '#fef3c7'};
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 16px;
           ">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${isDark ? '#f59e0b' : '#d97706'}" stroke-width="2">
               <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
             </svg>
           </div>
-          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});">
             未保存的更改
           </h3>
-          <p style="margin: 0; font-size: 14px; color: #6b7280;">
+          <p style="margin: 0; font-size: 14px; color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});">
             当前图纸有未保存的更改，是否保存？
           </p>
         </div>
         <div style="
           padding: 16px 20px;
-          background: #f9fafb;
-          border-top: 1px solid #e5e7eb;
+          background: var(--bg-secondary, ${isDark ? '#1a1d21' : '#f8fafc'});
+          border-top: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
           display: flex;
           justify-content: center;
           gap: 12px;
         ">
           <button id="mxcad-unsaved-cancel" style="
             padding: 10px 20px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
             border-radius: 8px;
-            background: white;
-            color: #374151;
+            background: transparent;
+            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-          ">
+            transition: all 0.2s ease;
+          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'; this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'})'">
             取消
           </button>
           <button id="mxcad-unsaved-discard" style="
             padding: 10px 20px;
             border: none;
             border-radius: 8px;
-            background: #ef4444;
+            background: var(--error, #ef4444);
             color: white;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-          ">
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
+          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
             不保存
           </button>
           <button id="mxcad-unsaved-save" style="
             padding: 10px 20px;
             border: none;
             border-radius: 8px;
-            background: #4f46e5;
+            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#a5b4fc' : '#4f46e5'}), var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'}));
             color: white;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-          ">
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
+          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})${isDark ? ', 0 0 20px rgba(99, 102, 241, 0.3)' : ''}'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
             保存
           </button>
         </div>
@@ -809,6 +820,10 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
       document.body.removeChild(dialog);
     }
 
+    // 获取当前主题
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const isDark = currentTheme === 'dark';
+
     dialog = document.createElement('div');
     dialog.id = dialogId;
     dialog.style.cssText = `
@@ -817,7 +832,8 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--bg-overlay, ${isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.5)'});
+      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -827,28 +843,30 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
 
     dialog.innerHTML = `
       <div style="
-        background: white;
+        background: var(--bg-elevated, ${isDark ? '#2a2f35' : '#ffffff'});
+        border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
         border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-lg, 0 10px 15px ${isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)'});
         width: 90%;
         max-width: 450px;
         overflow: hidden;
       ">
         <div style="
           padding: 16px 20px;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
           display: flex;
           align-items: center;
           justify-content: space-between;
         ">
-          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">保存文件</h3>
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});">保存文件</h3>
           <button id="mxcad-save-dialog-close" style="
             background: none;
             border: none;
             cursor: pointer;
             padding: 4px;
-            color: #9ca3af;
-          ">
+            color: var(--text-muted, ${isDark ? '#5a6a7a' : '#94a3b8'});
+            transition: color 0.2s ease;
+          " onmouseover="this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.color='var(--text-muted, ${isDark ? '#5a6a7a' : '#94a3b8'})'">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -860,7 +878,7 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
             display: block;
             font-size: 14px;
             font-weight: 500;
-            color: #374151;
+            color: var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'});
             margin-bottom: 8px;
           ">
             修改说明（可选）
@@ -869,51 +887,57 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
             width: 100%;
             height: 100px;
             padding: 12px;
-            border: 1px solid #d1d5db;
+            background: var(--bg-secondary, ${isDark ? '#1a1d21' : '#ffffff'});
+            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
             border-radius: 8px;
             font-size: 14px;
+            color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});
             resize: vertical;
             box-sizing: border-box;
             font-family: inherit;
-          "></textarea>
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          " onfocus="this.style.borderColor='var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'})'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.2)'" onblur="this.style.borderColor='var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'})'; this.style.boxShadow='none'"></textarea>
           <p style="
             margin: 8px 0 0 0;
             font-size: 12px;
-            color: #6b7280;
+            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
           ">
             此说明将记录在版本历史中，方便后续查看修改内容。
           </p>
         </div>
         <div style="
           padding: 16px 20px;
-          background: #f9fafb;
-          border-top: 1px solid #e5e7eb;
+          background: var(--bg-secondary, ${isDark ? '#1a1d21' : '#f8fafc'});
+          border-top: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
           display: flex;
           justify-content: flex-end;
           gap: 12px;
         ">
           <button id="mxcad-save-dialog-cancel" style="
             padding: 10px 20px;
-            border: none;
+            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
             border-radius: 8px;
             background: transparent;
-            color: #6b7280;
+            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-          ">
+            transition: all 0.2s ease;
+          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'; this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'})'">
             取消
           </button>
           <button id="mxcad-save-dialog-confirm" style="
             padding: 10px 20px;
             border: none;
             border-radius: 8px;
-            background: #4f46e5;
+            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#a5b4fc' : '#4f46e5'}), var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'}));
             color: white;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-          ">
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
+          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})${isDark ? ', 0 0 20px rgba(99, 102, 241, 0.3)' : ''}'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
             保存
           </button>
         </div>
@@ -1262,7 +1286,15 @@ MxFun.addCommand('Mx_ShowCollaborate', () => {
 });
 
 // ==================== Mx_Save 命令 ====================
-
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    // 只有这里处理，其他同元素监听器被跳过
+    MxFun.removeCommand('Mx_QSave');//删除mxcad-app内部的保存命令
+    MxFun.sendStringToExecute('Mx_Save');
+  }
+}, true); // useCapture=true 捕获阶段处理
 /**
  * Mx_Save 命令：保存当前 CAD 文件
  */
@@ -1271,16 +1303,16 @@ MxFun.addCommand('Mx_Save', async () => {
     const projectId = currentFileInfo?.projectId;
     if (projectId) {
       try {
-        const { useProjectPermission } =
-          await import('../hooks/useProjectPermission');
-        const { checkPermission } = useProjectPermission();
-        const canSave = await checkPermission(projectId, 'CAD_SAVE');
-        if (!canSave) {
+        // 直接调用 API 检查权限（非 React 组件中不能使用 Hook）
+        const response = await projectsApi.checkPermission(projectId, 'CAD_SAVE');
+        if (!response.data.hasPermission) {
           globalShowToast('您没有保存图纸的权限', 'error');
           return;
         }
       } catch (error) {
         console.error('权限检查失败', error);
+        globalShowToast('权限检查失败，请稍后重试', 'error');
+        return;
       }
     }
 

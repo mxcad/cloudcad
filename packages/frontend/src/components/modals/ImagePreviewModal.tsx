@@ -64,7 +64,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      className="fixed inset-0 z-[10000] flex items-center justify-center"
       onClick={(e) => e.stopPropagation()}
     >
       {/* 背景遮罩 - 关闭模态框 */}

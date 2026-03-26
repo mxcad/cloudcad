@@ -1314,6 +1314,22 @@ export const Profile: React.FC = () => {
           font-weight: 500;
         }
 
+        /* ===== 隐藏浏览器自带的密码显示按钮 ===== */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+          display: none;
+        }
+
+        input[type="password"]::-webkit-credentials-auto-fill-button {
+          visibility: hidden;
+          display: none !important;
+          pointer-events: none;
+        }
+
+        input[type="password"]::-webkit-textfield-decoration-container {
+          display: none;
+        }
+
         /* ===== 深色主题特殊处理 ===== */
         [data-theme="dark"] .profile-card {
           background: rgba(26, 29, 33, 0.9);

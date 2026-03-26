@@ -20,6 +20,7 @@ import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import X from 'lucide-react/dist/esm/icons/x';
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import { VersionHistoryDropdown } from './VersionHistoryDropdown';
 import styles from './ResourceList.module.css';
 
 /** 视图类型 */
@@ -43,6 +44,14 @@ export interface ResourceItem {
   meta?: Record<string, string | number>;
   isActive?: boolean;
   badge?: React.ReactNode;
+  /** 文件路径（用于版本历史） */
+  filePath?: string;
+  /** 父节点ID（用于版本历史） */
+  parentId?: string | null;
+  /** 项目ID（用于版本历史） */
+  projectId?: string;
+  /** 是否为CAD文件 */
+  isCadFile?: boolean;
 }
 
 /** 组件属性 */
@@ -97,6 +106,15 @@ interface ResourceListProps {
   showDelete?: boolean;
   /** 删除回调 */
   onItemDelete?: (item: ResourceItem) => void;
+  /** 是否显示版本历史按钮 */
+  showVersionHistory?: boolean;
+  /** 查看版本历史回调（可选，默认打开新标签页） */
+  onViewVersionHistory?: (revision: number, fileId: string, parentId: string | null) => void;
+  /** 
+   * 自定义渲染项（用于复用 FileItem 组件）
+   * 当提供此属性时，将使用它来渲染每个项目，而不是默认的 ListItem/GridItem
+   */
+  renderItem?: (item: ResourceItem, viewMode: ViewMode) => React.ReactNode;
 }
 
 /** 格式化文件大小 */
@@ -139,6 +157,63 @@ const CascadeCategorySelector: React.FC<{
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  // 检测容器宽度（用于自适应布局）
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(container);
+    // 初始化时立即获取宽度
+    setContainerWidth(container.offsetWidth);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // 是否使用紧凑布局（容器宽度不足时）
+  const isCompactLayout = containerWidth > 0 && containerWidth < 420;
+  
+  // 面板是否需要向上弹出（检测是否会超出视口底部）
+  const [shouldOpenUp, setShouldOpenUp] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // 检测面板是否超出视口
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return;
+    
+    const checkPosition = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      
+      // 估算面板高度：紧凑布局约 400px，水平布局约 280px
+      const estimatedPanelHeight = isCompactLayout ? 400 : 280;
+      
+      // 如果下方空间不足，向上弹出
+      setShouldOpenUp(spaceBelow < estimatedPanelHeight && rect.top > estimatedPanelHeight);
+    };
+    
+    checkPosition();
+    // 监听滚动和窗口大小变化
+    window.addEventListener('scroll', checkPosition, true);
+    window.addEventListener('resize', checkPosition);
+    
+    return () => {
+      window.removeEventListener('scroll', checkPosition, true);
+      window.removeEventListener('resize', checkPosition);
+    };
+  }, [isOpen, isCompactLayout]);
 
   // 点击外部关闭
   useEffect(() => {
@@ -228,7 +303,10 @@ const CascadeCategorySelector: React.FC<{
 
       {/* 级联面板 */}
       {isOpen && (
-        <div className={styles.cascadePanel}>
+        <div 
+          ref={panelRef}
+          className={`${styles.cascadePanel} ${isCompactLayout ? styles.compact : ''} ${shouldOpenUp ? styles.openUp : ''}`}
+        >
           {/* 一级分类 */}
           <div className={styles.cascadeColumn}>
             <div className={styles.cascadeColumnTitle}>一级分类</div>
@@ -330,12 +408,21 @@ const ListItem: React.FC<{
   onClick: () => void;
   showDelete?: boolean;
   onDelete?: () => void;
-}> = ({ item, onClick, showDelete, onDelete }) => {
+  showVersionHistory?: boolean;
+  onViewVersionHistory?: (revision: number, fileId: string, parentId: string | null) => void;
+}> = ({ item, onClick, showDelete, onDelete, showVersionHistory, onViewVersionHistory }) => {
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     onDelete?.();
   };
+
+  // 是否显示版本历史按钮
+  const canShowVersionHistory = showVersionHistory && 
+    item.type === 'file' && 
+    item.isCadFile && 
+    item.filePath && 
+    item.projectId;
 
   return (
     <div
@@ -377,6 +464,17 @@ const ListItem: React.FC<{
           ))}
         </div>
       </div>
+      {/* 版本历史按钮 */}
+      {canShowVersionHistory && (
+        <VersionHistoryDropdown
+          fileId={item.id}
+          parentId={item.parentId || null}
+          filePath={item.filePath!}
+          projectId={item.projectId!}
+          size="sm"
+          onViewVersion={onViewVersionHistory}
+        />
+      )}
       {showDelete && onDelete && (
         <button
           className={styles.deleteButton}
@@ -399,7 +497,9 @@ const GridItem: React.FC<{
   onClick: () => void;
   showDelete?: boolean;
   onDelete?: () => void;
-}> = ({ item, onClick, showDelete, onDelete }) => {
+  showVersionHistory?: boolean;
+  onViewVersionHistory?: (revision: number, fileId: string, parentId: string | null) => void;
+}> = ({ item, onClick, showDelete, onDelete, showVersionHistory, onViewVersionHistory }) => {
   const [imageError, setImageError] = useState(false);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -407,6 +507,13 @@ const GridItem: React.FC<{
     e.preventDefault();
     onDelete?.();
   };
+
+  // 是否显示版本历史按钮
+  const canShowVersionHistory = showVersionHistory && 
+    item.type === 'file' && 
+    item.isCadFile && 
+    item.filePath && 
+    item.projectId;
 
   return (
     <div
@@ -432,6 +539,19 @@ const GridItem: React.FC<{
         )}
         {item.badge && (
           <div className={styles.gridBadge}>{item.badge}</div>
+        )}
+        {/* 版本历史按钮 */}
+        {canShowVersionHistory && (
+          <div className={styles.gridVersionButton}>
+            <VersionHistoryDropdown
+              fileId={item.id}
+              parentId={item.parentId || null}
+              filePath={item.filePath!}
+              projectId={item.projectId!}
+              size="sm"
+              onViewVersion={onViewVersionHistory}
+            />
+          </div>
         )}
         {showDelete && onDelete && (
           <button
@@ -484,6 +604,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   breadcrumb,
   showDelete = false,
   onItemDelete,
+  showVersionHistory = false,
+  onViewVersionHistory,
+  renderItem,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -590,6 +713,15 @@ export const ResourceList: React.FC<ResourceListProps> = ({
             <FileImage size={48} className={styles.emptyIcon} />
             <div className={styles.emptyText}>{emptyText}</div>
           </div>
+        ) : renderItem ? (
+          // 使用自定义渲染（如 FileItem 组件）
+          <div className={viewMode === 'list' ? styles.listView : styles.gridView}>
+            {items.map((item) => (
+              <React.Fragment key={item.id}>
+                {renderItem(item, viewMode)}
+              </React.Fragment>
+            ))}
+          </div>
         ) : viewMode === 'list' ? (
           <div className={styles.listView}>
             {items.map((item) => (
@@ -599,6 +731,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                 onClick={() => onItemClick(item)}
                 showDelete={showDelete}
                 onDelete={onItemDelete ? () => onItemDelete(item) : undefined}
+                showVersionHistory={showVersionHistory}
+                onViewVersionHistory={onViewVersionHistory}
               />
             ))}
           </div>
@@ -611,6 +745,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                 onClick={() => onItemClick(item)}
                 showDelete={showDelete}
                 onDelete={onItemDelete ? () => onItemDelete(item) : undefined}
+                showVersionHistory={showVersionHistory}
+                onViewVersionHistory={onViewVersionHistory}
               />
             ))}
           </div>

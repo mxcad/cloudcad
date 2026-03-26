@@ -45,6 +45,7 @@ const SYSTEM_PERMISSIONS: Permission[] = [
   Permission.SYSTEM_MONITOR,
   Permission.SYSTEM_CONFIG_READ,
   Permission.SYSTEM_CONFIG_WRITE,
+  Permission.SYSTEM_TEMPLATE_READ,
 ];
 
 /**

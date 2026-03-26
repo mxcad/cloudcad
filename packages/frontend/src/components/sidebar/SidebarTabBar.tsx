@@ -8,6 +8,7 @@ import X from 'lucide-react/dist/esm/icons/x';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import Users from 'lucide-react/dist/esm/icons/users';
 import { SidebarTab } from '../../types/sidebar';
+import { Tooltip } from '../ui/Tooltip';
 import styles from './sidebar.module.css';
 
 interface SidebarTabBarProps {
@@ -58,14 +59,15 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
           </button>
         ))}
       </div>
-      <button
-        className={styles.tabBarButton}
-        onClick={onCloseClick}
-        title="关闭侧边栏"
-        aria-label="关闭侧边栏"
-      >
-        <X size={18} />
-      </button>
+      <Tooltip content="关闭侧边栏" position="bottom" delay={100}>
+        <button
+          className={styles.tabBarButton}
+          onClick={onCloseClick}
+          aria-label="关闭侧边栏"
+        >
+          <X size={18} />
+        </button>
+      </Tooltip>
     </div>
   );
 };

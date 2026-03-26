@@ -592,6 +592,21 @@
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
+/* 网格视图版本历史按钮 */
+.gridVersionButton {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+}
+
+.gridItem:hover .gridVersionButton {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .gridItemInfo {
   padding: var(--space-2) var(--space-3);
   background: linear-gradient(
@@ -761,7 +776,7 @@
   left: 0;
   z-index: 100;
   display: flex;
-  min-width: 400px;
+  min-width: max-content;
   max-width: 600px;
   background: linear-gradient(
     180deg,
@@ -776,15 +791,40 @@
   overflow: hidden;
 }
 
+/* 向上弹出 */
+.cascadePanel.openUp {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* 紧凑布局：垂直堆叠 */
+.cascadePanel.compact {
+  flex-direction: column;
+  min-width: 100%;
+  max-width: 100%;
+  right: 0;
+}
+
 .cascadeColumn {
   flex: 1;
-  min-width: 140px;
+  min-width: 120px;
   max-width: 200px;
   border-right: 1px solid var(--border-default);
 }
 
 .cascadeColumn:last-child {
   border-right: none;
+}
+
+/* 紧凑布局下的列样式 */
+.cascadePanel.compact .cascadeColumn {
+  max-width: 100%;
+  border-right: none;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.cascadePanel.compact .cascadeColumn:last-child {
+  border-bottom: none;
 }
 
 .cascadeColumnTitle {
@@ -806,6 +846,11 @@
   max-height: 240px;
   overflow-y: auto;
   padding: 4px;
+}
+
+/* 紧凑布局下减小每列高度，避免整体超出视口 */
+.cascadePanel.compact .cascadeColumnContent {
+  max-height: 180px;
 }
 
 .cascadeItem {
@@ -862,8 +907,9 @@
 @media (max-width: 480px) {
   .cascadePanel {
     flex-direction: column;
-    min-width: 200px;
-    max-width: 280px;
+    min-width: 100%;
+    max-width: 100%;
+    right: 0;
   }
 
   .cascadeColumn {

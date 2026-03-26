@@ -489,6 +489,9 @@ function getPermissionLabel(permission) {
     SYSTEM_FONT_DOWNLOAD: '下载字体',
     SYSTEM_ADMIN: '系统管理',
     SYSTEM_MONITOR: '系统监控',
+    SYSTEM_CONFIG_READ: '查看配置',
+    SYSTEM_CONFIG_WRITE: '修改配置',
+    SYSTEM_TEMPLATE_READ: '查看模板库',
     // 项目权限
     PROJECT_UPDATE: '编辑项目',
     PROJECT_DELETE: '删除项目',

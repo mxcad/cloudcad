@@ -9,6 +9,8 @@ import type { ProjectDto, FileSystemNodeDto, UserDashboardStatsDto } from '../ty
 import { formatFileSize, formatRelativeTime } from '../utils/fileUtils';
 import { APP_NAME } from '../constants/appConfig';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { FileItem } from '../components/FileItem';
+import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
 
 // Lucide 图标
 import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
@@ -83,57 +85,6 @@ const StatCard: React.FC<StatCardProps> = ({
           style={{ background: `${color}15` }}
         >
           <Icon size={20} color={color} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface FileItemProps {
-  file: FileSystemNodeDto;
-  onClick?: () => void;
-}
-
-const FileItem: React.FC<FileItemProps> = ({ file, onClick }) => {
-  const isFile = !file.isFolder;
-  
-  return (
-    <div
-      onClick={onClick}
-      className="group flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)]"
-    >
-      {/* 图标 */}
-      <div 
-        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ 
-          background: isFile 
-            ? 'var(--accent-100)' 
-            : 'var(--primary-100)'
-        }}
-      >
-        {isFile ? (
-          <FileText size={18} color="var(--accent-600)" />
-        ) : (
-          <FolderOpen size={18} color="var(--primary-600)" />
-        )}
-      </div>
-      
-      {/* 内容 */}
-      <div className="flex-1 min-w-0">
-        <h4 
-          className="font-medium text-sm truncate"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          {file.name}
-        </h4>
-        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-          <span>{formatRelativeTime(file.updatedAt)}</span>
-          {file.size && (
-            <>
-              <span>·</span>
-              <span>{formatFileSize(file.size)}</span>
-            </>
-          )}
         </div>
       </div>
     </div>
@@ -488,14 +439,15 @@ export const Dashboard: React.FC = () => {
                 {recentFiles.map((file) => (
                   <FileItem
                     key={file.id}
-                    file={file}
-                    onClick={() => {
-                      if (file.isFolder) {
+                    node={toFileSystemNode(file)}
+                    compact
+                    onEnter={(node) => {
+                      if (node.isFolder) {
                         // 文件夹：跳转到目录
-                        navigate(`/personal-space/${file.id}`);
+                        navigate(`/personal-space/${node.id}`);
                       } else {
-                        // 文件：直接打开编辑器
-                        navigate(`/cad-editor/${file.id}`);
+                        // 文件：在新标签页打开编辑器
+                        window.open(`/cad-editor/${node.id}`, '_blank');
                       }
                     }}
                   />
@@ -550,15 +502,19 @@ export const Dashboard: React.FC = () => {
                 {recentProjects.map((project) => (
                   <FileItem
                     key={project.id}
-                    file={{
+                    node={{
                       id: project.id,
                       name: project.name,
-                      description: project.description,
                       isFolder: true,
                       isRoot: project.isRoot,
                       updatedAt: project.updatedAt,
-                    } as FileSystemNodeDto}
-                    onClick={() => navigate(`/projects/${project.id}/files`)}
+                      parentId: undefined,
+                      createdAt: project.createdAt || '',
+                      path: '',
+                      ownerId: project.ownerId || '',
+                    } as FileSystemNode}
+                    compact
+                    onEnter={() => navigate(`/projects/${project.id}/files`)}
                   />
                 ))}
               </div>

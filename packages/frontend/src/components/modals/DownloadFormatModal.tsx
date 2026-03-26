@@ -104,8 +104,16 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     >
       <div className="space-y-6">
         {/* 文件名 */}
-        <div className="bg-slate-50 p-4 rounded-lg">
-          <p className="text-sm text-slate-600">
+        <div
+          className="p-4 rounded-lg"
+          style={{
+            backgroundColor: 'var(--bg-secondary, #f8fafc)',
+          }}
+        >
+          <p
+            className="text-sm"
+            style={{ color: 'var(--text-secondary, #334155)' }}
+          >
             <span className="font-medium">文件：</span>
             <span className="ml-2 font-mono text-sm">
               {getDisplayFileName(fileName, format)}
@@ -115,30 +123,62 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
 
         {/* 格式选择 */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-3">
+          <label
+            className="block text-sm font-medium mb-3"
+            style={{ color: 'var(--text-secondary, #334155)' }}
+          >
             选择下载格式 *
           </label>
           <div className="space-y-2">
             {(Object.keys(formatLabels) as DownloadFormat[]).map((f) => (
               <label
                 key={f}
-                className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all
-                  ${
+                className="flex items-center p-4 border rounded-lg cursor-pointer transition-all"
+                style={{
+                  borderColor:
                     format === f
-                      ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
-                      : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+                      ? 'var(--primary-500, #6366f1)'
+                      : 'var(--border-default, #e2e8f0)',
+                  backgroundColor:
+                    format === f
+                      ? 'rgba(99, 102, 241, 0.1)'
+                      : 'transparent',
+                  boxShadow:
+                    format === f ? '0 0 0 2px rgba(99, 102, 241, 0.2)' : 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (format !== f) {
+                    e.currentTarget.style.borderColor =
+                      'var(--border-strong, #cbd5e1)';
+                    e.currentTarget.style.backgroundColor =
+                      'var(--bg-tertiary, #f1f5f9)';
                   }
-                `}
+                }}
+                onMouseLeave={(e) => {
+                  if (format !== f) {
+                    e.currentTarget.style.borderColor =
+                      'var(--border-default, #e2e8f0)';
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
                 <input
                   type="radio"
                   name="format"
                   value={f}
                   checked={format === f}
-                  onChange={(e) => setFormat(e.target.value as DownloadFormat)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                  onChange={(e) =>
+                    setFormat(e.target.value as DownloadFormat)
+                  }
+                  className="w-4 h-4"
+                  style={{
+                    accentColor: 'var(--primary-500, #6366f1)',
+                  }}
                 />
-                <span className="ml-3 text-slate-900">
+                <span
+                  className="ml-3"
+                  style={{ color: 'var(--text-primary, #0f172a)' }}
+                >
                   {formatLabels[f].label}
                 </span>
               </label>
@@ -148,13 +188,27 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
 
         {/* PDF 参数（仅在选择 PDF 格式时显示） */}
         {format === 'pdf' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-            <p className="text-sm font-medium text-blue-900">PDF 导出参数</p>
+          <div
+            className="rounded-lg p-4 space-y-4"
+            style={{
+              backgroundColor: 'var(--bg-secondary, #f8fafc)',
+              border: '1px solid var(--border-default, #e2e8f0)',
+            }}
+          >
+            <p
+              className="text-sm font-medium"
+              style={{ color: 'var(--text-secondary, #334155)' }}
+            >
+              PDF 导出参数
+            </p>
 
             {/* 宽度和高度 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label
+                  className="block text-xs font-medium mb-1"
+                  style={{ color: 'var(--text-secondary, #334155)' }}
+                >
                   宽度（像素）
                 </label>
                 <input
@@ -163,12 +217,20 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                   onChange={(e) =>
                     setPdfOptions({ ...pdfOptions, width: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 rounded-md text-sm"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary, #ffffff)',
+                    border: '1px solid var(--border-default, #e2e8f0)',
+                    color: 'var(--text-primary, #0f172a)',
+                  }}
                   placeholder="2000"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label
+                  className="block text-xs font-medium mb-1"
+                  style={{ color: 'var(--text-secondary, #334155)' }}
+                >
                   高度（像素）
                 </label>
                 <input
@@ -177,7 +239,12 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                   onChange={(e) =>
                     setPdfOptions({ ...pdfOptions, height: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 rounded-md text-sm"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary, #ffffff)',
+                    border: '1px solid var(--border-default, #e2e8f0)',
+                    color: 'var(--text-primary, #0f172a)',
+                  }}
                   placeholder="2000"
                 />
               </div>
@@ -185,7 +252,10 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
 
             {/* 颜色策略 */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label
+                className="block text-xs font-medium mb-1"
+                style={{ color: 'var(--text-secondary, #334155)' }}
+              >
                 颜色策略
               </label>
               <select
@@ -196,7 +266,12 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                     colorPolicy: e.target.value as 'mono' | 'color',
                   })
                 }
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                className="w-full px-3 py-2 rounded-md text-sm"
+                style={{
+                  backgroundColor: 'var(--bg-secondary, #ffffff)',
+                  border: '1px solid var(--border-default, #e2e8f0)',
+                  color: 'var(--text-primary, #0f172a)',
+                }}
               >
                 <option value="mono">黑白（单色）</option>
                 <option value="color">彩色</option>
@@ -206,7 +281,10 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         )}
 
         {/* 格式说明 */}
-        <div className="text-xs text-slate-500 space-y-1">
+        <div
+          className="text-xs space-y-1"
+          style={{ color: 'var(--text-tertiary, #64748b)' }}
+        >
           <p>
             • <strong>MXWEB</strong>：CloudCAD 专用格式，可直接在线编辑
           </p>

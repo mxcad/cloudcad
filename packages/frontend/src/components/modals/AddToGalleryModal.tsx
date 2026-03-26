@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import X from 'lucide-react/dist/esm/icons/x';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import Box from 'lucide-react/dist/esm/icons/box';
@@ -503,8 +504,8 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-[var(--bg-overlay)] flex items-center justify-center z-50 p-4">
+  const modalContent = (
+    <div className="fixed inset-0 bg-[var(--bg-overlay)] flex items-center justify-center z-[10000] p-4">
       <div className="bg-[var(--bg-elevated)] rounded-xl shadow-lg max-w-md w-full border border-[var(--border-default)]">
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-default)]">
@@ -659,4 +660,6 @@ export const AddToGalleryModal: React.FC<AddToGalleryModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };

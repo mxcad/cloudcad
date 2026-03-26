@@ -2982,6 +2982,21 @@
                 "desc"
               ]
             }
+          },
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "项目过滤类型：all-全部，owned-我创建的，joined-我加入的",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "owned",
+                "joined"
+              ]
+            }
           }
         ],
         "responses": {
@@ -3105,6 +3120,21 @@
               "enum": [
                 "asc",
                 "desc"
+              ]
+            }
+          },
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "项目过滤类型：all-全部，owned-我创建的，joined-我加入的",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "owned",
+                "joined"
               ]
             }
           }
@@ -8364,6 +8394,7 @@
                 "SYSTEM_MONITOR",
                 "SYSTEM_CONFIG_READ",
                 "SYSTEM_CONFIG_WRITE",
+                "SYSTEM_TEMPLATE_READ",
                 "PROJECT_UPDATE",
                 "PROJECT_DELETE",
                 "PROJECT_MEMBER_MANAGE",
@@ -10356,7 +10387,8 @@
                 "SYSTEM_ADMIN",
                 "SYSTEM_MONITOR",
                 "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE"
+                "SYSTEM_CONFIG_WRITE",
+                "SYSTEM_TEMPLATE_READ"
               ]
             }
           },
@@ -10428,7 +10460,8 @@
                 "SYSTEM_ADMIN",
                 "SYSTEM_MONITOR",
                 "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE"
+                "SYSTEM_CONFIG_WRITE",
+                "SYSTEM_TEMPLATE_READ"
               ]
             }
           },
@@ -10515,7 +10548,8 @@
                 "SYSTEM_ADMIN",
                 "SYSTEM_MONITOR",
                 "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE"
+                "SYSTEM_CONFIG_WRITE",
+                "SYSTEM_TEMPLATE_READ"
               ]
             }
           },
@@ -10559,7 +10593,8 @@
           "SYSTEM_ADMIN",
           "SYSTEM_MONITOR",
           "SYSTEM_CONFIG_READ",
-          "SYSTEM_CONFIG_WRITE"
+          "SYSTEM_CONFIG_WRITE",
+          "SYSTEM_TEMPLATE_READ"
         ],
         "description": "系统权限枚举"
       },
@@ -10612,6 +10647,7 @@
           "SYSTEM_MONITOR",
           "SYSTEM_CONFIG_READ",
           "SYSTEM_CONFIG_WRITE",
+          "SYSTEM_TEMPLATE_READ",
           "PROJECT_UPDATE",
           "PROJECT_DELETE",
           "PROJECT_MEMBER_MANAGE",

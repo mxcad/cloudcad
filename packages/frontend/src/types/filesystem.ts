@@ -219,13 +219,14 @@ export interface FontInfo {
 // ============================================
 
 /**
- * 从文件名提取扩展名
+ * 从文件名提取扩展名（带点）
+ * @returns 返回带点的扩展名（如 ".dwg"），无扩展名时返回 undefined
  */
 export function getFileExtension(filename: string | undefined): string | undefined {
   if (!filename) return undefined;
   const lastDot = filename.lastIndexOf('.');
   if (lastDot === -1 || lastDot === 0) return undefined;
-  return filename.slice(lastDot + 1).toLowerCase();
+  return filename.slice(lastDot).toLowerCase();
 }
 
 /**

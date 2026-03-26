@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
 
 import { handleError } from '../utils/errorHandler';
-import { getOriginalFileUrl } from '../utils/fileUtils';
+import { getOriginalFileUrl, formatRelativeTime, formatFileSize } from '../utils/fileUtils';
 import {
   Thumbnail,
   FileItemSelection,
@@ -18,11 +18,18 @@ import {
   type ActionType,
 } from './file-item/fileActionConfig';
 import { FileSystemNode } from '../types/filesystem';
+import { Tooltip } from './ui/Tooltip';
+
+// Lucide 图标（用于 compact 模式）
+import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
 
 interface FileItemProps {
   node: FileSystemNode;
-  isSelected: boolean;
-  viewMode: 'grid' | 'list';
+  isSelected?: boolean;
+  viewMode?: 'grid' | 'list';
+  /** 紧凑模式：用于 Dashboard 等简化场景，隐藏菜单和选择框 */
+  compact?: boolean;
   isMultiSelectMode?: boolean;
   isTrash?: boolean;
   canUpload?: boolean;
@@ -32,16 +39,16 @@ interface FileItemProps {
   canAddToGallery?: boolean;
   canViewVersionHistory?: boolean;
   canManageTrash?: boolean;
-  onSelect: (
+  onSelect?: (
     nodeId: string,
     isMultiSelect?: boolean,
     isRangeSelect?: boolean
   ) => void;
   onEnter: (node: FileSystemNode) => void;
-  onDownload: (node: FileSystemNode) => void;
-  onDelete: (node: FileSystemNode) => void;
+  onDownload?: (node: FileSystemNode) => void;
+  onDelete?: (node: FileSystemNode) => void;
   onPermanentlyDelete?: (node: FileSystemNode) => void;
-  onRename: (node: FileSystemNode) => void;
+  onRename?: (node: FileSystemNode) => void;
   onRefresh?: () => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDeleteNode?: (e: React.MouseEvent) => void;
@@ -61,8 +68,9 @@ interface FileItemProps {
 
 export const FileItem: React.FC<FileItemProps> = ({
   node,
-  isSelected,
-  viewMode,
+  isSelected = false,
+  viewMode = 'list',
+  compact = false,
   isMultiSelectMode = false,
   isTrash = false,
   canUpload = false,
@@ -94,6 +102,12 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDrop,
   isDropTarget = false,
 }) => {
+  // 空值保护：node 为空时返回 null
+  if (!node) {
+    console.warn('[FileItem] node is undefined or null');
+    return null;
+  }
+
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
@@ -102,10 +116,12 @@ export const FileItem: React.FC<FileItemProps> = ({
   } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageSrc, setPreviewImageSrc] = useState('');
+  const [useCompactActions, setUseCompactActions] = useState(false);
   const isRoot = node.isRoot;
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
   const blockItemClickRef = useRef(false);
+  const listItemRef = useRef<HTMLDivElement | null>(null);
 
   const externalReferenceUpload = useExternalReferenceUpload({
     nodeId: node.id,
@@ -188,7 +204,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         // - 直接点击：切换选中状态（isMulti=true, isShift=false）
         // - Ctrl+点击：切换选中状态（isMulti=true, isShift=false）
         // - Shift+点击：范围选择（isMulti=true, isShift=true）
-        onSelect(node.id, true, isShift);
+        onSelect?.(node.id, true, isShift);
       } else {
         if (isImageFile()) {
           handleImagePreview();
@@ -243,7 +259,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     upload_external_reference: handleUploadExternalReference,
     download: (e) => {
       e.stopPropagation();
-      onDownload(node);
+      onDownload?.(node);
     },
     view_version_history: (e) => {
       e.stopPropagation();
@@ -255,7 +271,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     },
     rename: (e) => {
       e.stopPropagation();
-      onRename(node);
+      onRename?.(node);
     },
     move: (e) => {
       e.stopPropagation();
@@ -271,7 +287,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     },
     delete: (e) => {
       e.stopPropagation();
-      onDelete(node);
+      onDelete?.(node);
     },
     permanently_delete: (e) => {
       e.stopPropagation();
@@ -341,6 +357,26 @@ export const FileItem: React.FC<FileItemProps> = ({
     );
   }
 
+  // 响应式操作按钮：监听列表项宽度，空间不足时切换为菜单按钮模式
+  useEffect(() => {
+    if (viewMode !== 'list') return;
+
+    const element = listItemRef.current;
+    if (!element) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        // 宽度小于 550px 时使用紧凑模式（菜单按钮）
+        // 操作按钮区域大约需要：每个按钮 40px × N个按钮
+        setUseCompactActions(width < 550);
+      }
+    });
+
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, [viewMode]);
+
   if (viewMode === 'grid') {
     const showSelection = isMultiSelectMode && isSelected;
 
@@ -389,7 +425,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         <FileItemSelection
           isSelected={isSelected}
           isMultiSelectMode={isMultiSelectMode}
-          onSelect={(isShift) => onSelect(node.id, true, isShift)}
+          onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
           isGrid
         />
 
@@ -475,8 +511,54 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const showListSelection = isMultiSelectMode && isSelected;
 
+  // compact 模式：简化渲染
+  if (compact) {
+    return (
+      <div
+        onClick={() => onEnter(node)}
+        className="group flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)]"
+      >
+        {/* 图标 */}
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{
+            background: node.isFolder
+              ? 'var(--primary-100)'
+              : 'var(--accent-100)'
+          }}
+        >
+          {node.isFolder ? (
+            <FolderOpen size={18} color="var(--primary-600)" />
+          ) : (
+            <FileText size={18} color="var(--accent-600)" />
+          )}
+        </div>
+
+        {/* 内容 */}
+        <div className="flex-1 min-w-0">
+          <h4
+            className="font-medium text-sm truncate"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {node.name}
+          </h4>
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+            <span>{formatRelativeTime(node.updatedAt)}</span>
+            {node.size && (
+              <>
+                <span>·</span>
+                <span>{formatFileSize(node.size)}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
+      ref={listItemRef}
       data-tour="file-item"
       className={`group flex items-center gap-4 p-3 rounded-lg transition-all duration-200 cursor-pointer
         ${showListSelection ? '' : 'hover:border-[var(--border-default)]'}
@@ -509,7 +591,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       <FileItemSelection
         isSelected={isSelected}
         isMultiSelectMode={isMultiSelectMode}
-        onSelect={(isShift) => onSelect(node.id, true, isShift)}
+        onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
       />
 
       <div className="w-10 h-10 flex-shrink-0">
@@ -527,38 +609,73 @@ export const FileItem: React.FC<FileItemProps> = ({
 
       <FileItemTypeTag node={node} />
 
-      <div 
+      <div
         data-tour="file-item-actions"
-        className="flex items-center gap-1 opacity-100 transition-opacity duration-200"
+        className="flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0"
       >
-        {availableActions.map((action) => (
-          <button
-            {...action.props}
-            key={action.type}
-            onClick={(e) => {
-              e.stopPropagation();
-              actionHandlers[action.type]?.(e);
-            }}
-            className={`p-2 rounded-lg transition-colors ${
-              action.colorClass || 'text-slate-500'
-            } ${action.hoverClass || 'hover:bg-slate-100'}`}
-            title={action.tooltip}
-          >
-            {/* 将图标的尺寸放大到 18px 以匹配列表视图 */}
-            <span className="inline-block scale-110 origin-center">
-              {React.cloneElement(
-                action.icon as React.ReactElement<{
-                  width?: number;
-                  height?: number;
-                }>,
-                {
-                  width: 18,
-                  height: 18,
-                }
-              )}
-            </span>
-          </button>
-        ))}
+        {useCompactActions ? (
+          // 紧凑模式：显示菜单按钮
+          <FileItemMenu
+            node={node}
+            isTrash={isTrash}
+            showMenu={showMenu}
+            menuPosition={menuPosition}
+            menuButtonRef={menuButtonRef}
+            menuContainerRef={menuContainerRef}
+            onToggleMenu={handleToggleMenu}
+            onCloseMenu={handleCloseMenu}
+            onDownload={onDownload}
+            onDelete={onDelete}
+            onPermanentlyDelete={onPermanentlyDelete}
+            onRename={onRename}
+            onEdit={onEdit}
+            onShowMembers={onShowMembers}
+            onShowRoles={onShowRoles}
+            onRestore={onRestore}
+            onMove={onMove}
+            onCopy={onCopy}
+            onAddToGallery={onAddToGallery}
+            onShowVersionHistory={onShowVersionHistory}
+            onUploadExternalReference={handleUploadExternalReference}
+            isCadFile={isCadFile}
+            canDownload={canDownload}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            canAddToGallery={canAddToGallery}
+            canViewVersionHistory={canViewVersionHistory}
+            canManageTrash={canManageTrash}
+          />
+        ) : (
+          // 正常模式：显示独立操作按钮
+          availableActions.map((action) => (
+            <Tooltip key={action.type} content={action.tooltip} position="top">
+              <button
+                {...action.props}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  actionHandlers[action.type]?.(e);
+                }}
+                className={`p-2 rounded-lg transition-colors ${
+                  action.colorClass || 'text-slate-500'
+                } ${action.hoverClass || 'hover:bg-slate-100'}`}
+              >
+                {/* 将图标的尺寸放大到 18px 以匹配列表视图 */}
+                <span className="inline-block scale-110 origin-center">
+                  {React.cloneElement(
+                    action.icon as React.ReactElement<{
+                      width?: number;
+                      height?: number;
+                    }>,
+                    {
+                      width: 18,
+                      height: 18,
+                    }
+                  )}
+                </span>
+              </button>
+            </Tooltip>
+          ))
+        )}
       </div>
 
       <ImagePreviewModal

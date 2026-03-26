@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MoreIcon } from '../FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
 import { getAvailableActions, type ActionType } from './fileActionConfig';
+import { Tooltip } from '../ui/Tooltip';
 
 interface FileItemMenuProps {
   node: FileSystemNode;
@@ -14,9 +15,9 @@ interface FileItemMenuProps {
   onToggleMenu: (e: React.MouseEvent) => void;
   onCloseMenu: () => void;
   onDownload?: (node: FileSystemNode) => void;
-  onDelete: (node: FileSystemNode) => void;
+  onDelete?: (node: FileSystemNode) => void;
   onPermanentlyDelete?: (node: FileSystemNode) => void;
-  onRename: (node: FileSystemNode) => void;
+  onRename?: (node: FileSystemNode) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onShowMembers?: (e: React.MouseEvent) => void;
   onShowRoles?: (e: React.MouseEvent) => void;
@@ -83,11 +84,11 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     download: () => onDownload?.(node),
     view_version_history: () => onShowVersionHistory?.(node),
     add_to_gallery: () => onAddToGallery?.(node),
-    rename: () => onRename(node),
+    rename: () => onRename?.(node),
     move: () => onMove?.(node),
     copy: () => onCopy?.(node),
     restore: () => onRestore?.(node),
-    delete: () => onDelete(node),
+    delete: () => onDelete?.(node),
     permanently_delete: () => onPermanentlyDelete?.(node),
     edit: () => onEdit?.({ stopPropagation: () => {} } as React.MouseEvent),
     show_members: () =>
@@ -218,14 +219,16 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
   return (
     <>
-      <button
-        data-tour="file-item-menu-btn"
-        ref={menuButtonRef}
-        onClick={onToggleMenu}
-        className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] hover:bg-[var(--bg-tertiary)] shadow-sm border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-      >
-        <MoreIcon size={16} />
-      </button>
+      <Tooltip content="更多操作" position="top">
+        <button
+          data-tour="file-item-menu-btn"
+          ref={menuButtonRef}
+          onClick={onToggleMenu}
+          className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] hover:bg-[var(--bg-tertiary)] shadow-sm border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+        >
+          <MoreIcon size={16} />
+        </button>
+      </Tooltip>
 
       {showMenu &&
         menuPosition &&

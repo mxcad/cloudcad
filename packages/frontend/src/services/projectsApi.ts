@@ -18,6 +18,14 @@ import type {
   CreateFolderDto,
 } from '../types/api-client';
 
+/**
+ * 项目过滤类型
+ * - all: 全部项目（我创建的 + 我加入的）
+ * - owned: 我创建的项目
+ * - joined: 我加入的项目（非创建者）
+ */
+export type ProjectFilterType = 'all' | 'owned' | 'joined';
+
 export const projectsApi = {
   // ========== 统一节点操作 ==========
 
@@ -33,8 +41,17 @@ export const projectsApi = {
 
   // ========== 项目操作（兼容旧 API） ==========
 
-  list: (config?: { signal?: AbortSignal }) =>
-    getApiClient().FileSystemController_getProjects(null, null, config),
+  /**
+   * 获取项目列表
+   * @param filter 项目过滤类型：all-全部，owned-我创建的，joined-我加入的
+   * @param config 请求配置
+   */
+  list: (filter?: ProjectFilterType, config?: { signal?: AbortSignal }) =>
+    getApiClient().FileSystemController_getProjects(
+      filter ? { filter } : null,
+      null,
+      config
+    ),
 
   getDeletedProjects: (config?: { signal?: AbortSignal }) =>
     getApiClient().FileSystemController_getDeletedProjects(null, null, config),

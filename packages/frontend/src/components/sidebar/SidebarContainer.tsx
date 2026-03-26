@@ -41,6 +41,7 @@ import { SidebarTrigger } from './SidebarTrigger';
 import { ProjectDrawingsPanel } from '../ProjectDrawingsPanel';
 import { CADEditorSidebar } from '../CADEditorSidebar';
 import { CollaborateSidebar } from '../CollaborateSidebar';
+import { Tooltip } from '../ui/Tooltip';
 import { FileSystemNode } from '../../types/filesystem';
 import styles from './sidebar.module.css';
 
@@ -240,7 +241,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       const rect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - rect.left;
       // 限制宽度范围
-      const clampedWidth = Math.max(200, Math.min(600, newWidth));
+      const clampedWidth = Math.max(300, Math.min(600, newWidth));
       setWidth(clampedWidth);
     };
 
@@ -327,35 +328,47 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
           <div className={styles.drawingsPanel}>
             {/* 子 Tab 切换 */}
             <div className={styles.subTabBar}>
-              <button
-                className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
-                onClick={() => handleDrawingsSubTabChange('my-project')}
-              >
-                <FolderOpen size={14} />
-                <span>我的项目</span>
-              </button>
-              <button
-                className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
-                onClick={() => handleDrawingsSubTabChange('my-drawings')}
-              >
-                <FileText size={14} />
-                <span>我的图纸</span>
-              </button>
-              <button
-                className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
-                onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
-              >
-                <Box size={14} />
-                <span>图纸库</span>
-              </button>
-              <button
-                className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
-                onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
-                data-tour="sidebar-blocks-btn"
-              >
-                <LayoutGrid size={14} />
-                <span>图块库</span>
-              </button>
+              <Tooltip content="我的项目" position="bottom" delay={100}>
+                <button
+                  className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
+                  onClick={() => handleDrawingsSubTabChange('my-project')}
+                  aria-label="我的项目"
+                >
+                  <FolderOpen size={14} />
+                  <span>我的项目</span>
+                </button>
+              </Tooltip>
+              <Tooltip content="我的图纸" position="bottom" delay={100}>
+                <button
+                  className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
+                  onClick={() => handleDrawingsSubTabChange('my-drawings')}
+                  aria-label="我的图纸"
+                >
+                  <FileText size={14} />
+                  <span>我的图纸</span>
+                </button>
+              </Tooltip>
+              <Tooltip content="图纸库" position="bottom" delay={100}>
+                <button
+                  className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
+                  onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
+                  aria-label="图纸库"
+                >
+                  <Box size={14} />
+                  <span>图纸库</span>
+                </button>
+              </Tooltip>
+              <Tooltip content="图块库" position="bottom" delay={100}>
+                <button
+                  className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
+                  onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
+                  data-tour="sidebar-blocks-btn"
+                  aria-label="图块库"
+                >
+                  <LayoutGrid size={14} />
+                  <span>图块库</span>
+                </button>
+              </Tooltip>
             </div>
             {/* 子 Tab 内容 */}
             <div className={styles.subTabContent}>
@@ -367,6 +380,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
                   parentId={currentOpenFileParentId}
+                  personalSpaceId={personalSpaceId}
                 />
               )}
               {activeDrawingsSubTab === 'my-drawings' && (

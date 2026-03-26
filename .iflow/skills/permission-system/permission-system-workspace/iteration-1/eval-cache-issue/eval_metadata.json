@@ -1,0 +1,31 @@
+{
+  "eval_id": 4,
+  "eval_name": "cache-issue-diagnosis",
+  "prompt": "我修改了用户的角色，从 USER 改成了 ADMIN，但是权限检查还是用的旧的权限，这是什么问题？",
+  "assertions": [
+    {
+      "name": "识别了缓存问题",
+      "description": "应该指出这是缓存问题",
+      "check_type": "output_contains",
+      "expected": "缓存"
+    },
+    {
+      "name": "定位了具体代码位置",
+      "description": "应该指出 users.service.ts 中的具体位置",
+      "check_type": "output_contains",
+      "expected": "users.service.ts"
+    },
+    {
+      "name": "提到了 await 问题",
+      "description": "应该指出 clearUserCache 缺少 await",
+      "check_type": "output_contains",
+      "expected": "await"
+    },
+    {
+      "name": "提供了解决方案",
+      "description": "应该提供修复建议",
+      "check_type": "output_contains",
+      "expected": "clearUserCache"
+    }
+  ]
+}

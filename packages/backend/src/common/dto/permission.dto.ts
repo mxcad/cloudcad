@@ -58,6 +58,10 @@ export enum SystemPermission {
   CONFIG_READ = 'SYSTEM_CONFIG_READ',
   /** 修改运行时配置 */
   CONFIG_WRITE = 'SYSTEM_CONFIG_WRITE',
+
+  // ========== 模板库管理 ==========
+  /** 查看模板库 */
+  TEMPLATE_READ = 'SYSTEM_TEMPLATE_READ',
 }
 
 /**

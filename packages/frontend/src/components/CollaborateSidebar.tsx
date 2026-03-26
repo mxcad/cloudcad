@@ -13,10 +13,12 @@ import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import Check from 'lucide-react/dist/esm/icons/check';
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
+import { Tooltip } from './ui/Tooltip';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
+import { mxcadManager } from '../services/mxcadManager';
 import styles from './CollaborateSidebar.module.css';
 
 /**
@@ -30,11 +32,25 @@ import styles from './CollaborateSidebar.module.css';
 export const CollaborateSidebar: React.FC = () => {
   const { showToast } = useNotification();
 
+  /**
+   * 获取协同对象
+   * 如果 CAD 未初始化完成，返回 null
+   */
   const getCooperate = () => {
-    const cooperate = MxCpp.getCurrentMxCAD()?.getCooperate();
+    const mxCAD = MxCpp.getCurrentMxCAD();
+    if (!mxCAD) {
+      return null;
+    }
+
+    const cooperate = mxCAD.getCooperate();
+    if (!cooperate) {
+      return null;
+    }
+
     cooperate.init({
       server_addres: APP_COOPERATE_URL,
     });
+
     return cooperate;
   };
 
@@ -66,10 +82,44 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, []);
 
-  // 组件加载时获取协同列表
+  // CAD 初始化状态轮询
+  const [isCadReady, setIsCadReady] = useState(false);
+  const initCheckRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 检查 CAD 初始化状态
   useEffect(() => {
-    fetchWorks();
-  }, [fetchWorks]);
+    const checkCadReady = () => {
+      const ready = mxcadManager.isReady();
+      if (ready) {
+        setIsCadReady(true);
+        if (initCheckRef.current) {
+          clearInterval(initCheckRef.current);
+          initCheckRef.current = null;
+        }
+      }
+    };
+
+    // 立即检查一次
+    checkCadReady();
+
+    // 如果还没准备好，启动轮询
+    if (!mxcadManager.isReady()) {
+      initCheckRef.current = setInterval(checkCadReady, 500);
+    }
+
+    return () => {
+      if (initCheckRef.current) {
+        clearInterval(initCheckRef.current);
+      }
+    };
+  }, []);
+
+  // CAD 准备好后获取协同列表
+  useEffect(() => {
+    if (isCadReady) {
+      fetchWorks();
+    }
+  }, [isCadReady, fetchWorks]);
 
   // 创建协同
   const handleCreateWork = useCallback(async () => {
@@ -201,17 +251,19 @@ export const CollaborateSidebar: React.FC = () => {
           <span>{creating ? '创建中...' : '创建协同'}</span>
         </button>
 
-        <button
-          onClick={fetchWorks}
-          disabled={loading}
-          className={`${styles.iconButton} ${styles.ripple}`}
-          title="刷新列表"
-        >
-          <RefreshCw
-            size={18}
-            className={loading ? 'animate-spin' : ''}
-          />
-        </button>
+        <Tooltip content="刷新列表" position="bottom" delay={100} disabled={loading}>
+          <button
+            onClick={fetchWorks}
+            disabled={loading}
+            className={`${styles.iconButton} ${styles.ripple}`}
+            aria-label="刷新列表"
+          >
+            <RefreshCw
+              size={18}
+              className={loading ? 'animate-spin' : ''}
+            />
+          </button>
+        </Tooltip>
       </div>
 
       {/* 当前协同状态 */}

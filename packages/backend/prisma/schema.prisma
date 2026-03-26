@@ -349,6 +349,9 @@ enum Permission {
   // ========== 运行时配置管理 ==========
   SYSTEM_CONFIG_READ
   SYSTEM_CONFIG_WRITE
+
+  // ========== 模板库管理 ==========
+  SYSTEM_TEMPLATE_READ
 }
 
 // 项目权限枚举（与系统权限完全解耦）

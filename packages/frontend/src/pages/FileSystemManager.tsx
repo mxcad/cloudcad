@@ -13,7 +13,8 @@ import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/file-system';
 import { useProjectManagement } from '../hooks/useProjectManagement';
 import { usePermission } from '../hooks/usePermission';
-import { useProjectPermission } from '../hooks/useProjectPermission';
+import { useProjectPermissions } from '../hooks/useProjectPermissions';
+import { getFileItemPermissionProps } from '../hooks/useFileItemProps';
 import { useAuth } from '../contexts/AuthContext';
 import { useFileSystemStore } from '../stores/fileSystemStore';
 import { projectsApi } from '../services/projectsApi';
@@ -39,6 +40,7 @@ import { VersionHistoryModal } from '../components/modals/VersionHistoryModal';
 import { versionControlApi } from '../services/versionControlApi';
 import { ProjectPermission } from '../constants/permissions';
 import { isAbortError } from '../utils/errorHandler';
+import type { ProjectFilterType } from '../services/projectsApi';
 
 interface FileSystemManagerProps {
   mode?: 'project' | 'personal-space';
@@ -53,6 +55,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+
+  // 项目过滤状态：区分"我创建的"和"我加入的"项目
+  const [projectFilter, setProjectFilter] = useState<ProjectFilterType>('all');
 
   // 私人空间状态 - 使用 store 缓存
   const {
@@ -138,6 +143,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   } = useFileSystem({
     mode,
     personalSpaceId,
+    projectFilter,
   });
 
   // 项目管理 hooks
@@ -205,14 +211,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   // 权限管理 hook
   const { hasPermission } = usePermission();
-  const { checkPermission } = useProjectPermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isProjectRolesModalOpen, setIsProjectRolesModalOpen] = useState(false);
 
   // 所有用户都可以创建项目，不需要权限检查
   const canCreateProject = true;
 
-  // 权限状态
+  // 权限状态（用于根节点/项目列表的权限）
   const [nodePermissions, setNodePermissions] = useState<
     Map<
       string,
@@ -228,50 +233,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   // 权限加载状态
   const [permissionsLoading, setPermissionsLoading] = useState(false);
 
-  // 项目权限状态
-  const [projectPermissions, setProjectPermissions] = useState<
-    Record<string, boolean | undefined>
-  >({});
-
-  // 加载项目权限
-  useEffect(() => {
-    if (!user || !urlProjectId) return;
-
-    const loadProjectPermissions = async () => {
-      try {
-        const permissions = [
-          ProjectPermission.FILE_CREATE,
-          ProjectPermission.FILE_UPLOAD,
-          ProjectPermission.FILE_OPEN,
-          ProjectPermission.FILE_EDIT,
-          ProjectPermission.FILE_DELETE,
-          ProjectPermission.FILE_TRASH_MANAGE,
-          ProjectPermission.FILE_DOWNLOAD,
-          ProjectPermission.FILE_MOVE,
-          ProjectPermission.FILE_COPY,
-          ProjectPermission.CAD_SAVE,
-          ProjectPermission.FILE_DOWNLOAD,
-          ProjectPermission.CAD_EXTERNAL_REFERENCE,
-          ProjectPermission.GALLERY_ADD,
-          ProjectPermission.VERSION_READ,
-        ] as const;
-
-        const permissionResults = await Promise.all(
-          permissions.map((perm) => checkPermission(urlProjectId, perm))
-        );
-
-        const newPermissions: Record<string, boolean | undefined> = {};
-        permissions.forEach((perm, index) => {
-          newPermissions[perm] = permissionResults[index];
-        });
-        setProjectPermissions(newPermissions);
-      } catch (error) {
-        console.error('加载项目权限失败:', error);
-      }
-    };
-
-    loadProjectPermissions();
-  }, [user, urlProjectId, checkPermission]);
+  // 项目文件权限（使用统一的权限加载 Hook）
+  const { permissions: projectPermissions } = useProjectPermissions(urlProjectId);
 
   // 移动/拷贝状态（支持批量操作标记）
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
@@ -773,6 +736,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   // ========== 渲染函数 ==========
 
+  // 项目过滤 Tab 配置
+  const projectFilterTabs: { key: ProjectFilterType; label: string }[] = [
+    { key: 'all', label: '全部' },
+    { key: 'owned', label: '我创建的' },
+    { key: 'joined', label: '我加入的' },
+  ];
+
   const renderHeader = () => (
     <div
       className="backdrop-blur-xl rounded-2xl p-4 shadow-sm space-y-3"
@@ -1000,12 +970,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         </div>
       </div>
 
-      {/* 项目回收站标签页 - 仅在项目根目录模式下显示 */}
+      {/* 项目标签页 - 仅在项目根目录模式下显示 */}
       {isAtRoot && (
         <div
           className="flex items-center gap-2 border-b"
           style={{ borderColor: 'var(--border-default)' }}
         >
+          {/* 一级 Tab：我的项目 / 回收站 */}
           <button
             onClick={() => isProjectTrashView && handleToggleProjectTrashView()}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
@@ -1058,6 +1029,37 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           >
             回收站
           </button>
+
+          {/* 二级 Tab：项目过滤（仅在"我的项目"视图下显示） */}
+          {!isProjectTrashView && isProjectRootMode && (
+            <div className="flex items-center gap-1 ml-4 pl-4 border-l" style={{ borderColor: 'var(--border-default)' }}>
+              {projectFilterTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setProjectFilter(tab.key)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  style={{
+                    background: projectFilter === tab.key ? 'var(--bg-tertiary)' : 'transparent',
+                    color: projectFilter === tab.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (projectFilter !== tab.key) {
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                      e.currentTarget.style.background = 'var(--bg-tertiary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (projectFilter !== tab.key) {
+                      e.currentTarget.style.color = 'var(--text-tertiary)';
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
           {isProjectTrashView && nodes.length > 0 && (
             <div className="ml-auto flex items-center gap-2">
               <Button
@@ -1369,7 +1371,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 ? '开始创建您的第一个项目'
                 : '上传文件或创建文件夹来开始使用'}
       </p>
-      {isProjectsEmpty && canCreateProject && (
+      {isProjectsEmpty && canCreateProject && !isProjectTrashView && !isTrashView && (
         <Button
           onClick={openCreateProject}
           variant="outline"
@@ -1510,26 +1512,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 isDropTarget={dropTargetId === node.id}
-                canUpload={projectPermissions[ProjectPermission.FILE_UPLOAD]}
-                canEdit={
-                  node.isRoot
-                    ? (permissions.canEdit ?? false)
-                    : projectPermissions[ProjectPermission.FILE_EDIT]
-                }
-                canDelete={
-                  node.isRoot
-                    ? (permissions.canDelete ?? false)
-                    : projectPermissions[ProjectPermission.FILE_DELETE]
-                }
-                canDownload={
-                  projectPermissions[ProjectPermission.FILE_DOWNLOAD]
-                }
-                canAddToGallery={
-                  projectPermissions[ProjectPermission.GALLERY_ADD]
-                }
-                canViewVersionHistory={
-                  projectPermissions[ProjectPermission.VERSION_READ]
-                }
+                {...getFileItemPermissionProps(node, {
+                  projectPermissions,
+                  nodePermissions: permissions,
+                })}
               />
             );
           })}

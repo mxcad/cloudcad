@@ -291,23 +291,44 @@ export class FileSystemService {
       limit = 20,
       sortBy,
       sortOrder,
+      filter,
     } = query || {};
     const skip = (page - 1) * limit;
+
+    // 根据 filter 参数构建不同的查询条件
+    let ownerCondition: any;
+
+    switch (filter) {
+      case 'owned':
+        // 只返回用户创建的项目
+        ownerCondition = { ownerId: userId };
+        break;
+      case 'joined':
+        // 只返回用户作为成员加入的项目（非创建者）
+        ownerCondition = {
+          projectMembers: {
+            some: { userId },
+          },
+          ownerId: { not: userId }, // 排除自己创建的项目
+        };
+        break;
+      case 'all':
+      default:
+        // 返回全部：用户创建的 + 用户作为成员加入的
+        ownerCondition = {
+          OR: [
+            { ownerId: userId },
+            { projectMembers: { some: { userId } } },
+          ],
+        };
+        break;
+    }
 
     const where: any = {
       isRoot: true,
       deletedAt: null,
       personalSpaceKey: null, // 排除私人空间
-      OR: [
-        // 用户拥有的项目
-        { ownerId: userId },
-        // 用户作为成员加入的项目
-        {
-          projectMembers: {
-            some: { userId },
-          },
-        },
-      ],
+      ...ownerCondition,
     };
 
     if (search) {

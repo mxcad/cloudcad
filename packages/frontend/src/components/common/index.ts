@@ -12,3 +12,5 @@ export type {
   CategoryOption,
   ViewMode,
 } from './ResourceList';
+
+export { VersionHistoryDropdown } from './VersionHistoryDropdown';

@@ -13,13 +13,14 @@
  * - 图标在hover时展开显示文字提示
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import Box from 'lucide-react/dist/esm/icons/box';
 import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
 import Users from 'lucide-react/dist/esm/icons/users';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
+import { Tooltip } from '../ui/Tooltip';
 import styles from './sidebar.module.css';
 
 interface SidebarTriggerProps {
@@ -91,8 +92,6 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   activeDrawingsSubTab,
   onTabClick,
 }) => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
   const handleButtonClick = (button: ToolButtonConfig) => {
     onTabClick(button.tab, button.subTab);
   };
@@ -108,57 +107,52 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
     <div className={styles.narrowSidebar} role="toolbar" aria-label="侧边栏工具条" data-tour="cad-sidebar-trigger">
       {/* 顶部装饰线 */}
       <div className={styles.sidebarAccentLine} />
-      
+
       {/* 主工具区 */}
       <div className={styles.toolsContainer}>
         {TOOL_BUTTONS.map((button) => {
           const isActive = isButtonActive(button);
-          const isHovered = hoveredId === button.id;
-          
+
           return (
-            <div
+            <Tooltip
               key={button.id}
-              className={styles.toolWrapper}
-              onMouseEnter={() => setHoveredId(button.id)}
-              onMouseLeave={() => setHoveredId(null)}
+              content={button.label}
+              position="right"
+              delay={100}
             >
-              {/* 激活指示器 */}
-              <div 
-                className={`${styles.activeIndicator} ${isActive ? styles.visible : ''}`}
-                style={{ backgroundColor: button.color }}
-              />
-              
-              {/* 按钮主体 */}
-              <button
-                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
-                onClick={() => handleButtonClick(button)}
-                title={button.label}
-                aria-label={`打开${button.label}`}
-                aria-pressed={isActive}
-                data-tour={button.dataTour}
-              >
-                {/* 玻璃背景 */}
-                <div className={styles.buttonGlass} />
-                
-                {/* 图标 */}
-                <span className={styles.buttonIcon}>{button.icon}</span>
-                
-                {/* 悬停时的光晕 */}
-                <div 
-                  className={`${styles.buttonGlow} ${isHovered ? styles.visible : ''}`}
-                  style={{ background: `radial-gradient(circle, ${button.color}30 0%, transparent 70%)` }}
+              <div className={styles.toolWrapper}>
+                {/* 激活指示器 */}
+                <div
+                  className={`${styles.activeIndicator} ${isActive ? styles.visible : ''}`}
+                  style={{ backgroundColor: button.color }}
                 />
-              </button>
-              
-              {/* 悬浮提示 */}
-              <div className={`${styles.floatingLabel} ${isHovered ? styles.visible : ''}`}>
-                <span style={{ color: button.color }}>{button.label}</span>
+
+                {/* 按钮主体 */}
+                <button
+                  className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                  onClick={() => handleButtonClick(button)}
+                  aria-label={`打开${button.label}`}
+                  aria-pressed={isActive}
+                  data-tour={button.dataTour}
+                >
+                  {/* 玻璃背景 */}
+                  <div className={styles.buttonGlass} />
+
+                  {/* 图标 */}
+                  <span className={styles.buttonIcon}>{button.icon}</span>
+
+                  {/* 悬停时的光晕 */}
+                  <div
+                    className={styles.buttonGlow}
+                    style={{ background: `radial-gradient(circle, ${button.color}30 0%, transparent 70%)` }}
+                  />
+                </button>
               </div>
-            </div>
+            </Tooltip>
           );
         })}
       </div>
-      
+
       {/* 底部装饰 */}
       <div className={styles.sidebarBottom}>
         <div className={styles.dotPattern} />
