@@ -24,9 +24,6 @@
 ### CAD 编辑器
 ![CAD 编辑器](documents/user-guide/imgs/04-cad-editor.png)
 
-### 协同编辑
-![协同编辑](documents/user-guide/imgs/18-cad-collaborate.png)
-
 ### 项目管理
 ![项目管理](documents/user-guide/imgs/05-projects.png)
 
