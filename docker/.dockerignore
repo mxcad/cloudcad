@@ -55,10 +55,8 @@ tmp
 *.tmp
 *.temp
 
-# 文件数据 (运行时生成)
-filesData
-uploads
-svn-repo
+# 数据目录 (用户数据，不包含在镜像中)
+data/
 
 # 文档 (可选)
 docs

@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required for production}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     ports:
       - '${DB_PORT:-5432}:5432'
     healthcheck:
@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
-      - redis_data:/data
+      - ./data/redis:/data
     ports:
       - '${REDIS_PORT:-6379}:6379'
     healthcheck:
@@ -86,10 +86,10 @@ services:
       UPLOAD_MAX_SIZE: ${UPLOAD_MAX_SIZE:-104857600}
       UPLOAD_ALLOWED_TYPES: ${UPLOAD_ALLOWED_TYPES:-.dwg,.dxf,.pdf,.png,.jpg,.jpeg}
       # 文件存储路径（容器内路径）
-      FILES_DATA_PATH: /app/filesData
-      SVN_REPO_PATH: /app/svn-repo
-      MXCAD_UPLOAD_PATH: /app/uploads
-      MXCAD_TEMP_PATH: /app/temp
+      FILES_DATA_PATH: /app/data/files
+      SVN_REPO_PATH: /app/data/svn-repo
+      MXCAD_UPLOAD_PATH: /app/data/uploads
+      MXCAD_TEMP_PATH: /app/data/temp
       MXCAD_ASSEMBLY_PATH: /app/runtime/linux/mxcad/mxcadassembly
       MXCAD_FONTS_PATH: /app/runtime/linux/mxcad/fonts
       # 前端字体目录（nginx 静态资源）
@@ -113,12 +113,12 @@ services:
       - '${API_PORT:-3001}:3001'
       - '${COOPERATE_PORT:-3000}:3000'
     volumes:
-      # 使用 Docker 命名卷存储持久化数据（最佳实践）
-      - files_data:/app/filesData
-      - svn_repo:/app/svn-repo
-      - uploads:/app/uploads
-      - temp:/app/temp
-      - logs:/app/logs
+      # 绑定挂载到 ./data/ 目录，便于备份和迁移
+      - ./data/files:/app/data/files
+      - ./data/svn-repo:/app/data/svn-repo
+      - ./data/uploads:/app/data/uploads
+      - ./data/temp:/app/data/temp
+      - ./data/logs:/app/data/logs
       # 注意: 不再挂载 mxcadassembly，避免覆盖容器内的文件
     depends_on:
       postgres:
@@ -137,11 +137,13 @@ networks:
   cloudcad-network:
     driver: bridge
 
-volumes:
-  postgres_data:
-  redis_data:
-  files_data:
-  svn_repo:
-  uploads:
-  temp:
-  logs:
+# 数据目录已改为绑定挂载到 ./data/ 目录
+# 备份时只需复制 ./data/ 目录即可
+# volumes:
+#   postgres_data:
+#   redis_data:
+#   files_data:
+#   svn_repo:
+#   uploads:
+#   temp:
+#   logs:

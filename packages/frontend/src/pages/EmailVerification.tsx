@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../services/authApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
@@ -23,7 +23,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
  * 邮箱验证页面 - CloudCAD
- * 
+ *
  * 设计特色：
  * - 居中卡片布局
  * - 统一渐变网格背景
@@ -36,7 +36,11 @@ export const EmailVerification: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyEmailAndLogin, isAuthenticated } = useAuth();
+  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
+
+  const appName = brandConfig?.title || 'CloudCAD';
+  const appLogo = brandConfig?.logo || '/logo.png';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,9 +196,9 @@ export const EmailVerification: React.FC = () => {
           <div className="logo-section">
             <div className="logo-wrapper">
               <div className="logo-glow" />
-              <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+              <img src={appLogo} alt={appName} className="logo-image" />
             </div>
-            <h1 className="app-title">{APP_NAME}</h1>
+            <h1 className="app-title">{appName}</h1>
             <p className="app-tagline">验证您的邮箱地址</p>
           </div>
 
@@ -205,7 +209,8 @@ export const EmailVerification: React.FC = () => {
             </div>
             {email ? (
               <p className="email-text">
-                我们已向 <span className="email-highlight">{email}</span> 发送了验证码
+                我们已向 <span className="email-highlight">{email}</span>{' '}
+                发送了验证码
               </p>
             ) : (
               <p className="email-text">请输入您收到的6位数字验证码</p>
@@ -230,7 +235,9 @@ export const EmailVerification: React.FC = () => {
 
           {/* 验证码输入 */}
           <div className="code-section">
-            <label htmlFor="code" className="code-label">验证码</label>
+            <label htmlFor="code" className="code-label">
+              验证码
+            </label>
             <input
               id="code"
               type="text"
@@ -302,10 +309,7 @@ export const EmailVerification: React.FC = () => {
               )}
             </button>
 
-            <button
-              onClick={() => navigate('/login')}
-              className="back-button"
-            >
+            <button onClick={() => navigate('/login')} className="back-button">
               <ArrowLeftIcon size={16} />
               <span>返回登录</span>
             </button>
@@ -325,7 +329,7 @@ export const EmailVerification: React.FC = () => {
           </div>
         </div>
 
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
 
       <style>{`

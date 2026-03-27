@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { validateField, validateRegisterForm } from '../utils/validation';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
@@ -28,7 +28,7 @@ import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
 
 /**
  * 注册页面 - CloudCAD
- * 
+ *
  * 设计特色：
  * - 居中单卡片布局
  * - 分步表单设计：步骤指示器 + 动态表单
@@ -40,10 +40,17 @@ import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
 export const Register: React.FC = () => {
   useDocumentTitle('注册');
   const navigate = useNavigate();
-  const { register: registerUser, isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    register: registerUser,
+    isAuthenticated,
+    loading: authLoading,
+  } = useAuth();
   const { config: runtimeConfig, loading: configLoading } = useRuntimeConfig();
+  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
 
+  const appName = brandConfig?.title || 'CloudCAD';
+  const appLogo = brandConfig?.logo || '/logo.png';
   const mailEnabled = runtimeConfig.mailEnabled;
 
   const [formData, setFormData] = useState<RegisterDto>({
@@ -77,13 +84,11 @@ export const Register: React.FC = () => {
             </div>
             <h2 className="closed-title">注册已关闭</h2>
             <p className="closed-message">
-              系统管理员已关闭新用户注册功能。<br />
+              系统管理员已关闭新用户注册功能。
+              <br />
               如有疑问，请联系管理员。
             </p>
-            <button
-              onClick={() => navigate('/login')}
-              className="back-button"
-            >
+            <button onClick={() => navigate('/login')} className="back-button">
               <ArrowLeftIcon size={18} />
               <span>返回登录</span>
             </button>
@@ -112,44 +117,50 @@ export const Register: React.FC = () => {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
 
-    if (name === 'confirmPassword') {
-      setConfirmPassword(value);
-      if (touched.confirmPassword) {
-        if (value && formData.password !== value) {
-          setFieldErrors((prev) => ({ ...prev, confirmPassword: '两次输入的密码不一致' }));
-        } else {
-          setFieldErrors((prev) => {
-            const newErrors = { ...prev };
-            delete newErrors.confirmPassword;
-            return newErrors;
-          });
+      if (name === 'confirmPassword') {
+        setConfirmPassword(value);
+        if (touched.confirmPassword) {
+          if (value && formData.password !== value) {
+            setFieldErrors((prev) => ({
+              ...prev,
+              confirmPassword: '两次输入的密码不一致',
+            }));
+          } else {
+            setFieldErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.confirmPassword;
+              return newErrors;
+            });
+          }
+        }
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+
+        if (touched[name]) {
+          const fieldError = validateField(
+            name as keyof typeof import('../utils/validation').ValidationRules,
+            value
+          );
+          if (fieldError) {
+            setFieldErrors((prev) => ({ ...prev, [name]: fieldError }));
+          } else {
+            setFieldErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors[name];
+              return newErrors;
+            });
+          }
         }
       }
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
 
-      if (touched[name]) {
-        const fieldError = validateField(
-          name as keyof typeof import('../utils/validation').ValidationRules,
-          value
-        );
-        if (fieldError) {
-          setFieldErrors((prev) => ({ ...prev, [name]: fieldError }));
-        } else {
-          setFieldErrors((prev) => {
-            const newErrors = { ...prev };
-            delete newErrors[name];
-            return newErrors;
-          });
-        }
-      }
-    }
-
-    if (error) setError(null);
-  }, [touched, formData.password, error]);
+      if (error) setError(null);
+    },
+    [touched, formData.password, error]
+  );
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -158,7 +169,10 @@ export const Register: React.FC = () => {
 
     if (name === 'confirmPassword') {
       if (value && formData.password !== value) {
-        setFieldErrors((prev) => ({ ...prev, confirmPassword: '两次输入的密码不一致' }));
+        setFieldErrors((prev) => ({
+          ...prev,
+          confirmPassword: '两次输入的密码不一致',
+        }));
       } else {
         setFieldErrors((prev) => {
           const newErrors = { ...prev };
@@ -188,7 +202,7 @@ export const Register: React.FC = () => {
       const errors: Record<string, string> = {};
       if (!formData.username) errors.username = '请输入用户名';
       if (mailEnabled && !formData.email) errors.email = '请输入邮箱';
-      
+
       setFieldErrors((prev) => ({ ...prev, ...errors }));
       return Object.keys(errors).length === 0;
     }
@@ -233,7 +247,9 @@ export const Register: React.FC = () => {
     setError(null);
 
     try {
-      const registerData = mailEnabled ? formData : { ...formData, email: undefined };
+      const registerData = mailEnabled
+        ? formData
+        : { ...formData, email: undefined };
       const result = await registerUser(registerData as RegisterDto);
 
       if (mailEnabled && formData.email) {
@@ -249,11 +265,17 @@ export const Register: React.FC = () => {
       }
     } catch (err) {
       const axiosError = err as Error & {
-        response?: { data?: { message?: string }; status?: number; statusText?: string };
+        response?: {
+          data?: { message?: string };
+          status?: number;
+          statusText?: string;
+        };
       };
       setError(
         axiosError.message ||
-          (axiosError.response?.status === 409 ? '用户名或邮箱已被使用' : axiosError.response?.statusText) ||
+          (axiosError.response?.status === 409
+            ? '用户名或邮箱已被使用'
+            : axiosError.response?.statusText) ||
           '注册失败，请稍后重试'
       );
     } finally {
@@ -261,7 +283,9 @@ export const Register: React.FC = () => {
     }
   };
 
-  const getPasswordStrength = (password: string): { strength: number; label: string; color: string } => {
+  const getPasswordStrength = (
+    password: string
+  ): { strength: number; label: string; color: string } => {
     if (!password) return { strength: 0, label: '', color: '' };
     let score = 0;
     if (password.length >= 8) score++;
@@ -283,7 +307,10 @@ export const Register: React.FC = () => {
   const passwordStrength = getPasswordStrength(formData.password);
 
   return (
-    <div className="relative z-[1] register-page" data-theme={isDark ? 'dark' : 'light'}>
+    <div
+      className="relative z-[1] register-page"
+      data-theme={isDark ? 'dark' : 'light'}
+    >
       {/* 交互式动态背景 - 带鼠标视差效果 */}
       <InteractiveBackground />
 
@@ -299,15 +326,17 @@ export const Register: React.FC = () => {
           <div className="logo-section">
             <div className="logo-wrapper">
               <div className="logo-glow" />
-              <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+              <img src={appLogo} alt={appName} className="logo-image" />
             </div>
-            <h1 className="app-title">{APP_NAME}</h1>
+            <h1 className="app-title">{appName}</h1>
             <p className="app-tagline">创建账户，开启云端 CAD 之旅</p>
           </div>
 
           {/* 步骤指示器 */}
           <div className="step-indicator">
-            <div className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
+            <div
+              className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}
+            >
               <div className="step-number">
                 {currentStep > 1 ? <CheckCircleIcon size={16} /> : 1}
               </div>
@@ -326,7 +355,9 @@ export const Register: React.FC = () => {
               {currentStep === 1 ? '创建账户' : '设置密码'}
             </h2>
             <p className="form-subtitle">
-              {currentStep === 1 ? '填写您的基本信息' : '设置安全密码以保护账户'}
+              {currentStep === 1
+                ? '填写您的基本信息'
+                : '设置安全密码以保护账户'}
             </p>
           </div>
 
@@ -343,12 +374,17 @@ export const Register: React.FC = () => {
             {/* 步骤 1：基本信息 */}
             {currentStep === 1 && (
               <div className="form-step animate-fade-in">
-                <div className={`input-group ${focusedField === 'username' ? 'focused' : ''} ${fieldErrors.username ? 'error' : ''}`}>
+                <div
+                  className={`input-group ${focusedField === 'username' ? 'focused' : ''} ${fieldErrors.username ? 'error' : ''}`}
+                >
                   <label htmlFor="username" className="input-label">
                     用户名 <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
-                    <UserIcon size={18} className={`input-icon ${focusedField === 'username' ? 'active' : ''}`} />
+                    <UserIcon
+                      size={18}
+                      className={`input-icon ${focusedField === 'username' ? 'active' : ''}`}
+                    />
                     <input
                       id="username"
                       name="username"
@@ -368,12 +404,17 @@ export const Register: React.FC = () => {
                   )}
                 </div>
 
-                <div className={`input-group ${focusedField === 'nickname' ? 'focused' : ''} ${fieldErrors.nickname ? 'error' : ''}`}>
+                <div
+                  className={`input-group ${focusedField === 'nickname' ? 'focused' : ''} ${fieldErrors.nickname ? 'error' : ''}`}
+                >
                   <label htmlFor="nickname" className="input-label">
                     昵称
                   </label>
                   <div className="input-wrapper">
-                    <SparklesIcon size={18} className={`input-icon ${focusedField === 'nickname' ? 'active' : ''}`} />
+                    <SparklesIcon
+                      size={18}
+                      className={`input-icon ${focusedField === 'nickname' ? 'active' : ''}`}
+                    />
                     <input
                       id="nickname"
                       name="nickname"
@@ -393,12 +434,17 @@ export const Register: React.FC = () => {
                 </div>
 
                 {mailEnabled && (
-                  <div className={`input-group ${focusedField === 'email' ? 'focused' : ''} ${fieldErrors.email ? 'error' : ''}`}>
+                  <div
+                    className={`input-group ${focusedField === 'email' ? 'focused' : ''} ${fieldErrors.email ? 'error' : ''}`}
+                  >
                     <label htmlFor="email" className="input-label">
                       邮箱地址 <span className="required">*</span>
                     </label>
                     <div className="input-wrapper">
-                      <MailIcon size={18} className={`input-icon ${focusedField === 'email' ? 'active' : ''}`} />
+                      <MailIcon
+                        size={18}
+                        className={`input-icon ${focusedField === 'email' ? 'active' : ''}`}
+                      />
                       <input
                         id="email"
                         name="email"
@@ -420,7 +466,11 @@ export const Register: React.FC = () => {
                   </div>
                 )}
 
-                <button type="button" onClick={handleNext} className="submit-button">
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="submit-button"
+                >
                   <span>下一步</span>
                   <ArrowRightIcon size={18} className="button-arrow" />
                 </button>
@@ -430,12 +480,17 @@ export const Register: React.FC = () => {
             {/* 步骤 2：密码设置 */}
             {currentStep === 2 && (
               <div className="form-step animate-fade-in">
-                <div className={`input-group ${focusedField === 'password' ? 'focused' : ''} ${fieldErrors.password ? 'error' : ''}`}>
+                <div
+                  className={`input-group ${focusedField === 'password' ? 'focused' : ''} ${fieldErrors.password ? 'error' : ''}`}
+                >
                   <label htmlFor="password" className="input-label">
                     密码 <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
-                    <LockIcon size={18} className={`input-icon ${focusedField === 'password' ? 'active' : ''}`} />
+                    <LockIcon
+                      size={18}
+                      className={`input-icon ${focusedField === 'password' ? 'active' : ''}`}
+                    />
                     <input
                       id="password"
                       name="password"
@@ -455,22 +510,29 @@ export const Register: React.FC = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       tabIndex={-1}
                     >
-                      {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                      {showPassword ? (
+                        <EyeOffIcon size={18} />
+                      ) : (
+                        <EyeIcon size={18} />
+                      )}
                     </button>
                     <div className="input-glow" />
                   </div>
                   {formData.password && (
                     <div className="password-strength">
                       <div className="strength-bar">
-                        <div 
-                          className="strength-fill" 
-                          style={{ 
+                        <div
+                          className="strength-fill"
+                          style={{
                             width: `${(passwordStrength.strength / 4) * 100}%`,
-                            background: passwordStrength.color 
-                          }} 
+                            background: passwordStrength.color,
+                          }}
                         />
                       </div>
-                      <span className="strength-label" style={{ color: passwordStrength.color }}>
+                      <span
+                        className="strength-label"
+                        style={{ color: passwordStrength.color }}
+                      >
                         {passwordStrength.label}
                       </span>
                     </div>
@@ -480,12 +542,17 @@ export const Register: React.FC = () => {
                   )}
                 </div>
 
-                <div className={`input-group ${focusedField === 'confirmPassword' ? 'focused' : ''} ${fieldErrors.confirmPassword ? 'error' : ''}`}>
+                <div
+                  className={`input-group ${focusedField === 'confirmPassword' ? 'focused' : ''} ${fieldErrors.confirmPassword ? 'error' : ''}`}
+                >
                   <label htmlFor="confirmPassword" className="input-label">
                     确认密码 <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
-                    <CheckCircleIcon size={18} className={`input-icon ${focusedField === 'confirmPassword' ? 'active' : ''}`} />
+                    <CheckCircleIcon
+                      size={18}
+                      className={`input-icon ${focusedField === 'confirmPassword' ? 'active' : ''}`}
+                    />
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
@@ -502,24 +569,40 @@ export const Register: React.FC = () => {
                     <button
                       type="button"
                       className="password-toggle"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       tabIndex={-1}
                     >
-                      {showConfirmPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                      {showConfirmPassword ? (
+                        <EyeOffIcon size={18} />
+                      ) : (
+                        <EyeIcon size={18} />
+                      )}
                     </button>
                     <div className="input-glow" />
                   </div>
                   {fieldErrors.confirmPassword && (
-                    <p className="error-message">{fieldErrors.confirmPassword}</p>
+                    <p className="error-message">
+                      {fieldErrors.confirmPassword}
+                    </p>
                   )}
                 </div>
 
                 <div className="button-group">
-                  <button type="button" onClick={handleBack} className="back-button-step">
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="back-button-step"
+                  >
                     <ArrowLeftIcon size={18} />
                     <span>返回</span>
                   </button>
-                  <button type="submit" disabled={loading} className="submit-button">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="submit-button"
+                  >
                     {loading ? (
                       <>
                         <Loader2Icon size={18} className="animate-spin" />
@@ -561,7 +644,7 @@ export const Register: React.FC = () => {
           </div>
         </div>
 
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
 
       <style>{`

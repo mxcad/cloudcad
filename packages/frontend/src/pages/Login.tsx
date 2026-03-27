@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
@@ -28,7 +28,7 @@ interface LocationState {
 
 /**
  * 登录页面 - CloudCAD
- * 
+ *
  * 设计特色：
  * - 居中卡片布局
  * - 统一渐变网格背景
@@ -42,6 +42,9 @@ export const Login: React.FC = () => {
   const location = useLocation();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
   const { isDark } = useTheme();
+  const { config } = useBrandConfig();
+  const appName = config?.title || 'CloudCAD';
+  const appLogo = config?.logo || '/logo.png';
 
   const [formData, setFormData] = useState<LoginDto>({
     account: '',
@@ -68,11 +71,14 @@ export const Login: React.FC = () => {
     }
   }, [isAuthenticated, authLoading, navigate, location]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(null);
-  }, [error]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      if (error) setError(null);
+    },
+    [error]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,9 +117,9 @@ export const Login: React.FC = () => {
           <div className="logo-section">
             <div className="logo-wrapper">
               <div className="logo-glow" />
-              <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+              <img src={appLogo} alt={appName} className="logo-image" />
             </div>
-            <h1 className="app-title">{APP_NAME}</h1>
+            <h1 className="app-title">{appName}</h1>
             <p className="app-tagline">专业云端 CAD 图纸管理平台</p>
           </div>
 
@@ -140,12 +146,16 @@ export const Login: React.FC = () => {
 
           {/* 登录表单 */}
           <form className="login-form" onSubmit={handleSubmit}>
-            <div className={`input-group ${focusedField === 'account' ? 'focused' : ''}`}>
-              <label htmlFor="account" className="input-label">邮箱或用户名</label>
+            <div
+              className={`input-group ${focusedField === 'account' ? 'focused' : ''}`}
+            >
+              <label htmlFor="account" className="input-label">
+                邮箱或用户名
+              </label>
               <div className="input-wrapper">
-                <MailIcon 
-                  size={18} 
-                  className={`input-icon ${focusedField === 'account' ? 'active' : ''}`} 
+                <MailIcon
+                  size={18}
+                  className={`input-icon ${focusedField === 'account' ? 'active' : ''}`}
                 />
                 <input
                   id="account"
@@ -164,12 +174,16 @@ export const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}>
-              <label htmlFor="password" className="input-label">密码</label>
+            <div
+              className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}
+            >
+              <label htmlFor="password" className="input-label">
+                密码
+              </label>
               <div className="input-wrapper">
-                <LockIcon 
-                  size={18} 
-                  className={`input-icon ${focusedField === 'password' ? 'active' : ''}`} 
+                <LockIcon
+                  size={18}
+                  className={`input-icon ${focusedField === 'password' ? 'active' : ''}`}
                 />
                 <input
                   id="password"
@@ -190,16 +204,20 @@ export const Login: React.FC = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                  {showPassword ? (
+                    <EyeOffIcon size={18} />
+                  ) : (
+                    <EyeIcon size={18} />
+                  )}
                 </button>
                 <div className="input-glow" />
               </div>
             </div>
 
             <div className="form-options">
-              <button 
-                type="button" 
-                onClick={() => navigate('/forgot-password')} 
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
                 className="forgot-password-link"
               >
                 忘记密码？
@@ -225,7 +243,10 @@ export const Login: React.FC = () => {
           <div className="form-footer">
             <p className="register-text">
               还没有账户？
-              <button onClick={() => navigate('/register')} className="register-link">
+              <button
+                onClick={() => navigate('/register')}
+                className="register-link"
+              >
                 立即注册
               </button>
             </p>
@@ -246,7 +267,7 @@ export const Login: React.FC = () => {
         </div>
 
         {/* 版权信息 */}
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
 
       <style>{`

@@ -15,11 +15,49 @@
  * 从环境变量读取配置
  */
 
-/** 应用名称 */
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'CloudCAD';
+const BRAND_CONFIG_URL = '/brand/config.json';
 
-/** Logo 路径 */
-export const APP_LOGO = import.meta.env.VITE_APP_LOGO || '/logo.png';
+export const DEFAULT_APP_NAME = import.meta.env.VITE_APP_NAME || 'CloudCAD';
+export const DEFAULT_APP_LOGO = import.meta.env.VITE_APP_LOGO || '/logo.png';
+
+export interface BrandConfig {
+  title: string;
+  logo: string;
+}
+
+let cachedBrandConfig: BrandConfig | null = null;
+
+export async function fetchBrandConfig(): Promise<BrandConfig> {
+  if (cachedBrandConfig) return cachedBrandConfig;
+
+  try {
+    const res = await fetch(BRAND_CONFIG_URL);
+    if (res.ok) {
+      const config = (await res.json()) as BrandConfig;
+      cachedBrandConfig = config;
+      return config;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch brand config, using defaults');
+  }
+
+  const defaultConfig: BrandConfig = {
+    title: DEFAULT_APP_NAME,
+    logo: DEFAULT_APP_LOGO,
+  };
+  cachedBrandConfig = defaultConfig;
+  return defaultConfig;
+}
+
+export function getAppName(): string {
+  return cachedBrandConfig?.title || DEFAULT_APP_NAME;
+}
+
+export function getAppLogo(): string {
+  return cachedBrandConfig?.logo || DEFAULT_APP_LOGO;
+}
+
+export { cachedBrandConfig };
 
 /** API 基础路径 */
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -30,7 +68,8 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
  * - 否则使用环境变量配置的值
  */
 function getCooperateUrl(): string {
-  const envUrl = import.meta.env.VITE_APP_COOPERATE_URL || 'http://localhost:3091';
+  const envUrl =
+    import.meta.env.VITE_APP_COOPERATE_URL || 'http://localhost:3091';
 
   // 如果是 localhost 地址，在生产环境动态替换域名
   if (envUrl.startsWith('http://localhost')) {

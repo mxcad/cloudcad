@@ -3,11 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { projectsApi } from '../services/projectsApi';
 import { usersApi } from '../services/usersApi';
-import type { ProjectDto, FileSystemNodeDto, UserDashboardStatsDto } from '../types/api-client';
+import type {
+  ProjectDto,
+  FileSystemNodeDto,
+  UserDashboardStatsDto,
+} from '../types/api-client';
 import { formatFileSize, formatRelativeTime } from '../utils/fileUtils';
-import { APP_NAME } from '../constants/appConfig';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
@@ -26,7 +30,7 @@ import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
 /**
  * 仪表盘页面 - CloudCAD 登录后首页
- * 
+ *
  * 使用真实 API 数据展示用户工作概览
  */
 
@@ -34,43 +38,53 @@ interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: React.ComponentType<{ size?: number; className?: string; color?: string }>;
+  icon: React.ComponentType<{
+    size?: number;
+    className?: string;
+    color?: string;
+  }>;
   color: string;
   onClick?: () => void;
   loading?: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
   color,
   onClick,
-  loading 
+  loading,
 }) => {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`
         relative p-5 rounded-2xl transition-all duration-300
         ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl' : ''}
       `}
-      style={{ 
+      style={{
         background: 'var(--bg-secondary)',
         border: '1px solid var(--border-default)',
-        boxShadow: 'var(--shadow-sm)'
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <div className="text-sm font-medium mb-1" style={{ color: 'var(--text-tertiary)' }}>
+          <div
+            className="text-sm font-medium mb-1"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
             {title}
           </div>
           {loading ? (
             <div className="h-8 w-20 rounded-lg skeleton-theme" />
           ) : (
-            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+            <div
+              className="text-2xl font-bold mb-1"
+              style={{ color: 'var(--text-primary)' }}
+            >
               {value}
             </div>
           )}
@@ -80,7 +94,7 @@ const StatCard: React.FC<StatCardProps> = ({
             </div>
           )}
         </div>
-        <div 
+        <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: `${color}15` }}
         >
@@ -92,29 +106,41 @@ const StatCard: React.FC<StatCardProps> = ({
 };
 
 interface QuickActionProps {
-  icon: React.ComponentType<{ size?: number; className?: string; color?: string }>;
+  icon: React.ComponentType<{
+    size?: number;
+    className?: string;
+    color?: string;
+  }>;
   label: string;
   color: string;
   onClick?: () => void;
 }
 
-const QuickAction: React.FC<QuickActionProps> = ({ icon: Icon, label, color, onClick }) => (
+const QuickAction: React.FC<QuickActionProps> = ({
+  icon: Icon,
+  label,
+  color,
+  onClick,
+}) => (
   <button
     onClick={onClick}
     className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left w-full hover:bg-[var(--bg-tertiary)] group"
   >
-    <div 
+    <div
       className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
       style={{ background: `${color}15` }}
     >
       <Icon size={18} color={color} />
     </div>
-    <span className="font-medium text-sm flex-1" style={{ color: 'var(--text-secondary)' }}>
+    <span
+      className="font-medium text-sm flex-1"
+      style={{ color: 'var(--text-secondary)' }}
+    >
       {label}
     </span>
-    <ArrowRight 
-      size={14} 
-      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-x-1" 
+    <ArrowRight
+      size={14}
+      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-x-1"
       color="var(--text-muted)"
     />
   </button>
@@ -126,21 +152,28 @@ export const Dashboard: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isDark } = useTheme();
-  
+  const { config: brandConfig } = useBrandConfig();
+
+  const appName = brandConfig?.title || 'CloudCAD';
+
   // 数据状态
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [personalFiles, setPersonalFiles] = useState<FileSystemNodeDto[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<UserDashboardStatsDto | null>(null);
+  const [dashboardStats, setDashboardStats] =
+    useState<UserDashboardStatsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('');
-  
+
   // 项目创建弹框状态
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [projectFormData, setProjectFormData] = useState({ name: '', description: '' });
+  const [projectFormData, setProjectFormData] = useState({
+    name: '',
+    description: '',
+  });
   const [projectCreating, setProjectCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
-  
+
   // 计算问候语
   useEffect(() => {
     const hour = new Date().getHours();
@@ -151,7 +184,7 @@ export const Dashboard: React.FC = () => {
     else if (hour < 18) setGreeting('下午好');
     else setGreeting('晚上好');
   }, []);
-  
+
   // 检测 URL 参数，自动打开创建弹框
   useEffect(() => {
     if (searchParams.get('action') === 'create-project') {
@@ -160,49 +193,56 @@ export const Dashboard: React.FC = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [searchParams, navigate]);
-  
+
   // 创建项目
-  const handleCreateProject = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!projectFormData.name.trim()) return;
-    
-    setProjectCreating(true);
-    try {
-      const response = await projectsApi.create({
-        name: projectFormData.name.trim(),
-        description: projectFormData.description.trim() || undefined,
-      });
-      
-      // 关闭弹框，重置表单
-      setIsProjectModalOpen(false);
-      setProjectFormData({ name: '', description: '' });
-      
-      // 显示成功提示
-      setCreateSuccess(response.data?.name || projectFormData.name);
-      setTimeout(() => setCreateSuccess(null), 3000);
-      
-      // 刷新项目列表
-      const projectsRes = await projectsApi.list();
-      if (projectsRes.data?.projects) {
-        const sortedProjects = projectsRes.data.projects
-          .filter((p: ProjectDto) => p.status !== 'DELETED')
-          .sort((a: ProjectDto, b: ProjectDto) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        setProjects(sortedProjects);
+  const handleCreateProject = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!projectFormData.name.trim()) return;
+
+      setProjectCreating(true);
+      try {
+        const response = await projectsApi.create({
+          name: projectFormData.name.trim(),
+          description: projectFormData.description.trim() || undefined,
+        });
+
+        // 关闭弹框，重置表单
+        setIsProjectModalOpen(false);
+        setProjectFormData({ name: '', description: '' });
+
+        // 显示成功提示
+        setCreateSuccess(response.data?.name || projectFormData.name);
+        setTimeout(() => setCreateSuccess(null), 3000);
+
+        // 刷新项目列表
+        const projectsRes = await projectsApi.list();
+        if (projectsRes.data?.projects) {
+          const sortedProjects = projectsRes.data.projects
+            .filter((p: ProjectDto) => p.status !== 'DELETED')
+            .sort(
+              (a: ProjectDto, b: ProjectDto) =>
+                new Date(b.updatedAt).getTime() -
+                new Date(a.updatedAt).getTime()
+            );
+          setProjects(sortedProjects);
+        }
+      } catch (err) {
+        console.error('创建项目失败:', err);
+        setError('创建项目失败，请重试');
+      } finally {
+        setProjectCreating(false);
       }
-    } catch (err) {
-      console.error('创建项目失败:', err);
-      setError('创建项目失败，请重试');
-    } finally {
-      setProjectCreating(false);
-    }
-  }, [projectFormData]);
-  
+    },
+    [projectFormData]
+  );
+
   // 加载真实数据
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // 并行加载多个数据源
         const [projectsRes, statsRes, personalSpaceRes] = await Promise.all([
@@ -210,23 +250,30 @@ export const Dashboard: React.FC = () => {
           usersApi.getDashboardStats(),
           projectsApi.getPersonalSpace().catch(() => null), // 私人空间可能不存在
         ]);
-        
+
         // 处理项目数据
         if (projectsRes.data?.projects) {
           const sortedProjects = projectsRes.data.projects
             .filter((p: ProjectDto) => p.status !== 'DELETED')
-            .sort((a: ProjectDto, b: ProjectDto) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+            .sort(
+              (a: ProjectDto, b: ProjectDto) =>
+                new Date(b.updatedAt).getTime() -
+                new Date(a.updatedAt).getTime()
+            );
           setProjects(sortedProjects);
         }
-        
+
         // 处理统计数据
         if (statsRes.data) {
           setDashboardStats(statsRes.data);
         }
-        
+
         // 处理个人空间文件
         if (personalSpaceRes?.data?.id) {
-          const childrenRes = await projectsApi.getChildren(personalSpaceRes.data.id, { limit: 10 });
+          const childrenRes = await projectsApi.getChildren(
+            personalSpaceRes.data.id,
+            { limit: 10 }
+          );
           if (childrenRes.data?.nodes) {
             setPersonalFiles(childrenRes.data.nodes);
           }
@@ -238,10 +285,10 @@ export const Dashboard: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     loadData();
   }, []);
-  
+
   // 统计数据
   const stats = useMemo(() => {
     if (!dashboardStats) {
@@ -257,7 +304,7 @@ export const Dashboard: React.FC = () => {
         otherFiles: 0,
       };
     }
-    
+
     return {
       projects: dashboardStats.projectCount,
       files: dashboardStats.totalFiles,
@@ -270,48 +317,49 @@ export const Dashboard: React.FC = () => {
       otherFiles: dashboardStats.fileTypeStats.other,
     };
   }, [dashboardStats]);
-  
+
   const userName = user?.nickname || user?.username || '用户';
-  
+
   // 最近更新的项目（前5个）
   const recentProjects = useMemo(() => projects.slice(0, 5), [projects]);
-  
+
   // 最近更新的文件（前5个）
   const recentFiles = useMemo(() => personalFiles.slice(0, 5), [personalFiles]);
-  
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       {/* 欢迎区域 */}
-      <div 
+      <div
         className="relative overflow-hidden rounded-2xl p-6 mb-6"
         style={{
-          background: isDark 
+          background: isDark
             ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%)'
             : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(6, 182, 212, 0.03) 100%)',
-          border: '1px solid var(--border-default)'
+          border: '1px solid var(--border-default)',
         }}
       >
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 
+            <h1
               className="text-2xl sm:text-3xl font-bold mb-1"
               style={{ color: 'var(--text-primary)' }}
             >
               {greeting}，{userName}
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-              欢迎使用 {APP_NAME}，开始您的设计工作
+              欢迎使用 {appName}，开始您的设计工作
             </p>
           </div>
-          
+
           {/* 快捷操作按钮 */}
           <div className="flex gap-3">
             <button
               onClick={() => setIsProjectModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm text-white transition-all duration-200 hover:shadow-lg"
               style={{
-                background: 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
+                background:
+                  'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
               }}
             >
               <Plus size={16} />
@@ -323,7 +371,7 @@ export const Dashboard: React.FC = () => {
               style={{
                 background: 'var(--bg-secondary)',
                 border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)'
+                color: 'var(--text-secondary)',
               }}
             >
               <Upload size={16} />
@@ -332,35 +380,39 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* 错误提示 */}
       {error && (
-        <div 
+        <div
           className="flex items-center gap-3 p-4 rounded-xl mb-6"
-          style={{ 
+          style={{
             background: 'var(--error-light)',
-            border: '1px solid var(--error-dim)'
+            border: '1px solid var(--error-dim)',
           }}
         >
           <AlertCircle size={20} style={{ color: 'var(--error)' }} />
-          <span className="text-sm" style={{ color: 'var(--error)' }}>{error}</span>
+          <span className="text-sm" style={{ color: 'var(--error)' }}>
+            {error}
+          </span>
         </div>
       )}
-      
+
       {/* 成功提示 */}
       {createSuccess && (
-        <div 
+        <div
           className="flex items-center gap-3 p-4 rounded-xl mb-6"
-          style={{ 
+          style={{
             background: 'var(--success-light, rgba(34, 197, 94, 0.1))',
-            border: '1px solid var(--success-dim, rgba(34, 197, 94, 0.3))'
+            border: '1px solid var(--success-dim, rgba(34, 197, 94, 0.3))',
           }}
         >
           <CheckCircle size={20} style={{ color: '#22c55e' }} />
-          <span className="text-sm" style={{ color: '#22c55e' }}>项目「{createSuccess}」创建成功！</span>
+          <span className="text-sm" style={{ color: '#22c55e' }}>
+            项目「{createSuccess}」创建成功！
+          </span>
         </div>
       )}
-      
+
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
@@ -398,27 +450,30 @@ export const Dashboard: React.FC = () => {
           loading={loading}
         />
       </div>
-      
+
       {/* 主内容区域 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 左侧：最近内容 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 最近访问的文件 */}
-          <div 
+          <div
             className="rounded-2xl p-5"
-            style={{ 
+            style={{
               background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)'
+              border: '1px solid var(--border-default)',
             }}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock size={18} style={{ color: 'var(--primary-500)' }} />
-                <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <h3
+                  className="font-semibold"
+                  style={{ color: 'var(--text-primary)' }}
+                >
                   最近文件
                 </h3>
               </div>
-              <Link 
+              <Link
                 to="/personal-space"
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
                 style={{ color: 'var(--primary-500)' }}
@@ -427,10 +482,10 @@ export const Dashboard: React.FC = () => {
                 <ArrowRight size={14} />
               </Link>
             </div>
-            
+
             {loading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => (
+                {[1, 2, 3].map((i) => (
                   <div key={i} className="h-16 rounded-xl skeleton-theme" />
                 ))}
               </div>
@@ -454,34 +509,41 @@ export const Dashboard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div 
+              <div
                 className="text-center py-8 rounded-xl"
                 style={{ background: 'var(--bg-tertiary)' }}
               >
-                <FileText size={32} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-2" />
+                <FileText
+                  size={32}
+                  style={{ color: 'var(--text-muted)' }}
+                  className="mx-auto mb-2"
+                />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   暂无文件，上传您的第一个图纸
                 </p>
               </div>
             )}
           </div>
-          
+
           {/* 我的项目 */}
-          <div 
+          <div
             className="rounded-2xl p-5"
-            style={{ 
+            style={{
               background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)'
+              border: '1px solid var(--border-default)',
             }}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Layers size={18} style={{ color: 'var(--accent-500)' }} />
-                <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <h3
+                  className="font-semibold"
+                  style={{ color: 'var(--text-primary)' }}
+                >
                   最近项目
                 </h3>
               </div>
-              <Link 
+              <Link
                 to="/projects"
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
                 style={{ color: 'var(--accent-500)' }}
@@ -490,10 +552,10 @@ export const Dashboard: React.FC = () => {
                 <ArrowRight size={14} />
               </Link>
             </div>
-            
+
             {loading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => (
+                {[1, 2, 3].map((i) => (
                   <div key={i} className="h-16 rounded-xl skeleton-theme" />
                 ))}
               </div>
@@ -502,28 +564,34 @@ export const Dashboard: React.FC = () => {
                 {recentProjects.map((project) => (
                   <FileItem
                     key={project.id}
-                    node={{
-                      id: project.id,
-                      name: project.name,
-                      isFolder: true,
-                      isRoot: project.isRoot,
-                      updatedAt: project.updatedAt,
-                      parentId: undefined,
-                      createdAt: project.createdAt || '',
-                      path: '',
-                      ownerId: project.ownerId || '',
-                    } as FileSystemNode}
+                    node={
+                      {
+                        id: project.id,
+                        name: project.name,
+                        isFolder: true,
+                        isRoot: project.isRoot,
+                        updatedAt: project.updatedAt,
+                        parentId: undefined,
+                        createdAt: project.createdAt || '',
+                        path: '',
+                        ownerId: project.ownerId || '',
+                      } as FileSystemNode
+                    }
                     compact
                     onEnter={() => navigate(`/projects/${project.id}/files`)}
                   />
                 ))}
               </div>
             ) : (
-              <div 
+              <div
                 className="text-center py-8 rounded-xl"
                 style={{ background: 'var(--bg-tertiary)' }}
               >
-                <FolderOpen size={32} color="var(--text-muted)" className="mx-auto mb-2" />
+                <FolderOpen
+                  size={32}
+                  color="var(--text-muted)"
+                  className="mx-auto mb-2"
+                />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   暂无项目，创建您的第一个项目
                 </p>
@@ -531,18 +599,21 @@ export const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
-        
+
         {/* 右侧：快捷操作和存储 */}
         <div className="space-y-6">
           {/* 快捷操作 */}
-          <div 
+          <div
             className="rounded-2xl p-5"
-            style={{ 
+            style={{
               background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)'
+              border: '1px solid var(--border-default)',
             }}
           >
-            <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+            <h3
+              className="font-semibold mb-4"
+              style={{ color: 'var(--text-primary)' }}
+            >
               快捷操作
             </h3>
             <div className="space-y-1">
@@ -562,7 +633,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* 项目创建弹框 */}
       <ProjectModal
         isOpen={isProjectModalOpen}

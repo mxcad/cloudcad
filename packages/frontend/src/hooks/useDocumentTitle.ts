@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useEffect, useRef } from 'react';
-import { APP_NAME } from '../constants/appConfig';
+import { getAppName } from '../constants/appConfig';
 
 /**
  * 设置页面标题的 Hook
@@ -33,14 +33,16 @@ export function useDocumentTitle(title: string, skip = false): void {
       return;
     }
 
+    const appName = getAppName();
+
     // 保存当前标题
     previousTitle.current = document.title;
 
     // 设置新标题
     if (title) {
-      document.title = `${title} - ${APP_NAME}`;
+      document.title = `${title} - ${appName}`;
     } else {
-      document.title = APP_NAME;
+      document.title = appName;
     }
 
     // 清理函数：恢复原标题

@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { InteractiveBackground } from './InteractiveBackground';
 import { ThemeToggle } from './ThemeToggle';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { Link } from 'react-router-dom';
 
 // 导入 lucide 图标
@@ -20,9 +20,9 @@ interface AuthLayoutProps {
 
 /**
  * 认证页面统一布局组件
- * 
+ *
  * 适用于：登录、注册、忘记密码、重置密码、个人资料等页面
- * 
+ *
  * 特性：
  * - 统一的动态渐变背景
  * - 主题切换按钮
@@ -38,6 +38,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   backText = '返回',
 }) => {
   const { isDark } = useTheme();
+  const { config: brandConfig } = useBrandConfig();
+
+  const appName = brandConfig?.title || 'CloudCAD';
 
   return (
     <div className="auth-layout" data-theme={isDark ? 'dark' : 'light'}>
@@ -91,7 +94,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         </div>
 
         {/* 版权信息 */}
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
 
       <style>{`

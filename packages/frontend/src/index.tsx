@@ -4,7 +4,7 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { initApiClient } from './services/apiClient';
-
+import { fetchBrandConfig } from './constants/appConfig';
 
 import './styles/transitions.css';
 import './styles/theme.css';
@@ -26,18 +26,18 @@ const GlobalLoading = () => (
   </div>
 );
 
-// 应用启动器：先初始化 API Client，再渲染应用
+// 应用启动器：先初始化 API Client 和 Brand Config，再渲染应用
 const AppInitializer: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    initApiClient()
+    Promise.all([initApiClient(), fetchBrandConfig()])
       .then(() => {
         setIsReady(true);
       })
       .catch((err) => {
-        console.error('API Client 初始化失败:', err);
+        console.error('应用初始化失败:', err);
         setError('应用初始化失败，请刷新页面重试');
       });
   }, []);

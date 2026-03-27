@@ -62,11 +62,10 @@ pnpm-debug.log*
 .env.production.local
 
 # Generated files
-uploads/
-temp/
-filesData/
-svn-repo/
 swagger_json.json
+
+# Data directory (all user data)
+data/
 
 # Temporary/debug files
 *.bak

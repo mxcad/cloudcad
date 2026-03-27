@@ -274,8 +274,8 @@ const OFFLINE_EXCLUDES = {
     '.vscode', '.idea',
     // iFlow
     '.iflow',
-    // 运行时生成
-    'logs', 'uploads', 'temp', 'filesData', 'svn-repo', 'offline-data',
+    // 数据目录（用户数据，不打包）
+    'data',
     // 发布目录
     'release', 'dist',
     // 测试
@@ -656,6 +656,82 @@ async function prepareDeployStore() {
 }
 
 /**
+ * 重命名前端静态资源配置为 .example
+ * 避免部署包覆盖用户自定义配置
+ * 处理 public 目录下所有子目录中的：
+ *   - JSON 配置文件 → *.json.example
+ *   - 品牌资源文件（如 logo.png）→ *.png.example
+ * 
+ * @param {string} tempDir - 临时目录路径
+ */
+function renameFrontendConfigFiles(tempDir) {
+  const publicDir = path.join(tempDir, 'packages', 'frontend', 'dist');
+
+  if (!fs.existsSync(publicDir)) {
+    log('警告：前端 public 目录不存在，跳过配置文件重命名');
+    return;
+  }
+
+  let totalRenamed = 0;
+
+  // 递归遍历 public 目录下所有子目录
+  function processDirectory(dir) {
+    if (!fs.existsSync(dir)) {
+      return;
+    }
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        // 递归处理子目录
+        processDirectory(fullPath);
+      } else if (entry.isFile()) {
+        // 检查是否需要重命名
+        const fileName = entry.name;
+        let shouldRename = false;
+        let newFileName = null;
+
+        // JSON 文件：重命名为 .json.example
+        if (fileName.endsWith('.json') && !fileName.endsWith('.example')) {
+          newFileName = `${fileName}.example`;
+          shouldRename = true;
+        }
+        // brand 目录下的图片文件：重命名为 .example
+        // 这些是用户上传的品牌资源，需要保留用户的
+        else if (dir.includes(path.sep + 'brand' + path.sep) || dir.endsWith(path.sep + 'brand')) {
+          if ((fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.svg') || fileName.endsWith('.gif')) 
+              && !fileName.endsWith('.example')) {
+            newFileName = `${fileName}.example`;
+            shouldRename = true;
+          }
+        }
+
+        // 执行重命名
+        if (shouldRename && newFileName) {
+          const newPath = path.join(dir, newFileName);
+          try {
+            fs.renameSync(fullPath, newPath);
+            log(`重命名：${path.relative(publicDir, fullPath)} -> ${path.relative(publicDir, newPath)}`);
+            totalRenamed++;
+          } catch (err) {
+            error(`重命名失败：${fullPath} - ${err.message}`);
+          }
+        }
+      }
+    }
+  }
+
+  processDirectory(publicDir);
+
+  if (totalRenamed > 0) {
+    log(`✓ 前端配置文件重命名完成：${totalRenamed} 个文件`);
+  }
+}
+
+/**
  * 部署包：复制文件到临时目录
  */
 function prepareDeployDir(platform) {
@@ -692,7 +768,10 @@ function prepareDeployDir(platform) {
   // 创建部署包标记文件（让 start.bat 能够识别这是部署包）
   fs.writeFileSync(path.join(tempDir, '.deploy'), '');
   log('创建 .deploy 标记文件');
-  
+
+  // 重命名前端 JSON 配置文件为 .example（避免覆盖用户自定义配置）
+  renameFrontendConfigFiles(tempDir);
+
   // 创建 .npmrc 文件，指向部署包专用的 pnpm store
   fs.writeFileSync(path.join(tempDir, '.npmrc'), 'store-dir=./.pnpm-store-deploy\n');
   log('创建 .npmrc (store-dir=./.pnpm-store-deploy)');

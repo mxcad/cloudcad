@@ -166,11 +166,11 @@ export default (): AppConfig => ({
     ),
   },
 
-  // 存储路径配置
-  filesDataPath: resolvePath(process.env.FILES_DATA_PATH || 'filesData'),
-  svnRepoPath: resolvePath(process.env.SVN_REPO_PATH || 'svn-repo'),
-  mxcadUploadPath: resolvePath(process.env.MXCAD_UPLOAD_PATH || 'uploads'),
-  mxcadTempPath: resolvePath(process.env.MXCAD_TEMP_PATH || 'temp'),
+  // 存储路径配置（默认在 data/ 目录下）
+  filesDataPath: resolvePath(process.env.FILES_DATA_PATH || 'data/files'),
+  svnRepoPath: resolvePath(process.env.SVN_REPO_PATH || 'data/svn-repo'),
+  mxcadUploadPath: resolvePath(process.env.MXCAD_UPLOAD_PATH || 'data/uploads'),
+  mxcadTempPath: resolvePath(process.env.MXCAD_TEMP_PATH || 'data/temp'),
 
   // 文件扩展名配置
   fileExtensions: {

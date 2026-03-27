@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TruncateText } from './ui/TruncateText';
@@ -47,9 +47,16 @@ interface NavItemProps {
 /**
  * 导航项组件 - 带有精美动画效果
  */
-const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge, dataTour }) => {
+const NavItem: React.FC<NavItemProps> = ({
+  to,
+  icon: Icon,
+  label,
+  active,
+  badge,
+  dataTour,
+}) => {
   const { isDark } = useTheme();
-  
+
   return (
     <Link
       to={to}
@@ -57,50 +64,69 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge,
       className={`
         group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ease-out
         relative overflow-hidden
-        ${active 
-          ? isDark 
-            ? 'text-white shadow-lg' 
-            : 'text-white shadow-md shadow-primary/30'
-          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+        ${
+          active
+            ? isDark
+              ? 'text-white shadow-lg'
+              : 'text-white shadow-md shadow-primary/30'
+            : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
         }
       `}
-      style={active ? {
-        background: 'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
-      } : {}}
+      style={
+        active
+          ? {
+              background:
+                'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+            }
+          : {}
+      }
     >
       {/* 悬停背景效果 */}
       {!active && (
         <div className="absolute inset-0 bg-[var(--bg-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
       )}
-      
+
       {/* 活跃指示器 */}
       {active && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white/50 rounded-r-full" />
       )}
-      
+
       {/* 图标 */}
-      <div className={`
+      <div
+        className={`
         relative z-10 p-2 rounded-lg transition-all duration-300
-        ${active 
-          ? 'bg-white/20' 
-          : 'bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-secondary)]'
+        ${
+          active
+            ? 'bg-white/20'
+            : 'bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-secondary)]'
         }
-      `}>
-        <Icon size={18} className={active ? 'text-white' : 'text-[var(--text-tertiary)] group-hover:text-[var(--primary-500)]'} />
+      `}
+      >
+        <Icon
+          size={18}
+          className={
+            active
+              ? 'text-white'
+              : 'text-[var(--text-tertiary)] group-hover:text-[var(--primary-500)]'
+          }
+        />
       </div>
-      
+
       {/* 标签 */}
       <span className="relative z-10 font-medium text-sm">{label}</span>
-      
+
       {/* 徽章 */}
       {badge !== undefined && badge > 0 && (
-        <span className={`
+        <span
+          className={`
           relative z-10 ml-auto text-xs font-semibold px-2 py-0.5 rounded-full
-          ${active 
-            ? 'bg-white/30 text-white' 
-            : 'bg-[var(--primary-100)] text-[var(--primary-600)]'
+          ${
+            active
+              ? 'bg-white/30 text-white'
+              : 'bg-[var(--primary-100)] text-[var(--primary-600)]'
           }
-        `}>
+        `}
+        >
           {badge > 99 ? '99+' : badge}
         </span>
       )}
@@ -117,7 +143,9 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon: Icon, label, active, badge,
  * - 完美主题切换支持
  * - 流畅的交互动画
  */
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Layout: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const location = useLocation();
 
   // 如果是 CAD 编辑器页面，不渲染布局（CAD 编辑器有自己的全屏布局）
@@ -129,12 +157,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { logout, user, loading } = useAuth();
   const { hasPermission } = usePermission();
   const { config: runtimeConfig } = useRuntimeConfig();
+  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
-  const {
-    isActive: isTourActive,
-    openTourCenter,
-  } = useTour();
-  
+  const { isActive: isTourActive, openTourCenter } = useTour();
+
+  const appName = brandConfig?.title || 'CloudCAD';
+
   // UI 状态
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -142,7 +170,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
+
   // 存储空间状态
   const [storageInfo, setStorageInfo] = useState<StorageInfoDto | null>(null);
   const [storageLoading, setStorageLoading] = useState(true);
@@ -198,49 +226,97 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   // 格式化时间
   const formattedTime = useMemo(() => {
-    return currentTime.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
+    return currentTime.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: false 
+      hour12: false,
     });
   }, [currentTime]);
 
   const formattedDate = useMemo(() => {
-    return currentTime.toLocaleDateString('zh-CN', { 
-      month: 'short', 
+    return currentTime.toLocaleDateString('zh-CN', {
+      month: 'short',
       day: 'numeric',
-      weekday: 'short'
+      weekday: 'short',
     });
   }, [currentTime]);
 
   // 导航菜单项配置
-  const menuItems = useMemo(() => [
-    { to: '/dashboard', icon: LayoutDashboard, label: '仪表盘', visible: true },
-    { to: '/projects', icon: FolderOpen, label: '项目管理', visible: true, dataTour: 'sidebar-projects' },
-    { to: '/personal-space', icon: FileText, label: '我的图纸', visible: true, dataTour: 'sidebar-personal-space' },
-    { to: '/font-library', icon: Type, label: '字体库', visible:
-      hasPermission(SystemPermission.SYSTEM_FONT_READ) },
-    { to: '/users', icon: Users, label: '用户管理', visible:
-      hasPermission(SystemPermission.SYSTEM_USER_READ) },
-    { to: '/roles', icon: ShieldCheck, label: '角色权限', visible:
-      hasPermission(SystemPermission.SYSTEM_ROLE_READ), dataTour: 'sidebar-roles' },
-    { to: '/system-monitor', icon: Activity, label: '系统监控', visible:
-      hasPermission(SystemPermission.SYSTEM_MONITOR) },
-  ], [hasPermission]);
+  const menuItems = useMemo(
+    () => [
+      {
+        to: '/dashboard',
+        icon: LayoutDashboard,
+        label: '仪表盘',
+        visible: true,
+      },
+      {
+        to: '/projects',
+        icon: FolderOpen,
+        label: '项目管理',
+        visible: true,
+        dataTour: 'sidebar-projects',
+      },
+      {
+        to: '/personal-space',
+        icon: FileText,
+        label: '我的图纸',
+        visible: true,
+        dataTour: 'sidebar-personal-space',
+      },
+      {
+        to: '/font-library',
+        icon: Type,
+        label: '字体库',
+        visible: hasPermission(SystemPermission.SYSTEM_FONT_READ),
+      },
+      {
+        to: '/users',
+        icon: Users,
+        label: '用户管理',
+        visible: hasPermission(SystemPermission.SYSTEM_USER_READ),
+      },
+      {
+        to: '/roles',
+        icon: ShieldCheck,
+        label: '角色权限',
+        visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
+        dataTour: 'sidebar-roles',
+      },
+      {
+        to: '/system-monitor',
+        icon: Activity,
+        label: '系统监控',
+        visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
+      },
+    ],
+    [hasPermission]
+  );
 
   // 判断当前导航项是否活跃
-  const isActiveRoute = useCallback((path: string): boolean => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard' || location.pathname === '/';
-    }
-    if (path === '/projects') {
-      return location.pathname === '/projects' || location.pathname.startsWith('/projects/');
-    }
-    if (path === '/personal-space') {
-      return location.pathname === '/personal-space' || location.pathname.startsWith('/personal-space/');
-    }
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  }, [location.pathname]);
+  const isActiveRoute = useCallback(
+    (path: string): boolean => {
+      if (path === '/dashboard') {
+        return location.pathname === '/dashboard' || location.pathname === '/';
+      }
+      if (path === '/projects') {
+        return (
+          location.pathname === '/projects' ||
+          location.pathname.startsWith('/projects/')
+        );
+      }
+      if (path === '/personal-space') {
+        return (
+          location.pathname === '/personal-space' ||
+          location.pathname.startsWith('/personal-space/')
+        );
+      }
+      return (
+        location.pathname === path || location.pathname.startsWith(`${path}/`)
+      );
+    },
+    [location.pathname]
+  );
 
   // 存储空间使用率颜色
   const storageColor = useMemo(() => {
@@ -265,7 +341,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden animate-fade-in"
-          style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)' }}
+          style={{
+            background: 'var(--bg-overlay)',
+            backdropFilter: 'blur(4px)',
+          }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -276,34 +355,34 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-all duration-300 ease-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
-        style={{ 
+        style={{
           background: 'var(--bg-secondary)',
           borderRight: '1px solid var(--border-default)',
-          boxShadow: sidebarOpen ? 'var(--shadow-2xl)' : 'none'
+          boxShadow: sidebarOpen ? 'var(--shadow-2xl)' : 'none',
         }}
       >
         <div className="flex flex-col h-full">
           {/* Logo 区域 */}
           <div className="p-4">
-            <Link 
-              to="/dashboard" 
+            <Link
+              to="/dashboard"
               className="flex items-center gap-3 group p-2 -m-2 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)]"
-              title={APP_NAME}
+              title={appName}
             >
               {/* Logo 组件 - 仅图标模式 */}
               <Logo size="md" iconOnly={true} animated={false} />
-              
+
               {/* 品牌名称 */}
               <div className="flex flex-col">
                 {/* 主标题 */}
-                <span 
+                <span
                   className="text-[15px] font-bold tracking-tight leading-none"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  {APP_NAME}
+                  {appName}
                 </span>
                 {/* 副标题 */}
-                <span 
+                <span
                   className="text-[11px] font-medium tracking-wide mt-0.5"
                   style={{ color: 'var(--text-muted)' }}
                 >
@@ -311,7 +390,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </span>
               </div>
             </Link>
-            
+
             {/* 移动端关闭按钮 */}
             <button
               className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
@@ -324,7 +403,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {/* 导航菜单 */}
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
             <div className="pb-4">
-              <p 
+              <p
                 className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--text-muted)' }}
               >
@@ -334,17 +413,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 .filter((item) => item.visible)
                 .slice(0, 3)
                 .map((item) => (
-                  <NavItem 
-                    key={item.to} 
-                    {...item} 
+                  <NavItem
+                    key={item.to}
+                    {...item}
                     active={isActiveRoute(item.to)}
                   />
                 ))}
             </div>
-            
+
             {/* 管理菜单 */}
             {menuItems.some((item, idx) => idx >= 3 && item.visible) && (
-              <div className="pt-2 border-t" style={{ borderColor: 'var(--border-default)' }}>
+              <div
+                className="pt-2 border-t"
+                style={{ borderColor: 'var(--border-default)' }}
+              >
                 <p
                   className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--text-muted)' }}
@@ -354,9 +436,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 {menuItems
                   .filter((item, idx) => idx >= 3 && item.visible)
                   .map((item) => (
-                    <NavItem 
-                      key={item.to} 
-                      {...item} 
+                    <NavItem
+                      key={item.to}
+                      {...item}
                       active={isActiveRoute(item.to)}
                     />
                   ))}
@@ -365,20 +447,23 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </nav>
 
           {/* 存储空间信息 */}
-          <div 
+          <div
             className="p-4 mx-4 mb-4 rounded-xl"
-            style={{ 
+            style={{
               background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-default)'
+              border: '1px solid var(--border-default)',
             }}
           >
             <div className="flex items-center gap-2 mb-3">
               <HardDrive size={16} style={{ color: 'var(--text-tertiary)' }} />
-              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <span
+                className="text-sm font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
                 存储空间
               </span>
             </div>
-            
+
             {storageLoading ? (
               <div className="space-y-2">
                 <div className="h-2 rounded-full skeleton-theme" />
@@ -387,16 +472,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             ) : storageInfo ? (
               <>
                 {/* 进度条 */}
-                <div 
+                <div
                   className="h-2 rounded-full overflow-hidden mb-2"
                   style={{ background: 'var(--bg-secondary)' }}
                 >
-                  <div 
+                  <div
                     className={`h-full rounded-full bg-gradient-to-r ${storageColor} transition-all duration-500`}
-                    style={{ width: `${Math.min(storageInfo.usagePercent, 100)}%` }}
+                    style={{
+                      width: `${Math.min(storageInfo.usagePercent, 100)}%`,
+                    }}
                   />
                 </div>
-                
+
                 {/* 存储信息 */}
                 <div className="flex justify-between items-center text-xs">
                   <span style={{ color: 'var(--text-muted)' }}>
@@ -426,20 +513,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               title="查看引导中心"
             >
               <div className="relative">
-                <HelpCircle 
-                  size={18} 
+                <HelpCircle
+                  size={18}
                   className="transition-colors group-hover:text-[var(--primary-500)]"
                   style={{ color: 'var(--text-tertiary)' }}
                 />
                 {/* 引导进行中指示器 */}
                 {isTourActive && (
-                  <span 
+                  <span
                     className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse"
                     style={{ background: 'var(--primary-500)' }}
                   />
                 )}
               </div>
-              <span 
+              <span
                 className="text-sm font-medium transition-colors group-hover:text-[var(--text-primary)]"
                 style={{ color: 'var(--text-secondary)' }}
               >
@@ -460,7 +547,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
 
           {/* 用户信息区域 */}
-          <div 
+          <div
             className="p-4 border-t"
             style={{ borderColor: 'var(--border-default)' }}
           >
@@ -473,54 +560,68 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 }}
               >
                 {/* 头像 */}
-                <div 
+                <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
                   style={{
-                    background: 'linear-gradient(135deg, var(--primary-400), var(--accent-400))',
-                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
+                    background:
+                      'linear-gradient(135deg, var(--primary-400), var(--accent-400))',
+                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
                   }}
                 >
                   {user?.avatar ? (
-                    <img 
-                      src={user.avatar} 
-                      alt="Avatar" 
+                    <img
+                      src={user.avatar}
+                      alt="Avatar"
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <span className="text-sm font-semibold text-white">
-                      {(user?.nickname || user?.username || user?.email || 'U').charAt(0).toUpperCase()}
+                      {(user?.nickname || user?.username || user?.email || 'U')
+                        .charAt(0)
+                        .toUpperCase()}
                     </span>
                   )}
                 </div>
-                
+
                 {/* 用户信息 */}
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  <p
+                    className="text-sm font-semibold truncate"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
                     <TruncateText>
-                      {user?.nickname || user?.username || user?.email || '用户'}
+                      {user?.nickname ||
+                        user?.username ||
+                        user?.email ||
+                        '用户'}
                     </TruncateText>
                   </p>
-                  <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                    {user?.role?.name ? getRoleDisplayName(user.role.name) : '加载中...'}
+                  <p
+                    className="text-xs truncate"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {user?.role?.name
+                      ? getRoleDisplayName(user.role.name)
+                      : '加载中...'}
                   </p>
                 </div>
-                
+
                 {/* 下拉箭头 */}
-                <ChevronDown 
-                  size={16} 
+                <ChevronDown
+                  size={16}
                   className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
                   style={{ color: 'var(--text-muted)' }}
                 />
               </button>
-              
+
               {/* 用户下拉菜单 */}
               {showUserMenu && (
-                <div 
+                <div
                   className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden animate-scale-in"
-                  style={{ 
+                  style={{
                     background: 'var(--bg-elevated)',
                     border: '1px solid var(--border-default)',
-                    boxShadow: 'var(--shadow-xl)'
+                    boxShadow: 'var(--shadow-xl)',
                   }}
                 >
                   <Link
@@ -553,12 +654,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* 主内容区域 */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 顶部导航栏 */}
-        <header 
+        <header
           className="h-16 flex items-center justify-between px-6 lg:px-8 relative z-30"
-          style={{ 
-            background: isDark ? 'rgba(26, 29, 33, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          style={{
+            background: isDark
+              ? 'rgba(26, 29, 33, 0.8)'
+              : 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid var(--border-default)'
+            borderBottom: '1px solid var(--border-default)',
           }}
         >
           {/* 左侧：菜单按钮 */}
@@ -575,11 +678,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {/* 右侧工具栏 */}
           <div className="flex items-center gap-2">
             {/* 时间显示 */}
-            <div 
+            <div
               className="hidden md:flex flex-col items-end mr-4 px-3 py-1.5 rounded-lg"
               style={{ background: 'var(--bg-tertiary)' }}
             >
-              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <span
+                className="text-sm font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
                 {formattedTime}
               </span>
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -597,9 +703,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <button
                 className={`
                   p-2.5 rounded-xl transition-all duration-200
-                  ${showSettings 
-                    ? 'text-[var(--primary-500)] bg-[var(--primary-50)]' 
-                    : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]'
+                  ${
+                    showSettings
+                      ? 'text-[var(--primary-500)] bg-[var(--primary-50)]'
+                      : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]'
                   }
                 `}
                 onClick={(e) => {
@@ -609,15 +716,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               >
                 <Settings2 size={20} />
               </button>
-              
+
               {/* 设置下拉菜单 */}
               {showSettings && (
-                <div 
+                <div
                   className="absolute right-0 mt-2 w-52 rounded-xl overflow-hidden animate-slide-up z-50"
-                  style={{ 
+                  style={{
                     background: 'var(--bg-elevated)',
                     border: '1px solid var(--border-default)',
-                    boxShadow: 'var(--shadow-xl)'
+                    boxShadow: 'var(--shadow-xl)',
                   }}
                 >
                   <Link
@@ -640,7 +747,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                       系统设置
                     </Link>
                   )}
-                  <div 
+                  <div
                     className="h-px mx-4"
                     style={{ background: 'var(--border-subtle)' }}
                   />
@@ -664,25 +771,25 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
         {/* 系统公告横幅 */}
         {runtimeConfig.systemNotice && (
-          <div 
+          <div
             className="px-4 py-2.5 animate-slide-up"
-            style={{ 
+            style={{
               background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
-              borderBottom: `1px solid ${isDark ? 'rgba(245, 158, 11, 0.3)' : '#fef3c7'}`
+              borderBottom: `1px solid ${isDark ? 'rgba(245, 158, 11, 0.3)' : '#fef3c7'}`,
             }}
           >
             <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-              <svg 
-                className="w-5 h-5 flex-shrink-0" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-5 h-5 flex-shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
                 strokeWidth="2"
                 style={{ color: isDark ? '#f59e0b' : '#d97706' }}
               >
                 <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span 
+              <span
                 className="text-sm"
                 style={{ color: isDark ? '#fbbf24' : '#92400e' }}
               >
@@ -693,13 +800,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         )}
 
         {/* 页面内容 */}
-        <main 
+        <main
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ background: 'transparent' }}
         >
-          <div className="animate-fade-in">
-            {children}
-          </div>
+          <div className="animate-fade-in">{children}</div>
         </main>
       </div>
 
@@ -735,17 +840,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         }
       >
         <div className="text-center py-4">
-          <div 
+          <div
             className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
             style={{ background: 'var(--error-light)' }}
           >
             <LogOut size={28} style={{ color: 'var(--error)' }} />
           </div>
-          <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+          <h3
+            className="text-xl font-bold mb-2"
+            style={{ color: 'var(--text-primary)' }}
+          >
             确认退出登录
           </h3>
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            您确定要退出 {APP_NAME} 吗？退出后需要重新登录才能访问系统功能。
+            您确定要退出 {appName} 吗？退出后需要重新登录才能访问系统功能。
           </p>
         </div>
       </Modal>

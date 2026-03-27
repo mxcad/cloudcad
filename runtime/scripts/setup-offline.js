@@ -1273,10 +1273,19 @@ function setup(options = {}) {
   // 2. 将 .env.example 拷贝为 .env（离线包不包含 .env 文件）
   copyEnvExampleToEnv();
 
-  // 3. 设置包装脚本
+  // 3. 配置文件增量更新（前端 JSON + .env）
+  // 如果用户已有配置文件，只新增配置项，不修改已有配置
+  try {
+    const { updateAllConfigs } = require('./config-updater');
+    updateAllConfigs(PROJECT_ROOT);
+  } catch (err) {
+    error(`配置增量更新失败：${err.message}`);
+  }
+
+  // 4. 设置包装脚本
   const count = setupWrappers();
 
-  // 4. 检查 Prisma Client 是否已存在（部署包预生成）
+  // 5. 检查 Prisma Client 是否已存在（部署包预生成）
   const prismaReady = checkPrismaClientExists();
 
   if (!silent) {
@@ -1295,13 +1304,14 @@ function setup(options = {}) {
     console.log('');
     log('1. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
     log('2. .env 配置文件已从 .env.example 自动创建');
-    log('3. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
-    log('4. 这些命令会使用离线 Node.js，不影响系统环境');
-    log('5. npm scripts 也会自动使用离线 Node.js');
+    log('3. 配置文件已增量更新（只新增配置项，不修改已有配置）');
+    log('4. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
+    log('5. 这些命令会使用离线 Node.js，不影响系统环境');
+    log('6. npm scripts 也会自动使用离线 Node.js');
     if (prismaReady) {
-      log('6. Prisma Client 已就绪（来自部署包）');
+      log('7. Prisma Client 已就绪（来自部署包）');
     } else {
-      log('6. Prisma Client 需要在启动时生成');
+      log('7. Prisma Client 需要在启动时生成');
     }
     console.log('');
   }

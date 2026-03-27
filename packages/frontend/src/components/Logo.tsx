@@ -1,5 +1,5 @@
 import React from 'react';
-import { APP_LOGO } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import './Logo.css';
 
 interface LogoProps {
@@ -15,6 +15,9 @@ export const Logo: React.FC<LogoProps> = ({
   animated = true,
   iconOnly = false,
 }) => {
+  const { config } = useBrandConfig();
+  const logoSrc = config?.logo || '/logo.png';
+
   const sizeClasses = {
     sm: 'logo--sm',
     md: 'logo--md',
@@ -26,18 +29,14 @@ export const Logo: React.FC<LogoProps> = ({
       <div className="logo__icon-bg">
         {/* 动态渐变背景 */}
         <div className="logo__gradient" />
-        
+
         {/* Logo 图片 */}
-        <img 
-          src={APP_LOGO} 
-          alt="Logo" 
-          className="logo__image"
-        />
-        
+        <img src={logoSrc} alt="Logo" className="logo__image" />
+
         {/* 光泽效果 */}
         <div className="logo__shine" />
       </div>
-      
+
       {/* 发光效果 - 仅在深色主题显示 */}
       <div className="logo__glow" />
     </div>
@@ -45,14 +44,18 @@ export const Logo: React.FC<LogoProps> = ({
 
   if (iconOnly) {
     return (
-      <div className={`logo logo--icon-only ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}>
+      <div
+        className={`logo logo--icon-only ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}
+      >
         {iconContent}
       </div>
     );
   }
 
   return (
-    <div className={`logo ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}>
+    <div
+      className={`logo ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}
+    >
       {iconContent}
 
       {/* Logo 文字 */}
@@ -61,9 +64,7 @@ export const Logo: React.FC<LogoProps> = ({
           <span className="logo__title--brand">梦想</span>
           <span className="logo__title--product">网页</span>
         </h1>
-        {showSubtitle && (
-          <p className="logo__subtitle">CAD 协同平台</p>
-        )}
+        {showSubtitle && <p className="logo__subtitle">CAD 协同平台</p>}
       </div>
     </div>
   );

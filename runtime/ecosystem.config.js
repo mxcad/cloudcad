@@ -31,8 +31,8 @@ const NODE_RUNTIME_PATH = IS_WINDOWS
   : path.join(RUNTIME_DIR, 'linux', 'node', 'bin', 'node');
 const USE_RUNTIME = fs.existsSync(NODE_RUNTIME_PATH);
 
-// 数据目录
-const DATA_DIR = path.join(PROJECT_ROOT, 'offline-data');
+// 数据目录（统一在 data/ 目录下）
+const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PG_DATA_DIR = path.join(DATA_DIR, 'postgres');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');

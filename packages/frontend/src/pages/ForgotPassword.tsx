@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/authApi';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
@@ -23,7 +23,7 @@ import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
 
 /**
  * 忘记密码页面 - CloudCAD
- * 
+ *
  * 设计特色：
  * - 居中卡片布局
  * - 统一渐变网格背景
@@ -35,8 +35,12 @@ export const ForgotPassword: React.FC = () => {
   useDocumentTitle('忘记密码');
   const navigate = useNavigate();
   const { config: runtimeConfig } = useRuntimeConfig();
+  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
-  
+
+  const appName = brandConfig?.title || 'CloudCAD';
+  const appLogo = brandConfig?.logo || '/logo.png';
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +60,7 @@ export const ForgotPassword: React.FC = () => {
     try {
       const response = await authApi.forgotPassword(email);
       const data = response.data as unknown as ForgotPasswordResponseDto;
-      
+
       if (data.mailEnabled === false) {
         setSupportInfo({
           supportEmail: data.supportEmail ?? undefined,
@@ -91,9 +95,9 @@ export const ForgotPassword: React.FC = () => {
             <div className="logo-section">
               <div className="logo-wrapper">
                 <div className="logo-glow" />
-                <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+                <img src={appLogo} alt={appName} className="logo-image" />
               </div>
-              <h1 className="app-title">{APP_NAME}</h1>
+              <h1 className="app-title">{appName}</h1>
             </div>
 
             {/* 客服联系内容 */}
@@ -110,7 +114,7 @@ export const ForgotPassword: React.FC = () => {
                 <h3 className="support-card-title">客服联系方式</h3>
                 <div className="support-list">
                   {supportInfo.supportEmail && (
-                    <a 
+                    <a
                       href={`mailto:${supportInfo.supportEmail}`}
                       className="support-item"
                     >
@@ -119,7 +123,7 @@ export const ForgotPassword: React.FC = () => {
                     </a>
                   )}
                   {supportInfo.supportPhone && (
-                    <a 
+                    <a
                       href={`tel:${supportInfo.supportPhone}`}
                       className="support-item"
                     >
@@ -128,7 +132,9 @@ export const ForgotPassword: React.FC = () => {
                     </a>
                   )}
                   {!supportInfo.supportEmail && !supportInfo.supportPhone && (
-                    <p className="support-empty">暂无客服联系方式，请联系系统管理员</p>
+                    <p className="support-empty">
+                      暂无客服联系方式，请联系系统管理员
+                    </p>
                   )}
                 </div>
               </div>
@@ -142,7 +148,7 @@ export const ForgotPassword: React.FC = () => {
               </button>
             </div>
           </div>
-          <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+          <p className="copyright">© 2026 {appName}. All rights reserved.</p>
         </div>
 
         <style>{`
@@ -192,9 +198,9 @@ export const ForgotPassword: React.FC = () => {
             <div className="logo-section">
               <div className="logo-wrapper">
                 <div className="logo-glow" />
-                <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+                <img src={appLogo} alt={appName} className="logo-image" />
               </div>
-              <h1 className="app-title">{APP_NAME}</h1>
+              <h1 className="app-title">{appName}</h1>
             </div>
 
             {/* 成功内容 */}
@@ -204,7 +210,8 @@ export const ForgotPassword: React.FC = () => {
               </div>
               <h2 className="success-title">验证码已发送</h2>
               <p className="success-subtitle">
-                我们已向 <span className="success-email">{email}</span> 发送了验证码
+                我们已向 <span className="success-email">{email}</span>{' '}
+                发送了验证码
               </p>
 
               <div className="success-card">
@@ -216,7 +223,9 @@ export const ForgotPassword: React.FC = () => {
 
               <div className="button-group">
                 <button
-                  onClick={() => navigate('/reset-password', { state: { email } })}
+                  onClick={() =>
+                    navigate('/reset-password', { state: { email } })
+                  }
                   className="primary-button"
                 >
                   <span>前往重置密码</span>
@@ -246,7 +255,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
             </div>
           </div>
-          <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+          <p className="copyright">© 2026 {appName}. All rights reserved.</p>
         </div>
 
         <style>{`
@@ -303,9 +312,9 @@ export const ForgotPassword: React.FC = () => {
           <div className="logo-section">
             <div className="logo-wrapper">
               <div className="logo-glow" />
-              <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+              <img src={appLogo} alt={appName} className="logo-image" />
             </div>
-            <h1 className="app-title">{APP_NAME}</h1>
+            <h1 className="app-title">{appName}</h1>
             <p className="app-tagline">找回您的账户密码</p>
           </div>
 
@@ -326,7 +335,9 @@ export const ForgotPassword: React.FC = () => {
           {/* 表单 */}
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="input-group">
-              <label htmlFor="email" className="input-label">邮箱地址</label>
+              <label htmlFor="email" className="input-label">
+                邮箱地址
+              </label>
               <div className="input-wrapper">
                 <MailIcon size={18} className="input-icon" />
                 <input
@@ -381,7 +392,7 @@ export const ForgotPassword: React.FC = () => {
           </div>
         </div>
 
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
 
       <style>{`

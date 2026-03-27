@@ -125,9 +125,9 @@ COPY runtime/scripts/cooperate-manager.js ./runtime/scripts/cooperate-manager.js
 # 复制 nginx 配置
 COPY docker/nginx/nginx.conf /etc/nginx/http.d/default.conf
 
-# 创建必要目录并设置权限
-RUN mkdir -p /app/filesData /app/logs /app/svn-repo /app/uploads /app/temp /run/nginx && \
-    chmod -R 755 /app/filesData /app/logs /app/svn-repo /app/uploads /app/temp
+# 创建数据目录并设置权限（统一在 /app/data/ 下）
+RUN mkdir -p /app/data/files /app/data/logs /app/data/svn-repo /app/data/uploads /app/data/temp /run/nginx && \
+    chmod -R 755 /app/data
 
 # 暴露端口
 EXPOSE 80 3001 3000

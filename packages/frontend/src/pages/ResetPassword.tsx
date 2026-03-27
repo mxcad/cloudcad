@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../services';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { APP_NAME } from '../constants/appConfig';
+import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
@@ -28,7 +28,7 @@ interface LocationState {
 
 /**
  * 重置密码页面 - CloudCAD
- * 
+ *
  * 设计特色：
  * - 居中卡片布局
  * - 统一渐变网格背景
@@ -40,8 +40,12 @@ export const ResetPassword: React.FC = () => {
   useDocumentTitle('重置密码');
   const navigate = useNavigate();
   const location = useLocation();
+  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
-  
+
+  const appName = brandConfig?.title || 'CloudCAD';
+  const appLogo = brandConfig?.logo || '/logo.png';
+
   const emailFromState = (location.state as LocationState)?.email || '';
 
   const [formData, setFormData] = useState({
@@ -114,9 +118,7 @@ export const ResetPassword: React.FC = () => {
                 <CheckCircleIcon size={32} />
               </div>
               <h2 className="success-title">密码重置成功！</h2>
-              <p className="success-subtitle">
-                即将自动跳转到登录页...
-              </p>
+              <p className="success-subtitle">即将自动跳转到登录页...</p>
             </div>
           </div>
         </div>
@@ -153,9 +155,9 @@ export const ResetPassword: React.FC = () => {
           <div className="logo-section">
             <div className="logo-wrapper">
               <div className="logo-glow" />
-              <img src="/logo.png" alt={APP_NAME} className="logo-image" />
+              <img src={appLogo} alt={appName} className="logo-image" />
             </div>
-            <h1 className="app-title">{APP_NAME}</h1>
+            <h1 className="app-title">{appName}</h1>
             <p className="app-tagline">重置您的账户密码</p>
           </div>
 
@@ -176,7 +178,9 @@ export const ResetPassword: React.FC = () => {
           {/* 表单 */}
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="input-group">
-              <label htmlFor="email" className="input-label">邮箱地址</label>
+              <label htmlFor="email" className="input-label">
+                邮箱地址
+              </label>
               <div className="input-wrapper">
                 <MailIcon size={18} className="input-icon" />
                 <input
@@ -195,7 +199,9 @@ export const ResetPassword: React.FC = () => {
             </div>
 
             <div className="input-group">
-              <label htmlFor="code" className="input-label">验证码</label>
+              <label htmlFor="code" className="input-label">
+                验证码
+              </label>
               <div className="input-wrapper">
                 <KeyRoundIcon size={18} className="input-icon" />
                 <input
@@ -214,7 +220,9 @@ export const ResetPassword: React.FC = () => {
             </div>
 
             <div className="input-group">
-              <label htmlFor="newPassword" className="input-label">新密码</label>
+              <label htmlFor="newPassword" className="input-label">
+                新密码
+              </label>
               <div className="input-wrapper">
                 <LockIcon size={18} className="input-icon" />
                 <input
@@ -233,14 +241,20 @@ export const ResetPassword: React.FC = () => {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                  {showPassword ? (
+                    <EyeOffIcon size={18} />
+                  ) : (
+                    <EyeIcon size={18} />
+                  )}
                 </button>
                 <div className="input-glow" />
               </div>
             </div>
 
             <div className="input-group">
-              <label htmlFor="confirmPassword" className="input-label">确认新密码</label>
+              <label htmlFor="confirmPassword" className="input-label">
+                确认新密码
+              </label>
               <div className="input-wrapper">
                 <LockIcon size={18} className="input-icon" />
                 <input
@@ -259,7 +273,11 @@ export const ResetPassword: React.FC = () => {
                   className="password-toggle"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                  {showConfirmPassword ? (
+                    <EyeOffIcon size={18} />
+                  ) : (
+                    <EyeIcon size={18} />
+                  )}
                 </button>
                 <div className="input-glow" />
               </div>
@@ -302,7 +320,7 @@ export const ResetPassword: React.FC = () => {
           </div>
         </div>
 
-        <p className="copyright">© 2026 {APP_NAME}. All rights reserved.</p>
+        <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
 
       <style>{`
