@@ -9,8 +9,29 @@
 const fs = require('fs');
 const path = require('path');
 
-// 版权注释内容
+// ============================================================
+
+// 新版权声明内容（要插入的字符串）
+
+// ============================================================
+
 const COPYRIGHT_HEADER = `///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+`;
+
+// ============================================================
+// 旧版权声明内容（要清空的字符串）
+// ============================================================
+let OLD_COPYRIGHT_HEADER = `///////////////////////////////////////////////////////////////////////////////
 // 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 // 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
@@ -19,7 +40,6 @@ const COPYRIGHT_HEADER = `//////////////////////////////////////////////////////
 // This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
-
 `;
 
 // 需要扫描的目录
@@ -90,14 +110,29 @@ function hasCopyrightHeader(content) {
 }
 
 /**
+ * 移除文件中所有旧的版权声明（全文字符串匹配）
+ */
+function removeOldCopyright(content) {
+  // 使用 split join 进行全局字符串替换
+  return content.split(OLD_COPYRIGHT_HEADER).join('');
+}
+
+/**
  * 处理 shebang 行（如 #!/usr/bin/env node）
+ * 先移除旧版权声明，再添加新的
  */
 function processFileContent(content, hasShebang) {
+  // 先移除文件中所有旧的版权声明（全文匹配）
+  content = removeOldCopyright(content);
+  
+  // 移除 shebang 后可能残留的旧版权声明
   if (hasShebang) {
-    // 如果有 shebang，在 shebang 后添加版权注释
     const lines = content.split('\n');
     const shebangLine = lines[0];
-    const restContent = lines.slice(1).join('\n');
+    let restContent = lines.slice(1).join('\n');
+    
+    // 再次检查并移除 shebang 后的旧版权声明
+    restContent = removeOldCopyright(restContent);
     
     // 检查 shebang 后是否已有版权注释
     if (hasCopyrightHeader(restContent)) {
@@ -122,14 +157,18 @@ function processFile(filePath, mode) {
   const content = fs.readFileSync(filePath, 'utf-8');
   const hasShebang = content.startsWith('#!/');
   
-  if (hasCopyrightHeader(content)) {
-    return { status: 'skipped', reason: 'already_has_copyright' };
-  }
+  // 检查是否有旧版权声明需要替换（字符串匹配）
+  const hasOldCopyright = content.includes(OLD_COPYRIGHT_HEADER);
   
   if (mode === 'check') {
+    // 检查模式：如果已有新版权声明则跳过
+    if (hasCopyrightHeader(content) && !hasOldCopyright) {
+      return { status: 'skipped', reason: 'already_has_copyright' };
+    }
     return { status: 'missing', reason: 'no_copyright_header' };
   }
   
+  // 添加模式：处理文件（会先移除旧版权再添加新的）
   const newContent = processFileContent(content, hasShebang);
   
   if (newContent === null) {
@@ -137,6 +176,12 @@ function processFile(filePath, mode) {
   }
   
   fs.writeFileSync(filePath, newContent, 'utf-8');
+  
+  // 如果之前有旧版权，标记为替换
+  if (hasOldCopyright) {
+    return { status: 'replaced', reason: 'copyright_replaced' };
+  }
+  
   return { status: 'updated', reason: 'copyright_added' };
 }
 
@@ -153,6 +198,7 @@ function main() {
   
   let totalFiles = 0;
   let updatedFiles = 0;
+  let replacedFiles = 0;
   let skippedFiles = 0;
   let missingFiles = 0;
   
@@ -177,6 +223,9 @@ function main() {
       if (result.status === 'updated') {
         updatedFiles++;
         console.log(`✓ 已添加: ${relativePath}`);
+      } else if (result.status === 'replaced') {
+        replacedFiles++;
+        console.log(`↻ 已替换: ${relativePath}`);
       } else if (result.status === 'missing') {
         missingFiles++;
         missingFileList.push(relativePath);
@@ -199,6 +248,7 @@ function main() {
     }
   } else {
     console.log(`已添加版权注释: ${updatedFiles}`);
+    console.log(`已替换版权注释: ${replacedFiles}`);
     console.log(`跳过（已有版权）: ${skippedFiles}`);
   }
   

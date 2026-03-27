@@ -1,21 +1,76 @@
-MIT License
+Custom License Agreement - CloudCAD
+Copyright © 2022-2026 Chengdu Dreamkaide Technology Co., Ltd.
 
-Copyright (c) 2024 CloudCAD Contributors
+This license agreement ("Agreement") is made by and between Chengdu Dreamkaide Technology Co., Ltd. ("Licensor") and the user of the software named "CloudCAD" ("User"). By using the Software, User agrees to be bound by the terms and conditions set forth in this Agreement.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## 1. Non-Commercial Use
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The Software is intended for non-commercial use only. Non-commercial use refers to the utilization of the Software without the intent to generate profit, including but not limited to personal learning, research, and testing. You may use, study, research, and test the Software for non-commercial purposes.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+**If you modify the source code of the Software, you must contribute the modified source code back to the original project under the same license, unless you have obtained written authorization from the Licensor.** This requirement ensures that improvements made by the community are shared with all users.
+
+## 2. Redistribution of Source Code
+
+If you redistribute the source code of the Software (including any modified versions), you must:
+
+(a) Include the original copyright notice and this License Agreement in its entirety;
+
+(b) Retain all existing copyright notices, trademark notices, and other legal disclaimers unchanged;
+
+(c) **Clearly document and disclose all modifications made to the original source code**;
+
+(d) **Make the complete source code of the modified version publicly available under the same license terms**, unless you have obtained written authorization from the Licensor.
+
+Redistribution without compliance with the above requirements is strictly prohibited.
+
+## 3. Binary Files
+
+The compiled binary form of the Software, including but not limited to WASM, EXE, and front-end packaged resources, shall not be reverse engineered, decompiled, or disassembled. This restriction applies to all versions of the Software, including any updated or modified versions.
+
+## 4. Watermark Retention
+
+All watermarks, logos, and brand elements within the Software must remain intact and unaltered. Violation of this clause will result in immediate termination of this License.
+
+## 5. Commercial Use
+
+Unless you have entered into a separate commercial license agreement with Chengdu Dreamkaide Technology Co., Ltd. and obtained written permission, you are prohibited from using the Software for commercial purposes. If you have not signed such an agreement, you do not have the right to use the Software commercially. For inquiries about commercial licenses, please contact the Licensor for more information.
+
+## 6. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIMS, DAMAGES, OR OTHER LIABILITIES ARISING OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE, WHETHER BASED ON CONTRACT, TORT, OR ANY OTHER THEORY. This disclaimer does not affect any consumer rights you may have under applicable Chinese law.
+
+## 7. Commercial Licensing
+
+Users who have signed a purchase contract with Chengdu Dreamkaide Technology Co., Ltd. are governed by that contract if it conflicts with this License. Users who have not signed such a contract are exclusively governed by this License. Specific terms of commercial licensing, such as licensing fees and validity period, will be detailed in the commercial license agreement.
+
+## 8. Contact Information
+
+For commercial license inquiries, please contact:
+
+- **Company**: Chengdu Dreamkaide Technology Co., Ltd. (成都梦想凯德科技有限公司)
+- **Address**: 522, 5th Floor, Building 1, No. 1388, Middle Tianfu Avenue, High-tech Zone, Chengdu, China (Sichuan) Pilot Free Trade Zone
+- **Email**: 710714273@qq.com
+- **Website**: https://www.mxdraw.com/
+
+## 9. Governing Law and Dispute Resolution
+
+This License is governed by the laws of the People's Republic of China. Any disputes arising out of or in connection with this License shall first be resolved through friendly negotiations between the parties; if negotiations fail, either party may submit the dispute to the courts of competent jurisdiction at the location of the Licensor for litigation resolution.
+
+## 10. Amendment and Termination
+
+- The Licensor reserves the right to amend the terms and conditions of this License at any time. Amendments will be notified to users through the official website or other appropriate means.
+- The User may terminate this License at any time by ceasing to use the Software. Upon termination, the User must destroy all copies of the Software and any derivative works.
+
+## 11. Intellectual Property Statement
+
+The Software and all related intellectual property rights (including but not limited to patents, copyrights, trademarks, and trade secrets) are owned by Chengdu Dreamkaide Technology Co., Ltd. Without the written consent of the Licensor, the User may not infringe or attempt to infringe these rights in any manner.
+
+## 12. Third-Party Open Source Components
+
+The Software may incorporate certain third-party open source components, each of which is governed by its own license terms. You are solely responsible for complying with the terms of the applicable third-party licenses. This License Agreement does not apply to any such third-party components, and your rights to use them are exclusively as granted under their respective open source licenses.
+
+---
+
+By using the Software, you acknowledge that you have read and understood this License Agreement and agree to be bound by its terms and conditions.
+
+**Chengdu Dreamkaide Technology Co., Ltd.**

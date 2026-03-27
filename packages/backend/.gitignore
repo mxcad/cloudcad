@@ -1,18 +1,21 @@
 # 排除上传的文件
 uploads/
 temp/
+filesData/
+svn-repo/
 
 # 排除日志文件
 *.log
-*.txt
+logs/
 
 # 排除测试覆盖率报告
 coverage/
-cov*.txt
-final*.txt
-test*.txt
-type-*.txt
-integration-*.txt
+*.txt
 
 # 排除构建产物
 dist/
+*.tsbuildinfo
+
+# 排除环境文件
+.env
+.env.local
