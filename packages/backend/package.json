@@ -62,7 +62,7 @@
     "express-session": "^1.18.2",
     "graphmatch": "^1.1.1",
     "handlebars": "^4.7.8",
-    "ioredis": "^5.8.2",
+    "ioredis": "^5.10.1",
     "is-unicode-supported": "^2.1.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.11",
