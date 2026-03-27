@@ -13,6 +13,29 @@
 
 ---
 
+## 项目预览
+
+### 登录页面
+![登录页面](documents/user-guide/imgs/01-login.png)
+
+### 工作台仪表盘
+![仪表盘](documents/user-guide/imgs/02-dashboard.png)
+
+### CAD 编辑器
+![CAD 编辑器](documents/user-guide/imgs/04-cad-editor.png)
+
+### 协同编辑
+![协同编辑](documents/user-guide/imgs/18-cad-collaborate.png)
+
+### 项目管理
+![项目管理](documents/user-guide/imgs/05-projects.png)
+
+### 用户与权限管理
+![用户管理](documents/user-guide/imgs/07-user-management.png)
+![角色权限](documents/user-guide/imgs/08-role-permissions.png)
+
+---
+
 ## 环境要求
 
 ### 基础环境
