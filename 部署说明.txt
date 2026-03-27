@@ -59,8 +59,8 @@ CAD文件转换依赖MXCAD程序，位于：
    Linux:   ./stop.sh
 
 【日志位置】
-   offline-data/pm2/logs/     PM2服务日志
-   offline-data/logs/         应用日志
+   data/pm2/logs/     PM2服务日志
+   data/logs/         应用日志
 
 【部署包目录】
 
@@ -79,7 +79,7 @@ cloudcad/
 │   │   └── mxcad/        CAD转换程序及依赖
 │   ├── scripts/          启动管理脚本
 │   └── ecosystem.config.js  PM2进程配置
-├── offline-data/          运行数据（自动创建）
+├── data/                  运行数据（自动创建）
 │   ├── postgres/         数据库文件
 │   └── pm2/logs/         服务日志
 ├── 部署说明.txt           本文件

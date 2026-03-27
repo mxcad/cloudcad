@@ -24,7 +24,7 @@ const PLATFORM_DIR = IS_WINDOWS
   : path.join(RUNTIME_DIR, 'linux');
 
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
-const DATA_DIR = path.join(PROJECT_ROOT, 'offline-data');
+const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PG_DATA_DIR = path.join(DATA_DIR, 'postgres');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
 
@@ -87,7 +87,7 @@ function initLinuxSystem() {
       fs.mkdirSync(pgSocketDir, { recursive: true });
       log('info', `创建 PostgreSQL socket 目录: ${pgSocketDir}`);
     } catch (e) {
-      // 可能需要 root 权限，尝试使用 offline-data 目录
+      // 可能需要 root 权限，尝试使用 data 目录
       log('warn', `无法创建 ${pgSocketDir}，使用替代路径`);
     }
   }

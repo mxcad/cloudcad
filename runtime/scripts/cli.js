@@ -37,7 +37,7 @@ const PLATFORM_DIR = IS_WINDOWS
   : path.join(RUNTIME_DIR, 'linux');
 
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
-const DATA_DIR = path.join(PROJECT_ROOT, 'offline-data');
+const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PM2_HOME = path.join(DATA_DIR, 'pm2');
 
 // 可执行文件路径

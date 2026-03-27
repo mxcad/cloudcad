@@ -122,7 +122,7 @@ setlocal
 REM CloudCAD offline pm2 entry
 REM setlocal ensures PATH changes are isolated to this script session only
 
-set "PM2_HOME=%~dp0offline-data\\pm2"
+set "PM2_HOME=%~dp0data\\pm2"
 set "PATH=%~dp0runtime\\windows\\node;%PATH%"
 "%~dp0runtime\\windows\\node\\node.exe" "%~dp0runtime\\windows\\node\\node_modules\\pm2\\bin\\pm2" %*
 endlocal
@@ -139,7 +139,7 @@ function createLinuxPm2Wrapper() {
 # PATH export is scoped to this script process only
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-export PM2_HOME="$SCRIPT_DIR/offline-data/pm2"
+export PM2_HOME="$SCRIPT_DIR/data/pm2"
 export PATH="$SCRIPT_DIR/runtime/linux/node/bin:$PATH"
 exec "$SCRIPT_DIR/runtime/linux/node/bin/node" "$SCRIPT_DIR/runtime/linux/node/bin/node_modules/pm2/bin/pm2" "$@"
 `;
@@ -263,7 +263,7 @@ function createWindowsPs1Pm2Wrapper() {
 param([Parameter(ValueFromRemainingArguments)]$Args)
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$env:PM2_HOME = Join-Path $ScriptDir "offline-data\\pm2"
+$env:PM2_HOME = Join-Path $ScriptDir "data\\pm2"
 $env:PATH = "$(Join-Path $ScriptDir 'runtime\\windows\\node');$env:PATH"
 $NodePath = Join-Path $ScriptDir "runtime\\windows\\node\\node.exe"
 $Pm2Path = Join-Path $ScriptDir "runtime\\windows\\node\\node_modules\\pm2\\bin\\pm2"
@@ -1021,7 +1021,7 @@ setlocal
 REM CloudCAD offline pm2 entry
 REM PM2_HOME is set locally and won't affect system pm2
 
-set "PM2_HOME=%~dp0${backPath}\\offline-data\\pm2"
+set "PM2_HOME=%~dp0${backPath}\\data\\pm2"
 "%~dp0${backPath}\\${rootRelativeNodeExe}" "%~dp0${backPath}\\${rootRelativePm2Js}" %*
 endlocal
 `;
@@ -1038,7 +1038,7 @@ param([Parameter(ValueFromRemainingArguments)]$Args)
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $ProjectRoot = Join-Path $ScriptDir "${backPath}"
-$env:PM2_HOME = Join-Path $ProjectRoot "offline-data\\pm2"
+$env:PM2_HOME = Join-Path $ProjectRoot "data\\pm2"
 $NodePath = Join-Path $ProjectRoot "${rootRelativeNodeExe}"
 $Pm2Path = Join-Path $ProjectRoot "${rootRelativePm2Js}"
 
@@ -1055,7 +1055,7 @@ $Pm2Path = Join-Path $ProjectRoot "${rootRelativePm2Js}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/${backPath}" && pwd)"
-export PM2_HOME="$PROJECT_ROOT/offline-data/pm2"
+export PM2_HOME="$PROJECT_ROOT/data/pm2"
 exec "$PROJECT_ROOT/${rootRelativeNodeExe}" "$PROJECT_ROOT/${rootRelativePm2Js}" "$@"
 `;
       fs.writeFileSync(pm2CmdPath, pm2Content, { encoding: 'utf8' });

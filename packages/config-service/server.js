@@ -28,7 +28,7 @@ const BACKEND_DIR = path.join(PROJECT_ROOT, 'packages', 'backend');
 const ENV_PATH = path.join(BACKEND_DIR, '.env');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const RUNTIME_DIR = path.join(PROJECT_ROOT, 'runtime');
-const DATA_DIR = path.join(PROJECT_ROOT, 'offline-data');
+const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PM2_HOME = path.join(DATA_DIR, 'pm2');
 const ECOSYSTEM_PATH = path.join(RUNTIME_DIR, 'ecosystem.config.js');
 
@@ -538,7 +538,7 @@ function startService(serviceName) {
   if (serviceName === 'backend' || serviceName === 'frontend') {
     const tempConfigPath = path.join(
       PROJECT_ROOT,
-      'offline-data',
+      'data',
       'pm2-deploy.config.js'
     );
     if (fs.existsSync(tempConfigPath)) {

@@ -29,7 +29,7 @@ import { TourProvider } from './contexts/TourContext';
 import { GlobalTourRenderer } from './components/tour';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
-import { BrandProvider, useBrandConfig } from './contexts/BrandContext';
+import { BrandProvider } from './contexts/BrandContext';
 
 // 受保护的路由组件（认证检查）
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
@@ -250,24 +250,7 @@ function AppContent() {
   );
 }
 
-function AppLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-        <div className="text-slate-600 dark:text-slate-400">加载中...</div>
-      </div>
-    </div>
-  );
-}
-
 function App() {
-  const { loading: brandLoading } = useBrandConfig();
-
-  if (brandLoading) {
-    return <AppLoading />;
-  }
-
   return (
     <BrandProvider>
       <Router>

@@ -235,7 +235,7 @@ lsof -i :6379
 
 ```bash
 # 删除数据目录
-rm -rf offline-data/postgres
+rm -rf data/postgres
 
 # 重新启动
 node runtime/scripts/start.js
