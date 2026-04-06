@@ -37,17 +37,17 @@
     "deploy:rebuild": "docker-compose -f docker/docker-compose.yml build --no-cache"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "effect": "^3.19.19",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "effect": "^3.21.0",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-unused-imports": "^4.3.0",
     "prettier": "^3.2.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.2"
   },
   "engines": {
     "node": ">=20.19.5",
