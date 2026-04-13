@@ -37,7 +37,7 @@
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.68.0",
     "react-horizontal-scrolling": "^0.1.13",
-    "react-router-dom": "^7.10.1",
+    "react-router-dom": "^7.13.2",
     "recharts": "^3.5.1",
     "spark-md5": "^3.0.2",
     "tailwind-merge": "^3.4.0",
