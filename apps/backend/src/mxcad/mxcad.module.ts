@@ -19,12 +19,12 @@ import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
 import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module';
 import { MxcadFacadeModule } from './facade/mxcad-facade.module';
+import { MxcadSaveModule } from './save/mxcad-save.module';
 import { FileUploadManagerFacadeService } from './facade/file-upload-manager-facade.service';
 import { ChunkUploadManagerService } from './services/chunk-upload-manager.service';
 import { FileMergeService } from './services/file-merge.service';
 import { UploadUtilityService } from './services/upload-utility.service';
 import { FileConversionUploadService } from './services/file-conversion-upload.service';
-import { SaveAsService } from './services/save-as.service';
 import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -114,6 +114,7 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxcadNodeModule,
     MxcadExternalRefModule,
     MxcadFacadeModule,
+    MxcadSaveModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
@@ -129,7 +130,6 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     FileMergeService,
     UploadUtilityService,
     FileConversionUploadService,
-    SaveAsService,
     // 来自 FileSystemModule 的 FileSystemService 别名
     {
       provide: 'FileSystemServiceMain',

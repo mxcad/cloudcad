@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
-import { FileSystemService as MxFileSystemService } from './file-system.service';
+import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import * as fs from 'fs';

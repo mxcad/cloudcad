@@ -35,7 +35,7 @@ import { ProjectCrudService } from '../file-operations/project-crud.service';
 import { FileTreeService } from './file-tree/file-tree.service';
 import { FileOperationsService } from '../file-operations/file-operations.service';
 import { FileDownloadExportService } from './services/file-download-export.service';
-import { ProjectMemberService } from './services/project-member.service';
+import { ProjectMemberService } from './project-member/project-member.service';
 import { StorageInfoService } from './storage-quota/storage-info.service';
 
 /**

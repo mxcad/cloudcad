@@ -14,6 +14,7 @@ import { FileValidationModule } from './file-validation/file-validation.module';
 import { StorageQuotaModule } from './storage-quota/storage-quota.module';
 import { FileTreeModule } from './file-tree/file-tree.module';
 import { FilePermissionModule } from './file-permission/file-permission.module';
+import { ProjectMemberModule } from './project-member/project-member.module';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
@@ -26,7 +27,6 @@ import { PersonalSpaceModule } from '../personal-space/personal-space.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import {
   FileDownloadExportService,
-  ProjectMemberService,
   SearchService,
 } from './services';
 
@@ -45,6 +45,7 @@ import {
     StorageQuotaModule,
     FileTreeModule,
     FilePermissionModule,
+    ProjectMemberModule,
   ],
   controllers: [FileSystemController],
   providers: [
@@ -52,7 +53,6 @@ import {
     FileDownloadHandlerService,
     RequireProjectPermissionGuard,
     FileDownloadExportService,
-    ProjectMemberService,
     SearchService,
   ],
   exports: [
@@ -62,9 +62,9 @@ import {
     StorageQuotaModule,
     FileTreeModule,
     FilePermissionModule,
+    ProjectMemberModule,
     FileDownloadHandlerService,
     FileDownloadExportService,
-    ProjectMemberService,
     SearchService,
   ],
 })
