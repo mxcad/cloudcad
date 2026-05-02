@@ -12,7 +12,7 @@ import {
   UploadChunkOptions,
   MergeOptions,
   MergeResult,
-} from './file-upload-manager.types';
+} from '../services/file-upload-manager.types';
 import { FileMergeService } from './file-merge.service';
 import * as path from 'path';
 
