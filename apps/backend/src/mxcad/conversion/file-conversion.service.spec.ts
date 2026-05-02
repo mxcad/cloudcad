@@ -1,191 +1,211 @@
 /////////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
-// The code, documentation, and related materials of this software belong to
-// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
-// Technology Co., Ltd. to use this software, its documentation, or related
-// materials.
-// https://www.mxdraw.com/
 /////////////////////////////////////////////////////////////////////////////////
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FileConversionService } from './file-conversion.service';
 
+// Mock child_process.exec — mutable dispatch via execBehaviors
+const execBehaviors: Record<string, Function> = {};
+jest.mock('child_process', () => ({
+  exec: jest.fn((cmd: string, opts: any, cb?: Function) => {
+    if (typeof opts === 'function') {
+      cb = opts;
+      opts = {};
+    }
+    const handler = execBehaviors[cmd] || execBehaviors['*'];
+    if (handler) {
+      const result = handler(cmd);
+      if (cb) cb(result.error, result.stdout, result.stderr);
+      return { on: jest.fn() } as any;
+    }
+    if (cb) cb(null, '{"code":0}', '');
+    return { on: jest.fn() } as any;
+  }),
+}));
+
+function setExec(pattern: string, fn: (cmd: string) => { error: Error | null; stdout: string; stderr: string }) {
+  execBehaviors[pattern] = fn;
+}
+
 describe('FileConversionService', () => {
   let service: FileConversionService;
-  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+    delete execBehaviors['*'];
+
     const mockConfigService = {
-      get: jest.fn().mockReturnValue({
-        assemblyPath: '/path/to/mxcadassembly.exe',
-        fileExt: '.mxweb',
-        compression: true,
+      get: jest.fn((key: string, options?: any) => {
+        if (key === 'mxcad') return { assemblyPath: '/fake/mxcadassembly.exe', fileExt: '.mxweb', compression: true };
+        if (key === 'upload') return { maxConcurrent: 2, conversionMaxConcurrent: 2 };
+        if (options?.infer) {
+          if (key === 'mxcad') return { assemblyPath: '/fake/mxcadassembly.exe', fileExt: '.mxweb', compression: true };
+          if (key === 'upload') return { maxConcurrent: 2, conversionMaxConcurrent: 2 };
+        }
+        return undefined;
       }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileConversionService,
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     })
-      .setLogger({
-        log: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-        verbose: jest.fn(),
-      })
+      .setLogger({ log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() })
       .compile();
 
     service = module.get<FileConversionService>(FileConversionService);
-    configService = module.get(ConfigService);
   });
 
+  // ==================== convertFile ====================
   describe('convertFile', () => {
     it('should convert DWG file successfully', async () => {
-      // TODO: Implement test
-    });
-
-    it('should convert DXF file successfully', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: null, stdout: '{"code":0}', stderr: '' }));
+      const r = await service.convertFile({ srcPath: '/tmp/f.dwg', fileHash: 'abc' });
+      expect(r.isOk).toBe(true);
     });
 
     it('should handle conversion failure with error code', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: null, stdout: '{"code":1,"message":"Invalid file"}', stderr: '' }));
+      const r = await service.convertFile({ srcPath: '/tmp/bad.dwg', fileHash: 'xyz' });
+      expect(r.isOk).toBe(false);
+      expect(r.error).toContain('Invalid file');
     });
 
     it('should handle parse error when output is invalid JSON', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: null, stdout: 'not json', stderr: '' }));
+      const r = await service.convertFile({ srcPath: '/tmp/f.dwg', fileHash: 'abc' });
+      expect(r.isOk).toBe(false);
     });
 
-    it('should handle timeout error', async () => {
-      // TODO: Implement test
+    it('should handle exec error with successful stdout fallback', async () => {
+      setExec('*', () => ({ error: new Error('exec error'), stdout: '{"code":0}', stderr: '' }));
+      const r = await service.convertFile({ srcPath: '/tmp/f.dwg', fileHash: 'abc' });
+      expect(r.isOk).toBe(true);
     });
 
-    it('should use custom timeout when provided', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle relative source path', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle absolute source path', async () => {
-      // TODO: Implement test
-    });
-
-    it('should pass optional parameters correctly', async () => {
-      // TODO: Implement test
-    });
-
-    it('should respect compression option', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle success when exit code is non-zero but output indicates success', async () => {
-      // TODO: Implement test
+    it('should handle exec error with no successful output', async () => {
+      setExec('*', () => ({ error: new Error('ETIMEOUT'), stdout: '', stderr: 'timeout' }));
+      const r = await service.convertFile({ srcPath: '/tmp/f.dwg', fileHash: 'abc' });
+      expect(r.isOk).toBe(false);
     });
   });
 
+  // ==================== convertFileAsync ====================
   describe('convertFileAsync', () => {
     it('should return a task ID', async () => {
-      // TODO: Implement test
+      const r = await service.convertFileAsync({ srcPath: '/f.dwg', fileHash: 'abc' });
+      expect(r).toMatch(/^task_\d+/);
     });
 
     it('should generate unique task IDs for multiple calls', async () => {
-      // TODO: Implement test
+      const r1 = await service.convertFileAsync({ srcPath: '/f.dwg', fileHash: 'abc' });
+      const r2 = await service.convertFileAsync({ srcPath: '/f.dwg', fileHash: 'abc' });
+      expect(r1).not.toBe(r2);
     });
   });
 
+  // ==================== checkConversionStatus ====================
   describe('checkConversionStatus', () => {
-    it('should return completed status for a task', async () => {
-      // TODO: Implement test
+    it('should return completed status', async () => {
+      const r = await service.checkConversionStatus('task-1');
+      expect(r.code).toBe(0);
+      expect(r.status).toBe('completed');
     });
   });
 
+  // ==================== getConvertedExtension ====================
   describe('getConvertedExtension', () => {
     it('should return .mxweb for .dwg files', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.dwg')).toBe('.mxweb');
     });
 
     it('should return .mxweb for .dxf files', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.dxf')).toBe('.mxweb');
     });
 
     it('should return .pdf for .pdf files', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.pdf')).toBe('.pdf');
     });
 
     it('should return .png for .png files', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.png')).toBe('.png');
     });
 
     it('should return .jpg for .jpg files', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.jpg')).toBe('.jpg');
     });
 
     it('should return .jpeg for .jpeg files', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.jpeg')).toBe('.jpeg');
     });
 
     it('should return default extension for unknown file types', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.unknown')).toBe('.mxweb');
     });
 
     it('should handle case-insensitive extensions', () => {
-      // TODO: Implement test
+      expect(service.getConvertedExtension('f.DWG')).toBe('.mxweb');
+      expect(service.getConvertedExtension('f.Dxf')).toBe('.mxweb');
+      expect(service.getConvertedExtension('f.PDF')).toBe('.pdf');
     });
   });
 
+  // ==================== needsConversion ====================
   describe('needsConversion', () => {
     it('should return true for DWG files', () => {
-      // TODO: Implement test
+      expect(service.needsConversion('f.dwg')).toBe(true);
     });
 
     it('should return true for DXF files', () => {
-      // TODO: Implement test
+      expect(service.needsConversion('f.dxf')).toBe(true);
     });
 
     it('should return false for PDF files', () => {
-      // TODO: Implement test
+      expect(service.needsConversion('f.pdf')).toBe(false);
     });
 
     it('should return false for image files', () => {
-      // TODO: Implement test
+      expect(service.needsConversion('f.png')).toBe(false);
+      expect(service.needsConversion('f.jpg')).toBe(false);
     });
   });
 
+  // ==================== convertBinToMxweb ====================
   describe('convertBinToMxweb', () => {
     it('should convert bin file to mxweb successfully', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: null, stdout: '{"code":0}', stderr: '' }));
+      const r = await service.convertBinToMxweb('/tmp/f.bin', '/tmp/out', 'f.mxweb');
+      expect(r.success).toBe(true);
+      expect(r.outputPath).toContain('f.mxweb');
     });
 
     it('should handle conversion failure', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: null, stdout: '{"code":1,"message":"Convert failed"}', stderr: '' }));
+      const r = await service.convertBinToMxweb('/tmp/f.bin', '/tmp/out', 'f.mxweb');
+      expect(r.success).toBe(false);
     });
 
     it('should handle parse error', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: null, stdout: 'invalid json', stderr: '' }));
+      const r = await service.convertBinToMxweb('/tmp/f.bin', '/tmp/out', 'f.mxweb');
+      expect(r.success).toBe(false);
     });
 
     it('should handle execution error', async () => {
-      // TODO: Implement test
+      setExec('*', () => ({ error: new Error('Exec failed'), stdout: '', stderr: '' }));
+      const r = await service.convertBinToMxweb('/tmp/f.bin', '/tmp/out', 'f.mxweb');
+      expect(r.success).toBe(false);
     });
 
-    it('should handle relative paths', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle success when exit code is non-zero but output indicates success', async () => {
-      // TODO: Implement test
+    it('should handle success when exit code non-zero but output indicates success', async () => {
+      setExec('*', () => ({ error: new Error('non-zero'), stdout: '{"code":0}', stderr: '' }));
+      const r = await service.convertBinToMxweb('/tmp/f.bin', '/tmp/out', 'f.mxweb');
+      expect(r.success).toBe(true);
     });
   });
 });

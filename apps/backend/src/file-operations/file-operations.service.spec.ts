@@ -17,20 +17,20 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileOperationsService } from './file-operations.service';
-import { DatabaseService } from '../../database/database.service';
-import { StorageManager } from '../../common/services/storage-manager.service';
-import { VersionControlService } from '../../version-control/version-control.service';
+import { DatabaseService } from '../database/database.service';
+import { StorageManager } from '../common/services/storage-manager.service';
+import { VersionControlService } from '../version-control/version-control.service';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 
 describe('FileOperationsService', () => {
   let service: FileOperationsService;
-  let prisma: jest.Mocked<DatabaseService>;
-  let storageManager: jest.Mocked<StorageManager>;
-  let configService: jest.Mocked<ConfigService>;
-  let versionControlService: jest.Mocked<VersionControlService>;
-  let storageInfoService: jest.Mocked<StorageInfoService>;
-  let fileTreeService: jest.Mocked<FileTreeService>;
+  let prisma: any;
+  let storageManager: any;
+  let configService: any;
+  let versionControlService: any;
+  let storageInfoService: any;
+  let fileTreeService: any;
 
   beforeEach(async () => {
     const mockPrisma = {

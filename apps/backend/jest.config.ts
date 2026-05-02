@@ -15,7 +15,7 @@ const config: Config = {
     '/node_modules/',
   ],
   transform: {
-    '^\.+\.(t|j)s$': [
+    '^.+\\.ts$': [
       'ts-jest',
       {
         tsconfig: {
@@ -35,6 +35,10 @@ const config: Config = {
       },
     ],
   },
+  transformIgnorePatterns: [
+    '/node_modules/',
+    '/packages/',
+  ],
   collectCoverageFrom: [
     'src/**/*.(t|j)s',
     '!src/**/*.d.ts',
