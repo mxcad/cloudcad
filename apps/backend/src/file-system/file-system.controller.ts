@@ -47,7 +47,6 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
-import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
 import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
 import {
   ProjectPermission,
@@ -435,7 +434,7 @@ export class FileSystemController {
   }
 
   @Get('nodes/:nodeId/thumbnail')
-  @OptionalAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取文件节点缩略图' })
   @ApiProduces('image/jpeg')
   @ApiResponse({ status: 200, description: '获取缩略图成功' })
