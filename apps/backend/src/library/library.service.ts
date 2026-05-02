@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { FileSystemService } from '../file-system/file-system.service';
-import { FileTreeService } from '../file-system/services/file-tree.service';
+import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { PermissionService } from '../common/services/permission.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import * as fs from 'fs';

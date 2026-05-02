@@ -26,7 +26,7 @@ import { VersionControlService } from '../../version-control/version-control.ser
 import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
-import { FileTreeService } from '../file-system/services/file-tree.service';
+import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 

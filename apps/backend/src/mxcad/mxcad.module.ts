@@ -15,22 +15,19 @@ import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
 import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
-import { FileSystemNodeService } from './services/filesystem-node.service';
+import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
+import { MxcadNodeModule } from './node/mxcad-node.module';
 import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
-import { ChunkUploadService } from './services/chunk-upload.service';
 import { ChunkUploadManagerService } from './services/chunk-upload-manager.service';
 import { FileMergeService } from './services/file-merge.service';
 import { ExternalRefService } from './services/external-ref.service';
 import { UploadUtilityService } from './services/upload-utility.service';
 import { FileConversionUploadService } from './services/file-conversion-upload.service';
-import { FileCheckService } from './services/file-check.service';
-import { NodeCreationService } from './services/node-creation.service';
 import { SaveAsService } from './services/save-as.service';
 import { ExternalReferenceHandler } from './services/external-reference-handler.service';
 import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
 import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
 import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
-import { StorageCheckService } from '../storage/storage-check.service';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -115,6 +112,8 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     }),
     MxcadInfraModule,
     MxcadConversionModule,
+    MxcadChunkModule,
+    MxcadNodeModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
@@ -123,21 +122,16 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
   controllers: [MxCadController],
   providers: [
     MxCadService,
-    FileSystemNodeService,
     FileUploadManagerFacadeService,
+    ChunkUploadManagerService,
     ExternalReferenceHandler,
     MxcadFileHandlerService,
     ExternalReferenceUpdateService,
     // 新服务
-    StorageCheckService,
-    ChunkUploadService,
-    ChunkUploadManagerService,
     FileMergeService,
     ExternalRefService,
     UploadUtilityService,
     FileConversionUploadService,
-    FileCheckService,
-    NodeCreationService,
     SaveAsService,
     UploadOrchestrator,
     // 来自 FileSystemModule 的 FileSystemService 别名

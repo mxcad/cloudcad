@@ -27,7 +27,7 @@ import {
 import { ProjectPermission, SystemPermission } from '../enums/permissions.enum';
 import { DatabaseService } from '../../database/database.service';
 import { PermissionService } from '../services/permission.service';
-import { FileTreeService } from '../../file-system/services/file-tree.service';
+import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 
 /**
  * 项目权限检查 Guard

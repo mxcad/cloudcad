@@ -54,7 +54,7 @@ import {
   SystemPermission,
 } from '../common/enums/permissions.enum';
 import { FileSystemService } from './file-system.service';
-import { FileTreeService } from './services/file-tree.service';
+import { FileTreeService } from './file-tree/file-tree.service';
 import { SearchService } from './services/search.service';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 import { ProjectPermissionService } from '../roles/project-permission.service';

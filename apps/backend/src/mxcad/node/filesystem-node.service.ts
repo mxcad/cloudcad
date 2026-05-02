@@ -12,7 +12,7 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { FileTreeService } from '../../file-system/services/file-tree.service';
+import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { FileStatus, User, Prisma } from '@prisma/client';
 import { Request } from 'express';
 import type { ExternalReferenceInfo } from '../types/external-reference.types';
