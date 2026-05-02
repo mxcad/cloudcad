@@ -98,7 +98,9 @@ export class FileDownloadExportService {
     return this.storageManager.getFullPath(node.path);
   }
 
-  private async getFileStream(filePath: string): Promise<NodeJS.ReadableStream> {
+  private async getFileStream(
+    filePath: string
+  ): Promise<NodeJS.ReadableStream> {
     try {
       return await this.storage.getFileStream(filePath);
     } catch (error) {
@@ -273,7 +275,8 @@ export class FileDownloadExportService {
             `开始转换文件: ${originalFilename} -> ${targetFilename}`
           );
           const mxCadService = await this.getMxCadServiceInstance();
-          const result = await mxCadService.convertServerFile(conversionOptions);
+          const result =
+            await mxCadService.convertServerFile(conversionOptions);
 
           const resultObj = result as { code?: number; message?: string };
           if (resultObj.code !== 0) {

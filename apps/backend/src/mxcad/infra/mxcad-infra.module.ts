@@ -37,9 +37,6 @@ import { LinuxInitService } from './linux-init.service';
     ThumbnailGenerationService,
     LinuxInitService,
   ],
-  exports: [
-    FileSystemService,
-    ThumbnailGenerationService,
-  ],
+  exports: [FileSystemService, ThumbnailGenerationService],
 })
 export class MxcadInfraModule {}

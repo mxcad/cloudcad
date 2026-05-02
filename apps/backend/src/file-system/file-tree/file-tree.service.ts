@@ -113,7 +113,7 @@ export class FileTreeService {
 
       // 获取正确的projectId
       const projectId = await this.getProjectId(parentId);
-      
+
       const fileNode = await tx.fileSystemNode.create({
         data: {
           name: uniqueName,
@@ -203,8 +203,13 @@ export class FileTreeService {
 
     // 在事务外清除配额缓存
     const projectId = await this.getProjectId(parentId);
-    await this.storageInfoService.invalidateQuotaCache(ownerId, projectId || undefined);
-    this.logger.debug(`[createFileNode] 配额缓存已清除: userId=${ownerId}, projectId=${projectId}`);
+    await this.storageInfoService.invalidateQuotaCache(
+      ownerId,
+      projectId || undefined
+    );
+    this.logger.debug(
+      `[createFileNode] 配额缓存已清除: userId=${ownerId}, projectId=${projectId}`
+    );
 
     return createdNode;
   }

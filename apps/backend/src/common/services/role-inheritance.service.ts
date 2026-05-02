@@ -338,7 +338,9 @@ export class RoleInheritanceService implements OnModuleInit {
       const rolePermissions = await this.getRolePermissions(roleName);
 
       this.logger.log(`角色 ${roleName} 的权限数量: ${rolePermissions.length}`);
-      this.logger.log(`角色 ${roleName} 的权限列表: ${rolePermissions.join(', ')}`);
+      this.logger.log(
+        `角色 ${roleName} 的权限列表: ${rolePermissions.join(', ')}`
+      );
 
       const hasPermission = rolePermissions.includes(permission);
       this.logger.log(
@@ -533,10 +535,7 @@ export class RoleInheritanceService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     // 异步执行预热，不阻塞模块启动
     this.warmupCacheAsync().catch((error) => {
-      this.logger.error(
-        `预热角色权限缓存失败: ${error.message}`,
-        error.stack
-      );
+      this.logger.error(`预热角色权限缓存失败: ${error.message}`, error.stack);
     });
   }
 

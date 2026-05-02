@@ -65,10 +65,12 @@ export class PublicFileController {
   @Post('chunk/check')
   @Public()
   @ApiOperation({ summary: '检查分片是否存在' })
-  @ApiResponse({ status: 200, description: '返回分片存在状态', type: CheckChunkResponseDto })
-  async checkChunk(
-    @Body() dto: CheckChunkDto,
-  ): Promise<CheckChunkResponseDto> {
+  @ApiResponse({
+    status: 200,
+    description: '返回分片存在状态',
+    type: CheckChunkResponseDto,
+  })
+  async checkChunk(@Body() dto: CheckChunkDto): Promise<CheckChunkResponseDto> {
     return this.publicFileService.checkChunk(dto);
   }
 
@@ -79,7 +81,11 @@ export class PublicFileController {
   @Post('file/check')
   @Public()
   @ApiOperation({ summary: '检查文件是否已存在（秒传检查）' })
-  @ApiResponse({ status: 200, description: '返回文件存在状态', type: CheckFileResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: '返回文件存在状态',
+    type: CheckFileResponseDto,
+  })
   async checkFile(@Body() dto: CheckFileDto): Promise<CheckFileResponseDto> {
     return this.publicFileService.checkFile(dto);
   }
@@ -94,11 +100,15 @@ export class PublicFileController {
   @Public()
   @ApiOperation({ summary: '上传分片' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, description: '上传成功', type: UploadChunkResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: '上传成功',
+    type: UploadChunkResponseDto,
+  })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async uploadChunk(
     @Body() dto: UploadChunkDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ): Promise<UploadChunkResponseDto> {
     if (!file) {
       throw new BadRequestException('未上传文件');
@@ -115,7 +125,7 @@ export class PublicFileController {
     const isLastChunk = dto.chunk + 1 === dto.chunks;
 
     this.logger.log(
-      `分片上传成功: hash=${dto.hash}, chunk=${dto.chunk}/${dto.chunks - 1}`,
+      `分片上传成功: hash=${dto.hash}, chunk=${dto.chunk}/${dto.chunks - 1}`
     );
 
     return {
@@ -137,7 +147,7 @@ export class PublicFileController {
     type: MergeCompleteResponseDto,
   })
   async mergeChunks(
-    @Body() dto: MergeChunksDto,
+    @Body() dto: MergeChunksDto
   ): Promise<MergeCompleteResponseDto> {
     this.logger.log(`开始合并分片: hash=${dto.hash}, name=${dto.name}`);
     return this.publicFileService.mergeChunks(dto);
@@ -160,7 +170,7 @@ export class PublicFileController {
   async accessFile(
     @Param('hash') hash: string,
     @Param('filename') filename: string,
-    @Res() res: Response,
+    @Res() res: Response
   ): Promise<void> {
     const filePath = await this.publicFileService.findFileInDir(hash, filename);
 
@@ -168,14 +178,19 @@ export class PublicFileController {
       throw new NotFoundException('文件不存在');
     }
 
-    this.logger.log(`文件访问: hash=${hash}, filename=${filename}, path=${filePath}`);
+    this.logger.log(
+      `文件访问: hash=${hash}, filename=${filename}, path=${filePath}`
+    );
 
     try {
       const fileStats = fs.statSync(filePath);
 
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Length', fileStats.size);
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${encodeURIComponent(path.basename(filePath))}"`
+      );
       res.setHeader('Cache-Control', 'public, max-age=3600');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -211,7 +226,7 @@ export class PublicFileController {
   @ApiResponse({ status: 404, description: '文件不存在' })
   async accessFileByHashPattern(
     @Param('filename') filename: string,
-    @Res() res: Response,
+    @Res() res: Response
   ): Promise<void> {
     // 从 filename 中提取 hash（去掉 .xxx.mxweb 或 .mxweb 后缀）
     // 如 "4b298dd48355af1202b532fc4d051658.dwg.mxweb" -> "4b298dd48355af1202b532fc4d051658"
@@ -224,14 +239,19 @@ export class PublicFileController {
       throw new NotFoundException('文件不存在');
     }
 
-    this.logger.log(`文件访问: filename=${filename}, hash=${hash}, path=${filePath}`);
+    this.logger.log(
+      `文件访问: filename=${filename}, hash=${hash}, path=${filePath}`
+    );
 
     try {
       const fileStats = fs.statSync(filePath);
 
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Length', fileStats.size);
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${encodeURIComponent(path.basename(filePath))}"`
+      );
       res.setHeader('Cache-Control', 'public, max-age=3600');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -277,7 +297,7 @@ export class PublicFileController {
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async uploadExtReference(
     @Body() dto: UploadExtReferenceDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ): Promise<{ ret: string; hash?: string; message?: string }> {
     if (!file) {
       throw new BadRequestException('未上传文件');
@@ -292,14 +312,14 @@ export class PublicFileController {
     }
 
     this.logger.log(
-      `[uploadExtReference] 开始处理: srcHash=${dto.srcFileHash}, extRefFile=${dto.extRefFile}, size=${file.size}`,
+      `[uploadExtReference] 开始处理: srcHash=${dto.srcFileHash}, extRefFile=${dto.extRefFile}, size=${file.size}`
     );
 
     return this.publicFileService.uploadExtReference(
       file.buffer,
       dto.srcFileHash,
       dto.extRefFile,
-      dto.hash,
+      dto.hash
     );
   }
 
@@ -310,7 +330,11 @@ export class PublicFileController {
   @Get('ext-reference/check')
   @Public()
   @ApiOperation({ summary: '检查外部参照文件是否存在' })
-  @ApiQuery({ name: 'srcHash', description: '源图纸文件的哈希值', required: true })
+  @ApiQuery({
+    name: 'srcHash',
+    description: '源图纸文件的哈希值',
+    required: true,
+  })
   @ApiQuery({ name: 'fileName', description: '外部参照文件名', required: true })
   @ApiResponse({
     status: 200,
@@ -324,7 +348,7 @@ export class PublicFileController {
   })
   async checkExtReference(
     @Query('srcHash') srcHash: string,
-    @Query('fileName') fileName: string,
+    @Query('fileName') fileName: string
   ): Promise<{ exists: boolean }> {
     if (!srcHash) {
       throw new BadRequestException('缺少源图纸哈希值');
@@ -336,11 +360,11 @@ export class PublicFileController {
 
     const exists = await this.publicFileService.checkExtReferenceExists(
       srcHash,
-      fileName,
+      fileName
     );
 
     this.logger.log(
-      `[checkExtReference] 检查结果: srcHash=${srcHash}, fileName=${fileName}, exists=${exists}`,
+      `[checkExtReference] 检查结果: srcHash=${srcHash}, fileName=${fileName}, exists=${exists}`
     );
 
     return { exists };
@@ -358,9 +382,7 @@ export class PublicFileController {
     description: '返回预加载数据',
   })
   @ApiResponse({ status: 404, description: '预加载数据不存在' })
-  async getPreloadingData(
-    @Param('hash') hash: string,
-  ): Promise<any> {
+  async getPreloadingData(@Param('hash') hash: string): Promise<any> {
     if (!hash) {
       throw new BadRequestException('缺少文件哈希值');
     }
@@ -368,15 +390,11 @@ export class PublicFileController {
     const data = await this.publicFileService.getPreloadingData(hash);
 
     if (!data) {
-      this.logger.log(
-        `[getPreloadingData] 预加载数据不存在: hash=${hash}`,
-      );
+      this.logger.log(`[getPreloadingData] 预加载数据不存在: hash=${hash}`);
       return null;
     }
 
-    this.logger.log(
-      `[getPreloadingData] 预加载数据返回: hash=${hash}`,
-    );
+    this.logger.log(`[getPreloadingData] 预加载数据返回: hash=${hash}`);
 
     return data;
   }

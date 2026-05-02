@@ -22,7 +22,11 @@ export enum StorageQuotaType {
  * 存储空间信息 DTO
  */
 export class StorageInfoDto {
-  @ApiProperty({ description: '配额类型', enum: Object.values(StorageQuotaType), enumName: 'StorageQuotaTypeEnum' })
+  @ApiProperty({
+    description: '配额类型',
+    enum: Object.values(StorageQuotaType),
+    enumName: 'StorageQuotaTypeEnum',
+  })
   type: StorageQuotaType;
 
   @ApiProperty({ description: '已使用空间（字节）' })

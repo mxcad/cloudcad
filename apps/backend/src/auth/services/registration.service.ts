@@ -22,7 +22,10 @@ import { DatabaseService } from '../../database/database.service';
 import { RegisterDto, AuthResponseDto } from '../dto/auth.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
-import { USER_SERVICE, IUserService } from '../../common/interfaces/user-service.interface';
+import {
+  USER_SERVICE,
+  IUserService,
+} from '../../common/interfaces/user-service.interface';
 import { AuthTokenService } from './auth-token.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -47,7 +50,8 @@ export class RegistrationService {
     registerDto: RegisterDto,
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    const { email, username, password, nickname, wechatTempToken } = registerDto;
+    const { email, username, password, nickname, wechatTempToken } =
+      registerDto;
 
     const allowRegister = await this.runtimeConfigService.getValue<boolean>(
       'allowRegister',
@@ -59,7 +63,7 @@ export class RegistrationService {
 
     if (email) {
       const existingUserByEmail = await this.prisma.user.findFirst({
-        where: { 
+        where: {
           email,
           deletedAt: null,
         },
@@ -76,7 +80,11 @@ export class RegistrationService {
       throw new ConflictException('用户名已被使用');
     }
 
-    let wechatData: { wechatId: string; nickname: string; avatar: string } | null = null;
+    let wechatData: {
+      wechatId: string;
+      nickname: string;
+      avatar: string;
+    } | null = null;
     if (wechatTempToken) {
       try {
         const payload = this.jwtService.verify(wechatTempToken, {
@@ -214,7 +222,7 @@ export class RegistrationService {
     code: string,
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-this.logger.log(`开始验证邮箱: ${email}`);
+    this.logger.log(`开始验证邮箱: ${email}`);
 
     const result = await this.emailVerificationService.verifyEmail(email, code);
 
@@ -267,7 +275,17 @@ this.logger.log(`开始验证邮箱: ${email}`);
     // 场景2：已有用户验证邮箱 - 用户已注册但邮箱未验证
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
-      include: { role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } } },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
     });
 
     if (!existingUser) {
@@ -283,11 +301,22 @@ this.logger.log(`开始验证邮箱: ${email}`);
         emailVerified: true,
         emailVerifiedAt: new Date(),
       },
-      include: { role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } } },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
     });
 
     const { password: _, ...userWithoutPassword } = updatedUser;
-    const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
       req.session.userId = updatedUser.id;

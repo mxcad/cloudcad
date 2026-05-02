@@ -70,7 +70,7 @@ export class AccountBindingService {
     }
 
     const existingUser = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         email,
         deletedAt: null,
       },
@@ -122,7 +122,7 @@ export class AccountBindingService {
     }
 
     const existingUser = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         email,
         deletedAt: null,
       },
@@ -162,7 +162,7 @@ export class AccountBindingService {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     const existingUser = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         phone: formattedPhone,
         deletedAt: null,
       },
@@ -304,7 +304,7 @@ export class AccountBindingService {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     const existingUser = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         phone: formattedPhone,
         deletedAt: null,
       },
@@ -392,7 +392,10 @@ export class AccountBindingService {
       throw new BadRequestException('您还未绑定邮箱');
     }
 
-    const result = await this.emailVerificationService.verifyEmail(user.email, code);
+    const result = await this.emailVerificationService.verifyEmail(
+      user.email,
+      code
+    );
     if (!result.valid) {
       throw new UnauthorizedException(result.message);
     }
@@ -552,7 +555,7 @@ export class AccountBindingService {
 
     if (dto.email) {
       const user = await this.prisma.user.findFirst({
-        where: { 
+        where: {
           email: dto.email,
           deletedAt: null,
         },

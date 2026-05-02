@@ -81,7 +81,7 @@ export interface SmsProvider {
   sendTemplate(
     phone: string,
     templateId: string,
-    params: Record<string, string>,
+    params: Record<string, string>
   ): Promise<SendResult>;
 
   /**

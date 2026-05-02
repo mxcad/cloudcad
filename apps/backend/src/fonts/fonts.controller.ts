@@ -143,7 +143,8 @@ export class FontsController {
   })
   @ApiQuery({
     name: 'target',
-    enum: Object.values(FontUploadTarget), enumName: 'FontUploadTarget',
+    enum: Object.values(FontUploadTarget),
+    enumName: 'FontUploadTarget',
     required: false,
     description: '删除目标',
   })

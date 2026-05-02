@@ -92,7 +92,9 @@ export class PermissionsGuard implements CanActivate {
    */
   private extractContext(request: Request): PermissionContext {
     return {
-      ipAddress: request.ip || (request.connection as { remoteAddress?: string })?.remoteAddress,
+      ipAddress:
+        request.ip ||
+        (request.connection as { remoteAddress?: string })?.remoteAddress,
       userAgent: request.headers['user-agent'],
       time: new Date(),
       // 可以根据需要添加更多上下文信息

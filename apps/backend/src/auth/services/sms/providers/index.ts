@@ -49,7 +49,7 @@ export class SmsProviderFactory {
 
       default:
         this.logger.warn(
-          `未知的短信服务商: ${config.provider}，回退到 Mock 模式`,
+          `未知的短信服务商: ${config.provider}，回退到 Mock 模式`
         );
         return new MockSmsProvider();
     }

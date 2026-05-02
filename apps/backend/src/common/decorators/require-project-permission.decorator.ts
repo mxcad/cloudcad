@@ -63,7 +63,9 @@ export const RequireProjectPermission = (
   mode: ProjectPermissionCheckMode = ProjectPermissionCheckMode.ALL
 ) => {
   // 支持单个权限或数组
-  const permissionArray = Array.isArray(permissions) ? permissions : [permissions];
+  const permissionArray = Array.isArray(permissions)
+    ? permissions
+    : [permissions];
 
   return applyDecorators(
     SetMetadata(REQUIRE_PROJECT_PERMISSION_KEY, permissionArray),

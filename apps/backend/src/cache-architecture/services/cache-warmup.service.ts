@@ -10,7 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+} from '@nestjs/common';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { IWarmupStrategy, WarmupResult } from '../strategies/warmup.strategy';
@@ -24,7 +29,7 @@ import { ProjectRoleMapper } from '../utils/project-role.mapper';
 import { ProjectRole } from '../../common/enums/permissions.enum';
 
 /**
- * 缓存预热配置接口 
+ * 缓存预热配置接口
  */
 export interface ICacheWarmupConfig {
   /** 是否启用预热 */
@@ -45,14 +50,14 @@ export interface ICacheWarmupConfig {
 
 /**
  * 统一的缓存预热服务
- * 
+ *
  * 功能：
  * 1. 使用策略模式管理多种预热策略
  * 2. 支持定时预热（Cron）
  * 3. 支持启动时预热（OnModuleInit）
  * 4. 支持手动触发预热
  * 5. 提供配置管理和统计信息
- * 
+ *
  * 架构设计：
  * - 策略层：5 个独立策略类（热点数据、权限、角色、用户、项目）
  * - 执行层：统一调度，支持策略组合
@@ -89,7 +94,7 @@ export class CacheWarmupService implements OnModuleInit {
     // 跳过启动时预热，改为懒加载
     this.logger.log('缓存预热已禁用（启动时），改为懒加载策略');
     this.logger.log('缓存将在首次访问时自动加载');
-    
+
     // 如果需要手动触发预热，可以通过 API 调用
     // this.triggerWarmup();
   }
@@ -323,13 +328,17 @@ export class CacheWarmupService implements OnModuleInit {
       await this.redisCache.cacheUserRole(user.id, user.role);
 
       // 缓存用户权限
-      const permissions = RolePermissionsMapper.getPermissionsByRole(user.role.name);
+      const permissions = RolePermissionsMapper.getPermissionsByRole(
+        user.role.name
+      );
       await this.redisCache.cacheUserPermissions(user.id, permissions);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error(`预热用户 ${userId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(
+        `预热用户 ${userId} 失败: ${error instanceof Error ? error.message : '未知错误'}`
+      );
     }
   }
 
@@ -367,7 +376,9 @@ export class CacheWarmupService implements OnModuleInit {
 
       // 预热每个成员的访问角色
       for (const member of members) {
-        const accessRole = ProjectRoleMapper.mapRoleToAccessRole(member.projectRole.name);
+        const accessRole = ProjectRoleMapper.mapRoleToAccessRole(
+          member.projectRole.name
+        );
         await this.redisCache.cacheNodeAccessRole(
           member.user.id,
           project.id,
@@ -385,7 +396,9 @@ export class CacheWarmupService implements OnModuleInit {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error(`预热项目 ${projectId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(
+        `预热项目 ${projectId} 失败: ${error instanceof Error ? error.message : '未知错误'}`
+      );
     }
   }
 

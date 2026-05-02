@@ -36,10 +36,10 @@ export class MockSmsProvider implements SmsProvider {
   async sendTemplate(
     phone: string,
     templateId: string,
-    params: Record<string, string>,
+    params: Record<string, string>
   ): Promise<SendResult> {
     this.logger.log(
-      `[Mock SMS] 发送模板短信到 ${phone}, 模板: ${templateId}, 参数: ${JSON.stringify(params)}`,
+      `[Mock SMS] 发送模板短信到 ${phone}, 模板: ${templateId}, 参数: ${JSON.stringify(params)}`
     );
 
     return {

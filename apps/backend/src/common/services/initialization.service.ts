@@ -21,7 +21,10 @@ import {
   ProjectRole,
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
 } from '../enums/permissions.enum';
-import { USER_SERVICE, IUserService } from '../interfaces/user-service.interface';
+import {
+  USER_SERVICE,
+  IUserService,
+} from '../interfaces/user-service.interface';
 
 /**
  * 系统初始化服务
@@ -173,9 +176,7 @@ export class InitializationService implements OnModuleInit {
             this.logger.warn(
               `⚠️  关键权限缺失：系统角色 ${roleConfig.name} 缺少关键权限: ${missingCriticalPerms.join(', ')}`
             );
-            this.logger.warn(
-              `   正在自动恢复关键权限...`
-            );
+            this.logger.warn(`   正在自动恢复关键权限...`);
 
             await this.prisma.rolePermission.createMany({
               data: missingCriticalPerms.map((permission) => ({
@@ -252,10 +253,10 @@ export class InitializationService implements OnModuleInit {
       case 'ADMIN':
         // 系统管理员必须拥有的权限配置相关权限
         return [
-          'SYSTEM_ROLE_READ',              // 查看角色
-          'SYSTEM_ROLE_CREATE',            // 创建角色
-          'SYSTEM_ROLE_UPDATE',            // 编辑角色
-          'SYSTEM_ROLE_DELETE',            // 删除角色
+          'SYSTEM_ROLE_READ', // 查看角色
+          'SYSTEM_ROLE_CREATE', // 创建角色
+          'SYSTEM_ROLE_UPDATE', // 编辑角色
+          'SYSTEM_ROLE_DELETE', // 删除角色
           'SYSTEM_ROLE_PERMISSION_MANAGE', // 角色权限管理
         ];
       default:
@@ -443,7 +444,7 @@ export class InitializationService implements OnModuleInit {
   private async ensureAllUsersHavePersonalSpace(): Promise<void> {
     try {
       const startTime = Date.now();
-      
+
       // 查找所有已有私人空间的用户 ID
       const personalSpaces = await this.prisma.fileSystemNode.findMany({
         where: {
@@ -492,10 +493,10 @@ export class InitializationService implements OnModuleInit {
       // 批量创建私人空间（使用事务）
       let createdCount = 0;
       const batchSize = 10; // 每批处理 10 个用户
-      
+
       for (let i = 0; i < usersWithoutPersonalSpace.length; i += batchSize) {
         const batch = usersWithoutPersonalSpace.slice(i, i + batchSize);
-        
+
         try {
           // 使用事务批量创建
           await this.prisma.$transaction(
@@ -544,7 +545,7 @@ export class InitializationService implements OnModuleInit {
   private async ensurePublicLibraries(): Promise<void> {
     try {
       const startTime = Date.now();
-      
+
       // 获取系统管理员用户作为资源库所有者
       const adminRole = await this.prisma.role.findFirst({
         where: { name: SystemRole.ADMIN },
@@ -621,7 +622,7 @@ export class InitializationService implements OnModuleInit {
           this.logger.error(`创建公共资源库失败: ${result.reason}`);
         }
       }
-      
+
       const duration = Date.now() - startTime;
       this.logger.log(`✅ 公共资源库初始化完成，耗时 ${duration}ms`);
     } catch (error) {

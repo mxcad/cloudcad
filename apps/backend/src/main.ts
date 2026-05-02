@@ -110,7 +110,9 @@ async function bootstrap() {
       name: config.session.name,
     })
   );
-  logger.log(`Session cookie secure: ${config.session.cookieSecure} (NODE_ENV=${config.nodeEnv})`);
+  logger.log(
+    `Session cookie secure: ${config.session.cookieSecure} (NODE_ENV=${config.nodeEnv})`
+  );
   if (config.session.cookieDomain) {
     logger.log(`Session cookie domain: ${config.session.cookieDomain}`);
   }

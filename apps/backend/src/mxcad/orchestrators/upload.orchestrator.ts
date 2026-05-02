@@ -444,7 +444,10 @@ export class UploadOrchestrator {
 
       // 转换文件（如果需要）
       // MXWeb 文件不需要转换，直接跳过
-      if (!FileTypeDetector.isMxwebFile(name) && this.fileConversionService.needsConversion(name)) {
+      if (
+        !FileTypeDetector.isMxwebFile(name) &&
+        this.fileConversionService.needsConversion(name)
+      ) {
         const convertedExt =
           this.fileConversionService.getConvertedExtension(name);
         const convertedPath = path.join(

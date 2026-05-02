@@ -48,7 +48,8 @@ export class HotDataStrategy implements IWarmupStrategy {
       const hotDataWithFrequency = hotData.map((data) => {
         const minutesSinceLastAccess =
           (now - data.lastAccessedAt.getTime()) / 60000;
-        const frequency = data.accessCount / Math.max(minutesSinceLastAccess, 1);
+        const frequency =
+          data.accessCount / Math.max(minutesSinceLastAccess, 1);
         return { ...data, frequency };
       });
 
@@ -75,7 +76,9 @@ export class HotDataStrategy implements IWarmupStrategy {
       await this.multiLevelCache.setMany(loadedData);
 
       const duration = Date.now() - startTime;
-      this.logger.log(`成功预热 ${loadedData.size} 条热点数据，耗时 ${duration}ms`);
+      this.logger.log(
+        `成功预热 ${loadedData.size} 条热点数据，耗时 ${duration}ms`
+      );
 
       return {
         success: true,

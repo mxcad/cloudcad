@@ -26,7 +26,9 @@ export class StorageService {
     private localStorageProvider: LocalStorageProvider,
     private configService: ConfigService<AppConfig>
   ) {
-    this.filesDataPath = this.configService.get('filesDataPath', { infer: true });
+    this.filesDataPath = this.configService.get('filesDataPath', {
+      infer: true,
+    });
   }
 
   /**

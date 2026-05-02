@@ -28,7 +28,11 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { RuntimeConfigService } from './runtime-config.service';
-import { UpdateRuntimeConfigDto, RuntimeConfigResponseDto, RuntimeConfigDefinitionDto } from './dto/runtime-config.dto';
+import {
+  UpdateRuntimeConfigDto,
+  RuntimeConfigResponseDto,
+  RuntimeConfigDefinitionDto,
+} from './dto/runtime-config.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -111,7 +115,9 @@ export class RuntimeConfigController {
     description: '返回配置项详情',
     type: RuntimeConfigResponseDto,
   })
-  async getConfig(@Param('key') key: string): Promise<RuntimeConfigResponseDto> {
+  async getConfig(
+    @Param('key') key: string
+  ): Promise<RuntimeConfigResponseDto> {
     return this.runtimeConfigService.get(key);
   }
 
@@ -137,7 +143,7 @@ export class RuntimeConfigController {
   async updateConfig(
     @Param('key') key: string,
     @Body() dto: UpdateRuntimeConfigDto,
-    @Req() req: Request,
+    @Req() req: Request
   ) {
     const user = req.user as { id: string };
     const ip = req.ip;

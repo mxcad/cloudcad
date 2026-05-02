@@ -35,13 +35,7 @@ import { NodeCreationService } from './node-creation.service';
     CommonModule,
     forwardRef(() => FileSystemModule),
   ],
-  providers: [
-    FileSystemNodeService,
-    NodeCreationService,
-  ],
-  exports: [
-    FileSystemNodeService,
-    NodeCreationService,
-  ],
+  providers: [FileSystemNodeService, NodeCreationService],
+  exports: [FileSystemNodeService, NodeCreationService],
 })
 export class MxcadNodeModule {}

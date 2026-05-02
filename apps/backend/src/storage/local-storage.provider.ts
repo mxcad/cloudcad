@@ -90,7 +90,9 @@ export class LocalStorageProvider implements StorageProvider {
         charCode !== 10 &&
         charCode !== 13
       ) {
-        this.logger.error(`[validatePath] 路径包含控制字符: charCode=${charCode}, index=${i}, key=${key}`);
+        this.logger.error(
+          `[validatePath] 路径包含控制字符: charCode=${charCode}, index=${i}, key=${key}`
+        );
         throw new BadRequestException('路径包含非法字符');
       }
       if (charCode === 127) {

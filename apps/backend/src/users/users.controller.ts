@@ -169,11 +169,11 @@ export class UsersController {
   ) {
     // 用户只能更新自己的信息，排除角色ID和状态字段
     const { roleId, status, ...profileData } = updateUserDto;
-    
+
     // 检查用户名修改限制（一月最多3次）
     if (updateUserDto.username) {
       const existingUser = await this.usersService.findOne(req.user.id);
-      
+
       // 检查用户名是否有变化
       if (updateUserDto.username !== existingUser.username) {
         // 获取用户的修改次数和时间
@@ -184,12 +184,19 @@ export class UsersController {
             lastUsernameChangeAt: true,
           },
         });
-        
+
         const now = new Date();
-        const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        
+        const oneMonthAgo = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          now.getDate()
+        );
+
         // 如果上次修改时间超过一个月，重置修改次数
-        if (!userWithCount?.lastUsernameChangeAt || userWithCount.lastUsernameChangeAt < oneMonthAgo) {
+        if (
+          !userWithCount?.lastUsernameChangeAt ||
+          userWithCount.lastUsernameChangeAt < oneMonthAgo
+        ) {
           await this.databaseService.user.update({
             where: { id: req.user.id },
             data: {
@@ -200,17 +207,22 @@ export class UsersController {
         }
 
         // 检查修改次数是否超过限制
-        const updatedUserWithCount = await this.databaseService.user.findUnique({
-          where: { id: req.user.id },
-          select: {
-            usernameChangeCount: true,
-          },
-        });
+        const updatedUserWithCount = await this.databaseService.user.findUnique(
+          {
+            where: { id: req.user.id },
+            select: {
+              usernameChangeCount: true,
+            },
+          }
+        );
 
-        if (updatedUserWithCount && updatedUserWithCount.usernameChangeCount >= 3) {
+        if (
+          updatedUserWithCount &&
+          updatedUserWithCount.usernameChangeCount >= 3
+        ) {
           throw new BadRequestException('用户名一月内只能修改3次');
         }
-        
+
         // 更新用户名时增加修改次数和时间
         await this.databaseService.user.update({
           where: { id: req.user.id },
@@ -223,7 +235,7 @@ export class UsersController {
         });
       }
     }
-    
+
     return this.usersService.update(req.user.id, profileData);
   }
 

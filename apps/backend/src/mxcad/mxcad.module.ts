@@ -17,16 +17,14 @@ import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
+import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module';
 import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
 import { ChunkUploadManagerService } from './services/chunk-upload-manager.service';
 import { FileMergeService } from './services/file-merge.service';
-import { ExternalRefService } from './services/external-ref.service';
 import { UploadUtilityService } from './services/upload-utility.service';
 import { FileConversionUploadService } from './services/file-conversion-upload.service';
 import { SaveAsService } from './services/save-as.service';
-import { ExternalReferenceHandler } from './services/external-reference-handler.service';
 import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
-import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
 import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -114,6 +112,7 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxcadConversionModule,
     MxcadChunkModule,
     MxcadNodeModule,
+    MxcadExternalRefModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
@@ -124,12 +123,9 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxCadService,
     FileUploadManagerFacadeService,
     ChunkUploadManagerService,
-    ExternalReferenceHandler,
     MxcadFileHandlerService,
-    ExternalReferenceUpdateService,
     // 新服务
     FileMergeService,
-    ExternalRefService,
     UploadUtilityService,
     FileConversionUploadService,
     SaveAsService,
@@ -147,9 +143,7 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxCadService,
     FileUploadManagerFacadeService,
     UploadOrchestrator,
-    ExternalReferenceHandler,
     MxcadFileHandlerService,
-    ExternalReferenceUpdateService,
   ],
 })
 export class MxCadModule {}

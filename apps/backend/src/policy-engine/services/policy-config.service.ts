@@ -21,7 +21,10 @@ import { DatabaseService } from '../../database/database.service';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
 import { PolicyEngineService } from './policy-engine.service';
 import { PolicyType } from '../enums/policy-type.enum';
-import { Permission as PrismaPermission, PermissionPolicy } from '@prisma/client';
+import {
+  Permission as PrismaPermission,
+  PermissionPolicy,
+} from '@prisma/client';
 
 /**
  * 权限策略配置
@@ -64,7 +67,9 @@ export class PolicyConfigService {
   async createPolicyConfig(
     config: PermissionPolicyConfig,
     createdBy: string
-  ): Promise<PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }> {
+  ): Promise<
+    PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }
+  > {
     try {
       // 验证策略配置
       const policy = this.policyEngine.createPolicyUnsafe(
@@ -118,7 +123,9 @@ export class PolicyConfigService {
     policyId: string,
     updates: Partial<PermissionPolicyConfig>,
     updatedBy: string
-  ): Promise<PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }> {
+  ): Promise<
+    PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }
+  > {
     try {
       // 查找现有策略
       const existing = await this.prisma.permissionPolicy.findUnique({
@@ -224,10 +231,23 @@ export class PolicyConfigService {
    */
   async getPolicyConfig(
     policyId: string
-  ): Promise<(PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }) | null> {
+  ): Promise<
+    | (PermissionPolicyConfig & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+      })
+    | null
+  > {
     try {
       const cacheKey = `${this.cachePrefix}${policyId}`;
-      const cached = this.cacheService.get<PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }>(cacheKey);
+      const cached = this.cacheService.get<
+        PermissionPolicyConfig & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+        }
+      >(cacheKey);
 
       if (cached !== null) {
         return cached;
@@ -264,11 +284,23 @@ export class PolicyConfigService {
   /**
    * 获取所有策略配置
    */
-  async getAllPolicyConfigs(): Promise<(PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date })[]> {
+  async getAllPolicyConfigs(): Promise<
+    (PermissionPolicyConfig & {
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+    })[]
+  > {
     try {
       const cacheKey = `${this.cachePrefix}all`;
       const cached =
-        await this.cacheService.get<(PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date })[]>(cacheKey);
+        await this.cacheService.get<
+          (PermissionPolicyConfig & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+          })[]
+        >(cacheKey);
 
       if (cached !== null) {
         return cached;
@@ -307,11 +339,23 @@ export class PolicyConfigService {
    */
   async getEnabledPoliciesForPermission(
     permission: PrismaPermission
-  ): Promise<(PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date })[]> {
+  ): Promise<
+    (PermissionPolicyConfig & {
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+    })[]
+  > {
     try {
       const cacheKey = `${this.cachePrefix}permission:${permission}`;
       const cached =
-        await this.cacheService.get<(PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date })[]>(cacheKey);
+        await this.cacheService.get<
+          (PermissionPolicyConfig & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+          })[]
+        >(cacheKey);
 
       if (cached !== null) {
         return cached;
@@ -367,7 +411,9 @@ export class PolicyConfigService {
     policyId: string,
     enabled: boolean,
     updatedBy: string
-  ): Promise<PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }> {
+  ): Promise<
+    PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }
+  > {
     return this.updatePolicyConfig(policyId, { enabled }, updatedBy);
   }
 

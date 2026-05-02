@@ -27,7 +27,10 @@ import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryProjectsDto } from '../file-system/dto/query-projects.dto';
 import { FileOperationsService } from './file-operations.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
-import { NodeListResponseDto, FileSystemNodeDto } from '../file-system/dto/file-system-response.dto';
+import {
+  NodeListResponseDto,
+  FileSystemNodeDto,
+} from '../file-system/dto/file-system-response.dto';
 import * as path from 'path';
 
 @Injectable()
@@ -115,7 +118,7 @@ export class ProjectCrudService {
 
       // 获取正确的projectId
       const projectId = await this.fileTreeService.getProjectId(parentId);
-      
+
       const node = await this.prisma.fileSystemNode.create({
         data: {
           name,
@@ -178,7 +181,10 @@ export class ProjectCrudService {
     return this.createNode(userId, dto.name, { parentId });
   }
 
-  async getUserProjects(userId: string, query?: QueryProjectsDto): Promise<NodeListResponseDto> {
+  async getUserProjects(
+    userId: string,
+    query?: QueryProjectsDto
+  ): Promise<NodeListResponseDto> {
     const {
       search,
       projectStatus,
@@ -252,7 +258,7 @@ export class ProjectCrudService {
         this.prisma.fileSystemNode.count({ where }),
       ]);
 
-      const nodeList: FileSystemNodeDto[] = nodes.map(node => ({
+      const nodeList: FileSystemNodeDto[] = nodes.map((node) => ({
         id: node.id,
         name: node.name,
         description: node.description,
@@ -287,7 +293,10 @@ export class ProjectCrudService {
     }
   }
 
-  async getUserDeletedProjects(userId: string, query?: QueryProjectsDto): Promise<NodeListResponseDto> {
+  async getUserDeletedProjects(
+    userId: string,
+    query?: QueryProjectsDto
+  ): Promise<NodeListResponseDto> {
     const { search, page = 1, limit = 20, sortBy, sortOrder } = query || {};
     const skip = (page - 1) * limit;
 
@@ -346,7 +355,7 @@ export class ProjectCrudService {
         `查询已删除项目结果 - 找到 ${nodes.length} 个项目，总计 ${total} 个`
       );
 
-      const nodeList: FileSystemNodeDto[] = nodes.map(node => ({
+      const nodeList: FileSystemNodeDto[] = nodes.map((node) => ({
         id: node.id,
         name: node.name,
         description: node.description,

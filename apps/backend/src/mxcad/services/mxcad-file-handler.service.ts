@@ -7,7 +7,7 @@ import * as fs from 'fs';
 
 /**
  * MxCAD 文件处理服务
- * 
+ *
  * 统一处理项目文件、图纸库、图块库的文件访问请求
  * 支持 mxweb 文件和外部参照文件的访问
  */
@@ -17,7 +17,7 @@ export class MxcadFileHandlerService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly db: DatabaseService,
+    private readonly db: DatabaseService
   ) {}
 
   /**
@@ -35,7 +35,9 @@ export class MxcadFileHandlerService {
 ----------------------------------------
       `);
 
-      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const absoluteFilePath = path.resolve(filesDataPath, filename);
 
       this.logger.log(`[serveFile] 绝对路径: ${absoluteFilePath}`);
@@ -64,7 +66,8 @@ export class MxcadFileHandlerService {
       const errorStack = error instanceof Error ? error.stack : undefined;
       const errorStatus = (error as { status?: number }).status;
       const errorStatusCode = (error as { statusCode?: number }).statusCode;
-      const errorResponse = (error as { response?: { error?: string } }).response;
+      const errorResponse = (error as { response?: { error?: string } })
+        .response;
 
       this.logger.error(`[serveFile] 处理失败: ${errorMessage}`, errorStack);
       if (!res.headersSent) {
@@ -82,7 +85,9 @@ export class MxcadFileHandlerService {
    * @param filename 请求的文件路径
    * @returns 外部参照文件路径，如果不存在则返回 null
    */
-  private async findExternalReferencePath(filename: string): Promise<string | null> {
+  private async findExternalReferencePath(
+    filename: string
+  ): Promise<string | null> {
     try {
       // 解析路径：YYYYMM/{nodeId}/...
       const parts = filename.split('/');
@@ -91,7 +96,7 @@ export class MxcadFileHandlerService {
       }
 
       const nodeId = parts[1];
-      
+
       // 获取节点的 fileHash
       const node = await this.db.fileSystemNode.findUnique({
         where: { id: nodeId },
@@ -105,8 +110,10 @@ export class MxcadFileHandlerService {
       // 构建外部参照路径：{dir}/{fileHash}/{fileName}
       const dir = path.dirname(filename);
       const extRefPath = path.join(dir, node.fileHash, path.basename(filename));
-      
-      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
+
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const fullPath = path.resolve(filesDataPath, extRefPath);
 
       // 检查外部参照文件是否存在
@@ -116,7 +123,9 @@ export class MxcadFileHandlerService {
 
       return null;
     } catch (error) {
-      this.logger.error(`[findExternalReferencePath] 查找失败：${error.message}`);
+      this.logger.error(
+        `[findExternalReferencePath] 查找失败：${error.message}`
+      );
       return null;
     }
   }
@@ -129,7 +138,7 @@ export class MxcadFileHandlerService {
   private streamFile(filePath: string, res: Response): void {
     const fileStats = fs.statSync(filePath);
     const ext = path.extname(filePath).toLowerCase();
-    
+
     // 设置 Content-Type
     const contentTypes: Record<string, string> = {
       '.mxweb': 'application/octet-stream',
@@ -155,7 +164,10 @@ export class MxcadFileHandlerService {
     res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
     // 对文件名进行编码，避免中文等非 ASCII 字符导致的响应头错误
     const encodedFilename = encodeURIComponent(path.basename(filePath));
-    res.setHeader('Content-Disposition', `inline; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
+    );
 
     // 创建文件流并返回
     const fileStream = fs.createReadStream(filePath);

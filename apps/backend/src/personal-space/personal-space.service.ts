@@ -8,7 +8,11 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { FileSystemNode, ProjectStatus } from '@prisma/client';
 
@@ -23,7 +27,7 @@ export class PersonalSpaceService {
    */
   async createPersonalSpace(userId: string): Promise<FileSystemNode> {
     const ownerRole = await this.database.projectRole.findFirst({
-      where: { name: 'PROJECT_OWNER', isSystem: true }
+      where: { name: 'PROJECT_OWNER', isSystem: true },
     });
 
     if (!ownerRole) {
@@ -42,9 +46,9 @@ export class PersonalSpaceService {
           create: {
             userId,
             projectRoleId: ownerRole.id,
-          }
-        }
-      }
+          },
+        },
+      },
     });
   }
 
@@ -53,7 +57,7 @@ export class PersonalSpaceService {
    */
   async getPersonalSpace(userId: string): Promise<FileSystemNode> {
     const personalSpace = await this.database.fileSystemNode.findUnique({
-      where: { personalSpaceKey: userId }
+      where: { personalSpaceKey: userId },
     });
 
     if (!personalSpace) {

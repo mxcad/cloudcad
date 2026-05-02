@@ -948,7 +948,9 @@ export class MxCadController {
       // 如果指定了 updatePreloading，则更新源图纸的外部参照信息
       if (body.updatePreloading) {
         try {
-          await this.mxCadService.updateExternalReferenceAfterUpload(body.nodeId);
+          await this.mxCadService.updateExternalReferenceAfterUpload(
+            body.nodeId
+          );
           this.logger.log(
             `[uploadExtReferenceImage] 外部参照信息已更新: nodeId=${body.nodeId}`
           );
@@ -1122,7 +1124,9 @@ export class MxCadController {
       }
 
       // 构建目标文件名（根据上传文件扩展名映射）
-      const fileExt = path.extname(file.originalname || file.filename).toLowerCase();
+      const fileExt = path
+        .extname(file.originalname || file.filename)
+        .toLowerCase();
       const extMap: Record<string, ThumbnailFormat> = {
         '.png': 'png',
         '.jpg': 'jpg',
@@ -1465,7 +1469,9 @@ export class MxCadController {
         infer: true,
       });
       const absoluteFilePath = path.resolve(filesDataPath, normalizedFilename);
-      this.logger.debug(`文件路径检查: ${filesDataPath}, ${filename}, exists=${fs.existsSync(absoluteFilePath)}`);
+      this.logger.debug(
+        `文件路径检查: ${filesDataPath}, ${filename}, exists=${fs.existsSync(absoluteFilePath)}`
+      );
       this.logger.log(`尝试访问文件: ${absoluteFilePath}`);
 
       // 检查文件是否存在
@@ -1692,7 +1698,9 @@ export class MxCadController {
                       );
 
                     if (!binResult.success || !binResult.content) {
-                      throw new NotFoundException(`分片文件获取失败: ${binFile}`);
+                      throw new NotFoundException(
+                        `分片文件获取失败: ${binFile}`
+                      );
                     }
 
                     // 保存分片文件到临时目录，保持原文件名
@@ -2129,7 +2137,9 @@ export class MxCadController {
               res.end();
               return;
             } else {
-              throw new NotFoundException(`获取存储文件信息失败: ${normalizedFilename}`);
+              throw new NotFoundException(
+                `获取存储文件信息失败: ${normalizedFilename}`
+              );
             }
           } catch (error) {
             this.logger.error(`获取存储文件信息失败: ${error.message}`, error);
@@ -2252,7 +2262,9 @@ export class MxCadController {
 
       // 4. 严格验证 nodeId 是否存在
       if (!nodeId) {
-        throw new BadRequestException('缺少节点ID（nodeId），无法创建文件系统节点');
+        throw new BadRequestException(
+          '缺少节点ID（nodeId），无法创建文件系统节点'
+        );
       }
 
       // 5. 检查节点是否属于公共资源库，如果是则验证系统权限

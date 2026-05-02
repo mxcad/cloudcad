@@ -78,7 +78,7 @@ export class UsersService {
       // 如果提供了邮箱，检查是否已存在（排除已注销用户）
       if (createUserDto.email) {
         const existingEmail = await this.prisma.user.findFirst({
-          where: { 
+          where: {
             email: createUserDto.email,
             deletedAt: null,
           },
@@ -101,7 +101,7 @@ export class UsersService {
       // 如果提供了手机号，检查是否已存在（排除已注销用户）
       if (createUserDto.phone) {
         const existingPhone = await this.prisma.user.findFirst({
-          where: { 
+          where: {
             phone: createUserDto.phone,
             deletedAt: null,
           },
@@ -221,7 +221,15 @@ export class UsersService {
    */
   async findAll(query: QueryUsersDto, userId?: string) {
     try {
-      const { search, roleId, page = 1, limit = 10, sortBy, sortOrder, projectId } = query;
+      const {
+        search,
+        roleId,
+        page = 1,
+        limit = 10,
+        sortBy,
+        sortOrder,
+        projectId,
+      } = query;
       const skip = (page - 1) * limit;
 
       const where: Prisma.UserWhereInput = {};
@@ -489,7 +497,7 @@ export class UsersService {
       // 检查邮箱唯一性（排除已注销用户）
       if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
         const emailExists = await this.prisma.user.findFirst({
-          where: { 
+          where: {
             email: updateUserDto.email,
             deletedAt: null,
           },
@@ -517,7 +525,7 @@ export class UsersService {
       // 检查手机号唯一性（排除已注销用户）
       if (updateUserDto.phone && updateUserDto.phone !== existingUser.phone) {
         const phoneExists = await this.prisma.user.findFirst({
-          where: { 
+          where: {
             phone: updateUserDto.phone,
             deletedAt: null,
           },
@@ -624,7 +632,7 @@ export class UsersService {
 
       await this.prisma.user.update({
         where: { id },
-        data: { 
+        data: {
           deletedAt: new Date(),
           phone: null,
           phoneVerified: false,
@@ -927,7 +935,10 @@ export class UsersService {
    */
   private async verifyEmailCode(email: string, code: string): Promise<boolean> {
     try {
-      const result = await this.emailVerificationService.verifyEmail(email, code);
+      const result = await this.emailVerificationService.verifyEmail(
+        email,
+        code
+      );
       return result.valid;
     } catch {
       return false;

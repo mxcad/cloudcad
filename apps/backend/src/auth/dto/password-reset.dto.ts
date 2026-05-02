@@ -35,7 +35,10 @@ export class ForgotPasswordDto {
   @IsOptional()
   phone?: string;
 
-  @ApiProperty({ description: '验证联系方式（内部使用，用于触发邮箱或手机号验证器）', example: '' })
+  @ApiProperty({
+    description: '验证联系方式（内部使用，用于触发邮箱或手机号验证器）',
+    example: '',
+  })
   @Validate(HasEmailOrPhone, { message: '必须提供邮箱或手机号' })
   validateContact: string;
 }
@@ -78,7 +81,10 @@ export class ResetPasswordDto {
   })
   confirmPassword: string;
 
-  @ApiProperty({ description: '验证联系方式（内部使用，用于触发邮箱或手机号验证器）', example: '' })
+  @ApiProperty({
+    description: '验证联系方式（内部使用，用于触发邮箱或手机号验证器）',
+    example: '',
+  })
   @Validate(HasEmailOrPhoneReset, { message: '必须提供邮箱或手机号' })
   validateContact: string;
 }
@@ -92,7 +98,10 @@ function HasEmailOrPhoneReset(value: unknown, args: ValidationArguments) {
 }
 
 export class ChangePasswordDto {
-  @ApiPropertyOptional({ description: '当前密码（无密码用户可不填）', example: 'OldPassword123!' })
+  @ApiPropertyOptional({
+    description: '当前密码（无密码用户可不填）',
+    example: 'OldPassword123!',
+  })
   @IsString({ message: '当前密码必须是字符串' })
   @IsOptional()
   oldPassword?: string;
@@ -114,10 +123,16 @@ export class ForgotPasswordResponseDto {
   @ApiProperty({ description: '短信服务是否启用' })
   smsEnabled: boolean;
 
-  @ApiPropertyOptional({ description: '客服邮箱（邮件禁用时返回）', nullable: true })
+  @ApiPropertyOptional({
+    description: '客服邮箱（邮件禁用时返回）',
+    nullable: true,
+  })
   supportEmail?: string;
 
-  @ApiPropertyOptional({ description: '客服电话（邮件禁用时返回）', nullable: true })
+  @ApiPropertyOptional({
+    description: '客服电话（邮件禁用时返回）',
+    nullable: true,
+  })
   supportPhone?: string;
 }
 

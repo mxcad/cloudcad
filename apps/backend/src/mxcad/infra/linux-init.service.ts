@@ -22,7 +22,10 @@ import { promisify } from 'util';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
-import { checkSvnAvailableSync, getPlatformInfo } from '@cloudcad/svn-version-tool';
+import {
+  checkSvnAvailableSync,
+  getPlatformInfo,
+} from '@cloudcad/svn-version-tool';
 
 const execAsync = promisify(exec);
 
@@ -45,7 +48,9 @@ export class LinuxInitService implements OnModuleInit {
    */
   async onModuleInit(): Promise<void> {
     const platformInfo = getPlatformInfo();
-    this.logger.log(`当前平台: ${platformInfo.platform}, SVN 路径: ${platformInfo.svnPath}`);
+    this.logger.log(
+      `当前平台: ${platformInfo.platform}, SVN 路径: ${platformInfo.svnPath}`
+    );
 
     // 检查 SVN 是否可用
     const svnCheck = checkSvnAvailableSync();
@@ -124,7 +129,9 @@ export class LinuxInitService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`设置 mxcadassembly 权限失败: ${error.message}`);
       // 尝试使用 sudo（可能需要无密码 sudo 配置）
-      this.logger.warn('如果权限不足，请手动执行: sudo chmod -R 777 mxcadassembly');
+      this.logger.warn(
+        '如果权限不足，请手动执行: sudo chmod -R 777 mxcadassembly'
+      );
     }
   }
 

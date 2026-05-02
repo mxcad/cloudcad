@@ -159,7 +159,10 @@ export class ProjectPermissionDto {
  */
 export class PermissionDto {
   @ApiProperty({
-    enum: [...Object.values(SystemPermission), ...Object.values(ProjectPermission)],
+    enum: [
+      ...Object.values(SystemPermission),
+      ...Object.values(ProjectPermission),
+    ],
     description: '权限',
     example: SystemPermission.USER_READ,
     enumName: 'PermissionEnum',

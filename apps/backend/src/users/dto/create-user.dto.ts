@@ -91,12 +91,20 @@ export class CreateUserDto {
   @IsString({ message: '角色ID必须是字符串' })
   roleId?: string;
 
-  @ApiProperty({ description: '手机号是否已验证', required: false, default: false })
+  @ApiProperty({
+    description: '手机号是否已验证',
+    required: false,
+    default: false,
+  })
   @IsOptional()
   @IsBoolean({ message: 'phoneVerified 必须是布尔值' })
   phoneVerified?: boolean;
 
-  @ApiProperty({ description: '邮箱是否已验证', required: false, default: false })
+  @ApiProperty({
+    description: '邮箱是否已验证',
+    required: false,
+    default: false,
+  })
   @IsOptional()
   @IsBoolean({ message: 'emailVerified 必须是布尔值' })
   emailVerified?: boolean;
@@ -106,7 +114,11 @@ export class CreateUserDto {
   @IsString()
   wechatId?: string;
 
-  @ApiProperty({ description: '登录方式 (LOCAL | WECHAT)', required: false, default: 'LOCAL' })
+  @ApiProperty({
+    description: '登录方式 (LOCAL | WECHAT)',
+    required: false,
+    default: 'LOCAL',
+  })
   @IsOptional()
   @IsString()
   provider?: string;

@@ -65,10 +65,12 @@ export class SmsVerificationService {
   constructor(
     private readonly configService: ConfigService,
     private readonly runtimeConfigService: RuntimeConfigService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {
     const cacheTTL = this.configService.get('cacheTTL');
-    const smsConfig = this.configService.get<{ limits?: SmsLimitsConfig }>('sms');
+    const smsConfig = this.configService.get<{ limits?: SmsLimitsConfig }>(
+      'sms'
+    );
 
     // 设置验证码有效期（默认 5 分钟）
     this.codeTTL = cacheTTL?.verificationCode ?? 300;
@@ -81,13 +83,15 @@ export class SmsVerificationService {
     };
 
     // 设置验证限制（默认最多尝试 5 次）
-    const smsVerifyConfig = this.configService.get<{ verifyLimits?: SmsVerifyLimitsConfig }>('sms');
+    const smsVerifyConfig = this.configService.get<{
+      verifyLimits?: SmsVerifyLimitsConfig;
+    }>('sms');
     this.verifyLimits = smsVerifyConfig?.verifyLimits ?? {
       maxVerifyAttempts: 5,
     };
 
     this.logger.log(
-      `短信限制配置: 每日上限=${this.limits.dailyLimitPerPhone}/手机号, IP限制=${this.limits.hourlyLimitPerIp}/小时, 验证最多${this.verifyLimits.maxVerifyAttempts}次`,
+      `短信限制配置: 每日上限=${this.limits.dailyLimitPerPhone}/手机号, IP限制=${this.limits.hourlyLimitPerIp}/小时, 验证最多${this.verifyLimits.maxVerifyAttempts}次`
     );
   }
 
@@ -102,7 +106,7 @@ export class SmsVerificationService {
     // 检查运行时配置是否启用短信服务
     const smsEnabled = await this.runtimeConfigService.getValue<boolean>(
       'smsEnabled',
-      false,
+      false
     );
 
     if (!smsEnabled) {
@@ -153,9 +157,9 @@ export class SmsVerificationService {
     return `sms_verification:daily_count:${phone}:${today}`;
   }
 
-/**
-    * 获取 IP 每小时发送次数 Key
-    */
+  /**
+   * 获取 IP 每小时发送次数 Key
+   */
   private getIpHourlyCountKey(ip: string): string {
     const hour = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
     return `sms_verification:ip_hourly_count:${ip}:${hour}`;
@@ -199,7 +203,7 @@ export class SmsVerificationService {
    */
   async sendVerificationCode(
     phone: string,
-    clientIp?: string,
+    clientIp?: string
   ): Promise<{ success: boolean; message: string }> {
     // 验证手机号格式
     if (!this.validatePhone(phone)) {
@@ -221,27 +225,22 @@ export class SmsVerificationService {
     const dailyCountKey = this.getDailyCountKey(formattedPhone);
     const dailyCount = parseInt(
       (await this.redis.get(dailyCountKey)) || '0',
-      10,
+      10
     );
 
     if (dailyCount >= this.limits.dailyLimitPerPhone) {
       throw new BadRequestException(
-        `该手机号今日发送次数已达上限（${this.limits.dailyLimitPerPhone}次），请明天再试`,
+        `该手机号今日发送次数已达上限（${this.limits.dailyLimitPerPhone}次），请明天再试`
       );
     }
 
     // 3. 检查 IP 每小时发送上限
     if (clientIp) {
       const ipCountKey = this.getIpHourlyCountKey(clientIp);
-      const ipCount = parseInt(
-        (await this.redis.get(ipCountKey)) || '0',
-        10,
-      );
+      const ipCount = parseInt((await this.redis.get(ipCountKey)) || '0', 10);
 
       if (ipCount >= this.limits.hourlyLimitPerIp) {
-        throw new BadRequestException(
-          `当前网络发送次数已达上限，请稍后再试`,
-        );
+        throw new BadRequestException(`当前网络发送次数已达上限，请稍后再试`);
       }
     }
 
@@ -278,12 +277,12 @@ export class SmsVerificationService {
 
     if (result.success) {
       this.logger.log(
-        `验证码发送成功: ${formattedPhone}, 今日第${currentDailyCount}次, IP=${clientIp || 'unknown'}`,
+        `验证码发送成功: ${formattedPhone}, 今日第${currentDailyCount}次, IP=${clientIp || 'unknown'}`
       );
       return { success: true, message: '验证码已发送' };
     } else {
       this.logger.warn(
-        `验证码发送失败: ${formattedPhone}, 原因: ${result.message}`,
+        `验证码发送失败: ${formattedPhone}, 原因: ${result.message}`
       );
       // 发送失败时清理 Redis 中的验证码和计数
       await this.redis.del(codeKey);
@@ -318,8 +317,13 @@ export class SmsVerificationService {
    */
   async verifyCode(
     phone: string,
-    code: string,
-  ): Promise<{ valid: boolean; message: string; remainingAttempts?: number; expiresIn?: number }> {
+    code: string
+  ): Promise<{
+    valid: boolean;
+    message: string;
+    remainingAttempts?: number;
+    expiresIn?: number;
+  }> {
     if (!this.validatePhone(phone)) {
       throw new BadRequestException('手机号格式不正确');
     }
@@ -354,7 +358,7 @@ export class SmsVerificationService {
       }
 
       this.logger.log(
-        `验证码验证失败: ${formattedPhone}, 剩余尝试次数: ${remainingAttempts - 1}`,
+        `验证码验证失败: ${formattedPhone}, 剩余尝试次数: ${remainingAttempts - 1}`
       );
 
       return {
@@ -390,7 +394,7 @@ export class SmsVerificationService {
   async sendTemplate(
     phone: string,
     templateId: string,
-    params: Record<string, string>,
+    params: Record<string, string>
   ): Promise<{ success: boolean; message: string }> {
     if (!this.validatePhone(phone)) {
       throw new BadRequestException('手机号格式不正确');
@@ -401,7 +405,7 @@ export class SmsVerificationService {
     const result = await provider.sendTemplate(
       formattedPhone,
       templateId,
-      params,
+      params
     );
 
     return {

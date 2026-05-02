@@ -50,10 +50,12 @@ export class PublicFileUploadService {
     private readonly configService: ConfigService<AppConfig>,
     private readonly concurrencyManager: ConcurrencyManager,
     private readonly fileConversionService: FileConversionService,
-    private readonly fileSystemService: FileSystemService,
+    private readonly fileSystemService: FileSystemService
   ) {
     this.tempPath = this.configService.get('mxcadTempPath', { infer: true });
-    this.uploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+    this.uploadPath = this.configService.get('mxcadUploadPath', {
+      infer: true,
+    });
   }
 
   /**
@@ -62,7 +64,10 @@ export class PublicFileUploadService {
   async checkChunkExists(dto: CheckChunkDto): Promise<boolean> {
     const { fileHash, chunk } = dto;
     const chunkFilename = `${chunk}_${fileHash}`;
-    const chunkPath = path.join(this.getChunkTempDirPath(fileHash), chunkFilename);
+    const chunkPath = path.join(
+      this.getChunkTempDirPath(fileHash),
+      chunkFilename
+    );
 
     const exists = await FileUtils.exists(chunkPath);
 
@@ -75,7 +80,7 @@ export class PublicFileUploadService {
     }
 
     this.logger.debug(
-      `检查分片: hash=${fileHash}, chunk=${chunk}, exists=${exists}`,
+      `检查分片: hash=${fileHash}, chunk=${chunk}, exists=${exists}`
     );
     return exists;
   }
@@ -86,22 +91,24 @@ export class PublicFileUploadService {
    */
   async checkFileExist(
     filename: string,
-    fileHash: string,
+    fileHash: string
   ): Promise<{ exist: boolean; mxwebPath?: string }> {
     try {
       // 检查文件是否需要转换
-      const needsConversion = this.fileConversionService.needsConversion(filename);
+      const needsConversion =
+        this.fileConversionService.needsConversion(filename);
 
       if (needsConversion) {
         // CAD 文件：检查转换后的 mxweb 是否存在
-        const convertedExt = this.fileConversionService.getConvertedExtension(filename);
+        const convertedExt =
+          this.fileConversionService.getConvertedExtension(filename);
         const mxwebFilename = `${fileHash}${convertedExt}`;
         const mxwebPath = this.fileSystemService.getMd5Path(mxwebFilename);
 
         const exists = await this.fileSystemService.exists(mxwebPath);
 
         this.logger.log(
-          `[checkFileExist] CAD文件检查: filename=${filename}, hash=${fileHash}, mxwebPath=${mxwebPath}, exists=${exists}`,
+          `[checkFileExist] CAD文件检查: filename=${filename}, hash=${fileHash}, mxwebPath=${mxwebPath}, exists=${exists}`
         );
 
         if (exists) {
@@ -112,12 +119,13 @@ export class PublicFileUploadService {
         // 非 CAD 文件：检查原始文件是否存在
         const ext = path.extname(filename);
         const originalFilename = `${fileHash}${ext}`;
-        const originalPath = this.fileSystemService.getMd5Path(originalFilename);
+        const originalPath =
+          this.fileSystemService.getMd5Path(originalFilename);
 
         const exists = await this.fileSystemService.exists(originalPath);
 
         this.logger.log(
-          `[checkFileExist] 非CAD文件检查: filename=${filename}, hash=${fileHash}, originalPath=${originalPath}, exists=${exists}`,
+          `[checkFileExist] 非CAD文件检查: filename=${filename}, hash=${fileHash}, originalPath=${originalPath}, exists=${exists}`
         );
 
         if (exists) {
@@ -147,7 +155,7 @@ export class PublicFileUploadService {
     return this.fileSystemService.getMd5Path(filename);
   }
 
-    /**
+  /**
    * 根据文件名获取文件路径
    */
   getFilePath(filename: string): string {
@@ -181,7 +189,7 @@ export class PublicFileUploadService {
     // 验证分片数量
     if (files.length !== chunks) {
       throw new BadRequestException(
-        `分片数量不匹配: 期望=${chunks}, 实际=${files.length}`,
+        `分片数量不匹配: 期望=${chunks}, 实际=${files.length}`
       );
     }
 
@@ -194,7 +202,7 @@ export class PublicFileUploadService {
       `merge:public:${hash}`,
       async () => {
         return await this.performMerge(chunkDir, targetPath, hash, chunks);
-      },
+      }
     );
 
     if (!success) {
@@ -224,7 +232,9 @@ export class PublicFileUploadService {
         // 转换失败，清理临时文件
         await this.cleanupTempDirectory(hash);
         this.logger.error(`图纸转换失败: ${name}, error=${ret?.message}`);
-        throw new InternalServerErrorException(`图纸转换失败: ${ret?.message || '未知错误'}`);
+        throw new InternalServerErrorException(
+          `图纸转换失败: ${ret?.message || '未知错误'}`
+        );
       }
 
       // 转换成功，获取 mxweb 文件路径
@@ -246,7 +256,7 @@ export class PublicFileUploadService {
    */
   async findFilesByPrefix(prefix: string): Promise<string[]> {
     const files = await FileUtils.readDirectory(this.uploadPath);
-    return files.filter(f => f.startsWith(prefix));
+    return files.filter((f) => f.startsWith(prefix));
   }
 
   /**
@@ -256,7 +266,7 @@ export class PublicFileUploadService {
     chunkDir: string,
     targetPath: string,
     hash: string,
-    chunks: number,
+    chunks: number
   ): Promise<boolean> {
     return new Promise((resolve) => {
       try {
@@ -285,7 +295,7 @@ export class PublicFileUploadService {
           for (let i = 0; i < fileList.length; i++) {
             if (fileList[i].num !== i) {
               this.logger.error(
-                `分片不连续: 期望=${i}, 实际=${fileList[i].num}`,
+                `分片不连续: 期望=${i}, 实际=${fileList[i].num}`
               );
               resolve(false);
               return;
@@ -377,7 +387,7 @@ export class PublicFileUploadService {
       return success;
     } catch (error) {
       this.logger.error(
-        `清理临时目录失败: hash=${hash}, error=${error.message}`,
+        `清理临时目录失败: hash=${hash}, error=${error.message}`
       );
       return false;
     }

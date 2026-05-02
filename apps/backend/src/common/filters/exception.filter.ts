@@ -95,9 +95,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
         // 传递额外字段（如 email、phone 等业务数据）
         for (const key of Object.keys(responseObj)) {
-          if (
-            !['statusCode', 'message', 'error', 'code'].includes(key)
-          ) {
+          if (!['statusCode', 'message', 'error', 'code'].includes(key)) {
             extraFields[key] = responseObj[key];
           }
         }

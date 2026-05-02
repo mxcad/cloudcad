@@ -39,9 +39,7 @@ export interface QuotaCheckResult {
 export class QuotaEnforcementService {
   private readonly logger = new Logger(QuotaEnforcementService.name);
 
-  constructor(
-    private readonly storageInfoService: StorageInfoService,
-  ) {}
+  constructor(private readonly storageInfoService: StorageInfoService) {}
 
   /**
    * 检查上传是否超出配额
@@ -53,25 +51,26 @@ export class QuotaEnforcementService {
   async checkUploadQuota(
     userId: string,
     nodeId: string,
-    fileSize: number,
+    fileSize: number
   ): Promise<QuotaCheckResult> {
     // 获取节点的配额信息
     const quotaInfo = await this.storageInfoService.getStorageQuota(
       userId,
-      nodeId,
+      nodeId
     );
 
     // 检查剩余空间是否足够
     if (quotaInfo.remaining < fileSize) {
       this.logger.warn(
         `用户 ${userId} 上传文件超出配额: ` +
-        `需要 ${fileSize} 字节, 剩余 ${quotaInfo.remaining} 字节`,
+          `需要 ${fileSize} 字节, 剩余 ${quotaInfo.remaining} 字节`
       );
 
       const error: QuotaExceededError = {
         code: 'QUOTA_EXCEEDED',
-        message: `存储空间不足。当前已使用 ${this.formatSize(quotaInfo.used)} / ${this.formatSize(quotaInfo.total)}，` +
-                 `还需 ${this.formatSize(fileSize - quotaInfo.remaining)} 空间。`,
+        message:
+          `存储空间不足。当前已使用 ${this.formatSize(quotaInfo.used)} / ${this.formatSize(quotaInfo.total)}，` +
+          `还需 ${this.formatSize(fileSize - quotaInfo.remaining)} 空间。`,
         quotaInfo: {
           used: quotaInfo.used,
           total: quotaInfo.total,
@@ -94,7 +93,7 @@ export class QuotaEnforcementService {
   async isQuotaExceeded(userId: string, nodeId: string): Promise<boolean> {
     const quotaInfo = await this.storageInfoService.getStorageQuota(
       userId,
-      nodeId,
+      nodeId
     );
     return quotaInfo.used > quotaInfo.total;
   }
@@ -106,7 +105,7 @@ export class QuotaEnforcementService {
    */
   async getQuotaExceededDetails(
     userId: string,
-    nodeId: string,
+    nodeId: string
   ): Promise<{
     isExceeded: boolean;
     exceededBy: number;
@@ -115,7 +114,7 @@ export class QuotaEnforcementService {
   }> {
     const quotaInfo = await this.storageInfoService.getStorageQuota(
       userId,
-      nodeId,
+      nodeId
     );
     const isExceeded = quotaInfo.used > quotaInfo.total;
     const exceededBy = isExceeded ? quotaInfo.used - quotaInfo.total : 0;

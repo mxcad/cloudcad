@@ -28,19 +28,8 @@ import { StorageCheckService } from '../../storage/storage-check.service';
  * - FileCheckService: 文件存在性检查（存储层和文件系统）
  */
 @Module({
-  imports: [
-    ConfigModule,
-    CommonModule,
-    StorageModule,
-  ],
-  providers: [
-    ChunkUploadService,
-    FileCheckService,
-    StorageCheckService,
-  ],
-  exports: [
-    ChunkUploadService,
-    FileCheckService,
-  ],
+  imports: [ConfigModule, CommonModule, StorageModule],
+  providers: [ChunkUploadService, FileCheckService, StorageCheckService],
+  exports: [ChunkUploadService, FileCheckService],
 })
 export class MxcadChunkModule {}

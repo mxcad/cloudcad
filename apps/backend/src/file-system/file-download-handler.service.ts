@@ -10,7 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { FileSystemService } from './file-system.service';
 
@@ -69,8 +74,13 @@ export class FileDownloadHandlerService {
         // 检查 If-None-Match（304 缓存命中）
         const ifNoneMatch = res.req?.headers['if-none-match'];
         if (ifNoneMatch === etag) {
-          if (typeof (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy === 'function') {
-            (stream as NodeJS.ReadableStream & { destroy: () => void }).destroy();
+          if (
+            typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
+              .destroy === 'function'
+          ) {
+            (
+              stream as NodeJS.ReadableStream & { destroy: () => void }
+            ).destroy();
           }
           res.status(304).end();
           this.logger.log(
@@ -98,7 +108,10 @@ export class FileDownloadHandlerService {
         this.logger.error(`文件流传输错误: ${error.message}`, error.stack);
 
         // 清理资源
-        if (typeof (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy === 'function') {
+        if (
+          typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
+            .destroy === 'function'
+        ) {
           (stream as NodeJS.ReadableStream & { destroy: () => void }).destroy();
         }
 
@@ -129,7 +142,8 @@ export class FileDownloadHandlerService {
             : error instanceof ForbiddenException
               ? 403
               : 500;
-        const errorMessage = error instanceof Error ? error.message : '文件下载失败';
+        const errorMessage =
+          error instanceof Error ? error.message : '文件下载失败';
         res.status(status).json({
           message: errorMessage,
         });

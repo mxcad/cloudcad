@@ -40,7 +40,11 @@ export class RuntimeConfigResponseDto {
   })
   value: string | number | boolean;
 
-  @ApiProperty({ description: '值类型', enum: ['string', 'number', 'boolean'], example: 'boolean' })
+  @ApiProperty({
+    description: '值类型',
+    enum: ['string', 'number', 'boolean'],
+    example: 'boolean',
+  })
   type: string;
 
   @ApiProperty({ description: '分类', example: 'mail' })
@@ -55,7 +59,10 @@ export class RuntimeConfigResponseDto {
   @ApiPropertyOptional({ description: '最后修改人 ID' })
   updatedBy?: string;
 
-  @ApiProperty({ description: '最后更新时间', example: '2024-01-01T00:00:00.000Z' })
+  @ApiProperty({
+    description: '最后更新时间',
+    example: '2024-01-01T00:00:00.000Z',
+  })
   updatedAt: Date;
 }
 
@@ -66,7 +73,11 @@ export class RuntimeConfigDefinitionDto {
   @ApiProperty({ description: '配置键名', example: 'mailEnabled' })
   key: string;
 
-  @ApiProperty({ description: '值类型', enum: ['string', 'number', 'boolean'], example: 'boolean' })
+  @ApiProperty({
+    description: '值类型',
+    enum: ['string', 'number', 'boolean'],
+    example: 'boolean',
+  })
   type: string;
 
   @ApiProperty({ description: '分类', example: 'mail' })

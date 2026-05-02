@@ -31,7 +31,8 @@ export enum FontUploadTarget {
 export class UploadFontDto {
   @ApiProperty({
     description: '上传目标',
-    enum: Object.values(FontUploadTarget), enumName: 'FontUploadTarget',
+    enum: Object.values(FontUploadTarget),
+    enumName: 'FontUploadTarget',
     default: FontUploadTarget.BOTH,
   })
   @IsEnum(FontUploadTarget)
@@ -45,7 +46,8 @@ export class UploadFontDto {
 export class DeleteFontDto {
   @ApiProperty({
     description: '删除目标',
-    enum: Object.values(FontUploadTarget), enumName: 'FontUploadTarget',
+    enum: Object.values(FontUploadTarget),
+    enumName: 'FontUploadTarget',
     default: FontUploadTarget.BOTH,
   })
   @IsEnum(FontUploadTarget)

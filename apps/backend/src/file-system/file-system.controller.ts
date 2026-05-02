@@ -92,7 +92,12 @@ import {
 import { StorageInfoDto } from '../common/dto/storage-info.dto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { findThumbnail, findThumbnailSync, getMimeType, THUMBNAIL_FORMATS } from '../mxcad/infra/thumbnail-utils';
+import {
+  findThumbnail,
+  findThumbnailSync,
+  getMimeType,
+  THUMBNAIL_FORMATS,
+} from '../mxcad/infra/thumbnail-utils';
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard, PermissionsGuard)
@@ -156,7 +161,10 @@ export class FileSystemController {
   }
 
   @Get('personal-space/by-user/:userId')
-  @RequirePermissions([SystemPermission.SYSTEM_USER_UPDATE, SystemPermission.STORAGE_QUOTA])
+  @RequirePermissions([
+    SystemPermission.SYSTEM_USER_UPDATE,
+    SystemPermission.STORAGE_QUOTA,
+  ])
   @ApiOperation({ summary: '获取指定用户的私人空间（管理员）' })
   @ApiResponse({
     status: 200,
@@ -164,9 +172,7 @@ export class FileSystemController {
     type: FileSystemNodeDto,
   })
   @ApiResponse({ status: 403, description: '无权限' })
-  async getUserPersonalSpace(
-    @Param('userId') userId: string
-  ) {
+  async getUserPersonalSpace(@Param('userId') userId: string) {
     return this.fileSystemService.getPersonalSpace(userId);
   }
 
@@ -573,10 +579,7 @@ export class FileSystemController {
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 403, description: '无权限更新配额' })
   @ApiResponse({ status: 404, description: '节点不存在' })
-  async updateStorageQuota(
-    @Request() req,
-    @Body() dto: UpdateStorageQuotaDto,
-  ) {
+  async updateStorageQuota(@Request() req, @Body() dto: UpdateStorageQuotaDto) {
     return this.fileSystemService.updateNodeStorageQuota(dto.nodeId, dto.quota);
   }
 
@@ -938,7 +941,8 @@ export class FileSystemController {
   })
   @ApiQuery({
     name: 'format',
-    enum: Object.values(CadDownloadFormat), enumName: 'CadDownloadFormat',
+    enum: Object.values(CadDownloadFormat),
+    enumName: 'CadDownloadFormat',
     required: false,
     description:
       '下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）',
@@ -1204,7 +1208,7 @@ export class FileSystemController {
 
   /**
    * 统一搜索接口
-   * 
+   *
    * 支持多种搜索范围：
    * - project: 搜索项目（项目列表级别）
    * - project_files: 搜索指定项目内的文件（需提供 projectId）
@@ -1227,14 +1231,11 @@ export class FileSystemController {
     type: NodeListResponseDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
-  async search(
-    @Request() req,
-    @Query() dto: SearchDto
-  ) {
+  async search(@Request() req, @Query() dto: SearchDto) {
     this.logger.log(
       `[统一搜索] 用户ID: ${req.user.id}, 关键词: ${dto.keyword}, 范围: ${dto.scope}, 项目ID: ${dto.projectId}`
     );
-    
+
     return this.searchService.search(req.user.id, dto);
   }
 }

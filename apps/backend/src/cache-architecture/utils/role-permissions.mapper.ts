@@ -13,26 +13,27 @@ export class RolePermissionsMapper {
   /**
    * 角色权限映射表
    */
-  private static readonly rolePermissions: Record<string, SystemPermission[]> = {
-    ADMIN: [
-      SystemPermission.SYSTEM_USER_READ,
-      SystemPermission.SYSTEM_USER_CREATE,
-      SystemPermission.SYSTEM_USER_UPDATE,
-      SystemPermission.SYSTEM_USER_DELETE,
-      SystemPermission.SYSTEM_ROLE_READ,
-      SystemPermission.SYSTEM_ROLE_CREATE,
-      SystemPermission.SYSTEM_ROLE_UPDATE,
-      SystemPermission.SYSTEM_ROLE_DELETE,
-      SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
-      SystemPermission.SYSTEM_FONT_READ,
-      SystemPermission.SYSTEM_FONT_UPLOAD,
-      SystemPermission.SYSTEM_FONT_DELETE,
-      SystemPermission.SYSTEM_FONT_DOWNLOAD,
-      SystemPermission.SYSTEM_ADMIN,
-      SystemPermission.SYSTEM_MONITOR,
-    ],
-    USER: [],
-  };
+  private static readonly rolePermissions: Record<string, SystemPermission[]> =
+    {
+      ADMIN: [
+        SystemPermission.SYSTEM_USER_READ,
+        SystemPermission.SYSTEM_USER_CREATE,
+        SystemPermission.SYSTEM_USER_UPDATE,
+        SystemPermission.SYSTEM_USER_DELETE,
+        SystemPermission.SYSTEM_ROLE_READ,
+        SystemPermission.SYSTEM_ROLE_CREATE,
+        SystemPermission.SYSTEM_ROLE_UPDATE,
+        SystemPermission.SYSTEM_ROLE_DELETE,
+        SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
+        SystemPermission.SYSTEM_FONT_READ,
+        SystemPermission.SYSTEM_FONT_UPLOAD,
+        SystemPermission.SYSTEM_FONT_DELETE,
+        SystemPermission.SYSTEM_FONT_DOWNLOAD,
+        SystemPermission.SYSTEM_ADMIN,
+        SystemPermission.SYSTEM_MONITOR,
+      ],
+      USER: [],
+    };
 
   /**
    * 根据角色名称获取对应的权限列表

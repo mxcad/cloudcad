@@ -36,7 +36,9 @@ export class DirectoryAllocator {
     private readonly fileLockService: FileLockService,
     private readonly localStorageProvider: LocalStorageProvider
   ) {
-    this.nodeLimit = this.configService.get('storage', { infer: true })!.nodeLimit;
+    this.nodeLimit = this.configService.get('storage', {
+      infer: true,
+    })!.nodeLimit;
   }
 
   /**

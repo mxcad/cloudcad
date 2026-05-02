@@ -18,7 +18,10 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { StorageManager, NodeStorageInfo } from '../../common/services/storage-manager.service';
+import {
+  StorageManager,
+  NodeStorageInfo,
+} from '../../common/services/storage-manager.service';
 import { Prisma } from '@prisma/client';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
 import { NodeUtils, CreateNodeOptions } from '../../common/utils/node-utils';
@@ -219,7 +222,7 @@ export class NodeCreationService {
     this.logger.log(`[performCreateNode] 开始创建节点: ${name} (${fileHash})`);
 
     let nodeId: string | undefined;
-          let storageInfo: NodeStorageInfo | null = null;
+    let storageInfo: NodeStorageInfo | null = null;
     try {
       // 阶段1：数据库操作（事务）
       await this.databaseService.$transaction(async (tx) => {

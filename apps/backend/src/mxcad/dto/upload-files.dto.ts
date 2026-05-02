@@ -95,7 +95,8 @@ export class UploadFilesDto {
   lastModifiedDate?: string;
 
   @ApiProperty({
-    description: '冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名，默认）',
+    description:
+      '冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名，默认）',
     required: false,
     enum: ['skip', 'overwrite', 'rename'],
   })

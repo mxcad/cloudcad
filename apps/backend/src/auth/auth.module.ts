@@ -104,7 +104,10 @@ import { USER_SERVICE } from '../common/interfaces/user-service.interface';
     EmailService,
     EmailVerificationService,
     InitializationService,
-    { provide: EMAIL_VERIFICATION_SERVICE, useExisting: EmailVerificationService },
+    {
+      provide: EMAIL_VERIFICATION_SERVICE,
+      useExisting: EmailVerificationService,
+    },
   ],
   exports: [
     AuthFacadeService,

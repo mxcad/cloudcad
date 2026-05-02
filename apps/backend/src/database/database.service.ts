@@ -10,7 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/app.config';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -56,23 +61,30 @@ export class DatabaseService
       adapter,
     });
 
-    this.logger.log(`数据库连接URL: ${databaseUrl.replace(/:[^:@]*@/, ':***@')}`);
+    this.logger.log(
+      `数据库连接URL: ${databaseUrl.replace(/:[^:@]*@/, ':***@')}`
+    );
   }
 
   async onModuleInit() {
     const startTime = Date.now();
     this.logger.log('正在连接数据库...');
-    
+
     try {
       // 使用 Promise.race 实现连接超时
       const connectPromise = this.$connect();
-      const timeout = this.configService.get('database', { infer: true })!.connectionTimeoutMillis;
+      const timeout = this.configService.get('database', {
+        infer: true,
+      })!.connectionTimeoutMillis;
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`数据库连接超时 (${timeout}ms)`)), timeout)
+        setTimeout(
+          () => reject(new Error(`数据库连接超时 (${timeout}ms)`)),
+          timeout
+        )
       );
 
       await Promise.race([connectPromise, timeoutPromise]);
-      
+
       const duration = Date.now() - startTime;
       this.logger.log(`✅ 数据库连接成功，耗时 ${duration}ms`);
     } catch (error) {

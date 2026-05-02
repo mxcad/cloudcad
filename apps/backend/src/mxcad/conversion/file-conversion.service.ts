@@ -55,7 +55,7 @@ export class FileConversionService implements IFileConversionService {
     this.logger.log(
       `文件转换限流器初始化: CPU核心数=${cpuCount}, 最大并发数=${maxConcurrent}`
     );
-    
+
     // 检测操作系统
     const isLinux = os.platform() === 'linux';
 
@@ -68,7 +68,13 @@ export class FileConversionService implements IFileConversionService {
       mxcadConfig.assemblyPath ||
       (isLinux
         ? path.join(projectRoot, 'runtime', 'linux', 'mxcad', 'mxcadassembly')
-        : path.join(projectRoot, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe'));
+        : path.join(
+            projectRoot,
+            'runtime',
+            'windows',
+            'mxcad',
+            'mxcadassembly.exe'
+          ));
 
     // Linux 下需要的工作目录（runtime/linux/mxcad）
     this.mxCadBinPath = isLinux
@@ -126,7 +132,9 @@ export class FileConversionService implements IFileConversionService {
   /**
    * 实际执行文件转换（内部方法）
    */
-  private async executeConversion(options: ConversionOptions): Promise<ConversionResult> {
+  private async executeConversion(
+    options: ConversionOptions
+  ): Promise<ConversionResult> {
     let stdout = '';
     let stderr = '';
     const originalDir = process.cwd();
@@ -187,7 +195,6 @@ export class FileConversionService implements IFileConversionService {
 
       // Linux 平台特殊处理
       if (this.isLinux()) {
-
         if (this.mxCadBinPath) {
           process.chdir(this.mxCadBinPath);
           changedDir = true;
@@ -257,12 +264,16 @@ export class FileConversionService implements IFileConversionService {
       // 确保 stdout 和 stderr 是字符串
       const errorStdout = (error as { stdout?: Buffer | string }).stdout
         ? Buffer.isBuffer((error as { stdout?: Buffer | string }).stdout)
-          ? ((error as { stdout?: Buffer | string }).stdout as Buffer).toString()
+          ? (
+              (error as { stdout?: Buffer | string }).stdout as Buffer
+            ).toString()
           : (error as { stdout?: Buffer | string }).stdout
         : stdout || '';
       const errorStderr = (error as { stderr?: Buffer | string }).stderr
         ? Buffer.isBuffer((error as { stderr?: Buffer | string }).stderr)
-          ? ((error as { stderr?: Buffer | string }).stderr as Buffer).toString()
+          ? (
+              (error as { stderr?: Buffer | string }).stderr as Buffer
+            ).toString()
           : (error as { stderr?: Buffer | string }).stderr
         : stderr || '';
 
@@ -272,7 +283,10 @@ export class FileConversionService implements IFileConversionService {
       if (outputToCheck) {
         try {
           // 确保 outputToCheck 是字符串
-          const outputStr = typeof outputToCheck === 'string' ? outputToCheck : outputToCheck.toString();
+          const outputStr =
+            typeof outputToCheck === 'string'
+              ? outputToCheck
+              : outputToCheck.toString();
 
           // 查找 JSON 位置
           const iPos = outputStr.lastIndexOf('{"code"');
@@ -293,7 +307,8 @@ export class FileConversionService implements IFileConversionService {
       }
 
       // 只有在真正失败时才输出错误日志
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       const errorCode = (error as { code?: string | number }).code;
 
       this.logger.error(`文件转换异常: ${errorMessage}`);

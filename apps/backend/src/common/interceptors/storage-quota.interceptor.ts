@@ -27,12 +27,12 @@ export class StorageQuotaInterceptor implements NestInterceptor {
 
   constructor(
     private readonly quotaEnforcementService: QuotaEnforcementService,
-    private readonly runtimeConfigService: RuntimeConfigService,
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {}
 
   async intercept(
     context: ExecutionContext,
-    next: CallHandler,
+    next: CallHandler
   ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
@@ -51,7 +51,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
     // 检查是否启用配额强制检查
     const enforceQuota = await this.runtimeConfigService.getValue(
       'enforceStorageQuota',
-      true,
+      true
     );
 
     // 如果未启用强制检查，仅记录日志
@@ -67,14 +67,14 @@ export class StorageQuotaInterceptor implements NestInterceptor {
     // 如果无法获取必要信息，记录原因并跳过检查
     if (!fileSize) {
       this.logger.debug(
-        `跳过配额检查: 无法获取文件大小, url=${url}, method=${request.method}`,
+        `跳过配额检查: 无法获取文件大小, url=${url}, method=${request.method}`
       );
       return next.handle();
     }
 
     if (!parentNodeId) {
       this.logger.debug(
-        `跳过配额检查: 无法获取父节点ID, url=${url}, method=${request.method}`,
+        `跳过配额检查: 无法获取父节点ID, url=${url}, method=${request.method}`
       );
       return next.handle();
     }
@@ -84,10 +84,10 @@ export class StorageQuotaInterceptor implements NestInterceptor {
       await this.quotaEnforcementService.checkUploadQuota(
         user.id,
         parentNodeId,
-        fileSize,
+        fileSize
       );
       this.logger.debug(
-        `配额检查通过: userId=${user.id}, nodeId=${parentNodeId}, size=${fileSize}`,
+        `配额检查通过: userId=${user.id}, nodeId=${parentNodeId}, size=${fileSize}`
       );
     } catch (error) {
       // 配额不足，直接抛出异常
@@ -96,7 +96,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
       }
       // 其他错误不阻断上传，但记录警告
       this.logger.warn(
-        `配额检查异常: ${error.message}, userId=${user.id}, nodeId=${parentNodeId}`,
+        `配额检查异常: ${error.message}, userId=${user.id}, nodeId=${parentNodeId}`
       );
     }
 
@@ -117,7 +117,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
     if (request.files && Array.isArray(request.files)) {
       return request.files.reduce(
         (sum: number, file: any) => sum + (file?.size || 0),
-        0,
+        0
       );
     }
 
@@ -128,7 +128,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
         if (Array.isArray(field)) {
           totalSize += field.reduce(
             (sum: number, file: any) => sum + (file?.size || 0),
-            0,
+            0
           );
         }
       }

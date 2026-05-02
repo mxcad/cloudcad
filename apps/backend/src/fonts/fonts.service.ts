@@ -76,12 +76,28 @@ export class FontsService {
     // 从配置服务获取字体目录路径
     this.backendFontsDir = this.configService.get<string>(
       'fonts.backendPath',
-      path.join(process.cwd(), '..', '..', 'runtime', 'windows', 'mxcad', 'fonts')
+      path.join(
+        process.cwd(),
+        '..',
+        '..',
+        'runtime',
+        'windows',
+        'mxcad',
+        'fonts'
+      )
     );
 
     this.frontendFontsDir = this.configService.get<string>(
       'fonts.frontendPath',
-      path.join(process.cwd(), '..', '..', 'runtime', 'windows', 'mxcad', 'fonts')
+      path.join(
+        process.cwd(),
+        '..',
+        '..',
+        'runtime',
+        'windows',
+        'mxcad',
+        'fonts'
+      )
     );
 
     this.logger.log(`后端字体目录: ${this.backendFontsDir}`);
@@ -394,7 +410,9 @@ export class FontsService {
           if (fileError.code === 'EPERM' || fileError.code === 'EACCES') {
             this.logger.warn(`无法访问字体文件(可能正被使用): ${file}`);
           } else {
-            this.logger.warn(`读取字体文件信息失败: ${file}, ${fileError.message}`);
+            this.logger.warn(
+              `读取字体文件信息失败: ${file}, ${fileError.message}`
+            );
           }
           continue;
         }

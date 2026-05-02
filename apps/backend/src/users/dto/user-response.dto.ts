@@ -53,7 +53,11 @@ export class UserResponseDto {
   @ApiPropertyOptional({ description: '手机号码' })
   phone?: string;
 
-  @ApiProperty({ description: '用户状态', enum: Object.values(UserStatus), enumName: 'UserStatusEnum' })
+  @ApiProperty({
+    description: '用户状态',
+    enum: Object.values(UserStatus),
+    enumName: 'UserStatusEnum',
+  })
   status: UserStatus;
 
   @ApiProperty({ description: '用户角色', type: () => UserRoleDto })
@@ -138,7 +142,11 @@ export class UserProfileResponseDto {
   @ApiProperty({ description: '头像 URL', required: false })
   avatar?: string;
 
-  @ApiProperty({ description: '用户状态', enum: Object.values(UserStatus), enumName: 'UserStatusEnum' })
+  @ApiProperty({
+    description: '用户状态',
+    enum: Object.values(UserStatus),
+    enumName: 'UserStatusEnum',
+  })
   status: UserStatus;
 
   @ApiProperty({ description: '用户角色', type: () => UserRoleDto })

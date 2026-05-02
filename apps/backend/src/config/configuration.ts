@@ -137,7 +137,8 @@ export default (): AppConfig => ({
     ]),
     maxConcurrent: parseInt(process.env.UPLOAD_MAX_CONCURRENT || '3', 10) || 3,
     // 分片上传并发数（I/O 密集型，可以较高）
-    chunkMaxConcurrent: parseInt(process.env.UPLOAD_CHUNK_MAX_CONCURRENT || '5', 10) || 5,
+    chunkMaxConcurrent:
+      parseInt(process.env.UPLOAD_CHUNK_MAX_CONCURRENT || '5', 10) || 5,
   },
 
   session: {
@@ -150,8 +151,13 @@ export default (): AppConfig => ({
       24 * 60 * 60 * 1000, // 24小时
     name: process.env.SESSION_NAME || 'mxcad.sid',
     cookieDomain: process.env.SESSION_COOKIE_DOMAIN || undefined,
-    cookieSameSite: process.env.SESSION_COOKIE_SAME_SITE as 'none' | 'lax' | 'strict' || 'lax',
-    cookieSecure: parseBoolean(process.env.SESSION_COOKIE_SECURE, process.env.NODE_ENV === 'production'),
+    cookieSameSite:
+      (process.env.SESSION_COOKIE_SAME_SITE as 'none' | 'lax' | 'strict') ||
+      'lax',
+    cookieSecure: parseBoolean(
+      process.env.SESSION_COOKIE_SECURE,
+      process.env.NODE_ENV === 'production'
+    ),
   },
 
   cache: {

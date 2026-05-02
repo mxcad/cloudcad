@@ -8,7 +8,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { LoginDto, AuthResponseDto } from '../dto/auth.dto';
 import { EmailVerificationService } from './email-verification.service';
@@ -117,7 +122,10 @@ export class LoginService {
         this.logger.warn(`登录失败 - 需要绑定邮箱: ${account}`);
         const tempToken = this.jwtService.sign(
           { sub: user.id, type: 'bind_email_temp' },
-          { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '30m' }
+          {
+            secret: this.configService.get<string>('JWT_SECRET'),
+            expiresIn: '30m',
+          }
         );
         throw new UnauthorizedException({
           code: 'EMAIL_REQUIRED',
@@ -150,7 +158,10 @@ export class LoginService {
         this.logger.warn(`登录失败 - 需要绑定手机号: ${account}`);
         const tempToken = this.jwtService.sign(
           { sub: user.id, type: 'bind_phone_temp' },
-          { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '30m' }
+          {
+            secret: this.configService.get<string>('JWT_SECRET'),
+            expiresIn: '30m',
+          }
         );
         throw new UnauthorizedException({
           code: 'PHONE_REQUIRED',
@@ -170,7 +181,8 @@ export class LoginService {
     const hasPassword = !!user.password;
     const { password: _, ...userWithoutPassword } = user;
 
-    const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
       req.session.userId = user.id;

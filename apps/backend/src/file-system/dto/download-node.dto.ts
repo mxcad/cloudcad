@@ -65,7 +65,8 @@ export class PdfConversionParams {
 export class DownloadNodeQueryDto {
   @ApiProperty({
     description: '下载格式（仅 CAD 文件有效）',
-    enum: Object.values(CadDownloadFormat), enumName: 'CadDownloadFormat',
+    enum: Object.values(CadDownloadFormat),
+    enumName: 'CadDownloadFormat',
     required: false,
     default: CadDownloadFormat.MXWEB,
   })

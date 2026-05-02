@@ -36,7 +36,7 @@ export class PublicFileService {
 
   constructor(
     private readonly uploadService: PublicFileUploadService,
-    private readonly fileConversionService: FileConversionService,
+    private readonly fileConversionService: FileConversionService
   ) {}
 
   /**
@@ -51,7 +51,11 @@ export class PublicFileService {
    * 保存分片文件到临时目录
    * 手动处理文件保存，避免 Multer 解析顺序问题
    */
-  async saveChunk(fileBuffer: Buffer, hash: string, chunkIndex: number): Promise<void> {
+  async saveChunk(
+    fileBuffer: Buffer,
+    hash: string,
+    chunkIndex: number
+  ): Promise<void> {
     const chunkDir = this.uploadService.getChunkTempDirPath(hash);
     const chunkFilename = `${chunkIndex}_${hash}`;
     const chunkPath = path.join(chunkDir, chunkFilename);
@@ -75,12 +79,12 @@ export class PublicFileService {
     const { filename, fileHash } = dto;
     const { exist, mxwebPath } = await this.uploadService.checkFileExist(
       filename,
-      fileHash,
+      fileHash
     );
 
     if (exist && mxwebPath) {
       this.logger.log(
-        `[checkFile] 秒传成功: filename=${filename}, hash=${fileHash}`,
+        `[checkFile] 秒传成功: filename=${filename}, hash=${fileHash}`
       );
 
       return {
@@ -112,7 +116,9 @@ export class PublicFileService {
    */
   async findMxwebFile(hash: string): Promise<string | null> {
     const files = await this.uploadService.findFilesByPrefix(hash);
-    const mxwebFile = files.find(f => f.startsWith(hash) && f.endsWith('.mxweb'));
+    const mxwebFile = files.find(
+      (f) => f.startsWith(hash) && f.endsWith('.mxweb')
+    );
     return mxwebFile ? this.uploadService.getFilePath(mxwebFile) : null;
   }
 
@@ -157,7 +163,7 @@ export class PublicFileService {
     fileBuffer: Buffer,
     srcFileHash: string,
     extRefFileName: string,
-    fileHash?: string,
+    fileHash?: string
   ): Promise<{ ret: string; hash?: string; message?: string }> {
     const logger = this.logger;
 
@@ -191,7 +197,7 @@ export class PublicFileService {
         // 对于 DWG/DXF 文件，需要进行转换
         const tempFilePath = path.join(srcDir, extRefFileName);
         await fs.promises.writeFile(tempFilePath, fileBuffer);
-        
+
         try {
           // 调用转换服务将 DWG/DXF 转换为 MXWeb
           const { isOk, ret } = await this.fileConversionService.convertFile({
@@ -199,49 +205,55 @@ export class PublicFileService {
             fileHash: hash,
             createPreloadingData: true,
           });
-          
+
           if (!isOk) {
             // 转换失败时，删除临时文件
             if (fs.existsSync(tempFilePath)) {
               await fs.promises.unlink(tempFilePath);
             }
-            return { ret: 'failed', message: `文件转换失败: ${ret?.message || '未知错误'}` };
+            return {
+              ret: 'failed',
+              message: `文件转换失败: ${ret?.message || '未知错误'}`,
+            };
           }
-          
+
           // 转换成功后删除临时文件
           await fs.promises.unlink(tempFilePath);
-          
+
           // 转换工具在原始文件旁边生成 {originalName}.mxweb，如: {hash}.dwg -> {hash}.dwg.mxweb
           const targetPath = tempFilePath + '.mxweb';
-          
+
           logger.log(
-            `[uploadExtReference] 外部参照文件上传并转换成功: ${extRefFileName} -> ${targetPath}`,
+            `[uploadExtReference] 外部参照文件上传并转换成功: ${extRefFileName} -> ${targetPath}`
           );
         } catch (convertError) {
           logger.error(
             `[uploadExtReference] 转换文件失败: ${convertError.message}`,
-            convertError.stack,
+            convertError.stack
           );
           // 转换失败时，删除临时文件
           if (fs.existsSync(tempFilePath)) {
             await fs.promises.unlink(tempFilePath);
           }
-          return { ret: 'failed', message: `文件转换失败: ${convertError.message}` };
+          return {
+            ret: 'failed',
+            message: `文件转换失败: ${convertError.message}`,
+          };
         }
       } else {
         // 对于非 DWG/DXF 文件，直接保存
         const targetPath = path.join(srcDir, extRefFileName);
         await fs.promises.writeFile(targetPath, fileBuffer);
-        
+
         logger.log(
-          `[uploadExtReference] 外部参照文件上传成功: ${extRefFileName} -> ${targetPath}`,
+          `[uploadExtReference] 外部参照文件上传成功: ${extRefFileName} -> ${targetPath}`
         );
       }
       return { ret: 'ok', hash };
     } catch (error) {
       logger.error(
         `[uploadExtReference] 处理文件失败: ${error.message}`,
-        error.stack,
+        error.stack
       );
       return { ret: 'failed', message: error.message };
     }
@@ -255,7 +267,7 @@ export class PublicFileService {
    */
   async checkExtReferenceExists(
     srcFileHash: string,
-    extRefFileName: string,
+    extRefFileName: string
   ): Promise<boolean> {
     const uploadPath = this.uploadService.getUploadPath();
     const srcDir = path.join(uploadPath, srcFileHash);
@@ -280,31 +292,39 @@ export class PublicFileService {
    */
   async getPreloadingData(hash: string): Promise<any> {
     const uploadPath = this.uploadService.getUploadPath();
-    
+
     try {
       // 查找 uploads 目录中以 hash 开头的 mxweb 文件
       const files = await this.uploadService.findFilesByPrefix(hash);
-      const mxwebFile = files.find(f => f.startsWith(hash) && f.endsWith('.mxweb'));
-      
+      const mxwebFile = files.find(
+        (f) => f.startsWith(hash) && f.endsWith('.mxweb')
+      );
+
       if (mxwebFile) {
         // 构造预加载数据文件名：{mxweb文件名}_preloading.json
         const preloadingFilename = `${mxwebFile}_preloading.json`;
         const preloadingPath = path.join(uploadPath, preloadingFilename);
-        
+
         if (fs.existsSync(preloadingPath)) {
           const content = await fs.promises.readFile(preloadingPath, 'utf8');
-          this.logger.log(`[getPreloadingData] 从路径读取预加载数据: ${preloadingPath}`);
+          this.logger.log(
+            `[getPreloadingData] 从路径读取预加载数据: ${preloadingPath}`
+          );
           return JSON.parse(content);
         } else {
-          this.logger.log(`[getPreloadingData] 预加载文件不存在: ${preloadingPath}`);
+          this.logger.log(
+            `[getPreloadingData] 预加载文件不存在: ${preloadingPath}`
+          );
         }
       } else {
         this.logger.log(`[getPreloadingData] 未找到 mxweb 文件，hash: ${hash}`);
       }
     } catch (error) {
-      this.logger.error(`[getPreloadingData] 查找预加载数据失败: ${error.message}`);
+      this.logger.error(
+        `[getPreloadingData] 查找预加载数据失败: ${error.message}`
+      );
     }
-    
+
     return null;
   }
 }

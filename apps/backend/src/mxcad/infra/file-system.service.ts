@@ -28,7 +28,9 @@ export class FileSystemService implements IFileSystemService {
   private readonly tempPath: string;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    this.uploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+    this.uploadPath = this.configService.get('mxcadUploadPath', {
+      infer: true,
+    });
     this.tempPath = this.configService.get('mxcadTempPath', { infer: true });
   }
 

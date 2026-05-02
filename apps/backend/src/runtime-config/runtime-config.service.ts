@@ -36,7 +36,7 @@ const CACHE_TTL = 3600; // 1 小时
 export class RuntimeConfigService implements OnModuleInit {
   constructor(
     private readonly prisma: DatabaseService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
   /**
@@ -57,7 +57,7 @@ export class RuntimeConfigService implements OnModuleInit {
    */
   private async syncDefaultConfigs() {
     const startTime = Date.now();
-    
+
     // 获取所有已存在的配置
     const existingConfigs = await this.prisma.runtimeConfig.findMany({
       select: { key: true },
@@ -96,7 +96,7 @@ export class RuntimeConfigService implements OnModuleInit {
    */
   async getValue<T = string | number | boolean>(
     key: string,
-    defaultValue?: T,
+    defaultValue?: T
   ): Promise<T> {
     // 1. 查 Redis 缓存
     const cached = await this.redis.get(`${CACHE_PREFIX}${key}`);
@@ -117,8 +117,15 @@ export class RuntimeConfigService implements OnModuleInit {
     }
 
     // 4. 解析值并写入缓存
-    const value = this.parseValue(config.value, config.type as RuntimeConfigValueType);
-    await this.redis.setex(`${CACHE_PREFIX}${key}`, CACHE_TTL, JSON.stringify(value));
+    const value = this.parseValue(
+      config.value,
+      config.type as RuntimeConfigValueType
+    );
+    await this.redis.setex(
+      `${CACHE_PREFIX}${key}`,
+      CACHE_TTL,
+      JSON.stringify(value)
+    );
 
     return value as T;
   }
@@ -137,7 +144,10 @@ export class RuntimeConfigService implements OnModuleInit {
 
     return {
       key: config.key,
-      value: this.parseValue(config.value, config.type as RuntimeConfigValueType),
+      value: this.parseValue(
+        config.value,
+        config.type as RuntimeConfigValueType
+      ),
       type: config.type as RuntimeConfigValueType,
       category: config.category as RuntimeConfigItem['category'],
       description: config.description,
@@ -154,7 +164,7 @@ export class RuntimeConfigService implements OnModuleInit {
     key: string,
     value: string | number | boolean,
     operatorId?: string,
-    operatorIp?: string,
+    operatorIp?: string
   ): Promise<void> {
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     if (!def) {
@@ -221,12 +231,16 @@ export class RuntimeConfigService implements OnModuleInit {
     for (const config of configs) {
       result[config.key] = this.parseValue(
         config.value,
-        config.type as RuntimeConfigValueType,
+        config.type as RuntimeConfigValueType
       );
     }
 
     // 4. 写入缓存
-    await this.redis.setex(`${CACHE_PREFIX}all`, CACHE_TTL, JSON.stringify(result));
+    await this.redis.setex(
+      `${CACHE_PREFIX}all`,
+      CACHE_TTL,
+      JSON.stringify(result)
+    );
 
     return result;
   }
@@ -241,7 +255,10 @@ export class RuntimeConfigService implements OnModuleInit {
 
     return configs.map((config) => ({
       key: config.key,
-      value: this.parseValue(config.value, config.type as RuntimeConfigValueType),
+      value: this.parseValue(
+        config.value,
+        config.type as RuntimeConfigValueType
+      ),
       type: config.type as RuntimeConfigValueType,
       category: config.category as RuntimeConfigItem['category'],
       description: config.description,
@@ -254,7 +271,11 @@ export class RuntimeConfigService implements OnModuleInit {
   /**
    * 重置配置为默认值
    */
-  async resetToDefault(key: string, operatorId?: string, operatorIp?: string): Promise<void> {
+  async resetToDefault(
+    key: string,
+    operatorId?: string,
+    operatorIp?: string
+  ): Promise<void> {
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     if (!def) {
       throw new BadRequestException(`未知的配置项: ${key}`);
@@ -266,7 +287,10 @@ export class RuntimeConfigService implements OnModuleInit {
   /**
    * 解析配置值
    */
-  private parseValue(value: string, type: RuntimeConfigValueType): string | number | boolean {
+  private parseValue(
+    value: string,
+    type: RuntimeConfigValueType
+  ): string | number | boolean {
     try {
       const parsed = JSON.parse(value);
       switch (type) {

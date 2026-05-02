@@ -63,7 +63,7 @@ export class LibraryController {
     private readonly libraryService: LibraryService,
     private readonly fileSystemService: FileSystemService,
     private readonly fileDownloadHandler: FileDownloadHandlerService,
-    private readonly mxcadFileHandler: MxcadFileHandlerService,
+    private readonly mxcadFileHandler: MxcadFileHandlerService
   ) {}
 
   // ========== 图纸库接口（只读） ==========
@@ -96,7 +96,7 @@ export class LibraryController {
   })
   async getDrawingChildren(
     @Param('nodeId') nodeId: string,
-    @Query() query?: QueryChildrenDto,
+    @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
     const actualNodeId =
@@ -119,7 +119,7 @@ export class LibraryController {
   })
   async getDrawingAllFiles(
     @Param('nodeId') nodeId: string,
-    @Query() query?: QueryChildrenDto,
+    @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
     const actualNodeId =
@@ -129,7 +129,7 @@ export class LibraryController {
     return this.fileSystemService.getAllFilesUnderNode(
       actualNodeId,
       mockUserId,
-      query,
+      query
     );
   }
 
@@ -148,7 +148,7 @@ export class LibraryController {
   })
   async getDrawingFile(
     @Param('path') filePath: string[],
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     const filename = filePath.join('/');
     return this.mxcadFileHandler.serveFile(filename, res);
@@ -185,7 +185,7 @@ export class LibraryController {
   async downloadDrawingNode(
     @Param('nodeId') nodeId: string,
     @Request() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     await this.fileDownloadHandler.handleDownload(nodeId, req.user.id, res, {
       clientIp: req.ip,
@@ -199,10 +199,7 @@ export class LibraryController {
   @Public()
   @ApiOperation({ summary: '获取图纸库文件缩略图' })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async getDrawingThumbnail(
-    @Param('nodeId') nodeId: string,
-    @Request() req,
-  ) {
+  async getDrawingThumbnail(@Param('nodeId') nodeId: string, @Request() req) {
     const mockUserId = 'system';
     return this.fileSystemService.checkFileAccess(nodeId, mockUserId);
   }
@@ -237,7 +234,7 @@ export class LibraryController {
   })
   async getBlockChildren(
     @Param('nodeId') nodeId: string,
-    @Query() query?: QueryChildrenDto,
+    @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
     const actualNodeId =
@@ -260,7 +257,7 @@ export class LibraryController {
   })
   async getBlockAllFiles(
     @Param('nodeId') nodeId: string,
-    @Query() query?: QueryChildrenDto,
+    @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
     const actualNodeId =
@@ -270,7 +267,7 @@ export class LibraryController {
     return this.fileSystemService.getAllFilesUnderNode(
       actualNodeId,
       mockUserId,
-      query,
+      query
     );
   }
 
@@ -290,7 +287,7 @@ export class LibraryController {
   async getBlockFile(
     @Param('path') filePath: string[],
     @Res() res: Response,
-    @Request() req: any,
+    @Request() req: any
   ) {
     const filename = filePath.join('/');
 
@@ -341,7 +338,7 @@ export class LibraryController {
   async downloadBlockNode(
     @Param('nodeId') nodeId: string,
     @Request() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     await this.fileDownloadHandler.handleDownload(nodeId, req.user.id, res, {
       clientIp: req.ip,
@@ -355,10 +352,7 @@ export class LibraryController {
   @Public()
   @ApiOperation({ summary: '获取图块库文件缩略图' })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async getBlockThumbnail(
-    @Param('nodeId') nodeId: string,
-    @Request() req,
-  ) {
+  async getBlockThumbnail(@Param('nodeId') nodeId: string, @Request() req) {
     const mockUserId = 'system';
     return this.fileSystemService.checkFileAccess(nodeId, mockUserId);
   }

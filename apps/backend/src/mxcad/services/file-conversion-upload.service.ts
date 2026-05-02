@@ -15,10 +15,10 @@ import {
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
-import { ExternalReferenceUpdateService } from './external-reference-update.service';
+import { ExternalReferenceUpdateService } from '../external-ref/external-reference-update.service';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { UploadFileOptions } from './file-upload-manager.types';
-import { ExternalRefService } from './external-ref.service';
+import { ExternalRefService } from '../external-ref/external-ref.service';
 import { UploadUtilityService } from './upload-utility.service';
 import { FileMergeService } from './file-merge.service';
 import { ThumbnailGenerationService } from '../infra/thumbnail-generation.service';
@@ -497,7 +497,12 @@ export class FileConversionUploadService {
     originalName: string,
     fileHash: string,
     fileSize: number,
-    context: { userId: string; nodeId?: string; srcDwgNodeId?: string; isLibrary?: boolean }
+    context: {
+      userId: string;
+      nodeId?: string;
+      srcDwgNodeId?: string;
+      isLibrary?: boolean;
+    }
   ): Promise<void> {
     if (!context.nodeId) {
       this.logger.warn('⚠️ 缺少节点ID，无法创建文件系统节点。');
@@ -592,11 +597,12 @@ export class FileConversionUploadService {
               this.logger.log(
                 `[handleFileNodeCreation] 开始自动生成缩略图: ${newNode.id}`
               );
-              const result = await this.thumbnailGenerationService.generateThumbnail(
-                mxwebPath,
-                nodeDir,
-                newNode.id
-              );
+              const result =
+                await this.thumbnailGenerationService.generateThumbnail(
+                  mxwebPath,
+                  nodeDir,
+                  newNode.id
+                );
               if (result.success) {
                 this.logger.log(
                   `[handleFileNodeCreation] 缩略图生成成功: ${result.thumbnailPath}`

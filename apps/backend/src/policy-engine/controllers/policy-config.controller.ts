@@ -32,7 +32,10 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../../common/enums/permissions.enum';
-import { PolicyConfigService, PermissionPolicyConfig } from '../services/policy-config.service';
+import {
+  PolicyConfigService,
+  PermissionPolicyConfig,
+} from '../services/policy-config.service';
 import { CreatePolicyDto } from '../dto/create-policy.dto';
 import { UpdatePolicyDto } from '../dto/update-policy.dto';
 import { PolicyResponseDto } from '../dto/policy.dto';
@@ -211,7 +214,13 @@ export class PolicyConfigController {
   /**
    * 格式化策略响应
    */
-  private formatPolicyResponse(policy: PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }): PolicyResponseDto {
+  private formatPolicyResponse(
+    policy: PermissionPolicyConfig & {
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }
+  ): PolicyResponseDto {
     return {
       id: policy.id,
       type: policy.type as PolicyType,

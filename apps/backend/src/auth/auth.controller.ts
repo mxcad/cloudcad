@@ -21,7 +21,10 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import type { Response as ExpressResponse, Request as ExpressRequest } from 'express';
+import type {
+  Response as ExpressResponse,
+  Request as ExpressRequest,
+} from 'express';
 import type { AuthenticatedRequest } from '../common/types/request.types';
 import type { SessionRequest } from './interfaces/jwt-payload.interface';
 import {
@@ -208,7 +211,8 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '验证码无效或已过期' })
   @ApiResponse({ status: 409, description: '手机号、邮箱或用户名已存在' })
   async verifyEmailAndRegisterPhone(
-    @Body() dto: {
+    @Body()
+    dto: {
       email: string;
       code: string;
       phone: string;
@@ -254,26 +258,44 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '绑定邮箱并登录（用于已注册但没有邮箱的用户）' })
-  @ApiResponse({ status: 200, description: '绑定成功', type: AuthApiResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: '绑定成功',
+    type: AuthApiResponseDto,
+  })
   @ApiResponse({ status: 400, description: '验证码无效或令牌过期' })
   async bindEmailAndLogin(
     @Body() dto: { tempToken: string; email: string; code: string },
     @Req() req: SessionRequest
   ): Promise<AuthResponseDto> {
-    return this.authService.bindEmailAndLogin(dto.tempToken, dto.email, dto.code, req);
+    return this.authService.bindEmailAndLogin(
+      dto.tempToken,
+      dto.email,
+      dto.code,
+      req
+    );
   }
 
   @Post('bind-phone-and-login')
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '绑定手机号并登录（用于已注册但没有手机号的用户）' })
-  @ApiResponse({ status: 200, description: '绑定成功', type: AuthApiResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: '绑定成功',
+    type: AuthApiResponseDto,
+  })
   @ApiResponse({ status: 400, description: '验证码无效或令牌过期' })
   async bindPhoneAndLogin(
     @Body() dto: { tempToken: string; phone: string; code: string },
     @Req() req: SessionRequest
   ): Promise<AuthResponseDto> {
-    return this.authService.bindPhoneAndLogin(dto.tempToken, dto.phone, dto.code, req);
+    return this.authService.bindPhoneAndLogin(
+      dto.tempToken,
+      dto.phone,
+      dto.code,
+      req
+    );
   }
 
   @Post('verify-phone')
@@ -347,7 +369,11 @@ export class AuthController {
     @Request() req: AuthenticatedRequest,
     @Body() dto: BindEmailDto & { isRebind?: boolean }
   ): Promise<BindEmailResponseDto> {
-    return this.authService.sendBindEmailCode(req.user.id, dto.email, dto.isRebind);
+    return this.authService.sendBindEmailCode(
+      req.user.id,
+      dto.email,
+      dto.isRebind
+    );
   }
 
   @Post('verify-bind-email')
@@ -692,7 +718,10 @@ export class AuthController {
     }
 
     // 统一的重定向函数
-    const redirectToFrontend = (path: string, hashData?: Record<string, unknown>) => {
+    const redirectToFrontend = (
+      path: string,
+      hashData?: Record<string, unknown>
+    ) => {
       let url = `${origin}${path}`;
       if (hashData) {
         const hash = encodeURIComponent(

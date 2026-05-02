@@ -41,7 +41,9 @@ export class DiskMonitorService {
   private readonly filesDataPath: string;
 
   constructor(private configService: ConfigService<AppConfig>) {
-    this.filesDataPath = this.configService.get('filesDataPath', { infer: true });
+    this.filesDataPath = this.configService.get('filesDataPath', {
+      infer: true,
+    });
   }
 
   /**

@@ -48,7 +48,12 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
  */
 @Global()
 @Module({
-  imports: [ConfigModule, ScheduleModule.forRoot(), DatabaseModule, CommonModule],
+  imports: [
+    ConfigModule,
+    ScheduleModule.forRoot(),
+    DatabaseModule,
+    CommonModule,
+  ],
   controllers: [CacheMonitorController],
   providers: [
     // 缓存提供者

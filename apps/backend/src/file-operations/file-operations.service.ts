@@ -118,16 +118,22 @@ export class FileOperationsService {
       }
       const nameWithoutExt = baseName.substring(0, lastDotIndex);
       const extension = baseName.substring(lastDotIndex);
-      
+
       // 生成完整的模式，包含扩展名
-      const generateFullName = (counter: number) => `${nameWithoutExt} (${counter})${extension}`;
-      
+      const generateFullName = (counter: number) =>
+        `${nameWithoutExt} (${counter})${extension}`;
+
       // 找到现有名称中的最大数字后缀
       let maxCounter = 0;
-      const escapedNameWithoutExt = nameWithoutExt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedNameWithoutExt = nameWithoutExt.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&'
+      );
       const escapedExtension = extension.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`^${escapedNameWithoutExt} \((\d+)\)${escapedExtension}$`);
-      
+      const pattern = new RegExp(
+        `^${escapedNameWithoutExt} \((\d+)\)${escapedExtension}$`
+      );
+
       for (const name of existingNames) {
         const match = name.match(pattern);
         if (match) {
@@ -137,7 +143,7 @@ export class FileOperationsService {
           }
         }
       }
-      
+
       // 从最大值+1开始计数
       let counter = maxCounter + 1;
       let newName: string;
@@ -157,11 +163,11 @@ export class FileOperationsService {
   ): string {
     // 对 baseName 进行正则转义，避免特殊字符影响匹配
     const escapedBaseName = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    
+
     // 找到现有名称中的最大数字后缀
     let maxCounter = 0;
     const pattern = new RegExp(`^${escapedBaseName} \((\d+)\)$`);
-    
+
     for (const name of existingNames) {
       const match = name.match(pattern);
       if (match) {
@@ -171,7 +177,7 @@ export class FileOperationsService {
         }
       }
     }
-    
+
     // 从最大值+1开始计数
     let counter = maxCounter + 1;
     let newName: string;
@@ -209,42 +215,49 @@ export class FileOperationsService {
 
       if (permanently) {
         // 1. 收集所有需要删除的文件信息
-        const filesToDelete: Array<{ path: string; fileHash: string | null; nodeId: string }> = [];
+        const filesToDelete: Array<{
+          path: string;
+          fileHash: string | null;
+          nodeId: string;
+        }> = [];
         const nodesToDelete: string[] = [];
 
         // 2. 递归收集文件信息（不执行删除操作）
         await this.collectFilesToDelete(nodeId, filesToDelete, nodesToDelete);
 
         // 3. 在事务中执行数据库操作（快速完成）
-        await this.prisma.$transaction(async (tx) => {
-          // 更新子文件节点状态
-          for (const file of filesToDelete) {
-            if (file.path) {
+        await this.prisma.$transaction(
+          async (tx) => {
+            // 更新子文件节点状态
+            for (const file of filesToDelete) {
+              if (file.path) {
+                await tx.fileSystemNode.update({
+                  where: { id: file.nodeId },
+                  data: { deletedFromStorage: new Date() },
+                });
+              }
+            }
+
+            // 批量删除子节点
+            if (nodesToDelete.length > 0) {
+              await tx.fileSystemNode.deleteMany({
+                where: { id: { in: nodesToDelete } },
+              });
+            }
+
+            // 更新并删除主节点
+            if (!node.isFolder && node.path) {
               await tx.fileSystemNode.update({
-                where: { id: file.nodeId },
+                where: { id: nodeId },
                 data: { deletedFromStorage: new Date() },
               });
             }
+            await tx.fileSystemNode.delete({ where: { id: nodeId } });
+          },
+          {
+            timeout: 30000, // 增加事务超时时间到30秒
           }
-          
-          // 批量删除子节点
-          if (nodesToDelete.length > 0) {
-            await tx.fileSystemNode.deleteMany({
-              where: { id: { in: nodesToDelete } },
-            });
-          }
-          
-          // 更新并删除主节点
-          if (!node.isFolder && node.path) {
-            await tx.fileSystemNode.update({
-              where: { id: nodeId },
-              data: { deletedFromStorage: new Date() },
-            });
-          }
-          await tx.fileSystemNode.delete({ where: { id: nodeId } });
-        }, {
-          timeout: 30000, // 增加事务超时时间到30秒
-        });
+        );
 
         // 4. 在事务外部执行耗时的文件系统操作
         for (const file of filesToDelete) {
@@ -369,7 +382,7 @@ export class FileOperationsService {
         updateData.projectStatus = ProjectStatus.ACTIVE;
       } else {
         updateData.fileStatus = FileStatus.COMPLETED;
-        
+
         // 检查是否存在文件名冲突，如果存在则生成唯一文件名
         if (node.parentId && node.name) {
           const uniqueName = await this.generateUniqueName(
@@ -562,33 +575,40 @@ export class FileOperationsService {
       });
 
       // 1. 收集所有需要删除的文件信息
-      const filesToDelete: Array<{ path: string; fileHash: string | null; nodeId: string }> = [];
+      const filesToDelete: Array<{
+        path: string;
+        fileHash: string | null;
+        nodeId: string;
+      }> = [];
       const nodesToDelete: string[] = [];
 
       // 2. 递归收集文件信息（不执行删除操作）
       await this.collectFilesToDelete(projectId, filesToDelete, nodesToDelete);
 
       // 3. 在事务中执行数据库操作（快速完成）
-      await this.prisma.$transaction(async (tx) => {
-        // 更新子文件节点状态
-        for (const file of filesToDelete) {
-          if (file.path) {
-            await tx.fileSystemNode.update({
-              where: { id: file.nodeId },
-              data: { deletedFromStorage: new Date() },
+      await this.prisma.$transaction(
+        async (tx) => {
+          // 更新子文件节点状态
+          for (const file of filesToDelete) {
+            if (file.path) {
+              await tx.fileSystemNode.update({
+                where: { id: file.nodeId },
+                data: { deletedFromStorage: new Date() },
+              });
+            }
+          }
+
+          // 批量删除子节点
+          if (nodesToDelete.length > 0) {
+            await tx.fileSystemNode.deleteMany({
+              where: { id: { in: nodesToDelete } },
             });
           }
+        },
+        {
+          timeout: 30000, // 增加事务超时时间到30秒
         }
-        
-        // 批量删除子节点
-        if (nodesToDelete.length > 0) {
-          await tx.fileSystemNode.deleteMany({
-            where: { id: { in: nodesToDelete } },
-          });
-        }
-      }, {
-        timeout: 30000, // 增加事务超时时间到30秒
-      });
+      );
 
       // 4. 在事务外部执行耗时的文件系统操作
       for (const file of filesToDelete) {
@@ -680,7 +700,8 @@ export class FileOperationsService {
       );
 
       // 计算新的projectId
-      const newProjectId = await this.fileTreeService.getProjectId(targetParentId);
+      const newProjectId =
+        await this.fileTreeService.getProjectId(targetParentId);
 
       const movedNode = await this.prisma.fileSystemNode.update({
         where: { id: nodeId },
@@ -859,16 +880,17 @@ export class FileOperationsService {
     if (!sourceNode.isFolder && sourceNode.path) {
       try {
         // 获取源节点的目录路径
-        const sourceDirRelativePath = this.storageManager.getNodeDirectoryRelativePath(sourceNode.path);
+        const sourceDirRelativePath =
+          this.storageManager.getNodeDirectoryRelativePath(sourceNode.path);
         const fileName = path.basename(sourceNode.path);
-        
+
         // 复制整个目录（包括所有相关文件，如外部参照、缩略图等）
         const newFilePath = await this.storageManager.copyNodeDirectory(
           sourceDirRelativePath,
           newNode.id,
           fileName
         );
-        
+
         // 更新新节点的路径
         await this.prisma.fileSystemNode.update({
           where: { id: newNode.id },
@@ -883,11 +905,11 @@ export class FileOperationsService {
     if (sourceNode.isFolder && sourceNode.children.length > 0) {
       // 维护一个已使用的名称集合，确保子节点名称唯一性
       const usedNames = new Set<string>();
-      
+
       for (const child of sourceNode.children) {
         let childUniqueName = child.name;
         let counter = 1;
-        
+
         // 检查名称是否已被使用（包括数据库中已存在的和当前复制过程中已使用的）
         const existingNames = await this.prisma.fileSystemNode.findMany({
           where: {
@@ -896,11 +918,14 @@ export class FileOperationsService {
           },
           select: { name: true },
         });
-        
+
         const existingNamesSet = new Set(existingNames.map((n) => n.name));
-        
+
         // 生成唯一名称
-        while (existingNamesSet.has(childUniqueName) || usedNames.has(childUniqueName)) {
+        while (
+          existingNamesSet.has(childUniqueName) ||
+          usedNames.has(childUniqueName)
+        ) {
           const lastDotIndex = child.name.lastIndexOf('.');
           if (lastDotIndex === -1) {
             childUniqueName = `${child.name} (${counter})`;
@@ -911,11 +936,16 @@ export class FileOperationsService {
           }
           counter++;
         }
-        
+
         // 将生成的名称添加到已使用集合中
         usedNames.add(childUniqueName);
-        
-        await this.copyNodeRecursive(child.id, newNode.id, childUniqueName, ownerId);
+
+        await this.copyNodeRecursive(
+          child.id,
+          newNode.id,
+          childUniqueName,
+          ownerId
+        );
       }
     }
 
@@ -997,7 +1027,9 @@ export class FileOperationsService {
     this.logger.log(`准备删除节点物理目录: ${nodePath}`);
 
     try {
-      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
 
       if (this.versionControlService.isReady()) {
@@ -1043,7 +1075,11 @@ export class FileOperationsService {
   // 收集需要删除的文件信息
   async collectFilesToDelete(
     nodeId: string,
-    filesToDelete: Array<{ path: string; fileHash: string | null; nodeId: string }>,
+    filesToDelete: Array<{
+      path: string;
+      fileHash: string | null;
+      nodeId: string;
+    }>,
     nodesToDelete: string[]
   ): Promise<void> {
     const children = await this.prisma.fileSystemNode.findMany({
@@ -1057,7 +1093,11 @@ export class FileOperationsService {
 
     for (const child of children) {
       if (!child.isFolder && child.path) {
-        filesToDelete.push({ path: child.path, fileHash: child.fileHash, nodeId: child.id });
+        filesToDelete.push({
+          path: child.path,
+          fileHash: child.fileHash,
+          nodeId: child.id,
+        });
       }
       nodesToDelete.push(child.id);
     }
@@ -1072,17 +1112,23 @@ export class FileOperationsService {
     if (!nodePath) return;
 
     try {
-      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
 
       if (commitSvn && this.versionControlService.isReady()) {
         try {
-          const deleteResult = await this.versionControlService.deleteNodeDirectory(nodeDirectory);
+          const deleteResult =
+            await this.versionControlService.deleteNodeDirectory(nodeDirectory);
           if (deleteResult.success) {
             this.logger.log(`节点目录已从 SVN 标记删除: ${nodeDirectory}`);
           }
         } catch (svnError) {
-          this.logger.error(`节点目录从 SVN 标记删除失败: ${nodeDirectory}`, svnError);
+          this.logger.error(
+            `节点目录从 SVN 标记删除失败: ${nodeDirectory}`,
+            svnError
+          );
         }
       }
 
@@ -1121,44 +1167,51 @@ export class FileOperationsService {
       }
 
       // 1. 收集所有需要删除的文件信息
-      const filesToDelete: Array<{ path: string; fileHash: string | null; nodeId: string }> = [];
+      const filesToDelete: Array<{
+        path: string;
+        fileHash: string | null;
+        nodeId: string;
+      }> = [];
       const nodesToDelete: string[] = [];
 
       // 2. 递归收集文件信息（不执行删除操作）
       await this.collectFilesToDelete(projectId, filesToDelete, nodesToDelete);
 
       // 3. 在事务中执行数据库操作（快速完成）
-      await this.prisma.$transaction(async (tx) => {
-        // 更新子文件节点状态
-        for (const file of filesToDelete) {
-          if (file.path) {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // 更新子文件节点状态
+          for (const file of filesToDelete) {
+            if (file.path) {
+              await tx.fileSystemNode.update({
+                where: { id: file.nodeId },
+                data: { deletedFromStorage: new Date() },
+              });
+            }
+          }
+
+          // 批量删除子节点
+          if (nodesToDelete.length > 0) {
+            await tx.fileSystemNode.deleteMany({
+              where: { id: { in: nodesToDelete } },
+            });
+          }
+
+          // 更新并删除主节点
+          if (!project.isFolder && project.path) {
             await tx.fileSystemNode.update({
-              where: { id: file.nodeId },
+              where: { id: projectId },
               data: { deletedFromStorage: new Date() },
             });
           }
-        }
-        
-        // 批量删除子节点
-        if (nodesToDelete.length > 0) {
-          await tx.fileSystemNode.deleteMany({
-            where: { id: { in: nodesToDelete } },
+          await tx.fileSystemNode.delete({
+            where: { id: projectId, isRoot: true, deletedAt: { not: null } },
           });
+        },
+        {
+          timeout: 30000, // 增加事务超时时间到30秒
         }
-        
-        // 更新并删除主节点
-        if (!project.isFolder && project.path) {
-          await tx.fileSystemNode.update({
-            where: { id: projectId },
-            data: { deletedFromStorage: new Date() },
-          });
-        }
-        await tx.fileSystemNode.delete({
-          where: { id: projectId, isRoot: true, deletedAt: { not: null } },
-        });
-      }, {
-        timeout: 30000, // 增加事务超时时间到30秒
-      });
+      );
 
       // 4. 在事务外部执行耗时的文件系统操作
       for (const file of filesToDelete) {
@@ -1169,7 +1222,11 @@ export class FileOperationsService {
 
       // 5. 处理主节点的文件删除（如果是文件）
       if (!project.isFolder && project.path) {
-        await this.deleteFileFromStorage(project.path, project.fileHash, commitSvn);
+        await this.deleteFileFromStorage(
+          project.path,
+          project.fileHash,
+          commitSvn
+        );
       }
 
       // 清除配额缓存
@@ -1224,42 +1281,49 @@ export class FileOperationsService {
       }
 
       // 1. 收集所有需要删除的文件信息
-      const filesToDelete: Array<{ path: string; fileHash: string | null; nodeId: string }> = [];
+      const filesToDelete: Array<{
+        path: string;
+        fileHash: string | null;
+        nodeId: string;
+      }> = [];
       const nodesToDelete: string[] = [];
 
       // 2. 递归收集文件信息（不执行删除操作）
       await this.collectFilesToDelete(nodeId, filesToDelete, nodesToDelete);
 
       // 3. 在事务中执行数据库操作（快速完成）
-      await this.prisma.$transaction(async (tx) => {
-        // 更新子文件节点状态
-        for (const file of filesToDelete) {
-          if (file.path) {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // 更新子文件节点状态
+          for (const file of filesToDelete) {
+            if (file.path) {
+              await tx.fileSystemNode.update({
+                where: { id: file.nodeId },
+                data: { deletedFromStorage: new Date() },
+              });
+            }
+          }
+
+          // 批量删除子节点
+          if (nodesToDelete.length > 0) {
+            await tx.fileSystemNode.deleteMany({
+              where: { id: { in: nodesToDelete } },
+            });
+          }
+
+          // 更新并删除主节点
+          if (!node.isFolder && node.path) {
             await tx.fileSystemNode.update({
-              where: { id: file.nodeId },
+              where: { id: nodeId },
               data: { deletedFromStorage: new Date() },
             });
           }
+          await tx.fileSystemNode.delete({ where: { id: nodeId } });
+        },
+        {
+          timeout: 30000, // 增加事务超时时间到30秒
         }
-        
-        // 批量删除子节点
-        if (nodesToDelete.length > 0) {
-          await tx.fileSystemNode.deleteMany({
-            where: { id: { in: nodesToDelete } },
-          });
-        }
-        
-        // 更新并删除主节点
-        if (!node.isFolder && node.path) {
-          await tx.fileSystemNode.update({
-            where: { id: nodeId },
-            data: { deletedFromStorage: new Date() },
-          });
-        }
-        await tx.fileSystemNode.delete({ where: { id: nodeId } });
-      }, {
-        timeout: 30000, // 增加事务超时时间到30秒
-      });
+      );
 
       // 4. 在事务外部执行耗时的文件系统操作
       for (const file of filesToDelete) {

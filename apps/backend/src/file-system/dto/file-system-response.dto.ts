@@ -47,7 +47,12 @@ export class FileSystemNodeDto {
   @ApiProperty({ description: '文件哈希', required: false })
   fileHash?: string;
 
-  @ApiProperty({ description: '文件状态', enum: Object.values(FileStatus), enumName: 'FileStatusEnum', required: false })
+  @ApiProperty({
+    description: '文件状态',
+    enum: Object.values(FileStatus),
+    enumName: 'FileStatusEnum',
+    required: false,
+  })
   fileStatus?: FileStatus;
 
   @ApiProperty({ description: '创建时间' })
@@ -94,7 +99,11 @@ export class ProjectDto {
   @ApiProperty({ description: '项目描述', required: false })
   description?: string;
 
-  @ApiProperty({ description: '项目状态', enum: Object.values(ProjectStatus), enumName: 'ProjectStatusEnum' })
+  @ApiProperty({
+    description: '项目状态',
+    enum: Object.values(ProjectStatus),
+    enumName: 'ProjectStatusEnum',
+  })
   status: ProjectStatus;
 
   @ApiProperty({ description: '所有者 ID' })
@@ -146,7 +155,11 @@ export class ProjectMemberDto {
  * 统一分页列表响应 DTO - 所有列表接口都用这个格式
  */
 export class NodeListResponseDto {
-  @ApiProperty({ description: '节点列表', type: FileSystemNodeDto, isArray: true })
+  @ApiProperty({
+    description: '节点列表',
+    type: FileSystemNodeDto,
+    isArray: true,
+  })
   nodes: FileSystemNodeDto[];
 
   @ApiProperty({ description: '总数' })

@@ -21,7 +21,7 @@ import { ConfigService } from '@nestjs/config';
 import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
 import { FileSystemNodeService } from './node/filesystem-node.service';
 import { FileConversionService } from './conversion/file-conversion.service';
-import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
+import { ExternalReferenceUpdateService } from './external-ref/external-reference-update.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { VersionControlService } from '../version-control/version-control.service';
 import { DatabaseService } from '../database/database.service';
@@ -31,13 +31,23 @@ import {
   ExternalReferenceStats,
   ExternalReferenceInfo,
 } from './types/external-reference.types';
-import { MxCadContext, ConvertServerFileParam } from './types/mxcad-context.types';
+import {
+  MxCadContext,
+  ConvertServerFileParam,
+} from './types/mxcad-context.types';
 import { Request } from 'express';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
 import { AppConfig } from '../config/app.config';
-import { findThumbnail, findThumbnailSync, getThumbnailFileName, getMimeType, THUMBNAIL_FORMATS, type ThumbnailFormat } from './services/thumbnail-utils';
+import {
+  findThumbnail,
+  findThumbnailSync,
+  getThumbnailFileName,
+  getMimeType,
+  THUMBNAIL_FORMATS,
+  type ThumbnailFormat,
+} from './services/thumbnail-utils';
 
 @Injectable()
 export class MxCadService {
@@ -55,7 +65,9 @@ export class MxCadService {
     private readonly versionControlService: VersionControlService,
     private readonly prisma: DatabaseService
   ) {
-    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
+      infer: true,
+    });
   }
 
   /**
@@ -143,10 +155,7 @@ export class MxCadService {
 
       return { isDuplicate: false };
     } catch (error) {
-      this.logger.error(
-        `检查重复文件失败: ${error.message}`,
-        error.stack
-      );
+      this.logger.error(`检查重复文件失败: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -271,7 +280,12 @@ export class MxCadService {
   /**
    * 为 MxCAD-App 推断上下文信息
    */
-  async inferContextForMxCadApp(fileHash: string, request: Request): Promise<import('./services/filesystem-node.service').FileSystemNodeContext | null> {
+  async inferContextForMxCadApp(
+    fileHash: string,
+    request: Request
+  ): Promise<
+    import('./services/filesystem-node.service').FileSystemNodeContext | null
+  > {
     return this.fileSystemNodeService.inferContextForMxCadApp(
       fileHash,
       request
@@ -606,7 +620,9 @@ export class MxCadService {
       }
 
       // 构建目标文件名（使用上传文件的格式）
-      const targetFileName = getThumbnailFileName(thumbnailFormat as ThumbnailFormat);
+      const targetFileName = getThumbnailFileName(
+        thumbnailFormat as ThumbnailFormat
+      );
 
       // 构建目标路径：filesData/YYYYMM[/N]/nodeId/thumbnail.{format}
       // 注意：node.path 包含文件名，需要先提取目录路径
@@ -800,12 +816,13 @@ export class MxCadService {
         this.logger.log(
           `[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`
         );
-        const commitResult = await this.versionControlService.commitNodeDirectory(
-          nodeDirectory,
-          message,
-          userId,
-          userName
-        );
+        const commitResult =
+          await this.versionControlService.commitNodeDirectory(
+            nodeDirectory,
+            message,
+            userId,
+            userName
+          );
 
         if (commitResult.success) {
           this.logger.log(`节点目录已提交到 SVN: ${node.name}`);
@@ -845,15 +862,12 @@ export class MxCadService {
     }
   }
 
-   /**
-    * 调用 mxcadassembly 生成 bin 文件
-    * @param mxwebPath mxweb 文件完整路径
-    * @param nodeName 节点名称（用于日志）
-    */
-  async generateBinFiles(
-    mxwebPath: string,
-    nodeName: string
-  ): Promise<void> {
+  /**
+   * 调用 mxcadassembly 生成 bin 文件
+   * @param mxwebPath mxweb 文件完整路径
+   * @param nodeName 节点名称（用于日志）
+   */
+  async generateBinFiles(mxwebPath: string, nodeName: string): Promise<void> {
     try {
       this.logger.log(`[generateBinFiles] 开始生成 bin 文件: ${mxwebPath}`);
 

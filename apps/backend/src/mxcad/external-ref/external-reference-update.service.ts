@@ -19,7 +19,7 @@ import { AppConfig } from '../../config/app.config';
 /**
  * 外部参照更新服务
  * 负责处理文件上传后的外部参照信息更新逻辑
- * 
+ *
  * 此服务从 MxCadService 中提取，用于消除循环依赖：
  * MxCadService → FileUploadManagerFacadeService → FileConversionUploadService → MxCadService
  */
@@ -33,7 +33,9 @@ export class ExternalReferenceUpdateService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly storageManager: StorageManager
   ) {
-    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
+      infer: true,
+    });
   }
 
   /**

@@ -8,7 +8,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { EmailVerificationService } from './email-verification.service';
 import { SmsVerificationService } from './sms';
@@ -200,7 +205,10 @@ export class PasswordService {
 
     let user;
     if (email) {
-      const result = await this.emailVerificationService.verifyEmail(email, code);
+      const result = await this.emailVerificationService.verifyEmail(
+        email,
+        code
+      );
       if (!result.valid) {
         this.logger.error(`验证码验证失败：${email}，${result.message}`);
         throw new UnauthorizedException(result.message);

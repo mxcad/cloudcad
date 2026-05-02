@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { DatabaseService } from '../../database/database.service';
@@ -10,7 +15,7 @@ import * as fsPromises from 'fs/promises';
 
 /**
  * 外部参照处理服务
- * 
+ *
  * 负责处理项目文件和图纸库的外部参照文件访问请求
  * 提供统一的外部参照文件读取和流式传输逻辑
  */
@@ -27,7 +32,7 @@ export class ExternalReferenceHandler {
 
   /**
    * 处理外部参照文件请求
-   * 
+   *
    * @param nodeId 节点 ID
    * @param fileName 外部参照文件名
    * @param res Express Response 对象
@@ -67,7 +72,9 @@ export class ExternalReferenceHandler {
 
       // 3. 获取外部参照目录名称（从 preloading.json 中提取 src_file_md5）
       // preloading.json 文件命名：{nodeId}.dwg.mxweb_preloading.json
-      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const storageRootPath = path.resolve(filesDataPath, node.path, '..');
       const preloadingFilePath = path.join(
         storageRootPath,
@@ -136,7 +143,8 @@ export class ExternalReferenceHandler {
       const errorStack = error instanceof Error ? error.stack : undefined;
       const errorStatus = (error as { status?: number }).status;
       const errorStatusCode = (error as { statusCode?: number }).statusCode;
-      const errorResponse = (error as { response?: { error?: string } }).response;
+      const errorResponse = (error as { response?: { error?: string } })
+        .response;
 
       this.logger.error(
         `[handleExternalReferenceRequest] 获取文件失败：${errorMessage}`,
@@ -154,7 +162,7 @@ export class ExternalReferenceHandler {
 
   /**
    * 获取节点信息
-   * 
+   *
    * @param identifier 节点 ID 或 fileHash
    * @param isLibrary 是否为图纸库
    * @param userId 用户 ID（项目文件访问时必需）
@@ -199,7 +207,7 @@ export class ExternalReferenceHandler {
 
   /**
    * 流式传输文件
-   * 
+   *
    * @param filePath 文件绝对路径
    * @param fileName 文件名（用于 Content-Disposition）
    * @param res Express Response 对象
@@ -237,7 +245,7 @@ export class ExternalReferenceHandler {
 
   /**
    * 获取文件 Content-Type
-   * 
+   *
    * @param ext 文件扩展名
    * @private
    */

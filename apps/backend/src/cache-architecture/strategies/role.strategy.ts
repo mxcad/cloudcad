@@ -72,7 +72,9 @@ export class RoleStrategy implements IWarmupStrategy {
 
           // 预热每个成员的访问角色
           for (const member of members) {
-            const accessRole = ProjectRoleMapper.mapRoleToAccessRole(member.projectRole.name);
+            const accessRole = ProjectRoleMapper.mapRoleToAccessRole(
+              member.projectRole.name
+            );
             await this.redisCache.cacheNodeAccessRole(
               member.user.id,
               project.id,

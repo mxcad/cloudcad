@@ -31,10 +31,18 @@ export class AuditLogDto {
   @ApiProperty({ description: '审计日志 ID' })
   id: string;
 
-  @ApiProperty({ description: '操作类型', enum: Object.values(AuditAction), enumName: 'AuditActionEnum' })
+  @ApiProperty({
+    description: '操作类型',
+    enum: Object.values(AuditAction),
+    enumName: 'AuditActionEnum',
+  })
   action: AuditAction;
 
-  @ApiProperty({ description: '资源类型', enum: Object.values(ResourceType), enumName: 'ResourceTypeEnum' })
+  @ApiProperty({
+    description: '资源类型',
+    enum: Object.values(ResourceType),
+    enumName: 'ResourceTypeEnum',
+  })
   resourceType: ResourceType;
 
   @ApiProperty({ description: '资源 ID', required: false })

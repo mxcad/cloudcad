@@ -4,7 +4,10 @@ import { SearchDto, SearchScope, SearchType } from '../dto/search.dto';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { Prisma, FileStatus } from '@prisma/client';
-import { NodeListResponseDto, FileSystemNodeDto } from '../dto/file-system-response.dto';
+import {
+  NodeListResponseDto,
+  FileSystemNodeDto,
+} from '../dto/file-system-response.dto';
 
 @Injectable()
 export class SearchService {
@@ -35,7 +38,15 @@ export class SearchService {
 
     switch (scope) {
       case SearchScope.PROJECT:
-        return this.searchProjects(userId, { keyword, filter, page, limit, skip, sortBy, sortOrder });
+        return this.searchProjects(userId, {
+          keyword,
+          filter,
+          page,
+          limit,
+          skip,
+          sortBy,
+          sortOrder,
+        });
       case SearchScope.PROJECT_FILES:
         if (!projectId) {
           throw new BadRequestException('搜索项目文件时必须提供 projectId');
@@ -52,9 +63,26 @@ export class SearchService {
           sortOrder,
         });
       case SearchScope.ALL_PROJECTS:
-        return this.searchAllProjects(userId, { keyword, page, limit, skip, sortBy, sortOrder });
+        return this.searchAllProjects(userId, {
+          keyword,
+          page,
+          limit,
+          skip,
+          sortBy,
+          sortOrder,
+        });
       case SearchScope.LIBRARY:
-        return this.searchLibrary(userId, { keyword, libraryKey, type, extension, page, limit, skip, sortBy, sortOrder });
+        return this.searchLibrary(userId, {
+          keyword,
+          libraryKey,
+          type,
+          extension,
+          page,
+          limit,
+          skip,
+          sortBy,
+          sortOrder,
+        });
       default:
         throw new BadRequestException(`不支持的搜索范围: ${scope}`);
     }
@@ -101,7 +129,10 @@ export class SearchService {
       personalSpaceKey: null,
       libraryKey: null,
       ...ownerCondition,
-      OR: [{ name: { contains: keyword, mode: 'insensitive' } }, { description: { contains: keyword, mode: 'insensitive' } }],
+      OR: [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ],
     };
 
     const [nodes, total] = await Promise.all([
@@ -146,7 +177,13 @@ export class SearchService {
       projectId: node.projectId,
     }));
 
-    return { nodes: results, total, page: params.page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      nodes: results,
+      total,
+      page: params.page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   private async searchProjectFiles(
@@ -164,9 +201,22 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
     }
   ): Promise<NodeListResponseDto> {
-    const { keyword, type, extension, fileStatus, skip, limit, sortBy, sortOrder } = params;
+    const {
+      keyword,
+      type,
+      extension,
+      fileStatus,
+      skip,
+      limit,
+      sortBy,
+      sortOrder,
+    } = params;
 
-    const hasAccess = await this.permissionService.checkNodePermission(userId, projectId, ProjectPermission.FILE_OPEN);
+    const hasAccess = await this.permissionService.checkNodePermission(
+      userId,
+      projectId,
+      ProjectPermission.FILE_OPEN
+    );
     if (!hasAccess) {
       return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
     }
@@ -178,7 +228,10 @@ export class SearchService {
       deletedAt: null,
       personalSpaceKey: null,
       isRoot: false,
-      OR: [{ name: { contains: keyword, mode: 'insensitive' } }, { description: { contains: keyword, mode: 'insensitive' } }],
+      OR: [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ],
     };
 
     if (type === SearchType.FILE) where.isFolder = false;
@@ -237,12 +290,25 @@ export class SearchService {
       projectId: node.projectId || projectId,
     }));
 
-    return { nodes: results, total, page: params.page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      nodes: results,
+      total,
+      page: params.page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   private async searchAllProjects(
     userId: string,
-    params: { keyword: string; page: number; limit: number; skip: number; sortBy: string; sortOrder: 'asc' | 'desc' }
+    params: {
+      keyword: string;
+      page: number;
+      limit: number;
+      skip: number;
+      sortBy: string;
+      sortOrder: 'asc' | 'desc';
+    }
   ): Promise<NodeListResponseDto> {
     const { keyword, skip, limit, sortBy, sortOrder } = params;
 
@@ -260,7 +326,10 @@ export class SearchService {
     const where: Prisma.FileSystemNodeWhereInput = {
       projectId: { in: projectIds },
       deletedAt: null,
-      OR: [{ name: { contains: keyword, mode: 'insensitive' } }, { description: { contains: keyword, mode: 'insensitive' } }],
+      OR: [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ],
     };
 
     const [nodes, total] = await Promise.all([
@@ -314,7 +383,13 @@ export class SearchService {
       projectId: node.projectId,
     }));
 
-    return { nodes: results, total, page: params.page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      nodes: results,
+      total,
+      page: params.page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   private async searchLibrary(
@@ -331,7 +406,16 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
     }
   ): Promise<NodeListResponseDto> {
-    const { keyword, libraryKey, type, extension, skip, limit, sortBy, sortOrder } = params;
+    const {
+      keyword,
+      libraryKey,
+      type,
+      extension,
+      skip,
+      limit,
+      sortBy,
+      sortOrder,
+    } = params;
 
     this.logger.log(
       `[资源库搜索] 用户ID: ${userId}, 关键词: ${keyword}, libraryKey: ${libraryKey}, type: ${type}`
@@ -341,7 +425,10 @@ export class SearchService {
       deletedAt: null,
       libraryKey: libraryKey ? { equals: libraryKey } : { not: null },
       isRoot: false,
-      OR: [{ name: { contains: keyword, mode: 'insensitive' } }, { description: { contains: keyword, mode: 'insensitive' } }],
+      OR: [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ],
     };
 
     this.logger.log(`[资源库搜索] 查询条件: ${JSON.stringify(where)}`);
@@ -401,7 +488,13 @@ export class SearchService {
       projectId: node.projectId,
     }));
 
-    return { nodes: results, total, page: params.page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      nodes: results,
+      total,
+      page: params.page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   private async getAllProjectNodeIds(projectId: string): Promise<string[]> {

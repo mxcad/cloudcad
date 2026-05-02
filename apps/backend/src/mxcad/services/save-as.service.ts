@@ -138,9 +138,8 @@ export class SaveAsService {
       );
 
       // 不传入文件名，让 relativePath 返回目录路径，后续拼接 mxweb 文件名
-      const storageInfo = await this.storageManager.allocateNodeStorage(
-        newNodeId
-      );
+      const storageInfo =
+        await this.storageManager.allocateNodeStorage(newNodeId);
       const nodeDirectory = storageInfo.nodeDirectoryPath;
 
       const mxwebFileName = `${newNodeId}.${format}.mxweb`;
@@ -227,7 +226,9 @@ export class SaveAsService {
         }
       } else {
         // 跳过图纸库和图块库的 SVN 提交
-        this.logger.log(`[SaveAs] 跳过 SVN 提交: ${finalFileName} (图纸库/图块库文件)`);
+        this.logger.log(
+          `[SaveAs] 跳过 SVN 提交: ${finalFileName} (图纸库/图块库文件)`
+        );
       }
 
       try {

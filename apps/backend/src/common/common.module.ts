@@ -32,12 +32,7 @@ import { UserCleanupController } from './controllers/user-cleanup.controller';
 import { ConcurrencyManager } from './concurrency/concurrency-manager';
 
 @Module({
-  imports: [
-    ConfigModule,
-    DatabaseModule,
-    RedisModule,
-    StorageModule,
-  ],
+  imports: [ConfigModule, DatabaseModule, RedisModule, StorageModule],
   providers: [
     PermissionService,
     PermissionCacheService,

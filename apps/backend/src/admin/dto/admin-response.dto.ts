@@ -75,7 +75,10 @@ export class UserPermissionsResponseDto {
   @ApiProperty({ description: '提示消息' })
   message: string;
 
-  @ApiProperty({ description: '用户权限信息', type: () => UserPermissionInfoDto })
+  @ApiProperty({
+    description: '用户权限信息',
+    type: () => UserPermissionInfoDto,
+  })
   data: UserPermissionInfoDto;
 }
 

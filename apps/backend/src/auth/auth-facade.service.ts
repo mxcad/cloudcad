@@ -35,7 +35,10 @@ import { SmsVerificationService } from './services/sms';
 import { WechatService, WechatUserInfo } from './services/wechat.service';
 import { InitializationService } from '../common/services/initialization.service';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
-import { USER_SERVICE, IUserService } from '../common/interfaces/user-service.interface';
+import {
+  USER_SERVICE,
+  IUserService,
+} from '../common/interfaces/user-service.interface';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import {
@@ -142,10 +145,11 @@ export class AuthFacadeService {
     });
 
     if (!user) {
-      const allowAutoRegister = await this.runtimeConfigService.getValue<boolean>(
-        'allowAutoRegisterOnPhoneLogin',
-        false
-      );
+      const allowAutoRegister =
+        await this.runtimeConfigService.getValue<boolean>(
+          'allowAutoRegisterOnPhoneLogin',
+          false
+        );
 
       const allowRegister = await this.runtimeConfigService.getValue<boolean>(
         'allowRegister',
@@ -266,10 +270,11 @@ export class AuthFacadeService {
       'smsEnabled',
       false
     );
-    const requirePhoneVerification = await this.runtimeConfigService.getValue<boolean>(
-      'requirePhoneVerification',
-      false
-    );
+    const requirePhoneVerification =
+      await this.runtimeConfigService.getValue<boolean>(
+        'requirePhoneVerification',
+        false
+      );
     // 手机号注册需要同时满足：短信服务开启 AND 手机号必填验证
     if (!smsEnabled || !requirePhoneVerification) {
       throw new BadRequestException('手机号注册未启用，请使用邮箱注册');
@@ -372,18 +377,21 @@ export class AuthFacadeService {
       },
     });
 
-    const wechatAutoRegister = await this.runtimeConfigService.getValue<boolean>(
-      'wechatAutoRegister',
-      false
-    );
-    const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>(
-      'requireEmailVerification',
-      false
-    );
-    const requirePhoneVerification = await this.runtimeConfigService.getValue<boolean>(
-      'requirePhoneVerification',
-      false
-    );
+    const wechatAutoRegister =
+      await this.runtimeConfigService.getValue<boolean>(
+        'wechatAutoRegister',
+        false
+      );
+    const requireEmailVerification =
+      await this.runtimeConfigService.getValue<boolean>(
+        'requireEmailVerification',
+        false
+      );
+    const requirePhoneVerification =
+      await this.runtimeConfigService.getValue<boolean>(
+        'requirePhoneVerification',
+        false
+      );
 
     if (!user) {
       const allowRegister = await this.runtimeConfigService.getValue<boolean>(
@@ -631,7 +639,11 @@ export class AuthFacadeService {
     email: string,
     isRebind: boolean = false
   ): Promise<{ message: string }> {
-    return this.accountBindingService.sendBindEmailCode(userId, email, isRebind);
+    return this.accountBindingService.sendBindEmailCode(
+      userId,
+      email,
+      isRebind
+    );
   }
 
   async verifyBindEmail(
@@ -733,7 +745,10 @@ export class AuthFacadeService {
     this.logger.log(`开始验证手机号: ${phone}`);
 
     // 验证短信验证码
-    const verifyResult = await this.smsVerificationService.verifyCode(phone, code);
+    const verifyResult = await this.smsVerificationService.verifyCode(
+      phone,
+      code
+    );
     if (!verifyResult.valid) {
       throw new BadRequestException(verifyResult.message);
     }
@@ -744,7 +759,17 @@ export class AuthFacadeService {
     // 查找用户
     const user = await this.prisma.user.findFirst({
       where: { phone: formattedPhone },
-      include: { role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } } },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -768,7 +793,8 @@ export class AuthFacadeService {
 
     // 生成 token 并返回
     const { password: _, ...userWithoutPassword } = user;
-    const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
       req.session.userId = user.id;
@@ -819,7 +845,7 @@ export class AuthFacadeService {
 
     // 检查邮箱是否已被其他用户使用
     const existingUser = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         email,
         deletedAt: null,
       },
@@ -836,13 +862,24 @@ export class AuthFacadeService {
         emailVerified: true,
         emailVerifiedAt: new Date(),
       },
-      include: { role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } } },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
     });
 
     this.logger.log(`邮箱绑定成功: userId=${userId}, email=${email}`);
 
     const { password: _, ...userWithoutPassword } = user;
-    const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
       req.session.userId = user.id;
@@ -883,7 +920,10 @@ export class AuthFacadeService {
     const userId = payload.sub;
 
     // 验证短信验证码
-    const verifyResult = await this.smsVerificationService.verifyCode(phone, code);
+    const verifyResult = await this.smsVerificationService.verifyCode(
+      phone,
+      code
+    );
     if (!verifyResult.valid) {
       throw new BadRequestException(verifyResult.message);
     }
@@ -906,13 +946,26 @@ export class AuthFacadeService {
         phoneVerified: true,
         phoneVerifiedAt: new Date(),
       },
-      include: { role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } } },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
     });
 
-    this.logger.log(`手机号绑定成功: userId=${userId}, phone=${formattedPhone}`);
+    this.logger.log(
+      `手机号绑定成功: userId=${userId}, phone=${formattedPhone}`
+    );
 
     const { password: _, ...userWithoutPassword } = user;
-    const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
       req.session.userId = user.id;
@@ -941,16 +994,24 @@ export class AuthFacadeService {
     },
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    this.logger.log(`开始验证邮箱并完成手机号注册: ${email}, phone: ${registerData.phone}`);
+    this.logger.log(
+      `开始验证邮箱并完成手机号注册: ${email}, phone: ${registerData.phone}`
+    );
 
     // 验证邮箱验证码
-    const emailVerifyResult = await this.emailVerificationService.verifyEmail(email, emailCode);
+    const emailVerifyResult = await this.emailVerificationService.verifyEmail(
+      email,
+      emailCode
+    );
     if (!emailVerifyResult.valid) {
       throw new BadRequestException(emailVerifyResult.message);
     }
 
     // 验证手机号验证码
-    const phoneVerifyResult = await this.smsVerificationService.verifyCode(registerData.phone, registerData.code);
+    const phoneVerifyResult = await this.smsVerificationService.verifyCode(
+      registerData.phone,
+      registerData.code
+    );
     if (!phoneVerifyResult.valid) {
       throw new BadRequestException(phoneVerifyResult.message);
     }
@@ -974,7 +1035,7 @@ export class AuthFacadeService {
     }
 
     const existingUserByEmail = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         email,
         deletedAt: null,
       },
@@ -994,7 +1055,9 @@ export class AuthFacadeService {
       phoneVerified: true,
     });
 
-    this.logger.log(`手机号注册成功（邮箱验证后）: ${formattedPhone}, email: ${email}, username: ${username}`);
+    this.logger.log(
+      `手机号注册成功（邮箱验证后）: ${formattedPhone}, email: ${email}, username: ${username}`
+    );
 
     const tokens = await this.authTokenService.generateTokens(user);
 

@@ -40,7 +40,7 @@ export class FileValidationService {
 
   constructor(
     private readonly configService: ConfigService<AppConfig>,
-    private readonly runtimeConfigService: RuntimeConfigService,
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {
     const uploadConfig = this.configService.get('upload', { infer: true });
     this.allowedExtensions = uploadConfig.allowedExtensions;
@@ -80,7 +80,10 @@ export class FileValidationService {
    */
   private async getMaxFileSize(): Promise<number> {
     // 运行时配置中的值是 MB，需要转换为字节
-    const maxFileSizeMB = await this.runtimeConfigService.getValue<number>('maxFileSize', 100);
+    const maxFileSizeMB = await this.runtimeConfigService.getValue<number>(
+      'maxFileSize',
+      100
+    );
     return maxFileSizeMB * 1024 * 1024;
   }
 

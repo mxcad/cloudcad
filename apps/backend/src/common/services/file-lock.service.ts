@@ -36,7 +36,9 @@ export class FileLockService {
 
   constructor(private configService: ConfigService<AppConfig>) {
     // 从 filesDataPath 派生锁目录
-    const filesDataPath = this.configService.get('filesDataPath', { infer: true })!;
+    const filesDataPath = this.configService.get('filesDataPath', {
+      infer: true,
+    })!;
     this.lockDir = path.join(filesDataPath, '.lock');
     // 从 fileLock 配置获取锁参数
     const fileLockConfig = this.configService.get('fileLock', { infer: true })!;

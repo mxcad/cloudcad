@@ -47,7 +47,8 @@ export class PolicyResponseDto {
 
   @ApiProperty({
     description: '策略类型',
-    enum: Object.values(PolicyType), enumName: 'PolicyType',
+    enum: Object.values(PolicyType),
+    enumName: 'PolicyType',
   })
   @IsEnum(PolicyType)
   type: PolicyType;
@@ -66,7 +67,8 @@ export class PolicyResponseDto {
 
   @ApiProperty({
     description: '关联的权限',
-    enum: Object.values(PrismaPermission), enumName: 'PrismaPermission',
+    enum: Object.values(PrismaPermission),
+    enumName: 'PrismaPermission',
     isArray: true,
   })
   @IsEnum(PrismaPermission, { each: true })

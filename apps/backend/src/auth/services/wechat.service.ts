@@ -8,7 +8,11 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
@@ -65,9 +69,7 @@ export class WechatService {
    */
   getAuthUrl(state: string): string {
     if (!this.appId) {
-      throw new Error(
-        '微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID'
-      );
+      throw new Error('微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID');
     }
     if (!this.callbackUrl) {
       throw new Error(
@@ -106,9 +108,7 @@ export class WechatService {
 
       if (data.errcode) {
         this.logger.error(`获取微信 access_token 失败: ${data.errmsg}`);
-        throw new InternalServerErrorException(
-          `微信授权失败: ${data.errmsg}`
-        );
+        throw new InternalServerErrorException(`微信授权失败: ${data.errmsg}`);
       }
 
       return data;
@@ -170,9 +170,7 @@ export class WechatService {
 
       if (data.errcode) {
         this.logger.error(`刷新微信 access_token 失败: ${data.errmsg}`);
-        throw new InternalServerErrorException(
-          `刷新授权失败: ${data.errmsg}`
-        );
+        throw new InternalServerErrorException(`刷新授权失败: ${data.errmsg}`);
       }
 
       return data;
@@ -203,7 +201,9 @@ export class WechatService {
       const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
       if (stateData.csrf) {
         // 验证内部的 csrf 是否是合法的 64 位 Hex 字符串
-        return typeof stateData.csrf === 'string' && stateData.csrf.length === 64;
+        return (
+          typeof stateData.csrf === 'string' && stateData.csrf.length === 64
+        );
       }
     } catch (e) {
       // 如果解析失败，说明不是 Base64 格式，尝试旧格式

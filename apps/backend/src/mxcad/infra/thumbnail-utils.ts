@@ -30,9 +30,7 @@ export function getThumbnailFileName(format: ThumbnailFormat): string {
  * @param nodeDir 节点目录路径
  * @returns 找到的缩略图信息，如果未找到则返回 null
  */
-export async function findThumbnail(
-  nodeDir: string
-): Promise<{
+export async function findThumbnail(nodeDir: string): Promise<{
   path: string;
   fileName: string;
   format: ThumbnailFormat;
@@ -119,7 +117,9 @@ export function getMimeType(format: ThumbnailFormat): string {
  * @param fileName 文件名（如 'thumbnail.webp'）
  * @returns 缩略图格式，如果不是缩略图文件则返回 null
  */
-export function getThumbnailFormatFromFileName(fileName: string): ThumbnailFormat | null {
+export function getThumbnailFormatFromFileName(
+  fileName: string
+): ThumbnailFormat | null {
   for (const format of THUMBNAIL_FORMATS) {
     if (fileName === getThumbnailFileName(format)) {
       return format;

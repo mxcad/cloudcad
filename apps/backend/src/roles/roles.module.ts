@@ -20,10 +20,7 @@ import { AuditLogModule } from '../audit/audit-log.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 
 @Module({
-  imports: [
-    CommonModule,
-    AuditLogModule,
-  ],
+  imports: [CommonModule, AuditLogModule],
   controllers: [RolesController],
   providers: [
     RolesService,

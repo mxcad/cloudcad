@@ -118,7 +118,10 @@ export class CacheVersionService implements OnModuleInit {
     try {
       // 获取分布式锁，防止并发创建版本
       const lockKey = this.getVersionLockKey(type, key);
-      const lock = await this.acquireLock(lockKey, this.distributedLockTTL * 1000); // 使用配置的锁 TTL
+      const lock = await this.acquireLock(
+        lockKey,
+        this.distributedLockTTL * 1000
+      ); // 使用配置的锁 TTL
 
       if (!lock) {
         // 如果获取锁失败，重试获取现有版本
@@ -222,10 +225,7 @@ export class CacheVersionService implements OnModuleInit {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `批量删除缓存版本失败: ${type} - ${message}`,
-        stack
-      );
+      this.logger.error(`批量删除缓存版本失败: ${type} - ${message}`, stack);
     }
   }
 
@@ -358,10 +358,7 @@ export class CacheVersionService implements OnModuleInit {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `获取所有版本信息失败: ${type} - ${message}`,
-        stack
-      );
+      this.logger.error(`获取所有版本信息失败: ${type} - ${message}`, stack);
       return [];
     }
   }
@@ -394,10 +391,7 @@ export class CacheVersionService implements OnModuleInit {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `清理过期版本失败: ${type} - ${message}`,
-        stack
-      );
+      this.logger.error(`清理过期版本失败: ${type} - ${message}`, stack);
       return 0;
     }
   }

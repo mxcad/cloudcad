@@ -70,7 +70,7 @@ export class AliyunSmsProvider implements SmsProvider {
           signName: this.signName,
           templateCode: this.templateCode,
           templateParam: JSON.stringify({ code }),
-        }),
+        })
       );
 
       const isSuccess = result.body?.code === 'OK';
@@ -79,7 +79,7 @@ export class AliyunSmsProvider implements SmsProvider {
         this.logger.log(`验证码发送成功: ${formattedPhone}`);
       } else {
         this.logger.warn(
-          `验证码发送失败: ${formattedPhone}, 错误码: ${result.body?.code}, 错误信息: ${result.body?.message}`,
+          `验证码发送失败: ${formattedPhone}, 错误码: ${result.body?.code}, 错误信息: ${result.body?.message}`
         );
       }
 
@@ -104,7 +104,7 @@ export class AliyunSmsProvider implements SmsProvider {
   async sendTemplate(
     phone: string,
     templateId: string,
-    params: Record<string, string>,
+    params: Record<string, string>
   ): Promise<SendResult> {
     try {
       const formattedPhone = this.formatPhone(phone);
@@ -115,7 +115,7 @@ export class AliyunSmsProvider implements SmsProvider {
           signName: this.signName,
           templateCode: templateId,
           templateParam: JSON.stringify(params),
-        }),
+        })
       );
 
       const isSuccess = result.body?.code === 'OK';

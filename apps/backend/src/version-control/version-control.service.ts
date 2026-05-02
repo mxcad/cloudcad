@@ -103,8 +103,11 @@ export class VersionControlService implements OnModuleInit {
   constructor(private readonly configService: ConfigService<AppConfig>) {
     // 使用 NestJS 标准配置方式获取路径（configuration.ts 已解析为绝对路径）
     this.svnRepoPath = this.configService.get('svnRepoPath', { infer: true })!;
-    this.filesDataPath = this.configService.get('filesDataPath', { infer: true })!;
-    this.svnIgnorePatterns = this.configService.get('svn', { infer: true })?.ignorePatterns || [];
+    this.filesDataPath = this.configService.get('filesDataPath', {
+      infer: true,
+    })!;
+    this.svnIgnorePatterns =
+      this.configService.get('svn', { infer: true })?.ignorePatterns || [];
 
     this.logger.log(`SVN 仓库路径: ${this.svnRepoPath}`);
     this.logger.log(`filesData 路径: ${this.filesDataPath}`);
@@ -247,9 +250,7 @@ export class VersionControlService implements OnModuleInit {
       return await operation();
     } catch (error) {
       if (this.isSvnLockedError(error)) {
-        this.logger.warn(
-          `${operationName} 遇到锁定错误，尝试 cleanup...`
-        );
+        this.logger.warn(`${operationName} 遇到锁定错误，尝试 cleanup...`);
         try {
           await svnCleanupAsync(this.filesDataPath);
           this.logger.log('SVN cleanup 成功，重试操作...');
@@ -304,7 +305,13 @@ export class VersionControlService implements OnModuleInit {
         timestamp: new Date().toISOString(),
       });
 
-      await svnCommitAsync([this.filesDataPath], commitMessage, false, null, null);
+      await svnCommitAsync(
+        [this.filesDataPath],
+        commitMessage,
+        false,
+        null,
+        null
+      );
       this.logger.log('svn:global-ignores 设置成功并已提交');
     } catch (error) {
       // 如果提交失败（可能没有变更），仅记录警告
@@ -327,7 +334,7 @@ export class VersionControlService implements OnModuleInit {
     userName?: string
   ): Promise<SvnOperationResult> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -381,7 +388,13 @@ export class VersionControlService implements OnModuleInit {
               message: `Add directory: ${pathParts[i]}`,
               timestamp: new Date().toISOString(),
             });
-            await svnCommitAsync([currentPath], commitMessage, false, null, null);
+            await svnCommitAsync(
+              [currentPath],
+              commitMessage,
+              false,
+              null,
+              null
+            );
             this.logger.log(`中间目录提交成功: ${currentPath}`);
           } catch (error) {
             if (!error.message.includes('not under version control')) {
@@ -437,7 +450,7 @@ export class VersionControlService implements OnModuleInit {
     message: string
   ): Promise<SvnOperationResult> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -489,7 +502,7 @@ export class VersionControlService implements OnModuleInit {
     nodeDirectory: string
   ): Promise<SvnOperationResult> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过删除');
       return { success: false, message: 'SVN 未初始化' };
@@ -527,7 +540,7 @@ export class VersionControlService implements OnModuleInit {
    */
   async commitWorkingCopy(message: string): Promise<SvnOperationResult> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -567,7 +580,7 @@ export class VersionControlService implements OnModuleInit {
     limit?: number
   ): Promise<SvnLogResponse> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化', entries: [] };
@@ -764,7 +777,7 @@ export class VersionControlService implements OnModuleInit {
     revision: number
   ): Promise<{ success: boolean; message: string; files?: string[] }> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化' };
@@ -819,7 +832,7 @@ export class VersionControlService implements OnModuleInit {
     revision: number
   ): Promise<{ success: boolean; message: string; content?: Buffer }> {
     await this.ensureInitialized();
-    
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化' };

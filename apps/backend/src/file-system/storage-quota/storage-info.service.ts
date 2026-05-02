@@ -61,7 +61,7 @@ export class StorageInfoService {
     // 如果未提供 node 但提供了 nodeId，从数据库获取节点信息
     let resolvedNode = node;
     let resolvedNodeId = nodeId;
-    
+
     if (!resolvedNode && nodeId) {
       resolvedNode = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
@@ -103,7 +103,11 @@ export class StorageInfoService {
 
     // 缓存未命中，计算配额
     this.logger.debug(`配额缓存未命中，计算中: ${cacheKey}`);
-    const quotaInfo = await this.calculateStorageQuota(userId, resolvedNodeId, resolvedNode);
+    const quotaInfo = await this.calculateStorageQuota(
+      userId,
+      resolvedNodeId,
+      resolvedNode
+    );
 
     // 存入缓存
     this.quotaCache.set(cacheKey, {
@@ -165,7 +169,8 @@ export class StorageInfoService {
     }
 
     const available = totalLimit - totalUsed;
-    const usagePercentage = totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
+    const usagePercentage =
+      totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
 
     return {
       type,

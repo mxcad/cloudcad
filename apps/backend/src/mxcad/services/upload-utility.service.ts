@@ -3,7 +3,13 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
 import { FileSystemService as MxFileSystemService } from './file-system.service';
@@ -25,7 +31,8 @@ export class UploadUtilityService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly storageManager: StorageManager
   ) {
-    this.mxcadUploadPath = this.configService.get('mxcadUploadPath') || '../../uploads';
+    this.mxcadUploadPath =
+      this.configService.get('mxcadUploadPath') || '../../uploads';
   }
 
   async createNonCadNode(
@@ -36,12 +43,16 @@ export class UploadUtilityService {
     context: { userId: string; nodeId: string }
   ): Promise<void> {
     try {
-      const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+      const parentNode = await this.fileSystemServiceMain.getNode(
+        context.nodeId
+      );
       if (!parentNode) {
         throw new NotFoundException(`父节点不存在: ${context.nodeId}`);
       }
 
-      const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+      const parentId = parentNode.isFolder
+        ? parentNode.id
+        : parentNode.parentId;
       if (!parentId) {
         throw new BadRequestException(`无法确定父节点ID: ${context.nodeId}`);
       }
@@ -60,18 +71,33 @@ export class UploadUtilityService {
         skipFileCopy: true,
       });
 
-      const storageInfo = await this.storageManager.allocateNodeStorage(newNode.id, originalName);
+      const storageInfo = await this.storageManager.allocateNodeStorage(
+        newNode.id,
+        originalName
+      );
       await fs.promises.copyFile(sourceFilePath, storageInfo.filePath);
-      await this.fileSystemServiceMain.updateNodePath(newNode.id, storageInfo.fileRelativePath);
+      await this.fileSystemServiceMain.updateNodePath(
+        newNode.id,
+        storageInfo.fileRelativePath
+      );
 
-      this.logger.log(`✅ 非CAD文件系统节点创建成功: ${originalName} (${fileHash})`);
+      this.logger.log(
+        `✅ 非CAD文件系统节点创建成功: ${originalName} (${fileHash})`
+      );
     } catch (error) {
-      this.logger.error(`创建非CAD文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`, error.stack);
+      this.logger.error(
+        `创建非CAD文件系统节点失败: ${originalName} (${fileHash}): ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
 
-  async getFileSize(fileHash: string, filename: string, targetFile: string): Promise<number> {
+  async getFileSize(
+    fileHash: string,
+    filename: string,
+    targetFile: string
+  ): Promise<number> {
     try {
       const localPath = this.fileSystemService.getMd5Path(targetFile);
       const size = await this.fileSystemService.getFileSize(localPath);
@@ -79,7 +105,8 @@ export class UploadUtilityService {
         return size;
       }
 
-      const uploadPath = this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
+      const uploadPath =
+        this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
       const allFiles = await this.fileSystemService.readDirectory(uploadPath);
       const relatedFiles = allFiles.filter((file) => file.startsWith(fileHash));
       if (relatedFiles.length > 0) {
@@ -94,9 +121,13 @@ export class UploadUtilityService {
     }
   }
 
-  async checkFileExistsInStorage(fileHash: string, originalFilename: string): Promise<boolean> {
+  async checkFileExistsInStorage(
+    fileHash: string,
+    originalFilename: string
+  ): Promise<boolean> {
     const targetFile = this.getConvertedFileName(fileHash, originalFilename);
-    const uploadPath = this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
+    const uploadPath =
+      this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
     const localPath = path.join(uploadPath, targetFile);
     const existsInLocal = fs.existsSync(localPath);
 
@@ -120,18 +151,30 @@ export class UploadUtilityService {
   }
 
   getConvertedFileName(fileHash: string, originalFilename: string): string {
-    const suffix = originalFilename.substring(originalFilename.lastIndexOf('.') + 1);
+    const suffix = originalFilename.substring(
+      originalFilename.lastIndexOf('.') + 1
+    );
     return `${fileHash}.${suffix}.mxweb`;
   }
 
-  async generateUniqueFileName(parentId: string, baseName: string): Promise<string> {
+  async generateUniqueFileName(
+    parentId: string,
+    baseName: string
+  ): Promise<string> {
     try {
       // 检查是否是文件夹（根据文件名是否有扩展名判断）
       const isFolder = path.extname(baseName) === '';
       // 调用文件系统服务的统一方法生成唯一名称
-      return await this.fileSystemServiceMain.generateUniqueName(parentId, baseName, isFolder);
+      return await this.fileSystemServiceMain.generateUniqueName(
+        parentId,
+        baseName,
+        isFolder
+      );
     } catch (error) {
-      this.logger.error(`[generateUniqueFileName] 生成唯一文件名失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `[generateUniqueFileName] 生成唯一文件名失败: ${error.message}`,
+        error.stack
+      );
       return baseName;
     }
   }

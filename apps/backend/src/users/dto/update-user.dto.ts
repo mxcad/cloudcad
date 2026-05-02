@@ -64,7 +64,12 @@ export class UpdateUserDto {
   @IsString({ message: '角色ID必须是字符串' })
   roleId?: string;
 
-  @ApiProperty({ description: '用户状态', enum: Object.values(UserStatus), enumName: 'UserStatusEnum', required: false })
+  @ApiProperty({
+    description: '用户状态',
+    enum: Object.values(UserStatus),
+    enumName: 'UserStatusEnum',
+    required: false,
+  })
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;

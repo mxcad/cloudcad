@@ -55,14 +55,14 @@ export class PermissionStrategy implements IWarmupStrategy {
           await this.redisCache.cacheUserRole(user.id, user.role);
 
           // 缓存用户权限（基于角色）
-          const permissions = RolePermissionsMapper.getPermissionsByRole(user.role.name);
+          const permissions = RolePermissionsMapper.getPermissionsByRole(
+            user.role.name
+          );
           await this.redisCache.cacheUserPermissions(user.id, permissions);
 
           successCount++;
         } catch (error) {
-          this.logger.error(
-            `预热用户 ${user.id} 的权限失败: ${error.message}`
-          );
+          this.logger.error(`预热用户 ${user.id} 的权限失败: ${error.message}`);
         }
       }
 

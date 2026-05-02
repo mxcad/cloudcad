@@ -98,7 +98,7 @@ export class TencentSmsProvider implements SmsProvider {
         this.logger.log(`验证码发送成功: ${formattedPhone}`);
       } else {
         this.logger.warn(
-          `验证码发送失败: ${formattedPhone}, 错误: ${status?.Message}`,
+          `验证码发送失败: ${formattedPhone}, 错误: ${status?.Message}`
         );
       }
 
@@ -123,7 +123,7 @@ export class TencentSmsProvider implements SmsProvider {
   async sendTemplate(
     phone: string,
     templateId: string,
-    params: Record<string, string>,
+    params: Record<string, string>
   ): Promise<SendResult> {
     try {
       const formattedPhone = this.formatPhone(phone);

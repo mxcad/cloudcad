@@ -76,7 +76,7 @@ export class EmailVerificationService {
 
   async verifyEmail(
     email: string,
-    code: string,
+    code: string
   ): Promise<{ valid: boolean; message: string; remainingAttempts?: number }> {
     const key = this.getCodeKey(email);
     const attemptsKey = this.getVerifyAttemptsKey(email);
@@ -104,7 +104,7 @@ export class EmailVerificationService {
       }
 
       throw new BadRequestException(
-        `验证码错误，剩余 ${remainingAttempts - 1} 次尝试机会`,
+        `验证码错误，剩余 ${remainingAttempts - 1} 次尝试机会`
       );
     }
 

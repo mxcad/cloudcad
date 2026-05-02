@@ -8,7 +8,11 @@ import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { FileSystemService as MxFileSystemService } from './file-system.service';
 import { RateLimiter } from '../../common/concurrency/rate-limiter';
-import { UploadChunkOptions, MergeOptions, MergeResult } from './file-upload-manager.types';
+import {
+  UploadChunkOptions,
+  MergeOptions,
+  MergeResult,
+} from './file-upload-manager.types';
 import { FileMergeService } from './file-merge.service';
 import * as path from 'path';
 
@@ -71,7 +75,9 @@ export class ChunkUploadManagerService {
           }
 
           if (allChunksExist) {
-            this.logger.log(`✅ 所有分片已存在，等待 uploadChunk 触发合并: ${name}`);
+            this.logger.log(
+              `✅ 所有分片已存在，等待 uploadChunk 触发合并: ${name}`
+            );
             return { ret: MxUploadReturn.kChunkAlreadyExist };
           }
         }
@@ -86,7 +92,9 @@ export class ChunkUploadManagerService {
     }
   }
 
-  async uploadChunk(options: UploadChunkOptions): Promise<{ ret: string; tz?: boolean }> {
+  async uploadChunk(
+    options: UploadChunkOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     const { hash, chunks, name, size, chunk, context } = options;
 
     return this.uploadRateLimiter.execute(async () => {
@@ -94,7 +102,13 @@ export class ChunkUploadManagerService {
 
       if (isLastChunk) {
         this.logger.log(`[uploadChunk] 最后一个分片，触发合并: hash=${hash}`);
-        return this.fileMergeService.mergeConvertFile({ hash, chunks, name, size, context });
+        return this.fileMergeService.mergeConvertFile({
+          hash,
+          chunks,
+          name,
+          size,
+          context,
+        });
       } else {
         this.logger.log(`[uploadChunk] 保存分片: hash=${hash}, chunk=${chunk}`);
         return { ret: MxUploadReturn.kOk };

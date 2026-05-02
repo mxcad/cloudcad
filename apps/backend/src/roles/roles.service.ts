@@ -391,7 +391,9 @@ export class RolesService {
    * 返回数据库存储的原始权限值（大写格式）
    */
   private mapToRoleDto(
-    role: Prisma.RoleGetPayload<{ include: { permissions: { select: { permission: true } } } }>
+    role: Prisma.RoleGetPayload<{
+      include: { permissions: { select: { permission: true } } };
+    }>
   ): RoleDto {
     return {
       id: role.id,

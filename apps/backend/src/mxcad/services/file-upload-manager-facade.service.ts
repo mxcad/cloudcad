@@ -8,7 +8,10 @@ import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
-import { FileSystemNodeService, FileSystemNodeContext } from '../node/filesystem-node.service';
+import {
+  FileSystemNodeService,
+  FileSystemNodeContext,
+} from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
@@ -22,7 +25,7 @@ import {
 } from './file-upload-manager.types';
 import { ChunkUploadManagerService } from './chunk-upload-manager.service';
 import { FileMergeService } from './file-merge.service';
-import { ExternalRefService } from './external-ref.service';
+import { ExternalRefService } from '../external-ref/external-ref.service';
 import { UploadUtilityService } from './upload-utility.service';
 import { FileConversionUploadService } from './file-conversion-upload.service';
 
@@ -30,7 +33,8 @@ import { FileConversionUploadService } from './file-conversion-upload.service';
 export class FileUploadManagerFacadeService {
   private readonly logger = new Logger(FileUploadManagerFacadeService.name);
 
-  private readonly checkingFiles: Map<string, Promise<{ ret: string }>> = new Map();
+  private readonly checkingFiles: Map<string, Promise<{ ret: string }>> =
+    new Map();
   private readonly mxcadUploadPath: string;
   private readonly filesDataPath: string;
 
@@ -50,8 +54,10 @@ export class FileUploadManagerFacadeService {
     private readonly uploadUtilityService: UploadUtilityService,
     private readonly fileConversionUploadService: FileConversionUploadService
   ) {
-    this.mxcadUploadPath = this.configService.get('mxcadUploadPath') || '../../uploads';
-    this.filesDataPath = this.configService.get('filesDataPath') || '../../filesData';
+    this.mxcadUploadPath =
+      this.configService.get('mxcadUploadPath') || '../../uploads';
+    this.filesDataPath =
+      this.configService.get('filesDataPath') || '../../filesData';
   }
 
   async checkChunkExist(options: UploadChunkOptions): Promise<{ ret: string }> {
@@ -63,18 +69,26 @@ export class FileUploadManagerFacadeService {
     fileHash: string,
     context?: FileSystemNodeContext
   ): Promise<{ ret: string; nodeId?: string }> {
-    return this.fileConversionUploadService.checkFileExist(filename, fileHash, context);
+    return this.fileConversionUploadService.checkFileExist(
+      filename,
+      fileHash,
+      context
+    );
   }
 
   async mergeConvertFile(options: MergeOptions): Promise<MergeResult> {
     return this.fileMergeService.mergeConvertFile(options);
   }
 
-  async uploadChunk(options: UploadChunkOptions): Promise<{ ret: string; tz?: boolean }> {
+  async uploadChunk(
+    options: UploadChunkOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     return this.chunkUploadManagerService.uploadChunk(options);
   }
 
-  async uploadAndConvertFile(options: UploadFileOptions): Promise<{ ret: string; tz?: boolean }> {
+  async uploadAndConvertFile(
+    options: UploadFileOptions
+  ): Promise<{ ret: string; tz?: boolean }> {
     return this.fileConversionUploadService.uploadAndConvertFile(options);
   }
 
@@ -85,11 +99,16 @@ export class FileUploadManagerFacadeService {
   async uploadAndConvertFileWithPermission(
     options: UploadFileOptions
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    return this.fileConversionUploadService.uploadAndConvertFileWithPermission(options);
+    return this.fileConversionUploadService.uploadAndConvertFileWithPermission(
+      options
+    );
   }
 
   getConvertedFileName(fileHash: string, originalFilename: string): string {
-    return this.uploadUtilityService.getConvertedFileName(fileHash, originalFilename);
+    return this.uploadUtilityService.getConvertedFileName(
+      fileHash,
+      originalFilename
+    );
   }
 
   async getExternalRefDirName(srcDwgNodeId: string): Promise<string> {
@@ -102,7 +121,12 @@ export class FileUploadManagerFacadeService {
     extRefFileName: string,
     srcFilePath: string
   ): Promise<void> {
-    return this.externalRefService.handleExternalReferenceFile(extRefHash, srcDwgNodeId, extRefFileName, srcFilePath);
+    return this.externalRefService.handleExternalReferenceFile(
+      extRefHash,
+      srcDwgNodeId,
+      extRefFileName,
+      srcFilePath
+    );
   }
 
   async handleExternalReferenceImage(
@@ -112,6 +136,12 @@ export class FileUploadManagerFacadeService {
     srcFilePath: string,
     context: FileSystemNodeContext
   ): Promise<void> {
-    return this.externalRefService.handleExternalReferenceImage(fileHash, srcDwgNodeId, extRefFileName, srcFilePath, context);
+    return this.externalRefService.handleExternalReferenceImage(
+      fileHash,
+      srcDwgNodeId,
+      extRefFileName,
+      srcFilePath,
+      context
+    );
   }
 }

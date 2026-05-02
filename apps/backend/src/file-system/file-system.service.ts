@@ -227,8 +227,16 @@ export class FileSystemService {
   /**
    * 生成唯一文件名
    */
-  async generateUniqueName(parentId: string, baseName: string, isFolder: boolean) {
-    return this.fileOperationsService.generateUniqueName(parentId, baseName, isFolder);
+  async generateUniqueName(
+    parentId: string,
+    baseName: string,
+    isFolder: boolean
+  ) {
+    return this.fileOperationsService.generateUniqueName(
+      parentId,
+      baseName,
+      isFolder
+    );
   }
 
   /**
@@ -494,15 +502,10 @@ export class FileSystemService {
 
     // 清除配额缓存
     if (node.ownerId) {
-      await this.storageInfoService.invalidateQuotaCache(
-        node.ownerId,
-        nodeId
-      );
+      await this.storageInfoService.invalidateQuotaCache(node.ownerId, nodeId);
     }
 
-    this.logger.log(
-      `节点 ${nodeId} 的存储配额已更新为 ${quota} GB`,
-    );
+    this.logger.log(`节点 ${nodeId} 的存储配额已更新为 ${quota} GB`);
 
     return updatedNode;
   }
