@@ -17,7 +17,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { FileSystemService } from './file-system.service';
+import { FileSystemService } from '../file-system.service';
 
 /**
  * 文件下载处理服务
