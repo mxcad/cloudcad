@@ -7,7 +7,9 @@ const config: Config = {
   roots: ['<rootDir>/src'],
   // 白名单机制：只运行核心测试文件
   testMatch: [
-    '**/file-validation.service.spec.ts',   // P1: 文件验证逻辑
+    '**/*.spec.ts',
+    '!**/node_modules/**',
+    '!**/test/**',
   ],
   testPathIgnorePatterns: [
     '/node_modules/',

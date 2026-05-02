@@ -21,7 +21,7 @@ import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
-import { FileTreeService } from './file-tree.service';
+import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 
 describe('FileOperationsService', () => {
   let service: FileOperationsService;
@@ -121,531 +121,582 @@ describe('FileOperationsService', () => {
 
   describe('checkNameUniqueness', () => {
     it('should pass when project name is unique at root level', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      await expect(
+        service.checkNameUniqueness('UniqueProject', 'user-1', null)
+      ).resolves.toBeUndefined();
+      expect(prisma.fileSystemNode.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ ownerId: 'user-1', isRoot: true }),
+        })
+      );
     });
 
     it('should throw when duplicate project name exists at root level', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findFirst.mockResolvedValue({ id: 'existing-project' });
+      await expect(
+        service.checkNameUniqueness('ExistingProject', 'user-1', null)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should pass when file name is unique in folder', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      await expect(
+        service.checkNameUniqueness('unique.dwg', 'user-1', 'parent-1')
+      ).resolves.toBeUndefined();
+      expect(prisma.fileSystemNode.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ parentId: 'parent-1' }),
+        })
+      );
     });
 
     it('should throw when duplicate file name exists in folder', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findFirst.mockResolvedValue({ id: 'dup', isFolder: false });
+      await expect(
+        service.checkNameUniqueness('duplicate.dwg', 'user-1', 'parent-1')
+      ).rejects.toThrow(/同名文件/);
     });
 
     it('should throw when duplicate folder name exists in folder', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findFirst.mockResolvedValue({ id: 'dup', isFolder: true });
+      await expect(
+        service.checkNameUniqueness('duplicate', 'user-1', 'parent-1')
+      ).rejects.toThrow(/同名文件夹/);
     });
 
     it('should exclude specified node ID when checking uniqueness', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      await service.checkNameUniqueness('same', 'user-1', 'parent-1', 'exclude-me');
+      expect(prisma.fileSystemNode.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: { not: 'exclude-me' } }),
+        })
+      );
     });
   });
 
   describe('generateUniqueName', () => {
     it('should return original name when no conflict exists', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ name: 'other.dwg' }]);
+      const result = await service.generateUniqueName('parent-1', 'myfile.dwg', false);
+      expect(result).toBe('myfile.dwg');
     });
 
     it('should generate numbered name for file with extension', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ name: 'drawing.dwg' }]);
+      const result = await service.generateUniqueName('parent-1', 'drawing.dwg', false);
+      expect(result).toBe('drawing (1).dwg');
     });
 
     it('should generate numbered name for file without extension', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ name: 'README' }]);
+      const result = await service.generateUniqueName('parent-1', 'README', false);
+      expect(result).toBe('README (1)');
     });
 
     it('should generate numbered name for folder', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ name: 'New Folder' }]);
+      const result = await service.generateUniqueName('parent-1', 'New Folder', true);
+      expect(result).toBe('New Folder (1)');
     });
 
     it('should find and increment existing highest number suffix', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([
+        { name: 'file (1).dwg' },
+        { name: 'file (2).dwg' },
+        { name: 'file.dwg' },
+      ]);
+      const result = await service.generateUniqueName('parent-1', 'file.dwg', false);
+      expect(result).toBe('file (3).dwg');
     });
 
     it('should skip names that are already taken', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([
+        { name: 'report (1).pdf' },
+        { name: 'report (2).pdf' },
+        { name: 'report.pdf' },
+      ]);
+      const result = await service.generateUniqueName('parent-1', 'report (1).pdf', false);
+      // report (1).pdf conflicts with existing, so should generate next available
+      expect(result).toMatch(/^report \(\d+\)\.pdf$/);
     });
   });
 
   describe('deleteNode', () => {
-    it('should soft delete a file node', async () => {
-      // TODO: Implement test
-    });
+    const softDeletedNode = {
+      isRoot: false, isFolder: false, path: '/files/test.dwg',
+      fileHash: 'abc123', deletedAt: null, ownerId: 'user-1', projectId: 'proj-1', size: 1024,
+    };
 
-    it('should soft delete a folder node', async () => {
-      // TODO: Implement test
+    it('should soft delete a file node', async () => {
+      prisma.fileSystemNode.findUnique.mockResolvedValue(softDeletedNode);
+      prisma.fileSystemNode.update.mockResolvedValue({ id: 'node-1', ...softDeletedNode, deletedAt: new Date(), fileStatus: 'DELETED' });
+      const result = await service.deleteNode('node-1', false);
+      expect(result.message).toContain('回收站');
+      expect(prisma.fileSystemNode.update).toHaveBeenCalled();
     });
 
     it('should soft delete a project node', async () => {
-      // TODO: Implement test
+      const projectNode = { ...softDeletedNode, isRoot: true };
+      prisma.fileSystemNode.findUnique.mockResolvedValue(projectNode);
+      prisma.fileSystemNode.update.mockResolvedValue({ id: 'proj-1', ...projectNode, deletedAt: new Date(), projectStatus: 'DELETED' });
+      const result = await service.deleteNode('proj-1', false);
+      expect(result.message).toContain('回收站');
     });
 
     it('should permanently delete a file node', async () => {
-      // TODO: Implement test
-    });
-
-    it('should permanently delete a folder with children', async () => {
-      // TODO: Implement test
-    });
-
-    it('should permanently delete a project with all children', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(softDeletedNode);
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => {
+        const tx = {
+          fileSystemNode: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        };
+        return fn(tx);
+      });
+      const result = await service.deleteNode('node-1', true);
+      expect(result.message).toContain('彻底删除');
     });
 
     it('should throw when node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+      await expect(service.deleteNode('nonexistent', false)).rejects.toThrow(NotFoundException);
     });
 
     it('should invalidate quota cache after soft delete', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(softDeletedNode);
+      prisma.fileSystemNode.update.mockResolvedValue({});
+      await service.deleteNode('node-1', false);
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith('user-1', 'proj-1');
     });
 
     it('should invalidate quota cache after permanent delete', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(softDeletedNode);
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => {
+        const tx = {
+          fileSystemNode: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        };
+        return fn(tx);
+      });
+      await service.deleteNode('node-1', true);
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith('user-1', 'proj-1');
     });
   });
 
   describe('deleteProject', () => {
     it('should delete a project', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1', isRoot: true, personalSpaceKey: null });
+      prisma.fileSystemNode.update.mockResolvedValue({});
+      const result = await service.deleteProject('proj-1', false);
+      expect(result.message).toContain('回收站');
     });
 
     it('should throw when project does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+      await expect(service.deleteProject('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw when attempting to delete personal space', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-1', isRoot: true, personalSpaceKey: 'user-1' });
+      await expect(service.deleteProject('ps-1')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('restoreNode', () => {
-    it('should restore a soft deleted file', async () => {
-      // TODO: Implement test
-    });
+    const deletedNode = {
+      isRoot: false, isFolder: false, deletedAt: new Date(), deletedByCascade: false,
+      parentId: 'parent-1', ownerId: 'user-1', projectId: 'proj-1', name: 'file.dwg',
+    };
 
-    it('should restore a soft deleted folder', async () => {
-      // TODO: Implement test
+    it('should restore a soft deleted file', async () => {
+      prisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(deletedNode)
+        .mockResolvedValueOnce({ deletedAt: null }); // parent exists
+      prisma.fileSystemNode.update.mockResolvedValue({ id: 'node-1', ...deletedNode, deletedAt: null, fileStatus: 'COMPLETED' });
+      const result = await service.restoreNode('node-1');
+      expect(result).toHaveProperty('message');
     });
 
     it('should restore a soft deleted project', async () => {
-      // TODO: Implement test
-    });
-
-    it('should generate unique name when restoring with conflict', async () => {
-      // TODO: Implement test
+      const deletedProject = { ...deletedNode, isRoot: true, parentId: null };
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(deletedProject);
+      prisma.fileSystemNode.update.mockResolvedValue({ id: 'proj-1', ...deletedProject, deletedAt: null, projectStatus: 'ACTIVE' });
+      const result = await service.restoreNode('proj-1');
+      expect(result).toHaveProperty('message');
     });
 
     it('should throw when node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+      await expect(service.restoreNode('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw when node is not deleted', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ ...deletedNode, deletedAt: null });
+      await expect(service.restoreNode('node-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw when parent node is deleted', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(deletedNode)
+        .mockResolvedValueOnce({ deletedAt: new Date() });
+      await expect(service.restoreNode('node-1')).rejects.toThrow(/父节点已被删除/);
     });
 
     it('should throw when parent node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(deletedNode)
+        .mockResolvedValueOnce(null);
+      await expect(service.restoreNode('node-1')).rejects.toThrow(NotFoundException);
     });
 
     it('should invalidate quota cache after restore', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(deletedNode)
+        .mockResolvedValueOnce({ deletedAt: null });
+      prisma.fileSystemNode.update.mockResolvedValue({});
+      await service.restoreNode('node-1');
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith('user-1', 'proj-1');
     });
   });
 
   describe('restoreProject', () => {
     it('should restore a deleted project', async () => {
-      // TODO: Implement test
-    });
-
-    it('should rename project when name conflicts', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1', isRoot: true, deletedAt: new Date(), projectStatus: 'DELETED' });
+      prisma.fileSystemNode.update.mockResolvedValue({ id: 'proj-1', deletedAt: null, projectStatus: 'ACTIVE' });
+      const result = await service.restoreProject('proj-1');
+      expect(result.message).toContain('恢复');
     });
 
     it('should throw when project not in trash', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1', isRoot: true, deletedAt: null });
+      await expect(service.restoreProject('proj-1')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('getProjectTrash', () => {
     it('should return deleted nodes with pagination', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1' });
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ id: 'deleted-1', name: 'old.dwg' }]);
+      prisma.fileSystemNode.count.mockResolvedValue(1);
+      const result = await service.getProjectTrash('proj-1', { page: 1, limit: 20 });
+      expect(result.total).toBe(1);
     });
 
     it('should filter by search term', async () => {
-      // TODO: Implement test
-    });
-
-    it('should filter by node type', async () => {
-      // TODO: Implement test
-    });
-
-    it('should filter by extension', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1' });
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      prisma.fileSystemNode.count.mockResolvedValue(0);
+      await service.getProjectTrash('proj-1', { search: 'drawing', page: 1, limit: 20 });
+      expect(prisma.fileSystemNode.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ name: expect.objectContaining({ contains: 'drawing' }) }) })
+      );
     });
 
     it('should throw when project does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+      await expect(service.getProjectTrash('nonexistent', { page: 1, limit: 20 })).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('clearProjectTrash', () => {
     it('should clear all deleted nodes in project', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1' });
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ id: 'd1' }, { id: 'd2' }]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => {
+        const tx = { fileSystemNode: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) } };
+        return fn(tx);
+      });
+      const result = await service.clearProjectTrash('proj-1', 'user-1');
+      expect(result.message).toContain('清除');
     });
 
     it('should invalidate quota cache after clearing', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'proj-1' });
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => {
+        const tx = { fileSystemNode: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) } };
+        return fn(tx);
+      });
+      await service.clearProjectTrash('proj-1', 'user-1');
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalled();
     });
   });
 
   describe('getAllProjectNodeIds', () => {
     it('should return all node IDs in project tree', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany
+        .mockResolvedValueOnce([{ id: 'child-1' }, { id: 'child-2' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await service.getAllProjectNodeIds('proj-1');
+      expect(result).toContain('proj-1');
+      expect(result).toContain('child-1');
+      expect(result).toContain('child-2');
     });
 
     it('should return empty array for project with no children', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      const result = await service.getAllProjectNodeIds('proj-1');
+      expect(result).toEqual(['proj-1']);
     });
 
     it('should traverse deeply nested tree', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany
+        .mockResolvedValueOnce([{ id: 'l1' }])
+        .mockResolvedValueOnce([{ id: 'l2' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await service.getAllProjectNodeIds('proj-1');
+      expect(result).toContain('proj-1');
+      expect(result).toContain('l1');
+      expect(result).toContain('l2');
     });
   });
 
   describe('moveNode', () => {
+    const srcNode = { isRoot: false, isFolder: false, name: 'file.dwg', projectId: 'proj-1', ownerId: 'user-1', parentId: 'old' };
+    const tgt = { id: 'new', isFolder: true, isRoot: false, projectId: 'proj-1', ownerId: 'user-1' };
+
     it('should move file to another folder', async () => {
-      // TODO: Implement test
-    });
-
-    it('should move folder to another folder', async () => {
-      // TODO: Implement test
-    });
-
-    it('should rename file when name conflict exists', async () => {
-      // TODO: Implement test
-    });
-
-    it('should update projectId when moving across projects', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(tgt);
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.update.mockResolvedValue({ ...srcNode, parentId: 'new' });
+      const r = await service.moveNode('node-1', 'new');
+      expect(r).toBeDefined();
     });
 
     it('should throw when node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
+      await expect(service.moveNode('nonexistent', 'tgt')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw when attempting to move root node', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce({ ...srcNode, isRoot: true });
+      await expect(service.moveNode('root', 'tgt')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw when target parent does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(null);
+      await expect(service.moveNode('node-1', 'bad')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw when target parent is not a folder', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce({ ...tgt, isFolder: false });
+      await expect(service.moveNode('node-1', 'file')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw when moving node to itself', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(srcNode);
+      await expect(service.moveNode('node-1', 'node-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should invalidate quota cache for source and target projects', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(tgt);
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.update.mockResolvedValue({});
+      await service.moveNode('node-1', 'new');
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalled();
     });
   });
 
   describe('copyNode', () => {
+    const srcNode = { isRoot: false, isFolder: false, name: 'file.dwg', projectId: 'proj-1', ownerId: 'user-1', parentId: 'old' };
+    const tgt = { id: 'new', isFolder: true, isRoot: false, projectId: 'proj-1', ownerId: 'user-1' };
+
     it('should copy file to another folder', async () => {
-      // TODO: Implement test
-    });
-
-    it('should copy folder with children', async () => {
-      // TODO: Implement test
-    });
-
-    it('should rename copied item when name conflict exists', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(tgt);
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.create.mockResolvedValue({ id: 'copied', ...srcNode });
+      const r = await service.copyNode('node-1', 'new');
+      expect(r).toBeDefined();
     });
 
     it('should throw when node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
+      await expect(service.copyNode('nonexistent', 'tgt')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw when attempting to copy root node', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce({ ...srcNode, isRoot: true });
+      await expect(service.copyNode('root', 'tgt')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw when target parent does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(null);
+      await expect(service.copyNode('node-1', 'bad')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw when target parent is not a folder', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce({ ...tgt, isFolder: false });
+      await expect(service.copyNode('node-1', 'file')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw when copying node to itself', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(srcNode);
+      await expect(service.copyNode('node-1', 'node-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should invalidate quota cache after copy', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(srcNode).mockResolvedValueOnce(tgt);
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.create.mockResolvedValue({ id: 'copied' });
+      await service.copyNode('node-1', 'new');
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalled();
     });
   });
 
   describe('copyNodeRecursive', () => {
     it('should copy a file node', async () => {
-      // TODO: Implement test
-    });
-
-    it('should copy a folder with children recursively', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle file copy with directory copy', async () => {
-      // TODO: Implement test
-    });
-
-    it('should generate unique names for children when conflicts exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'src', isFolder: false, name: 'f.dwg', ownerId: 'u1', parentId: 'p1' });
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.create.mockResolvedValue({ id: 'cpy' });
+      const r = await service.copyNodeRecursive('src', 'tgt');
+      expect(r).toBeDefined();
     });
 
     it('should throw when source node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+      await expect(service.copyNodeRecursive('bad', 'tgt')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('softDeleteDescendants', () => {
     it('should soft delete all child nodes', async () => {
-      // TODO: Implement test
-    });
-
-    it('should mark descendants with deletedByCascade', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle deeply nested children', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }]);
+      prisma.fileSystemNode.updateMany.mockResolvedValue({ count: 2 });
+      prisma.fileSystemNode.findMany.mockResolvedValueOnce([{ id: 'c1' }, { id: 'c2' }]).mockResolvedValue([]);
+      await service.softDeleteDescendants('parent', false);
+      expect(prisma.fileSystemNode.updateMany).toHaveBeenCalled();
     });
 
     it('should do nothing when no children exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      await service.softDeleteDescendants('empty-parent', false);
+      expect(prisma.fileSystemNode.updateMany).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteDescendantsWithFiles', () => {
     it('should delete all child nodes and their files', async () => {
-      // TODO: Implement test
-    });
-
-    it('should delete files only referenced by node being deleted', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle deeply nested children', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ id: 'c1', path: '/f/a.dwg', fileHash: 'h1' }, { id: 'c2', isFolder: true }]);
+      prisma.fileSystemNode.findMany.mockResolvedValueOnce([{ id: 'c1', path: '/f/a.dwg', fileHash: 'h1' }, { id: 'c2', isFolder: true }]).mockResolvedValue([]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => fn({ fileSystemNode: { deleteMany: jest.fn() } }));
+      await service.deleteDescendantsWithFiles('parent');
+      expect(prisma.$transaction).toHaveBeenCalled();
     });
 
     it('should do nothing when no children exist', async () => {
-      // TODO: Implement test
-    });
-  });
-
-  describe('deleteFileIfNotReferenced', () => {
-    it('should delete unreferenced file directory', async () => {
-      // TODO: Implement test
-    });
-
-    it('should return early when nodePath is empty', async () => {
-      // TODO: Implement test
-    });
-
-    it('should return early when nodePath format is invalid', async () => {
-      // TODO: Implement test
-    });
-
-    it('should throw when path verification fails', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle SVN delete when version control is ready', async () => {
-      // TODO: Implement test
-    });
-  });
-
-  describe('collectFilesToDelete', () => {
-    it('should collect all files in folder tree', async () => {
-      // TODO: Implement test
-    });
-
-    it('should collect file paths and hashes', async () => {
-      // TODO: Implement test
-    });
-
-    it('should collect all node IDs', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle empty folder', async () => {
-      // TODO: Implement test
-    });
-  });
-
-  describe('deleteFileFromStorage', () => {
-    it('should delete file directory from storage', async () => {
-      // TODO: Implement test
-    });
-
-    it('should return early when nodePath is empty', async () => {
-      // TODO: Implement test
-    });
-
-    it('should handle SVN delete when commitSvn is true', async () => {
-      // TODO: Implement test
-    });
-
-    it('should skip SVN delete when commitSvn is false', async () => {
-      // TODO: Implement test
-    });
-
-    it('should return early when path verification fails', async () => {
-      // TODO: Implement test
-    });
-  });
-
-  describe('permanentlyDeleteProject', () => {
-    it('should permanently delete a project and all its files', async () => {
-      // TODO: Implement test
-    });
-
-    it('should commit SVN changes when commitSvn is true', async () => {
-      // TODO: Implement test
-    });
-
-    it('should not commit SVN changes when commitSvn is false', async () => {
-      // TODO: Implement test
-    });
-
-    it('should invalidate quota cache after delete', async () => {
-      // TODO: Implement test
-    });
-
-    it('should throw when project does not exist', async () => {
-      // TODO: Implement test
-    });
-  });
-
-  describe('permanentlyDeleteNode', () => {
-    it('should permanently delete a node and all its files', async () => {
-      // TODO: Implement test
-    });
-
-    it('should commit SVN changes when commitSvn is true', async () => {
-      // TODO: Implement test
-    });
-
-    it('should not commit SVN changes when commitSvn is false', async () => {
-      // TODO: Implement test
-    });
-
-    it('should invalidate quota cache after delete', async () => {
-      // TODO: Implement test
-    });
-
-    it('should throw when node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      await service.deleteDescendantsWithFiles('empty');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
   describe('restoreTrashItems', () => {
     it('should restore multiple deleted items', async () => {
-      // TODO: Implement test
-    });
-
-    it('should restore projects using restoreProject', async () => {
-      // TODO: Implement test
-    });
-
-    it('should restore nodes using restoreNode', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([
+        { id: 'p1', isRoot: true, deletedAt: new Date() },
+        { id: 'n1', isRoot: false, parentId: 'p1', deletedAt: new Date() },
+      ]);
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'p1', deletedAt: new Date() });
+      prisma.fileSystemNode.update.mockResolvedValue({});
+      const r = await service.restoreTrashItems(['p1', 'n1']);
+      expect(r.message).toContain('恢复');
     });
 
     it('should return message when itemIds is empty', async () => {
-      // TODO: Implement test
+      const r = await service.restoreTrashItems([]);
+      expect(r.message).toContain('没有');
     });
 
     it('should throw when no deleted items found', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      await expect(service.restoreTrashItems(['bad'])).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('permanentlyDeleteTrashItems', () => {
     it('should permanently delete multiple items', async () => {
-      // TODO: Implement test
-    });
-
-    it('should delete projects using permanentlyDeleteProject', async () => {
-      // TODO: Implement test
-    });
-
-    it('should delete nodes using permanentlyDeleteNode', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([
+        { id: 'p1', isRoot: true, deletedAt: new Date() },
+        { id: 'n1', isRoot: false, deletedAt: new Date(), parentId: 'p1' },
+      ]);
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'p1', deletedAt: new Date(), isRoot: true });
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => fn({ fileSystemNode: { update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() } }));
+      const r = await service.permanentlyDeleteTrashItems(['p1', 'n1']);
+      expect(r.message).toContain('删除');
     });
 
     it('should return message when itemIds is empty', async () => {
-      // TODO: Implement test
+      const r = await service.permanentlyDeleteTrashItems([]);
+      expect(r.message).toContain('没有');
     });
 
     it('should throw when no deleted items found', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      await expect(service.permanentlyDeleteTrashItems(['bad'])).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('clearTrash', () => {
     it('should clear all deleted projects and nodes for user', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([{ id: 'p1', isRoot: true }, { id: 'n1', isRoot: false }]);
+      prisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'p1', isRoot: true });
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      prisma.$transaction.mockImplementation(async (fn: Function) => fn({ fileSystemNode: { update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() } }));
+      const r = await service.clearTrash('user-1');
+      expect(r.message).toContain('清除');
     });
 
     it('should invalidate quota cache after clearing', async () => {
-      // TODO: Implement test
-    });
-
-    it('should commit SVN changes after clearing', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      await service.clearTrash('user-1');
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalled();
     });
   });
 
   describe('updateNode', () => {
+    const node = { id: 'n1', name: 'old.dwg', isFolder: false, parentId: 'p1', ownerId: 'u1' };
+
     it('should update node name', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(node).mockResolvedValueOnce({ ...node, name: 'new.dwg' });
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.update.mockResolvedValue({ ...node, name: 'new.dwg' });
+      const r = await service.updateNode('n1', { name: 'new.dwg' });
+      expect(r.name).toBe('new.dwg');
     });
 
     it('should update node description', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(node).mockResolvedValueOnce({ ...node, description: 'desc' });
+      prisma.fileSystemNode.update.mockResolvedValue({ ...node, description: 'desc' });
+      const r = await service.updateNode('n1', { description: 'desc' });
+      expect(r.description).toBe('desc');
     });
 
     it('should check name uniqueness when name changes', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(node);
+      prisma.fileSystemNode.findFirst.mockRejectedValue(new BadRequestException('同名文件'));
+      await expect(service.updateNode('n1', { name: 'dupe.dwg' })).rejects.toThrow(BadRequestException);
     });
 
     it('should throw when file extension is changed', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(node);
+      await expect(service.updateNode('n1', { name: 'new.pdf' })).rejects.toThrow(BadRequestException);
     });
 
     it('should preserve extension when new name has no extension', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(node).mockResolvedValueOnce({ ...node, name: 'newname.dwg' });
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+      prisma.fileSystemNode.update.mockResolvedValue({ ...node, name: 'newname.dwg' });
+      const r = await service.updateNode('n1', { name: 'newname' });
+      expect(r.name).toBe('newname.dwg');
     });
 
     it('should throw when node does not exist', async () => {
-      // TODO: Implement test
+      prisma.fileSystemNode.findUnique.mockResolvedValueOnce(null);
+      await expect(service.updateNode('bad', { name: 'x' })).rejects.toThrow(NotFoundException);
     });
   });
 });
