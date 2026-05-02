@@ -43,7 +43,6 @@ import {
 } from '../file-system/dto/file-system-response.dto';
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
 import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
-import { UseInterceptors } from '@nestjs/common';
 
 /**
  * 公共资源库控制器（仅保留只读接口）

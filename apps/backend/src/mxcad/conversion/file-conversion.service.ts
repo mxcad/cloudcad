@@ -17,7 +17,7 @@ import type {
   ConversionResult,
   ConversionOptions,
 } from '../interfaces/file-conversion.interface';
-import { FileTypeDetector } from '../../utils/file-type-detector';
+import { FileTypeDetector } from '../utils/file-type-detector';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
