@@ -14,8 +14,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
 import { AdminModule } from './admin/admin.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+
 import { AuthModule } from './auth/auth.module';
 import { JwtStrategyExecutor } from './auth/jwt.strategy.executor';
 import { CommonModule } from './common/common.module';
@@ -88,9 +87,8 @@ const envFilePaths = [
     PublicFileModule,
     LibraryModule,
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [
-    AppService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,

@@ -12,7 +12,8 @@
       "Bash(mv /d/project/cloudcad/apps/backend/src/file-system/file-validation.service.ts /d/project/cloudcad/apps/backend/src/file-system/file-validation/)",
       "Bash(mv /d/project/cloudcad/apps/backend/src/file-system/file-validation.service.spec.ts /d/project/cloudcad/apps/backend/src/file-system/file-validation/)",
       "Bash(npx jest *)",
-      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx jest --testPathPatterns=\"file-operations.service.spec\" --no-coverage)"
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx jest --testPathPatterns=\"file-operations.service.spec\" --no-coverage)",
+      "Bash(npx ts-node *)"
     ]
   },
   "enableAllProjectMcpServers": true,
