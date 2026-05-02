@@ -533,18 +533,18 @@ export class SearchService {
   }
 
   private async getAllProjectNodeIds(projectId: string): Promise<string[]> {
-    const nodeIds: string[] = [];
-    const collectIds = async (currentId: string) => {
-      nodeIds.push(currentId);
-      const children = await this.prisma.fileSystemNode.findMany({
-        where: { parentId: currentId, deletedAt: null },
-        select: { id: true },
-      });
-      for (const child of children) {
-        await collectIds(child.id);
-      }
-    };
-    await collectIds(projectId);
-    return nodeIds;
+    const result = await this.prisma.$queryRaw<{ id: string }[]>`
+      WITH RECURSIVE tree AS (
+        SELECT id FROM file_system_nodes
+        WHERE id = ${projectId} AND deleted_at IS NULL
+        UNION ALL
+        SELECT n.id FROM file_system_nodes n
+        JOIN tree t ON n.parent_id = t.id
+        WHERE n.deleted_at IS NULL
+      )
+      SELECT id FROM tree
+    `;
+
+    return result.map((row) => row.id);
   }
 }

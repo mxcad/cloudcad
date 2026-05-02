@@ -115,6 +115,8 @@ model FileSystemNode {
   @@index([libraryKey])
   @@index([projectId])
   @@index([storageQuota])
+  @@index([projectId, deletedAt, isFolder, updatedAt], name: "idx_project_search")
+  @@index([libraryKey, deletedAt, isFolder, updatedAt], name: "idx_library_search")
   @@map("file_system_nodes")
 }
 

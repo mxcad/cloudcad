@@ -994,7 +994,7 @@ export class FileOperationsService {
     if (children.length > 0) {
       for (const child of children) {
         if (!child.isFolder && child.path) {
-          await this.deleteFileIfNotReferenced(tx, child.path, child.fileHash);
+          await this.deleteFileIfNotReferenced(tx, child.id, child.path, child.fileHash);
           await tx.fileSystemNode.update({
             where: { id: child.id },
             data: { deletedFromStorage: new Date() },
@@ -1011,6 +1011,7 @@ export class FileOperationsService {
 
   async deleteFileIfNotReferenced(
     tx: Prisma.TransactionClient,
+    nodeId: string,
     nodePath: string,
     fileHash: string | null
   ): Promise<void> {
@@ -1022,6 +1023,23 @@ export class FileOperationsService {
         `nodePath 格式不正确，跳过删除: ${nodePath} (期望格式: YYYYMM[/N]/nodeId/文件名)`
       );
       return;
+    }
+
+    // 检查是否有其他未删除节点引用了相同的 fileHash
+    if (fileHash) {
+      const otherRefCount = await tx.fileSystemNode.count({
+        where: {
+          fileHash,
+          deletedAt: null,
+          id: { not: nodeId },
+        },
+      });
+      if (otherRefCount > 0) {
+        this.logger.warn(
+          `跳过物理文件删除: fileHash ${fileHash} 仍被 ${otherRefCount} 个其他节点引用, nodePath: ${nodePath}`
+        );
+        return;
+      }
     }
 
     this.logger.log(`准备删除节点物理目录: ${nodePath}`);
@@ -1052,7 +1070,6 @@ export class FileOperationsService {
 
       const fullPath = this.storageManager.getFullPath(nodePath);
       const nodeDirectoryPath = path.dirname(fullPath);
-      const nodeId = pathParts[pathParts.length - 2];
 
       if (!nodeDirectoryPath.endsWith(nodeId)) {
         this.logger.error(
@@ -1110,6 +1127,25 @@ export class FileOperationsService {
     commitSvn: boolean
   ): Promise<void> {
     if (!nodePath) return;
+
+    // 检查是否有其他未删除节点引用了相同的 fileHash
+    if (fileHash) {
+      const pathParts = nodePath.split('/');
+      const nodeId = pathParts[pathParts.length - 2];
+      const otherRefCount = await this.prisma.fileSystemNode.count({
+        where: {
+          fileHash,
+          deletedAt: null,
+          id: { not: nodeId },
+        },
+      });
+      if (otherRefCount > 0) {
+        this.logger.warn(
+          `跳过物理文件删除: fileHash ${fileHash} 仍被 ${otherRefCount} 个其他节点引用, nodePath: ${nodePath}`
+        );
+        return;
+      }
+    }
 
     try {
       const filesDataPath = this.configService.get('filesDataPath', {
@@ -1490,6 +1526,7 @@ export class FileOperationsService {
         if (!node.isFolder && node.path) {
           await this.deleteFileIfNotReferenced(
             this.prisma,
+            node.id,
             node.path,
             node.fileHash
           );

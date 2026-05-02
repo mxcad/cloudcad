@@ -37,6 +37,7 @@
     "db:audit-permissions": "pnpm exec tsx scripts/audit-permissions.ts"
   },
   "dependencies": {
+    "2": "^3.0.0",
     "@alicloud/dysmsapi20170525": "^4.5.0",
     "@alicloud/openapi-client": "^0.4.15",
     "@alicloud/tea-util": "^1.4.11",
@@ -54,6 +55,8 @@
     "@nestjs/terminus": "^11.0.0",
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
+    "@tus/file-store": "^2.1.0",
+    "@tus/server": "^2.4.0",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",

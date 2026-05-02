@@ -13,18 +13,13 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
-import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
 import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module';
 import { MxcadFacadeModule } from './facade/mxcad-facade.module';
 import { MxcadSaveModule } from './save/mxcad-save.module';
-import { MxcadUploadModule } from './upload/mxcad-upload.module';
 import { MxcadCoreModule } from './core/mxcad-core.module';
+import { TusModule } from './tus/tus.module';
 import { FileUploadManagerFacadeService } from './facade/file-upload-manager-facade.service';
-import { MulterModule } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { join } from 'path';
-import * as fs from 'fs';
 import { DatabaseModule } from '../database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -54,64 +49,14 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
       }),
       inject: [ConfigService],
     }),
-    MulterModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService<AppConfig>) => {
-        const config = configService.get('mxcadUploadPath', { infer: true });
-        const tempPath = configService.get('mxcadTempPath', { infer: true });
-        // Multer 层使用固定上限值 500MB
-        // 业务层的精确限制由 FileValidationService 使用运行时配置 maxFileSize 实现
-        const maxFileSize = 500 * 1024 * 1024; // 500MB
-
-        return {
-          storage: diskStorage({
-            destination: (req, file, cb) => {
-              if (req.body.chunk !== undefined) {
-                // 分片文件存放位置
-                const fileMd5 = req.body.hash;
-                const tmpDir = join(tempPath, `chunk_${fileMd5}`);
-                fs.mkdirSync(tmpDir, { recursive: true });
-                cb(null, tmpDir);
-              } else {
-                // 完整文件存放位置
-                fs.mkdirSync(config, { recursive: true });
-                cb(null, config);
-              }
-            },
-            filename: (req, file, cb) => {
-              const fileMd5 = req.body.hash;
-              if (req.body.chunk !== undefined) {
-                // 分片文件名: {chunkIndex}_{fileHash}
-                cb(null, `${req.body.chunk}_${fileMd5}`);
-              } else if (fileMd5) {
-                // 完整文件名: {fileHash}.{ext}
-                const ext = file.originalname.split('.').pop();
-                cb(null, `${fileMd5}.${ext}`);
-              } else {
-                // 没有 hash 参数时，使用原始文件名
-                cb(null, file.originalname);
-              }
-            },
-          }),
-          // 确保所有字段都被解析，包括非文件字段
-          limits: {
-            fileSize: maxFileSize,
-            fields: 20, // 允许最多20个字段
-            fieldSize: 1024 * 1024, // 每个字段最大1MB
-          },
-        };
-      },
-      inject: [ConfigService],
-    }),
     MxcadInfraModule,
     MxcadConversionModule,
-    MxcadChunkModule,
     MxcadNodeModule,
     MxcadExternalRefModule,
     MxcadFacadeModule,
     MxcadSaveModule,
-    MxcadUploadModule,
     MxcadCoreModule,
+    TusModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
@@ -129,10 +74,6 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     RequireProjectPermissionGuard,
     // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxcadExceptionFilter
   ],
-  exports: [
-    MxCadService,
-    FileUploadManagerFacadeService,
-    MxcadFileHandlerService,
-  ],
+  exports: [],
 })
 export class MxCadModule {}
