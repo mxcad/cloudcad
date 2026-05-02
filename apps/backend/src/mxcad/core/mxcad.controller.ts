@@ -49,35 +49,35 @@ import {
 } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { MxCadService } from './mxcad.service';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseService } from '../../database/database.service';
 import { FileSystemNode, Prisma } from '@prisma/client';
-import { PreloadingDataDto } from './dto/preloading-data.dto';
-import { UploadExtReferenceFileDto } from './dto/upload-ext-reference-file.dto';
-import { UploadFilesDto } from './dto/upload-files.dto';
-import { FileExistResponseDto } from './dto/file-exist-response.dto';
-import { ChunkExistResponseDto } from './dto/chunk-exist-response.dto';
-import { CheckFileExistDto } from './dto/check-file-exist.dto';
-import { CheckChunkExistDto } from './dto/check-chunk-exist.dto';
-import { CheckDuplicateFileDto } from './dto/check-duplicate-file.dto';
-import { CheckDuplicateFileResponseDto } from './dto/check-duplicate-file-response.dto';
-import { CheckReferenceResponseDto } from './dto/check-reference-response.dto';
-import { RefreshExternalReferencesResponseDto } from './dto/refresh-external-references-response.dto';
-import { UploadFileResponseDto } from './dto/upload-file-response.dto';
-import { CheckThumbnailResponseDto } from './dto/check-thumbnail-response.dto';
-import { UploadThumbnailResponseDto } from './dto/upload-thumbnail-response.dto';
-import { UploadThumbnailDto } from './dto/upload-thumbnail.dto';
-import { SaveMxwebResponseDto } from './dto/save-mxweb-response.dto';
-import { SaveMxwebDto } from './dto/save-mxweb.dto';
-import { SaveMxwebAsDto } from './dto/save-mxweb-as.dto';
-import { SaveMxwebAsResponseDto } from './dto/save-mxweb-as-response.dto';
-import { MxCadRequest } from './types/request.types';
-import { MxCadContext } from './types/mxcad-context.types';
+import { PreloadingDataDto } from '../dto/preloading-data.dto';
+import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
+import { UploadFilesDto } from '../dto/upload-files.dto';
+import { FileExistResponseDto } from '../dto/file-exist-response.dto';
+import { ChunkExistResponseDto } from '../dto/chunk-exist-response.dto';
+import { CheckFileExistDto } from '../dto/check-file-exist.dto';
+import { CheckChunkExistDto } from '../dto/check-chunk-exist.dto';
+import { CheckDuplicateFileDto } from '../dto/check-duplicate-file.dto';
+import { CheckDuplicateFileResponseDto } from '../dto/check-duplicate-file-response.dto';
+import { CheckReferenceResponseDto } from '../dto/check-reference-response.dto';
+import { RefreshExternalReferencesResponseDto } from '../dto/refresh-external-references-response.dto';
+import { UploadFileResponseDto } from '../dto/upload-file-response.dto';
+import { CheckThumbnailResponseDto } from '../dto/check-thumbnail-response.dto';
+import { UploadThumbnailResponseDto } from '../dto/upload-thumbnail-response.dto';
+import { UploadThumbnailDto } from '../dto/upload-thumbnail.dto';
+import { SaveMxwebResponseDto } from '../dto/save-mxweb-response.dto';
+import { SaveMxwebDto } from '../dto/save-mxweb.dto';
+import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
+import { SaveMxwebAsResponseDto } from '../dto/save-mxweb-as-response.dto';
+import { MxCadRequest } from '../types/request.types';
+import { MxCadContext } from '../types/mxcad-context.types';
 import { ConfigService } from '@nestjs/config';
-import { StorageService } from '../storage/storage.service';
-import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
-import { FileTreeService } from '../file-system/file-tree/file-tree.service';
-import { PermissionService } from '../common/services/permission.service';
-import { ProjectPermissionService } from '../roles/project-permission.service';
+import { StorageService } from '../../storage/storage.service';
+import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
+import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
+import { PermissionService } from '../../common/services/permission.service';
+import { ProjectPermissionService } from '../../roles/project-permission.service';
 import {
   findThumbnail,
   getThumbnailFileName,
@@ -85,17 +85,17 @@ import {
   getMimeType,
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
-} from './infra/thumbnail-utils';
-import { VersionControlService } from '../version-control/version-control.service';
-import { AppConfig } from '../config/app.config';
-import { FileConversionService } from './conversion/file-conversion.service';
-import { SaveAsService } from './save/save-as.service';
-import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
-import { ProjectPermission } from '../common/enums/permissions.enum';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
-import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
+} from '../infra/thumbnail-utils';
+import { VersionControlService } from '../../version-control/version-control.service';
+import { AppConfig } from '../../config/app.config';
+import { FileConversionService } from '../conversion/file-conversion.service';
+import { SaveAsService } from '../save/save-as.service';
+import { MxcadFileHandlerService } from './mxcad-file-handler.service';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
+import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
+import { StorageQuotaInterceptor } from '../../common/interceptors/storage-quota.interceptor';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')

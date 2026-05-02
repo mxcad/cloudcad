@@ -34,7 +34,7 @@ import { RequirePermissions } from '../common/decorators/require-permissions.dec
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { Public } from '../auth/decorators/public.decorator';
 import { FileSystemService } from '../file-system/file-system.service';
-import { FileDownloadHandlerService } from '../file-system/file-download-handler.service';
+import { FileDownloadHandlerService } from '../file-system/file-download/file-download-handler.service';
 import { MxcadFileHandlerService } from '../mxcad/services/mxcad-file-handler.service';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import {

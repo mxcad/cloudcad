@@ -11,8 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module, forwardRef } from '@nestjs/common';
-import { MxCadController } from './mxcad.controller';
-import { MxCadService } from './mxcad.service';
 import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
@@ -21,8 +19,8 @@ import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module
 import { MxcadFacadeModule } from './facade/mxcad-facade.module';
 import { MxcadSaveModule } from './save/mxcad-save.module';
 import { MxcadUploadModule } from './upload/mxcad-upload.module';
+import { MxcadCoreModule } from './core/mxcad-core.module';
 import { FileUploadManagerFacadeService } from './facade/file-upload-manager-facade.service';
-import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -113,16 +111,15 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxcadFacadeModule,
     MxcadSaveModule,
     MxcadUploadModule,
+    MxcadCoreModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
     RolesModule,
   ],
-  controllers: [MxCadController],
+  controllers: [],
   providers: [
-    MxcadService,
     FileUploadManagerFacadeService,
-    MxcadFileHandlerService,
     // 来自 FileSystemModule 的 FileSystemService 别名
     {
       provide: 'FileSystemServiceMain',

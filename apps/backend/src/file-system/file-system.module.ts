@@ -16,7 +16,7 @@ import { FileTreeModule } from './file-tree/file-tree.module';
 import { FilePermissionModule } from './file-permission/file-permission.module';
 import { ProjectMemberModule } from './project-member/project-member.module';
 import { SearchModule } from './search/search.module';
-import { FileDownloadHandlerService } from './file-download-handler.service';
+import { FileDownloadModule } from './file-download/file-download.module';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
@@ -26,9 +26,6 @@ import { VersionControlModule } from '../version-control/version-control.module'
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { PersonalSpaceModule } from '../personal-space/personal-space.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
-import {
-  FileDownloadExportService,
-} from './services';
 
 @Module({
   imports: [
@@ -47,13 +44,12 @@ import {
     FilePermissionModule,
     ProjectMemberModule,
     SearchModule,
+    FileDownloadModule,
   ],
   controllers: [FileSystemController],
   providers: [
     FileSystemService,
-    FileDownloadHandlerService,
     RequireProjectPermissionGuard,
-    FileDownloadExportService,
   ],
   exports: [
     FileSystemService,
@@ -64,8 +60,7 @@ import {
     FilePermissionModule,
     ProjectMemberModule,
     SearchModule,
-    FileDownloadHandlerService,
-    FileDownloadExportService,
+    FileDownloadModule,
   ],
 })
 export class FileSystemModule {}

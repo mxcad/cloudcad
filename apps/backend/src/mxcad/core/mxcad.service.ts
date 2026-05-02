@@ -18,28 +18,28 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FileUploadManagerFacadeService } from './facade/file-upload-manager-facade.service';
-import { FileSystemNodeService } from './node/filesystem-node.service';
-import { FileConversionService } from './conversion/file-conversion.service';
-import { ExternalReferenceUpdateService } from './external-ref/external-reference-update.service';
-import { StorageManager } from '../common/services/storage-manager.service';
-import { VersionControlService } from '../version-control/version-control.service';
-import { DatabaseService } from '../database/database.service';
-import { PreloadingDataDto } from './dto/preloading-data.dto';
-import { ConversionOptions } from './interfaces/file-conversion.interface';
+import { FileUploadManagerFacadeService } from '../facade/file-upload-manager-facade.service';
+import { FileSystemNodeService } from '../node/filesystem-node.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
+import { ExternalReferenceUpdateService } from '../external-ref/external-reference-update.service';
+import { StorageManager } from '../../common/services/storage-manager.service';
+import { VersionControlService } from '../../version-control/version-control.service';
+import { DatabaseService } from '../../database/database.service';
+import { PreloadingDataDto } from '../dto/preloading-data.dto';
+import { ConversionOptions } from '../interfaces/file-conversion.interface';
 import {
   ExternalReferenceStats,
   ExternalReferenceInfo,
-} from './types/external-reference.types';
+} from '../types/external-reference.types';
 import {
   MxCadContext,
   ConvertServerFileParam,
-} from './types/mxcad-context.types';
+} from '../types/mxcad-context.types';
 import { Request } from 'express';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
-import { AppConfig } from '../config/app.config';
+import { AppConfig } from '../../config/app.config';
 import {
   findThumbnail,
   findThumbnailSync,
@@ -47,7 +47,7 @@ import {
   getMimeType,
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
-} from './services/thumbnail-utils';
+} from '../infra/thumbnail-utils';
 
 @Injectable()
 export class MxCadService {
@@ -284,7 +284,7 @@ export class MxCadService {
     fileHash: string,
     request: Request
   ): Promise<
-    import('./services/filesystem-node.service').FileSystemNodeContext | null
+    import('../node/filesystem-node.service').FileSystemNodeContext | null
   > {
     return this.fileSystemNodeService.inferContextForMxCadApp(
       fileHash,
