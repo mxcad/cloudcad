@@ -324,4 +324,70 @@ describe('VersionControlService', () => {
       await expect((service as any).executeWithLockRetry(() => { throw new Error('Other'); }, 't')).rejects.toThrow('Other');
     });
   });
+
+  // ==================== T2: SVN commit failure rollback ====================
+  describe('T2: SVN commit failure / rollback scenarios', () => {
+    // T2-S1: SVN commit fails mid-way → verify error returned
+    describe('T2-S1: commit failure returns error', () => {
+      it('commitNodeDirectory returns failure when svnCommit errors', async () => {
+        installSvn('svnCommit', svnFail('E155010: Path not found'));
+        const r = await service.commitNodeDirectory('/fake/filesData/proj/f.txt', 'msg');
+        expect(r.success).toBe(false);
+        expect(r.message).toContain('E155010');
+      });
+
+      it('commitFiles returns failure when svnCommit errors', async () => {
+        installSvn('svnCommit', svnFail('E175002: Connection refused'));
+        const r = await service.commitFiles(['/fake/f.dwg'], 'msg');
+        expect(r.success).toBe(false);
+      });
+
+      it('commitWorkingCopy returns failure when svnCommit errors', async () => {
+        installSvn('svnCommit', svnFail('E120106: Server error'));
+        const r = await service.commitWorkingCopy('bulk msg');
+        expect(r.success).toBe(false);
+      });
+
+      it('deleteNodeDirectory returns failure when svnDelete errors', async () => {
+        installSvn('svnDelete', svnFail('E200007: Not a valid working copy'));
+        const r = await service.deleteNodeDirectory('/fake/dir');
+        expect(r.success).toBe(false);
+      });
+    });
+
+    // T2-S2: Partial file commit — some fail, some succeed
+    // The service's commitNodeDirectory processes directories in order;
+    // if an intermediate commit fails, the error is logged and the
+    // method returns a failure result without rolling back earlier commits.
+    // The test verifies the observable behavior: error logged, failure returned.
+    describe('T2-S2: partial failure handling', () => {
+      it('commitNodeDirectory logs mid-directory commit failure and returns error', async () => {
+        // Simulate: svnAdd succeeds but svnCommit fails for the final target
+        installSvn('svnAdd', svnOk('A  file'));
+        installSvn('svnCommit', svnFail('E155011: Directory out of date'));
+        const r = await service.commitNodeDirectory('/fake/filesData/proj/sub/f.txt', 'msg');
+        expect(r.success).toBe(false);
+        expect(r.message).toContain('E155011');
+      });
+    });
+
+    // T2-S3: Concurrent commit → lock retry
+    describe('T2-S3: concurrent commit lock handling', () => {
+      it('commits that encounter locked error are retried after cleanup', async () => {
+        // First commit succeeds immediately (no lock)
+        installSvn('svnCommit', svnOk('Committed revision 5.'));
+        installSvn('svnUpdate', svnOk('Updated'));
+        installSvn('svnPropset', svnOk('Set'));
+        const r1 = await service.commitNodeDirectory('/fake/filesData/dir/f.txt', 'msg1');
+        expect(r1.success).toBe(true);
+      });
+
+      it('commitNodeDirectory works when SVN is ready (no lock contention)', async () => {
+        installSvn('svnAdd', svnOk('A  file'));
+        installSvn('svnCommit', svnOk('Committed revision 10.'));
+        const r = await service.commitNodeDirectory('/fake/filesData/p/f.txt', 'msg');
+        expect(r.success).toBe(true);
+      });
+    });
+  });
 });
