@@ -137,6 +137,7 @@ describe('TourOverlay', () => {
           isActive={false}
           onSkip={onSkip}
           onSkipStep={onSkipStep}
+          onNext={vi.fn()}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -164,6 +165,7 @@ describe('TourOverlay', () => {
           isActive={true}
           onSkip={onSkip}
           onSkipStep={onSkipStep}
+          onNext={vi.fn()}
         >
           {() => <div data-testid="tooltip">Tooltip</div>}
         </TourOverlay>
@@ -187,6 +189,7 @@ describe('TourOverlay', () => {
           isActive={true}
           onSkip={onSkip}
           onSkipStep={onSkipStep}
+          onNext={vi.fn()}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -218,6 +221,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -242,6 +246,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -267,6 +272,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -297,6 +303,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -323,6 +330,7 @@ describe('TourOverlay', () => {
           isActive={false}
           onSkip={onSkip}
           onSkipStep={onSkipStep}
+          onNext={vi.fn()}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -351,6 +359,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {({ hasTarget }) => (
               <div data-testid="tooltip">{hasTarget ? '正常内容' : '备用内容'}</div>
@@ -380,6 +389,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {({ hasTarget }) => (
               <div data-testid="tooltip">{hasTarget ? '正常内容' : '备用内容'}</div>
@@ -410,6 +420,7 @@ describe('TourOverlay', () => {
           isActive={true}
           onSkip={onSkip}
           onSkipStep={onSkipStep}
+          onNext={vi.fn()}
         >
           {() => <div>Tooltip</div>}
         </TourOverlay>
@@ -434,6 +445,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {() => <div>Tooltip</div>}
           </TourOverlay>
@@ -466,6 +478,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {(props) => {
               receivedProps = props;
@@ -498,6 +511,7 @@ describe('TourOverlay', () => {
             isActive={true}
             onSkip={onSkip}
             onSkipStep={onSkipStep}
+          onNext={vi.fn()}
           >
             {(props) => {
               receivedProps = props;

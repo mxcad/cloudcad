@@ -13,11 +13,18 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { CommonModule } from '../common/common.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
+import { SmsModule } from '../auth/services/sms/sms.module';
+import { AuthModule } from '../auth/auth.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
-  imports: [forwardRef(() => CommonModule), RuntimeConfigModule],
+  imports: [
+    forwardRef(() => CommonModule),
+    RuntimeConfigModule,
+    SmsModule,
+    forwardRef(() => AuthModule),
+  ],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

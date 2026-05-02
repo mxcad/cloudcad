@@ -19,8 +19,9 @@ import {
   FileSystemNode,
   BreadcrumbItem,
   projectToNode,
+  toFileSystemNode,
 } from '../../types/filesystem';
-import type { ProjectDto } from '../../types/api-client';
+import type { ProjectDto, SearchScope } from '../../types/api-client';
 import { PaginationMeta } from '../../components/ui/Pagination';
 
 import { handleError, isAbortError } from '../../utils/errorHandler';
@@ -125,7 +126,7 @@ export const useFileSystemData = ({
                 traversalNode.parentId,
                 { signal }
               );
-              traversalNode = parentResponse.data;
+              traversalNode = toFileSystemNode(parentResponse.data);
             } catch (err) {
               console.warn(
                 '获取父节点失败，停止构建面包屑',
@@ -173,10 +174,6 @@ export const useFileSystemData = ({
     clearSelection();
     setIsMultiSelectMode(false);
 
-    // 标志：是否应该在 finally 中设置 loading = false
-    // 私人空间模式下等待 personalSpaceId 时保持 loading 状态
-    let shouldKeepLoading = false;
-
     try {
       const params: {
         page: number;
@@ -191,24 +188,73 @@ export const useFileSystemData = ({
         params.search = searchQuery;
       }
 
+      // 如果有搜索关键词，使用统一搜索接口
+      if (searchQuery) {
+        let searchScope: SearchScope = 'project_files';
+        let searchProjectId: string | undefined;
+        let searchFilter: 'all' | 'owned' | 'joined' = 'all';
+
+        if (isProjectRootMode) {
+          searchScope = 'project';
+          searchFilter = projectFilter || 'all';
+        } else if (isPersonalSpaceMode || urlProjectId) {
+          searchScope = 'project_files';
+          searchProjectId = isPersonalSpaceMode
+            ? (urlNodeId || urlProjectId || '')
+            : urlProjectId;
+        }
+
+        const searchResponse = await projectsApi.search(
+          searchQuery,
+          {
+            scope: searchScope,
+            filter: searchFilter,
+            projectId: searchProjectId,
+            page: paginationRef.current.page,
+            limit: paginationRef.current.limit,
+          },
+          {
+            signal: abortController.signal,
+          }
+        );
+
+        const searchData = searchResponse.data;
+        if (searchData?.nodes) {
+          const searchNodes = searchData.nodes.map(toFileSystemNode);
+          setNodes(searchNodes);
+          setPaginationMeta({
+            total: searchData.total,
+            page: searchData.page,
+            limit: searchData.limit,
+            totalPages: searchData.totalPages,
+          });
+        }
+
+        setLoading(false);
+        return;
+      }
+
       // 私人空间模式：加载私人空间根目录或子目录
       if (isPersonalSpaceMode) {
         const currentNodeId = urlNodeId || urlProjectId || '';
 
         if (!currentNodeId) {
-          // personalSpaceId 还没准备好，保持 loading 状态，等待下次触发
-          // 不要设置 loading = false，否则会显示空内容
+          // personalSpaceId 还没准备好，保持 loading 状态等待
+          // 不设置错误状态，避免闪烁
           console.log('[useFileSystemData] 等待 personalSpaceId...');
-          shouldKeepLoading = true;
+          // 保持 loading 状态为 true，让用户看到加载中界面而不是错误界面
           return;
         }
 
         // 私人空间回收站视图
         if (isTrashView) {
-          const trashResponse = await projectsApi.getProjectTrash(currentNodeId);
+          const trashResponse = await projectsApi.getProjectTrash(currentNodeId, {
+            page: paginationRef.current.page,
+            limit: paginationRef.current.limit,
+          });
 
           const trashData = trashResponse.data;
-          const trashNodes = trashData?.nodes || [];
+          const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
           setNodes(trashNodes);
 
           if (trashData?.total !== undefined) {
@@ -238,7 +284,7 @@ export const useFileSystemData = ({
             const nodeResponse = await projectsApi.getNode(currentNodeId, {
               signal: abortController.signal,
             });
-            setCurrentNode(nodeResponse.data);
+            setCurrentNode(toFileSystemNode(nodeResponse.data));
           } catch {
             // 忽略错误
           }
@@ -252,13 +298,21 @@ export const useFileSystemData = ({
           projectsApi.getNode(currentNodeId, {
             signal: abortController.signal,
           }),
-          projectsApi.getChildren(currentNodeId, undefined, {
-            signal: abortController.signal,
-          }),
+          projectsApi.getChildren(
+            currentNodeId,
+            {
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+              search: searchQuery || undefined,
+            },
+            {
+              signal: abortController.signal,
+            }
+          ),
         ]);
 
-        const nodeData = nodeResponse.data;
-        const childrenData = childrenResponse.data?.nodes || [];
+        const nodeData = toFileSystemNode(nodeResponse.data);
+        const childrenData = (childrenResponse.data?.nodes || []).map(toFileSystemNode);
         setNodes(childrenData);
         const childrenMeta = childrenResponse.data;
         if (childrenMeta?.total !== undefined) {
@@ -291,22 +345,35 @@ export const useFileSystemData = ({
 
         if (isProjectTrashViewRef.current) {
           // 加载已删除的项目列表（项目回收站）
-          response = await projectsApi.getDeletedProjects({
-            signal: abortController.signal,
-          });
+          response = await projectsApi.getDeletedProjects(
+            {
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+            },
+            {
+              signal: abortController.signal,
+            }
+          );
         } else {
           // 加载正常项目列表，支持按类型过滤
-          response = await projectsApi.list(projectFilter, {
-            signal: abortController.signal,
-          });
+          response = await projectsApi.list(
+            projectFilter,
+            {
+              page: paginationRef.current.page,
+              limit: paginationRef.current.limit,
+            },
+            {
+              signal: abortController.signal,
+            }
+          );
         }
 
         // 处理分页响应
-        // ProjectListResponseDto 包含 projects, total, page, limit, totalPages
+        // ProjectListResponseDto 包含 nodes, total, page, limit, totalPages
         const projectData = response.data;
-        if (projectData?.projects) {
-          // ProjectDto[] 转换为 FileSystemNode[]
-          const projectNodes = projectData.projects.map(projectToNode);
+        if (projectData?.nodes) {
+          // NodeDto[] 转换为 FileSystemNode[]
+          const projectNodes = projectData.nodes.map(projectToNode);
           setNodes(projectNodes);
           setPaginationMeta({
             total: projectData.total,
@@ -343,11 +410,14 @@ export const useFileSystemData = ({
             throw new Error('项目ID不存在，无法加载项目回收站');
           }
 
-          const trashResponse = await projectsApi.getProjectTrash(urlProjectId);
+          const trashResponse = await projectsApi.getProjectTrash(urlProjectId, {
+            page: paginationRef.current.page,
+            limit: paginationRef.current.limit,
+          });
 
           // ProjectTrashResponseDto 包含 nodes, total, page, limit, totalPages
           const trashData = trashResponse.data;
-          const trashNodes = trashData?.nodes || [];
+          const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
           setNodes(trashNodes);
           if (trashData?.total !== undefined) {
             setPaginationMeta({
@@ -371,7 +441,7 @@ export const useFileSystemData = ({
           const projectResponse = await projectsApi.getNode(urlProjectId, {
             signal: abortController.signal,
           });
-          setCurrentNode(projectResponse.data);
+          setCurrentNode(toFileSystemNode(projectResponse.data));
 
           const projectData = projectResponse.data;
           setBreadcrumbs([
@@ -394,12 +464,20 @@ export const useFileSystemData = ({
             projectsApi.getNode(currentNodeId, {
               signal: abortController.signal,
             }),
-            projectsApi.getChildren(currentNodeId, undefined, {
-              signal: abortController.signal,
-            }),
+            projectsApi.getChildren(
+              currentNodeId,
+              {
+                page: paginationRef.current.page,
+                limit: paginationRef.current.limit,
+                search: searchQuery || undefined,
+              },
+              {
+                signal: abortController.signal,
+              }
+            ),
           ]);
 
-          const nodeData = nodeResponse.data;
+          const nodeData = toFileSystemNode(nodeResponse.data);
 
           // 访问控制：项目模式下禁止访问私人空间节点
           // 检查节点或其根节点是否为私人空间
@@ -471,10 +549,7 @@ export const useFileSystemData = ({
       handleError(err, '加载数据失败');
       showToast(errorMessage, 'error');
     } finally {
-      // 如果需要保持 loading 状态（如等待 personalSpaceId），不设置 loading = false
-      if (!shouldKeepLoading) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [
     urlProjectId,

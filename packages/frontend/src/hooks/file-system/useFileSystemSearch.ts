@@ -10,7 +10,8 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useFileSystemStore } from '../../stores/fileSystemStore';
 
 interface UseFileSystemSearchProps {
   loadData: () => void;
@@ -18,9 +19,18 @@ interface UseFileSystemSearchProps {
 
 export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, limit: 20 });
+  const { pageSize: storePageSize, setPageSize: setStorePageSize } = useFileSystemStore();
+  const [pagination, setPagination] = useState({ page: 1, limit: storePageSize });
   const paginationRef = useRef(pagination);
   const shouldLoadDataRef = useRef(false);
+
+  // 同步 store 中的 pageSize 到 pagination
+  useEffect(() => {
+    if (storePageSize !== paginationRef.current.limit) {
+      paginationRef.current = { ...paginationRef.current, limit: storePageSize };
+      setPagination((prev) => ({ ...prev, limit: storePageSize }));
+    }
+  }, [storePageSize]);
 
   const syncPaginationRef = useCallback(() => {
     paginationRef.current = pagination;
@@ -44,8 +54,11 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     paginationRef.current = { page: 1, limit: newPageSize };
     shouldLoadDataRef.current = true;
-    setPagination(paginationRef.current);
-  }, []);
+    // 更新 store 以持久化 pageSize
+    setStorePageSize(newPageSize);
+    // 立即更新 pagination 状态，确保 useEffect 能捕获到变化
+    setPagination({ page: 1, limit: newPageSize });
+  }, [setStorePageSize]);
 
   const checkShouldLoadData = useCallback(() => {
     const shouldLoad = shouldLoadDataRef.current;

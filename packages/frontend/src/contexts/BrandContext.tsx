@@ -5,7 +5,11 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { fetchBrandConfig, type BrandConfig } from '../constants/appConfig';
+import {
+  fetchBrandConfig,
+  cachedBrandConfig,
+  type BrandConfig,
+} from '../constants/appConfig';
 
 interface BrandContextValue {
   config: BrandConfig | null;
@@ -18,10 +22,21 @@ const BrandContext = createContext<BrandContextValue>({
 });
 
 export function BrandProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<BrandConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  // 使用缓存值初始化，避免重复请求和不必要的重渲染
+  const [config, setConfig] = useState<BrandConfig | null>(
+    cachedBrandConfig || null
+  );
+  const [loading, setLoading] = useState(!cachedBrandConfig);
 
   useEffect(() => {
+    // 如果已有缓存，直接使用，不再请求
+    if (cachedBrandConfig) {
+      setConfig(cachedBrandConfig);
+      setLoading(false);
+      return;
+    }
+
+    // 否则发起请求
     fetchBrandConfig().then((cfg) => {
       setConfig(cfg);
       setLoading(false);

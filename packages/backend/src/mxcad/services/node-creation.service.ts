@@ -18,11 +18,13 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { StorageManager } from '../../common/services/storage-manager.service';
+import { StorageManager, NodeStorageInfo } from '../../common/services/storage-manager.service';
+import { Prisma } from '@prisma/client';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
 import { NodeUtils, CreateNodeOptions } from '../../common/utils/node-utils';
 import { FileUtils } from '../../common/utils/file-utils';
 import { FileStatus } from '@prisma/client';
+import { FileTreeService } from '../../file-system/services/file-tree.service';
 
 // 重新导出 CreateNodeOptions 以供其他模块使用
 export { CreateNodeOptions } from '../../common/utils/node-utils';
@@ -81,7 +83,8 @@ export class NodeCreationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly storageManager: StorageManager,
-    private readonly concurrencyManager: ConcurrencyManager
+    private readonly concurrencyManager: ConcurrencyManager,
+    private readonly fileTreeService: FileTreeService
   ) {}
 
   /**
@@ -216,8 +219,7 @@ export class NodeCreationService {
     this.logger.log(`[performCreateNode] 开始创建节点: ${name} (${fileHash})`);
 
     let nodeId: string | undefined;
-    let storageInfo: any = null;
-
+          let storageInfo: NodeStorageInfo | null = null;
     try {
       // 阶段1：数据库操作（事务）
       await this.databaseService.$transaction(async (tx) => {
@@ -260,6 +262,9 @@ export class NodeCreationService {
           existingNames
         );
 
+        // 获取父节点的projectId
+        const projectId = await this.fileTreeService.getProjectId(parentId);
+
         // 创建新节点
         const newNode = await tx.fileSystemNode.create({
           data: {
@@ -275,6 +280,7 @@ export class NodeCreationService {
             fileStatus: FileStatus.COMPLETED,
             fileHash,
             ownerId,
+            projectId,
           },
         });
 
@@ -307,7 +313,7 @@ export class NodeCreationService {
           // 拷贝文件
           const copySuccess = await FileUtils.copyFile(
             sourceFilePath,
-            storageInfo.fullPath
+            storageInfo.filePath
           );
           if (!copySuccess) {
             throw new InternalServerErrorException('文件拷贝失败');
@@ -316,11 +322,11 @@ export class NodeCreationService {
           // 更新节点的 path
           await this.databaseService.fileSystemNode.update({
             where: { id: nodeId },
-            data: { path: storageInfo.relativePath },
+            data: { path: storageInfo.fileRelativePath },
           });
 
           this.logger.log(
-            `[performCreateNode] IO操作成功: ${storageInfo.relativePath}`
+            `[performCreateNode] IO操作成功: ${storageInfo.fileRelativePath}`
           );
         } catch (error) {
           // IO失败，回滚数据库
@@ -370,7 +376,7 @@ export class NodeCreationService {
     this.logger.log(`[performReferenceNode] 开始引用节点: ${hash}`);
 
     let newNodeId: string | undefined;
-    let storageInfo: any = null;
+    let storageInfo: NodeStorageInfo | null = null;
     let originalNodeInfo: {
       name: string;
       extension: string | null;
@@ -454,6 +460,9 @@ export class NodeCreationService {
           existingNames
         );
 
+        // 获取父节点的projectId
+        const projectId = await this.fileTreeService.getProjectId(parentId);
+
         // 创建引用节点
         const newNode = await tx.fileSystemNode.create({
           data: {
@@ -469,6 +478,7 @@ export class NodeCreationService {
             fileStatus: FileStatus.COMPLETED,
             fileHash: existingNode.fileHash,
             ownerId,
+            projectId,
           },
         });
 
@@ -513,7 +523,7 @@ export class NodeCreationService {
         const sourceFullPath = this.storageManager.getFullPath(sourceNode.path);
         const copySuccess = await FileUtils.copyFile(
           sourceFullPath,
-          storageInfo.fullPath
+          storageInfo.filePath
         );
         if (!copySuccess) {
           throw new InternalServerErrorException('文件拷贝失败');
@@ -522,11 +532,11 @@ export class NodeCreationService {
         // 更新节点的 path
         await this.databaseService.fileSystemNode.update({
           where: { id: newNodeId },
-          data: { path: storageInfo.relativePath },
+          data: { path: storageInfo.fileRelativePath },
         });
 
         this.logger.log(
-          `[performReferenceNode] IO操作成功: ${storageInfo.relativePath}`
+          `[performReferenceNode] IO操作成功: ${storageInfo.fileRelativePath}`
         );
       } catch (error) {
         // IO失败，回滚数据库
@@ -573,7 +583,7 @@ export class NodeCreationService {
    * @returns 节点名称列表
    */
   private async getExistingNodeNames(
-    tx: any,
+    tx: Prisma.TransactionClient,
     parentId: string
   ): Promise<string[]> {
     const nodes = await tx.fileSystemNode.findMany({
@@ -586,6 +596,6 @@ export class NodeCreationService {
       },
     });
 
-    return nodes.map((node: any) => node.name);
+    return nodes.map((node: { name: string }) => node.name);
   }
 }

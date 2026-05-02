@@ -10,8 +10,8 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
 
 /**
  * 检查文件是否存在请求 DTO
@@ -48,4 +48,13 @@ export class CheckFileExistDto {
   @IsNumber()
   @IsNotEmpty()
   fileSize: number;
+
+  @ApiPropertyOptional({
+    description: '冲突处理策略',
+    enum: ['skip', 'overwrite', 'rename'],
+    default: 'rename',
+  })
+  @IsEnum(['skip', 'overwrite', 'rename'])
+  @IsOptional()
+  conflictStrategy?: 'skip' | 'overwrite' | 'rename';
 }

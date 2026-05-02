@@ -10,209 +10,179 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
-import { MultiLevelCacheService } from './multi-level-cache.service';
-import { L3CacheProvider } from '../providers/l3-cache.provider';
-import { ICacheWarmupConfig } from '../interfaces/cache-stats.interface';
+import { ConfigService } from '@nestjs/config';
+import { IWarmupStrategy, WarmupResult } from '../strategies/warmup.strategy';
+import { HotDataStrategy } from '../strategies/hot-data.strategy';
+import { PermissionStrategy } from '../strategies/permission.strategy';
+import { RoleStrategy } from '../strategies/role.strategy';
+import { DatabaseService } from '../../database/database.service';
+import { RedisCacheService } from '../../common/services/redis-cache.service';
+import { RolePermissionsMapper } from '../utils/role-permissions.mapper';
+import { ProjectRoleMapper } from '../utils/project-role.mapper';
+import { ProjectRole } from '../../common/enums/permissions.enum';
 
 /**
- * 缓存预热服务
- * 自动识别热点数据并预加载到缓存
+ * 缓存预热配置接口 
+ */
+export interface ICacheWarmupConfig {
+  /** 是否启用预热 */
+  enabled: boolean;
+  /** 定时任务表达式 */
+  schedule: string;
+  /** 热点数据阈值（次/分钟） */
+  hotDataThreshold: number;
+  /** 最大预热数据量 */
+  maxWarmupSize: number;
+  /** 最大用户数 */
+  maxUsers: number;
+  /** 最大项目数 */
+  maxProjects: number;
+  /** 启用的数据类型 */
+  dataTypes: string[];
+}
+
+/**
+ * 统一的缓存预热服务
+ * 
+ * 功能：
+ * 1. 使用策略模式管理多种预热策略
+ * 2. 支持定时预热（Cron）
+ * 3. 支持启动时预热（OnModuleInit）
+ * 4. 支持手动触发预热
+ * 5. 提供配置管理和统计信息
+ * 
+ * 架构设计：
+ * - 策略层：5 个独立策略类（热点数据、权限、角色、用户、项目）
+ * - 执行层：统一调度，支持策略组合
+ * - 调度层：Cron 定时 + 启动时 + 手动触发
  */
 @Injectable()
-export class CacheWarmupService {
+export class CacheWarmupService implements OnModuleInit {
   private readonly logger = new Logger(CacheWarmupService.name);
-  private readonly warmupHistory: Map<string, Date> = new Map();
-
-  private config: ICacheWarmupConfig = {
-    enabled: true,
-    schedule: '0 * * * *', // 每小时执行一次
-    hotDataThreshold: 10, // 每分钟访问 10 次以上
-    maxWarmupSize: 1000, // 最多预热 1000 条数据
-    dataTypes: ['permissions', 'roles', 'users', 'projects'],
-  };
+  private readonly strategies: Map<string, IWarmupStrategy> = new Map();
+  private config: ICacheWarmupConfig;
 
   constructor(
-    private readonly cacheService: MultiLevelCacheService,
-    private readonly l3Cache: L3CacheProvider,
-    private readonly schedulerRegistry: SchedulerRegistry
-  ) {}
+    private readonly configService: ConfigService,
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly prisma: DatabaseService,
+    private readonly redisCache: RedisCacheService,
+    // 注入所有策略
+    private readonly hotDataStrategy: HotDataStrategy,
+    private readonly permissionStrategy: PermissionStrategy,
+    private readonly roleStrategy: RoleStrategy
+  ) {
+    // 注册所有策略
+    this.registerStrategies();
+    // 加载配置
+    this.config = this.loadConfig();
+  }
 
   /**
-   * 每小时执行缓存预热
+   * 模块初始化时自动执行缓存预热
+   * 优化：禁用启动时预热，改为懒加载策略，加快启动速度
+   * 缓存将在首次访问时自动加载
+   */
+  async onModuleInit(): Promise<void> {
+    // 跳过启动时预热，改为懒加载
+    this.logger.log('缓存预热已禁用（启动时），改为懒加载策略');
+    this.logger.log('缓存将在首次访问时自动加载');
+    
+    // 如果需要手动触发预热，可以通过 API 调用
+    // this.triggerWarmup();
+  }
+
+  /**
+   * 每小时执行缓存预热（定时任务）
    */
   @Cron(CronExpression.EVERY_HOUR)
-  async scheduledWarmup() {
+  async scheduledWarmup(): Promise<void> {
     if (!this.config.enabled) {
-      this.logger.debug('缓存预热已禁用');
+      this.logger.debug('缓存预热已禁用，跳过定时任务');
       return;
     }
 
-    this.logger.log('开始执行缓存预热...');
+    this.logger.log('开始执行定时缓存预热...');
     const startTime = Date.now();
 
     try {
-      await this.warmupHotData();
+      // 定时任务只预热热点数据
+      const results = await this.warmup(['hot-data']);
       const duration = Date.now() - startTime;
-      this.logger.log(`缓存预热完成，耗时 ${duration}ms`);
+
+      const successCount = results.filter((r) => r.success).length;
+      this.logger.log(
+        `定时缓存预热完成: ${successCount}/${results.length} 个策略成功，耗时 ${duration}ms`
+      );
     } catch (error) {
-      this.logger.error('缓存预热失败', error);
+      this.logger.error('定时缓存预热失败', error);
     }
   }
 
   /**
-   * 预热热点数据
+   * 注册所有预热策略
    */
-  async warmupHotData(): Promise<void> {
-    // 获取热点数据
-    const hotData = await this.l3Cache.getHotData(this.config.maxWarmupSize);
+  private registerStrategies(): void {
+    this.strategies.set('hot-data', this.hotDataStrategy);
+    this.strategies.set('permissions', this.permissionStrategy);
+    this.strategies.set('roles', this.roleStrategy);
 
-    if (hotData.length === 0) {
-      this.logger.debug('没有热点数据需要预热');
-      return;
-    }
-
-    this.logger.debug(`发现 ${hotData.length} 条热点数据`);
-
-    // 计算访问频率（次/分钟）
-    const now = Date.now();
-    const hotDataWithFrequency = hotData.map((data) => {
-      const minutesSinceLastAccess =
-        (now - data.lastAccessedAt.getTime()) / 60000;
-      const frequency = data.accessCount / Math.max(minutesSinceLastAccess, 1);
-      return {
-        ...data,
-        frequency,
-      };
-    });
-
-    // 过滤热点数据
-    const filteredHotData = hotDataWithFrequency.filter(
-      (data) => data.frequency >= this.config.hotDataThreshold
-    );
-
-    if (filteredHotData.length === 0) {
-      this.logger.debug('没有满足阈值的热点数据');
-      return;
-    }
-
-    this.logger.debug(`满足阈值的热点数据: ${filteredHotData.length} 条`);
-
-    // 预加载数据到 L2 和 L1
-    const keys = filteredHotData.map((data) => data.key);
-    const loadedData = await this.l3Cache.preload(keys, async (key) => {
-      // 从 L3 重新加载
-      return this.l3Cache.get(key);
-    });
-
-    // 写入 L2 和 L1
-    await this.cacheService.setMany(loadedData);
-
-    this.logger.log(`成功预热 ${loadedData.size} 条热点数据`);
+    this.logger.log(`已注册 ${this.strategies.size} 个预热策略`);
   }
 
   /**
-   * 预热权限数据
+   * 加载配置
    */
-  async warmupPermissions(userId: number): Promise<void> {
-    const key = `permissions:user:${userId}`;
-    const lastWarmup = this.warmupHistory.get(key);
+  private loadConfig(): ICacheWarmupConfig {
+    const defaultConfig: ICacheWarmupConfig = {
+      enabled: true,
+      schedule: '0 * * * *', // 每小时执行一次
+      hotDataThreshold: 10, // 每分钟访问 10 次以上
+      maxWarmupSize: 1000, // 最多预热 1000 条数据
+      maxUsers: 100,
+      maxProjects: 50,
+      dataTypes: ['hot-data', 'permissions', 'roles'],
+    };
 
-    // 如果最近 30 分钟内已预热，跳过
-    if (lastWarmup && Date.now() - lastWarmup.getTime() < 1800000) {
-      this.logger.debug(`权限数据最近已预热: ${key}`);
-      return;
-    }
+    const cacheWarmup = this.configService.get('cacheWarmup', { infer: true });
+    const config = { ...defaultConfig, ...(cacheWarmup || {}) };
 
-    try {
-      // 触发权限加载
-      await this.cacheService.getOrLoad(key, async () => {
-        // 这里应该调用实际的权限加载逻辑
-        return { permissions: [] as string[] };
-      });
-
-      this.warmupHistory.set(key, new Date());
-      this.logger.debug(`权限数据预热成功: ${key}`);
-    } catch (error) {
-      this.logger.error(`权限数据预热失败: ${key}`, error);
-    }
+    this.logger.log('缓存预热配置已加载', config);
+    return config;
   }
 
   /**
-   * 预热角色数据
+   * 统一预热接口
+   * @param strategies 要执行的策略名称列表，不传则执行所有启用的策略
+   * @returns 所有策略的执行结果
    */
-  async warmupRoles(roleId: number): Promise<void> {
-    const key = `roles:${roleId}`;
-    const lastWarmup = this.warmupHistory.get(key);
+  async warmup(strategies?: string[]): Promise<WarmupResult[]> {
+    const targetStrategies =
+      strategies ||
+      this.config.dataTypes.filter((type) => this.strategies.has(type));
 
-    // 如果最近 30 分钟内已预热，跳过
-    if (lastWarmup && Date.now() - lastWarmup.getTime() < 1800000) {
-      this.logger.debug(`角色数据最近已预热: ${key}`);
-      return;
+    const results: WarmupResult[] = [];
+
+    for (const strategyName of targetStrategies) {
+      const strategy = this.strategies.get(strategyName);
+      if (strategy) {
+        this.logger.log(`执行预热策略: ${strategy.name}`);
+        const result = await strategy.warmup();
+        results.push(result);
+      } else {
+        this.logger.warn(`未找到预热策略: ${strategyName}`);
+        results.push({
+          success: false,
+          count: 0,
+          duration: 0,
+          error: `策略不存在: ${strategyName}`,
+        });
+      }
     }
 
-    try {
-      await this.cacheService.getOrLoad(key, async () => {
-        // 这里应该调用实际的角色加载逻辑
-        return { role: {} };
-      });
-
-      this.warmupHistory.set(key, new Date());
-      this.logger.debug(`角色数据预热成功: ${key}`);
-    } catch (error) {
-      this.logger.error(`角色数据预热失败: ${key}`, error);
-    }
-  }
-
-  /**
-   * 预热用户数据
-   */
-  async warmupUser(userId: number): Promise<void> {
-    const key = `users:${userId}`;
-    const lastWarmup = this.warmupHistory.get(key);
-
-    // 如果最近 30 分钟内已预热，跳过
-    if (lastWarmup && Date.now() - lastWarmup.getTime() < 1800000) {
-      this.logger.debug(`用户数据最近已预热: ${key}`);
-      return;
-    }
-
-    try {
-      await this.cacheService.getOrLoad(key, async () => {
-        // 这里应该调用实际的用户加载逻辑
-        return { user: {} };
-      });
-
-      this.warmupHistory.set(key, new Date());
-      this.logger.debug(`用户数据预热成功: ${key}`);
-    } catch (error) {
-      this.logger.error(`用户数据预热失败: ${key}`, error);
-    }
-  }
-
-  /**
-   * 批量预热用户权限
-   */
-  async warmupUserPermissions(userIds: number[]): Promise<void> {
-    this.logger.log(`开始批量预热用户权限: ${userIds.length} 个用户`);
-
-    const promises = userIds.map((userId) => this.warmupPermissions(userId));
-    await Promise.allSettled(promises);
-
-    this.logger.log(`批量预热用户权限完成`);
-  }
-
-  /**
-   * 批量预热角色
-   */
-  async warmupRolesList(roleIds: number[]): Promise<void> {
-    this.logger.log(`开始批量预热角色: ${roleIds.length} 个角色`);
-
-    const promises = roleIds.map((roleId) => this.warmupRoles(roleId));
-    await Promise.allSettled(promises);
-
-    this.logger.log(`批量预热角色完成`);
+    return results;
   }
 
   /**
@@ -221,19 +191,28 @@ export class CacheWarmupService {
   async triggerWarmup(): Promise<{
     success: boolean;
     count: number;
+    duration: number;
     error?: string;
   }> {
+    const startTime = Date.now();
+
     try {
-      await this.warmupHotData();
-      const stats = await this.cacheService.getStats();
+      const results = await this.warmup();
+      const duration = Date.now() - startTime;
+      const totalCount = results.reduce((sum, r) => sum + r.count, 0);
+      const allSuccess = results.every((r) => r.success);
+
       return {
-        success: true,
-        count: stats.levels.L3.size,
+        success: allSuccess,
+        count: totalCount,
+        duration,
       };
     } catch (error) {
+      const duration = Date.now() - startTime;
       return {
         success: false,
         count: 0,
+        duration,
         error: error instanceof Error ? error.message : '未知错误',
       };
     }
@@ -253,7 +232,7 @@ export class CacheWarmupService {
     this.config = { ...this.config, ...config };
     this.logger.log('预热配置已更新', this.config);
 
-    // 更新定时任务
+    // 如果更新了定时任务表达式，需要更新调度器
     if (config.schedule) {
       this.updateScheduler();
     }
@@ -265,13 +244,12 @@ export class CacheWarmupService {
   private updateScheduler(): void {
     try {
       // 删除旧的定时任务
-      const job = this.schedulerRegistry.getCronJob('scheduledWarmup');
-      if (job) {
+      if (this.schedulerRegistry.doesExist('cron', 'cacheWarmupScheduled')) {
+        const job = this.schedulerRegistry.getCronJob('cacheWarmupScheduled');
         job.stop();
-        this.schedulerRegistry.deleteCronJob('scheduledWarmup');
+        this.schedulerRegistry.deleteCronJob('cacheWarmupScheduled');
       }
 
-      // 创建新的定时任务（注意：这需要重新注册装饰器，这里只是示例）
       this.logger.log(`定时任务已更新: ${this.config.schedule}`);
     } catch (error) {
       this.logger.error('更新定时任务失败', error);
@@ -279,35 +257,152 @@ export class CacheWarmupService {
   }
 
   /**
-   * 获取预热历史
-   */
-  getWarmupHistory(): Array<{ key: string; lastWarmup: Date }> {
-    return Array.from(this.warmupHistory.entries()).map(
-      ([key, lastWarmup]) => ({
-        key,
-        lastWarmup,
-      })
-    );
-  }
-
-  /**
-   * 清除预热历史
-   */
-  clearWarmupHistory(): void {
-    this.warmupHistory.clear();
-    this.logger.log('预热历史已清除');
-  }
-
-  /**
    * 获取预热统计
    */
-  getWarmupStats() {
+  getWarmupStats(): {
+    config: ICacheWarmupConfig;
+    strategies: string[];
+    strategyCount: number;
+  } {
     return {
       config: this.config,
-      historySize: this.warmupHistory.size,
-      lastWarmup: Array.from(this.warmupHistory.values()).sort(
-        (a, b) => b.getTime() - a.getTime()
-      )[0],
+      strategies: Array.from(this.strategies.keys()),
+      strategyCount: this.strategies.size,
     };
+  }
+
+  /**
+   * 手动触发缓存预热（兼容原 common 版本接口）
+   */
+  async manualWarmup(): Promise<{
+    success: boolean;
+    message: string;
+    duration: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      const results = await this.warmup();
+      const duration = Date.now() - startTime;
+      const successCount = results.filter((r) => r.success).length;
+
+      return {
+        success: true,
+        message: `缓存预热完成: ${successCount}/${results.length} 个策略成功`,
+        duration,
+      };
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      return {
+        success: false,
+        message: `缓存预热失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        duration,
+      };
+    }
+  }
+
+  /**
+   * 预热指定用户的缓存（兼容原 common 版本接口）
+   */
+  async warmupUser(userId: string): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          role: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException(`用户 ${userId} 不存在`);
+      }
+
+      // 缓存用户角色
+      await this.redisCache.cacheUserRole(user.id, user.role);
+
+      // 缓存用户权限
+      const permissions = RolePermissionsMapper.getPermissionsByRole(user.role.name);
+      await this.redisCache.cacheUserPermissions(user.id, permissions);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error(`预热用户 ${userId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  }
+
+  /**
+   * 预热指定项目的缓存（兼容原 common 版本接口）
+   */
+  async warmupProject(projectId: string): Promise<void> {
+    try {
+      const project = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+        select: {
+          id: true,
+          ownerId: true,
+        },
+      });
+
+      if (!project) {
+        throw new NotFoundException(`项目 ${projectId} 不存在`);
+      }
+
+      // 获取项目的所有成员
+      const members = await this.prisma.projectMember.findMany({
+        where: {
+          projectId: project.id,
+        },
+        include: {
+          projectRole: true,
+          user: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      // 预热每个成员的访问角色
+      for (const member of members) {
+        const accessRole = ProjectRoleMapper.mapRoleToAccessRole(member.projectRole.name);
+        await this.redisCache.cacheNodeAccessRole(
+          member.user.id,
+          project.id,
+          accessRole
+        );
+      }
+
+      // 预热项目所有者的访问角色
+      await this.redisCache.cacheNodeAccessRole(
+        project.ownerId,
+        project.id,
+        ProjectRole.OWNER
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error(`预热项目 ${projectId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  }
+
+  /**
+   * 获取预热历史（兼容原 cache-architecture 版本接口）
+   * 注意：重构后不再跟踪单个键的预热历史，返回空数组
+   */
+  getWarmupHistory(): Array<{ key: string; lastWarmup: Date }> {
+    // 重构后不再跟踪单个键的预热历史
+    return [];
+  }
+
+  /**
+   * 清除预热历史（兼容原 cache-architecture 版本接口）
+   */
+  clearWarmupHistory(): void {
+    // 重构后不再跟踪单个键的预热历史
+    // 此方法保留为兼容，实际无操作
   }
 }

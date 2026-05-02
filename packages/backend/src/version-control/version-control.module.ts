@@ -10,18 +10,25 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { VersionControlService } from './version-control.service';
 import { VersionControlController } from './version-control.controller';
 import { RolesModule } from '../roles/roles.module';
 import { DatabaseModule } from '../database/database.module';
-import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
+import { CommonModule } from '../common/common.module';
+import { FileSystemModule } from '../file-system/file-system.module';
 
 @Module({
-  imports: [ConfigModule, RolesModule, DatabaseModule],
+  imports: [
+    ConfigModule,
+    CommonModule,
+    DatabaseModule,
+    forwardRef(() => RolesModule),
+    forwardRef(() => FileSystemModule),
+  ],
   controllers: [VersionControlController],
-  providers: [VersionControlService, RequireProjectPermissionGuard],
+  providers: [VersionControlService],
   exports: [VersionControlService],
 })
 export class VersionControlModule {}

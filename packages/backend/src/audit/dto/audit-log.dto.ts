@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { AuditAction, ResourceType } from '@prisma/client';
+import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 
 export class AuditLogUserDto {
   @ApiProperty({ description: '用户 ID' })
@@ -31,10 +31,10 @@ export class AuditLogDto {
   @ApiProperty({ description: '审计日志 ID' })
   id: string;
 
-  @ApiProperty({ description: '操作类型', enum: AuditAction })
+  @ApiProperty({ description: '操作类型', enum: Object.values(AuditAction), enumName: 'AuditActionEnum' })
   action: AuditAction;
 
-  @ApiProperty({ description: '资源类型', enum: ResourceType })
+  @ApiProperty({ description: '资源类型', enum: Object.values(ResourceType), enumName: 'ResourceTypeEnum' })
   resourceType: ResourceType;
 
   @ApiProperty({ description: '资源 ID', required: false })
@@ -61,12 +61,12 @@ export class AuditLogDto {
   @ApiProperty({ description: '创建时间' })
   createdAt: Date;
 
-  @ApiProperty({ description: '用户信息', type: AuditLogUserDto })
+  @ApiProperty({ description: '用户信息', type: () => AuditLogUserDto })
   user: AuditLogUserDto;
 }
 
 export class AuditLogListResponseDto {
-  @ApiProperty({ description: '审计日志列表', type: [AuditLogDto] })
+  @ApiProperty({ description: '审计日志列表', type: () => [AuditLogDto] })
   logs: AuditLogDto[];
 
   @ApiProperty({ description: '总数' })

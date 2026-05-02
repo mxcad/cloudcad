@@ -32,18 +32,26 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import { ApiTags, ApiConsumes, ApiResponse, ApiBody, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiConsumes,
+  ApiResponse,
+  ApiBody,
+  ApiOperation,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { MxCadService } from './mxcad.service';
 import { DatabaseService } from '../database/database.service';
+import { FileSystemNode, Prisma } from '@prisma/client';
 import { PreloadingDataDto } from './dto/preloading-data.dto';
-import { UploadExtReferenceDto } from './dto/upload-ext-reference.dto';
+import { UploadExtReferenceFileDto } from './dto/upload-ext-reference-file.dto';
 import { UploadFilesDto } from './dto/upload-files.dto';
 import { FileExistResponseDto } from './dto/file-exist-response.dto';
 import { ChunkExistResponseDto } from './dto/chunk-exist-response.dto';
@@ -59,21 +67,38 @@ import { UploadThumbnailResponseDto } from './dto/upload-thumbnail-response.dto'
 import { UploadThumbnailDto } from './dto/upload-thumbnail.dto';
 import { SaveMxwebResponseDto } from './dto/save-mxweb-response.dto';
 import { SaveMxwebDto } from './dto/save-mxweb.dto';
+import { SaveMxwebAsDto } from './dto/save-mxweb-as.dto';
+import { SaveMxwebAsResponseDto } from './dto/save-mxweb-as-response.dto';
 import { MxCadRequest } from './types/request.types';
+import { MxCadContext } from './types/mxcad-context.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
 import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
+import { FileTreeService } from '../file-system/services/file-tree.service';
+import { PermissionService } from '../common/services/permission.service';
+import { ProjectPermissionService } from '../roles/project-permission.service';
+import {
+  findThumbnail,
+  getThumbnailFileName,
+  getThumbnailFormatFromFileName,
+  getMimeType,
+  THUMBNAIL_FORMATS,
+  type ThumbnailFormat,
+} from './services/thumbnail-utils';
 import { VersionControlService } from '../version-control/version-control.service';
 import { AppConfig } from '../config/app.config';
 import { FileConversionService } from './services/file-conversion.service';
+import { SaveAsService } from './services/save-as.service';
+import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-
+import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
+@UseInterceptors(StorageQuotaInterceptor)
 export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
   private readonly mxCadFileExt: string;
@@ -95,10 +120,16 @@ export class MxCadController {
     private readonly configService: ConfigService<AppConfig>,
     private readonly storageService: StorageService,
     private readonly permissionService: FileSystemPermissionService,
+    private readonly systemPermissionService: PermissionService,
+    private readonly projectPermissionService: ProjectPermissionService,
     private readonly versionControlService: VersionControlService,
-    private readonly fileConversionService: FileConversionService
+    private readonly fileConversionService: FileConversionService,
+    private readonly saveAsService: SaveAsService,
+    private readonly mxcadFileHandler: MxcadFileHandlerService,
+    private readonly fileTreeService: FileTreeService
   ) {
-    this.mxCadFileExt = this.configService.get('mxcad.fileExt', { infer: true }) || '.mxweb';
+    this.mxCadFileExt =
+      this.configService.get('mxcad.fileExt', { infer: true }) || '.mxweb';
     const cacheTTLConfig = this.configService.get('cacheTTL', { infer: true });
     this.cacheTTL = cacheTTLConfig.mxcad * 1000; // 转为毫秒
   }
@@ -136,10 +167,10 @@ export class MxCadController {
 
   /**
    * 检查文件是否存在
+   * 注意：公共资源库（libraryKey='drawing'或'block'）使用系统权限检查，由 buildContextFromRequest 处理
    */
   @Post('files/fileisExist')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({
     status: 200,
@@ -170,10 +201,10 @@ export class MxCadController {
 
   /**
    * 检查目录中是否存在重复文件（相同文件名和hash）
+   * 注意：公共资源库使用系统权限检查，由 buildContextFromRequest 处理
    */
   @Post('files/checkDuplicate')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '检查目录中是否存在重复文件' })
   @ApiResponse({
@@ -338,11 +369,14 @@ export class MxCadController {
 
   /**
    * 上传文件（支持分片）
+   *
+   * 注意：不使用 RequireProjectPermissionGuard，因为：
+   * 1. Guard 在 Multer 拦截器之前执行，此时 request.body 还未被解析
+   * 2. 权限检查已在 buildContextFromRequest 方法内部进行（Multer 解析之后）
    */
   @Post('files/uploadFiles')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(AnyFilesInterceptor())
-  @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadFilesDto })
   @ApiResponse({
@@ -395,8 +429,8 @@ export class MxCadController {
           context,
           body.srcDwgNodeId // 外部参照上传时的源图纸节点 ID
         );
-        // 返回标准格式
-        return { nodeId: result.nodeId, tz: result.tz };
+        // 返回完整结果，包含 ret 字段用于判断是否是跳过策略
+        return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
       } catch (error) {
         this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
         throw new InternalServerErrorException(
@@ -429,8 +463,8 @@ export class MxCadController {
           body.chunks,
           context
         );
-        // 返回标准格式
-        return { nodeId: result.nodeId, tz: result.tz };
+        // 返回完整结果，包含 ret 字段用于判断是否是跳过策略
+        return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
       } catch (error) {
         this.mxCadService.logError(`分片文件处理失败: ${error.message}`, error);
         throw new InternalServerErrorException(
@@ -450,8 +484,8 @@ export class MxCadController {
         body.size,
         context
       );
-      // 返回标准格式
-      return { nodeId: result.nodeId, tz: result.tz };
+      // 返回完整结果，包含 ret 字段用于判断是否是跳过策略
+      return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
     }
   }
 
@@ -475,7 +509,7 @@ export class MxCadController {
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('commitMessage') commitMessage: string,
-    @Req() request: any
+    @Req() request: MxCadRequest
   ) {
     this.logger.log(
       `[saveMxwebToNode] 开始保存: nodeId=${nodeId}, commitMessage=${commitMessage || '(无)'}`
@@ -508,16 +542,137 @@ export class MxCadController {
   }
 
   /**
+   * 保存mxweb文件为新文件（Save As）
+   * 路由: POST /api/mxcad/save-as
+   */
+  @Post('save-as')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: SaveMxwebAsDto })
+  @ApiResponse({
+    status: 200,
+    description: '保存mxweb文件为新文件',
+    type: SaveMxwebAsResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+  })
+  async saveMxwebAs(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: SaveMxwebAsDto,
+    @Req() request: MxCadRequest
+  ) {
+    this.logger.log(
+      `[saveMxwebAs] 开始保存: targetType=${dto.targetType}, parentId=${dto.targetParentId}, format=${dto.format}`
+    );
+
+    const userId = request.user?.id;
+    const userName =
+      request.user?.username || request.user?.nickname || request.user?.email;
+
+    if (!userId) {
+      throw new UnauthorizedException('用户未登录');
+    }
+
+    if (dto.targetType === 'project' && !dto.projectId) {
+      throw new BadRequestException('保存到项目时必须提供projectId');
+    }
+
+    // ==================== 权限验证 ====================
+    // 1. 验证目标父节点存在
+    const targetParentNode = await this.prisma.fileSystemNode.findUnique({
+      where: { id: dto.targetParentId, deletedAt: null },
+      select: { id: true, isFolder: true, personalSpaceKey: true },
+    });
+
+    if (!targetParentNode) {
+      throw new BadRequestException('目标文件夹不存在');
+    }
+
+    if (!targetParentNode.isFolder) {
+      throw new BadRequestException('目标必须是文件夹');
+    }
+
+    // 2. 根据保存类型进行权限验证
+    if (dto.targetType === 'personal') {
+      // 私人空间：验证目标节点是否属于当前用户
+      // 查找目标节点的根节点（私人空间）
+      const rootId = await this.fileTreeService.getProjectId(
+        dto.targetParentId
+      );
+      const rootNode = rootId
+        ? await this.prisma.fileSystemNode.findUnique({
+            where: { id: rootId },
+            select: { personalSpaceKey: true, ownerId: true },
+          })
+        : null;
+
+      // 验证是否为当前用户的私人空间
+      const isUserPersonalSpace =
+        rootNode?.personalSpaceKey === userId || rootNode?.ownerId === userId;
+
+      if (!isUserPersonalSpace) {
+        this.logger.warn(
+          `[saveMxwebAs] 用户 ${userId} 尝试保存到非自己的私人空间: ${dto.targetParentId}`
+        );
+        throw new BadRequestException('您没有权限保存到此位置');
+      }
+    } else {
+      // 项目：验证用户是否有项目的 CAD_SAVE 权限
+      if (dto.projectId) {
+        const hasPermission = await this.permissionService.checkNodePermission(
+          userId,
+          dto.projectId,
+          ProjectPermission.CAD_SAVE
+        );
+
+        if (!hasPermission) {
+          this.logger.warn(
+            `[saveMxwebAs] 用户 ${userId} 没有项目 ${dto.projectId} 的 CAD_SAVE 权限`
+          );
+          throw new BadRequestException('您没有权限保存到此项目');
+        }
+      } else {
+        throw new BadRequestException('保存到项目时必须提供projectId');
+      }
+    }
+    // ==================== 权限验证结束 ====================
+
+    const result = await this.saveAsService.saveMxwebAs({
+      file,
+      targetType: dto.targetType,
+      targetParentId: dto.targetParentId,
+      projectId: dto.projectId,
+      format: dto.format || 'dwg',
+      userId,
+      userName,
+      commitMessage: dto.commitMessage,
+      fileName: dto.fileName,
+    });
+
+    if (!result.success) {
+      this.logger.error(`[saveMxwebAs] 保存失败: ${result.message}`);
+      throw new BadRequestException(result.message);
+    }
+
+    this.logger.log(`[saveMxwebAs] 保存成功: nodeId=${result.nodeId}`);
+    return result;
+  }
+
+  /**
    * 上传外部参照 DWG
    *
    * 优化流程：先上传到临时目录，验证通过后直接移动到目标目录，避免转换后再拷贝。
    */
-  @Post('up_ext_reference_dwg')
+  @Post('up_ext_reference_dwg/:nodeId')
   @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @UseInterceptors(FileInterceptor('file'))
+  @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadExtReferenceDto })
+  @ApiBody({ type: UploadExtReferenceFileDto })
   @ApiResponse({
     status: 200,
     description: '上传成功',
@@ -542,11 +697,15 @@ export class MxCadController {
     description: '无效的外部参照文件',
   })
   async uploadExtReferenceDwg(
+    @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: UploadExtReferenceDto,
+    @Body() body: UploadExtReferenceFileDto,
     @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
+    // 确保 body 中的 nodeId 与路由参数一致
+    body.nodeId = nodeId;
+
     this.logger.log(`[uploadExtReferenceDwg] 开始处理: ${body.ext_ref_file}`);
     this.logger.log(
       `[uploadExtReferenceDwg] 接收到的 body 参数: ${JSON.stringify(body)}`
@@ -662,7 +821,7 @@ export class MxCadController {
   @Post('up_ext_reference_image')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadExtReferenceDto })
+  @ApiBody({ type: UploadExtReferenceFileDto })
   @ApiResponse({
     status: 200,
     description: '上传成功',
@@ -688,7 +847,7 @@ export class MxCadController {
   })
   async uploadExtReferenceImage(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: UploadExtReferenceDto,
+    @Body() body: UploadExtReferenceFileDto,
     @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
@@ -707,7 +866,7 @@ export class MxCadController {
     }
 
     // 验证用户权限
-    let sourceNode: any = null;
+    let sourceNode: FileSystemNode | null = null;
     try {
       const userId = await this.validateTokenAndGetUserId(request);
       this.logger.log(`[uploadExtReferenceImage] 用户ID: ${userId}`);
@@ -785,18 +944,24 @@ export class MxCadController {
         context
       );
 
-      // 更新源图纸的外部参照信息
-      try {
-        await this.mxCadService.updateExternalReferenceAfterUpload(body.nodeId);
+      // 如果指定了 updatePreloading，则更新源图纸的外部参照信息
+      if (body.updatePreloading) {
+        try {
+          await this.mxCadService.updateExternalReferenceAfterUpload(body.nodeId);
+          this.logger.log(
+            `[uploadExtReferenceImage] 外部参照信息已更新: nodeId=${body.nodeId}`
+          );
+        } catch (updateError) {
+          this.logger.error(
+            `[uploadExtReferenceImage] 更新外部参照信息失败: ${updateError.message}`,
+            updateError.stack
+          );
+          // 更新失败不影响主流程
+        }
+      } else {
         this.logger.log(
-          `[uploadExtReferenceImage] 外部参照信息已更新: nodeId=${body.nodeId}`
+          `[uploadExtReferenceImage] skip updatePreloading: nodeId=${body.nodeId}`
         );
-      } catch (updateError) {
-        this.logger.error(
-          `[uploadExtReferenceImage] 更新外部参照信息失败: ${updateError.message}`,
-          updateError.stack
-        );
-        // 更新失败不影响主流程
       }
 
       return res.json({ code: 0, message: 'ok' });
@@ -813,7 +978,7 @@ export class MxCadController {
    * 查询缩略图是否存在
    *
    * 查询逻辑：通过 nodeId 检查本地存储中是否存在缩略图
-   * 缩略图文件名格式：thumbnail.jpg
+   * 缩略图文件名格式：thumbnail.webp / thumbnail.jpg / thumbnail.png（按优先级查找）
    *
    * @param nodeId 文件系统节点 ID
    * @returns 缩略图是否存在
@@ -940,7 +1105,9 @@ export class MxCadController {
       // 构建目标目录路径
       // 注意：node.path 包含完整路径（如：202602/nodeId/nodeId.dwg.mxweb）
       // 需要提取目录部分（如：202602/nodeId）
-      const filesDataPath = this.configService.get("filesDataPath", { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const nodePathParts = node.path.split('/');
       // 移除最后一个部分（文件名），保留目录部分
       const dirParts = nodePathParts.slice(0, -1);
@@ -953,8 +1120,22 @@ export class MxCadController {
         this.logger.log(`[uploadThumbnail] 创建目录: ${targetDir}`);
       }
 
-      // 构建目标文件名（固定为 thumbnail.jpg）
-      const targetFileName = 'thumbnail.jpg';
+      // 构建目标文件名（根据上传文件扩展名映射）
+      const fileExt = path.extname(file.originalname || file.filename).toLowerCase();
+      const extMap: Record<string, ThumbnailFormat> = {
+        '.png': 'png',
+        '.jpg': 'jpg',
+        '.jpeg': 'jpg',
+        '.webp': 'webp',
+      };
+      const thumbnailFormat = extMap[fileExt];
+      if (!thumbnailFormat) {
+        return res.status(400).json({
+          code: -1,
+          message: `不支持的图片格式: ${fileExt}，仅支持 ${THUMBNAIL_FORMATS.join(', ')}`,
+        });
+      }
+      const targetFileName = getThumbnailFileName(thumbnailFormat);
       const targetFilePath = path.join(targetDir, targetFileName);
 
       // 将文件从临时目录直接移动到目标目录
@@ -1116,9 +1297,12 @@ export class MxCadController {
           res.status(500).json({ code: -1, message: '获取文件失败' });
         }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(`[getNonCadFile] 获取文件失败: ${storageKey}`, error);
-      if (error.code === 'NotFound' || error.code === 'NoSuchKey') {
+      if (
+        (error as { code?: string }).code === 'NotFound' ||
+        (error as { code?: string }).code === 'NoSuchKey'
+      ) {
         return res.status(404).json({ code: -1, message: '文件不存在' });
       }
       return res.status(500).json({ code: -1, message: '获取文件失败' });
@@ -1130,11 +1314,15 @@ export class MxCadController {
    * 支持访问路径: /mxcad/filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
    * 从本地存储读取文件
    *
+   * 需要登录认证，不允许公开访问
+   *
    * @param res Express Response 对象
    * @param req Express Request 对象
    * @returns 返回文件流或错误信息
    */
   @Get('filesData/*path')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: '成功获取文件',
@@ -1146,6 +1334,10 @@ export class MxCadController {
         },
       },
     },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未登录，无法访问文件',
   })
   @ApiResponse({
     status: 404,
@@ -1177,7 +1369,7 @@ export class MxCadController {
       },
     },
   })
-  async getFilesDataFile(@Res() res: Response, @Req() req: any) {
+  async getFilesDataFile(@Res() res: Response, @Req() req: Request) {
     // 从 req.params.path 获取完整的路径（支持多层路径）
     const pathArray = req.params.path;
     const filename = Array.isArray(pathArray)
@@ -1189,7 +1381,8 @@ export class MxCadController {
       );
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
-    return this.handleFilesDataFileRequest(filename, res, req, false);
+    // 使用共享的文件处理服务
+    return this.mxcadFileHandler.serveFile(filename, res);
   }
 
   /**
@@ -1215,7 +1408,7 @@ export class MxCadController {
     status: 500,
     description: '服务器内部错误',
   })
-  async getFilesDataFileHead(@Res() res: Response, @Req() req: any) {
+  async getFilesDataFileHead(@Res() res: Response, @Req() req: Request) {
     // 从 req.params.path 获取完整的路径（支持多层路径）
     const pathArray = req.params.path;
     const filename = Array.isArray(pathArray)
@@ -1240,7 +1433,7 @@ export class MxCadController {
   private async handleFilesDataFileRequest(
     filename: string,
     @Res() res: Response,
-    @Req() req: any,
+    @Req() req: Request,
     isHeadRequest: boolean
   ) {
     try {
@@ -1267,7 +1460,9 @@ export class MxCadController {
       }
 
       // 正常请求：构建完整的文件路径: filesData/YYYYMM/nodeId/nodeId.dwg.mxweb
-      const filesDataPath = this.configService.get("filesDataPath", { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const absoluteFilePath = path.resolve(filesDataPath, normalizedFilename);
       console.log(filesDataPath, filename, fs.existsSync(absoluteFilePath));
       this.logger.log(`尝试访问文件: ${absoluteFilePath}`);
@@ -1335,7 +1530,7 @@ export class MxCadController {
     filename: string,
     version: string,
     @Res() res: Response,
-    @Req() req: any,
+    @Req() req: Request,
     isHeadRequest: boolean
   ) {
     try {
@@ -1344,7 +1539,9 @@ export class MxCadController {
       );
 
       // 构建完整的文件路径
-      const filesDataPath = this.configService.get("filesDataPath", { infer: true });
+      const filesDataPath = this.configService.get('filesDataPath', {
+        infer: true,
+      });
       const absoluteFilePath = path.resolve(filesDataPath, filename);
 
       // 对于 HEAD 请求，直接返回本地文件信息（当前版本），不从 SVN 获取
@@ -1436,10 +1633,12 @@ export class MxCadController {
             // 创建转换任务（先声明，后存入锁，再执行）
             let resolveConversionTask: (value: string | null) => void;
             let rejectConversionTask: (reason: Error) => void;
-            const conversionTask = new Promise<string | null>((resolve, reject) => {
-              resolveConversionTask = resolve;
-              rejectConversionTask = reject;
-            });
+            const conversionTask = new Promise<string | null>(
+              (resolve, reject) => {
+                resolveConversionTask = resolve;
+                rejectConversionTask = reject;
+              }
+            );
 
             // 立即存入锁 Map，防止竞态条件
             this.historyConversionLocks.set(lockKey, conversionTask);
@@ -1458,7 +1657,7 @@ export class MxCadController {
                   throw new Error('历史版本目录不存在');
                 }
 
-                const binFiles = listResult.files
+                const binFiles = listResult.files;
 
                 if (binFiles.length === 0) {
                   // 没有 bin 分片文件，说明这是第一个版本（上传时的原始版本）
@@ -1470,7 +1669,9 @@ export class MxCadController {
                 this.logger.log(`找到 ${binFiles.length} 个分片 bin 文件`);
 
                 // 创建临时目录用于存放 bin 分片文件
-                const mxcadTempPath = this.configService.get('mxcadTempPath', { infer: true });
+                const mxcadTempPath = this.configService.get('mxcadTempPath', {
+                  infer: true,
+                });
                 const tempDir = path.join(
                   mxcadTempPath,
                   `mxcad-history-${version}-${Date.now()}`
@@ -1498,7 +1699,6 @@ export class MxCadController {
                     await fsPromises.writeFile(tempBinFile, binResult.content);
                   }
 
-
                   // 转换 bin 文件为 mxweb
                   const binSrcPath = path.join(tempDir, `${mxwebBaseName}.bin`);
                   const conversionResult =
@@ -1508,11 +1708,18 @@ export class MxCadController {
                       historyMxwebName
                     );
 
-                  if (!conversionResult.success || !conversionResult.outputPath) {
-                    throw new Error(`bin→mxweb 转换失败: ${conversionResult.error}`);
+                  if (
+                    !conversionResult.success ||
+                    !conversionResult.outputPath
+                  ) {
+                    throw new Error(
+                      `bin→mxweb 转换失败: ${conversionResult.error}`
+                    );
                   }
 
-                  this.logger.log(`成功转换并保存历史版本 mxweb: ${historyMxwebName}`);
+                  this.logger.log(
+                    `成功转换并保存历史版本 mxweb: ${historyMxwebName}`
+                  );
 
                   resolveConversionTask!(conversionResult.outputPath);
                 } finally {
@@ -1704,7 +1911,7 @@ export class MxCadController {
       },
     },
   })
-  async getFile(@Res() res: Response, @Req() req: any) {
+  async getFile(@Res() res: Response, @Req() req: MxCadRequest) {
     // 从 req.params.path 获取完整的路径（支持多层路径）
     // req.params.path 可能是数组，需要拼接成字符串
     const pathArray = req.params.path;
@@ -1741,7 +1948,7 @@ export class MxCadController {
     status: 500,
     description: '服务器内部错误',
   })
-  async getFileHead(@Res() res: Response, @Req() req: any) {
+  async getFileHead(@Res() res: Response, @Req() req: MxCadRequest) {
     // 从 req.params.path 获取完整的路径（支持多层路径）
     // req.params.path 可能是数组，需要拼接成字符串
     const pathArray = req.params.path;
@@ -1767,7 +1974,7 @@ export class MxCadController {
   private async handleFileRequest(
     filename: string,
     @Res() res: Response,
-    @Req() req: any,
+    @Req() req: MxCadRequest,
     isHeadRequest: boolean
   ) {
     try {
@@ -1988,7 +2195,9 @@ export class MxCadController {
    * 从请求中构建上下文信息，通过JWT验证用户身份
    * 强制要求JWT认证，确保安全性
    */
-  private async buildContextFromRequest(request: any): Promise<any> {
+  private async buildContextFromRequest(
+    request: MxCadRequest
+  ): Promise<MxCadContext> {
     try {
       // 1. 必须从 Authorization header 获取 JWT token
       if (!request.headers.authorization) {
@@ -2014,7 +2223,7 @@ export class MxCadController {
           email: true,
           username: true,
           nickname: true,
-          role: true,
+          roleId: true,
           status: true,
         },
       });
@@ -2045,14 +2254,71 @@ export class MxCadController {
         throw new Error('缺少节点ID（nodeId），无法创建文件系统节点');
       }
 
-      // 5. 构建上下文
-      const context = {
+      // 5. 检查节点是否属于公共资源库，如果是则验证系统权限
+      const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
+
+      // 如果是公共资源库节点，验证系统权限
+      if (libraryKey === 'drawing') {
+        const hasPermission =
+          await this.systemPermissionService.checkSystemPermission(
+            userData.id,
+            'LIBRARY_DRAWING_MANAGE' as any
+          );
+        if (!hasPermission) {
+          throw new UnauthorizedException('没有图纸库管理权限');
+        }
+      } else if (libraryKey === 'block') {
+        const hasPermission =
+          await this.systemPermissionService.checkSystemPermission(
+            userData.id,
+            'LIBRARY_BLOCK_MANAGE' as any
+          );
+        if (!hasPermission) {
+          throw new UnauthorizedException('没有图块库管理权限');
+        }
+      } else {
+        // 项目文件：检查项目权限
+        const node = await this.prisma.fileSystemNode.findUnique({
+          where: { id: nodeId },
+          select: { id: true, isRoot: true, projectId: true },
+        });
+
+        if (!node) {
+          throw new Error('节点不存在');
+        }
+
+        // 如果是根节点，nodeId 就是 projectId
+        const projectId = node.isRoot ? node.id : node.projectId;
+
+        if (!projectId) {
+          throw new Error('无法确定项目ID');
+        }
+
+        // 检查用户是否有该项目的 FILE_UPLOAD 权限
+        const hasPermission =
+          await this.projectPermissionService.checkPermission(
+            userData.id,
+            projectId,
+            ProjectPermission.FILE_UPLOAD
+          );
+
+        if (!hasPermission) {
+          throw new UnauthorizedException('没有该项目的文件上传权限');
+        }
+      }
+
+      // 6. 构建上下文
+      const context: MxCadContext & { isLibrary?: boolean } = {
         nodeId,
         userId: userData.id,
-        userRole: userData.role,
+        userRole: userData.roleId,
+        conflictStrategy: request.body?.conflictStrategy || 'rename',
+        isLibrary: libraryKey === 'drawing' || libraryKey === 'block',
       };
 
-      this.logger.log(`构建上下文: userId=${userData.id}, nodeId=${nodeId}`);
+      this.logger.log(
+        `构建上下文: userId=${userData.id}, nodeId=${nodeId}, conflictStrategy=${context.conflictStrategy}, libraryKey=${libraryKey}, isLibrary=${context.isLibrary}`
+      );
       return context;
     } catch (error) {
       this.logger.error(`构建上下文失败: ${error.message}`, error);
@@ -2071,7 +2337,9 @@ export class MxCadController {
    * @param request Express Request 对象
    * @returns 用户 ID
    */
-  private async validateTokenAndGetUserId(request: any): Promise<string> {
+  private async validateTokenAndGetUserId(
+    request: MxCadRequest
+  ): Promise<string> {
     const authorization = request.headers.authorization;
 
     if (!authorization) {
@@ -2140,9 +2408,12 @@ export class MxCadController {
   private async getFileSystemNodeByHash(
     fileHash: string,
     projectId?: string
-  ): Promise<any> {
+  ): Promise<Pick<
+    FileSystemNode,
+    'id' | 'name' | 'ownerId' | 'parentId' | 'isRoot' | 'fileHash'
+  > | null> {
     try {
-      const where: any = {
+      const where: Prisma.FileSystemNodeWhereInput = {
         fileHash: fileHash,
         isFolder: false,
         deletedAt: null,
@@ -2329,13 +2600,13 @@ export class MxCadController {
    */
   private async validateExtReferenceUpload(
     file: Express.Multer.File | null,
-    body: UploadExtReferenceDto,
+    body: UploadExtReferenceFileDto,
     methodPrefix: string,
     allowedExtensions: string[]
   ): Promise<{
     success: boolean;
     error?: { code: number; message: string };
-    preloadingData?: any;
+    preloadingData?: unknown;
   }> {
     // 1. 验证文件
     if (!file) {

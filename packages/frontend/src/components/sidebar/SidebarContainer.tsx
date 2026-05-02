@@ -18,11 +18,10 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Box from 'lucide-react/dist/esm/icons/box';
-import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
-import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
+import { FolderOpen } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { Layers } from 'lucide-react';
+import { LayoutTemplate } from 'lucide-react';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { useSidebarSettings } from '../../hooks/useSidebarSettings';
 import {
@@ -38,11 +37,12 @@ import { filesApi } from '../../services/filesApi';
 import { projectsApi } from '../../services/projectsApi';
 import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
-import { ProjectDrawingsPanel } from '../ProjectDrawingsPanel';
-import { CADEditorSidebar } from '../CADEditorSidebar';
+import { ProjectDrawingsPanel, LibraryType } from '../ProjectDrawingsPanel';
 import { CollaborateSidebar } from '../CollaborateSidebar';
 import { Tooltip } from '../ui/Tooltip';
 import { FileSystemNode } from '../../types/filesystem';
+import { useAuth } from '../../contexts/AuthContext';
+import { LoginPrompt } from '../auth/LoginPrompt';
 import styles from './sidebar.module.css';
 
 /** 插入文件的参数类型 */
@@ -63,6 +63,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   onInsertFile,
 }) => {
   // ==================== Hooks ====================
+  const { isAuthenticated } = useAuth();
 
   const {
     settings,
@@ -82,11 +83,12 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   );
 
   // 当前激活的图纸子 Tab
-  const [activeDrawingsSubTab, setActiveDrawingsSubTab] = useState<DrawingsSubTab>(
-    settings.rememberState && settings.lastDrawingsSubTab
-      ? settings.lastDrawingsSubTab
-      : settings.defaultDrawingsSubTab
-  );
+  const [activeDrawingsSubTab, setActiveDrawingsSubTab] =
+    useState<DrawingsSubTab>(
+      settings.rememberState && settings.lastDrawingsSubTab
+        ? settings.lastDrawingsSubTab
+        : settings.defaultDrawingsSubTab
+    );
 
   // 宽度调整状态
   const [isResizing, setIsResizing] = useState(false);
@@ -95,19 +97,52 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const [personalSpaceId, setPersonalSpaceId] = useState<string | null>(null);
 
   // 当前打开的文件 ID
-  const [currentOpenFileId, setCurrentOpenFileId] = useState<string | null>(null);
+  const [currentOpenFileId, setCurrentOpenFileId] = useState<string | null>(
+    null
+  );
 
   // 当前打开文件的父目录 ID
-  const [currentOpenFileParentId, setCurrentOpenFileParentId] = useState<string | null>(null);
+  const [currentOpenFileParentId, setCurrentOpenFileParentId] = useState<
+    string | null
+  >(null);
 
   // 文档修改状态
   const [isModified, setIsModified] = useState(false);
+
+  // 登录提示状态
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [loginPromptAction, setLoginPromptAction] = useState<string>('');
+
+  // 子 Tab 栏宽度状态（用于判断是否显示 tooltip）
+  const [subTabBarWidth, setSubTabBarWidth] = useState<number>(400);
+  const subTabBarRef = useRef<HTMLDivElement>(null);
+
+  // 当前文件是否属于公开资源库
+  const [isLibraryFile, setIsLibraryFile] = useState(false);
 
   // ==================== Refs ====================
 
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ==================== Effects ====================
+
+  // 监听子 Tab 栏宽度变化（用于判断是否显示 tooltip）
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width } = entry.contentRect;
+        setSubTabBarWidth(width);
+      }
+    });
+
+    if (subTabBarRef.current) {
+      observer.observe(subTabBarRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // 引导模式下默认关闭侧边栏
   useEffect(() => {
@@ -118,12 +153,20 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
   // 获取私人空间 ID
   useEffect(() => {
-    projectsApi.getPersonalSpace().then((res) => {
-      if (res.data?.id) {
-        setPersonalSpaceId(res.data.id);
-      }
-    }).catch(console.error);
-  }, []);
+    if (!isAuthenticated) {
+      // 未登录时不获取私人空间
+      return;
+    }
+
+    projectsApi
+      .getPersonalSpace()
+      .then((res) => {
+        if (res.data?.id) {
+          setPersonalSpaceId(res.data.id);
+        }
+      })
+      .catch(console.error);
+  }, [isAuthenticated]);
 
   // 监听当前打开的文件和修改状态
   useEffect(() => {
@@ -132,6 +175,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       setCurrentOpenFileId(fileInfo?.fileId || null);
       setCurrentOpenFileParentId(fileInfo?.parentId || null);
       setIsModified(isDocumentModified());
+      
+      // 检查当前文件是否属于公开资源库
+      const isLib = fileInfo?.libraryKey === 'drawing' || fileInfo?.libraryKey === 'block';
+      setIsLibraryFile(isLib);
     };
 
     // 初始更新
@@ -165,7 +212,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // 宽度变化时更新 CAD 容器位置
   useEffect(() => {
     // 侧边栏关闭时保留 48px 窄条，CAD 编辑器需要让出这部分空间
-    mxcadManager.adjustContainerPosition(settings.isVisible ? settings.width : 48);
+    mxcadManager.adjustContainerPosition(
+      settings.isVisible ? settings.width : 48
+    );
   }, [settings.width, settings.isVisible]);
 
   // 监听 mxcad-open-sidebar 事件（Mx_ShowSidebar 和 Mx_ShowCollaborate 命令触发）
@@ -232,41 +281,55 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
   // ==================== 宽度调整处理 ====================
 
-  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const newWidth = e.clientX - rect.left;
-      // 限制宽度范围
-      const clampedWidth = Math.max(300, Math.min(600, newWidth));
-      setWidth(clampedWidth);
-    };
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const newWidth = e.clientX - rect.left;
+        // 限制宽度范围
+        const clampedWidth = Math.max(320, Math.min(600, newWidth));
+        setWidth(clampedWidth);
+      };
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [setWidth]);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [setWidth]
+  );
 
   // ==================== 图纸打开处理 ====================
 
-  const handleDrawingOpen = useCallback(async (node: FileSystemNode) => {
+  const handleDrawingOpen = useCallback(async (node: FileSystemNode, libraryType?: 'drawing' | 'block') => {
     try {
       // 先检查当前文档是否有未保存的修改
       const canProceed = await checkAndConfirmUnsavedChanges();
       if (!canProceed) {
-        // 用户取消或保存失败，不继续打开新文件
         return;
       }
 
-      // 获取文件信息
+      // 如果是库文件，使用新的打开方式
+      if (libraryType === 'drawing' || libraryType === 'block') {
+        const { openLibraryDrawing, openLibraryBlock } = await import('../../services/mxcadManager');
+
+        if (libraryType === 'drawing') {
+          await openLibraryDrawing(node.id, node.name, node.path, node.updatedAt);
+        } else {
+          await openLibraryBlock(node.id, node.name, node.path, node.updatedAt);
+        }
+        return;
+      }
+
+      // 项目文件：使用原有逻辑
       const fileResponse = await filesApi.get(node.id);
       const file = fileResponse.data as {
         fileHash?: string;
@@ -305,19 +368,35 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     }
   }, []);
 
-  // ==================== 图库插入文件处理 ====================
+  // 处理登录提示的登录按钮
+  const handleLoginClick = async () => {
+    // 隐藏 CAD 编辑器，避免遮挡登录页面
+    const { mxcadManager } = await import('../../services/mxcadManager');
+    mxcadManager.showMxCAD(false);
 
-  const handleGalleryInsertFile = useCallback(
-    (file: Pick<{ nodeId: string; filename: string }, 'nodeId' | 'filename'>) => {
-      if (onInsertFile) {
-        onInsertFile({
-          nodeId: file.nodeId,
-          filename: file.filename,
-        });
-      }
-    },
-    [onInsertFile]
-  );
+    // 保存当前路径，登录后返回
+    const navigate = (window as any).__mxcadNavigate__;
+    if (navigate) {
+      navigate('/login');
+    } else {
+      window.location.href = '/login';
+    }
+  };
+
+  // 处理登录提示的关闭
+  const handleLoginPromptClose = () => {
+    setShowLoginPrompt(false);
+  };
+
+  // 检查登录状态，未登录时显示登录提示
+  const checkLoginAndShowPrompt = (action: string) => {
+    if (!isAuthenticated) {
+      setLoginPromptAction(action);
+      setShowLoginPrompt(true);
+      return false;
+    }
+    return true;
+  };
 
   // ==================== 渲染内容 ====================
 
@@ -326,88 +405,197 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       case 'drawings':
         return (
           <div className={styles.drawingsPanel}>
-            {/* 子 Tab 切换 */}
-            <div className={styles.subTabBar}>
-              <Tooltip content="我的项目" position="bottom" delay={100}>
-                <button
-                  className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
-                  onClick={() => handleDrawingsSubTabChange('my-project')}
-                  aria-label="我的项目"
-                >
-                  <FolderOpen size={14} />
-                  <span>我的项目</span>
-                </button>
-              </Tooltip>
-              <Tooltip content="我的图纸" position="bottom" delay={100}>
-                <button
-                  className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
-                  onClick={() => handleDrawingsSubTabChange('my-drawings')}
-                  aria-label="我的图纸"
-                >
-                  <FileText size={14} />
-                  <span>我的图纸</span>
-                </button>
-              </Tooltip>
-              <Tooltip content="图纸库" position="bottom" delay={100}>
-                <button
-                  className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
-                  onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
-                  aria-label="图纸库"
-                >
-                  <Box size={14} />
-                  <span>图纸库</span>
-                </button>
-              </Tooltip>
-              <Tooltip content="图块库" position="bottom" delay={100}>
-                <button
-                  className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
-                  onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
-                  data-tour="sidebar-blocks-btn"
-                  aria-label="图块库"
-                >
-                  <LayoutGrid size={14} />
-                  <span>图块库</span>
-                </button>
-              </Tooltip>
+            {/* 子 Tab 切换 - 始终显示所有 sub-tab */}
+            <div className={styles.subTabBar} ref={subTabBarRef}>
+              {subTabBarWidth <= 390 ? (
+                <>
+                  <Tooltip content="图纸库" position="bottom" delay={100}>
+                    <button
+                      className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
+                      onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
+                      aria-label="图纸库"
+                    >
+                      <LayoutTemplate size={14} />
+                      <span>图纸库</span>
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="图块库" position="bottom" delay={100}>
+                    <button
+                      className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
+                      onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
+                      aria-label="图块库"
+                    >
+                      <Layers size={14} />
+                      <span>图块库</span>
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="我的项目" position="bottom" delay={100}>
+                    <button
+                      className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
+                      onClick={() => handleDrawingsSubTabChange('my-project')}
+                      aria-label="我的项目"
+                    >
+                      <FolderOpen size={14} />
+                      <span>我的项目</span>
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="我的图纸" position="bottom" delay={100}>
+                    <button
+                      className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
+                      onClick={() => handleDrawingsSubTabChange('my-drawings')}
+                      aria-label="我的图纸"
+                    >
+                      <FileText size={14} />
+                      <span>我的图纸</span>
+                    </button>
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <button
+                    className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
+                    onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
+                    aria-label="图纸库"
+                  >
+                    <LayoutTemplate size={14} />
+                    <span>图纸库</span>
+                  </button>
+                  <button
+                    className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
+                    onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
+                    aria-label="图块库"
+                  >
+                    <Layers size={14} />
+                    <span>图块库</span>
+                  </button>
+                  <button
+                    className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
+                    onClick={() => handleDrawingsSubTabChange('my-project')}
+                    aria-label="我的项目"
+                  >
+                    <FolderOpen size={14} />
+                    <span>我的项目</span>
+                  </button>
+                  <button
+                    className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
+                    onClick={() => handleDrawingsSubTabChange('my-drawings')}
+                    aria-label="我的图纸"
+                  >
+                    <FileText size={14} />
+                    <span>我的图纸</span>
+                  </button>
+                </>
+              )}
             </div>
             {/* 子 Tab 内容 */}
             <div className={styles.subTabContent}>
-              {activeDrawingsSubTab === 'my-project' && (
+              {activeDrawingsSubTab === 'drawings-gallery' && (
                 <ProjectDrawingsPanel
-                  key="my-project"
-                  projectId={projectId}
+                  key="drawings-gallery"
+                  libraryType="drawing"
                   onDrawingOpen={handleDrawingOpen}
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
-                  parentId={currentOpenFileParentId}
-                  personalSpaceId={personalSpaceId}
+                  doubleClickToOpen={true}
                 />
+              )}
+              {activeDrawingsSubTab === 'blocks-gallery' && (
+                <ProjectDrawingsPanel
+                  key="blocks-gallery"
+                  libraryType="block"
+                  onDrawingOpen={handleDrawingOpen}
+                  currentOpenFileId={currentOpenFileId}
+                  isModified={isModified}
+                />
+              )}
+              {activeDrawingsSubTab === 'my-project' && (
+                isAuthenticated ? (
+                  <ProjectDrawingsPanel
+                    key="my-project"
+                    projectId={isLibraryFile ? '' : projectId}
+                    onDrawingOpen={handleDrawingOpen}
+                    currentOpenFileId={currentOpenFileId}
+                    isModified={isModified}
+                    parentId={isLibraryFile ? null : currentOpenFileParentId}
+                    personalSpaceId={personalSpaceId}
+                  />
+                ) : (
+                  <div className={styles.loginPromptContainer}>
+                    <div className={styles.loginPromptContent}>
+                      <div className={styles.loginPromptIcon}>
+                        <FolderOpen size={40} />
+                      </div>
+                      <h3 className={styles.loginPromptTitle}>登录以访问我的项目</h3>
+                      <p className={styles.loginPromptDescription}>
+                        登录后可以查看和管理您的项目
+                      </p>
+                      <button
+                        className={styles.loginPromptButton}
+                        onClick={handleLoginClick}
+                      >
+                        立即登录
+                      </button>
+                    </div>
+                  </div>
+                )
               )}
               {activeDrawingsSubTab === 'my-drawings' && (
-                <ProjectDrawingsPanel
-                  key="my-drawings"
-                  projectId={personalSpaceId || ''}
-                  onDrawingOpen={handleDrawingOpen}
-                  isPersonalSpace={true}
-                  currentOpenFileId={currentOpenFileId}
-                  isModified={isModified}
-                  parentId={currentOpenFileParentId}
-                />
-              )}
-              {(activeDrawingsSubTab === 'drawings-gallery' || activeDrawingsSubTab === 'blocks-gallery') && (
-                <div data-tour="gallery-panel">
-                  <CADEditorSidebar
-                    key="gallery"
-                    defaultGalleryType={activeDrawingsSubTab === 'blocks-gallery' ? 'blocks' : 'drawings'}
-                    onInsertFile={handleGalleryInsertFile}
-                    showHeader={false}
+                isAuthenticated ? (
+                  <ProjectDrawingsPanel
+                    key="my-drawings"
+                    projectId={personalSpaceId || ''}
+                    onDrawingOpen={handleDrawingOpen}
+                    isPersonalSpace={true}
+                    currentOpenFileId={currentOpenFileId}
+                    isModified={isModified}
+                    parentId={currentOpenFileParentId}
                   />
-                </div>
+                ) : (
+                  <div className={styles.loginPromptContainer}>
+                    <div className={styles.loginPromptContent}>
+                      <div className={styles.loginPromptIcon}>
+                        <FileText size={40} />
+                      </div>
+                      <h3 className={styles.loginPromptTitle}>登录以访问我的图纸</h3>
+                      <p className={styles.loginPromptDescription}>
+                        登录后可以查看和管理您的私人图纸
+                      </p>
+                      <button
+                        className={styles.loginPromptButton}
+                        onClick={handleLoginClick}
+                      >
+                        立即登录
+                      </button>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>
         );
       case 'collaborate':
+        // 协同 tab 未登录时显示登录提示
+        if (!isAuthenticated) {
+          return (
+            <div className={styles.loginPromptContainer}>
+              <div className={styles.loginPromptContent}>
+                <div className={styles.loginPromptIcon}>
+                  <FolderOpen size={40} />
+                </div>
+                <h3 className={styles.loginPromptTitle}>登录以使用完整功能</h3>
+                <p className={styles.loginPromptDescription}>
+                  登录后可以使用我的图纸、我的项目、协同等功能
+                </p>
+                <button
+                  className={styles.loginPromptButton}
+                  onClick={handleLoginClick}
+                >
+                  立即登录
+                </button>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className={styles.content}>
             <CollaborateSidebar />
@@ -426,7 +614,11 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     <div
       ref={containerRef}
       className={`${styles.sidebarContainer} ${!isVisible ? styles.collapsed : ''}`}
-      style={{ width: isVisible ? settings.width : 48 }}
+      style={{
+        width: isVisible ? settings.width : 48,
+        // 拖拽时禁用 transition,避免延迟导致空白
+        transition: isResizing ? 'none' : undefined,
+      }}
     >
       {isVisible ? (
         <>

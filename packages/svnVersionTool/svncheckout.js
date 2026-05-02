@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 从SVN仓库检出代码
@@ -17,13 +17,13 @@ function svnCheckout(repoUrl, targetDir, username, password, callback) {
   if (password) {
     command += ` --password ${password}`;
   }
-  exec(command, { windowsHide: true }, (error, stdout) => {
-    if (error) {
-      callback(error);
-    } else {
+  executeCommand(command)
+    .then(stdout => {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnCheckout;

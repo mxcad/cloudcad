@@ -13,11 +13,11 @@ import { RedisModule } from '../redis/redis.module';
 import { AuditLogModule } from '../audit/audit-log.module';
 import { StorageModule } from '../storage/storage.module';
 import { UsersModule } from '../users/users.module';
+import { CacheArchitectureModule } from '../cache-architecture/cache-architecture.module';
 import { PermissionService } from './services/permission.service';
 import { PermissionCacheService } from './services/permission-cache.service';
 import { RolesCacheService } from './services/roles-cache.service';
 import { RedisCacheService } from './services/redis-cache.service';
-import { CacheWarmupService } from './services/cache-warmup.service';
 import { FileLockService } from './services/file-lock.service';
 import { DirectoryAllocator } from './services/directory-allocator.service';
 import { StorageManager } from './services/storage-manager.service';
@@ -29,6 +29,10 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
 import { RoleInheritanceService } from './services/role-inheritance.service';
 import { InitializationService } from './services/initialization.service';
 import { FileExtensionsService } from './services/file-extensions.service';
+import { UserCleanupService } from './services/user-cleanup.service';
+import { UserCleanupScheduler } from './schedulers/user-cleanup.scheduler';
+import { UserCleanupController } from './controllers/user-cleanup.controller';
+import { ConcurrencyManager } from './concurrency/concurrency-manager';
 
 @Module({
   imports: [
@@ -38,13 +42,13 @@ import { FileExtensionsService } from './services/file-extensions.service';
     StorageModule,
     forwardRef(() => AuditLogModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => CacheArchitectureModule),
   ],
   providers: [
     PermissionService,
     PermissionCacheService,
     RolesCacheService,
     RedisCacheService,
-    CacheWarmupService,
     FileLockService,
     DirectoryAllocator,
     StorageManager,
@@ -55,14 +59,16 @@ import { FileExtensionsService } from './services/file-extensions.service';
     RoleInheritanceService,
     InitializationService,
     FileExtensionsService,
+    UserCleanupService,
+    UserCleanupScheduler,
+    ConcurrencyManager,
   ],
-  controllers: [CacheMonitorController],
+  controllers: [CacheMonitorController, UserCleanupController],
   exports: [
     PermissionService,
     PermissionCacheService,
     RolesCacheService,
     RedisCacheService,
-    CacheWarmupService,
     FileLockService,
     DirectoryAllocator,
     StorageManager,
@@ -72,6 +78,8 @@ import { FileExtensionsService } from './services/file-extensions.service';
     RoleInheritanceService,
     InitializationService,
     FileExtensionsService,
+    UserCleanupService,
+    ConcurrencyManager,
   ],
 })
 export class CommonModule {}

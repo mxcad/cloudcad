@@ -14,38 +14,6 @@ import { FileSystemNode } from '@/types/filesystem';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// localStorage 版本控制
-const VIEW_MODE_VERSION = 'v1';
-const VIEW_MODE_KEY = `fileViewMode:${VIEW_MODE_VERSION}`;
-
-/**
- * 安全的 localStorage 操作
- */
-const safeStorage = {
-  getItem: (key: string): string | null => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem: (key: string, value: string): boolean => {
-    try {
-      localStorage.setItem(key, value);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-};
-
-// 从 localStorage 读取保存的视图模式
-const getInitialViewMode = (): 'grid' | 'list' => {
-  if (typeof window === 'undefined') return 'grid';
-  const saved = safeStorage.getItem(VIEW_MODE_KEY);
-  return saved === 'grid' || saved === 'list' ? saved : 'grid';
-};
-
 export interface FileSystemState {
   // Current path and selection
   currentPath: FileSystemNode[];
@@ -80,6 +48,10 @@ export interface FileSystemState {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
 
+  // Pagination
+  pageSize: number;
+  setPageSize: (size: number) => void;
+
   // Actions
   navigateToFolder: (folderId: string) => void;
   navigateUp: () => void;
@@ -92,15 +64,17 @@ export const useFileSystemStore = create<FileSystemState>()(
       currentPath: [],
       selectedItems: [],
       currentParentId: null,
-      viewMode: getInitialViewMode(),
+      viewMode: 'grid',
       sortBy: 'name',
       sortOrder: 'asc',
       searchTerm: '',
       personalSpaceId: null,
       personalSpaceIdLoading: false,
+      pageSize: 20, // 默认 20 项每页
 
       setPersonalSpaceId: (id) => set({ personalSpaceId: id }),
       setPersonalSpaceIdLoading: (loading) => set({ personalSpaceIdLoading: loading }),
+      setPageSize: (size) => set({ pageSize: size }),
 
       setCurrentPath: (path) => set({ currentPath: path }),
       setSelectedItems: (items) => set({ selectedItems: items }),
@@ -120,8 +94,6 @@ export const useFileSystemStore = create<FileSystemState>()(
 
       setViewMode: (mode) => {
         set({ viewMode: mode });
-        // 持久化到 localStorage
-        safeStorage.setItem(VIEW_MODE_KEY, mode);
       },
       setSortBy: (by) => set({ sortBy: by }),
       setSortOrder: (order) => set({ sortOrder: order }),
@@ -154,7 +126,12 @@ export const useFileSystemStore = create<FileSystemState>()(
     }),
     {
       name: 'fileSystemStore',
-      partialize: (state) => ({}),
+      partialize: (state) => ({
+        pageSize: state.pageSize,
+        viewMode: state.viewMode,
+        sortBy: state.sortBy,
+        sortOrder: state.sortOrder,
+      }),
     }
   )
 );

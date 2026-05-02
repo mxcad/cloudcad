@@ -12,7 +12,23 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { FileStatus } from '@prisma/client';
+import { FileTreeService } from '../../file-system/services/file-tree.service';
+import { FileStatus, User, Prisma } from '@prisma/client';
+import { Request } from 'express';
+import type { ExternalReferenceInfo } from '../types/external-reference.types';
+
+/**
+ * 最小用户信息类型
+ */
+interface MinimalUser {
+  id: string;
+  username: string;
+  email: string;
+  roleId: string;
+  role?: string; // 为了兼容 session.user 类型
+  status: string;
+  nickname?: string | null;
+}
 
 export interface FileSystemNodeContext {
   nodeId: string; // 当前节点ID（项目根目录或文件夹）
@@ -21,6 +37,8 @@ export interface FileSystemNodeContext {
   fileSize?: number; // 文件大小（用于秒传时传递文件大小）
   srcDwgNodeId?: string; // 外部参照上传时的源图纸节点 ID
   isImage?: boolean; // 是否为图片外部参照
+  conflictStrategy?: 'skip' | 'overwrite' | 'rename'; // 冲突策略
+  isLibrary?: boolean; // 是否为公开资源库上传（跳过 SVN 提交）
 }
 
 export interface CreateNodeOptions {
@@ -40,7 +58,10 @@ export class FileSystemNodeService {
   // 并发控制：防止同一个文件同时创建多个节点
   private readonly creatingNodes: Map<string, Promise<void>> = new Map();
 
-  constructor(private readonly prisma: DatabaseService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly fileTreeService: FileTreeService
+  ) {}
 
   /**
    * 检查指定目录下是否已存在相同哈希值的文件节点
@@ -187,6 +208,9 @@ export class FileSystemNodeService {
     );
 
     try {
+      // 获取父节点的projectId
+      const projectId = await this.fileTreeService.getProjectId(parentId);
+
       const fileNode = await this.prisma.fileSystemNode.create({
         data: {
           name: originalName,
@@ -201,6 +225,7 @@ export class FileSystemNodeService {
           fileStatus: FileStatus.COMPLETED,
           fileHash,
           ownerId: context.userId,
+          projectId,
         },
       });
 
@@ -235,7 +260,7 @@ export class FileSystemNodeService {
    */
   async inferContextForMxCadApp(
     fileHash: string,
-    request: any
+    request: Request
   ): Promise<FileSystemNodeContext | null> {
     try {
       this.logger.log(`🔍 为文件哈希 ${fileHash} 推断 MxCAD-App 上下文`);
@@ -258,7 +283,7 @@ export class FileSystemNodeService {
       const context = {
         nodeId: projectInfo.parentId || projectId,
         userId: user.id,
-        userRole: user.role,
+        userRole: user.roleId,
       };
 
       this.logger.log(
@@ -277,9 +302,31 @@ export class FileSystemNodeService {
   /**
    * 从请求中获取用户信息
    */
-  private async getUserFromRequest(request: any): Promise<any | null> {
+  private async getUserFromRequest(
+    request: Request
+  ): Promise<MinimalUser | null> {
     // 1. 尝试从 Session 获取用户信息
-    let user = request.session?.user;
+    const sessionUser = request.session?.user as
+      | {
+          id: string;
+          email: string;
+          username: string;
+          role: string;
+          status?: string;
+        }
+      | undefined;
+
+    let user: MinimalUser | null = sessionUser
+      ? {
+          id: sessionUser.id,
+          email: sessionUser.email,
+          username: sessionUser.username,
+          roleId: sessionUser.role, // session 中的 role 实际上是 roleId
+          role: sessionUser.role,
+          status: sessionUser.status || 'ACTIVE',
+          nickname: null,
+        }
+      : null;
 
     // 2. 如果没有 Session 用户，查找最近活动用户
     if (!user) {
@@ -288,22 +335,21 @@ export class FileSystemNodeService {
       });
 
       if (recentToken) {
-        user = await this.prisma.user.findUnique({
+        const dbUser = await this.prisma.user.findUnique({
           where: { id: recentToken.userId },
           select: {
             id: true,
             email: true,
             username: true,
             nickname: true,
-            role: true,
+            roleId: true,
             status: true,
           },
         });
 
-        if (user && user.status === 'ACTIVE') {
+        if (dbUser && dbUser.status === 'ACTIVE') {
+          user = dbUser as MinimalUser;
           this.logger.log(`✅ 使用最近活动用户: ${user.username} (${user.id})`);
-        } else {
-          user = null;
         }
       }
     }
@@ -316,7 +362,7 @@ export class FileSystemNodeService {
    */
   private async findProjectInfo(
     fileHash: string,
-    user: any
+    user: MinimalUser
   ): Promise<{ projectId: string | null; parentId: string | null }> {
     let projectId: string | null = null;
     let parentId: string | null = null;
@@ -346,13 +392,12 @@ export class FileSystemNodeService {
       );
 
       // 向上查找项目根节点
-      const foundProjectId = await this.findProjectRootId(
-        existingFile.parentId
+      projectId = await this.fileTreeService.getProjectId(
+        existingFile.parentId || ''
       );
       this.logger.log(
-        `📋 从现有文件推断节点: projectId=${foundProjectId}, parentId=${fileParentId}`
+        `📋 从现有文件推断节点: projectId=${projectId}, parentId=${fileParentId}`
       );
-      projectId = foundProjectId;
       parentId = fileParentId;
     } else {
       // 如果是新文件，将创建默认项目
@@ -363,38 +408,9 @@ export class FileSystemNodeService {
   }
 
   /**
-   * 向上查找项目根节点ID
-   */
-  private async findProjectRootId(
-    parentId: string | null
-  ): Promise<string | null> {
-    let currentNodeId = parentId;
-    let foundProjectId: string | null = null;
-
-    while (currentNodeId) {
-      const parentNode = await this.prisma.fileSystemNode.findUnique({
-        where: { id: currentNodeId },
-        select: { id: true, isRoot: true, parentId: true, name: true },
-      });
-
-      if (parentNode?.isRoot) {
-        foundProjectId = parentNode.id;
-        this.logger.log(
-          `📍 找到项目根节点: ${foundProjectId} (${parentNode.name})`
-        );
-        break;
-      }
-
-      currentNodeId = parentNode?.parentId || null;
-    }
-
-    return foundProjectId;
-  }
-
-  /**
    * 创建默认项目
    */
-  private async createDefaultProject(user: any): Promise<string> {
+  private async createDefaultProject(user: MinimalUser): Promise<string> {
     this.logger.log(`🏗️ 为用户 ${user.username} 创建默认项目`);
 
     // 检查是否已有同名默认项目
@@ -450,7 +466,7 @@ export class FileSystemNodeService {
   }
 
   private async createNewNode(
-    tx: any,
+    tx: Prisma.TransactionClient,
     options: {
       name: string;
       accessPath: string;
@@ -487,6 +503,9 @@ export class FileSystemNodeService {
       `[createNewNode] 创建新节点: name=${name}, currentNode=${currentNode.name} (${currentNode.id}, isFolder=${currentNode.isFolder}), parentId=${parentId}`
     );
 
+    // 获取父节点的projectId
+    const projectId = await this.fileTreeService.getProjectId(parentId);
+
     const fileNode = await tx.fileSystemNode.create({
       data: {
         name,
@@ -501,6 +520,7 @@ export class FileSystemNodeService {
         fileStatus: FileStatus.COMPLETED,
         fileHash,
         ownerId: context.userId,
+        projectId,
       },
     });
 
@@ -514,7 +534,7 @@ export class FileSystemNodeService {
    * 例如: dxf.dxf -> dxf (1).dxf -> dxf (2).dxf
    */
   private async generateUniqueFileName(
-    tx: any,
+    tx: Prisma.TransactionClient,
     parentId: string,
     originalName: string
   ): Promise<string> {
@@ -560,8 +580,15 @@ export class FileSystemNodeService {
   }
 
   private async handleExistingNode(
-    tx: any,
-    existingNode: any,
+    tx: Prisma.TransactionClient,
+    existingNode: {
+      id: string;
+      name: string;
+      fileHash: string;
+      size: number;
+      mimeType: string;
+      extension: string;
+    },
     originalName: string,
     context: FileSystemNodeContext
   ): Promise<void> {
@@ -635,6 +662,9 @@ export class FileSystemNodeService {
       `[handleExistingNode] 父节点存在: ${parentExists.name} (${parentExists.id})`
     );
 
+    // 获取父节点的projectId
+    const projectId = await this.fileTreeService.getProjectId(targetParentId);
+
     // 创建新节点，path 初始设为 null，后续文件拷贝时会创建独立物理目录
     const newNode = await tx.fileSystemNode.create({
       data: {
@@ -650,6 +680,7 @@ export class FileSystemNodeService {
         fileStatus: FileStatus.COMPLETED,
         fileHash: existingNode.fileHash,
         ownerId: context.userId,
+        projectId,
       },
     });
     this.logger.log(
@@ -748,7 +779,7 @@ export class FileSystemNodeService {
     nodeId: string,
     hasMissing: boolean,
     missingCount: number,
-    references: any[]
+    references: ExternalReferenceInfo[]
   ): Promise<void> {
     try {
       await this.prisma.fileSystemNode.update({

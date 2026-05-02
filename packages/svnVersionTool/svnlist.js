@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 列出SVN仓库内容
@@ -24,13 +24,13 @@ function svnList(repoUrl, isRecursive, revision, username, password, callback) {
   if (password) {
     command += ` --password ${password}`;
   }
-  exec(command, { windowsHide: true }, (error, stdout) => {
-    if (error) {
-      callback(error);
-    } else {
+  executeCommand(command)
+    .then(stdout => {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnList;

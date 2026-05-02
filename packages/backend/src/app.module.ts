@@ -27,7 +27,6 @@ import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
 import { FileSystemModule } from './file-system/file-system.module';
 import { FontsModule } from './fonts/fonts.module';
-import { GalleryModule } from './gallery/gallery.module';
 import { HealthModule } from './health/health.module';
 import { MxCadModule } from './mxcad/mxcad.module';
 import { RedisModule } from './redis/redis.module';
@@ -43,6 +42,8 @@ import {
 import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 import { RuntimeConfigModule } from './runtime-config/runtime-config.module';
+import { PublicFileModule } from './public-file/public-file.module';
+import { LibraryModule } from './library/library.module';
 
 // env 文件查找路径：支持多种运行模式
 // 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
@@ -74,7 +75,7 @@ const envFilePaths = [
     RolesModule,
     FileSystemModule,
     FontsModule,
-    GalleryModule,
+
     MxCadModule,
     AdminModule,
     SchedulerModule,
@@ -84,6 +85,8 @@ const envFilePaths = [
     VersionControlModule,
     PolicyEngineModule,
     RuntimeConfigModule,
+    PublicFileModule,
+    LibraryModule,
   ],
   controllers: [AppController],
   providers: [

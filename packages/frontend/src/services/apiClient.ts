@@ -26,13 +26,22 @@ let initPromise: Promise<Client> | null = null;
  * 初始化 API 客户端（应用启动时调用）
  */
 export async function initApiClient(): Promise<Client> {
-  if (client) return client;
-  if (initPromise) return initPromise;
+  console.log('[apiClient] 开始初始化 API 客户端');
+  if (client) {
+    console.log('[apiClient] 客户端已存在，直接返回');
+    return client;
+  }
+  if (initPromise) {
+    console.log('[apiClient] 初始化进行中，返回已有 Promise');
+    return initPromise;
+  }
 
   initPromise = (async () => {
+    console.log('[apiClient] 创建新的初始化 Promise');
     // 先创建 axios 实例
     // 注意：swagger 定义中的路径已经包含 /api 前缀，所以 baseURL 要去掉 /api
     const baseURL = API_BASE_URL.replace(/\/api$/, '');
+    console.log('[apiClient] API Base URL:', baseURL);
     const axiosInstance = axios.create({
       baseURL,
       timeout: API_TIMEOUT,
@@ -40,13 +49,17 @@ export async function initApiClient(): Promise<Client> {
       withCredentials: true, // 允许跨域请求携带 Cookie，用于 Session 认证
     });
 
+    console.log('[apiClient] swaggerDefinition:', !!swaggerDefinition, 'keys:', Object.keys(swaggerDefinition || {}).length);
     api = new OpenAPIClientAxios({
       definition: swaggerDefinition as never,
       axiosInstance,
     });
 
+    console.log('[apiClient] 开始调用 api.init()');
     client = await api.init<Client>();
+    console.log('[apiClient] api.init() 完成，client:', !!client);
     setupInterceptors(client);
+    console.log('[apiClient] 初始化完成');
     return client;
   })();
 
@@ -54,11 +67,30 @@ export async function initApiClient(): Promise<Client> {
 }
 
 /**
+ * 初始化 API 客户端（后台调用，不阻塞渲染）
+ * 首次调用会启动初始化，后续调用返回同一个 Promise
+ */
+export function ensureApiClientInit(): Promise<Client> {
+  return initApiClient();
+}
+
+/**
  * 获取类型安全的 API 客户端
- * 必须在 initApiClient() 完成后调用
+ * 如果尚未初始化，会自动等待初始化完成
+ */
+export async function getApiClientAsync(): Promise<Client> {
+  if (client) return client;
+  return initApiClient();
+}
+
+/**
+ * 获取类型安全的 API 客户端（同步版本）
+ * 注意：仅在确认已初始化时使用，否则使用 getApiClientAsync()
  */
 export function getApiClient(): Client {
   if (!client) {
+    // 启动初始化（不阻塞）
+    initApiClient();
     throw new Error('API client not initialized. Call initApiClient() first.');
   }
   return client;
@@ -129,11 +161,14 @@ function setupInterceptors(instance: AxiosInstance) {
         _retry?: boolean;
       };
       const isLoginEndpoint = originalRequest?.url?.includes('/auth/login');
+      // 对于 getProfile 请求，不自动刷新 token 或跳转，由 AuthContext 自己处理
+      const isProfileEndpoint = originalRequest?.url?.includes('/auth/profile');
 
       if (
         axiosError.response?.status === 401 &&
         !originalRequest._retry &&
-        !isLoginEndpoint
+        !isLoginEndpoint &&
+        !isProfileEndpoint
       ) {
         originalRequest._retry = true;
         const refreshToken = localStorage.getItem('refreshToken');
@@ -162,6 +197,14 @@ function setupInterceptors(instance: AxiosInstance) {
           clearAuthAndRedirect();
           return Promise.reject(error);
         }
+      }
+
+      // 对于 getProfile 请求的 401 错误，只清除认证信息，不自动跳转
+      // 由 AuthContext 和路由组件决定如何处理
+      if (isProfileEndpoint && axiosError.response?.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
       }
 
       if (axiosError.response?.status === 403) {

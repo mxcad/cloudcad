@@ -6,12 +6,13 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { FileSystemController } from './file-system.controller';
 import { FileSystemService } from './file-system.service';
 import { FileHashService } from './file-hash.service';
 import { FileValidationService } from './file-validation.service';
 import { FileSystemPermissionService } from './file-system-permission.service';
+import { FileDownloadHandlerService } from './file-download-handler.service';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
 import { StorageModule } from '../storage/storage.module';
@@ -21,6 +22,17 @@ import { VersionControlModule } from '../version-control/version-control.module'
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { PersonalSpaceModule } from '../personal-space/personal-space.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
+import {
+  ProjectCrudService,
+  FileTreeService,
+  FileOperationsService,
+  FileDownloadExportService,
+  ProjectMemberService,
+  StorageInfoService,
+  StorageQuotaService,
+  QuotaEnforcementService,
+  SearchService,
+} from './services';
 
 @Module({
   imports: [
@@ -28,7 +40,7 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
     CommonModule,
     StorageModule,
     AuditLogModule,
-    RolesModule,
+    forwardRef(() => RolesModule),
     VersionControlModule,
     RuntimeConfigModule,
     PersonalSpaceModule,
@@ -39,13 +51,33 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
     FileHashService,
     FileValidationService,
     FileSystemPermissionService,
+    FileDownloadHandlerService,
     RequireProjectPermissionGuard,
+    ProjectCrudService,
+    FileTreeService,
+    FileOperationsService,
+    FileDownloadExportService,
+    ProjectMemberService,
+    StorageInfoService,
+    StorageQuotaService,
+    QuotaEnforcementService,
+    SearchService,
   ],
   exports: [
     FileSystemService,
     FileHashService,
     FileValidationService,
     FileSystemPermissionService,
+    FileDownloadHandlerService,
+    ProjectCrudService,
+    FileTreeService,
+    FileOperationsService,
+    FileDownloadExportService,
+    ProjectMemberService,
+    StorageInfoService,
+    StorageQuotaService,
+    QuotaEnforcementService,
+    SearchService,
   ],
 })
 export class FileSystemModule {}

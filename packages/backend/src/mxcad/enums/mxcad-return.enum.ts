@@ -18,4 +18,5 @@ export enum MxUploadReturn {
   kFileAlreadyExist = 'fileAlreadyExist', // 文件已存在
   kFileNoExist = 'fileNoExist', // 文件不存在
   kConvertFileError = 'convertFileError', // 文件转换错误
+  kQuotaExceeded = 'quotaExceeded', // 存储配额不足
 }

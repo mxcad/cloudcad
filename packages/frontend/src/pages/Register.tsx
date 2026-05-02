@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { validateField, validateRegisterForm } from '../utils/validation';
@@ -8,23 +8,26 @@ import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import { authApi } from '../services/authApi';
 import type { RegisterDto } from '../types/api-client';
 
 // 导入 lucide 图标
-import UserIcon from 'lucide-react/dist/esm/icons/user';
-import MailIcon from 'lucide-react/dist/esm/icons/mail';
-import LockIcon from 'lucide-react/dist/esm/icons/lock';
-import SparklesIcon from 'lucide-react/dist/esm/icons/sparkles';
-import ArrowRightIcon from 'lucide-react/dist/esm/icons/arrow-right';
-import ArrowLeftIcon from 'lucide-react/dist/esm/icons/arrow-left';
-import Loader2Icon from 'lucide-react/dist/esm/icons/loader-2';
-import AlertCircleIcon from 'lucide-react/dist/esm/icons/alert-circle';
-import CheckCircleIcon from 'lucide-react/dist/esm/icons/check-circle';
-import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
-import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
-import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
-import EyeIcon from 'lucide-react/dist/esm/icons/eye';
-import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
+import { User } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { Boxes } from 'lucide-react';
+import { Eye } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
+import { Phone } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 /**
  * 注册页面 - CloudCAD
@@ -40,6 +43,7 @@ import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
 export const Register: React.FC = () => {
   useDocumentTitle('注册');
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     register: registerUser,
     isAuthenticated,
@@ -52,13 +56,60 @@ export const Register: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
   const appLogo = brandConfig?.logo || '/logo.png';
   const mailEnabled = runtimeConfig.mailEnabled;
+  const requireEmailVerification =
+    runtimeConfig.requireEmailVerification ?? false;
+  const smsEnabled = runtimeConfig.smsEnabled ?? false;
+  const requirePhoneVerification =
+    runtimeConfig.requirePhoneVerification ?? false;
+
+  // 获取微信临时 Token（如果存在）
+  // 如果不是通过微信注册入口进入（URL 无 wechat=1），清除可能残留的过期 Token
+  const searchParams = new URLSearchParams(location.search);
+  const isWechatEntry = searchParams.get('wechat') === '1';
+  if (!isWechatEntry) {
+    sessionStorage.removeItem('wechatTempToken');
+  }
+  const wechatTempToken = sessionStorage.getItem('wechatTempToken');
+  const isWechatRegister = !!wechatTempToken;
+
+  // 解析微信昵称（如果有）
+  let wechatNickname = '';
+  if (isWechatRegister && wechatTempToken) {
+    try {
+      const tokenPart = wechatTempToken.split('.')[1];
+      if (tokenPart) {
+        // JWT payload 使用 Base64url 编码，需要正确处理 UTF-8
+        const base64 = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonStr = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const payload = JSON.parse(jsonStr);
+        wechatNickname = payload.nickname || '';
+      }
+    } catch (e) {
+      // 忽略解析错误
+    }
+  }
 
   const [formData, setFormData] = useState<RegisterDto>({
     email: '',
     password: '',
     username: '',
-    nickname: '',
+    nickname: wechatNickname || '',
   });
+
+  // 手机号注册相关状态
+  const [phoneForm, setPhoneForm] = useState({
+    phone: '',
+    code: '',
+  });
+  const [countdown, setCountdown] = useState(0);
+  const [sendingCode, setSendingCode] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +131,7 @@ export const Register: React.FC = () => {
         <div className="register-container">
           <div className="closed-card">
             <div className="closed-icon">
-              <ShieldCheckIcon size={32} />
+              <ShieldCheck size={32} />
             </div>
             <h2 className="closed-title">注册已关闭</h2>
             <p className="closed-message">
@@ -89,7 +140,7 @@ export const Register: React.FC = () => {
               如有疑问，请联系管理员。
             </p>
             <button onClick={() => navigate('/login')} className="back-button">
-              <ArrowLeftIcon size={18} />
+              <ArrowLeft size={18} />
               <span>返回登录</span>
             </button>
           </div>
@@ -116,6 +167,124 @@ export const Register: React.FC = () => {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // 检查是否有预填信息（从登录页跳转过来）
+  useEffect(() => {
+    const state = location.state as {
+      prefillPhone?: string;
+      prefillCode?: string;
+    } | null;
+    if (state?.prefillPhone) {
+      setPhoneForm({
+        phone: state.prefillPhone,
+        code: state.prefillCode || '',
+      });
+      // 清除 state，避免刷新后重复填充
+      window.history.replaceState(null, '');
+    }
+  }, [location.state]);
+
+  // 清理倒计时
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, []);
+
+  // 处理倒计时
+  useEffect(() => {
+    if (countdown > 0) {
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (countdownRef.current && countdown <= 0) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, [countdown > 0]);
+
+  // 发送短信验证码
+  const handleSendCode = useCallback(async () => {
+    // 验证手机号格式
+    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+      setFieldErrors((prev) => ({ ...prev, phone: '请输入正确的手机号' }));
+      return;
+    }
+
+    setSendingCode(true);
+    setFieldErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.phone;
+      return newErrors;
+    });
+
+    try {
+      // 先检查手机号是否已被注册
+      const checkResult = await authApi.checkField({ phone: phoneForm.phone });
+      if (checkResult.data.phoneExists) {
+        setFieldErrors((prev) => ({ ...prev, phone: '该手机号已被注册' }));
+        return;
+      }
+
+      // 手机号可用，发送验证码
+      const response = await authApi.sendSmsCode(phoneForm.phone);
+      if (response.data?.success) {
+        setCountdown(60); // 60秒倒计时
+      } else {
+        setFieldErrors((prev) => ({
+          ...prev,
+          phone: response.data?.message || '发送验证码失败',
+        }));
+      }
+    } catch (err) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        phone:
+          (err as Error & { response?: { data?: { message?: string } } })
+            .response?.data?.message ||
+          (err as Error).message ||
+          '发送验证码失败',
+      }));
+    } finally {
+      setSendingCode(false);
+    }
+  }, [phoneForm.phone]);
+
+  // 手机号输入处理
+  const handlePhoneChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      // 手机号只允许输入数字
+      if (name === 'phone' && value && !/^\d*$/.test(value)) {
+        return;
+      }
+      // 验证码只允许输入数字
+      if (name === 'code' && value && !/^\d*$/.test(value)) {
+        return;
+      }
+      setPhoneForm((prev) => ({ ...prev, [name]: value }));
+      if (fieldErrors[name]) {
+        setFieldErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    },
+    [fieldErrors]
+  );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,11 +366,53 @@ export const Register: React.FC = () => {
     }
   };
 
-  const validateStep = (step: number): boolean => {
+  const validateStep = async (step: number): Promise<boolean> => {
     if (step === 1) {
       const errors: Record<string, string> = {};
       if (!formData.username) errors.username = '请输入用户名';
-      if (mailEnabled && !formData.email) errors.email = '请输入邮箱';
+
+      // 邮箱验证：必填时检查非空，选填时仅填写了才检查格式
+      if (mailEnabled && requireEmailVerification) {
+        if (!formData.email) {
+          errors.email = '请输入邮箱';
+        } else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+          errors.email = '请输入有效的邮箱地址';
+        }
+      }
+
+      // 手机号验证：必填时检查非空，选填时仅填写了才检查格式
+      if (smsEnabled && requirePhoneVerification) {
+        if (!phoneForm.phone) {
+          errors.phone = '请输入手机号';
+        } else if (phoneForm.phone && !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+          errors.phone = '请输入正确的手机号';
+        }
+        if (!phoneForm.code) {
+          errors.code = '请输入验证码';
+        }
+      }
+
+      // 检查字段唯一性
+      if (formData.username || formData.email || phoneForm.phone) {
+        try {
+          const checkResult = await authApi.checkField({
+            username: formData.username,
+            email: formData.email || undefined,
+            phone: phoneForm.phone || undefined,
+          });
+          if (checkResult.data.usernameExists) {
+            errors.username = '用户名已被使用';
+          }
+          if (checkResult.data.emailExists) {
+            errors.email = '邮箱已被注册';
+          }
+          if (checkResult.data.phoneExists) {
+            errors.phone = '手机号已被注册';
+          }
+        } catch (checkErr) {
+          console.error('检查字段唯一性失败:', checkErr);
+        }
+      }
 
       setFieldErrors((prev) => ({ ...prev, ...errors }));
       return Object.keys(errors).length === 0;
@@ -209,8 +420,9 @@ export const Register: React.FC = () => {
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid) {
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -221,6 +433,7 @@ export const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[Register] fieldErrors 提交时:', fieldErrors);
 
     const dataToValidate = {
       email: formData.email ?? '',
@@ -230,7 +443,7 @@ export const Register: React.FC = () => {
       nickname: formData.nickname,
     };
     const validationError = validateRegisterForm(dataToValidate, {
-      validateEmail: mailEnabled,
+      validateEmail: mailEnabled && requireEmailVerification,
     });
 
     if (validationError) {
@@ -238,8 +451,31 @@ export const Register: React.FC = () => {
       return;
     }
 
-    if (Object.keys(fieldErrors).length > 0) {
-      setError('请修正表单错误');
+    // 过滤掉空字符串的错误，只保留有实际内容的错误
+    // 只检查当前启用的字段，忽略不可见/非必填字段的残留错误
+    const relevantFields = ['username', 'password', 'confirmPassword', 'nickname'];
+    if (mailEnabled && requireEmailVerification) relevantFields.push('email');
+    if (smsEnabled && requirePhoneVerification) {
+      relevantFields.push('phone');
+      if (requirePhoneVerification) relevantFields.push('code');
+    }
+    const actualErrors = Object.entries(fieldErrors)
+      .filter(([key, v]) => v && v.trim() && relevantFields.includes(key));
+    console.log('[Register] 实际错误:', actualErrors);
+    if (actualErrors.length > 0) {
+      const errorFields = actualErrors.map(([key]) => {
+        const labels: Record<string, string> = {
+          username: '用户名',
+          password: '密码',
+          confirmPassword: '确认密码',
+          nickname: '昵称',
+          email: '邮箱',
+          phone: '手机号',
+          code: '验证码',
+        };
+        return labels[key] || key;
+      });
+      setError(`请修正以下字段：${errorFields.join('、')}`);
       return;
     }
 
@@ -247,21 +483,57 @@ export const Register: React.FC = () => {
     setError(null);
 
     try {
-      const registerData = mailEnabled
-        ? formData
-        : { ...formData, email: undefined };
-      const result = await registerUser(registerData as RegisterDto);
+      // 如果有预填的手机号和验证码，使用手机号注册
+      if (phoneForm.phone && phoneForm.code && smsEnabled && requirePhoneVerification) {
+        // 如果邮箱也是必填的，需要先填写邮箱
+        if (mailEnabled && requireEmailVerification) {
+          // 跳转到邮箱验证页面，携带手机号信息和邮箱
+          navigate('/verify-email', {
+            state: {
+              email: formData.email,
+              phone: phoneForm.phone,
+              code: phoneForm.code,
+              username: formData.username,
+              password: formData.password,
+              nickname: formData.nickname,
+              message: '请先验证邮箱，完成注册',
+            },
+          });
+          return;
+        }
 
-      if (mailEnabled && formData.email) {
-        navigate('/verify-email', {
-          state: { email: formData.email },
-          replace: true,
+        await authApi.registerByPhone({
+          username: formData.username,
+          password: formData.password,
+          nickname: formData.nickname,
+          phone: phoneForm.phone,
+          code: phoneForm.code,
         });
+        // 手机号注册成功（自动登录），跳转首页
+        if (isWechatRegister) {
+          sessionStorage.removeItem('wechatTempToken');
+        }
+        navigate('/');
       } else {
-        navigate('/login', {
-          state: { message: result?.message || '注册成功，请登录' },
-          replace: true,
-        });
+        const needEmail = mailEnabled && requireEmailVerification;
+        const registerData = needEmail
+          ? { ...formData, wechatTempToken }
+          : { ...formData, email: undefined, wechatTempToken };
+        const result = await registerUser(registerData as RegisterDto);
+
+        if (isWechatRegister) {
+          sessionStorage.removeItem('wechatTempToken');
+        }
+
+        // 需要邮箱验证：跳转到验证页面
+        if (result.email) {
+          navigate('/verify-email', {
+            state: { email: result.email, message: result.message },
+          });
+        } else {
+          // 直接注册成功（自动登录），跳转首页
+          navigate('/');
+        }
       }
     } catch (err) {
       const axiosError = err as Error & {
@@ -338,7 +610,7 @@ export const Register: React.FC = () => {
               className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}
             >
               <div className="step-number">
-                {currentStep > 1 ? <CheckCircleIcon size={16} /> : 1}
+                {currentStep > 1 ? <CheckCircle size={16} /> : 1}
               </div>
               <span className="step-label">基本信息</span>
             </div>
@@ -364,7 +636,7 @@ export const Register: React.FC = () => {
           {/* 错误提示 */}
           {error && (
             <div className="alert alert-error">
-              <AlertCircleIcon size={18} className="alert-icon" />
+              <AlertCircle size={18} className="alert-icon" />
               <span>{error}</span>
             </div>
           )}
@@ -381,7 +653,7 @@ export const Register: React.FC = () => {
                     用户名 <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
-                    <UserIcon
+                    <User
                       size={18}
                       className={`input-icon ${focusedField === 'username' ? 'active' : ''}`}
                     />
@@ -411,7 +683,7 @@ export const Register: React.FC = () => {
                     昵称
                   </label>
                   <div className="input-wrapper">
-                    <SparklesIcon
+                    <Sparkles
                       size={18}
                       className={`input-icon ${focusedField === 'nickname' ? 'active' : ''}`}
                     />
@@ -433,15 +705,18 @@ export const Register: React.FC = () => {
                   )}
                 </div>
 
-                {mailEnabled && (
+                {(mailEnabled && requireEmailVerification) && (
                   <div
                     className={`input-group ${focusedField === 'email' ? 'focused' : ''} ${fieldErrors.email ? 'error' : ''}`}
                   >
                     <label htmlFor="email" className="input-label">
-                      邮箱地址 <span className="required">*</span>
+                      邮箱地址{' '}
+                      {requireEmailVerification && (
+                        <span className="required">*</span>
+                      )}
                     </label>
                     <div className="input-wrapper">
-                      <MailIcon
+                      <Mail
                         size={18}
                         className={`input-icon ${focusedField === 'email' ? 'active' : ''}`}
                       />
@@ -450,7 +725,7 @@ export const Register: React.FC = () => {
                         name="email"
                         type="email"
                         autoComplete="email"
-                        required
+                        required={requireEmailVerification}
                         className="input-field"
                         placeholder="请输入邮箱地址"
                         value={formData.email}
@@ -466,13 +741,106 @@ export const Register: React.FC = () => {
                   </div>
                 )}
 
+                {/* 手机号输入 */}
+                {(smsEnabled && requirePhoneVerification) && (
+                  <>
+                    <div
+                      className={`input-group ${focusedField === 'phone' ? 'focused' : ''} ${fieldErrors.phone ? 'error' : ''}`}
+                    >
+                      <label htmlFor="phone" className="input-label">
+                        手机号{' '}
+                        {requirePhoneVerification && (
+                          <span className="required">*</span>
+                        )}
+                      </label>
+                      <div className="input-wrapper">
+                        <Phone
+                          size={18}
+                          className={`input-icon ${focusedField === 'phone' ? 'active' : ''}`}
+                        />
+                        <input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          autoComplete="tel"
+                          required={requirePhoneVerification}
+                          maxLength={11}
+                          className="input-field"
+                          placeholder="请输入手机号"
+                          value={phoneForm.phone}
+                          onChange={handlePhoneChange}
+                          onFocus={() => setFocusedField('phone')}
+                          onBlur={() => setFocusedField(null)}
+                        />
+                        <div className="input-glow" />
+                      </div>
+                      {fieldErrors.phone && (
+                        <p className="error-message">{fieldErrors.phone}</p>
+                      )}
+                    </div>
+
+                    <div
+                      className={`input-group ${focusedField === 'code' ? 'focused' : ''} ${fieldErrors.code ? 'error' : ''}`}
+                    >
+                      <label htmlFor="code" className="input-label">
+                        验证码{' '}
+                        {requirePhoneVerification && (
+                          <span className="required">*</span>
+                        )}
+                      </label>
+                      <div className="input-wrapper has-button">
+                        <MessageSquare
+                          size={18}
+                          className={`input-icon ${focusedField === 'code' ? 'active' : ''}`}
+                        />
+                        <input
+                          id="code"
+                          name="code"
+                          type="text"
+                          autoComplete="one-time-code"
+                          required={requirePhoneVerification}
+                          maxLength={6}
+                          className="input-field has-button"
+                          placeholder="请输入验证码"
+                          value={phoneForm.code}
+                          onChange={handlePhoneChange}
+                          onFocus={() => setFocusedField('code')}
+                          onBlur={() => setFocusedField(null)}
+                        />
+                        <button
+                          type="button"
+                          className="code-button"
+                          onClick={handleSendCode}
+                          disabled={
+                            countdown > 0 ||
+                            sendingCode ||
+                            phoneForm.phone.length !== 11
+                          }
+                        >
+                          {sendingCode ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : countdown > 0 ? (
+                            `${countdown}s`
+                          ) : (
+                            '获取验证码'
+                          )}
+                        </button>
+                        <div className="input-glow" />
+                      </div>
+                      {fieldErrors.code && (
+                        <p className="error-message">{fieldErrors.code}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 <button
                   type="button"
                   onClick={handleNext}
                   className="submit-button"
                 >
                   <span>下一步</span>
-                  <ArrowRightIcon size={18} className="button-arrow" />
+                  <ArrowRight size={18} className="button-arrow" />
                 </button>
               </div>
             )}
@@ -487,7 +855,7 @@ export const Register: React.FC = () => {
                     密码 <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
-                    <LockIcon
+                    <Lock
                       size={18}
                       className={`input-icon ${focusedField === 'password' ? 'active' : ''}`}
                     />
@@ -511,9 +879,9 @@ export const Register: React.FC = () => {
                       tabIndex={-1}
                     >
                       {showPassword ? (
-                        <EyeOffIcon size={18} />
+                        <EyeOff size={18} />
                       ) : (
-                        <EyeIcon size={18} />
+                        <Eye size={18} />
                       )}
                     </button>
                     <div className="input-glow" />
@@ -549,7 +917,7 @@ export const Register: React.FC = () => {
                     确认密码 <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
-                    <CheckCircleIcon
+                    <CheckCircle
                       size={18}
                       className={`input-icon ${focusedField === 'confirmPassword' ? 'active' : ''}`}
                     />
@@ -575,9 +943,9 @@ export const Register: React.FC = () => {
                       tabIndex={-1}
                     >
                       {showConfirmPassword ? (
-                        <EyeOffIcon size={18} />
+                        <EyeOff size={18} />
                       ) : (
-                        <EyeIcon size={18} />
+                        <Eye size={18} />
                       )}
                     </button>
                     <div className="input-glow" />
@@ -595,7 +963,7 @@ export const Register: React.FC = () => {
                     onClick={handleBack}
                     className="back-button-step"
                   >
-                    <ArrowLeftIcon size={18} />
+                    <ArrowLeft size={18} />
                     <span>返回</span>
                   </button>
                   <button
@@ -605,13 +973,13 @@ export const Register: React.FC = () => {
                   >
                     {loading ? (
                       <>
-                        <Loader2Icon size={18} className="animate-spin" />
+                        <Loader2 size={18} className="animate-spin" />
                         <span>注册中...</span>
                       </>
                     ) : (
                       <>
                         <span>立即注册</span>
-                        <ArrowRightIcon size={18} className="button-arrow" />
+                        <ArrowRight size={18} className="button-arrow" />
                       </>
                     )}
                   </button>
@@ -633,13 +1001,13 @@ export const Register: React.FC = () => {
           {/* 底部特性图标 */}
           <div className="features-bar">
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
-              <CpuIcon size={14} />
+              <Cpu size={14} />
             </div>
             <div className="feature-dot" data-tooltip="多用户实时协同编辑">
-              <BoxesIcon size={14} />
+              <Boxes size={14} />
             </div>
             <div className="feature-dot" data-tooltip="企业级数据安全保障">
-              <ShieldCheckIcon size={14} />
+              <ShieldCheck size={14} />
             </div>
           </div>
         </div>
@@ -1011,6 +1379,49 @@ export const Register: React.FC = () => {
         .strength-label {
           font-size: 0.6875rem;
           font-weight: 500;
+        }
+
+        /* 验证码按钮 */
+        .input-wrapper.has-button {
+          position: relative;
+        }
+
+        .input-field.has-button {
+          padding-right: 7rem;
+        }
+
+        .code-button {
+          position: absolute;
+          right: 0.5rem;
+          top: 50%;
+          transform: translateY(-50%);
+          padding: 0.5rem 0.75rem;
+          background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+          border: none;
+          border-radius: 8px;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+          z-index: 2;
+          min-width: 5.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .code-button:hover:not(:disabled) {
+          transform: translateY(-50%) scale(1.02);
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+        }
+
+        .code-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background: var(--bg-tertiary);
+          color: var(--text-muted);
         }
 
         /* 按钮组 */

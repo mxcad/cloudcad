@@ -14,12 +14,23 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DirectoryAllocator } from './directory-allocator.service';
 import { LocalStorageProvider } from '../../storage/local-storage.provider';
 import * as path from 'path';
+import * as fsPromises from 'fs/promises';
 
 export interface NodeStorageInfo {
   nodeId: string;
   directory: string; // YYYYMM[/N]
-  fullPath: string; // 完整路径
-  relativePath: string; // 相对路径：YYYYMM[/N]/nodeId/...
+  
+  /** 节点目录的完整路径 (YYYYMM/nodeId) */
+  nodeDirectoryPath: string;
+  
+  /** 节点目录的相对路径 (YYYYMM/nodeId) */
+  nodeDirectoryRelativePath: string;
+  
+  /** 文件的完整路径 (如果传了 fileName: YYYYMM/nodeId/fileName) */
+  filePath?: string;
+  
+  /** 文件的相对路径 (如果传了 fileName: YYYYMM/nodeId/fileName) */
+  fileRelativePath?: string;
 }
 
 @Injectable()
@@ -48,21 +59,29 @@ export class StorageManager {
     const nodeRelativePath = `${allocation.targetDirectory}/${nodeId}`;
     await this.localStorageProvider.createDirectory(nodeRelativePath);
 
-    // 构建相对路径
-    let relativePath = nodeRelativePath;
-    if (fileName) {
-      relativePath = `${nodeRelativePath}/${fileName}`;
-    }
-
+    // 构建路径
+    const nodeDirectoryPath = this.localStorageProvider['getAbsolutePath'](nodeRelativePath);
+    
     const storageInfo: NodeStorageInfo = {
       nodeId,
       directory: allocation.targetDirectory,
-      fullPath: this.localStorageProvider['getAbsolutePath'](relativePath),
-      relativePath,
+      nodeDirectoryPath,
+      nodeDirectoryRelativePath: nodeRelativePath,
     };
 
+    // 如果提供了文件名，构建文件路径
+    if (fileName) {
+      const fileRelativePath = `${nodeRelativePath}/${fileName}`;
+      storageInfo.filePath = this.localStorageProvider['getAbsolutePath'](fileRelativePath);
+      storageInfo.fileRelativePath = fileRelativePath;
+    }
+
     this.logger.log(
-      `为节点 ${nodeId} 分配存储成功: ${storageInfo.relativePath}`
+      `[allocateNodeStorage] nodeId=${nodeId}, directory=${allocation.targetDirectory}, fileName=${fileName || 'none'}`
+    );
+
+    this.logger.log(
+      `为节点 ${nodeId} 分配存储成功: ${storageInfo.nodeDirectoryRelativePath}`
     );
     return storageInfo;
   }
@@ -79,17 +98,23 @@ export class StorageManager {
     directory: string,
     fileName?: string
   ): NodeStorageInfo {
-    let relativePath = `${directory}/${nodeId}`;
-    if (fileName) {
-      relativePath = `${relativePath}/${fileName}`;
-    }
-
-    return {
+    const nodeRelativePath = `${directory}/${nodeId}`;
+    const nodeDirectoryPath = this.localStorageProvider['getAbsolutePath'](nodeRelativePath);
+    
+    const storageInfo: NodeStorageInfo = {
       nodeId,
       directory,
-      fullPath: this.localStorageProvider['getAbsolutePath'](relativePath),
-      relativePath,
+      nodeDirectoryPath,
+      nodeDirectoryRelativePath: nodeRelativePath,
     };
+
+    if (fileName) {
+      const fileRelativePath = `${nodeRelativePath}/${fileName}`;
+      storageInfo.filePath = this.localStorageProvider['getAbsolutePath'](fileRelativePath);
+      storageInfo.fileRelativePath = fileRelativePath;
+    }
+
+    return storageInfo;
   }
 
   /**
@@ -162,6 +187,60 @@ export class StorageManager {
   }
 
   /**
+   * 递归复制目录
+   */
+  private async recursiveCopyDirectory(
+    sourceDir: string,
+    targetDir: string
+  ): Promise<void> {
+    // 列出源目录中的所有条目
+    const entries = await this.localStorageProvider.listFiles(sourceDir);
+    
+    for (const entry of entries) {
+      const sourcePath = entry;
+      const destPath = entry.replace(sourceDir, targetDir);
+      
+      // 检查是否是目录
+      const absoluteSourcePath = this.localStorageProvider['getAbsolutePath'](sourcePath);
+      const stats = await fsPromises.stat(absoluteSourcePath);
+      
+      if (stats.isDirectory()) {
+        // 创建目标目录
+        await this.localStorageProvider.createDirectory(destPath);
+        // 递归复制子目录
+        await this.recursiveCopyDirectory(sourcePath, destPath);
+      } else {
+        // 复制文件
+        await this.localStorageProvider.copyFile(sourcePath, destPath);
+      }
+    }
+  }
+
+  /**
+   * 复制整个节点目录（包括所有相关文件）
+   * @param sourceDirRelativePath 源目录相对路径
+   * @param targetNodeId 目标节点ID
+   * @param fileName 文件名
+   * @returns 目标文件的相对路径
+   */
+  async copyNodeDirectory(
+    sourceDirRelativePath: string,
+    targetNodeId: string,
+    fileName: string
+  ): Promise<string> {
+    // 为目标节点分配存储空间
+    const storageInfo = await this.allocateNodeStorage(targetNodeId, fileName);
+    
+    // 递归复制整个目录结构（包括所有相关文件，如外部参照、缩略图等）
+    await this.recursiveCopyDirectory(
+      sourceDirRelativePath,
+      storageInfo.nodeDirectoryRelativePath
+    );
+    
+    return storageInfo.fileRelativePath;
+  }
+
+  /**
    * 获取节点完整路径
    * @param relativePath 相对路径（可能是 /mxcad/file/YYYYMM[/N]/nodeId/... 或 YYYYMM[/N]/nodeId/...）
    * @returns 完整路径
@@ -170,5 +249,48 @@ export class StorageManager {
     // 去掉 /mxcad/file/ 前缀，获取实际的存储路径
     const storagePath = relativePath.replace(/^\/mxcad\/file\//, '');
     return this.localStorageProvider['getAbsolutePath'](storagePath);
+  }
+
+  /**
+   * 从数据库存储路径中提取节点目录路径
+   * @param dbRelativePath 数据库中的相对路径 (YYYYMM/nodeId/fileName 或 YYYYMM/nodeId)
+   * @returns 节点目录的完整路径
+   */
+  getNodeDirectoryPath(dbRelativePath: string): string {
+    // 去掉前缀
+    const cleanPath = dbRelativePath.replace(/^\/mxcad\/file\//, '');
+    // 路径格式: YYYYMM/nodeId 或 YYYYMM/nodeId/fileName
+    const pathParts = cleanPath.split('/').filter(Boolean);
+    
+    // 如果是 2 部分: YYYYMM/nodeId
+    if (pathParts.length === 2) {
+      return this.localStorageProvider['getAbsolutePath'](cleanPath);
+    }
+    
+    // 如果是 3+ 部分: YYYYMM/nodeId/fileName, 提取前两部分
+    if (pathParts.length >= 3) {
+      const nodeDirectoryPath = `${pathParts[0]}/${pathParts[1]}`;
+      return this.localStorageProvider['getAbsolutePath'](nodeDirectoryPath);
+    }
+    
+    // 异常情况，直接返回
+    return this.localStorageProvider['getAbsolutePath'](cleanPath);
+  }
+
+  /**
+   * 从数据库存储路径中提取节点目录相对路径
+   * @param dbRelativePath 数据库中的相对路径
+   * @returns 节点目录的相对路径 (YYYYMM/nodeId)
+   */
+  getNodeDirectoryRelativePath(dbRelativePath: string): string {
+    // 去掉前缀
+    const cleanPath = dbRelativePath.replace(/^\/mxcad\/file\//, '');
+    const pathParts = cleanPath.split('/').filter(Boolean);
+    
+    if (pathParts.length >= 2) {
+      return `${pathParts[0]}/${pathParts[1]}`;
+    }
+    
+    return cleanPath;
   }
 }

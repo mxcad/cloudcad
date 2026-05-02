@@ -14,11 +14,13 @@
  */
 
 import React from 'react';
-import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Box from 'lucide-react/dist/esm/icons/box';
-import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
-import Users from 'lucide-react/dist/esm/icons/users';
+import { FolderOpen } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { Box } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { MxFun } from 'mxdraw';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
 import styles from './sidebar.module.css';
@@ -81,7 +83,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     id: 'collaborate',
     tab: 'collaborate',
     icon: <Users size={18} />,
-    label: '协同',
+    label: '实时协同',
     color: '#f59e0b',
     dataTour: 'trigger-collaborate',
   },
@@ -96,6 +98,10 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
     onTabClick(button.tab, button.subTab);
   };
 
+  const handleReturnToCloudMap = () => {
+    MxFun.sendStringToExecute('return-to-cloud-map-management');
+  };
+
   const isButtonActive = (button: ToolButtonConfig): boolean => {
     if (button.tab === 'collaborate') {
       return activeTab === 'collaborate';
@@ -107,6 +113,26 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
     <div className={styles.narrowSidebar} role="toolbar" aria-label="侧边栏工具条" data-tour="cad-sidebar-trigger">
       {/* 顶部装饰线 */}
       <div className={styles.sidebarAccentLine} />
+
+      {/* 返回按钮 - 固定在顶部 */}
+      <div className={styles.topToolWrapper}>
+        <Tooltip content="返回" position="right" delay={100}>
+          <div className={styles.toolWrapper}>
+            <button
+              className={styles.toolButton}
+              onClick={handleReturnToCloudMap}
+              aria-label="返回"
+            >
+              <div className={styles.buttonGlass} />
+              <span className={styles.buttonIcon}><ArrowLeft size={18} /></span>
+              <div
+                className={styles.buttonGlow}
+                style={{ background: `radial-gradient(circle, #6b728030 0%, transparent 70%)` }}
+              />
+            </button>
+          </div>
+        </Tooltip>
+      </div>
 
       {/* 主工具区 */}
       <div className={styles.toolsContainer}>

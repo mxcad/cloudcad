@@ -21,6 +21,7 @@ import {
 } from '../services/node-creation.service';
 import { FileConversionService } from '../services/file-conversion.service';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
+import { FileTypeDetector } from '../utils/file-type-detector';
 
 /**
  * 上传上下文
@@ -442,7 +443,8 @@ export class UploadOrchestrator {
       }
 
       // 转换文件（如果需要）
-      if (this.fileConversionService.needsConversion(name)) {
+      // MXWeb 文件不需要转换，直接跳过
+      if (!FileTypeDetector.isMxwebFile(name) && this.fileConversionService.needsConversion(name)) {
         const convertedExt =
           this.fileConversionService.getConvertedExtension(name);
         const convertedPath = path.join(
@@ -467,6 +469,8 @@ export class UploadOrchestrator {
         } else {
           this.logger.log(`文件转换成功: ${name} (${hash})`);
         }
+      } else if (FileTypeDetector.isMxwebFile(name)) {
+        this.logger.log(`MXWeb 文件跳过转换步骤: ${name} (${hash})`);
       }
 
       // 清理临时目录

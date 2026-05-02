@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 export COREPACK_ENABLE_STRICT=0
 
 # 使用内嵌的 Node.js
-NODE_EXE="./runtime/linux/node/node"
+NODE_EXE="./runtime/linux/node/bin/node"
 
 if [ ! -f "$NODE_EXE" ]; then
     echo "[错误] 找不到 Node.js 运行时: $NODE_EXE"
@@ -21,5 +21,5 @@ if [ -f ".deploy" ]; then
     echo "Starting CloudCAD (deploy mode)..."
     exec "$NODE_EXE" runtime/scripts/cli.js deploy --skip-build
 else
-    exec "$NODE_EXE" runtime/scripts/cli.js
+    exec "$NODE_EXE" runtime/scripts/cli.js start
 fi

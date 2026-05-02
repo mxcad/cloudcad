@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 更新 SVN 工作副本
@@ -16,13 +16,13 @@ function svnUpdate(targetPath, username, password, callback) {
   if (password) {
     command += ` --password ${password}`;
   }
-  exec(command, { windowsHide: true }, (error, stdout) => {
-    if (error) {
-      callback(error);
-    } else {
+  executeCommand(command)
+    .then(stdout => {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnUpdate;

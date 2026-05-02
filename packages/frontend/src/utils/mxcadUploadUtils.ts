@@ -22,6 +22,10 @@ export interface MxCadUploadOptions {
   hash: string;
   /** 目标节点 ID */
   nodeId: string;
+  /** 冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名） */
+  conflictStrategy?: 'skip' | 'overwrite' | 'rename';
+  /** 强制上传，跳过秒传检查（无缓存打开时使用） */
+  forceUpload?: boolean;
   /** 开始上传回调 */
   onBeginUpload?: () => void;
   /** 进度回调 */
@@ -71,7 +75,7 @@ export class MxCadUploadError extends Error {
 export const validateFileType = (file: File): boolean => {
   const fileExtension = '.' + file.name.split('.').pop();
   const normalizedExtension = fileExtension.toLowerCase();
-  return ['.dwg', '.dxf'].includes(normalizedExtension);
+  return ['.dwg', '.dxf', '.mxweb', '.mxwbe'].includes(normalizedExtension);
 };
 
 /**
@@ -98,13 +102,20 @@ export const validateFileSize = (
 export const uploadMxCadFile = async (
   options: MxCadUploadOptions
 ): Promise<MxCadUploadResult> => {
-  const { file, hash, nodeId, onBeginUpload, onProgress, onFileQueued } =
-    options;
+  const {
+    file,
+    hash,
+    nodeId,
+    conflictStrategy,
+    onBeginUpload,
+    onProgress,
+    onFileQueued,
+  } = options;
 
   // 验证文件类型
   if (!validateFileType(file)) {
     throw new MxCadUploadError(
-      `文件类型不支持: ${file.name} (支持 .dwg, .dxf)`,
+      `文件类型不支持: ${file.name} (支持 .dwg, .dxf, .mxweb, .mxwbe)`,
       file.name
     );
   }
@@ -132,6 +143,7 @@ export const uploadMxCadFile = async (
     fileHash: hash,
     filename: file.name,
     nodeId,
+    conflictStrategy,
   };
   const existData = await mxcadApi.checkFileExist(existRequest);
 
@@ -189,6 +201,9 @@ export const uploadMxCadFile = async (
     formData.append('hash', hash);
     formData.append('size', file.size.toString());
     formData.append('nodeId', nodeId);
+    if (conflictStrategy) {
+      formData.append('conflictStrategy', conflictStrategy);
+    }
     formData.append('file', chunk);
 
     const uploadData = await mxcadApi.uploadChunk(formData);
@@ -199,6 +214,22 @@ export const uploadMxCadFile = async (
     // 最后一个分片上传完成后，检查响应中是否包含 nodeId
     if (isLastChunk(chunkIndex) && uploadData?.nodeId) {
       newNodeId = uploadData.nodeId;
+
+      // 检查是否是跳过策略（文件已存在）
+      if (
+        (uploadData as unknown as { ret?: string }).ret === 'fileAlreadyExist'
+      ) {
+        return {
+          file,
+          hash,
+          nodeId: uploadData.nodeId,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          isUseServerExistingFile: true,
+          isInstantUpload: false,
+        };
+      }
     }
 
     onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
@@ -213,12 +244,29 @@ export const uploadMxCadFile = async (
     mergeFormData.append('hash', hash);
     mergeFormData.append('size', file.size.toString());
     mergeFormData.append('nodeId', nodeId);
+    if (conflictStrategy) {
+      mergeFormData.append('conflictStrategy', conflictStrategy);
+    }
 
     const mergeData = await mxcadApi.uploadChunk(mergeFormData);
 
     // mxcadApi 已自动解包，mergeData 直接是响应数据
     if (mergeData?.nodeId) {
       newNodeId = mergeData.nodeId;
+    }
+
+    // 检查是否是跳过策略（文件已存在）
+    if ((mergeData as unknown as { ret?: string }).ret === 'fileAlreadyExist') {
+      return {
+        file,
+        hash,
+        nodeId: mergeData?.nodeId ?? '',
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        isUseServerExistingFile: true,
+        isInstantUpload: false,
+      };
     }
   }
 

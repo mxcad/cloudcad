@@ -51,7 +51,7 @@ export class SvnLogEntryDto {
 
   @ApiPropertyOptional({
     description: '变更路径列表',
-    type: [SvnLogPathDto],
+    type: () => [SvnLogPathDto],
   })
   paths?: SvnLogPathDto[];
 }

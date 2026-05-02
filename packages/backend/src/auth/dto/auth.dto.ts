@@ -20,6 +20,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 
 export class RegisterDto {
@@ -30,6 +31,7 @@ export class RegisterDto {
   })
   @IsOptional()
   @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   email?: string;
 
   @ApiProperty({
@@ -72,11 +74,19 @@ export class RegisterDto {
   @IsString({ message: '昵称必须是字符串' })
   @MaxLength(50, { message: '昵称最多50个字符' })
   nickname?: string;
+
+  @ApiPropertyOptional({
+    description: '微信临时 Token（微信登录跳转注册时携带）',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @IsOptional()
+  @IsString({ message: '微信临时 Token 必须是字符串' })
+  wechatTempToken?: string;
 }
 
 export class LoginDto {
   @ApiProperty({
-    description: '邮箱或用户名',
+    description: '邮箱、用户名或手机号',
     example: 'user@example.com',
   })
   @IsString({ message: '登录账号必须是字符串' })
@@ -175,6 +185,38 @@ export class UserDto {
     example: 'ACTIVE',
   })
   status: string;
+
+  @ApiPropertyOptional({
+    description: '用户手机号（可能未绑定）',
+    example: '13800138000',
+    nullable: true,
+  })
+  phone?: string | null;
+
+  @ApiPropertyOptional({
+    description: '手机号是否已验证',
+    example: false,
+  })
+  phoneVerified?: boolean;
+
+  @ApiPropertyOptional({
+    description: '微信 OpenID',
+    example: 'oXYZ123...',
+    nullable: true,
+  })
+  wechatId?: string | null;
+
+  @ApiPropertyOptional({
+    description: '登录方式 (LOCAL | WECHAT)',
+    example: 'LOCAL',
+  })
+  provider?: string;
+
+  @ApiPropertyOptional({
+    description: '是否已设置密码',
+    example: true,
+  })
+  hasPassword?: boolean;
 }
 
 export class AuthResponseDto {

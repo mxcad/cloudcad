@@ -264,8 +264,8 @@ export class FontsService {
           await fs.unlink(backendPath);
           results.push({ location: 'backend', path: backendPath });
           this.logger.log(`字体已从后端目录删除: ${backendPath}`);
-        } catch (error: any) {
-          if (error.code !== 'ENOENT') {
+        } catch (error: unknown) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
             throw error;
           }
           this.logger.warn(`后端目录中不存在字体: ${fileName}`);
@@ -281,8 +281,8 @@ export class FontsService {
           await fs.unlink(frontendPath);
           results.push({ location: 'frontend', path: frontendPath });
           this.logger.log(`字体已从前端目录删除: ${frontendPath}`);
-        } catch (error: any) {
-          if (error.code !== 'ENOENT') {
+        } catch (error: unknown) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
             throw error;
           }
           this.logger.warn(`前端目录中不存在字体: ${fileName}`);

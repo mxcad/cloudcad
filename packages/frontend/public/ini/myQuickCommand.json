@@ -87,6 +87,7 @@
   ["MxPE_DrawMText", "_MText", "mtext", "mt"],
   ["Mx_Hatch", "_bhatch", "bhatch", "bh", "hatch", "h"],
   ["_InsertImage", "image", "_image", "ima"],
+  ["Mx_InsertImageWithUpload", "imgup", "_imgup"],
   ["_DrawRotatedDimension", "linedim", "_rdim"],
   ["_DrawAlignedDimension", "adim", "aligneddim"],
   ["_DrawRadialDimension", "rdim", " _dimradius"],

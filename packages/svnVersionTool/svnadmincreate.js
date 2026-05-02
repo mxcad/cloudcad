@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
 const svnadminPath = require('./svnadminpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 创建一个新的SVN仓库
@@ -9,12 +9,12 @@ const svnadminPath = require('./svnadminpath');
 
 function svnadminCreate(repoPath, callback) {
   const command = `${svnadminPath} create ${repoPath}`;
-  exec(command, { windowsHide: true }, (error, stdout) => {
-    if (error) {
-      callback(error);
-    } else {
+  executeCommand(command)
+    .then(stdout => {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 module.exports = svnadminCreate;

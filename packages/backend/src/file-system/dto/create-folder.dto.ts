@@ -10,12 +10,26 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, Length, IsBoolean } from 'class-validator';
 
 export class CreateFolderDto {
   @ApiProperty({ description: '文件夹名称', example: '设计图纸' })
   @IsString()
   @Length(1, 100)
   name: string;
+
+  @ApiPropertyOptional({ description: '父文件夹 ID', example: 'clx123abc' })
+  @IsString()
+  @IsOptional()
+  parentId?: string;
+
+  @ApiPropertyOptional({
+    description: '如果同名文件夹已存在则跳过创建',
+    example: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  skipIfExists?: boolean;
 }

@@ -48,8 +48,8 @@ check_env() {
 # ==================== SVN 初始化 ====================
 
 init_svn() {
-    local svn_repo_path="${SVN_REPO_PATH:-/app/svn-repo}"
-    local files_data_path="${FILES_DATA_PATH:-/app/filesData}"
+    local svn_repo_path="${SVN_REPO_PATH:-/app/data/svn-repo}"
+    local files_data_path="${FILES_DATA_PATH:-/app/data/files}"
     
     log_info "检查 SVN 仓库..."
     
@@ -142,10 +142,10 @@ wait_for_redis() {
 run_migrations() {
     log_info "运行数据库迁移..."
     cd /app/packages/backend
-    
+
     # 确保 prisma.config.ts 可以读取环境变量
     export DATABASE_URL="${DATABASE_URL}"
-    
+
     # 检查是否存在 migrations 目录且有迁移文件
     local has_migrations=false
     if [ -d "prisma/migrations" ]; then
@@ -154,14 +154,41 @@ run_migrations() {
             has_migrations=true
         fi
     fi
-    
+
     if [ "$has_migrations" = "true" ]; then
         # 有迁移文件，使用 migrate deploy
         log_info "检测到迁移文件，执行 migrate deploy..."
-        npx prisma migrate deploy --schema=prisma/schema.prisma || {
+        
+        # 显示迁移开始时间
+        local start_time=$(date +%s)
+        log_info "┌─ 数据库迁移开始 ──────────────────────────────┐"
+        
+        # 检查数据库大小
+        if command -v psql >/dev/null 2>&1; then
+            local db_size=$(psql -t -c "SELECT pg_size_pretty(pg_database_size(current_database()));" 2>/dev/null | tr -d '[:space:]')
+            if [ -n "$db_size" ]; then
+                log_info "│  数据库大小: $db_size"
+            fi
+        fi
+        
+        # 执行迁移
+        npx prisma migrate deploy --schema=prisma/schema.prisma 2>&1 | while IFS= read -r line; do
+            log_info "│  $line"
+        done
+        
+        local exit_code=${PIPESTATUS[0]}
+        local end_time=$(date +%s)
+        local elapsed=$((end_time - start_time))
+        
+        if [ $exit_code -ne 0 ]; then
+            log_error "│  ❌ 迁移失败 (耗时: ${elapsed}s)"
+            log_error "└───────────────────────────────────────────────────┘"
             log_error "数据库迁移失败"
             return 1
-        }
+        fi
+        
+        log_info "│  ✅ 迁移成功 (耗时: ${elapsed}s)"
+        log_info "└───────────────────────────────────────────────────┘"
     else
         # 没有迁移文件，使用 db push 同步 schema
         log_info "无迁移文件，使用 db push 同步数据库结构..."
@@ -170,7 +197,7 @@ run_migrations() {
             return 1
         }
     fi
-    
+
     log_info "数据库迁移完成"
 }
 

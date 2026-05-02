@@ -110,11 +110,11 @@ export class WarmupStatsDto {
   @ApiProperty({ description: '预热配置' })
   config: CacheWarmupConfigDto;
 
-  @ApiProperty({ description: '历史记录数量' })
-  historySize: number;
+  @ApiProperty({ description: '已注册策略列表' })
+  strategies: string[];
 
-  @ApiProperty({ description: '最后预热时间', required: false })
-  lastWarmup?: Date;
+  @ApiProperty({ description: '策略数量' })
+  strategyCount: number;
 }
 
 /**
@@ -126,6 +126,9 @@ export class WarmupResponseDto {
 
   @ApiProperty({ description: '预热数量' })
   count: number;
+
+  @ApiProperty({ description: '耗时（毫秒）', required: false })
+  duration?: number;
 
   @ApiProperty({ description: '错误信息', required: false })
   error?: string;

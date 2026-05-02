@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 
 # 使用内嵌的 Node.js
-NODE_EXE="./runtime/linux/node/node"
+NODE_EXE="./runtime/linux/node/bin/node"
 
 if [ ! -f "$NODE_EXE" ]; then
     echo "[错误] 找不到 Node.js 运行时: $NODE_EXE"

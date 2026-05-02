@@ -1,70 +1,138 @@
 # AGENTS.md - CloudCAD 项目上下文
 
 > **稳定规则 | 不随项目变动而改变**
+> 一、**只要有1%的可能性适用，就必须调用 Skill (强制性)**
+> 二、**涉及 API 定义或使用或修改，必须调用 api-contracts 技能 (强制性)**
 
 ---
 
-## 1. 元约束
+## 元约束
 
-| 约束            | 说明                                   |
-| --------------- | -------------------------------------- |
-| 100% 中文       | zh-CN 简体，技术术语可保留英文         |
-| 100% pnpm       | 禁止 npm/yarn                          |
-| 100% PowerShell | Windows 环境，命令符合 PowerShell 规范 |
-| 100% Express    | NestJS 后端必须使用 Express 平台       |
-| 100% 禁止 any   | TypeScript 严格模式                    |
-
----
-
-## 2. 行为准则
-
-| 准则     | 说明                             |
-| -------- | -------------------------------- |
-| 技术优先 | 优先考虑技术准确性，而非迎合用户 |
-| 不猜测   | 仅回答基于事实的信息，不进行推测 |
-| 保持一致 | 不轻易改变已设定的行为模式       |
-| 承认局限 | 在不确定时主动承认局限性         |
-| 专注执行 | 专注于解决问题，而非解释过程     |
+| 约束 | 说明 |
+|------|------|
+| 100% 中文 | zh-CN 简体，技术术语可保留英文 |
+| 100% pnpm | 禁止 npm/yarn |
+| 100% PowerShell | Windows 环境 |
+| 100% Express | NestJS 后端必须使用 Express |
+| 100% 禁止 any | TypeScript 严格模式 |
 
 ---
 
-## 3. 强制技能触发规则
+## 技术栈
 
-| 触发条件 | 必须调用的技能 |
-|----------|----------------|
-| 涉及 API 定义或使用或修改 | api-contracts |
-| 涉及主题、颜色、CSS 变量、深色/亮色模式、UI 样式规范 | perfect-theme-system |
-| 涉及后端配置添加或修改（环境变量、配置项、读取配置） | config-management |
-| 涉及权限、角色、访问控制 | permission-system |
-| 涉及 React 组件性能、数据获取、渲染优化 | vercel-react-best-practices |
-| 涉及 UI/UX 设计、组件布局、交互体验 | ui-ux-pro-max |
-| 涉及 Prisma Schema 修改（创建表、修改字段、外键关系、事务、软删除） | prisma-database |
+| 层级 | 技术 |
+|------|------|
+| 前端 | React 19.2.1 + Vite 6.2.0 + Tailwind CSS 4.1.18 |
+| 后端 | NestJS 11.x + Prisma 7.1.0 |
+| 数据库 | PostgreSQL + Redis |
+| 运行时 | Node.js >= 20.19.5, pnpm >= 9.15.9 |
 
 ---
 
-## 4. 禁止事项
+## Monorepo 包
 
-| 禁止项 | 说明 |
-|--------|------|
-| 禁止 npm/yarn | 必须使用 pnpm |
-| 禁止 any | TypeScript 严格模式 |
-| 禁止组件内定义组件 | 会导致每次渲染重新挂载 |
-| 禁止 Prisma 模糊类型 | 必须明确字段类型 |
-| 禁止硬编码颜色值 | 必须使用 CSS 变量 |
-
----
-
-## 5. 项目上下文
-
-**技术栈**: React 19 + Vite 6 + Tailwind CSS 4 + NestJS + Prisma + PostgreSQL + Redis
-
-**Monorepo 包**:
-- `packages/backend` - NestJS 后端 (端口 3001)
-- `packages/frontend` - React 前端
-- `packages/config-service` - 部署配置中心
-- `packages/svnVersionTool` - SVN 版本控制
+| 包 | 端口 | 说明 |
+|----|------|------|
+| packages/backend | 3001 | NestJS 后端服务 |
+| packages/frontend | 5173 | React 前端应用 |
+| packages/config-service | 3002 | 部署配置中心 |
+| packages/svnVersionTool | - | SVN 版本控制工具 |
 
 ---
 
-**文档版本**: 2.1.0
-**更新日期**: 2026-03-27
+## 模块索引
+
+### 后端模块
+
+| 模块 | 说明 | 详细文档 |
+|------|------|----------|
+| auth/users/roles/common | 认证授权 | [auth.md](documents/lcd/backend/auth.md) |
+| file-system/storage/mxcad/version-control | 文件系统 | [file-system.md](documents/lcd/backend/file-system.md) |
+| cache-architecture/redis/config/runtime-config | 缓存与配置 | [cache-config.md](documents/lcd/backend/cache-config.md) |
+| admin/audit/fonts/gallery/health/policy-engine/database | 功能模块 | [features.md](documents/lcd/backend/features.md) |
+| library/personal-space/public-file | 新增模块 | 见下方说明 |
+
+### 后端新增模块
+
+| 模块 | 路径 | 说明 |
+|------|------|------|
+| library | `src/library/` | 公共图库管理 |
+| personal-space | `src/personal-space/` | 个人空间管理 |
+| public-file | `src/public-file/` | 公共文件服务 |
+
+### 前端模块
+
+| 模块 | 说明 | 详细文档 |
+|------|------|----------|
+| pages | 页面组件 | [pages.md](documents/lcd/frontend/pages.md) |
+| components | UI 组件 | [components.md](documents/lcd/frontend/components.md) |
+| hooks | React Hooks | [hooks.md](documents/lcd/frontend/hooks.md) |
+| services/stores/contexts/utils | 服务与工具 | [services.md](documents/lcd/frontend/services.md) |
+
+### 共享文档
+
+| 文档 | 说明 |
+|------|------|
+| [architecture.md](documents/lcd/shared/architecture.md) | 架构概览 |
+| [guidelines.md](documents/lcd/shared/guidelines.md) | 开发规范 |
+| [commands.md](documents/lcd/shared/commands.md) | 常用命令 |
+
+---
+
+## 强制技能触发
+
+| 触发条件 | 技能 |
+|----------|------|
+| API 定义或修改 | api-contracts |
+| 主题/CSS 变量 | perfect-theme-system |
+| 后端配置修改 | config-management |
+| 权限/角色 | permission-system |
+| React 性能优化 | vercel-react-best-practices |
+| UI/UX 设计 | ui-ux-pro-max |
+| **数据库结构变更** | **prisma-database** |
+
+---
+
+## 开发规范
+
+### 数据库迁移规范 (Prisma)
+
+**核心原则：生产环境必须使用 Migration 脚本，禁止使用 `db push` 进行部署。**
+
+1. **开发阶段**：
+   - ❌ **禁止**：修改 `schema.prisma` 后仅依赖 `db push`。
+   - ✅ **必须**：运行 `pnpm prisma migrate dev --name <描述你的变更>`。
+   - 这会在 `packages/backend/prisma/migrations/` 下生成一个带时间戳的文件夹，里面包含 `migration.sql`。
+   - **必须**将 `migrations/` 文件夹提交到 Git。
+
+2. **部署阶段**：
+   - 部署脚本会自动执行 `prisma migrate deploy`。
+   - 系统会自动检测并应用未执行过的迁移脚本。
+   - 部署前会自动备份数据库到 `data/backups/`。
+
+3. **破坏性变更**：
+   - 对于字段重命名、类型变更等可能导致数据丢失的操作，必须编写自定义 SQL 迁移脚本。
+   - 遵循"向后兼容"原则：先加新字段，同步数据，再删旧字段（分版本发布）。
+
+---
+
+## 可用技能
+
+| 技能 | 用途 |
+|------|------|
+| api-contracts | API 契约一致性检查 |
+| code-concise | 代码简洁性审查 |
+| config-management | 后端配置管理规范 |
+| perfect-theme-system | 主题系统设计规范 |
+| permission-system | 权限系统规范 |
+| **prisma-database** | **Prisma 数据库迁移规范** |
+| ui-ux-pro-max | UI/UX 设计指南 |
+| vercel-react-best-practices | React 性能最佳实践 |
+| writing-documentation | 文档编写规范 |
+| layered-context | 分层上下文文档生成 |
+| find-skills | 技能发现与安装 |
+
+---
+
+**文档版本**: 4.1.0 (分层结构)
+**更新日期**: 2026-04-07

@@ -112,7 +112,10 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
     PrismaPermission.SYSTEM_MONITOR,
     PrismaPermission.SYSTEM_CONFIG_READ,
     PrismaPermission.SYSTEM_CONFIG_WRITE,
-    PrismaPermission.SYSTEM_TEMPLATE_READ,
+    PrismaPermission.LIBRARY_DRAWING_MANAGE,
+    PrismaPermission.LIBRARY_BLOCK_MANAGE,
+    PrismaPermission.STORAGE_QUOTA,
+    PrismaPermission.PROJECT_CREATE,
   ],
   [SystemRole.USER_MANAGER]: [
     // 用户管理员权限
@@ -125,6 +128,8 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
     PrismaPermission.SYSTEM_ROLE_UPDATE,
     PrismaPermission.SYSTEM_ROLE_DELETE,
     PrismaPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
+    PrismaPermission.STORAGE_QUOTA,
+    PrismaPermission.PROJECT_CREATE,
   ],
   [SystemRole.FONT_MANAGER]: [
     // 字体管理员权限
@@ -132,9 +137,11 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
     PrismaPermission.SYSTEM_FONT_UPLOAD,
     PrismaPermission.SYSTEM_FONT_DELETE,
     PrismaPermission.SYSTEM_FONT_DOWNLOAD,
+    PrismaPermission.PROJECT_CREATE,
   ],
   [SystemRole.USER]: [
-    // 普通用户：暂无系统权限（仅用于登录）
+    // 普通用户：创建项目权限
+    PrismaPermission.PROJECT_CREATE,
   ],
 };
 
@@ -177,7 +184,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
     PrismaProjectPermission.CAD_EXTERNAL_REFERENCE,
-    PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
   ],
   [ProjectRole.ADMIN]: [
@@ -196,7 +202,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
     PrismaProjectPermission.CAD_EXTERNAL_REFERENCE,
-    PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
   ],
   [ProjectRole.MEMBER]: [
@@ -210,7 +215,6 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
     PrismaProjectPermission.FILE_MOVE,
     PrismaProjectPermission.FILE_COPY,
     PrismaProjectPermission.CAD_SAVE,
-    PrismaProjectPermission.GALLERY_ADD,
     PrismaProjectPermission.VERSION_READ,
   ],
   [ProjectRole.EDITOR]: [

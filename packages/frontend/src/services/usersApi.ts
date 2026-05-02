@@ -15,6 +15,7 @@ import type {
   CreateUserDto,
   UpdateUserDto,
   ChangePasswordDto,
+  DeactivateAccountDto,
   OperationMethods,
 } from '../types/api-client';
 
@@ -37,6 +38,10 @@ export const usersApi = {
 
   delete: (id: string) => getApiClient().UsersController_remove({ id }),
 
+  deleteImmediately: (id: string) => getApiClient().UsersController_deleteImmediately({ id }),
+
+  restore: (id: string) => getApiClient().UsersController_restore({ id }),
+
   getProfile: () => getApiClient().UsersController_getProfile(),
 
   updateProfile: (data: UpdateUserDto) =>
@@ -46,4 +51,15 @@ export const usersApi = {
     getApiClient().UsersController_changePassword(null, data),
 
   getDashboardStats: () => getApiClient().UsersController_getDashboardStats(),
+
+  deactivateAccount: (data: DeactivateAccountDto) =>
+    getApiClient().UsersController_deactivateAccount(null, data),
+
+  getWechatDeactivateQr: () =>
+    getApiClient().get<{ token: string; qrUrl: string }>(
+      '/users/me/deactivate/wechat-qr',
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    ),
 };

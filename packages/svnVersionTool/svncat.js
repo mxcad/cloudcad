@@ -1,5 +1,5 @@
-const { execFile } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeExecFile } = require('./svn-executor');
 
 // 最大缓冲区大小：50MB
 const MAX_BUFFER_SIZE = 50 * 1024 * 1024;
@@ -33,22 +33,16 @@ function svnCat(filePath, revision, username, password, callback) {
     args.push('--password', password);
   }
 
-  execFile(
-    svnPath,
-    args,
-    {
-      encoding: 'buffer',
-      maxBuffer: MAX_BUFFER_SIZE,
-      windowsHide: true,
-    },
-    (error, stdout, _stderr) => {
-      if (error) {
-        callback(error);
-      } else {
-        callback(null, stdout);
-      }
-    }
-  );
+  executeExecFile(svnPath, args, {
+    encoding: 'buffer',
+    maxBuffer: MAX_BUFFER_SIZE
+  })
+    .then(stdout => {
+      callback(null, stdout);
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnCat;

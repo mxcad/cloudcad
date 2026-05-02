@@ -57,22 +57,26 @@ export class LocalStorageProvider implements StorageProvider {
 
     // 检查路径遍历攻击
     if (key.includes('..') || key.includes('~')) {
+      this.logger.error(`[validatePath] 路径包含 .. 或 ~: ${key}`);
       throw new BadRequestException('路径包含非法字符');
     }
 
     // 检查绝对路径（MxCAD-App 访问路径例外）
     if (path.isAbsolute(key) && !key.startsWith('/mxcad/file/')) {
+      this.logger.error(`[validatePath] 不允许使用绝对路径: ${key}`);
       throw new BadRequestException('不允许使用绝对路径');
     }
 
     // 检查 Windows 路径分隔符
     if (key.includes('\\')) {
+      this.logger.error(`[validatePath] 路径包含反斜杠: ${key}`);
       throw new BadRequestException('路径包含非法字符');
     }
 
     // 检查非法字符（Windows 不允许的字符）
     const illegalChars = /[<>:"|?*]/;
     if (illegalChars.test(key)) {
+      this.logger.error(`[validatePath] 路径包含 Windows 非法字符: ${key}`);
       throw new BadRequestException('路径包含非法字符');
     }
 
@@ -86,9 +90,11 @@ export class LocalStorageProvider implements StorageProvider {
         charCode !== 10 &&
         charCode !== 13
       ) {
+        this.logger.error(`[validatePath] 路径包含控制字符: charCode=${charCode}, index=${i}, key=${key}`);
         throw new BadRequestException('路径包含非法字符');
       }
       if (charCode === 127) {
+        this.logger.error(`[validatePath] 路径包含 DEL 字符: ${key}`);
         throw new BadRequestException('路径包含非法字符');
       }
     }

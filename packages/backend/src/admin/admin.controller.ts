@@ -16,6 +16,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -23,6 +24,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -30,6 +32,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { PermissionService } from '../common/services/permission.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
+import { StorageCleanupService } from '../common/services/storage-cleanup.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import {
   AdminStatsResponseDto,
@@ -47,7 +50,8 @@ import {
 export class AdminController {
   constructor(
     private readonly permissionService: PermissionService,
-    private readonly cacheService: PermissionCacheService
+    private readonly cacheService: PermissionCacheService,
+    private readonly storageCleanupService: StorageCleanupService
   ) {}
 
   @Get('stats')
@@ -141,6 +145,47 @@ export class AdminController {
         userRole: mockUser.role.name,
         permissions: await this.permissionService.getUserPermissions(mockUser),
       },
+    };
+  }
+
+  @Post('storage/cleanup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '手动触发存储清理' })
+  @ApiResponse({
+    status: 200,
+    description: '存储清理完成',
+  })
+  @ApiQuery({
+    name: 'delayDays',
+    required: false,
+    type: Number,
+    description: '清理延迟天数（覆盖默认值）',
+  })
+  async cleanupStorage(@Query('delayDays') delayDays?: number) {
+    const result = await this.storageCleanupService.manualCleanup(delayDays);
+    return {
+      message: '存储清理完成',
+      data: {
+        deletedNodes: result.deletedNodes,
+        deletedDirectories: result.deletedDirectories,
+        freedSpace: result.freedSpace,
+        errors: result.errors,
+      },
+    };
+  }
+
+  @Get('storage/cleanup/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取待清理存储统计' })
+  @ApiResponse({
+    status: 200,
+    description: '获取待清理存储统计成功',
+  })
+  async getCleanupStats() {
+    const stats = await this.storageCleanupService.getPendingCleanupStats();
+    return {
+      message: '待清理存储统计',
+      data: stats,
     };
   }
 }

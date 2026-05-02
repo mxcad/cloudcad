@@ -438,16 +438,16 @@ node runtime/scripts/start.js
 
 #### 存储路径配置
 
-| 变量               | 默认值    | 说明             |
-| ------------------ | --------- | ---------------- |
-| `FILES_DATA_PATH`  | filesData | 文件数据目录     |
-| `SVN_REPO_PATH`    | svn-repo  | SVN 仓库目录     |
-| `FILES_NODE_LIMIT` | 300000    | 单目录最大节点数 |
+| 变量               | 默认值        | 说明             |
+| ------------------ | ------------- | ---------------- |
+| `FILES_DATA_PATH`  | data/files    | 文件数据目录     |
+| `SVN_REPO_PATH`    | data/svn-repo | SVN 仓库目录     |
+| `FILES_NODE_LIMIT` | 300000        | 单目录最大节点数 |
 
 **⚠️ 重要：路径建议使用绝对路径**
 
-- Windows 示例：`D:/web/MxCADOnline/cloudcad/filesData`
-- Linux 示例：`/var/www/cloudcad/filesData`
+- Windows 示例：`D:/web/MxCADOnline/cloudcad/data/files`
+- Linux 示例：`/var/www/cloudcad/data/files`
 
 #### MxCAD 配置
 

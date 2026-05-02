@@ -8,22 +8,24 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 
 // Lucide 图标
-import MailIcon from 'lucide-react/dist/esm/icons/mail';
-import LockIcon from 'lucide-react/dist/esm/icons/lock';
-import KeyRoundIcon from 'lucide-react/dist/esm/icons/key-round';
-import ArrowLeftIcon from 'lucide-react/dist/esm/icons/arrow-left';
-import ArrowRightIcon from 'lucide-react/dist/esm/icons/arrow-right';
-import Loader2Icon from 'lucide-react/dist/esm/icons/loader-2';
-import AlertCircleIcon from 'lucide-react/dist/esm/icons/alert-circle';
-import CheckCircleIcon from 'lucide-react/dist/esm/icons/check-circle';
-import EyeIcon from 'lucide-react/dist/esm/icons/eye';
-import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
-import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
-import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
-import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
+import { Mail } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { Eye } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
+import { Phone } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { Boxes } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 interface LocationState {
   email?: string;
+  phone?: string;
 }
 
 /**
@@ -34,6 +36,7 @@ interface LocationState {
  * - 统一渐变网格背景
  * - 玻璃态效果
  * - 密码可见性切换
+ * - 支持邮箱/手机号两种方式
  * - 完美主题适配
  */
 export const ResetPassword: React.FC = () => {
@@ -47,9 +50,12 @@ export const ResetPassword: React.FC = () => {
   const appLogo = brandConfig?.logo || '/logo.png';
 
   const emailFromState = (location.state as LocationState)?.email || '';
+  const phoneFromState = (location.state as LocationState)?.phone || '';
+  const contactType = emailFromState ? 'email' : 'phone';
 
   const [formData, setFormData] = useState({
     email: emailFromState,
+    phone: phoneFromState,
     code: '',
     newPassword: '',
     confirmPassword: '',
@@ -84,7 +90,14 @@ export const ResetPassword: React.FC = () => {
     }
 
     try {
-      await authApi.resetPassword(formData);
+      await authApi.resetPassword({
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        code: formData.code,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
+        validateContact: '',
+      });
       setSuccess(true);
       setTimeout(() => {
         navigate('/login', {
@@ -107,6 +120,8 @@ export const ResetPassword: React.FC = () => {
   if (success) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
+        <InteractiveBackground />
+
         <div className="theme-toggle-wrapper">
           <ThemeToggle />
         </div>
@@ -115,7 +130,7 @@ export const ResetPassword: React.FC = () => {
           <div className="auth-card">
             <div className="success-content">
               <div className="success-icon">
-                <CheckCircleIcon size={32} />
+                <CheckCircle size={32} />
               </div>
               <h2 className="success-title">密码重置成功！</h2>
               <p className="success-subtitle">即将自动跳转到登录页...</p>
@@ -170,40 +185,65 @@ export const ResetPassword: React.FC = () => {
           {/* 错误提示 */}
           {error && (
             <div className="alert alert-error">
-              <AlertCircleIcon size={18} className="alert-icon" />
+              <AlertCircle size={18} className="alert-icon" />
               <span>{error}</span>
             </div>
           )}
 
           {/* 表单 */}
           <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="input-group">
-              <label htmlFor="email" className="input-label">
-                邮箱地址
-              </label>
-              <div className="input-wrapper">
-                <MailIcon size={18} className="input-icon" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="input-field"
-                  placeholder="请输入邮箱地址"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-                <div className="input-glow" />
+            {contactType === 'email' ? (
+              <div className="input-group">
+                <label htmlFor="email" className="input-label">
+                  邮箱地址
+                </label>
+                <div className="input-wrapper">
+                  <Mail size={18} className="input-icon" />
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="input-field"
+                    placeholder="请输入邮箱地址"
+                    value={formData.email}
+                    onChange={handleChange}
+                    readOnly
+                  />
+                  <div className="input-glow" />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="input-group">
+                <label htmlFor="phone" className="input-label">
+                  手机号码
+                </label>
+                <div className="input-wrapper">
+                  <Phone size={18} className="input-icon" />
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required
+                    className="input-field"
+                    placeholder="请输入手机号码"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    readOnly
+                  />
+                  <div className="input-glow" />
+                </div>
+              </div>
+            )}
 
             <div className="input-group">
               <label htmlFor="code" className="input-label">
                 验证码
               </label>
               <div className="input-wrapper">
-                <KeyRoundIcon size={18} className="input-icon" />
+                <KeyRound size={18} className="input-icon" />
                 <input
                   id="code"
                   name="code"
@@ -224,7 +264,7 @@ export const ResetPassword: React.FC = () => {
                 新密码
               </label>
               <div className="input-wrapper">
-                <LockIcon size={18} className="input-icon" />
+                <Lock size={18} className="input-icon" />
                 <input
                   id="newPassword"
                   name="newPassword"
@@ -241,11 +281,7 @@ export const ResetPassword: React.FC = () => {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOffIcon size={18} />
-                  ) : (
-                    <EyeIcon size={18} />
-                  )}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
                 <div className="input-glow" />
               </div>
@@ -256,7 +292,7 @@ export const ResetPassword: React.FC = () => {
                 确认新密码
               </label>
               <div className="input-wrapper">
-                <LockIcon size={18} className="input-icon" />
+                <Lock size={18} className="input-icon" />
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -274,9 +310,9 @@ export const ResetPassword: React.FC = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeOffIcon size={18} />
+                    <EyeOff size={18} />
                   ) : (
-                    <EyeIcon size={18} />
+                    <Eye size={18} />
                   )}
                 </button>
                 <div className="input-glow" />
@@ -286,13 +322,13 @@ export const ResetPassword: React.FC = () => {
             <button type="submit" disabled={loading} className="submit-button">
               {loading ? (
                 <>
-                  <Loader2Icon size={18} className="animate-spin" />
+                  <Loader2 size={18} className="animate-spin" />
                   <span>重置中...</span>
                 </>
               ) : (
                 <>
                   <span>重置密码</span>
-                  <ArrowRightIcon size={18} className="button-arrow" />
+                  <ArrowRight size={18} className="button-arrow" />
                 </>
               )}
             </button>
@@ -301,7 +337,7 @@ export const ResetPassword: React.FC = () => {
           {/* 返回登录 */}
           <div className="form-footer">
             <button onClick={() => navigate('/login')} className="back-link">
-              <ArrowLeftIcon size={16} />
+              <ArrowLeft size={16} />
               <span>返回登录</span>
             </button>
           </div>
@@ -309,13 +345,13 @@ export const ResetPassword: React.FC = () => {
           {/* 特性图标 */}
           <div className="features-bar">
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
-              <CpuIcon size={14} />
+              <Cpu size={14} />
             </div>
             <div className="feature-dot" data-tooltip="多用户实时协同编辑">
-              <BoxesIcon size={14} />
+              <Boxes size={14} />
             </div>
             <div className="feature-dot" data-tooltip="企业级数据安全保障">
-              <ShieldCheckIcon size={14} />
+              <ShieldCheck size={14} />
             </div>
           </div>
         </div>

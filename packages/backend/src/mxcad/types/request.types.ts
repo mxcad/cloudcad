@@ -11,18 +11,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import type { Request as ExpressRequest } from 'express';
+import type { AuthenticatedUser } from '../../common/types/request.types';
 
 /**
  * 扩展 Express Request 类型，添加自定义属性
  */
 export interface AuthenticatedRequest extends Omit<ExpressRequest, 'session'> {
   /** 用户信息 */
-  user?: {
-    id: string;
-    username: string;
-    email: string;
-    role: string;
-  };
+  user?: AuthenticatedUser;
   /** 会话信息 */
   session?: {
     userId?: string;

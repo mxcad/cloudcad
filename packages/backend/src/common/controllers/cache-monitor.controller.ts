@@ -26,7 +26,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { RedisCacheService } from '../services/redis-cache.service';
-import { CacheWarmupService } from '../services/cache-warmup.service';
+import { CacheWarmupService } from '../../cache-architecture/services/cache-warmup.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../decorators/require-permissions.decorator';
 import { PermissionsGuard } from '../guards/permissions.guard';

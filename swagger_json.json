@@ -650,459 +650,6 @@
         ]
       }
     },
-    "/api/auth/register": {
-      "post": {
-        "operationId": "AuthController_register",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "注册成功，请查收验证邮件",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "message": "注册成功，请查看邮箱并点击验证链接完成注册",
-                    "email": "user@example.com"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "409": {
-            "description": "邮箱或用户名已存在"
-          }
-        },
-        "summary": "用户注册",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/login": {
-      "post": {
-        "operationId": "AuthController_login",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "登录成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthApiResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "账号或密码错误"
-          }
-        },
-        "summary": "用户登录",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/refresh": {
-      "post": {
-        "operationId": "AuthController_refreshToken",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Token刷新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthApiResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "无效的刷新Token"
-          }
-        },
-        "summary": "刷新Token",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/logout": {
-      "post": {
-        "operationId": "AuthController_logout",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "登出成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "用户登出",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/profile": {
-      "get": {
-        "operationId": "AuthController_getProfile",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "获取用户信息成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserProfileResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取用户信息",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/send-verification": {
-      "post": {
-        "operationId": "AuthController_sendVerification",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "验证邮件已发送",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SendVerificationApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或发送过于频繁"
-          }
-        },
-        "summary": "发送邮箱验证码",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/verify-email": {
-      "post": {
-        "operationId": "AuthController_verifyEmail",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerifyEmailDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "邮箱验证成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VerifyEmailApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "验证码无效或已过期"
-          }
-        },
-        "summary": "验证邮箱",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/resend-verification": {
-      "post": {
-        "operationId": "AuthController_resendVerification",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "验证邮件已重新发送",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SendVerificationApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或发送过于频繁"
-          }
-        },
-        "summary": "重发验证码",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/forgot-password": {
-      "post": {
-        "operationId": "AuthController_forgotPassword",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "密码重置验证码已发送",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ForgotPasswordApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "该邮箱未注册或账号已禁用"
-          }
-        },
-        "summary": "忘记密码",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/reset-password": {
-      "post": {
-        "operationId": "AuthController_resetPassword",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPasswordDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "密码重置成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResetPasswordApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "验证码无效或已过期"
-          }
-        },
-        "summary": "重置密码",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/bind-email": {
-      "post": {
-        "operationId": "AuthController_sendBindEmailCode",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BindEmailDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "验证码已发送",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BindEmailApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "邮件服务未启用或已绑定邮箱"
-          },
-          "409": {
-            "description": "邮箱已被其他用户绑定"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "发送绑定邮箱验证码",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/auth/verify-bind-email": {
-      "post": {
-        "operationId": "AuthController_verifyBindEmail",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerifyBindEmailDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "邮箱绑定成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BindEmailApiResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "邮件服务未启用或已绑定邮箱"
-          },
-          "401": {
-            "description": "验证码无效或已过期"
-          },
-          "409": {
-            "description": "邮箱已被其他用户绑定"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "验证并绑定邮箱",
-        "tags": [
-          "认证"
-        ]
-      }
-    },
-    "/api/session/create": {
-      "post": {
-        "operationId": "SessionController_createSession",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Session"
-        ]
-      }
-    },
-    "/api/session/user": {
-      "get": {
-        "operationId": "SessionController_getSessionUser",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Session"
-        ]
-      }
-    },
-    "/api/session/destroy": {
-      "post": {
-        "operationId": "SessionController_destroySession",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Session"
-        ]
-      }
-    },
     "/api/cache/stats": {
       "get": {
         "operationId": "CacheMonitorController_getStats",
@@ -1218,6 +765,70 @@
         "summary": "预热指定项目的缓存",
         "tags": [
           "cache"
+        ]
+      }
+    },
+    "/api/user-cleanup/stats": {
+      "get": {
+        "operationId": "UserCleanupController_getStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功获取待清理用户统计",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCleanupStatsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取待清理用户统计",
+        "tags": [
+          "user-cleanup"
+        ]
+      }
+    },
+    "/api/user-cleanup/trigger": {
+      "post": {
+        "operationId": "UserCleanupController_triggerCleanup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCleanupTriggerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功触发用户数据清理",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCleanupTriggerResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "手动触发用户数据清理",
+        "tags": [
+          "user-cleanup"
         ]
       }
     },
@@ -1477,6 +1088,15 @@
             }
           },
           {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "用户状态筛选（ACTIVE/INACTIVE/SUSPENDED/DELETED）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "roleId",
             "required": false,
             "in": "query",
@@ -1530,6 +1150,15 @@
                 "asc",
                 "desc"
               ]
+            }
+          },
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "description": "项目ID（用于权限检查）",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -1609,6 +1238,15 @@
             }
           },
           {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "用户状态筛选（ACTIVE/INACTIVE/SUSPENDED/DELETED）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "roleId",
             "required": false,
             "in": "query",
@@ -1662,6 +1300,15 @@
                 "asc",
                 "desc"
               ]
+            }
+          },
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "description": "项目ID（用于权限检查）",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -1879,7 +1526,7 @@
         ],
         "responses": {
           "200": {
-            "description": "删除用户成功"
+            "description": "账户注销成功"
           },
           "404": {
             "description": "用户不存在"
@@ -1890,7 +1537,77 @@
             "bearer": []
           }
         ],
-        "summary": "删除用户",
+        "summary": "注销用户账户（软删除）",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/api/users/{id}/delete-immediately": {
+      "post": {
+        "operationId": "UsersController_deleteImmediately",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "账户立即注销成功"
+          },
+          "403": {
+            "description": "权限不足"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "立即注销指定用户账户（软删除 + 立即清理）",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/api/users/{id}/restore": {
+      "post": {
+        "operationId": "UsersController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用户恢复成功"
+          },
+          "400": {
+            "description": "用户未注销"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已注销用户",
         "tags": [
           "用户管理"
         ]
@@ -1930,6 +1647,92 @@
           }
         ],
         "summary": "更新用户状态",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/api/users/deactivate-account": {
+      "post": {
+        "operationId": "UsersController_deactivateAccount",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeactivateAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "账户注销成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeactivateAccountApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "账户已注销或验证失败"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "注销用户账户",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/api/users/me/restore": {
+      "post": {
+        "operationId": "UsersController_restoreAccount",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "账户恢复成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreAccountResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "账户未注销或已过冷静期"
+          },
+          "401": {
+            "description": "验证失败"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已注销账户（冷静期内）",
         "tags": [
           "用户管理"
         ]
@@ -2191,6 +1994,1072 @@
         "summary": "重置配置为默认值",
         "tags": [
           "runtime-config"
+        ]
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "409": {
+            "description": "邮箱或用户名已存在"
+          }
+        },
+        "summary": "用户注册",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "账号或密码错误"
+          }
+        },
+        "summary": "用户登录",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refreshToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token刷新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "无效的刷新Token"
+          }
+        },
+        "summary": "刷新Token",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "登出成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "用户登出",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取用户信息成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户信息",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/send-verification": {
+      "post": {
+        "operationId": "AuthController_sendVerification",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证邮件已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendVerificationApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误或发送过于频繁"
+          }
+        },
+        "summary": "发送邮箱验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-email": {
+      "post": {
+        "operationId": "AuthController_verifyEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "邮箱验证成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或已过期"
+          }
+        },
+        "summary": "验证邮箱",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-email-and-register-phone": {
+      "post": {
+        "operationId": "AuthController_verifyEmailAndRegisterPhone",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或已过期"
+          },
+          "409": {
+            "description": "手机号、邮箱或用户名已存在"
+          }
+        },
+        "summary": "验证邮箱并完成手机号注册",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/resend-verification": {
+      "post": {
+        "operationId": "AuthController_resendVerification",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证邮件已重新发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendVerificationApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误或发送过于频繁"
+          }
+        },
+        "summary": "重发验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/bind-email-and-login": {
+      "post": {
+        "operationId": "AuthController_bindEmailAndLogin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "绑定成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或令牌过期"
+          }
+        },
+        "summary": "绑定邮箱并登录（用于已注册但没有邮箱的用户）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/bind-phone-and-login": {
+      "post": {
+        "operationId": "AuthController_bindPhoneAndLogin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "绑定成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或令牌过期"
+          }
+        },
+        "summary": "绑定手机号并登录（用于已注册但没有手机号的用户）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-phone": {
+      "post": {
+        "operationId": "AuthController_verifyPhone",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "手机号验证成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或已过期"
+          }
+        },
+        "summary": "验证手机号（用于已注册但手机号未验证的用户）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码重置验证码已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "该邮箱未注册或账号已禁用"
+          }
+        },
+        "summary": "忘记密码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码重置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "验证码无效或已过期"
+          }
+        },
+        "summary": "重置密码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/bind-email": {
+      "post": {
+        "operationId": "AuthController_sendBindEmailCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证码已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BindEmailApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "邮件服务未启用或已绑定邮箱"
+          },
+          "409": {
+            "description": "邮箱已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "发送绑定邮箱验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-bind-email": {
+      "post": {
+        "operationId": "AuthController_verifyBindEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyBindEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "邮箱绑定成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BindEmailApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "邮件服务未启用或已绑定邮箱"
+          },
+          "401": {
+            "description": "验证码无效或已过期"
+          },
+          "409": {
+            "description": "邮箱已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "验证并绑定邮箱",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/send-unbind-email-code": {
+      "post": {
+        "operationId": "AuthController_sendUnbindEmailCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证码已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "验证码已发送到原邮箱"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "未绑定邮箱或发送过于频繁"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "发送解绑邮箱验证码（验证原邮箱）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-unbind-email-code": {
+      "post": {
+        "operationId": "AuthController_verifyUnbindEmailCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证通过，可以换绑新邮箱",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "验证通过",
+                    "token": "xxx"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或已过期"
+          },
+          "401": {
+            "description": "未绑定邮箱"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "验证解绑邮箱验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/rebind-email": {
+      "post": {
+        "operationId": "AuthController_rebindEmail",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "换绑成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "邮箱换绑成功"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或未验证原邮箱"
+          },
+          "409": {
+            "description": "新邮箱已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "换绑邮箱（需要先验证原邮箱）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/send-sms-code": {
+      "post": {
+        "operationId": "AuthController_sendSmsCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证码已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "验证码已发送"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "手机号格式不正确或发送过于频繁"
+          }
+        },
+        "summary": "发送短信验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-sms-code": {
+      "post": {
+        "operationId": "AuthController_verifySmsCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "valid": true,
+                    "message": "验证成功"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "手机号格式不正确"
+          }
+        },
+        "summary": "验证短信验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/register-phone": {
+      "post": {
+        "operationId": "AuthController_registerByPhone",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或参数无效"
+          },
+          "409": {
+            "description": "手机号或用户名已存在"
+          }
+        },
+        "summary": "手机号注册",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/login-phone": {
+      "post": {
+        "operationId": "AuthController_loginByPhone",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApiResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误"
+          },
+          "412": {
+            "description": "手机号未注册，需要跳转注册页"
+          }
+        },
+        "summary": "手机号验证码登录",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/bind-phone": {
+      "post": {
+        "operationId": "AuthController_bindPhone",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "绑定成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "手机号绑定成功"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或已绑定手机号"
+          },
+          "409": {
+            "description": "手机号已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "绑定手机号",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/send-unbind-phone-code": {
+      "post": {
+        "operationId": "AuthController_sendUnbindPhoneCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证码已发送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "验证码已发送到原手机号"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "未绑定手机号或发送过于频繁"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "发送解绑手机号验证码（验证原手机号）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/verify-unbind-phone-code": {
+      "post": {
+        "operationId": "AuthController_verifyUnbindPhoneCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "验证通过，可以换绑新手机号",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "验证通过",
+                    "token": "xxx"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或已过期"
+          },
+          "401": {
+            "description": "未绑定手机号"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "验证解绑手机号验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/rebind-phone": {
+      "post": {
+        "operationId": "AuthController_rebindPhone",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "换绑成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "手机号换绑成功"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或未验证原手机号"
+          },
+          "409": {
+            "description": "新手机号已被其他用户绑定"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "换绑手机号（需要先验证原手机号）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/check-field": {
+      "post": {
+        "operationId": "AuthController_checkFieldUniqueness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "返回各字段是否存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "usernameExists": false,
+                    "emailExists": false,
+                    "phoneExists": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "检查字段唯一性（用户名、邮箱、手机号）",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/wechat/login": {
+      "get": {
+        "operationId": "AuthController_getWechatAuthUrl",
+        "parameters": [
+          {
+            "name": "origin",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isPopup",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "purpose",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回微信授权 URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "authUrl": "https://open.weixin.qq.com/connect/qrconnect?...",
+                    "state": "random_state_string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取微信授权 URL",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/wechat/callback": {
+      "get": {
+        "operationId": "AuthController_wechatCallback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "微信登录成功，重定向回前端页面"
+          },
+          "400": {
+            "description": "授权失败或参数错误"
+          }
+        },
+        "summary": "微信授权回调",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/wechat/bind": {
+      "post": {
+        "operationId": "AuthController_bindWechat",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "绑定成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "微信绑定成功"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "绑定失败"
+          },
+          "409": {
+            "description": "该微信已绑定其他账号"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "绑定微信到当前账号",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/auth/wechat/unbind": {
+      "post": {
+        "operationId": "AuthController_unbindWechat",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "解绑成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "微信解绑成功"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "解绑失败"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "解绑微信",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/api/session/create": {
+      "post": {
+        "operationId": "SessionController_createSession",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/api/session/user": {
+      "get": {
+        "operationId": "SessionController_getSessionUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/api/session/destroy": {
+      "post": {
+        "operationId": "SessionController_destroySession",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
         ]
       }
     },
@@ -2928,12 +3797,7 @@
             "in": "query",
             "description": "项目状态",
             "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "ARCHIVED",
-                "DELETED"
-              ]
+              "$ref": "#/components/schemas/ProjectStatus"
             }
           },
           {
@@ -2989,13 +3853,7 @@
             "in": "query",
             "description": "项目过滤类型：all-全部，owned-我创建的，joined-我加入的",
             "schema": {
-              "default": "all",
-              "type": "string",
-              "enum": [
-                "all",
-                "owned",
-                "joined"
-              ]
+              "$ref": "#/components/schemas/ProjectFilterType"
             }
           }
         ],
@@ -3049,6 +3907,45 @@
         ]
       }
     },
+    "/api/file-system/personal-space/by-user/{userId}": {
+      "get": {
+        "operationId": "FileSystemController_getUserPersonalSpace",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取私人空间成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取指定用户的私人空间（管理员）",
+        "tags": [
+          "文件系统"
+        ]
+      }
+    },
     "/api/file-system/projects/trash": {
       "get": {
         "operationId": "FileSystemController_getDeletedProjects",
@@ -3068,12 +3965,7 @@
             "in": "query",
             "description": "项目状态",
             "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "ARCHIVED",
-                "DELETED"
-              ]
+              "$ref": "#/components/schemas/ProjectStatus"
             }
           },
           {
@@ -3129,13 +4021,7 @@
             "in": "query",
             "description": "项目过滤类型：all-全部，owned-我创建的，joined-我加入的",
             "schema": {
-              "default": "all",
-              "type": "string",
-              "enum": [
-                "all",
-                "owned",
-                "joined"
-              ]
+              "$ref": "#/components/schemas/ProjectFilterType"
             }
           }
         ],
@@ -3449,14 +4335,7 @@
             "in": "query",
             "description": "文件状态",
             "schema": {
-              "type": "string",
-              "enum": [
-                "UPLOADING",
-                "PROCESSING",
-                "COMPLETED",
-                "FAILED",
-                "DELETED"
-              ]
+              "$ref": "#/components/schemas/FileStatus"
             }
           },
           {
@@ -3920,14 +4799,7 @@
             "in": "query",
             "description": "文件状态",
             "schema": {
-              "type": "string",
-              "enum": [
-                "UPLOADING",
-                "PROCESSING",
-                "COMPLETED",
-                "FAILED",
-                "DELETED"
-              ]
+              "$ref": "#/components/schemas/FileStatus"
             }
           },
           {
@@ -4150,13 +5022,22 @@
         ]
       }
     },
-    "/api/file-system/storage": {
+    "/api/file-system/quota": {
       "get": {
-        "operationId": "FileSystemController_getStorageInfo",
-        "parameters": [],
+        "operationId": "FileSystemController_getStorageQuota",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "获取存储空间信息成功",
+            "description": "获取配额信息成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -4171,7 +5052,56 @@
             "bearer": []
           }
         ],
-        "summary": "获取存储空间信息",
+        "summary": "获取存储配额信息",
+        "tags": [
+          "文件系统"
+        ]
+      }
+    },
+    "/api/file-system/quota/update": {
+      "post": {
+        "operationId": "FileSystemController_updateStorageQuota",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStorageQuotaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新配额成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未登录"
+          },
+          "403": {
+            "description": "无权限更新配额"
+          },
+          "404": {
+            "description": "节点不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新节点存储配额",
         "tags": [
           "文件系统"
         ]
@@ -4537,14 +5467,17 @@
           "200": {
             "description": "获取缩略图成功"
           },
+          "204": {
+            "description": "缩略图不存在"
+          },
           "401": {
-            "description": "未登录"
+            "description": "未登录（项目文件需要登录）"
           },
           "403": {
             "description": "无权限访问该文件"
           },
           "404": {
-            "description": "文件不存在"
+            "description": "文件节点不存在"
           }
         },
         "security": [
@@ -4633,13 +5566,7 @@
             "in": "query",
             "description": "下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）",
             "schema": {
-              "enum": [
-                "dwg",
-                "dxf",
-                "mxweb",
-                "pdf"
-              ],
-              "type": "string"
+              "$ref": "#/components/schemas/CadDownloadFormat"
             }
           },
           {
@@ -4805,6 +5732,149 @@
           }
         ],
         "summary": "获取用户在项目中的角色",
+        "tags": [
+          "文件系统"
+        ]
+      }
+    },
+    "/api/file-system/search": {
+      "get": {
+        "description": "支持多种搜索范围：\n- project: 搜索项目列表\n- project_files: 搜索指定项目内的文件（需提供 projectId）\n- all_projects: 搜索所有有权限访问的项目中的文件",
+        "operationId": "FileSystemController_search",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "description": "搜索关键词",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "搜索范围",
+            "schema": {
+              "$ref": "#/components/schemas/SearchScope"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "搜索类型",
+            "schema": {
+              "$ref": "#/components/schemas/SearchType"
+            }
+          },
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "项目过滤类型（scope=project 时使用）",
+            "schema": {
+              "$ref": "#/components/schemas/ProjectFilter"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "description": "目标项目 ID（scope=project 或 scope=project_files 时必填）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名过滤",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "default": "updatedAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "统一搜索接口",
         "tags": [
           "文件系统"
         ]
@@ -5013,12 +6083,7 @@
             "in": "query",
             "description": "删除目标",
             "schema": {
-              "enum": [
-                "backend",
-                "frontend",
-                "both"
-              ],
-              "type": "string"
+              "$ref": "#/components/schemas/FontUploadTarget"
             }
           }
         ],
@@ -5078,462 +6143,6 @@
         "summary": "下载字体文件",
         "tags": [
           "字体管理"
-        ]
-      }
-    },
-    "/api/gallery/drawings/types": {
-      "post": {
-        "description": "获取图纸库的所有分类信息",
-        "operationId": "GalleryController_getDrawingsTypes",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "返回分类列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GalleryTypesResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取图纸库分类列表",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/drawings/filelist": {
-      "post": {
-        "description": "根据条件查询图纸列表，支持分页",
-        "operationId": "GalleryController_getDrawingsFileList",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GalleryFileListDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取图纸列表",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/blocks/types": {
-      "post": {
-        "description": "获取图块库的所有分类信息",
-        "operationId": "GalleryController_getBlocksTypes",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "返回分类列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GalleryTypesResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取图块库分类列表",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/blocks/filelist": {
-      "post": {
-        "description": "根据条件查询图块列表，支持分页",
-        "operationId": "GalleryController_getBlocksFileList",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GalleryFileListDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取图块列表",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/blocks/{path}": {
-      "get": {
-        "description": "获取图块库中的转换后文件（.mxweb）",
-        "operationId": "GalleryController_getBlocksFile",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功获取文件",
-            "content": {
-              "application/octet-stream": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "文件不存在"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "访问图块文件",
-        "tags": [
-          "图库管理"
-        ]
-      },
-      "head": {
-        "description": "获取图块库中转换后文件的元信息（不返回文件内容）",
-        "operationId": "GalleryController_getBlocksFileHead",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功获取文件信息"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "文件不存在"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取图块文件信息",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/drawings/{path}": {
-      "get": {
-        "description": "获取图纸库中的转换后文件（.mxweb）",
-        "operationId": "GalleryController_getDrawingsFile",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功获取文件",
-            "content": {
-              "application/octet-stream": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "文件不存在"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "访问图纸文件",
-        "tags": [
-          "图库管理"
-        ]
-      },
-      "head": {
-        "description": "获取图纸库中转换后文件的元信息（不返回文件内容）",
-        "operationId": "GalleryController_getDrawingsFileHead",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功获取文件信息"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "文件不存在"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取图纸文件信息",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/{galleryType}/types/create": {
-      "post": {
-        "description": "创建图库分类（一级或二级）",
-        "operationId": "GalleryController_createType",
-        "parameters": [
-          {
-            "name": "galleryType",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "创建成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "创建分类",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/{galleryType}/types/{typeId}": {
-      "put": {
-        "description": "更新图库分类名称",
-        "operationId": "GalleryController_updateType",
-        "parameters": [
-          {
-            "name": "galleryType",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "typeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "更新成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "更新分类",
-        "tags": [
-          "图库管理"
-        ]
-      },
-      "delete": {
-        "description": "删除图库分类",
-        "operationId": "GalleryController_deleteType",
-        "parameters": [
-          {
-            "name": "galleryType",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "typeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "删除成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "删除分类",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/{galleryType}/items": {
-      "post": {
-        "description": "将项目文件添加到图库",
-        "operationId": "GalleryController_addToGallery",
-        "parameters": [
-          {
-            "name": "galleryType",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddToGalleryDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "添加成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "添加文件到图库",
-        "tags": [
-          "图库管理"
-        ]
-      }
-    },
-    "/api/gallery/{galleryType}/items/{nodeId}": {
-      "delete": {
-        "description": "将文件从图库中移除（文件本身不会被删除）",
-        "operationId": "GalleryController_removeFromGallery",
-        "parameters": [
-          {
-            "name": "galleryType",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "nodeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "移除成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "从图库中移除文件",
-        "tags": [
-          "图库管理"
-        ]
-      },
-      "put": {
-        "description": "更新图库文件的分类信息",
-        "operationId": "GalleryController_updateGalleryItem",
-        "parameters": [
-          {
-            "name": "galleryType",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "nodeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "更新成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "更新图库文件的分类",
-        "tags": [
-          "图库管理"
         ]
       }
     },
@@ -5818,16 +6427,59 @@
         ]
       }
     },
-    "/api/mxcad/up_ext_reference_dwg": {
+    "/api/mxcad/save-as": {
       "post": {
-        "operationId": "MxCadController_uploadExtReferenceDwg",
+        "operationId": "MxCadController_saveMxwebAs",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/UploadExtReferenceDto"
+                "$ref": "#/components/schemas/SaveMxwebAsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存mxweb文件为新文件",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveMxwebAsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          }
+        },
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
+    "/api/mxcad/up_ext_reference_dwg/{nodeId}": {
+      "post": {
+        "operationId": "MxCadController_uploadExtReferenceDwg",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadExtReferenceFileDto"
               }
             }
           }
@@ -5877,7 +6529,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/UploadExtReferenceDto"
+                "$ref": "#/components/schemas/UploadExtReferenceFileDto"
               }
             }
           }
@@ -6085,6 +6737,9 @@
               }
             }
           },
+          "401": {
+            "description": "未登录，无法访问文件"
+          },
           "404": {
             "description": "文件不存在",
             "content": {
@@ -6126,6 +6781,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "MxCAD 文件上传与转换"
         ]
@@ -6377,6 +7037,56 @@
           }
         ],
         "summary": "获取用户权限信息",
+        "tags": [
+          "管理员"
+        ]
+      }
+    },
+    "/api/admin/storage/cleanup": {
+      "post": {
+        "operationId": "AdminController_cleanupStorage",
+        "parameters": [
+          {
+            "name": "delayDays",
+            "required": false,
+            "in": "query",
+            "description": "清理延迟天数（覆盖默认值）",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "存储清理完成"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "手动触发存储清理",
+        "tags": [
+          "管理员"
+        ]
+      }
+    },
+    "/api/admin/storage/cleanup/stats": {
+      "get": {
+        "operationId": "AdminController_getCleanupStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取待清理存储统计成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取待清理存储统计",
         "tags": [
           "管理员"
         ]
@@ -6857,6 +7567,1808 @@
           "权限策略配置"
         ]
       }
+    },
+    "/api/public-file/chunk/check": {
+      "post": {
+        "operationId": "PublicFileController_checkChunk",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckChunkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "返回分片存在状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckChunkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "检查分片是否存在",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/file/check": {
+      "post": {
+        "operationId": "PublicFileController_checkFile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckFileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "返回文件存在状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckFileResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "检查文件是否已存在（秒传检查）",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/chunk/upload": {
+      "post": {
+        "operationId": "PublicFileController_uploadChunk",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadChunkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadChunkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "上传分片",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/chunk/merge": {
+      "post": {
+        "operationId": "PublicFileController_mergeChunks",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeChunksDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "合并成功，返回文件信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeCompleteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "合并分片并获取文件访问信息",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/access/{hash}/{filename}": {
+      "get": {
+        "operationId": "PublicFileController_accessFile",
+        "parameters": [
+          {
+            "name": "hash",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文件二进制数据",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "description": "文件不存在"
+          }
+        },
+        "summary": "通过文件哈希访问目录下的文件",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/access/{filename}": {
+      "get": {
+        "operationId": "PublicFileController_accessFileByHashPattern",
+        "parameters": [
+          {
+            "name": "filename",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文件二进制数据",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "description": "文件不存在"
+          }
+        },
+        "summary": "在 uploads 目录下查找 mxweb 文件",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/ext-reference/upload": {
+      "post": {
+        "operationId": "PublicFileController_uploadExtReference",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadExtReferenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ret": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "hash": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          }
+        },
+        "summary": "上传外部参照文件（公开接口）",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/ext-reference/check": {
+      "get": {
+        "operationId": "PublicFileController_checkExtReference",
+        "parameters": [
+          {
+            "name": "srcHash",
+            "required": true,
+            "in": "query",
+            "description": "源图纸文件的哈希值",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileName",
+            "required": true,
+            "in": "query",
+            "description": "外部参照文件名",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文件存在状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "exists": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "检查外部参照文件是否存在",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/public-file/preloading/{hash}": {
+      "get": {
+        "operationId": "PublicFileController_getPreloadingData",
+        "parameters": [
+          {
+            "name": "hash",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回预加载数据"
+          },
+          "404": {
+            "description": "预加载数据不存在"
+          }
+        },
+        "summary": "获取预加载数据（包含外部参照信息）",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
+    "/api/library/drawing": {
+      "get": {
+        "operationId": "LibraryController_getDrawingLibrary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取图纸库详情",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/children/{nodeId}": {
+      "get": {
+        "operationId": "LibraryController_getDrawingChildren",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nodeType",
+            "required": false,
+            "in": "query",
+            "description": "节点类型",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "folder",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已删除的节点（用于回收站）",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取图纸库子节点列表",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/all-files/{nodeId}": {
+      "get": {
+        "operationId": "LibraryController_getDrawingAllFiles",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nodeType",
+            "required": false,
+            "in": "query",
+            "description": "节点类型",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "folder",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已删除的节点（用于回收站）",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "递归获取图纸库节点下的所有文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/filesData/{path}": {
+      "get": {
+        "operationId": "LibraryController_getDrawingFile",
+        "parameters": [
+          {
+            "name": "path",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/octet-stream": {}
+            }
+          }
+        },
+        "summary": "获取图纸库文件（统一入口）",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/nodes/{nodeId}": {
+      "get": {
+        "operationId": "LibraryController_getDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取图纸库节点详情",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      },
+      "delete": {
+        "operationId": "LibraryController_deleteDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanently",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      },
+      "patch": {
+        "operationId": "LibraryController_renameDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重命名成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "重命名图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/nodes/{nodeId}/download": {
+      "get": {
+        "operationId": "LibraryController_downloadDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "下载成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileContentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "下载图纸库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/nodes/{nodeId}/thumbnail": {
+      "get": {
+        "operationId": "LibraryController_getDrawingThumbnail",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        },
+        "summary": "获取图纸库文件缩略图",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/folders": {
+      "post": {
+        "operationId": "LibraryController_createDrawingFolder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建图纸库文件夹",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/upload": {
+      "post": {
+        "operationId": "LibraryController_uploadDrawingFile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "上传成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "上传图纸库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/files/upload-chunk": {
+      "post": {
+        "operationId": "LibraryController_uploadDrawingChunk",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "上传成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "上传图纸库文件（分片）",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/nodes/{nodeId}/move": {
+      "post": {
+        "operationId": "LibraryController_moveDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/nodes/{nodeId}/copy": {
+      "post": {
+        "operationId": "LibraryController_copyDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "复制成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "复制图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block": {
+      "get": {
+        "operationId": "LibraryController_getBlockLibrary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取图块库详情",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/children/{nodeId}": {
+      "get": {
+        "operationId": "LibraryController_getBlockChildren",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nodeType",
+            "required": false,
+            "in": "query",
+            "description": "节点类型",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "folder",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已删除的节点（用于回收站）",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取图块库子节点列表",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/all-files/{nodeId}": {
+      "get": {
+        "operationId": "LibraryController_getBlockAllFiles",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nodeType",
+            "required": false,
+            "in": "query",
+            "description": "节点类型",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "folder",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已删除的节点（用于回收站）",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "递归获取图块库节点下的所有文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/filesData/{path}": {
+      "get": {
+        "operationId": "LibraryController_getBlockFile",
+        "parameters": [
+          {
+            "name": "path",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/octet-stream": {}
+            }
+          }
+        },
+        "summary": "获取图块库文件（统一入口）",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/nodes/{nodeId}": {
+      "get": {
+        "operationId": "LibraryController_getBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "获取图块库节点详情",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      },
+      "delete": {
+        "operationId": "LibraryController_deleteBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanently",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      },
+      "patch": {
+        "operationId": "LibraryController_renameBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重命名成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "重命名图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/nodes/{nodeId}/download": {
+      "get": {
+        "operationId": "LibraryController_downloadBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "下载成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileContentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "下载图块库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/nodes/{nodeId}/thumbnail": {
+      "get": {
+        "operationId": "LibraryController_getBlockThumbnail",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        },
+        "summary": "获取图块库文件缩略图",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/files/upload-chunk": {
+      "post": {
+        "operationId": "LibraryController_uploadBlockChunk",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "上传成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "上传图块库文件（分片）",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/nodes/{nodeId}/move": {
+      "post": {
+        "operationId": "LibraryController_moveBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/nodes/{nodeId}/copy": {
+      "post": {
+        "operationId": "LibraryController_copyBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "复制成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "复制图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/folders": {
+      "post": {
+        "operationId": "LibraryController_createBlockFolder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建图块库文件夹",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/upload": {
+      "post": {
+        "operationId": "LibraryController_uploadBlockFile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "上传成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "上传图块库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/save/{nodeId}": {
+      "post": {
+        "operationId": "LibraryController_saveDrawing",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMxwebDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveMxwebResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "保存图纸到图纸库",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/drawing/save-as": {
+      "post": {
+        "operationId": "LibraryController_saveDrawingAs",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveLibraryAsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveMxwebAsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "另存为图纸到图纸库",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/save/{nodeId}": {
+      "post": {
+        "operationId": "LibraryController_saveBlock",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMxwebDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveMxwebResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "保存图块到图块库",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/library/block/save-as": {
+      "post": {
+        "operationId": "LibraryController_saveBlockAs",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveLibraryAsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveMxwebAsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "另存为图块到图块库",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
     }
   },
   "info": {
@@ -7118,6 +9630,10 @@
             "type": "number",
             "description": "预热数量"
           },
+          "duration": {
+            "type": "number",
+            "description": "耗时（毫秒）"
+          },
           "error": {
             "type": "string",
             "description": "错误信息"
@@ -7192,659 +9708,116 @@
               }
             ]
           },
-          "historySize": {
-            "type": "number",
-            "description": "历史记录数量"
+          "strategies": {
+            "description": "已注册策略列表",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
-          "lastWarmup": {
-            "format": "date-time",
-            "type": "string",
-            "description": "最后预热时间"
+          "strategyCount": {
+            "type": "number",
+            "description": "策略数量"
           }
         },
         "required": [
           "config",
-          "historySize"
+          "strategies",
+          "strategyCount"
         ]
       },
-      "RegisterDto": {
+      "UserCleanupStatsResponseDto": {
         "type": "object",
         "properties": {
-          "email": {
-            "type": "string",
-            "description": "用户邮箱（邮件服务启用时可选）",
-            "example": "user@example.com",
-            "format": "email"
+          "pendingCleanup": {
+            "type": "number",
+            "description": "待清理用户数",
+            "example": 15
           },
-          "username": {
+          "expiryDate": {
+            "format": "date-time",
             "type": "string",
-            "description": "用户名",
-            "example": "username",
-            "minLength": 3,
-            "maxLength": 20,
-            "pattern": "^[a-zA-Z0-9_]+$"
+            "description": "过期截止日期",
+            "example": "2026-03-11T00:00:00.000Z"
           },
-          "password": {
-            "type": "string",
-            "description": "密码",
-            "example": "password123",
-            "minLength": 8,
-            "maxLength": 50
-          },
-          "nickname": {
-            "type": "string",
-            "description": "昵称",
-            "example": "用户昵称",
-            "maxLength": 50
+          "delayDays": {
+            "type": "number",
+            "description": "延迟天数",
+            "example": 30
           }
         },
         "required": [
-          "username",
-          "password"
+          "pendingCleanup",
+          "expiryDate",
+          "delayDays"
         ]
       },
-      "LoginDto": {
+      "UserCleanupTriggerDto": {
         "type": "object",
         "properties": {
-          "account": {
-            "type": "string",
-            "description": "邮箱或用户名",
-            "example": "user@example.com"
-          },
-          "password": {
-            "type": "string",
-            "description": "密码",
-            "example": "Password123!"
+          "delayDays": {
+            "type": "number",
+            "description": "自定义延迟天数（覆盖默认值）",
+            "example": 7
           }
-        },
-        "required": [
-          "account",
-          "password"
-        ]
+        }
       },
-      "UserDto": {
+      "UserCleanupTriggerResponseDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "message": {
             "type": "string",
-            "description": "用户ID",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
+            "description": "消息",
+            "example": "清理完成: 处理 0 个用户"
           },
-          "email": {
-            "type": "string",
-            "description": "用户邮箱（可能未绑定）",
-            "example": "user@example.com",
-            "nullable": true
+          "success": {
+            "type": "boolean",
+            "description": "是否成功",
+            "example": true
           },
-          "username": {
-            "type": "string",
-            "description": "用户名",
-            "example": "username"
+          "processedUsers": {
+            "type": "number",
+            "description": "处理的用户数",
+            "example": 0
           },
-          "nickname": {
-            "type": "string",
-            "description": "昵称",
-            "example": "用户昵称"
+          "deletedMembers": {
+            "type": "number",
+            "description": "删除的成员关系数",
+            "example": 0
           },
-          "avatar": {
-            "type": "string",
-            "description": "头像URL",
-            "example": "https://example.com/avatar.jpg"
+          "deletedProjects": {
+            "type": "number",
+            "description": "删除的项目数",
+            "example": 0
           },
-          "role": {
-            "type": "object",
-            "description": "用户角色",
-            "properties": {
-              "id": {
-                "type": "string",
-                "example": "clxxxxxxx"
-              },
-              "name": {
-                "type": "string",
-                "enum": [
-                  "ADMIN",
-                  "USER_MANAGER",
-                  "FONT_MANAGER",
-                  "USER"
-                ],
-                "example": "USER"
-              },
-              "description": {
-                "type": "string",
-                "example": "普通用户，基础权限",
-                "nullable": true
-              },
-              "isSystem": {
-                "type": "boolean",
-                "example": true
-              },
-              "permissions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "permission": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+          "deletedAuditLogs": {
+            "type": "number",
+            "description": "删除的审计日志数",
+            "example": 0
+          },
+          "markedForStorageCleanup": {
+            "type": "number",
+            "description": "标记待清理的存储数",
+            "example": 0
+          },
+          "errors": {
+            "description": "错误列表",
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "string"
             }
-          },
-          "status": {
-            "type": "string",
-            "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ],
-            "example": "ACTIVE"
-          }
-        },
-        "required": [
-          "id",
-          "username",
-          "role",
-          "status"
-        ]
-      },
-      "AuthResponseDto": {
-        "type": "object",
-        "properties": {
-          "accessToken": {
-            "type": "string",
-            "description": "访问Token",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          },
-          "refreshToken": {
-            "type": "string",
-            "description": "刷新Token",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          },
-          "user": {
-            "description": "用户信息",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/UserDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "accessToken",
-          "refreshToken",
-          "user"
-        ]
-      },
-      "AuthApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "认证响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AuthResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
-      },
-      "RefreshTokenDto": {
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string",
-            "description": "刷新Token",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          }
-        },
-        "required": [
-          "refreshToken"
-        ]
-      },
-      "UserRoleDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "角色 ID"
-          },
-          "name": {
-            "type": "string",
-            "description": "角色名称"
-          },
-          "description": {
-            "type": "string",
-            "description": "角色描述"
-          },
-          "isSystem": {
-            "type": "boolean",
-            "description": "是否为系统角色"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "isSystem"
-        ]
-      },
-      "UserProfileResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "用户 ID"
-          },
-          "email": {
-            "type": "string",
-            "description": "用户邮箱"
-          },
-          "username": {
-            "type": "string",
-            "description": "用户名"
-          },
-          "nickname": {
-            "type": "string",
-            "description": "用户昵称"
-          },
-          "avatar": {
-            "type": "string",
-            "description": "头像 URL"
-          },
-          "status": {
-            "type": "string",
-            "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ]
-          },
-          "role": {
-            "description": "用户角色",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/UserRoleDto"
-              }
-            ]
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "创建时间"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "更新时间"
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "username",
-          "status",
-          "role",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "SendVerificationResponseDto": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "操作结果",
-            "example": "验证邮件已发送"
-          }
-        },
-        "required": [
-          "message"
-        ]
-      },
-      "SendVerificationApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "$ref": "#/components/schemas/SendVerificationResponseDto"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/SendVerificationResponseDto"
-          },
-          "timestamp": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
-      },
-      "VerifyEmailDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "邮箱地址",
-            "example": "user@example.com"
-          },
-          "code": {
-            "type": "string",
-            "description": "6位数字验证码",
-            "example": "123456"
-          }
-        },
-        "required": [
-          "email",
-          "code"
-        ]
-      },
-      "VerifyEmailResponseDto": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "操作结果",
-            "example": "邮箱验证成功"
-          }
-        },
-        "required": [
-          "message"
-        ]
-      },
-      "VerifyEmailApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "$ref": "#/components/schemas/VerifyEmailResponseDto"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/VerifyEmailResponseDto"
-          },
-          "timestamp": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
-      },
-      "ForgotPasswordDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "邮箱地址",
-            "example": "user@example.com"
-          }
-        },
-        "required": [
-          "email"
-        ]
-      },
-      "ForgotPasswordResponseDto": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "消息"
-          },
-          "mailEnabled": {
-            "type": "boolean",
-            "description": "邮件服务是否启用"
-          },
-          "supportEmail": {
-            "type": "string",
-            "description": "客服邮箱（邮件禁用时返回）",
-            "nullable": true
-          },
-          "supportPhone": {
-            "type": "string",
-            "description": "客服电话（邮件禁用时返回）",
-            "nullable": true
           }
         },
         "required": [
           "message",
-          "mailEnabled"
-        ]
-      },
-      "ForgotPasswordApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ForgotPasswordResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
-      },
-      "ResetPasswordDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "邮箱地址",
-            "example": "user@example.com"
-          },
-          "code": {
-            "type": "string",
-            "description": "验证码",
-            "example": "123456"
-          },
-          "newPassword": {
-            "type": "string",
-            "description": "新密码",
-            "example": "NewPassword123!"
-          },
-          "confirmPassword": {
-            "type": "string",
-            "description": "确认新密码",
-            "example": "NewPassword123!"
-          }
-        },
-        "required": [
-          "email",
-          "code",
-          "newPassword",
-          "confirmPassword"
-        ]
-      },
-      "ResetPasswordResponseDto": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "消息"
-          }
-        },
-        "required": [
-          "message"
-        ]
-      },
-      "ResetPasswordApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResetPasswordResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
-      },
-      "BindEmailDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "要绑定的邮箱地址",
-            "example": "user@example.com"
-          }
-        },
-        "required": [
-          "email"
-        ]
-      },
-      "BindEmailResponseDto": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "消息"
-          }
-        },
-        "required": [
-          "message"
-        ]
-      },
-      "BindEmailApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BindEmailResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
-        ]
-      },
-      "VerifyBindEmailDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "邮箱地址",
-            "example": "user@example.com"
-          },
-          "code": {
-            "type": "string",
-            "description": "验证码",
-            "example": "123456"
-          }
-        },
-        "required": [
-          "email",
-          "code"
+          "success",
+          "processedUsers",
+          "deletedMembers",
+          "deletedProjects",
+          "deletedAuditLogs",
+          "markedForStorageCleanup",
+          "errors"
         ]
       },
       "CreateUserDto": {
@@ -7855,6 +9828,11 @@
             "description": "用户邮箱（可选，当 mailEnabled=true 时建议填写）",
             "example": "user@example.com",
             "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆）",
+            "example": "13800138000"
           },
           "username": {
             "type": "string",
@@ -7884,11 +9862,65 @@
             "type": "string",
             "description": "角色ID",
             "example": "clh8x9y0z1a2b3c4d5e6f7g8h9"
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "手机号是否已验证",
+            "default": false
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "邮箱是否已验证",
+            "default": false
+          },
+          "wechatId": {
+            "type": "string",
+            "description": "微信 OpenID"
+          },
+          "provider": {
+            "type": "string",
+            "description": "登录方式 (LOCAL | WECHAT)",
+            "default": "LOCAL"
           }
         },
         "required": [
           "username",
           "password"
+        ]
+      },
+      "UserStatusEnum": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE",
+          "SUSPENDED"
+        ],
+        "description": "用户状态"
+      },
+      "UserRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "角色 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "角色名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "是否为系统角色"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "isSystem"
         ]
       },
       "UserResponseDto": {
@@ -7914,13 +9946,16 @@
             "type": "string",
             "description": "头像 URL"
           },
-          "status": {
+          "phone": {
             "type": "string",
+            "description": "手机号码"
+          },
+          "status": {
             "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserStatusEnum"
+              }
             ]
           },
           "role": {
@@ -7930,6 +9965,10 @@
                 "$ref": "#/components/schemas/UserRoleDto"
               }
             ]
+          },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "是否已设置密码（手机/微信自动注册用户可能未设置）"
           },
           "createdAt": {
             "format": "date-time",
@@ -7948,6 +9987,7 @@
           "username",
           "status",
           "role",
+          "hasPassword",
           "createdAt",
           "updatedAt"
         ]
@@ -8017,6 +10057,71 @@
           "username"
         ]
       },
+      "UserProfileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "用户 ID"
+          },
+          "email": {
+            "type": "string",
+            "description": "用户邮箱"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "用户昵称"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像 URL"
+          },
+          "status": {
+            "description": "用户状态",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserStatusEnum"
+              }
+            ]
+          },
+          "role": {
+            "description": "用户角色",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRoleDto"
+              }
+            ]
+          },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "是否已设置密码（手机/微信自动注册用户可能未设置）"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "username",
+          "status",
+          "role",
+          "hasPassword",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "FileTypeStatsDto": {
         "type": "object",
         "properties": {
@@ -8039,9 +10144,26 @@
           "other"
         ]
       },
+      "StorageQuotaTypeEnum": {
+        "type": "string",
+        "enum": [
+          "PERSONAL",
+          "PROJECT",
+          "LIBRARY"
+        ],
+        "description": "配额类型"
+      },
       "StorageInfoDto": {
         "type": "object",
         "properties": {
+          "type": {
+            "description": "配额类型",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StorageQuotaTypeEnum"
+              }
+            ]
+          },
           "used": {
             "type": "number",
             "description": "已使用空间（字节）"
@@ -8056,10 +10178,11 @@
           },
           "usagePercent": {
             "type": "number",
-            "description": "使用率（百分比）"
+            "description": "使用百分比"
           }
         },
         "required": [
+          "type",
           "used",
           "total",
           "remaining",
@@ -8113,6 +10236,11 @@
             "type": "string",
             "description": "用户邮箱"
           },
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆）",
+            "example": "13800138000"
+          },
           "username": {
             "type": "string",
             "description": "用户名",
@@ -8136,22 +10264,127 @@
             "description": "角色ID"
           },
           "status": {
-            "type": "string",
             "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserStatusEnum"
+              }
             ]
           }
         }
+      },
+      "DeactivateAccountDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "用户密码（密码登录用户必填）",
+            "example": "UserPassword123!"
+          },
+          "phoneCode": {
+            "type": "string",
+            "description": "手机验证码（绑定手机的用户必填）",
+            "example": "123456"
+          },
+          "emailCode": {
+            "type": "string",
+            "description": "邮箱验证码（邮箱注册用户必填）",
+            "example": "123456"
+          },
+          "wechatConfirm": {
+            "type": "string",
+            "description": "微信扫码验证（微信登录用户必填，值为 \"confirmed\" 表示已确认）",
+            "example": "confirmed"
+          }
+        }
+      },
+      "DeactivateAccountResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "消息"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "DeactivateAccountApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeactivateAccountResponseDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "RestoreAccountDto": {
+        "type": "object",
+        "properties": {
+          "verificationMethod": {
+            "type": "string",
+            "description": "恢复验证方式：password | phoneCode | emailCode",
+            "example": "password"
+          },
+          "code": {
+            "type": "string",
+            "description": "密码或验证码",
+            "example": "UserPassword123!"
+          }
+        },
+        "required": [
+          "verificationMethod",
+          "code"
+        ]
+      },
+      "RestoreAccountResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "消息"
+          }
+        },
+        "required": [
+          "message"
+        ]
       },
       "ChangePasswordDto": {
         "type": "object",
         "properties": {
           "oldPassword": {
             "type": "string",
-            "description": "旧密码",
+            "description": "当前密码（无密码用户可不填）",
             "example": "OldPassword123!"
           },
           "newPassword": {
@@ -8161,7 +10394,6 @@
           }
         },
         "required": [
-          "oldPassword",
           "newPassword"
         ]
       },
@@ -8334,6 +10566,621 @@
           "value"
         ]
       },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "用户邮箱（邮件服务启用时可选）",
+            "example": "user@example.com",
+            "format": "email"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "username",
+            "minLength": 3,
+            "maxLength": 20,
+            "pattern": "^[a-zA-Z0-9_]+$"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "password123",
+            "minLength": 8,
+            "maxLength": 50
+          },
+          "nickname": {
+            "type": "string",
+            "description": "昵称",
+            "example": "用户昵称",
+            "maxLength": 50
+          },
+          "wechatTempToken": {
+            "type": "string",
+            "description": "微信临时 Token（微信登录跳转注册时携带）",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "用户ID",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "email": {
+            "type": "object",
+            "description": "用户邮箱（可能未绑定）",
+            "example": "user@example.com",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "username"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "昵称",
+            "example": "用户昵称"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像URL",
+            "example": "https://example.com/avatar.jpg"
+          },
+          "role": {
+            "type": "object",
+            "description": "用户角色",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "clxxxxxxx"
+              },
+              "name": {
+                "type": "string",
+                "enum": [
+                  "ADMIN",
+                  "USER_MANAGER",
+                  "FONT_MANAGER",
+                  "USER"
+                ],
+                "example": "USER"
+              },
+              "description": {
+                "type": "string",
+                "example": "普通用户，基础权限",
+                "nullable": true
+              },
+              "isSystem": {
+                "type": "boolean",
+                "example": true
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "permission": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "用户状态",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "SUSPENDED"
+            ],
+            "example": "ACTIVE"
+          },
+          "phone": {
+            "type": "object",
+            "description": "用户手机号（可能未绑定）",
+            "example": "13800138000",
+            "nullable": true
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "手机号是否已验证",
+            "example": false
+          },
+          "wechatId": {
+            "type": "object",
+            "description": "微信 OpenID",
+            "example": "oXYZ123...",
+            "nullable": true
+          },
+          "provider": {
+            "type": "string",
+            "description": "登录方式 (LOCAL | WECHAT)",
+            "example": "LOCAL"
+          },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "是否已设置密码",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "role",
+          "status"
+        ]
+      },
+      "AuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "访问Token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "刷新Token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": {
+            "description": "用户信息",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "user"
+        ]
+      },
+      "AuthApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "认证响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthResponseDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "邮箱、用户名或手机号",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "Password123!"
+          }
+        },
+        "required": [
+          "account",
+          "password"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "刷新Token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "SendVerificationResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "操作结果",
+            "example": "验证邮件已发送"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "SendVerificationApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/SendVerificationResponseDto"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SendVerificationResponseDto"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "code": {
+            "type": "string",
+            "description": "6位数字验证码",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "email",
+          "code"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号码",
+            "example": "13800138000"
+          },
+          "validateContact": {
+            "type": "string",
+            "description": "验证联系方式（内部使用，用于触发邮箱或手机号验证器）",
+            "example": ""
+          }
+        },
+        "required": [
+          "validateContact"
+        ]
+      },
+      "ForgotPasswordResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "消息"
+          },
+          "mailEnabled": {
+            "type": "boolean",
+            "description": "邮件服务是否启用"
+          },
+          "smsEnabled": {
+            "type": "boolean",
+            "description": "短信服务是否启用"
+          },
+          "supportEmail": {
+            "type": "string",
+            "description": "客服邮箱（邮件禁用时返回）",
+            "nullable": true
+          },
+          "supportPhone": {
+            "type": "string",
+            "description": "客服电话（邮件禁用时返回）",
+            "nullable": true
+          }
+        },
+        "required": [
+          "message",
+          "mailEnabled",
+          "smsEnabled"
+        ]
+      },
+      "ForgotPasswordApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ForgotPasswordResponseDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号码",
+            "example": "13800138000"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码",
+            "example": "123456"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "新密码",
+            "example": "NewPassword123!"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "description": "确认新密码",
+            "example": "NewPassword123!"
+          },
+          "validateContact": {
+            "type": "string",
+            "description": "验证联系方式（内部使用，用于触发邮箱或手机号验证器）",
+            "example": ""
+          }
+        },
+        "required": [
+          "code",
+          "newPassword",
+          "confirmPassword",
+          "validateContact"
+        ]
+      },
+      "ResetPasswordResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "消息"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ResetPasswordApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResetPasswordResponseDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "BindEmailResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "消息"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "BindEmailApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BindEmailResponseDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "VerifyBindEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "email",
+          "code"
+        ]
+      },
+      "RoleCategoryEnum": {
+        "type": "string",
+        "enum": [
+          "SYSTEM",
+          "PROJECT",
+          "CUSTOM"
+        ],
+        "description": "角色类别"
+      },
+      "AllPermissionsEnum": {
+        "type": "string",
+        "enum": [
+          "SYSTEM_USER_READ",
+          "SYSTEM_USER_CREATE",
+          "SYSTEM_USER_UPDATE",
+          "SYSTEM_USER_DELETE",
+          "SYSTEM_ROLE_READ",
+          "SYSTEM_ROLE_CREATE",
+          "SYSTEM_ROLE_UPDATE",
+          "SYSTEM_ROLE_DELETE",
+          "SYSTEM_ROLE_PERMISSION_MANAGE",
+          "SYSTEM_FONT_READ",
+          "SYSTEM_FONT_UPLOAD",
+          "SYSTEM_FONT_DELETE",
+          "SYSTEM_FONT_DOWNLOAD",
+          "SYSTEM_ADMIN",
+          "SYSTEM_MONITOR",
+          "SYSTEM_CONFIG_READ",
+          "SYSTEM_CONFIG_WRITE",
+          "PROJECT_UPDATE",
+          "PROJECT_DELETE",
+          "PROJECT_MEMBER_MANAGE",
+          "PROJECT_MEMBER_ASSIGN",
+          "PROJECT_ROLE_MANAGE",
+          "PROJECT_ROLE_PERMISSION_MANAGE",
+          "PROJECT_TRANSFER",
+          "FILE_CREATE",
+          "FILE_UPLOAD",
+          "FILE_OPEN",
+          "FILE_EDIT",
+          "FILE_DELETE",
+          "FILE_TRASH_MANAGE",
+          "FILE_DOWNLOAD",
+          "FILE_SHARE",
+          "CAD_SAVE",
+          "CAD_EXTERNAL_REFERENCE",
+          "VERSION_READ",
+          "VERSION_CREATE",
+          "VERSION_DELETE",
+          "VERSION_RESTORE",
+          "PROJECT_SETTINGS_MANAGE"
+        ],
+        "description": "权限列表"
+      },
       "RoleDto": {
         "type": "object",
         "properties": {
@@ -8350,12 +11197,11 @@
             "description": "角色描述"
           },
           "category": {
-            "type": "string",
             "description": "角色类别",
-            "enum": [
-              "SYSTEM",
-              "PROJECT",
-              "CUSTOM"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RoleCategoryEnum"
+              }
             ]
           },
           "level": {
@@ -8375,50 +11221,7 @@
               "system:font:read"
             ],
             "items": {
-              "type": "string",
-              "enum": [
-                "SYSTEM_USER_READ",
-                "SYSTEM_USER_CREATE",
-                "SYSTEM_USER_UPDATE",
-                "SYSTEM_USER_DELETE",
-                "SYSTEM_ROLE_READ",
-                "SYSTEM_ROLE_CREATE",
-                "SYSTEM_ROLE_UPDATE",
-                "SYSTEM_ROLE_DELETE",
-                "SYSTEM_ROLE_PERMISSION_MANAGE",
-                "SYSTEM_FONT_READ",
-                "SYSTEM_FONT_UPLOAD",
-                "SYSTEM_FONT_DELETE",
-                "SYSTEM_FONT_DOWNLOAD",
-                "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR",
-                "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE",
-                "SYSTEM_TEMPLATE_READ",
-                "PROJECT_UPDATE",
-                "PROJECT_DELETE",
-                "PROJECT_MEMBER_MANAGE",
-                "PROJECT_MEMBER_ASSIGN",
-                "PROJECT_ROLE_MANAGE",
-                "PROJECT_ROLE_PERMISSION_MANAGE",
-                "PROJECT_TRANSFER",
-                "FILE_CREATE",
-                "FILE_UPLOAD",
-                "FILE_OPEN",
-                "FILE_EDIT",
-                "FILE_DELETE",
-                "FILE_TRASH_MANAGE",
-                "FILE_DOWNLOAD",
-                "FILE_SHARE",
-                "CAD_SAVE",
-                "CAD_EXTERNAL_REFERENCE",
-                "GALLERY_ADD",
-                "VERSION_READ",
-                "VERSION_CREATE",
-                "VERSION_DELETE",
-                "VERSION_RESTORE",
-                "PROJECT_SETTINGS_MANAGE"
-              ]
+              "$ref": "#/components/schemas/AllPermissionsEnum"
             }
           },
           "createdAt": {
@@ -8443,6 +11246,15 @@
           "updatedAt"
         ]
       },
+      "RoleCategory": {
+        "type": "string",
+        "enum": [
+          "SYSTEM",
+          "PROJECT",
+          "CUSTOM"
+        ],
+        "description": "角色类别"
+      },
       "CreateRoleDto": {
         "type": "object",
         "properties": {
@@ -8457,14 +11269,13 @@
             "example": "负责设计团队的管理工作"
           },
           "category": {
-            "type": "string",
             "description": "角色类别",
-            "enum": [
-              "SYSTEM",
-              "PROJECT",
-              "CUSTOM"
-            ],
-            "example": "CUSTOM"
+            "example": "CUSTOM",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RoleCategory"
+              }
+            ]
           },
           "level": {
             "type": "number",
@@ -8503,14 +11314,13 @@
             "example": "负责设计团队的管理工作"
           },
           "category": {
-            "type": "string",
             "description": "角色类别",
-            "enum": [
-              "SYSTEM",
-              "PROJECT",
-              "CUSTOM"
-            ],
-            "example": "CUSTOM"
+            "example": "CUSTOM",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RoleCategory"
+              }
+            ]
           },
           "level": {
             "type": "number",
@@ -8530,6 +11340,34 @@
           }
         }
       },
+      "ProjectPermissionEnum": {
+        "type": "string",
+        "enum": [
+          "PROJECT_UPDATE",
+          "PROJECT_DELETE",
+          "PROJECT_MEMBER_MANAGE",
+          "PROJECT_MEMBER_ASSIGN",
+          "PROJECT_ROLE_MANAGE",
+          "PROJECT_ROLE_PERMISSION_MANAGE",
+          "PROJECT_TRANSFER",
+          "FILE_CREATE",
+          "FILE_UPLOAD",
+          "FILE_OPEN",
+          "FILE_EDIT",
+          "FILE_DELETE",
+          "FILE_TRASH_MANAGE",
+          "FILE_DOWNLOAD",
+          "FILE_SHARE",
+          "CAD_SAVE",
+          "CAD_EXTERNAL_REFERENCE",
+          "VERSION_READ",
+          "VERSION_CREATE",
+          "VERSION_DELETE",
+          "VERSION_RESTORE",
+          "PROJECT_SETTINGS_MANAGE"
+        ],
+        "description": "权限名称"
+      },
       "ProjectRolePermissionDto": {
         "type": "object",
         "properties": {
@@ -8542,32 +11380,11 @@
             "description": "项目角色 ID"
           },
           "permission": {
-            "type": "string",
             "description": "权限名称",
-            "enum": [
-              "PROJECT_UPDATE",
-              "PROJECT_DELETE",
-              "PROJECT_MEMBER_MANAGE",
-              "PROJECT_MEMBER_ASSIGN",
-              "PROJECT_ROLE_MANAGE",
-              "PROJECT_ROLE_PERMISSION_MANAGE",
-              "PROJECT_TRANSFER",
-              "FILE_CREATE",
-              "FILE_UPLOAD",
-              "FILE_OPEN",
-              "FILE_EDIT",
-              "FILE_DELETE",
-              "FILE_TRASH_MANAGE",
-              "FILE_DOWNLOAD",
-              "FILE_SHARE",
-              "CAD_SAVE",
-              "CAD_EXTERNAL_REFERENCE",
-              "GALLERY_ADD",
-              "VERSION_READ",
-              "VERSION_CREATE",
-              "VERSION_DELETE",
-              "VERSION_RESTORE",
-              "PROJECT_SETTINGS_MANAGE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectPermissionEnum"
+              }
             ]
           },
           "createdAt": {
@@ -8741,6 +11558,15 @@
           "name"
         ]
       },
+      "ProjectStatusEnum": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "ARCHIVED",
+          "DELETED"
+        ],
+        "description": "项目状态"
+      },
       "ProjectDto": {
         "type": "object",
         "properties": {
@@ -8757,17 +11583,16 @@
             "description": "项目描述"
           },
           "status": {
-            "type": "string",
             "description": "项目状态",
-            "enum": [
-              "ACTIVE",
-              "ARCHIVED",
-              "DELETED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectStatusEnum"
+              }
             ]
           },
-          "isRoot": {
-            "type": "boolean",
-            "description": "是否为根节点"
+          "ownerId": {
+            "type": "string",
+            "description": "所有者 ID"
           },
           "createdAt": {
             "format": "date-time",
@@ -8779,9 +11604,10 @@
             "type": "string",
             "description": "更新时间"
           },
-          "ownerId": {
+          "deletedAt": {
+            "format": "date-time",
             "type": "string",
-            "description": "所有者 ID"
+            "description": "删除时间"
           },
           "memberCount": {
             "type": "number",
@@ -8792,46 +11618,37 @@
           "id",
           "name",
           "status",
-          "isRoot",
+          "ownerId",
           "createdAt",
-          "updatedAt",
-          "ownerId"
+          "updatedAt"
         ]
       },
-      "ProjectListResponseDto": {
-        "type": "object",
-        "properties": {
-          "projects": {
-            "description": "项目列表",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProjectDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "总数"
-          },
-          "page": {
-            "type": "number",
-            "description": "当前页码"
-          },
-          "limit": {
-            "type": "number",
-            "description": "每页数量"
-          },
-          "totalPages": {
-            "type": "number",
-            "description": "总页数"
-          }
-        },
-        "required": [
-          "projects",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
+      "ProjectStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "ARCHIVED",
+          "DELETED"
         ]
+      },
+      "ProjectFilterType": {
+        "type": "string",
+        "enum": [
+          "all",
+          "owned",
+          "joined"
+        ]
+      },
+      "FileStatusEnum": {
+        "type": "string",
+        "enum": [
+          "UPLOADING",
+          "PROCESSING",
+          "COMPLETED",
+          "FAILED",
+          "DELETED"
+        ],
+        "description": "文件状态"
       },
       "FileSystemNodeDto": {
         "type": "object",
@@ -8877,14 +11694,11 @@
             "description": "文件哈希"
           },
           "fileStatus": {
-            "type": "string",
             "description": "文件状态",
-            "enum": [
-              "UPLOADING",
-              "PROCESSING",
-              "COMPLETED",
-              "FAILED",
-              "DELETED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FileStatusEnum"
+              }
             ]
           },
           "createdAt": {
@@ -8910,9 +11724,17 @@
             "type": "string",
             "description": "私人空间标识（非空表示为私人空间）"
           },
+          "libraryKey": {
+            "type": "string",
+            "description": "公共资源库标识（drawing: 图纸库, block: 图块库）"
+          },
           "childrenCount": {
             "type": "number",
             "description": "子节点数量"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目 ID"
           }
         },
         "required": [
@@ -8923,6 +11745,41 @@
           "createdAt",
           "updatedAt",
           "ownerId"
+        ]
+      },
+      "ProjectListResponseDto": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "description": "节点列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileSystemNodeDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "总数"
+          },
+          "page": {
+            "type": "number",
+            "description": "当前页码"
+          },
+          "limit": {
+            "type": "number",
+            "description": "每页数量"
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "总页数"
+          }
+        },
+        "required": [
+          "nodes",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
         ]
       },
       "UpdateNodeDto": {
@@ -8963,121 +11820,39 @@
           "success"
         ]
       },
-      "TrashItemDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "节点 ID"
-          },
-          "name": {
-            "type": "string",
-            "description": "节点名称"
-          },
-          "description": {
-            "type": "string",
-            "description": "节点描述"
-          },
-          "isFolder": {
-            "type": "boolean",
-            "description": "是否为文件夹"
-          },
-          "isRoot": {
-            "type": "boolean",
-            "description": "是否为根节点"
-          },
-          "parentId": {
-            "type": "string",
-            "description": "父节点 ID"
-          },
-          "path": {
-            "type": "string",
-            "description": "文件路径"
-          },
-          "size": {
-            "type": "number",
-            "description": "文件大小"
-          },
-          "mimeType": {
-            "type": "string",
-            "description": "文件 MIME 类型"
-          },
-          "fileHash": {
-            "type": "string",
-            "description": "文件哈希"
-          },
-          "fileStatus": {
-            "type": "string",
-            "description": "文件状态",
-            "enum": [
-              "UPLOADING",
-              "PROCESSING",
-              "COMPLETED",
-              "FAILED",
-              "DELETED"
-            ]
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "创建时间"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "更新时间"
-          },
-          "deletedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "删除时间"
-          },
-          "ownerId": {
-            "type": "string",
-            "description": "所有者 ID"
-          },
-          "personalSpaceKey": {
-            "type": "string",
-            "description": "私人空间标识（非空表示为私人空间）"
-          },
-          "childrenCount": {
-            "type": "number",
-            "description": "子节点数量"
-          },
-          "originalParentId": {
-            "type": "string",
-            "description": "原始父节点 ID"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "isFolder",
-          "isRoot",
-          "createdAt",
-          "updatedAt",
-          "ownerId",
-          "originalParentId"
-        ]
-      },
       "TrashListResponseDto": {
         "type": "object",
         "properties": {
-          "items": {
-            "description": "回收站项目列表",
+          "nodes": {
+            "description": "节点列表",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/TrashItemDto"
+              "$ref": "#/components/schemas/FileSystemNodeDto"
             }
           },
           "total": {
             "type": "number",
             "description": "总数"
+          },
+          "page": {
+            "type": "number",
+            "description": "当前页码"
+          },
+          "limit": {
+            "type": "number",
+            "description": "每页数量"
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "总页数"
           }
         },
         "required": [
-          "items",
-          "total"
+          "nodes",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
         ]
       },
       "BatchOperationResponseDto": {
@@ -9120,11 +11895,21 @@
           "failedIds"
         ]
       },
+      "FileStatus": {
+        "type": "string",
+        "enum": [
+          "UPLOADING",
+          "PROCESSING",
+          "COMPLETED",
+          "FAILED",
+          "DELETED"
+        ]
+      },
       "ProjectTrashResponseDto": {
         "type": "object",
         "properties": {
           "nodes": {
-            "description": "回收站节点列表",
+            "description": "节点列表",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FileSystemNodeDto"
@@ -9184,6 +11969,17 @@
             "type": "string",
             "description": "文件夹名称",
             "example": "设计图纸"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "父文件夹 ID",
+            "example": "clx123abc"
+          },
+          "skipIfExists": {
+            "type": "boolean",
+            "description": "如果同名文件夹已存在则跳过创建",
+            "example": false,
+            "default": false
           }
         },
         "required": [
@@ -9234,14 +12030,11 @@
             "description": "文件哈希"
           },
           "fileStatus": {
-            "type": "string",
             "description": "文件状态",
-            "enum": [
-              "UPLOADING",
-              "PROCESSING",
-              "COMPLETED",
-              "FAILED",
-              "DELETED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FileStatusEnum"
+              }
             ]
           },
           "createdAt": {
@@ -9267,9 +12060,17 @@
             "type": "string",
             "description": "私人空间标识（非空表示为私人空间）"
           },
+          "libraryKey": {
+            "type": "string",
+            "description": "公共资源库标识（drawing: 图纸库, block: 图块库）"
+          },
           "childrenCount": {
             "type": "number",
             "description": "子节点数量"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目 ID"
           },
           "children": {
             "description": "子节点",
@@ -9369,6 +12170,25 @@
           "parentId"
         ]
       },
+      "UpdateStorageQuotaDto": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "节点 ID（用户个人空间根节点、项目根节点或公共资源库节点）",
+            "example": "cm3xk8z0r000008l6g8qj9z5x"
+          },
+          "quota": {
+            "type": "number",
+            "description": "配额大小（GB），0 表示使用系统默认值",
+            "example": 100
+          }
+        },
+        "required": [
+          "nodeId",
+          "quota"
+        ]
+      },
       "ProjectMemberDto": {
         "type": "object",
         "properties": {
@@ -9413,6 +12233,15 @@
           "projectRoleId",
           "projectRoleName",
           "joinedAt"
+        ]
+      },
+      "CadDownloadFormat": {
+        "type": "string",
+        "enum": [
+          "dwg",
+          "dxf",
+          "mxweb",
+          "pdf"
         ]
       },
       "ProjectUserPermissionsDto": {
@@ -9465,6 +12294,30 @@
           "userId",
           "permission",
           "hasPermission"
+        ]
+      },
+      "SearchScope": {
+        "type": "string",
+        "enum": [
+          "project",
+          "project_files",
+          "all_projects"
+        ]
+      },
+      "SearchType": {
+        "type": "string",
+        "enum": [
+          "all",
+          "file",
+          "folder"
+        ]
+      },
+      "ProjectFilter": {
+        "type": "string",
+        "enum": [
+          "all",
+          "owned",
+          "joined"
         ]
       },
       "SvnLogPathDto": {
@@ -9597,143 +12450,30 @@
           "message"
         ]
       },
+      "FontUploadTarget": {
+        "type": "string",
+        "enum": [
+          "backend",
+          "frontend",
+          "both"
+        ],
+        "description": "上传目标"
+      },
       "UploadFontDto": {
         "type": "object",
         "properties": {
           "target": {
-            "type": "string",
             "description": "上传目标",
-            "enum": [
-              "backend",
-              "frontend",
-              "both"
-            ],
-            "default": "both"
+            "default": "both",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FontUploadTarget"
+              }
+            ]
           }
         },
         "required": [
           "target"
-        ]
-      },
-      "GalleryTypeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "分类 ID",
-            "example": 1
-          },
-          "pid": {
-            "type": "number",
-            "description": "父分类 ID",
-            "example": 0
-          },
-          "name": {
-            "type": "string",
-            "description": "分类名称",
-            "example": "建筑"
-          },
-          "pname": {
-            "type": "string",
-            "description": "父分类名称",
-            "example": "建筑"
-          },
-          "status": {
-            "type": "number",
-            "description": "状态",
-            "example": 1
-          }
-        },
-        "required": [
-          "id",
-          "pid",
-          "name",
-          "pname",
-          "status"
-        ]
-      },
-      "GalleryTypesResponseDto": {
-        "type": "object",
-        "properties": {
-          "allblocks": {
-            "description": "分类列表",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GalleryTypeDto"
-            }
-          }
-        },
-        "required": [
-          "allblocks"
-        ]
-      },
-      "GalleryFileListDto": {
-        "type": "object",
-        "properties": {
-          "keywords": {
-            "type": "string",
-            "description": "搜索关键字",
-            "example": "箭头"
-          },
-          "firstType": {
-            "type": "number",
-            "description": "一级分类 ID（项目 ID）",
-            "example": 1
-          },
-          "secondType": {
-            "type": "number",
-            "description": "二级分类 ID（标签 ID）",
-            "example": 2
-          },
-          "thirdType": {
-            "type": "number",
-            "description": "三级分类 ID",
-            "example": 3
-          },
-          "pageIndex": {
-            "type": "number",
-            "description": "页码",
-            "example": 0
-          },
-          "pageSize": {
-            "type": "number",
-            "description": "每页数量",
-            "example": 50
-          }
-        },
-        "required": [
-          "pageIndex",
-          "pageSize"
-        ]
-      },
-      "AddToGalleryDto": {
-        "type": "object",
-        "properties": {
-          "nodeId": {
-            "type": "string",
-            "description": "文件节点 ID",
-            "example": "clxxx..."
-          },
-          "firstType": {
-            "type": "number",
-            "description": "一级分类 ID",
-            "example": 1
-          },
-          "secondType": {
-            "type": "number",
-            "description": "二级分类 ID",
-            "example": 2
-          },
-          "thirdType": {
-            "type": "number",
-            "description": "三级分类 ID（可选）",
-            "example": 3
-          }
-        },
-        "required": [
-          "nodeId",
-          "firstType",
-          "secondType"
         ]
       },
       "CheckChunkExistDto": {
@@ -9813,6 +12553,16 @@
             "type": "number",
             "description": "文件大小（字节）",
             "example": 1024567
+          },
+          "conflictStrategy": {
+            "type": "string",
+            "description": "冲突处理策略",
+            "enum": [
+              "skip",
+              "overwrite",
+              "rename"
+            ],
+            "default": "rename"
           }
         },
         "required": [
@@ -10031,6 +12781,15 @@
           "lastModifiedDate": {
             "type": "string",
             "description": "文件最后修改日期"
+          },
+          "conflictStrategy": {
+            "type": "string",
+            "description": "冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名，默认）",
+            "enum": [
+              "skip",
+              "overwrite",
+              "rename"
+            ]
           }
         },
         "required": [
@@ -10087,7 +12846,97 @@
           "path"
         ]
       },
-      "UploadExtReferenceDto": {
+      "SaveMxwebAsDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "mxweb 文件",
+            "format": "binary"
+          },
+          "targetType": {
+            "type": "string",
+            "description": "保存类型: personal-我的图纸, project-项目",
+            "enum": [
+              "personal",
+              "project"
+            ]
+          },
+          "targetParentId": {
+            "type": "string",
+            "description": "目标父节点ID"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目ID（targetType为project时必填）"
+          },
+          "format": {
+            "type": "string",
+            "description": "保存格式: dwg, dxf",
+            "enum": [
+              "dwg",
+              "dxf"
+            ],
+            "default": "dwg"
+          },
+          "commitMessage": {
+            "type": "string",
+            "description": "提交信息"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名（不含扩展名）"
+          }
+        },
+        "required": [
+          "file",
+          "targetType",
+          "targetParentId",
+          "format"
+        ]
+      },
+      "SaveMxwebAsResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "消息"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "新文件节点ID"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件路径"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目ID"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "父节点ID"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "nodeId",
+          "fileName",
+          "path",
+          "parentId"
+        ]
+      },
+      "UploadExtReferenceFileDto": {
         "type": "object",
         "properties": {
           "file": {
@@ -10109,11 +12958,15 @@
             "type": "string",
             "description": "外部参照文件名（含扩展名）",
             "example": "ref1.dwg"
+          },
+          "updatePreloading": {
+            "type": "boolean",
+            "description": "是否更新 mxweb_preloading.json（默认 false）",
+            "example": false
           }
         },
         "required": [
           "file",
-          "nodeId",
           "ext_ref_file"
         ]
       },
@@ -10324,18 +13177,53 @@
           "data"
         ]
       },
+      "PolicyType": {
+        "type": "string",
+        "enum": [
+          "TIME",
+          "IP",
+          "DEVICE"
+        ],
+        "description": "策略类型"
+      },
+      "PrismaPermission": {
+        "type": "string",
+        "enum": [
+          "SYSTEM_USER_READ",
+          "SYSTEM_USER_CREATE",
+          "SYSTEM_USER_UPDATE",
+          "SYSTEM_USER_DELETE",
+          "SYSTEM_ROLE_READ",
+          "SYSTEM_ROLE_CREATE",
+          "SYSTEM_ROLE_UPDATE",
+          "SYSTEM_ROLE_DELETE",
+          "SYSTEM_ROLE_PERMISSION_MANAGE",
+          "SYSTEM_FONT_READ",
+          "SYSTEM_FONT_UPLOAD",
+          "SYSTEM_FONT_DELETE",
+          "SYSTEM_FONT_DOWNLOAD",
+          "SYSTEM_ADMIN",
+          "SYSTEM_MONITOR",
+          "SYSTEM_CONFIG_READ",
+          "SYSTEM_CONFIG_WRITE",
+          "LIBRARY_DRAWING_MANAGE",
+          "LIBRARY_BLOCK_MANAGE",
+          "STORAGE_QUOTA",
+          "PROJECT_CREATE"
+        ],
+        "description": "关联的权限"
+      },
       "CreatePolicyDto": {
         "type": "object",
         "properties": {
           "type": {
-            "type": "string",
             "description": "策略类型",
-            "enum": [
-              "TIME",
-              "IP",
-              "DEVICE"
-            ],
-            "example": "TIME"
+            "example": "TIME",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PolicyType"
+              }
+            ]
           },
           "name": {
             "type": "string",
@@ -10369,27 +13257,7 @@
               "SYSTEM_USER_DELETE"
             ],
             "items": {
-              "type": "string",
-              "enum": [
-                "SYSTEM_USER_READ",
-                "SYSTEM_USER_CREATE",
-                "SYSTEM_USER_UPDATE",
-                "SYSTEM_USER_DELETE",
-                "SYSTEM_ROLE_READ",
-                "SYSTEM_ROLE_CREATE",
-                "SYSTEM_ROLE_UPDATE",
-                "SYSTEM_ROLE_DELETE",
-                "SYSTEM_ROLE_PERMISSION_MANAGE",
-                "SYSTEM_FONT_READ",
-                "SYSTEM_FONT_UPLOAD",
-                "SYSTEM_FONT_DELETE",
-                "SYSTEM_FONT_DOWNLOAD",
-                "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR",
-                "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE",
-                "SYSTEM_TEMPLATE_READ"
-              ]
+              "$ref": "#/components/schemas/PrismaPermission"
             }
           },
           "enabled": {
@@ -10418,12 +13286,11 @@
             "description": "策略 ID"
           },
           "type": {
-            "type": "string",
             "description": "策略类型",
-            "enum": [
-              "TIME",
-              "IP",
-              "DEVICE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PolicyType"
+              }
             ]
           },
           "name": {
@@ -10442,27 +13309,7 @@
             "type": "array",
             "description": "关联的权限",
             "items": {
-              "type": "string",
-              "enum": [
-                "SYSTEM_USER_READ",
-                "SYSTEM_USER_CREATE",
-                "SYSTEM_USER_UPDATE",
-                "SYSTEM_USER_DELETE",
-                "SYSTEM_ROLE_READ",
-                "SYSTEM_ROLE_CREATE",
-                "SYSTEM_ROLE_UPDATE",
-                "SYSTEM_ROLE_DELETE",
-                "SYSTEM_ROLE_PERMISSION_MANAGE",
-                "SYSTEM_FONT_READ",
-                "SYSTEM_FONT_UPLOAD",
-                "SYSTEM_FONT_DELETE",
-                "SYSTEM_FONT_DOWNLOAD",
-                "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR",
-                "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE",
-                "SYSTEM_TEMPLATE_READ"
-              ]
+              "$ref": "#/components/schemas/PrismaPermission"
             }
           },
           "enabled": {
@@ -10530,27 +13377,7 @@
               "SYSTEM_USER_DELETE"
             ],
             "items": {
-              "type": "string",
-              "enum": [
-                "SYSTEM_USER_READ",
-                "SYSTEM_USER_CREATE",
-                "SYSTEM_USER_UPDATE",
-                "SYSTEM_USER_DELETE",
-                "SYSTEM_ROLE_READ",
-                "SYSTEM_ROLE_CREATE",
-                "SYSTEM_ROLE_UPDATE",
-                "SYSTEM_ROLE_DELETE",
-                "SYSTEM_ROLE_PERMISSION_MANAGE",
-                "SYSTEM_FONT_READ",
-                "SYSTEM_FONT_UPLOAD",
-                "SYSTEM_FONT_DELETE",
-                "SYSTEM_FONT_DOWNLOAD",
-                "SYSTEM_ADMIN",
-                "SYSTEM_MONITOR",
-                "SYSTEM_CONFIG_READ",
-                "SYSTEM_CONFIG_WRITE",
-                "SYSTEM_TEMPLATE_READ"
-              ]
+              "$ref": "#/components/schemas/PrismaPermission"
             }
           },
           "enabled": {
@@ -10574,6 +13401,221 @@
           }
         }
       },
+      "CheckChunkDto": {
+        "type": "object",
+        "properties": {
+          "fileHash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值"
+          },
+          "chunk": {
+            "type": "number",
+            "description": "分片索引（从 0 开始）"
+          },
+          "chunks": {
+            "type": "number",
+            "description": "总分片数量"
+          }
+        },
+        "required": [
+          "fileHash",
+          "chunk",
+          "chunks"
+        ]
+      },
+      "CheckChunkResponseDto": {
+        "type": "object",
+        "properties": {
+          "exist": {
+            "type": "boolean",
+            "description": "分片是否存在"
+          }
+        },
+        "required": [
+          "exist"
+        ]
+      },
+      "CheckFileDto": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "fileHash": {
+            "type": "string",
+            "description": "文件 MD5 哈希"
+          }
+        },
+        "required": [
+          "filename",
+          "fileHash"
+        ]
+      },
+      "CheckFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "exist": {
+            "type": "boolean",
+            "description": "文件是否已存在"
+          },
+          "hash": {
+            "type": "string",
+            "description": "文件哈希"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "原始文件名"
+          }
+        },
+        "required": [
+          "exist"
+        ]
+      },
+      "UploadChunkDto": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值"
+          },
+          "name": {
+            "type": "string",
+            "description": "原始文件名"
+          },
+          "size": {
+            "type": "number",
+            "description": "文件总大小（字节）"
+          },
+          "chunk": {
+            "type": "number",
+            "description": "当前分片索引（从 0 开始）"
+          },
+          "chunks": {
+            "type": "number",
+            "description": "总分片数量"
+          }
+        },
+        "required": [
+          "hash",
+          "name",
+          "size",
+          "chunk",
+          "chunks"
+        ]
+      },
+      "UploadChunkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ret": {
+            "type": "string",
+            "description": "上传结果",
+            "example": "success"
+          },
+          "isLastChunk": {
+            "type": "boolean",
+            "description": "是否为最后一个分片"
+          }
+        },
+        "required": [
+          "ret"
+        ]
+      },
+      "MergeChunksDto": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值"
+          },
+          "name": {
+            "type": "string",
+            "description": "原始文件名"
+          },
+          "size": {
+            "type": "number",
+            "description": "文件总大小（字节）"
+          },
+          "chunks": {
+            "type": "number",
+            "description": "总分片数量"
+          }
+        },
+        "required": [
+          "hash",
+          "name",
+          "size",
+          "chunks"
+        ]
+      },
+      "MergeCompleteResponseDto": {
+        "type": "object",
+        "properties": {
+          "ret": {
+            "type": "string",
+            "description": "操作结果",
+            "example": "success"
+          },
+          "hash": {
+            "type": "string",
+            "description": "文件哈希"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "原始文件名"
+          }
+        },
+        "required": [
+          "ret",
+          "hash",
+          "fileName"
+        ]
+      },
+      "UploadExtReferenceDto": {
+        "type": "object",
+        "properties": {
+          "srcFileHash": {
+            "type": "string",
+            "description": "源图纸文件的哈希值（主图纸文件的 hash）",
+            "example": "4b298dd48355af1202b532fc4d051658"
+          },
+          "extRefFile": {
+            "type": "string",
+            "description": "外部参照文件名（含扩展名）",
+            "example": "A1.dwg"
+          },
+          "hash": {
+            "type": "string",
+            "description": "文件哈希值（可选，用于秒传检查）"
+          }
+        },
+        "required": [
+          "srcFileHash",
+          "extRefFile"
+        ]
+      },
+      "SaveLibraryAsDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "mxweb 文件",
+            "format": "binary"
+          },
+          "targetParentId": {
+            "type": "string",
+            "description": "目标父节点ID"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名（不含扩展名）"
+          }
+        },
+        "required": [
+          "file",
+          "targetParentId"
+        ]
+      },
       "SystemPermission": {
         "type": "string",
         "enum": [
@@ -10593,8 +13635,7 @@
           "SYSTEM_ADMIN",
           "SYSTEM_MONITOR",
           "SYSTEM_CONFIG_READ",
-          "SYSTEM_CONFIG_WRITE",
-          "SYSTEM_TEMPLATE_READ"
+          "SYSTEM_CONFIG_WRITE"
         ],
         "description": "系统权限枚举"
       },
@@ -10618,7 +13659,6 @@
           "FILE_SHARE",
           "CAD_SAVE",
           "CAD_EXTERNAL_REFERENCE",
-          "GALLERY_ADD",
           "VERSION_READ",
           "VERSION_CREATE",
           "VERSION_DELETE",
@@ -10647,7 +13687,6 @@
           "SYSTEM_MONITOR",
           "SYSTEM_CONFIG_READ",
           "SYSTEM_CONFIG_WRITE",
-          "SYSTEM_TEMPLATE_READ",
           "PROJECT_UPDATE",
           "PROJECT_DELETE",
           "PROJECT_MEMBER_MANAGE",
@@ -10665,7 +13704,6 @@
           "FILE_SHARE",
           "CAD_SAVE",
           "CAD_EXTERNAL_REFERENCE",
-          "GALLERY_ADD",
           "VERSION_READ",
           "VERSION_CREATE",
           "VERSION_DELETE",

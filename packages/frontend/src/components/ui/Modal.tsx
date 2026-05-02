@@ -1,4 +1,4 @@
-import X from 'lucide-react/dist/esm/icons/x';
+import { X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
@@ -12,7 +12,7 @@ interface ModalProps {
   footer?: React.ReactNode;
   maxWidth?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
-  /** z-index 层级，默认 50。CAD 编辑器环境下需要设置为更高值（如 10000） */
+  /** z-index 层级，默认 10002（高于 Toast 的 10001）。CAD 编辑器环境下可能需要更高值 */
   zIndex?: number;
 }
 
@@ -35,7 +35,7 @@ const sizeToMaxHeight: Record<string, string> = {
 
 /**
  * Modal 组件 - CloudCAD
- * 
+ *
  * 设计特色：
  * - 支持主题变量适配深色/亮色主题
  * - 毛玻璃遮罩效果
@@ -50,7 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth,
   size,
-  zIndex = 10000,
+  zIndex = 9999,
 }) => {
   const effectiveMaxWidth =
     maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
@@ -61,13 +61,13 @@ export const Modal: React.FC<ModalProps> = ({
   const modalContent = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 modal-enter"
-      style={{ zIndex }}
+      style={{ zIndex: zIndex }}
       onClick={(e) => e.stopPropagation()}
     >
       {/* 遮罩层 - 使用主题变量 */}
       <div
         className="absolute inset-0 transition-opacity duration-300"
-        style={{ 
+        style={{
           background: 'var(--bg-overlay)',
           backdropFilter: 'blur(4px)',
         }}
@@ -78,26 +78,27 @@ export const Modal: React.FC<ModalProps> = ({
           onClose();
         }}
       />
-      
+
       {/* 模态框内容 */}
       <div
         className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col`}
-        style={{ 
+        style={{
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border-default)',
           borderRadius: 'var(--radius-xl)',
           boxShadow: 'var(--shadow-xl)',
+          zIndex: zIndex + 1,
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
-        <div 
+        <div
           className="flex items-center justify-between px-6 py-4"
-          style={{ 
+          style={{
             borderBottom: '1px solid var(--border-default)',
           }}
         >
-          <h3 
+          <h3
             className="text-lg font-semibold"
             style={{ color: 'var(--text-primary)' }}
           >
@@ -107,7 +108,7 @@ export const Modal: React.FC<ModalProps> = ({
             data-tour="modal-close-btn"
             onClick={onClose}
             className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
-            style={{ 
+            style={{
               color: 'var(--text-muted)',
             }}
             onMouseEnter={(e) => {
@@ -122,20 +123,20 @@ export const Modal: React.FC<ModalProps> = ({
             <X size={20} />
           </button>
         </div>
-        
+
         {/* 内容区域 */}
-        <div 
+        <div
           className="p-6 overflow-y-auto flex-1"
           style={{ color: 'var(--text-secondary)' }}
         >
           {children}
         </div>
-        
+
         {/* 底部 */}
         {footer && (
-          <div 
+          <div
             className="px-6 py-4 flex justify-end gap-3"
-            style={{ 
+            style={{
               background: 'var(--bg-tertiary)',
               borderTop: '1px solid var(--border-default)',
             }}
@@ -223,7 +224,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
       }
     >
       <form onSubmit={handleSubmit}>
-        <label 
+        <label
           className="block text-sm font-medium mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
@@ -233,7 +234,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
           autoFocus
           type="text"
           className="w-full px-4 py-2.5 rounded-xl transition-all duration-200 outline-none"
-          style={{ 
+          style={{
             background: 'var(--bg-primary)',
             border: '1px solid var(--border-default)',
             color: 'var(--text-primary)',

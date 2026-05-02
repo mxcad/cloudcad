@@ -4,7 +4,7 @@
  * 用于 PM2 管理 Redis
  */
 
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
@@ -23,9 +23,45 @@ const PLATFORM_DIR = IS_WINDOWS
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
 
-// Redis 端口
-const REDIS_PORT = 6379;
+// Redis 端口（从环境变量读取）
+const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
+
+/**
+ * 从 .env 文件加载 REDIS_PASSWORD 配置
+ * @returns {string|null} Redis 密码，无密码返回 null
+ */
+function loadRedisPassword() {
+  // 优先从环境变量读取
+  if (process.env.REDIS_PASSWORD && process.env.REDIS_PASSWORD.trim()) {
+    return process.env.REDIS_PASSWORD.trim();
+  }
+  
+  // 从 .env 文件读取
+  if (fs.existsSync(BACKEND_ENV_PATH)) {
+    try {
+      const envContent = fs.readFileSync(BACKEND_ENV_PATH, 'utf-8');
+      const lines = envContent.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('REDIS_PASSWORD=')) {
+          const value = trimmed.substring('REDIS_PASSWORD='.length).trim();
+          // 移除可能的引号
+          if ((value.startsWith('"') && value.endsWith('"')) ||
+              (value.startsWith("'") && value.endsWith("'"))) {
+            return value.slice(1, -1);
+          }
+          return value || null;
+        }
+      }
+    } catch (err) {
+      // 读取失败，使用默认值
+    }
+  }
+  
+  return null;
+}
 
 // 可执行文件路径
 const redisServer = USE_RUNTIME
@@ -91,11 +127,25 @@ function startRedis() {
   return new Promise((resolve, reject) => {
     log('info', '启动 Redis...');
     
-    const redisProcess = spawn(redisServer, [
+    // 加载 Redis 密码配置
+    const redisPassword = loadRedisPassword();
+    
+    // 构建 Redis 启动参数
+    const redisArgs = [
       '--port', String(REDIS_PORT),
       '--dir', REDIS_DATA_DIR,
       '--appendonly', 'yes'
-    ], {
+    ];
+    
+    // 如果配置了密码，添加 requirepass 参数
+    if (redisPassword) {
+      redisArgs.push('--requirepass', redisPassword);
+      log('info', '已配置 Redis 密码认证');
+    } else {
+      log('info', 'Redis 无密码模式');
+    }
+    
+    const redisProcess = spawn(redisServer, redisArgs, {
       stdio: 'inherit',
       windowsHide: true,
       shell: IS_WINDOWS,
@@ -197,7 +247,17 @@ async function stopRedis() {
         : path.join(PLATFORM_DIR, 'redis', 'redis-cli'))
     : 'redis-cli';
   
-  const result = spawnSync(redisCli, ['shutdown', 'nosave'], {
+  // 加载 Redis 密码配置
+  const redisPassword = loadRedisPassword();
+  
+  // 构建 redis-cli 参数
+  const cliArgs = [];
+  if (redisPassword) {
+    cliArgs.push('-a', redisPassword);
+  }
+  cliArgs.push('shutdown', 'nosave');
+  
+  const result = spawnSync(redisCli, cliArgs, {
     stdio: 'pipe',
     shell: IS_WINDOWS,
     timeout: 5000,

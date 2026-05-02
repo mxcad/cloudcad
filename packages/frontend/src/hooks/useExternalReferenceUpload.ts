@@ -3,15 +3,15 @@
 // All rights reserved.
 // The code, documentation, and related materials of this software belong to
 // Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
+// software should reach an agreement with Chengdu Dream Kaide
 // Technology Co., Ltd. to use this software, its documentation, or related
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { mxcadApi } from '../services/mxcadApi';
+import { publicFileApi } from '../services/publicFileApi';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -21,6 +21,8 @@ import type {
 } from '../types/filesystem';
 
 import { handleError } from '../utils/errorHandler';
+import { isAuthenticated } from '../utils/authCheck';
+import { useUIStore } from '../stores/uiStore';
 
 /**
  * MxCAD 外部参照上传 Hook
@@ -34,17 +36,22 @@ import { handleError } from '../utils/errorHandler';
 export const useExternalReferenceUpload = (
   config: UseExternalReferenceUploadConfig
 ): UseExternalReferenceUploadReturn => {
-  const [loading, setLoading] = useState(false);
+  const { setGlobalLoading, setLoadingMessage } = useUIStore();
+  const [localLoading, setLocalLoading] = useState(false);
   const [files, setFiles] = useState<ExternalReferenceFile[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // 使用 ref 存储 nodeId，确保闭包中始终使用最新值
-  const nodeIdRef = useRef(config.nodeId);
+  // 确定当前是使用 nodeId 还是 fileHash
+  const isLoggedIn = isAuthenticated();
+  const identifier = isLoggedIn ? (config.nodeId || '') : (config.fileHash || '');
+
+  // 使用 ref 存储标识符，确保闭包中始终使用最新值
+  const identifierRef = useRef(identifier);
 
   // 在 useEffect 中更新 ref，遵循 React 最佳实践
   useEffect(() => {
-    nodeIdRef.current = config.nodeId;
-  }, [config.nodeId]);
+    identifierRef.current = isLoggedIn ? (config.nodeId || '') : (config.fileHash || '');
+  }, [config.nodeId, config.fileHash, isLoggedIn]);
 
   // 使用 ref 存储正在进行的请求，避免重复请求
 
@@ -55,42 +62,36 @@ export const useExternalReferenceUpload = (
   const preloadingDataCacheRef = useRef<Map<string, PreloadingData>>(new Map());
 
   /**
-
        * 获取预加载数据
-
        *
-
        * 添加了请求去重和缓存机制：
-
        * 1. 如果已有相同请求在进行中，跳过重复请求
-
        * 2. 如果缓存中存在数据且未过期，直接返回缓存数据
-
        */
 
   const fetchPreloadingData = useCallback(
-    async (nodeId: string): Promise<PreloadingData | null> => {
-      if (!nodeId) {
-        console.warn('nodeId 为空，无法获取预加载数据');
+    async (id: string): Promise<PreloadingData | null> => {
+      if (!id) {
+        console.warn('标识符为空，无法获取预加载数据');
 
         return null;
       }
 
       // 检查缓存（缓存有效期 5 秒）
 
-      const cached = preloadingDataCacheRef.current.get(nodeId);
+      const cached = preloadingDataCacheRef.current.get(id);
 
       if (cached) {
-        console.debug(`[fetchPreloadingData] 返回缓存数据: ${nodeId}`);
+        console.debug(`[fetchPreloadingData] 返回缓存数据: ${id}`);
 
         return cached;
       }
 
       // 检查是否已有相同请求在进行中
 
-      if (pendingRequestsRef.current.has(nodeId)) {
+      if (pendingRequestsRef.current.has(id)) {
         console.debug(
-          `[fetchPreloadingData] 节点 ${nodeId} 的请求已在进行中，跳过重复请求`
+          `[fetchPreloadingData] ${id} 的请求已在进行中，跳过重复请求`
         );
 
         return null;
@@ -98,20 +99,27 @@ export const useExternalReferenceUpload = (
 
       // 标记请求开始
 
-      pendingRequestsRef.current.add(nodeId);
+      pendingRequestsRef.current.add(id);
 
       try {
-        const data = await mxcadApi.getPreloadingData(nodeId);
+        let data = null;
+        if (isLoggedIn) {
+          // 已登录用户使用 mxcadApi
+          data = await mxcadApi.getPreloadingData(id);
+        } else {
+          // 未登录用户使用 publicFileApi
+          data = await publicFileApi.getPreloadingData(id);
+        }
 
         // 如果成功获取数据，更新缓存
 
         if (data) {
-          preloadingDataCacheRef.current.set(nodeId, data);
+          preloadingDataCacheRef.current.set(id, data);
 
           // 5 秒后清除缓存
 
           setTimeout(() => {
-            preloadingDataCacheRef.current.delete(nodeId);
+            preloadingDataCacheRef.current.delete(id);
           }, 5000);
         }
 
@@ -123,24 +131,28 @@ export const useExternalReferenceUpload = (
       } finally {
         // 请求完成后移除标记
 
-        pendingRequestsRef.current.delete(nodeId);
+        pendingRequestsRef.current.delete(id);
       }
     },
 
-    []
+    [isLoggedIn]
   );
 
   /**
    * 检查外部参照是否存在
    */
   const checkReferenceExists = useCallback(
-    async (nodeId: string, fileName: string): Promise<boolean> => {
-      if (!nodeId) return false;
+    async (id: string, fileName: string): Promise<boolean> => {
+      if (!id) return false;
       try {
-        const result = await mxcadApi.checkExternalReferenceExists(
-          nodeId,
-          fileName
-        );
+        let result = null;
+        if (isLoggedIn) {
+          // 已登录用户使用 mxcadApi
+          result = await mxcadApi.checkExternalReferenceExists(id, fileName);
+        } else {
+          // 未登录用户使用 publicFileApi
+          result = await publicFileApi.checkExtReference(id, fileName);
+        }
         console.debug(
           `[checkReferenceExists] 响应: ${fileName}`,
           'external-reference',
@@ -153,40 +165,63 @@ export const useExternalReferenceUpload = (
         return false;
       }
     },
-    []
+    [isLoggedIn]
   );
 
   /**
    * 检查缺失的外部参照
-   * @param nodeId 可选的节点ID，如果不提供则使用 config.nodeId
+   * @param identifier 可选的节点ID或文件hash，如果不提供则使用 config
+   * @param shouldRetry 是否启用重试逻辑。上传文件后应设为 true，手动点击查看时应设为 false（默认）
+   * @param forceOpen 是否强制打开弹框。手动点击管理外部参照时应设为 true，上传后检查应设为 false（默认）
    * @returns 是否有缺失的外部参照
    */
   const checkMissingReferences = useCallback(
-    async (nodeId?: string): Promise<boolean> => {
-      const id = nodeId || config.nodeId;
+    async (identifierParam?: string, shouldRetry = false, forceOpen = false): Promise<boolean> => {
+      const id = identifierParam || identifierRef.current;
 
-      // 增加重试逻辑：等待 preloading.json 生成
-      // 解决文件转换未完成时检查外部参照导致预加载数据不存在的问题
       let preloadingData = null;
-      let retryCount = 0;
-      const maxRetries = 10; // 最多重试10次
-      const retryDelay = 2000; // 每次间隔2秒（总共最多等待20秒）
 
-      while (retryCount < maxRetries && !preloadingData) {
-        preloadingData = await fetchPreloadingData(id);
+      if (shouldRetry) {
+        // 强制清除缓存，确保获取最新的预加载数据
+        preloadingDataCacheRef.current.delete(id);
+        
+        // 重试逻辑：等待 preloading.json 生成
+        // 解决文件转换未完成时检查外部参照导致预加载数据不存在的问题
+        let retryCount = 0;
+        const maxRetries = 10; // 最多重试10次
+        const retryDelay = 2000; // 每次间隔2秒（总共最多等待20秒）
 
-        if (!preloadingData) {
-          retryCount++;
-          if (retryCount < maxRetries) {
-            await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        while (retryCount < maxRetries && !preloadingData) {
+          preloadingData = await fetchPreloadingData(id);
+
+          if (!preloadingData) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.debug(
+                `[checkMissingReferences] 等待预加载数据生成，第 ${retryCount}/${maxRetries} 次重试`
+              );
+              await new Promise((resolve) => setTimeout(resolve, retryDelay));
+            }
           }
         }
+
+        if (!preloadingData) {
+          console.info(
+            '重试次数耗尽，仍未找到预加载数据，可能是转换失败或文件无外部参照'
+          );
+        }
+      } else {
+        // 不重试，直接获取一次
+        preloadingData = await fetchPreloadingData(id);
       }
 
       if (!preloadingData) {
-        console.info(
-          '重试次数耗尽，仍未找到预加载数据，可能是转换失败或文件无外部参照'
-        );
+        // 没有预加载数据
+        // 只有手动点击（forceOpen = true）时才打开弹框显示提示
+        if (forceOpen) {
+          setFiles([]);
+          setIsOpen(true);
+        }
         return false;
       }
 
@@ -200,6 +235,12 @@ export const useExternalReferenceUpload = (
       );
 
       if (missingImages.length === 0 && externalReference.length === 0) {
+        // 没有外部参照
+        // 只有手动点击（forceOpen = true）时才打开弹框显示提示
+        if (forceOpen) {
+          setFiles([]);
+          setIsOpen(true);
+        }
         return false;
       }
 
@@ -209,54 +250,60 @@ export const useExternalReferenceUpload = (
       // 检查 DWG 外部参照
       for (const name of externalReference) {
         const exists = await checkReferenceExists(id, name);
-        missingFiles.push({
-          name,
-          type: 'ref',
-          uploadState: 'notSelected',
-          progress: 0,
-          exists,
-        });
+        if (!exists) {
+          missingFiles.push({
+            name,
+            type: 'ref',
+            uploadState: 'notSelected',
+            progress: 0,
+            exists,
+          });
+        }
       }
 
       // 检查图片外部参照
       for (const name of missingImages) {
         const exists = await checkReferenceExists(id, name);
-        missingFiles.push({
-          name,
-          type: 'img',
-          uploadState: 'notSelected',
-          progress: 0,
-          exists,
-        });
+        if (!exists) {
+          missingFiles.push({
+            name,
+            type: 'img',
+            uploadState: 'notSelected',
+            progress: 0,
+            exists,
+          });
+        }
       }
 
-      // 不过滤已存在的文件，总是显示所有外部参照文件
-      // 用户可以选择覆盖已存在的文件
-      const allExternalReferences = missingFiles;
+      // 只显示缺失的外部参照文件
+      const missingExternalReferences = missingFiles;
 
       console.debug(
-        '[useExternalReferenceUpload] 所有外部参照文件:',
+        '[useExternalReferenceUpload] 缺失的外部参照文件:',
         'external-reference',
-        allExternalReferences
+        missingExternalReferences
       );
 
-      if (allExternalReferences.length === 0) {
+      if (missingExternalReferences.length === 0) {
+        // 没有缺失的外部参照文件
+        // 只有手动点击（forceOpen = true）时才打开弹框显示提示
+        if (forceOpen) {
+          setFiles([]);
+          setIsOpen(true);
+        }
         return false;
       }
 
-      const missingCount = allExternalReferences.filter(
-        (f) => !f.exists
-      ).length;
       console.debug(
-        `[useExternalReferenceUpload] 外部参照总数: ${allExternalReferences.length} 个，缺失: ${missingCount} 个`,
+        `[useExternalReferenceUpload] 缺失的外部参照文件数: ${missingExternalReferences.length} 个`,
         'external-reference'
       );
 
-      setFiles(allExternalReferences);
+      setFiles(missingExternalReferences);
       setIsOpen(true);
       return true;
     },
-    [config.nodeId, fetchPreloadingData, checkReferenceExists]
+    [fetchPreloadingData, checkReferenceExists]
   );
 
   /**
@@ -283,8 +330,7 @@ export const useExternalReferenceUpload = (
         const newFiles = [...prevFiles];
         selectedFiles.forEach((file) => {
           const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) {
-            existingFile.source = file;
+          if (existingFile) { (existingFile as any).source = file;
             existingFile.uploadState = 'notSelected';
           } else {
             console.warn(`未找到匹配的缺失文件: ${file.name}`);
@@ -334,7 +380,10 @@ export const useExternalReferenceUpload = (
       );
       return;
     }
-    setLoading(true);
+    setLocalLoading(true);
+    setGlobalLoading(true, '正在上传外部参照...');
+
+    const id = identifierRef.current;
 
     for (const fileInfo of filesToUpload) {
       if (!fileInfo.source) continue;
@@ -350,41 +399,84 @@ export const useExternalReferenceUpload = (
 
       try {
         if (fileInfo.type === 'img') {
-          // 图片外部参照：使用图片上传接口
-          await mxcadApi.uploadExtReferenceImage(
-            fileInfo.source,
-            config.nodeId,
-            fileInfo.name,
-            (progressEvent) => {
-              if (progressEvent.total) {
-                const progress =
-                  (progressEvent.loaded / progressEvent.total) * 100;
-                setFiles((prevFiles) =>
-                  prevFiles.map((f) =>
-                    f.name === fileInfo.name ? { ...f, progress } : f
-                  )
-                );
+          if (isLoggedIn) {
+            // 图片外部参照：使用图片上传接口（已登录用户）
+            await mxcadApi.uploadExtReferenceImage(
+              fileInfo.source,
+              config.nodeId || '',
+              fileInfo.name,
+              undefined,
+              (progressEvent) => {
+                if (progressEvent.total) {
+                  const progress =
+                    (progressEvent.loaded / progressEvent.total) * 100;
+                  setFiles((prevFiles) =>
+                    prevFiles.map((f) =>
+                      f.name === fileInfo.name ? { ...f, progress } : f
+                    )
+                  );
+                }
               }
-            }
-          );
+            );
+          } else {
+            // 图片外部参照：使用公开上传接口（未登录用户）
+            await publicFileApi.uploadExtReference(
+              fileInfo.source,
+              id,
+              fileInfo.name,
+              undefined,
+              (progressEvent) => {
+                if (progressEvent.total) {
+                  const progress =
+                    (progressEvent.loaded / progressEvent.total) * 100;
+                  setFiles((prevFiles) =>
+                    prevFiles.map((f) =>
+                      f.name === fileInfo.name ? { ...f, progress } : f
+                    )
+                  );
+                }
+              }
+            );
+          }
         } else {
-          // DWG 外部参照：使用 DWG 外部参照上传接口
-          await mxcadApi.uploadExtReferenceDwg(
-            fileInfo.source,
-            config.nodeId,
-            fileInfo.name,
-            (progressEvent) => {
-              if (progressEvent.total) {
-                const progress =
-                  (progressEvent.loaded / progressEvent.total) * 100;
-                setFiles((prevFiles) =>
-                  prevFiles.map((f) =>
-                    f.name === fileInfo.name ? { ...f, progress } : f
-                  )
-                );
+          if (isLoggedIn) {
+            // DWG 外部参照：使用 DWG 外部参照上传接口（已登录用户）
+            await mxcadApi.uploadExtReferenceDwg(
+              fileInfo.source,
+              config.nodeId || '',
+              fileInfo.name,
+              (progressEvent) => {
+                if (progressEvent.total) {
+                  const progress =
+                    (progressEvent.loaded / progressEvent.total) * 100;
+                  setFiles((prevFiles) =>
+                    prevFiles.map((f) =>
+                      f.name === fileInfo.name ? { ...f, progress } : f
+                    )
+                  );
+                }
               }
-            }
-          );
+            );
+          } else {
+            // DWG 外部参照：使用公开上传接口（未登录用户）
+            await publicFileApi.uploadExtReference(
+              fileInfo.source,
+              id,
+              fileInfo.name,
+              undefined,
+              (progressEvent) => {
+                if (progressEvent.total) {
+                  const progress =
+                    (progressEvent.loaded / progressEvent.total) * 100;
+                  setFiles((prevFiles) =>
+                    prevFiles.map((f) =>
+                      f.name === fileInfo.name ? { ...f, progress } : f
+                    )
+                  );
+                }
+              }
+            );
+          }
         }
 
         // 更新状态为成功
@@ -410,8 +502,9 @@ export const useExternalReferenceUpload = (
       }
     }
 
-    setLoading(false);
-  }, [files, config.nodeId, config.onError]);
+    setLocalLoading(false);
+    setGlobalLoading(false);
+  }, [files, config.nodeId, config.onError, isLoggedIn, setGlobalLoading]);
 
   /**
    * 关闭模态框
@@ -425,6 +518,12 @@ export const useExternalReferenceUpload = (
    * 完成上传
    */
   const complete = useCallback(() => {
+    // 空文件列表或没有文件需要上传时，不触发 onSuccess
+    if (files.length === 0) {
+      close();
+      return;
+    }
+
     const allSuccess = files.every((f) => f.uploadState === 'success');
 
     if (allSuccess) {
@@ -478,8 +577,7 @@ export const useExternalReferenceUpload = (
         const newFiles = [...prevFiles];
         selectedFiles.forEach((file) => {
           const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) {
-            existingFile.source = file;
+          if (existingFile) { (existingFile as any).source = file;
             existingFile.uploadState = 'notSelected';
           } else {
             console.warn(`未找到匹配的缺失文件: ${file.name}`);
@@ -498,17 +596,32 @@ export const useExternalReferenceUpload = (
     input.click();
   }, [files, uploadFiles]);
 
-  return {
+  // 使用 useMemo 缓存返回对象，避免每次渲染都创建新对象
+  const returnValue = useMemo(() => ({
     isOpen,
     files,
-    loading,
+    loading: localLoading,
     checkMissingReferences,
     selectFiles,
     uploadFiles,
-    selectAndUploadFiles, // 合并后的方法
+    selectAndUploadFiles,
     close,
     complete,
     skip,
     openModalForUpload,
-  };
+  }), [
+    isOpen,
+    files,
+    localLoading,
+    checkMissingReferences,
+    selectFiles,
+    uploadFiles,
+    selectAndUploadFiles,
+    close,
+    complete,
+    skip,
+    openModalForUpload,
+  ]);
+
+  return returnValue;
 };

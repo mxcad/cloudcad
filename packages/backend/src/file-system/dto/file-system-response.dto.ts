@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 // The code, documentation, and related materials of this software belong to
 // Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
@@ -47,7 +47,7 @@ export class FileSystemNodeDto {
   @ApiProperty({ description: '文件哈希', required: false })
   fileHash?: string;
 
-  @ApiProperty({ description: '文件状态', enum: FileStatus, required: false })
+  @ApiProperty({ description: '文件状态', enum: Object.values(FileStatus), enumName: 'FileStatusEnum', required: false })
   fileStatus?: FileStatus;
 
   @ApiProperty({ description: '创建时间' })
@@ -62,11 +62,23 @@ export class FileSystemNodeDto {
   @ApiProperty({ description: '所有者 ID' })
   ownerId: string;
 
-  @ApiProperty({ description: '私人空间标识（非空表示为私人空间）', required: false })
+  @ApiProperty({
+    description: '私人空间标识（非空表示为私人空间）',
+    required: false,
+  })
   personalSpaceKey?: string;
+
+  @ApiProperty({
+    description: '公共资源库标识（drawing: 图纸库, block: 图块库）',
+    required: false,
+  })
+  libraryKey?: string;
 
   @ApiProperty({ description: '子节点数量', required: false })
   childrenCount?: number;
+
+  @ApiProperty({ description: '项目 ID', required: false })
+  projectId?: string;
 }
 
 /**
@@ -82,11 +94,11 @@ export class ProjectDto {
   @ApiProperty({ description: '项目描述', required: false })
   description?: string;
 
-  @ApiProperty({ description: '项目状态', enum: ProjectStatus })
+  @ApiProperty({ description: '项目状态', enum: Object.values(ProjectStatus), enumName: 'ProjectStatusEnum' })
   status: ProjectStatus;
 
-  @ApiProperty({ description: '是否为根节点' })
-  isRoot: boolean;
+  @ApiProperty({ description: '所有者 ID' })
+  ownerId: string;
 
   @ApiProperty({ description: '创建时间' })
   createdAt: Date;
@@ -94,8 +106,8 @@ export class ProjectDto {
   @ApiProperty({ description: '更新时间' })
   updatedAt: Date;
 
-  @ApiProperty({ description: '所有者 ID' })
-  ownerId: string;
+  @ApiProperty({ description: '删除时间', required: false })
+  deletedAt?: Date;
 
   @ApiProperty({ description: '成员数量', required: false })
   memberCount?: number;
@@ -131,54 +143,10 @@ export class ProjectMemberDto {
 }
 
 /**
- * 分页响应 DTO
- */
-export class PaginatedResponseDto<T> {
-  @ApiProperty({
-    description: '数据列表',
-    type: 'array',
-    items: { type: 'object' },
-  })
-  data: T[];
-
-  @ApiProperty({ description: '总数' })
-  total: number;
-
-  @ApiProperty({ description: '当前页码' })
-  page: number;
-
-  @ApiProperty({ description: '每页数量' })
-  limit: number;
-
-  @ApiProperty({ description: '总页数' })
-  totalPages: number;
-}
-
-/**
- * 项目列表响应 DTO
- */
-export class ProjectListResponseDto {
-  @ApiProperty({ description: '项目列表', type: [ProjectDto] })
-  projects: ProjectDto[];
-
-  @ApiProperty({ description: '总数' })
-  total: number;
-
-  @ApiProperty({ description: '当前页码' })
-  page: number;
-
-  @ApiProperty({ description: '每页数量' })
-  limit: number;
-
-  @ApiProperty({ description: '总页数' })
-  totalPages: number;
-}
-
-/**
- * 节点列表响应 DTO
+ * 统一分页列表响应 DTO - 所有列表接口都用这个格式
  */
 export class NodeListResponseDto {
-  @ApiProperty({ description: '节点列表', type: [FileSystemNodeDto] })
+  @ApiProperty({ description: '节点列表', type: FileSystemNodeDto, isArray: true })
   nodes: FileSystemNodeDto[];
 
   @ApiProperty({ description: '总数' })
@@ -193,6 +161,11 @@ export class NodeListResponseDto {
   @ApiProperty({ description: '总页数' })
   totalPages: number;
 }
+
+/**
+ * 项目列表响应 DTO - 现在它只是 NodeListResponseDto 的别名
+ */
+export class ProjectListResponseDto extends NodeListResponseDto {}
 
 /**
  * 节点树响应 DTO
@@ -200,70 +173,62 @@ export class NodeListResponseDto {
 export class NodeTreeResponseDto extends FileSystemNodeDto {
   @ApiProperty({
     description: '子节点',
-    type: [FileSystemNodeDto],
+    type: () => [FileSystemNodeDto],
     required: false,
   })
   children?: FileSystemNodeDto[];
 }
 
 /**
- * 存储空间信息 DTO
- */
-export class StorageInfoDto {
-  @ApiProperty({ description: '已使用空间（字节）' })
-  used: number;
-
-  @ApiProperty({ description: '总空间（字节）' })
-  total: number;
-
-  @ApiProperty({ description: '剩余空间（字节）' })
-  remaining: number;
-
-  @ApiProperty({ description: '使用率（百分比）' })
-  usagePercent: number;
-}
-
-/**
  * 回收站项目 DTO
  */
-export class TrashItemDto extends FileSystemNodeDto {
+export class TrashItemDto {
+  @ApiProperty({ description: '节点 ID' })
+  id: string;
+
+  @ApiProperty({ description: '节点名称' })
+  name: string;
+
+  @ApiProperty({ description: '节点描述', required: false })
+  description?: string;
+
+  @ApiProperty({ description: '是否为文件夹' })
+  isFolder: boolean;
+
   @ApiProperty({ description: '原始父节点 ID' })
   originalParentId: string;
 
+  @ApiProperty({ description: '文件大小', required: false })
+  size?: number;
+
+  @ApiProperty({ description: '文件 MIME 类型', required: false })
+  mimeType?: string;
+
+  @ApiProperty({ description: '创建时间' })
+  createdAt: Date;
+
+  @ApiProperty({ description: '更新时间' })
+  updatedAt: Date;
+
   @ApiProperty({ description: '删除时间' })
-  declare deletedAt: Date;
+  deletedAt: Date;
+
+  @ApiProperty({ description: '所有者 ID' })
+  ownerId: string;
+
+  @ApiProperty({ description: '项目 ID', required: false })
+  projectId?: string;
 }
 
 /**
- * 回收站列表响应 DTO
+ * 回收站列表响应 DTO - 现在它也是 NodeListResponseDto 的别名
  */
-export class TrashListResponseDto {
-  @ApiProperty({ description: '回收站项目列表', type: [TrashItemDto] })
-  items: TrashItemDto[];
-
-  @ApiProperty({ description: '总数' })
-  total: number;
-}
+export class TrashListResponseDto extends NodeListResponseDto {}
 
 /**
- * 项目内回收站响应 DTO
+ * 项目内回收站响应 DTO - 现在它也是 NodeListResponseDto 的别名
  */
-export class ProjectTrashResponseDto {
-  @ApiProperty({ description: '回收站节点列表', type: [FileSystemNodeDto] })
-  nodes: FileSystemNodeDto[];
-
-  @ApiProperty({ description: '总数' })
-  total: number;
-
-  @ApiProperty({ description: '当前页码' })
-  page: number;
-
-  @ApiProperty({ description: '每页数量' })
-  limit: number;
-
-  @ApiProperty({ description: '总页数' })
-  totalPages: number;
-}
+export class ProjectTrashResponseDto extends NodeListResponseDto {}
 
 /**
  * 操作成功响应 DTO
@@ -309,7 +274,7 @@ export class ProjectUserPermissionsDto {
   @ApiProperty({ description: '用户 ID' })
   userId: string;
 
-  @ApiProperty({ description: '权限列表', type: [String] })
+  @ApiProperty({ description: '权限列表', type: () => [String] })
   permissions: string[];
 }
 

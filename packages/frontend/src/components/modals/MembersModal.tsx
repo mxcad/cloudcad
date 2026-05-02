@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
-import X from 'lucide-react/dist/esm/icons/x';
-import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right';
+import { RefreshCw } from 'lucide-react';
+import { X } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { TruncateText } from '../ui/TruncateText';
@@ -206,7 +206,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       });
 
       // 直接添加到列表，避免重新加载
-      const newMember = response.data as unknown as Member;
+      const memberData = response.data;
+      const newMember: Member = {
+        id: memberData.user.id,
+        userId: memberData.user.id,
+        email: memberData.user.email,
+        username: memberData.user.username,
+        nickname: memberData.user.nickname,
+        avatar: memberData.user.avatar,
+        projectRoleId: memberData.projectRoleId,
+        projectRoleName: memberData.projectRole.name,
+        joinedAt: memberData.createdAt
+      };
       setMembers((prev) => [...prev, newMember]);
 
       // 重置表单
@@ -314,7 +325,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         <div className="space-y-4" ref={contentRef}>
           {/* 错误提示 */}
           {errorMessage && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div
+              className="flex items-center gap-2 p-3 rounded-lg text-sm"
+              style={{
+                background: 'var(--error-light)',
+                color: 'var(--error)',
+              }}
+            >
               <AlertCircle size={16} />
               {errorMessage}
             </div>
@@ -326,27 +343,58 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               <button
                 data-tour="invite-member-btn"
                 onClick={() => setShowAddForm(true)}
-                className="w-full py-2 px-4 border-2 border-dashed border-slate-300 rounded-lg
-                         text-slate-500 hover:border-indigo-400 hover:text-indigo-600
-                         flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors"
+                style={{
+                  borderColor: 'var(--border-strong)',
+                  color: 'var(--text-tertiary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary-400)';
+                  e.currentTarget.style.color = 'var(--primary-600)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-strong)';
+                  e.currentTarget.style.color = 'var(--text-tertiary)';
+                }}
               >
                 <UserPlus size={18} />
                 添加成员
               </button>
             ) : loadingPermissions ? (
-              <div className="w-full py-2 px-4 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center gap-2">
-                <Loader2 size={18} className="animate-spin text-slate-400" />
-                <span className="text-slate-400">检查权限中...</span>
+              <div
+                className="w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2"
+                style={{
+                  borderColor: 'var(--border-default)',
+                }}
+              >
+                <Loader2
+                  size={18}
+                  className="animate-spin"
+                  style={{ color: 'var(--text-muted)' }}
+                />
+                <span style={{ color: 'var(--text-muted)' }}>
+                  检查权限中...
+                </span>
               </div>
             ) : null
           ) : (
             <form
               onSubmit={handleAddMember}
-              className="p-4 bg-slate-50 rounded-lg border border-slate-200 relative"
+              className="p-4 rounded-lg relative"
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-default)',
+              }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <UserPlus size={18} className="text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">
+                <UserPlus
+                  size={18}
+                  style={{ color: 'var(--text-tertiary)' }}
+                />
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
                   添加新成员
                 </span>
                 <button
@@ -358,9 +406,16 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     setSearchResults([]);
                     setSelectedUser(null);
                   }}
-                  className="ml-auto p-1 hover:bg-slate-200 rounded"
+                  className="ml-auto p-1 rounded"
+                  style={{ color: 'var(--text-tertiary)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-elevated)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                 >
-                  <X size={16} className="text-slate-500" />
+                  <X size={16} />
                 </button>
               </div>
               <div className="space-y-3">
@@ -376,14 +431,15 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       setSelectedUser(null);
                     }}
                     placeholder="搜索用户（邮箱或用户名）"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 rounded-lg text-sm input-theme"
                     autoComplete="off"
                   />
                   {searching && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <Loader2
                         size={16}
-                        className="animate-spin text-slate-400"
+                        className="animate-spin"
+                        style={{ color: 'var(--text-muted)' }}
                       />
                     </div>
                   )}
@@ -391,7 +447,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
                 {/* 搜索结果下拉列表 */}
                 {searchResults.length > 0 && !selectedUser && (
-                  <div className="absolute z-10 w-full bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div
+                    className="absolute z-10 w-full rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                    style={{
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-default)',
+                    }}
+                  >
                     {searchResults.map((user) => (
                       <button
                         key={user.id}
@@ -401,21 +463,36 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           setNewEmail(user.email);
                           setSearchResults([]);
                         }}
-                        className="w-full px-3 py-2 hover:bg-slate-100 text-left border-b border-slate-100 last:border-b-0"
+                        className="w-full px-3 py-2 text-left last:border-b-0 dropdown-item-theme"
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                        }}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                            style={{
+                              background: 'var(--primary-100)',
+                              color: 'var(--primary-600)',
+                            }}
+                          >
                             {(user?.nickname ||
                               user?.username ||
                               user?.email)?.[0]?.toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900">
+                            <p
+                              className="text-sm font-medium"
+                              style={{ color: 'var(--text-primary)' }}
+                            >
                               <TruncateText>
                                 {user.nickname || user.username}
                               </TruncateText>
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p
+                              className="text-xs"
+                              style={{ color: 'var(--text-tertiary)' }}
+                            >
                               <TruncateText>{user.email}</TruncateText>
                             </p>
                           </div>
@@ -427,8 +504,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
                 {/* 已选用户显示 */}
                 {selectedUser && (
-                  <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0">
+                  <div
+                    className="flex items-center gap-2 p-2 rounded-lg flex-shrink-0"
+                    style={{
+                      background: 'var(--primary-50)',
+                      border: '1px solid var(--primary-200)',
+                    }}
+                  >
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                      style={{
+                        background: 'var(--primary-100)',
+                        color: 'var(--primary-600)',
+                      }}
+                    >
                       {(
                         (selectedUser.nickname ||
                           selectedUser.username ||
@@ -437,12 +526,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       ).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
                         <TruncateText>
                           {selectedUser.nickname || selectedUser.username}
                         </TruncateText>
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
                         <TruncateText>{selectedUser.email}</TruncateText>
                       </p>
                     </div>
@@ -452,9 +547,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         setSelectedUser(null);
                         setNewEmail('');
                       }}
-                      className="p-1 hover:bg-indigo-200 rounded flex-shrink-0"
+                      className="p-1 rounded flex-shrink-0"
+                      style={{
+                        color: 'var(--text-tertiary)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--primary-200)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
-                      <X size={14} className="text-slate-500" />
+                      <X size={14} />
                     </button>
                   </div>
                 )}
@@ -465,8 +569,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     data-tour="member-role-select"
                     value={newRoleId}
                     onChange={(e) => setNewRoleId(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 rounded-lg text-sm input-theme"
                     disabled={loading}
+                    style={{ maxWidth: '200px' }}
                   >
                     <option value="">请选择角色</option>
                     {projectRoles
@@ -493,13 +598,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           {/* 筛选条 */}
           {members.length > 0 && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">
+              <span
+                className="text-sm"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
                 共 {filteredMembers.length} 人
               </span>
               <select
                 value={filterRoleId}
                 onChange={(e) => setFilterRoleId(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded bg-white text-sm text-slate-700"
+                className="px-3 py-1.5 rounded text-sm input-theme"
+                style={{
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)',
+                }}
               >
                 <option value="">所有角色</option>
                 {projectRoles.map((role) => (
@@ -515,41 +627,78 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           <div className="space-y-2">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <RefreshCw size={20} className="animate-spin text-slate-400" />
-                <span className="ml-2 text-slate-500">加载中...</span>
+                <RefreshCw
+                  size={20}
+                  className="animate-spin"
+                  style={{ color: 'var(--text-muted)' }}
+                />
+                <span
+                  className="ml-2"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  加载中...
+                </span>
               </div>
             ) : filteredMembers.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div
+                className="text-center py-8"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
                 {filterRoleId ? '没有符合条件的成员' : '暂无成员'}
               </div>
             ) : (
               filteredMembers.map((member) => {
-                const isOwner = member.projectRoleName === 'PROJECT_OWNER';
+                const isOwner =
+                  member.projectRoleName === 'PROJECT_OWNER';
+
                 const displayName =
                   member.nickname ||
                   member.username ||
                   member.email ||
                   '未知用户';
-                const avatarLetter = displayName[0]?.toUpperCase() || '?';
+
+                const avatarLetter =
+                  displayName[0]?.toUpperCase() || '?';
 
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ background: 'var(--bg-tertiary)' }}
                   >
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+                      style={{
+                        background: 'var(--primary-100)',
+                        color: 'var(--primary-600)',
+                      }}
+                    >
                       {avatarLetter}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
                         <TruncateText>{displayName}</TruncateText>
                       </p>
-                      <p className="text-xs text-slate-500">
-                        <TruncateText>{member.email || '无邮箱'}</TruncateText>
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
+                        <TruncateText>
+                          {member.email || '无邮箱'}
+                        </TruncateText>
                       </p>
                     </div>
                     {isOwner ? (
-                      <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded flex-shrink-0 font-medium">
+                      <span
+                        className="px-2 py-1 text-xs rounded flex-shrink-0 font-medium"
+                        style={{
+                          background: 'var(--primary-100)',
+                          color: 'var(--primary-700)',
+                        }}
+                      >
                         项目所有者
                       </span>
                     ) : (
@@ -559,12 +708,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           handleUpdateRole(member.id, e.target.value)
                         }
                         disabled={!canAssignRoles}
-                        className={`px-2 py-1 text-xs border border-slate-300 rounded bg-white flex-shrink-0 ${
-                          !canAssignRoles ? 'opacity-50 cursor-not-allowed' : ''
+                        className={`px-2 py-1 text-xs rounded flex-shrink-0 input-theme ${
+                          !canAssignRoles
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
                         }`}
+                        style={{ maxWidth: '100px' }}
                       >
                         {projectRoles
-                          .filter((role) => role.name !== 'PROJECT_OWNER')
+                          .filter(
+                            (role) => role.name !== 'PROJECT_OWNER'
+                          )
                           .map((role) => (
                             <option key={role.id} value={role.id}>
                               {getRoleDisplayName(role.name, false)}
@@ -578,7 +732,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           setTransferTarget(member);
                           setShowTransferModal(true);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded flex-shrink-0"
+                        className="p-1.5 rounded flex-shrink-0"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color =
+                            'var(--primary-600)';
+                          e.currentTarget.style.background =
+                            'var(--primary-50)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color =
+                            'var(--text-muted)';
+                          e.currentTarget.style.background =
+                            'transparent';
+                        }}
                         title="转让项目所有权"
                       >
                         <ArrowUpRight size={16} />
@@ -587,7 +754,19 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     {!isOwner && canManageMembers && (
                       <button
                         onClick={() => handleRemoveMember(member.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex-shrink-0"
+                        className="p-1.5 rounded flex-shrink-0"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--error)';
+                          e.currentTarget.style.background =
+                            'var(--error-light)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color =
+                            'var(--text-muted)';
+                          e.currentTarget.style.background =
+                            'transparent';
+                        }}
                         title="移除成员"
                       >
                         <X size={16} />
@@ -632,23 +811,44 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           }
         >
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div
+              className="flex items-start gap-3 p-4 rounded-lg"
+              style={{
+                background: 'var(--warning-light)',
+                border: '1px solid var(--warning-dim)',
+              }}
+            >
               <AlertCircle
                 size={20}
-                className="text-amber-600 flex-shrink-0 mt-0.5"
+                className="flex-shrink-0 mt-0.5"
+                style={{ color: 'var(--warning)' }}
               />
-              <div className="text-sm text-amber-900">
+              <div className="text-sm" style={{ color: 'var(--text-primary)' }}>
                 <p className="font-semibold mb-1">重要提示</p>
-                <p className="text-amber-800">
+                <p style={{ color: 'var(--text-secondary)' }}>
                   转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">转让给：</p>
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium flex-shrink-0">
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                转让给：
+              </p>
+              <div
+                className="flex items-center gap-3 p-3 rounded-lg"
+                style={{ background: 'var(--bg-tertiary)' }}
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+                  style={{
+                    background: 'var(--primary-100)',
+                    color: 'var(--primary-600)',
+                  }}
+                >
                   {(
                     (transferTarget.nickname ||
                       transferTarget.username ||
@@ -656,17 +856,26 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   ).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
                     {transferTarget.nickname || transferTarget.username}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p
+                    className="text-xs"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
                     {transferTarget.email}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="text-xs text-slate-500">
+            <div
+              className="text-xs"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
               <p>• 新所有者将获得项目的完全控制权</p>
               <p>• 您将成为该项目的管理员</p>
               <p>• 确认转让后，新所有者可以管理项目成员和权限</p>

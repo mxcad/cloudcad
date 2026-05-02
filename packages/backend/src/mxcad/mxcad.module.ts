@@ -17,10 +17,20 @@ import { FileConversionService } from './services/file-conversion.service';
 import { FileSystemService } from './services/file-system.service';
 import { CacheManagerService } from './services/cache-manager.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
-import { FileUploadManagerService } from './services/file-upload-manager.service';
+import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
 import { ChunkUploadService } from './services/chunk-upload.service';
+import { ChunkUploadManagerService } from './services/chunk-upload-manager.service';
+import { FileMergeService } from './services/file-merge.service';
+import { ExternalRefService } from './services/external-ref.service';
+import { UploadUtilityService } from './services/upload-utility.service';
+import { FileConversionUploadService } from './services/file-conversion-upload.service';
 import { FileCheckService } from './services/file-check.service';
 import { NodeCreationService } from './services/node-creation.service';
+import { SaveAsService } from './services/save-as.service';
+import { ExternalReferenceHandler } from './services/external-reference-handler.service';
+import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
+import { ThumbnailGenerationService } from './services/thumbnail-generation.service';
+import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
 import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
 import { ConcurrencyManager } from '../common/concurrency/concurrency-manager';
 import { StorageCheckService } from '../storage/storage-check.service';
@@ -39,12 +49,14 @@ import { VersionControlModule } from '../version-control/version-control.module'
 import { RolesModule } from '../roles/roles.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { AppConfig } from '../config/app.config';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 
 @Module({
   imports: [
     DatabaseModule,
     CommonModule,
     ConfigModule,
+    RuntimeConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService<AppConfig>) => ({
@@ -116,14 +128,24 @@ import { AppConfig } from '../config/app.config';
     FileSystemService,
     CacheManagerService,
     FileSystemNodeService,
-    FileUploadManagerService,
+    FileUploadManagerFacadeService,
+    ExternalReferenceHandler,
+    MxcadFileHandlerService,
+    ExternalReferenceUpdateService,
     // 新服务
     ConcurrencyManager,
     StorageCheckService,
     ChunkUploadService,
+    ChunkUploadManagerService,
+    FileMergeService,
+    ExternalRefService,
+    UploadUtilityService,
+    FileConversionUploadService,
     FileCheckService,
     NodeCreationService,
+    SaveAsService,
     UploadOrchestrator,
+    ThumbnailGenerationService,
     // 来自 FileSystemModule 的 FileSystemService 别名
     {
       provide: 'FileSystemServiceMain',
@@ -133,6 +155,16 @@ import { AppConfig } from '../config/app.config';
     RequireProjectPermissionGuard,
     // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxCadExceptionFilter
   ],
-  exports: [MxCadService, FileUploadManagerService, UploadOrchestrator],
+  exports: [
+    MxCadService,
+    FileUploadManagerFacadeService,
+    UploadOrchestrator,
+    FileConversionService,
+    FileSystemService,
+    ExternalReferenceHandler,
+    MxcadFileHandlerService,
+    ThumbnailGenerationService,
+    ExternalReferenceUpdateService,
+  ],
 })
 export class MxCadModule {}

@@ -28,8 +28,8 @@ cloudcad/
 │   ├── uploads/                   # MxCAD 上传临时文件（原 uploads）
 │   ├── temp/                      # 分片上传临时目录（原 temp）
 │   ├── logs/                      # 应用日志（原 logs）
-│   ├── postgres/                  # PostgreSQL 数据库文件（原 offline-data/postgres）
-│   └── redis/                     # Redis 数据文件（原 offline-data/redis）
+│   ├── postgres/                  # PostgreSQL 数据库文件（原 data/postgres）
+│   └── redis/                     # Redis 数据文件（原 data/redis）
 ├── runtime/                       # 运行时程序（非数据，随部署包更新）
 │   ├── windows/
 │   ├── linux/
@@ -48,8 +48,8 @@ cloudcad/
 | 上传临时 | `uploads/` | `data/uploads/` | MxCAD 上传过程中的临时文件 |
 | 分片临时 | `temp/` | `data/temp/` | 分片上传的临时目录 |
 | 日志 | `logs/` | `data/logs/` | 应用运行日志 |
-| PostgreSQL | `offline-data/postgres/` | `data/postgres/` | 数据库数据文件 |
-| Redis | `offline-data/redis/` | `data/redis/` | 缓存数据文件 |
+| PostgreSQL | `data/postgres/` | `data/postgres/` | 数据库数据文件 |
+| Redis | `data/redis/` | `data/redis/` | 缓存数据文件 |
 
 ### 2.2 备份时可忽略的目录
 
@@ -168,7 +168,7 @@ svn-repo/
 uploads/
 temp/
 logs/
-offline-data/
+data/
 ```
 
 **修改后**:
@@ -186,7 +186,7 @@ svn-repo/
 uploads/
 temp/
 logs/
-offline-data/
+data/
 ```
 
 **修改后**:

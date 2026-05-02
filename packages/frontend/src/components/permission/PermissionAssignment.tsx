@@ -9,10 +9,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
-import Check from 'lucide-react/dist/esm/icons/check';
-import Info from 'lucide-react/dist/esm/icons/info';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import { Check } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import {

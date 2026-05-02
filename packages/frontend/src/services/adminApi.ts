@@ -24,4 +24,8 @@ export const adminApi = {
 
   getUserPermissions: (userId: string) =>
     getApiClient().AdminController_getUserPermissions({ userId }),
+
+  getCleanupStats: () => getApiClient().AdminController_getCleanupStats(),
+
+  cleanupStorage: (delayDays?: number) => getApiClient().AdminController_cleanupStorage({ delayDays }),
 };

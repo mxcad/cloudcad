@@ -1,7 +1,7 @@
-const { exec } = require('child_process');
 const os = require('os');
-const svnPath = require('./svnpath');
+const { default: svnPath, getExecOptions } = require('./svnpath');
 const svnadminPath = require('./svnadminpath');
+const { executeCommand } = require('./svn-executor');
 
 const isWindows = os.platform() === 'win32';
 
@@ -12,8 +12,16 @@ const isWindows = os.platform() === 'win32';
  *   - result: { available: boolean, version: string, message: string }
  */
 function checkSvnAvailable(callback) {
-  exec(`"${svnPath}" --version --quiet`, { windowsHide: true }, (error, stdout, _stderr) => {
-    if (error) {
+  executeCommand(`"${svnPath}" --version --quiet`)
+    .then(stdout => {
+      const version = stdout.trim();
+      callback(null, {
+        available: true,
+        version,
+        message: `SVN ${version} 可用`,
+      });
+    })
+    .catch(error => {
       const message = isWindows
         ? 'SVN 可执行文件损坏或缺失，请重新安装 @cloudcad/svn-version-tool'
         : 'SVN 未安装，请运行: apt-get install subversion (Debian/Ubuntu) 或 yum install subversion (CentOS/RHEL)';
@@ -22,16 +30,7 @@ function checkSvnAvailable(callback) {
         version: null,
         message,
       });
-      return;
-    }
-
-    const version = stdout.trim();
-    callback(null, {
-      available: true,
-      version,
-      message: `SVN ${version} 可用`,
     });
-  });
 }
 
 /**
@@ -43,11 +42,11 @@ function checkSvnAvailableSync() {
   const { execSync } = require('child_process');
 
   try {
-    const version = execSync(`"${svnPath}" --version --quiet`, {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-    }).trim();
+    const execOptions = getExecOptions();
+    execOptions.encoding = 'utf-8';
+    execOptions.stdio = ['pipe', 'pipe', 'pipe'];
+    
+    const version = execSync(`"${svnPath}" --version --quiet`, execOptions).trim();
 
     return { available: true, version, message: `SVN ${version} 可用` };
   } catch (error) {

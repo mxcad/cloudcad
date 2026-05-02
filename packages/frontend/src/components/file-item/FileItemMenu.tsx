@@ -24,7 +24,6 @@ interface FileItemMenuProps {
   onRestore?: (node: FileSystemNode) => void;
   onMove?: (node: FileSystemNode) => void;
   onCopy?: (node: FileSystemNode) => void;
-  onAddToGallery?: (node: FileSystemNode) => void;
   onUploadExternalReference?: (e: React.MouseEvent) => void;
   onShowVersionHistory?: (node: FileSystemNode) => void;
   isCadFile: () => boolean;
@@ -32,9 +31,11 @@ interface FileItemMenuProps {
   canDownload?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
-  canAddToGallery?: boolean;
   canViewVersionHistory?: boolean;
+  canManageExternalReference?: boolean;
   canManageTrash?: boolean;
+  // 图库模式
+  galleryMode?: boolean;
 }
 
 export const FileItemMenu: React.FC<FileItemMenuProps> = ({
@@ -56,15 +57,15 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onRestore,
   onMove,
   onCopy,
-  onAddToGallery,
   onUploadExternalReference,
   onShowVersionHistory,
   isCadFile,
   canDownload,
   canEdit,
   canDelete,
-  canAddToGallery,
   canViewVersionHistory,
+  canManageExternalReference,
+  galleryMode,
 }) => {
   const isRoot = node.isRoot;
   const isFolder = node.isFolder;
@@ -83,7 +84,6 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
       } as React.MouseEvent),
     download: () => onDownload?.(node),
     view_version_history: () => onShowVersionHistory?.(node),
-    add_to_gallery: () => onAddToGallery?.(node),
     rename: () => onRename?.(node),
     move: () => onMove?.(node),
     copy: () => onCopy?.(node),
@@ -108,11 +108,10 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     canDownload,
     canEdit,
     canDelete,
-    canAddToGallery,
     canViewVersionHistory,
+    canManageExternalReference,
     canManageTrash: !!onRestore || !!onPermanentlyDelete,
     onDownload: !!onDownload,
-    onAddToGallery: !!onAddToGallery,
     onShowVersionHistory: !!onShowVersionHistory,
     onEdit: !!onEdit,
     onShowMembers: !!onShowMembers,
@@ -153,7 +152,10 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+      window.addEventListener('scroll', handleScroll, {
+        passive: true,
+        capture: true,
+      });
     }, 100);
 
     return () => {
@@ -173,7 +175,10 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
           // 根据操作类型确定颜色
           const getColorStyle = () => {
-            if (action.type === 'delete' || action.type === 'permanently_delete') {
+            if (
+              action.type === 'delete' ||
+              action.type === 'permanently_delete'
+            ) {
               return 'text-[var(--error)] hover:bg-[rgba(239,68,68,0.1)]';
             }
             if (action.type === 'restore') {
@@ -181,9 +186,6 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
             }
             if (action.type === 'view_version_history') {
               return 'text-[var(--info)] hover:bg-[rgba(59,130,246,0.1)]';
-            }
-            if (action.type === 'add_to_gallery') {
-              return 'text-[var(--primary-500)] hover:bg-[var(--bg-tertiary)]';
             }
             if (action.type === 'upload_external_reference') {
               return 'text-[var(--warning)] hover:bg-[rgba(245,158,11,0.1)]';
@@ -194,7 +196,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
           return (
             <React.Fragment key={action.type}>
               <button
-                data-tour='menu-show-roles'
+                data-tour="menu-show-roles"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleMenuAction(() => actionHandlers[action.type]?.());
@@ -204,7 +206,9 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                 {action.icon}
                 {action.label}
               </button>
-              {isDividerAfter ? <hr className="my-1 border-[var(--border-subtle)]" /> : null}
+              {isDividerAfter ? (
+                <hr className="my-1 border-[var(--border-subtle)]" />
+              ) : null}
             </React.Fragment>
           );
         })}

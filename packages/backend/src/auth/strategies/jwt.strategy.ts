@@ -77,6 +77,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         avatar: true,
         status: true,
         roleId: true,
+        phone: true,
+        phoneVerified: true,
+        wechatId: true,
+        provider: true,
+        password: true, // 用于判断是否设置了密码
       },
     });
 
@@ -84,7 +89,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (this.isDevelopment) {
         this.logger.warn(`用户不存在: ${payload.sub}`);
       }
-      throw new Error('用户不存在');
+      return null;
     }
 
     if (user.status !== 'ACTIVE') {
@@ -110,12 +115,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (this.isDevelopment) {
         this.logger.warn(`角色不存在: ${user.roleId}`);
       }
-      throw new Error('角色不存在');
+      return null;
     }
 
     // 返回用户基本信息 + 角色和权限信息
+    const { password, ...userWithoutPassword } = user;
     return {
-      ...user,
+      ...userWithoutPassword,
+      hasPassword: !!password,
       role: {
         name: role.name,
         description: role.description,

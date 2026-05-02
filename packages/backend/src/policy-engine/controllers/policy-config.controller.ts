@@ -32,7 +32,7 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../../common/enums/permissions.enum';
-import { PolicyConfigService } from '../services/policy-config.service';
+import { PolicyConfigService, PermissionPolicyConfig } from '../services/policy-config.service';
 import { CreatePolicyDto } from '../dto/create-policy.dto';
 import { UpdatePolicyDto } from '../dto/update-policy.dto';
 import { PolicyResponseDto } from '../dto/policy.dto';
@@ -211,13 +211,13 @@ export class PolicyConfigController {
   /**
    * 格式化策略响应
    */
-  private formatPolicyResponse(policy: any): PolicyResponseDto {
+  private formatPolicyResponse(policy: PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }): PolicyResponseDto {
     return {
       id: policy.id,
       type: policy.type as PolicyType,
       name: policy.name,
-      description: policy.description,
-      config: policy.config,
+      description: policy.description ?? undefined,
+      config: policy.config as Record<string, unknown>,
       permissions: (policy.permissions || []) as PrismaPermission[],
       enabled: policy.enabled,
       priority: policy.priority,

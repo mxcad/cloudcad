@@ -98,29 +98,17 @@ export class PermissionService {
           `权限检查缓存命中: 用户=${userId.substring(0, 8)}..., 权限=${permission}, 结果=${hasPermission}`
         );
       } else {
-        // 2. 检查系统管理员权限
-        const isAdmin = await this.isSystemAdmin(userId);
-        this.logger.log(
-          `isSystemAdmin 检查结果: 用户=${userId.substring(0, 8)}..., isAdmin=${isAdmin}`
+        // 2. 检查用户的系统权限（包括管理员也需要具体权限配置）
+        decisionReason = '系统权限检查';
+        hasPermission = await this.checkUserSystemPermission(
+          userId,
+          permission
         );
-
-        if (isAdmin) {
-          decisionReason = '系统管理员权限';
-          hasPermission = true;
-          this.cacheService.set(cacheKey, true, CACHE_TTL.USER_ROLE); // 10 分钟
-        } else {
-          // 3. 检查用户的系统权限
-          decisionReason = '系统权限检查';
-          hasPermission = await this.checkUserSystemPermission(
-            userId,
-            permission
-          );
-          this.cacheService.set(
-            cacheKey,
-            hasPermission,
-            CACHE_TTL.SYSTEM_PERMISSION
-          ); // 5 分钟
-        }
+        this.cacheService.set(
+          cacheKey,
+          hasPermission,
+          CACHE_TTL.SYSTEM_PERMISSION
+        ); // 5 分钟
         this.logger.log(
           `权限检查完成: 用户=${userId.substring(0, 8)}..., 权限=${permission}, 结果=${hasPermission}, 原因=${decisionReason}`
         );

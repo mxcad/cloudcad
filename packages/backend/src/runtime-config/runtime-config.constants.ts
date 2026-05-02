@@ -32,6 +32,24 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
   },
 
+  // 短信配置
+  {
+    key: 'smsEnabled',
+    type: 'boolean',
+    category: 'sms',
+    description: '短信服务开关',
+    defaultValue: false,
+    isPublic: true,
+  },
+  {
+    key: 'requirePhoneVerification',
+    type: 'boolean',
+    category: 'sms',
+    description: '强制手机号验证',
+    defaultValue: false,
+    isPublic: true,
+  },
+
   // 客服配置
   {
     key: 'supportEmail',
@@ -69,6 +87,67 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: true,
     isPublic: true,
   },
+  {
+    key: 'allowAutoRegisterOnPhoneLogin',
+    type: 'boolean',
+    category: 'user',
+    description: '手机验证码登录时自动注册',
+    defaultValue: false,
+    isPublic: true,
+  },
+
+  // 微信配置
+  {
+    key: 'wechatEnabled',
+    type: 'boolean',
+    category: 'wechat',
+    description: '微信登录开关',
+    defaultValue: false,
+    isPublic: true,
+  },
+  {
+    key: 'wechatAutoRegister',
+    type: 'boolean',
+    category: 'wechat',
+    description:
+      '微信登录自动创建账号（开启后无需填写用户名密码，类似手机验证码登录）',
+    defaultValue: false,
+    isPublic: true,
+  },
+
+  // 存储配额配置（单位：GB）
+  {
+    key: 'userStorageQuota',
+    type: 'number',
+    category: 'storage',
+    description: '个人空间存储配额 (GB)',
+    defaultValue: 10, // 10GB
+    isPublic: false,
+  },
+  {
+    key: 'projectStorageQuota',
+    type: 'number',
+    category: 'storage',
+    description: '项目存储配额 (GB)',
+    defaultValue: 50, // 50GB
+    isPublic: false,
+  },
+  {
+    key: 'libraryStorageQuota',
+    type: 'number',
+    category: 'storage',
+    description: '公共资源库存储配额 (GB)',
+    defaultValue: 100, // 100GB
+    isPublic: false,
+  },
+  {
+    key: 'enforceStorageQuota',
+    type: 'boolean',
+    category: 'storage',
+    description: '是否强制实施存储配额检查（开启后超配额无法上传）',
+    defaultValue: true,
+    isPublic: false,
+  },
 
   // 系统配置
   {
@@ -85,5 +164,5 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
  * 默认配置值映射
  */
 export const DEFAULT_RUNTIME_CONFIGS = Object.fromEntries(
-  RUNTIME_CONFIG_DEFINITIONS.map((def) => [def.key, def.defaultValue]),
+  RUNTIME_CONFIG_DEFINITIONS.map((def) => [def.key, def.defaultValue])
 ) as Record<string, string | number | boolean>;

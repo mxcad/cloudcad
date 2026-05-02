@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsIn } from 'class-validator';
 
 /**
  * 上传文件请求体 DTO
@@ -24,7 +24,7 @@ export class UploadFilesDto {
     required: false,
   })
   @IsOptional()
-  file?: any;
+  file?: Express.Multer.File;
 
   @ApiProperty({ description: '文件 MD5 哈希值' })
   @IsString()
@@ -93,4 +93,13 @@ export class UploadFilesDto {
   @IsOptional()
   @IsString()
   lastModifiedDate?: string;
+
+  @ApiProperty({
+    description: '冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名，默认）',
+    required: false,
+    enum: ['skip', 'overwrite', 'rename'],
+  })
+  @IsOptional()
+  @IsIn(['skip', 'overwrite', 'rename'])
+  conflictStrategy?: 'skip' | 'overwrite' | 'rename';
 }

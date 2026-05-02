@@ -18,6 +18,9 @@ import type {
   MoveNodeDto,
   CopyNodeDto,
   CreateFolderDto,
+  SearchScope,
+  SearchType,
+  FileStatus,
 } from '../types/api-client';
 
 /**
@@ -41,22 +44,86 @@ export const projectsApi = {
   createNode: (data: CreateNodeDto) =>
     getApiClient().FileSystemController_createNode(null, data),
 
+  // ========== 搜索接口 ==========
+
+  /**
+   * 统一搜索接口
+   *
+   * @param keyword 搜索关键词（必填）
+   * @param params 搜索参数
+   * @param config 请求配置
+   */
+  search: (
+    keyword: string,
+    params?: {
+      scope?: SearchScope;
+      type?: SearchType;
+      filter?: 'all' | 'owned' | 'joined';
+      projectId?: string;
+      libraryKey?: string;
+      extension?: string;
+      fileStatus?: FileStatus;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
+    config?: { signal?: AbortSignal }
+  ) =>
+    getApiClient().FileSystemController_search(
+      {
+        keyword,
+        scope: params?.scope,
+        type: params?.type,
+        filter: params?.filter,
+        projectId: params?.projectId,
+        libraryKey: params?.libraryKey,
+        extension: params?.extension,
+        fileStatus: params?.fileStatus,
+        page: params?.page,
+        limit: params?.limit,
+        sortBy: params?.sortBy,
+        sortOrder: params?.sortOrder,
+      },
+      null,
+      config
+    ),
+
   // ========== 项目操作（兼容旧 API） ==========
 
   /**
    * 获取项目列表
    * @param filter 项目过滤类型：all-全部，owned-我创建的，joined-我加入的
+   * @param params 分页参数
    * @param config 请求配置
    */
-  list: (filter?: ProjectFilterType, config?: { signal?: AbortSignal }) =>
+  list: (
+    filter?: ProjectFilterType,
+    params?: { page?: number; limit?: number },
+    config?: { signal?: AbortSignal }
+  ) =>
     getApiClient().FileSystemController_getProjects(
-      filter ? { filter } : null,
+      {
+        filter: filter || undefined,
+        page: params?.page,
+        limit: params?.limit,
+      },
       null,
       config
     ),
 
-  getDeletedProjects: (config?: { signal?: AbortSignal }) =>
-    getApiClient().FileSystemController_getDeletedProjects(null, null, config),
+  getDeletedProjects: (
+    params?: { page?: number; limit?: number },
+    config?: { signal?: AbortSignal }
+  ) =>
+    getApiClient().FileSystemController_getDeletedProjects(
+      {
+        page: params?.page,
+        limit: params?.limit,
+      },
+      null,
+      config
+    ),
 
   /**
    * 创建项目（兼容旧 API，内部调用 createNode）
@@ -89,11 +156,22 @@ export const projectsApi = {
 
   getChildren: (
     nodeId: string,
-    params?: { page?: number; limit?: number; search?: string; nodeType?: 'folder' | 'file' },
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      nodeType?: 'folder' | 'file';
+    },
     config?: { signal?: AbortSignal }
   ) =>
     getApiClient().FileSystemController_getChildren(
-      { nodeId, page: params?.page, limit: params?.limit, search: params?.search, nodeType: params?.nodeType },
+      {
+        nodeId,
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search,
+        nodeType: params?.nodeType,
+      },
       null,
       config
     ),
@@ -117,7 +195,19 @@ export const projectsApi = {
     return getApiClient().FileSystemController_copyNode({ nodeId }, data);
   },
 
-  getStorageInfo: () => getApiClient().FileSystemController_getStorageInfo(),
+  getStorageInfo: () =>
+    getApiClient().FileSystemController_getStorageQuota(null),
+
+  getQuota: (nodeId?: string) =>
+    getApiClient().FileSystemController_getStorageQuota(
+      nodeId ? { nodeId } : null
+    ),
+
+  updateStorageQuota: (nodeId: string, quota: number) =>
+    getApiClient().FileSystemController_updateStorageQuota(null, {
+      nodeId,
+      quota,
+    }),
 
   getMembers: (projectId: string) =>
     getApiClient().FileSystemController_getProjectMembers({ projectId }),
@@ -180,8 +270,12 @@ export const projectsApi = {
   /**
    * 获取项目内回收站内容
    */
-  getProjectTrash: (projectId: string) =>
-    getApiClient().FileSystemController_getProjectTrash({ projectId }),
+  getProjectTrash: (projectId: string, params?: { page?: number; limit?: number }) =>
+    getApiClient().FileSystemController_getProjectTrash({
+      projectId,
+      page: params?.page,
+      limit: params?.limit,
+    }),
 
   /**
    * 恢复已删除的节点
@@ -210,4 +304,10 @@ export const projectsApi = {
    */
   getPersonalSpace: () =>
     getApiClient().FileSystemController_getPersonalSpace(),
+
+  /**
+   * 获取指定用户的私人空间（管理员）
+   */
+  getUserPersonalSpace: (userId: string) =>
+    getApiClient().FileSystemController_getUserPersonalSpace({ userId }),
 };

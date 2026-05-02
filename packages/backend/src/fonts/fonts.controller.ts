@@ -36,6 +36,12 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+// 扩展 Request 类型以包含 Multer 文件属性
+interface RequestWithFiles extends Request {
+  files?: Express.Multer.File[];
+  file?: Express.Multer.File;
+}
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
@@ -105,10 +111,10 @@ export class FontsController {
       this.logger.log(`[uploadFont] 文件对象: ${file ? '存在' : '不存在'}`);
       this.logger.log(`[uploadFont] target: ${uploadFontDto?.target}`);
       this.logger.log(
-        `[uploadFont] req.files: ${(req as any).files ? '存在' : '不存在'}`
+        `[uploadFont] req.files: ${(req as RequestWithFiles).files ? '存在' : '不存在'}`
       );
       this.logger.log(
-        `[uploadFont] req.file: ${(req as any).file ? '存在' : '不存在'}`
+        `[uploadFont] req.file: ${(req as RequestWithFiles).file ? '存在' : '不存在'}`
       );
 
       const target = uploadFontDto.target || FontUploadTarget.BOTH;
@@ -137,7 +143,7 @@ export class FontsController {
   })
   @ApiQuery({
     name: 'target',
-    enum: FontUploadTarget,
+    enum: Object.values(FontUploadTarget), enumName: 'FontUploadTarget',
     required: false,
     description: '删除目标',
   })

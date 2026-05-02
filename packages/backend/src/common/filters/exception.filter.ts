@@ -59,6 +59,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = '服务器内部错误';
     let code = 'INTERNAL_SERVER_ERROR';
+    const extraFields: Record<string, unknown> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -91,6 +92,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         code =
           (typeof responseObj.code === 'string' ? responseObj.code : null) ||
           this.getErrorCode(status);
+
+        // 传递额外字段（如 email、phone 等业务数据）
+        for (const key of Object.keys(responseObj)) {
+          if (
+            !['statusCode', 'message', 'error', 'code'].includes(key)
+          ) {
+            extraFields[key] = responseObj[key];
+          }
+        }
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -103,6 +113,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const errorResponse = {
       code,
       message: sanitizedMessage,
+      ...extraFields,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,

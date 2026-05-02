@@ -3,7 +3,7 @@
   "headerTitle": "CAD梦想在线画图",
   "isShowNameOCurrentlyOpenDrawing": true,
   "isShowHeader": true,
-  "logoImg": true,
+  "logoImg": "/logo.png",
   "isShowHeaderTopBar": true,
   "isShowHeaderTopBarRightBtns": true,
   "isSketchesAndNotesUiMode": true,
@@ -27,11 +27,6 @@
   ],
   "isShowTitleButtonBar": true,
   "mTitleButtonBarData": [
-     {
-      "icon": "houtui",
-      "cmd": "return-to-cloud-map-management",
-      "prompt": "返回项目"
-    },
     {
       "icon": "dakaidwg",
       "cmd": "openFile",
@@ -97,7 +92,7 @@
     },
     {
       "icon": "class: cloudcad-icon cloudcad-xietongzu",
-      "prompt": "协同",
+      "prompt": "实时协同",
       "cmd": "Mx_ShowCollaborate"
     },
     {
@@ -181,7 +176,7 @@
       },
       {
         "icon": "tupian",
-        "cmd": "_InsertImage",
+        "cmd": "Mx_InsertImageWithUpload",
         "prompt": "插入图片"
       },
       {
@@ -364,6 +359,11 @@
           "icon": "dakaidwg",
           "cmd": "openFile"
         },
+         {
+          "tab": "打开文件_无缓存(D)",
+          "icon": "dakaidwg",
+          "cmd": "openFile_noCache"
+        },
         {
           "tab": "另存为",
           "icon": "lingcunweiDWG",
@@ -433,7 +433,7 @@
         {
           "tab": "插入图片",
           "icon": "tupian",
-          "cmd": "_InsertImage"
+          "cmd": "Mx_InsertImageWithUpload"
         },
         {
           "tab": "插入图块",
@@ -1372,19 +1372,7 @@
     {
       "label": "另存为",
       "tips": "CAD",
-      "cmd": "Mx_SaveAs",
-      "children": [
-        {
-          "label": "MxWeb格式",
-          "tips": "梦想在线CAD文件",
-          "cmd": "Mx_SaveAs"
-        },
-        {
-          "label": "Dwg格式",
-          "tips": "AutoCad图纸",
-          "cmd": "Mx_Export_DWG"
-        }
-      ]
+      "cmd": "exportFile"
     },
     {
       "label": "打印",

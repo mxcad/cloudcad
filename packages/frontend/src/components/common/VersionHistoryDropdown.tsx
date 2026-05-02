@@ -15,9 +15,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import History from 'lucide-react/dist/esm/icons/history';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
+import { History } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { versionControlApi } from '../../services/versionControlApi';
 import { Tooltip } from '../ui/Tooltip';
 import type { SvnLogEntryDto } from '../../types/api-client';

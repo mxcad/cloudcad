@@ -16,12 +16,15 @@ export type RuntimeConfigValueType = 'string' | 'number' | 'boolean';
 /**
  * 运行时配置分类
  */
-export type RuntimeConfigCategory = 
-  | 'mail' 
-  | 'support' 
-  | 'file' 
-  | 'user' 
-  | 'system';
+export type RuntimeConfigCategory =
+  | 'mail'
+  | 'sms'
+  | 'support'
+  | 'file'
+  | 'user'
+  | 'system'
+  | 'wechat'
+  | 'storage';
 
 /**
  * 运行时配置项定义

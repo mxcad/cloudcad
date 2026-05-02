@@ -6,7 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const BRAND_DIR = path.join(__dirname, '..', 'frontend', 'public', 'brand');
+// 品牌配置保存到 dist 目录，因为部署包使用的是 dist
+const BRAND_DIR = path.join(__dirname, '..', 'frontend', 'dist', 'brand');
 const CONFIG_PATH = path.join(BRAND_DIR, 'config.json');
 const LOGO_PATH = path.join(BRAND_DIR, 'logo.png');
 const ALLOWED_LOGO_TYPES = [

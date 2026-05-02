@@ -17,16 +17,16 @@ import { FileItem } from '../components/FileItem';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
 
 // Lucide 图标
-import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
-import Clock from 'lucide-react/dist/esm/icons/clock';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
-import Layers from 'lucide-react/dist/esm/icons/layers';
-import Upload from 'lucide-react/dist/esm/icons/upload';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import { FolderOpen } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Layers } from 'lucide-react';
+import { Upload } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 /**
  * 仪表盘页面 - CloudCAD 登录后首页
@@ -157,7 +157,7 @@ export const Dashboard: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
 
   // 数据状态
-  const [projects, setProjects] = useState<ProjectDto[]>([]);
+  const [projects, setProjects] = useState<FileSystemNodeDto[]>([]);
   const [personalFiles, setPersonalFiles] = useState<FileSystemNodeDto[]>([]);
   const [dashboardStats, setDashboardStats] =
     useState<UserDashboardStatsDto | null>(null);
@@ -217,11 +217,11 @@ export const Dashboard: React.FC = () => {
 
         // 刷新项目列表
         const projectsRes = await projectsApi.list();
-        if (projectsRes.data?.projects) {
-          const sortedProjects = projectsRes.data.projects
-            .filter((p: ProjectDto) => p.status !== 'DELETED')
+        if (projectsRes && projectsRes.data?.nodes) {
+          const sortedProjects = projectsRes.data.nodes
+            .filter((p: any) => p.status !== 'DELETED')
             .sort(
-              (a: ProjectDto, b: ProjectDto) =>
+              (a: any, b: any) =>
                 new Date(b.updatedAt).getTime() -
                 new Date(a.updatedAt).getTime()
             );
@@ -252,11 +252,11 @@ export const Dashboard: React.FC = () => {
         ]);
 
         // 处理项目数据
-        if (projectsRes.data?.projects) {
-          const sortedProjects = projectsRes.data.projects
-            .filter((p: ProjectDto) => p.status !== 'DELETED')
+        if (projectsRes && projectsRes.data?.nodes) {
+          const sortedProjects = projectsRes.data.nodes
+            .filter((p: any) => p.status !== 'DELETED')
             .sort(
-              (a: ProjectDto, b: ProjectDto) =>
+              (a: any, b: any) =>
                 new Date(b.updatedAt).getTime() -
                 new Date(a.updatedAt).getTime()
             );
@@ -439,6 +439,7 @@ export const Dashboard: React.FC = () => {
           subtitle="个文件"
           icon={Upload}
           color="#8b5cf6"
+          onClick={() => navigate('/personal-space?action=upload')}
           loading={loading}
         />
         <StatCard

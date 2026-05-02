@@ -1,61 +1,84 @@
 # CloudCAD Linux 部署包打包镜像
-# 基于 CentOS 7，确保所有组件兼容 glibc 2.17
+# 支持多种 Linux 发行版，通过 BASE_IMAGE 参数选择
 #
 # 使用方式：
 #   方式 1: 使用入口脚本（推荐）
-#     node scripts/pack-linux-deploy.js
+#     node scripts/pack-linux-deploy.js                    # 默认 CentOS 7
+#     node scripts/pack-linux-deploy.js --os ubuntu22      # Ubuntu 22.04
 #
 #   方式 2: 直接使用 Docker
 #     docker build -f runtime/docker/Dockerfile.linux-deploy -t cloudcad-pack-linux .
 #     docker run --rm -v ${PWD}/release:/app/release cloudcad-pack-linux
 #
+# 支持的 BASE_IMAGE：
+#   - centos:7 (默认，glibc 2.17，兼容性最广)
+#   - ubuntu:22.04 (glibc 2.35)
+#   - ubuntu:24.04 (glibc 2.39)
+#   - rockylinux:8 (glibc 2.28)
+#   - rockylinux:9 (glibc 2.34)
+#
 # 输出：
 #   release/cloudcad-deploy-*.tar.gz
 
-FROM centos:7
+ARG BASE_IMAGE=centos:7
+FROM ${BASE_IMAGE}
 
-# CentOS 7 已 EOL，需要切换到 vault 源
-RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
-    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+# 避免 Ubuntu/Debian 交互式提示
+ENV DEBIAN_FRONTEND=noninteractive
 
-# 安装 EPEL 和基本工具
-RUN yum install -y epel-release && \
-    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel* && \
-    sed -i 's|#baseurl=https://download.fedoraproject.org/pub|baseurl=https://archive.fedoraproject.org/pub|g' /etc/yum.repos.d/epel* && \
-    yum install -y \
-    curl \
-    wget \
-    git \
-    which \
-    && yum clean all
+# 根据不同系统安装基本工具和数据库
+RUN if command -v apt-get &> /dev/null; then \
+      # Debian/Ubuntu - 使用阿里云镜像加速 \
+      sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+      sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+      apt-get update && \
+      apt-get install -y curl wget git gnupg2 lsb-release ca-certificates && \
+      # PostgreSQL 15 - 使用阿里云镜像 \
+      curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
+      echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] https://mirrors.aliyun.com/postgresql/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+      apt-get update && \
+      apt-get install -y postgresql-15 redis-server subversion && \
+      rm -rf /var/lib/apt/lists/*; \
+    elif command -v dnf &> /dev/null; then \
+      # Rocky/RHEL 8/9 \
+      dnf install -y curl wget git && \
+      # PostgreSQL 15 \
+      dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %rhel)-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
+      dnf install -y postgresql15-server postgresql15 redis subversion && \
+      dnf clean all; \
+    elif command -v yum &> /dev/null; then \
+      # CentOS 7 \
+      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
+      sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* && \
+      yum install -y epel-release && \
+      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel* && \
+      sed -i 's|#baseurl=https://download.fedoraproject.org/pub|baseurl=https://archive.fedoraproject.org/pub|g' /etc/yum.repos.d/epel* && \
+      yum install -y curl wget git which && \
+      # PostgreSQL 15 \
+      echo "[pgdg15]" > /etc/yum.repos.d/pgdg-15.repo && \
+      echo "name=PostgreSQL 15 for RHEL/CentOS 7 - x86_64" >> /etc/yum.repos.d/pgdg-15.repo && \
+      echo "baseurl=https://mirrors.aliyun.com/postgresql/repos/yum/15/redhat/rhel-7-x86_64/" >> /etc/yum.repos.d/pgdg-15.repo && \
+      echo "enabled=1" >> /etc/yum.repos.d/pgdg-15.repo && \
+      echo "gpgcheck=0" >> /etc/yum.repos.d/pgdg-15.repo && \
+      yum install -y postgresql15-server postgresql15 redis subversion && \
+      yum clean all; \
+    fi
 
-# 安装 Node.js 20.19.5（项目要求 >= 20.19.5）
-# 使用 unofficial builds 的 glibc-217 版本，兼容 CentOS 7 (glibc 2.17)
-# 优先使用本地缓存，如果不存在则从网络下载
+# 复制 Node.js 缓存文件（仅 CentOS/RHEL 需要，Ubuntu 通过 NodeSource 安装）
 COPY runtime/cache/node-v20.19.5-linux-x64-glibc-217.tar.xz /tmp/node.tar.xz
 
-RUN mkdir -p /usr/local && \
-    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
-    rm -f /tmp/node.tar.xz && \
+# 安装 Node.js 20.19.5
+# Ubuntu/Debian 使用 NodeSource，CentOS/RHEL 使用本地缓存（glibc-217 版本）
+RUN if command -v apt-get &> /dev/null; then \
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+      apt-get install -y nodejs && \
+      rm -rf /var/lib/apt/lists/*; \
+    else \
+      mkdir -p /usr/local && \
+      tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
+      rm -f /tmp/node.tar.xz; \
+    fi && \
     node --version
-
-# 安装 PostgreSQL 15（使用阿里云镜像加速）
-# 直接创建 repo 配置文件，避免从官方源下载慢的问题
-RUN echo "[pgdg15]" > /etc/yum.repos.d/pgdg-15.repo && \
-    echo "name=PostgreSQL 15 for RHEL/CentOS 7 - x86_64" >> /etc/yum.repos.d/pgdg-15.repo && \
-    echo "baseurl=https://mirrors.aliyun.com/postgresql/repos/yum/15/redhat/rhel-7-x86_64/" >> /etc/yum.repos.d/pgdg-15.repo && \
-    echo "enabled=1" >> /etc/yum.repos.d/pgdg-15.repo && \
-    echo "gpgcheck=0" >> /etc/yum.repos.d/pgdg-15.repo && \
-    yum install -y postgresql15-server postgresql15 && \
-    yum clean all
-
-# 安装 Redis（通过 EPEL）
-RUN yum install -y redis && \
-    yum clean all
-
-# 安装 Subversion（通过 CentOS Base）
-RUN yum install -y subversion && \
-    yum clean all
 
 # 安装 pnpm 9.15.9 和 pm2（项目要求 pnpm >= 9.15.9）
 RUN npm install -g pnpm@9.15.9 pm2

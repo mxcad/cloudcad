@@ -331,7 +331,7 @@ export class CacheMonitorService {
 
         case CacheLevel.L2: {
           // 检查 Redis 连接
-          const l2Connected = (this.l2Cache as any).isReady?.() ?? true;
+          const l2Connected = this.l2Cache.isReady();
           if (!l2Connected) {
             status = 'unhealthy';
             availability = 0;

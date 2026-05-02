@@ -1,25 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import { authApi } from '../services/authApi';
 import type { LoginDto } from '../types/api-client';
 
 // 导入 lucide 图标
-import MailIcon from 'lucide-react/dist/esm/icons/mail';
-import LockIcon from 'lucide-react/dist/esm/icons/lock';
-import ArrowRightIcon from 'lucide-react/dist/esm/icons/arrow-right';
-import Loader2Icon from 'lucide-react/dist/esm/icons/loader-2';
-import CheckCircleIcon from 'lucide-react/dist/esm/icons/check-circle';
-import AlertCircleIcon from 'lucide-react/dist/esm/icons/alert-circle';
-import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
-import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
-import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
-import EyeIcon from 'lucide-react/dist/esm/icons/eye';
-import EyeOffIcon from 'lucide-react/dist/esm/icons/eye-off';
+import { Mail } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { Boxes } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { Eye } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
+import { Phone } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
+
+type LoginTab = 'account' | 'phone';
 
 interface LocationState {
   from?: string;
@@ -35,26 +42,158 @@ interface LocationState {
  * - 玻璃态效果
  * - 流畅动画
  * - 完美主题适配
+ * - 支持账号登录和手机验证码登录
  */
 export const Login: React.FC = () => {
   useDocumentTitle('登录');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    login,
+    loginByPhone,
+    loginWithWechat,
+    isAuthenticated,
+    loading: authLoading,
+    error: authError,
+    setError: setAuthError,
+  } = useAuth();
   const { isDark } = useTheme();
   const { config } = useBrandConfig();
+  const { config: runtimeConfig } = useRuntimeConfig();
   const appName = config?.title || 'CloudCAD';
   const appLogo = config?.logo || '/logo.png';
 
+  // 处理微信登录回调 Hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('wechat_result')) {
+      try {
+        const hashValue = hash.split('wechat_result=')[1];
+        if (hashValue) {
+          const result = JSON.parse(decodeURIComponent(hashValue));
+
+          // 清除 Hash
+          window.history.replaceState(null, '', window.location.pathname);
+
+          // 使用后端返回的 isPopup 标志判断是否为弹窗模式
+          const isPopup = result.isPopup === true;
+
+          if (isPopup) {
+            // === 弹窗模式 ===
+            // 存入 localStorage，主窗口会检测
+            localStorage.setItem('wechat_auth_result', JSON.stringify(result));
+            // 关闭弹窗
+            window.close();
+          } else {
+            // === 主窗口模式 (用户直接访问链接) ===
+            if (result.error) {
+              alert(`微信登录失败：${result.error}`);
+            } else if (result.needRegister) {
+              sessionStorage.setItem('wechatTempToken', result.tempToken);
+              navigate('/register?wechat=1');
+            } else if (result.accessToken) {
+              localStorage.setItem('accessToken', result.accessToken);
+              localStorage.setItem('refreshToken', result.refreshToken);
+              localStorage.setItem('user', JSON.stringify(result.user));
+              window.location.href = '/';
+            }
+          }
+        }
+      } catch (e) {
+        console.error('解析微信登录结果失败', e);
+      }
+    }
+  }, [navigate]);
+
+  // 短信服务和邮件服务是否启用
+  const smsEnabled = runtimeConfig?.smsEnabled ?? false;
+  const mailEnabled = runtimeConfig?.mailEnabled ?? false;
+  const wechatEnabled = runtimeConfig?.wechatEnabled ?? false;
+
+  // 根据运行时配置动态生成登录方式描述
+  const getAccountLoginLabel = () => {
+    if (smsEnabled && mailEnabled) {
+      return '手机号、邮箱或用户名';
+    }
+    if (smsEnabled) {
+      return '手机号或用户名';
+    }
+    if (mailEnabled) {
+      return '邮箱或用户名';
+    }
+    return '用户名';
+  };
+
+  const getAccountLoginPlaceholder = () => {
+    if (smsEnabled && mailEnabled) {
+      return '请输入手机号、邮箱或用户名';
+    }
+    if (smsEnabled) {
+      return '请输入手机号或用户名';
+    }
+    if (mailEnabled) {
+      return '请输入邮箱或用户名';
+    }
+    return '请输入用户名';
+  };
+
+  // Tab 状态
+  const [activeTab, setActiveTab] = useState<LoginTab>('account');
+
+  // 账号登录表单状态
   const [formData, setFormData] = useState<LoginDto>({
     account: '',
     password: '',
   });
+
+  // 手机登录表单状态
+  const [phoneForm, setPhoneForm] = useState({
+    phone: '',
+    code: '',
+  });
+
+  // 通用状态
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // 验证码倒计时
+  const [countdown, setCountdown] = useState(0);
+  const [sendingCode, setSendingCode] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 清理倒计时
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, []);
+
+  // 处理倒计时
+  useEffect(() => {
+    if (countdown > 0) {
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (countdownRef.current && countdown <= 0) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, [countdown > 0]);
 
   useEffect(() => {
     const state = location.state as LocationState | null;
@@ -71,6 +210,7 @@ export const Login: React.FC = () => {
     }
   }, [isAuthenticated, authLoading, navigate, location]);
 
+  // 账号登录输入处理
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
@@ -80,7 +220,60 @@ export const Login: React.FC = () => {
     [error]
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 手机登录输入处理
+  const handlePhoneChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      // 手机号只允许输入数字
+      if (name === 'phone' && value && !/^\d*$/.test(value)) {
+        return;
+      }
+      // 验证码只允许输入数字
+      if (name === 'code' && value && !/^\d*$/.test(value)) {
+        return;
+      }
+      setPhoneForm((prev) => ({ ...prev, [name]: value }));
+      if (error) setError(null);
+    },
+    [error]
+  );
+
+  // 发送验证码
+  const handleSendCode = useCallback(async () => {
+    // 验证手机号格式
+    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+      setError('请输入正确的手机号');
+      return;
+    }
+
+    setSendingCode(true);
+    setError(null);
+
+    try {
+      const response = await authApi.sendSmsCode(phoneForm.phone);
+      if (response.data?.success) {
+        setSuccess('验证码已发送');
+        setCountdown(60); // 60秒倒计时
+      } else {
+        setError(response.data?.message || '发送验证码失败');
+      }
+    } catch (err) {
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '发送验证码失败'
+      );
+    } finally {
+      setSendingCode(false);
+    }
+  }, [phoneForm.phone]);
+
+  // 联系客服弹框状态
+  const [showSupportModal, setShowSupportModal] = useState(false);
+
+  // 账号登录提交
+  const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -89,12 +282,103 @@ export const Login: React.FC = () => {
       await login(formData.account, formData.password);
       navigate('/');
     } catch (err) {
-      setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response
-          ?.data?.message ||
-          (err as Error).message ||
-          '登录失败，请检查账号和密码'
-      );
+      const errorData = (
+        err as Error & {
+          response?: { data?: { code?: string; message?: string; email?: string; phone?: string; tempToken?: string } };
+        }
+      ).response?.data;
+      const errorMessage =
+        errorData?.message || (err as Error).message || '登录失败，请检查账号和密码';
+
+      // 账号已被禁用 -> 显示联系客服弹框
+      if (errorMessage.includes('账号已被禁用')) {
+        setShowSupportModal(true);
+        return;
+      }
+
+      // 邮箱未验证 -> 跳转到邮箱验证页
+      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
+        navigate('/verify-email', { state: { email: errorData.email || '' } });
+        return;
+      }
+
+      // 需要绑定邮箱 -> 跳转到绑定邮箱页
+      if (errorData?.code === 'EMAIL_REQUIRED') {
+        navigate('/verify-email', { state: { tempToken: errorData.tempToken, mode: 'bind' } });
+        return;
+      }
+
+      // 手机号未验证 -> 跳转到手机验证页
+      if (errorData?.code === 'PHONE_NOT_VERIFIED') {
+        navigate('/verify-phone', { state: { phone: errorData.phone || '' } });
+        return;
+      }
+
+      // 需要绑定手机号 -> 跳转到绑定手机号页
+      if (errorData?.code === 'PHONE_REQUIRED') {
+        navigate('/verify-phone', { state: { tempToken: errorData.tempToken, mode: 'bind' } });
+        return;
+      }
+
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 手机登录提交
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    // 验证手机号格式
+    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+      setError('请输入正确的手机号');
+      setLoading(false);
+      return;
+    }
+
+    // 验证验证码格式
+    if (!phoneForm.code || !/^\d{6}$/.test(phoneForm.code)) {
+      setError('请输入6位数字验证码');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await loginByPhone(phoneForm.phone, phoneForm.code);
+      navigate('/');
+    } catch (err) {
+      const errorData = (
+        err as Error & {
+          response?: {
+            data?: { code?: string; message?: string; phone?: string };
+          };
+        }
+      ).response?.data;
+      const errorCode = errorData?.code;
+      const errorMessage =
+        errorData?.message || (err as Error).message || '登录失败，请重试';
+
+      // 账号已被禁用 -> 显示联系客服弹框
+      if (errorMessage.includes('账号已被禁用')) {
+        setShowSupportModal(true);
+        return;
+      }
+
+      // 如果是需要注册的提示，跳转到注册页并预填手机号和验证码
+      if (errorCode === 'PHONE_NOT_REGISTERED') {
+        navigate('/register', {
+          state: {
+            prefillPhone: phoneForm.phone,
+            prefillCode: phoneForm.code,
+          },
+        });
+        return;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -129,115 +413,250 @@ export const Login: React.FC = () => {
             <p className="form-subtitle">登录您的账户以继续</p>
           </div>
 
+          {/* 登录方式 Tab 切换 */}
+          {smsEnabled && (
+            <div className="login-tabs">
+              <button
+                type="button"
+                className={`login-tab ${activeTab === 'account' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('account');
+                  setError(null);
+                  setSuccess(null);
+                }}
+              >
+                <Mail size={16} />
+                <span>账号登录</span>
+              </button>
+              <button
+                type="button"
+                className={`login-tab ${activeTab === 'phone' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('phone');
+                  setError(null);
+                  setSuccess(null);
+                }}
+              >
+                <Phone size={16} />
+                <span>手机登录</span>
+              </button>
+            </div>
+          )}
+
           {/* 消息提示 */}
           {success && (
             <div className="alert alert-success">
-              <CheckCircleIcon size={18} className="alert-icon" />
+              <CheckCircle size={18} className="alert-icon" />
               <span>{success}</span>
             </div>
           )}
 
-          {error && (
+          {(error || authError) && (
             <div className="alert alert-error">
-              <AlertCircleIcon size={18} className="alert-icon" />
-              <span>{error}</span>
+              <AlertCircle size={18} className="alert-icon" />
+              <span>{error || authError}</span>
             </div>
           )}
 
-          {/* 登录表单 */}
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div
-              className={`input-group ${focusedField === 'account' ? 'focused' : ''}`}
-            >
-              <label htmlFor="account" className="input-label">
-                邮箱或用户名
-              </label>
-              <div className="input-wrapper">
-                <MailIcon
-                  size={18}
-                  className={`input-icon ${focusedField === 'account' ? 'active' : ''}`}
-                />
-                <input
-                  id="account"
-                  name="account"
-                  type="text"
-                  autoComplete="email username"
-                  required
-                  className="input-field"
-                  placeholder="请输入邮箱或用户名"
-                  value={formData.account}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('account')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <div className="input-glow" />
+          {/* 账号登录表单 */}
+          {activeTab === 'account' && (
+            <form className="login-form" onSubmit={handleAccountSubmit}>
+              <div
+                className={`input-group ${focusedField === 'account' ? 'focused' : ''}`}
+              >
+                <label htmlFor="account" className="input-label">
+                  {getAccountLoginLabel()}
+                </label>
+                <div className="input-wrapper">
+                  <Mail
+                    size={18}
+                    className={`input-icon ${focusedField === 'account' ? 'active' : ''}`}
+                  />
+                  <input
+                    id="account"
+                    name="account"
+                    type="text"
+                    autoComplete="email username tel"
+                    required
+                    className="input-field"
+                    placeholder={getAccountLoginPlaceholder()}
+                    value={formData.account}
+                    onChange={handleChange}
+                    onFocus={() => setFocusedField('account')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <div className="input-glow" />
+                </div>
               </div>
-            </div>
 
-            <div
-              className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}
-            >
-              <label htmlFor="password" className="input-label">
-                密码
-              </label>
-              <div className="input-wrapper">
-                <LockIcon
-                  size={18}
-                  className={`input-icon ${focusedField === 'password' ? 'active' : ''}`}
-                />
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  className="input-field has-toggle"
-                  placeholder="请输入密码"
-                  value={formData.password}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
+              <div
+                className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}
+              >
+                <label htmlFor="password" className="input-label">
+                  密码
+                </label>
+                <div className="input-wrapper">
+                  <Lock
+                    size={18}
+                    className={`input-icon ${focusedField === 'password' ? 'active' : ''}`}
+                  />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    className="input-field has-toggle"
+                    placeholder="请输入密码"
+                    value={formData.password}
+                    onChange={handleChange}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                  <div className="input-glow" />
+                </div>
+              </div>
+
+              <div className="form-options">
                 <button
                   type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
+                  onClick={() => navigate('/forgot-password')}
+                  className="forgot-password-link"
                 >
-                  {showPassword ? (
-                    <EyeOffIcon size={18} />
-                  ) : (
-                    <EyeIcon size={18} />
-                  )}
+                  忘记密码？
                 </button>
-                <div className="input-glow" />
               </div>
-            </div>
 
-            <div className="form-options">
               <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="forgot-password-link"
+                type="submit"
+                disabled={loading}
+                className="submit-button"
               >
-                忘记密码？
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>登录中...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>立即登录</span>
+                    <ArrowRight size={18} className="button-arrow" />
+                  </>
+                )}
               </button>
-            </div>
+            </form>
+          )}
 
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
-                <>
-                  <Loader2Icon size={18} className="animate-spin" />
-                  <span>登录中...</span>
-                </>
-              ) : (
-                <>
-                  <span>立即登录</span>
-                  <ArrowRightIcon size={18} className="button-arrow" />
-                </>
-              )}
-            </button>
-          </form>
+          {/* 手机登录表单 */}
+          {activeTab === 'phone' && (
+            <form className="login-form" onSubmit={handlePhoneSubmit}>
+              <div
+                className={`input-group ${focusedField === 'phone' ? 'focused' : ''}`}
+              >
+                <label htmlFor="phone" className="input-label">
+                  手机号
+                </label>
+                <div className="input-wrapper">
+                  <Phone
+                    size={18}
+                    className={`input-icon ${focusedField === 'phone' ? 'active' : ''}`}
+                  />
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required
+                    maxLength={11}
+                    className="input-field"
+                    placeholder="请输入手机号"
+                    value={phoneForm.phone}
+                    onChange={handlePhoneChange}
+                    onFocus={() => setFocusedField('phone')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <div className="input-glow" />
+                </div>
+              </div>
+
+              <div
+                className={`input-group ${focusedField === 'code' ? 'focused' : ''}`}
+              >
+                <label htmlFor="code" className="input-label">
+                  验证码
+                </label>
+                <div className="input-wrapper has-button">
+                  <MessageSquare
+                    size={18}
+                    className={`input-icon ${focusedField === 'code' ? 'active' : ''}`}
+                  />
+                  <input
+                    id="code"
+                    name="code"
+                    type="text"
+                    autoComplete="one-time-code"
+                    required
+                    maxLength={6}
+                    className="input-field has-button"
+                    placeholder="请输入验证码"
+                    value={phoneForm.code}
+                    onChange={handlePhoneChange}
+                    onFocus={() => setFocusedField('code')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <button
+                    type="button"
+                    className="code-button"
+                    onClick={handleSendCode}
+                    disabled={
+                      countdown > 0 ||
+                      sendingCode ||
+                      phoneForm.phone.length !== 11
+                    }
+                  >
+                    {sendingCode ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : countdown > 0 ? (
+                      `${countdown}s`
+                    ) : (
+                      '获取验证码'
+                    )}
+                  </button>
+                  <div className="input-glow" />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="submit-button"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>登录中...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>立即登录</span>
+                    <ArrowRight size={18} className="button-arrow" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
 
           {/* 注册链接 */}
           <div className="form-footer">
@@ -252,16 +671,47 @@ export const Login: React.FC = () => {
             </p>
           </div>
 
+          {/* 微信登录按钮 */}
+          {wechatEnabled && (
+            <>
+              <div className="divider">
+                <span>其他登录方式</span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setAuthError(null);
+                    await loginWithWechat();
+                  } catch (err) {
+                    const errorMessage = (
+                      err as Error & {
+                        response?: { data?: { message?: string } };
+                      }
+                    ).response?.data?.message ||
+                      (err as Error).message ||
+                      '微信登录失败';
+                    setAuthError(errorMessage);
+                  }
+                }}
+                className="wechat-login-button"
+              >
+                <MessageCircle size={20} />
+                <span>微信登录</span>
+              </button>
+            </>
+          )}
+
           {/* 特性图标 */}
           <div className="features-bar">
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
-              <CpuIcon size={14} />
+              <Cpu size={14} />
             </div>
             <div className="feature-dot" data-tooltip="多用户实时协同编辑">
-              <BoxesIcon size={14} />
+              <Boxes size={14} />
             </div>
             <div className="feature-dot" data-tooltip="企业级数据安全保障">
-              <ShieldCheckIcon size={14} />
+              <ShieldCheck size={14} />
             </div>
           </div>
         </div>
@@ -269,6 +719,58 @@ export const Login: React.FC = () => {
         {/* 版权信息 */}
         <p className="copyright">© 2026 {appName}. All rights reserved.</p>
       </div>
+
+      {/* 联系客服弹框 */}
+      {showSupportModal && (
+        <div className="support-modal-overlay">
+          <div className="support-modal">
+            <div className="support-modal-header">
+              <h3>账号已被禁用</h3>
+              <button 
+                className="support-modal-close" 
+                onClick={() => setShowSupportModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="support-modal-content">
+              <p className="support-modal-message">
+                您的账号已被禁用，无法登录系统。
+                <br />
+                如有疑问，请联系客服人员获取帮助。
+              </p>
+              <div className="support-contact-info">
+                <div className="support-contact-item">
+                  <span className="support-contact-label">客服邮箱：</span>
+                  <a href="mailto:support@cloudcad.com" className="support-contact-link">
+                    support@cloudcad.com
+                  </a>
+                </div>
+                <div className="support-contact-item">
+                  <span className="support-contact-label">客服电话：</span>
+                  <a href="tel:400-123-4567" className="support-contact-link">
+                    400-123-4567
+                  </a>
+                </div>
+                <div className="support-contact-item">
+                  <span className="support-contact-label">工作时间：</span>
+                  <span className="support-contact-value">
+                    周一至周五 9:00-18:00
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="support-modal-footer">
+              <button 
+                className="support-modal-button" 
+                onClick={() => setShowSupportModal(false)}
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         /* ===== 基础布局 ===== */
@@ -399,6 +901,49 @@ export const Login: React.FC = () => {
           color: var(--text-tertiary);
         }
 
+        /* ===== Tab 切换 ===== */
+        .login-tabs {
+          display: flex;
+          gap: 0.5rem;
+          margin-bottom: 1.5rem;
+          padding: 0.25rem;
+          background: var(--bg-tertiary);
+          border-radius: 12px;
+          border: 1px solid var(--border-subtle);
+        }
+
+        .login-tab {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          background: transparent;
+          border: none;
+          border-radius: 10px;
+          color: var(--text-tertiary);
+          font-size: 0.875rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .login-tab:hover {
+          color: var(--text-secondary);
+          background: var(--bg-secondary);
+        }
+
+        .login-tab.active {
+          background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+          color: white;
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .login-tab svg {
+          flex-shrink: 0;
+        }
+
         /* ===== 消息提示 ===== */
         .alert {
           display: flex;
@@ -527,6 +1072,49 @@ export const Login: React.FC = () => {
 
         .password-toggle:hover {
           color: var(--text-secondary);
+        }
+
+        /* ===== 验证码按钮 ===== */
+        .input-wrapper.has-button {
+          position: relative;
+        }
+
+        .input-field.has-button {
+          padding-right: 7rem;
+        }
+
+        .code-button {
+          position: absolute;
+          right: 0.5rem;
+          top: 50%;
+          transform: translateY(-50%);
+          padding: 0.5rem 0.75rem;
+          background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+          border: none;
+          border-radius: 8px;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+          z-index: 2;
+          min-width: 5.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .code-button:hover:not(:disabled) {
+          transform: translateY(-50%) scale(1.02);
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+        }
+
+        .code-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background: var(--bg-tertiary);
+          color: var(--text-muted);
         }
 
         /* ===== 表单选项 ===== */
@@ -685,6 +1273,56 @@ export const Login: React.FC = () => {
           transform: translateX(-50%) scale(1);
         }
 
+        /* ===== 微信登录按钮 ===== */
+        .divider {
+          display: flex;
+          align-items: center;
+          margin: 1.5rem 0;
+          color: var(--text-muted);
+          font-size: 0.75rem;
+        }
+
+        .divider::before,
+        .divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: var(--border-subtle);
+        }
+
+        .divider span {
+          padding: 0 0.75rem;
+        }
+
+        .wechat-login-button {
+          width: 100%;
+          height: 44px;
+          border: 1px solid var(--border-default);
+          border-radius: 12px;
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .wechat-login-button:hover {
+          background: #07c160;
+          border-color: #07c160;
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3);
+        }
+
+        .wechat-login-button:active {
+          transform: translateY(0);
+        }
+
         /* ===== 版权信息 ===== */
         .copyright {
           margin-top: 2rem;
@@ -720,6 +1358,140 @@ export const Login: React.FC = () => {
           display: none;
         }
 
+        /* ===== 联系客服弹框 ===== */
+        .support-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: fade-in 0.3s ease-out;
+        }
+
+        .support-modal {
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-default);
+          border-radius: 16px;
+          width: 90%;
+          max-width: 480px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          animation: slide-up 0.3s ease-out;
+        }
+
+        .support-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1.5rem 1.5rem 1rem;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .support-modal-header h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin: 0;
+        }
+
+        .support-modal-close {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 0;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          transition: all 0.2s;
+        }
+
+        .support-modal-close:hover {
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+        }
+
+        .support-modal-content {
+          padding: 1.5rem;
+        }
+
+        .support-modal-message {
+          font-size: 0.9375rem;
+          color: var(--text-secondary);
+          line-height: 1.5;
+          margin-bottom: 1.5rem;
+        }
+
+        .support-contact-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .support-contact-item {
+          display: flex;
+          align-items: center;
+          font-size: 0.875rem;
+        }
+
+        .support-contact-label {
+          color: var(--text-tertiary);
+          min-width: 80px;
+        }
+
+        .support-contact-link {
+          color: var(--primary-500);
+          text-decoration: none;
+          transition: color 0.2s;
+        }
+
+        .support-contact-link:hover {
+          color: var(--primary-600);
+          text-decoration: underline;
+        }
+
+        .support-contact-value {
+          color: var(--text-secondary);
+        }
+
+        .support-modal-footer {
+          padding: 1rem 1.5rem 1.5rem;
+          border-top: 1px solid var(--border-subtle);
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .support-modal-button {
+          padding: 0.625rem 1.5rem;
+          background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+          border: none;
+          border-radius: 8px;
+          color: white;
+          font-size: 0.875rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .support-modal-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
         /* ===== 深色主题特殊处理 ===== */
         [data-theme="dark"] .login-card {
           background: rgba(26, 29, 33, 0.9);
@@ -735,6 +1507,11 @@ export const Login: React.FC = () => {
 
         [data-theme="dark"] .logo-glow {
           opacity: 0.4;
+        }
+
+        [data-theme="dark"] .support-modal {
+          background: rgba(26, 29, 33, 0.95);
+          backdrop-filter: blur(20px);
         }
       `}</style>
     </div>

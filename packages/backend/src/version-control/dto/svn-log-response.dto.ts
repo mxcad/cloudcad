@@ -31,7 +31,7 @@ export class SvnLogResponseDto {
 
   @ApiProperty({
     description: '提交记录条目列表',
-    type: [SvnLogEntryDto],
+    type: () => [SvnLogEntryDto],
   })
   entries: SvnLogEntryDto[];
 }

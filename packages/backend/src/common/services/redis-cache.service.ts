@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { ProjectRole, SystemPermission } from '../enums/permissions.enum';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import { Role } from '@prisma/client';
 
 /**
  * Redis 缓存服务
@@ -207,12 +208,12 @@ export class RedisCacheService {
   /**
    * 缓存用户角色
    */
-  async cacheUserRole(userId: string, role: any): Promise<void> {
+  async cacheUserRole(userId: string, role: Role): Promise<void> {
     const key = this.generateCacheKey('role', userId);
     const roleData = {
       id: role.id,
       name: role.name,
-      description: role.description || undefined,
+      description: role.description ?? undefined,
       category: role.category,
       isSystem: role.isSystem,
     };

@@ -8,12 +8,13 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { join } from 'path';
 import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
@@ -21,11 +22,18 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { SessionController } from './session.controller';
-import { AuthService } from './auth.service';
+import { AuthFacadeService } from './auth-facade.service';
+import { RegistrationService } from './services/registration.service';
+import { LoginService } from './services/login.service';
+import { PasswordService } from './services/password.service';
+import { AccountBindingService } from './services/account-binding.service';
+import { AuthTokenService } from './services/auth-token.service';
+import { WechatService } from './services/wechat.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailService } from './services/email.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { SmsModule } from './services/sms/sms.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { InitializationService } from '../common/services/initialization.service';
@@ -34,11 +42,12 @@ import { AppConfig } from '../config/app.config';
 @Module({
   imports: [
     DatabaseModule,
-    CommonModule,
+    forwardRef(() => CommonModule),
     RedisModule,
     RuntimeConfigModule,
-    UsersModule,
+    forwardRef(() => UsersModule),
     PassportModule,
+    SmsModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<AppConfig>) => {
@@ -57,10 +66,10 @@ import { AppConfig } from '../config/app.config';
             from: mailConfig.from,
           },
           template: {
-            dir: process.cwd() + '/templates',
+            dir: join(__dirname, '..', 'templates'),
             adapter: new HandlebarsAdapter(),
             options: {
-              strict: true,
+              strict: false,
             },
           },
         };
@@ -80,7 +89,13 @@ import { AppConfig } from '../config/app.config';
   ],
   controllers: [AuthController, SessionController],
   providers: [
-    AuthService,
+    AuthFacadeService,
+    RegistrationService,
+    LoginService,
+    PasswordService,
+    AccountBindingService,
+    AuthTokenService,
+    WechatService,
     JwtStrategy,
     RefreshTokenStrategy,
     JwtAuthGuard,
@@ -90,10 +105,16 @@ import { AppConfig } from '../config/app.config';
     InitializationService,
   ],
   exports: [
-    AuthService,
+    AuthFacadeService,
+    RegistrationService,
+    LoginService,
+    PasswordService,
+    AccountBindingService,
+    AuthTokenService,
     TokenBlacklistService,
     JwtAuthGuard,
     EmailVerificationService,
+    SmsModule,
   ],
 })
 export class AuthModule {}

@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
@@ -16,63 +16,76 @@ if (!rootElement) {
   throw new Error('Could not find root element to mount to');
 }
 
-// 全局加载组件
-const GlobalLoading = () => (
-  <div className="min-h-screen flex items-center justify-center bg-white">
-    <div className="flex flex-col items-center gap-2">
-      <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-      <div className="text-sm text-slate-600">CloudCAD 加载中...</div>
-    </div>
-  </div>
-);
+console.log('[CloudCAD] 开始初始化应用，rootElement:', !!rootElement);
 
-// 应用启动器：先初始化 API Client 和 Brand Config，再渲染应用
+// 应用启动器：先等待 API Client 和 Brand Config 初始化完成，再渲染应用
 const AppInitializer: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[CloudCAD] 开始初始化 API Client 和 Brand Config');
+    // 等待初始化完成后再渲染
     Promise.all([initApiClient(), fetchBrandConfig()])
-      .then(() => {
+      .then(([apiClient, brandConfig]) => {
+        console.log('[CloudCAD] 初始化成功:', { apiClient: !!apiClient, brandConfig });
         setIsReady(true);
       })
       .catch((err) => {
-        console.error('应用初始化失败:', err);
-        setError('应用初始化失败，请刷新页面重试');
+        console.error('[CloudCAD] 初始化失败:', err);
+        setInitError(err instanceof Error ? err.message : String(err));
+        // 即使失败也继续渲染，让应用使用默认配置
+        setIsReady(true);
       });
   }, []);
 
-  if (error) {
+  if (!isReady) {
+    console.log('[CloudCAD] 初始化中...显示 loading');
+    // 显示一个可见的 loading 状态
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️</div>
-          <div className="text-slate-700">{error}</div>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            刷新页面
-          </button>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          background: '#1e293b',
+          color: 'white',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: '3px solid rgba(255,255,255,0.2)',
+              borderTopColor: '#6366f1',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }}
+          />
+          <p>正在加载 CloudCAD...</p>
+          {initError && (
+            <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>
+              初始化错误: {initError}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  if (!isReady) {
-    return <GlobalLoading />;
-  }
-
+  console.log('[CloudCAD] 初始化完成，渲染应用');
   return (
-    <Suspense fallback={<GlobalLoading />}>
-      <ThemeProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </NotificationProvider>
-      </ThemeProvider>
-    </Suspense>
+    <ThemeProvider>
+      <NotificationProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   );
 };
 

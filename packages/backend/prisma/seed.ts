@@ -1,6 +1,7 @@
 import 'dotenv/config';
-import { PrismaClient, Permission } from '@prisma/client';
+import { PrismaClient, Permission, UserStatus } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as bcrypt from 'bcryptjs';
 
 // 手动构建DATABASE_URL，确保格式正确
 const dbHost = process.env.DB_HOST || 'localhost';
@@ -45,7 +46,6 @@ const SYSTEM_PERMISSIONS: Permission[] = [
   Permission.SYSTEM_MONITOR,
   Permission.SYSTEM_CONFIG_READ,
   Permission.SYSTEM_CONFIG_WRITE,
-  Permission.SYSTEM_TEMPLATE_READ,
 ];
 
 /**
@@ -173,6 +173,57 @@ async function main() {
 
     // 分配权限
     await assignPermissionsToRole(role.id, roleConfig.permissions);
+  }
+
+  // 创建默认管理员账户（如果不存在）
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@cloudcad.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
+  
+  console.log('处理管理员账户...');
+  
+  const existingAdmin = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: adminEmail },
+        { username: 'admin' }
+      ]
+    }
+  });
+  
+  if (existingAdmin) {
+    console.log('  管理员账户已存在，跳过创建');
+  } else {
+    // 查找 ADMIN 角色
+    const adminRole = await prisma.role.findFirst({
+      where: { name: 'ADMIN' }
+    });
+    
+    if (!adminRole) {
+      console.error('  错误：未找到 ADMIN 角色');
+      return;
+    }
+    
+    // 哈希密码
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    
+    // 创建管理员账户
+    await prisma.user.create({
+      data: {
+        username: 'admin',
+        email: adminEmail,
+        password: hashedPassword,
+        nickname: '系统管理员',
+        roleId: adminRole.id,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        provider: 'LOCAL'
+      }
+    });
+    
+    console.log('  管理员账户已创建');
+    console.log(`  邮箱: ${adminEmail}`);
+    console.log(`  密码: ${adminPassword}`);
   }
 
   console.log('种子数据初始化完成!');

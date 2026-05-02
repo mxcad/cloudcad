@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 获取 SVN 提交历史
@@ -39,17 +39,16 @@ function svnLog(targetPath, limit, verbose, username, password, callback) {
   // 使用 XML 格式输出，便于解析
   command += ' --xml';
 
-  exec(
-    command,
-    { maxBuffer: 10 * 1024 * 1024, encoding: 'utf8', windowsHide: true },
-    (error, stdout, _stderr) => {
-      if (error) {
-        callback(error);
-      } else {
-        callback(null, stdout);
-      }
-    }
-  );
+  executeCommand(command, {
+    maxBuffer: 10 * 1024 * 1024,
+    encoding: 'utf8'
+  })
+    .then(stdout => {
+      callback(null, stdout);
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnLog;

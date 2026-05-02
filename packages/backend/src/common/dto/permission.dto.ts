@@ -58,10 +58,6 @@ export enum SystemPermission {
   CONFIG_READ = 'SYSTEM_CONFIG_READ',
   /** 修改运行时配置 */
   CONFIG_WRITE = 'SYSTEM_CONFIG_WRITE',
-
-  // ========== 模板库管理 ==========
-  /** 查看模板库 */
-  TEMPLATE_READ = 'SYSTEM_TEMPLATE_READ',
 }
 
 /**
@@ -109,10 +105,6 @@ export enum ProjectPermission {
   /** 管理外部参照 */
   CAD_EXTERNAL_REFERENCE = 'CAD_EXTERNAL_REFERENCE',
 
-  // ========== 图库权限 ==========
-  /** 添加到图库 */
-  GALLERY_ADD = 'GALLERY_ADD',
-
   // ========== 版本管理权限 ==========
   /** 查看版本历史 */
   VERSION_READ = 'VERSION_READ',
@@ -139,9 +131,10 @@ export type Permission = SystemPermission | ProjectPermission;
  */
 export class SystemPermissionDto {
   @ApiProperty({
-    enum: SystemPermission,
+    enum: Object.values(SystemPermission),
     description: '系统权限',
     example: SystemPermission.USER_READ,
+    enumName: 'SystemPermissionEnum',
   })
   permission: SystemPermission;
 }
@@ -152,9 +145,10 @@ export class SystemPermissionDto {
  */
 export class ProjectPermissionDto {
   @ApiProperty({
-    enum: ProjectPermission,
+    enum: Object.values(ProjectPermission),
     description: '项目权限',
     example: ProjectPermission.FILE_UPLOAD,
+    enumName: 'ProjectPermissionEnum',
   })
   permission: ProjectPermission;
 }
@@ -165,9 +159,10 @@ export class ProjectPermissionDto {
  */
 export class PermissionDto {
   @ApiProperty({
-    enum: Object.values({ ...SystemPermission, ...ProjectPermission }),
+    enum: [...Object.values(SystemPermission), ...Object.values(ProjectPermission)],
     description: '权限',
     example: SystemPermission.USER_READ,
+    enumName: 'PermissionEnum',
   })
   permission: Permission;
 }

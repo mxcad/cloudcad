@@ -26,6 +26,7 @@ import {
   svnList,
   svnPropset,
   svnUpdate,
+  svnCleanup,
 } from '@cloudcad/svn-version-tool';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -38,12 +39,7 @@ const svnDeleteAsync = promisify(svnDelete);
 const svnadminCreateAsync = promisify(svnadminCreate);
 const svnImportAsync = promisify(svnImport);
 const svnLogAsync = promisify(svnLog);
-const svnCatAsync: (
-  filePath: string,
-  revision: number,
-  username: string | null,
-  password: string | null
-) => Promise<Buffer> = promisify(svnCat) as any;
+const svnCatAsync = promisify(svnCat);
 const svnListAsync = promisify(svnList) as (
   repoUrl: string,
   isRecursive: boolean,
@@ -53,6 +49,7 @@ const svnListAsync = promisify(svnList) as (
 ) => Promise<string>;
 const svnPropsetAsync = promisify(svnPropset);
 const svnUpdateAsync = promisify(svnUpdate);
+const svnCleanupAsync = promisify(svnCleanup);
 
 /**
  * SVN 操作结果
@@ -100,6 +97,7 @@ export class VersionControlService implements OnModuleInit {
   private readonly filesDataPath: string;
   private readonly svnIgnorePatterns: string[];
   private isInitialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
     // 使用 NestJS 标准配置方式获取路径（configuration.ts 已解析为绝对路径）
@@ -113,15 +111,38 @@ export class VersionControlService implements OnModuleInit {
   }
 
   /**
-   * 模块初始化时设置 SVN 版本控制
+   * 模块初始化时异步设置 SVN 版本控制（不阻塞启动）
    */
   async onModuleInit(): Promise<void> {
-    try {
-      await this.initializeSvnRepository();
-    } catch (error) {
-      this.logger.error(`SVN 初始化失败: ${error.message}`, error.stack);
-      this.isInitialized = false;
+    // 异步初始化，不阻塞启动流程
+    this.initPromise = this.initializeSvnRepository()
+      .then(() => {
+        this.logger.log('SVN 版本控制初始化完成（异步）');
+        this.isInitialized = true;
+      })
+      .catch((error) => {
+        this.logger.error(`SVN 初始化失败: ${error.message}`, error.stack);
+        this.isInitialized = false;
+      });
+  }
+
+  /**
+   * 确保 SVN 已初始化（供外部调用）
+   * 如果还未初始化，会等待初始化完成
+   */
+  async ensureInitialized(): Promise<void> {
+    if (this.isInitialized) {
+      return;
     }
+
+    if (this.initPromise) {
+      await this.initPromise;
+      return;
+    }
+
+    // 如果还没开始初始化，立即初始化
+    await this.onModuleInit();
+    await this.initPromise;
   }
 
   /**
@@ -204,6 +225,44 @@ export class VersionControlService implements OnModuleInit {
   }
 
   /**
+   * 检查是否是 SVN 锁定错误
+   */
+  private isSvnLockedError(error: Error): boolean {
+    return (
+      error.message.includes('E155004') ||
+      error.message.includes('locked') ||
+      error.message.includes('is already locked')
+    );
+  }
+
+  /**
+   * 执行 SVN 操作，遇到锁定错误时自动 cleanup 并重试
+   */
+  private async executeWithLockRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (this.isSvnLockedError(error)) {
+        this.logger.warn(
+          `${operationName} 遇到锁定错误，尝试 cleanup...`
+        );
+        try {
+          await svnCleanupAsync(this.filesDataPath);
+          this.logger.log('SVN cleanup 成功，重试操作...');
+          return await operation();
+        } catch (cleanupError) {
+          this.logger.error(`SVN cleanup 失败: ${cleanupError.message}`);
+          throw error;
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
    * 设置 svn:global-ignores 忽略模式
    * 每次启动都会重新设置，覆盖之前的配置
    */
@@ -216,7 +275,10 @@ export class VersionControlService implements OnModuleInit {
     try {
       // 先更新工作副本，避免 "out of date" 错误
       this.logger.log('更新 SVN 工作副本...');
-      await svnUpdateAsync(this.filesDataPath, null, null);
+      await this.executeWithLockRetry(
+        () => svnUpdateAsync(this.filesDataPath, null, null),
+        'svn update'
+      );
       this.logger.log('SVN 工作副本更新成功');
 
       // 将忽略模式转换为换行分隔的字符串
@@ -263,6 +325,8 @@ export class VersionControlService implements OnModuleInit {
     userId?: string,
     userName?: string
   ): Promise<SvnOperationResult> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -371,6 +435,8 @@ export class VersionControlService implements OnModuleInit {
     filePaths: string[],
     message: string
   ): Promise<SvnOperationResult> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -421,6 +487,8 @@ export class VersionControlService implements OnModuleInit {
   async deleteNodeDirectory(
     nodeDirectory: string
   ): Promise<SvnOperationResult> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过删除');
       return { success: false, message: 'SVN 未初始化' };
@@ -457,6 +525,8 @@ export class VersionControlService implements OnModuleInit {
    * 提交 SVN 工作副本中的更改（用于批量提交删除）
    */
   async commitWorkingCopy(message: string): Promise<SvnOperationResult> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -495,6 +565,8 @@ export class VersionControlService implements OnModuleInit {
     filePath: string,
     limit?: number
   ): Promise<SvnLogResponse> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化', entries: [] };
@@ -690,6 +762,8 @@ export class VersionControlService implements OnModuleInit {
     directoryPath: string,
     revision: number
   ): Promise<{ success: boolean; message: string; files?: string[] }> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化' };
@@ -743,6 +817,8 @@ export class VersionControlService implements OnModuleInit {
     filePath: string,
     revision: number
   ): Promise<{ success: boolean; message: string; content?: Buffer }> {
+    await this.ensureInitialized();
+    
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化' };
@@ -755,7 +831,8 @@ export class VersionControlService implements OnModuleInit {
       const targetPath = path.join(this.filesDataPath, relativePath);
 
       // 调用 svn cat 命令获取指定版本的文件内容（返回 Buffer）
-      const content = await svnCatAsync(targetPath, revision, null, null);
+      const contentStr = await svnCatAsync(targetPath, revision, null, null);
+      const content = Buffer.from(contentStr);
 
       if (!content) {
         this.logger.error(

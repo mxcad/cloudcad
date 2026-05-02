@@ -13,14 +13,18 @@
 import { getApiClient } from './apiClient';
 import { calculateFileHash } from '../utils/hashUtils';
 import type { AxiosProgressEvent } from 'axios';
+import axios from 'axios';
 import type {
   CheckFileExistDto,
   CheckChunkExistDto,
   UploadFilesDto,
   UploadExtReferenceDto,
   SaveMxwebDto,
+  SaveMxwebAsDto,
   UploadThumbnailDto,
 } from '../types/api-client';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
  * 将 FormData 转换为 API 客户端期望的请求体类型
@@ -35,7 +39,10 @@ export const mxcadApi = {
    * 检查文件是否已存在（秒传检查）
    */
   checkFileExist: async (params: CheckFileExistDto) => {
-    const res = await getApiClient().MxCadController_checkFileExist(undefined, params);
+    const res = await getApiClient().MxCadController_checkFileExist(
+      undefined,
+      params
+    );
     return res.data;
   },
 
@@ -50,7 +57,10 @@ export const mxcadApi = {
     nodeId: string;
     currentFileId?: string;
   }) => {
-    const res = await getApiClient().MxCadController_checkDuplicateFile(undefined, params);
+    const res = await getApiClient().MxCadController_checkDuplicateFile(
+      undefined,
+      params
+    );
     return res.data;
   },
 
@@ -58,7 +68,10 @@ export const mxcadApi = {
    * 检查分片是否已存在
    */
   checkChunkExist: async (params: CheckChunkExistDto) => {
-    const res = await getApiClient().MxCadController_checkChunkExist(undefined, params);
+    const res = await getApiClient().MxCadController_checkChunkExist(
+      undefined,
+      params
+    );
     return res.data;
   },
 
@@ -77,7 +90,9 @@ export const mxcadApi = {
    * 获取预加载数据
    */
   getPreloadingData: async (nodeId: string) => {
-    const res = await getApiClient().MxCadController_getPreloadingData({ nodeId });
+    const res = await getApiClient().MxCadController_getPreloadingData({
+      nodeId,
+    });
     return res.data;
   },
 
@@ -115,7 +130,9 @@ export const mxcadApi = {
    * 刷新外部参照
    */
   refreshExternalReferences: async (nodeId: string) => {
-    const res = await getApiClient().MxCadController_refreshExternalReferences({ nodeId });
+    const res = await getApiClient().MxCadController_refreshExternalReferences({
+      nodeId,
+    });
     return res.data;
   },
 
@@ -135,16 +152,13 @@ export const mxcadApi = {
 
           const formData = new FormData();
           formData.append('hash', hash);
-          formData.append('nodeId', nodeId);
           formData.append('ext_ref_file', extRefFile);
           formData.append('file', file);
 
           const response =
             await getApiClient().MxCadController_uploadExtReferenceDwg(
-              undefined,
-              asFormData<UploadExtReferenceDto>(
-                formData
-              ),
+              { nodeId },
+              asFormData<UploadExtReferenceDto>(formData),
               { onUploadProgress: onProgress }
             );
 
@@ -163,6 +177,7 @@ export const mxcadApi = {
     file: File,
     nodeId: string,
     extRefFile: string,
+    updatePreloading?: boolean,
     onProgress?: (progressEvent: AxiosProgressEvent) => void
   ) => {
     return new Promise((resolve, reject) => {
@@ -174,14 +189,15 @@ export const mxcadApi = {
           formData.append('hash', hash);
           formData.append('nodeId', nodeId);
           formData.append('ext_ref_file', extRefFile);
+          if (updatePreloading !== undefined) {
+            formData.append('updatePreloading', String(updatePreloading));
+          }
           formData.append('file', file);
 
           const response =
             await getApiClient().MxCadController_uploadExtReferenceImage(
               undefined,
-              asFormData<UploadExtReferenceDto>(
-                formData
-              ),
+              asFormData<UploadExtReferenceDto>(formData),
               { onUploadProgress: onProgress }
             );
 
@@ -224,6 +240,71 @@ export const mxcadApi = {
           const response = await getApiClient().MxCadController_saveMxwebToNode(
             { nodeId },
             asFormData<SaveMxwebDto>(formData),
+            {
+              onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                if (onProgress && progressEvent.total) {
+                  const percentage =
+                    (progressEvent.loaded / progressEvent.total) * 100;
+                  onProgress(percentage);
+                }
+              },
+            }
+          );
+
+          resolve(response.data);
+        } catch (error) {
+          reject(error);
+        }
+      })();
+    });
+  },
+
+  /**
+   * 保存 mxweb 文件为新文件（Save As）
+   * @param blob mxweb 文件的 Blob 对象
+   * @param targetType 保存类型: personal-我的图纸, project-项目
+   * @param targetParentId 目标父节点ID
+   * @param projectId 项目ID（targetType为project时必填）
+   * @param format 保存格式: dwg, dxf
+   * @param onProgress 上传进度回调
+   * @param commitMessage 提交信息（可选）
+   * @returns Promise
+   */
+  saveMxwebAs: (
+    blob: Blob,
+    targetType: 'personal' | 'project',
+    targetParentId: string,
+    projectId: string | undefined,
+    format: 'dwg' | 'dxf',
+    onProgress?: (percentage: number) => void,
+    commitMessage?: string,
+    fileName?: string
+  ) => {
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          const file = new File([blob], 'drawing.mxweb', {
+            type: 'application/octet-stream',
+          });
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('targetType', targetType);
+          formData.append('targetParentId', targetParentId);
+          if (projectId) {
+            formData.append('projectId', projectId);
+          }
+          formData.append('format', format);
+          if (commitMessage) {
+            formData.append('commitMessage', commitMessage);
+          }
+          if (fileName) {
+            formData.append('fileName', fileName);
+          }
+
+          const response = await getApiClient().MxCadController_saveMxwebAs(
+            {},
+            asFormData<SaveMxwebAsDto>(formData),
             {
               onUploadProgress: (progressEvent: AxiosProgressEvent) => {
                 if (onProgress && progressEvent.total) {

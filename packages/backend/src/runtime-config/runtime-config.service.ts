@@ -41,33 +41,54 @@ export class RuntimeConfigService implements OnModuleInit {
 
   /**
    * 模块初始化时同步默认配置到数据库
+   * 优化：使用异步并行同步，不阻塞启动
    */
   async onModuleInit() {
-    await this.syncDefaultConfigs();
+    // 异步同步配置，不阻塞启动
+    this.syncDefaultConfigs().catch((error) => {
+      // 记录错误但不影响启动
+      console.error('运行时配置同步失败:', error);
+    });
   }
 
   /**
    * 同步默认配置到数据库（仅添加不存在的配置项）
+   * 优化：使用批量操作减少数据库往返
    */
   private async syncDefaultConfigs() {
-    for (const def of RUNTIME_CONFIG_DEFINITIONS) {
-      const existing = await this.prisma.runtimeConfig.findUnique({
-        where: { key: def.key },
-      });
+    const startTime = Date.now();
+    
+    // 获取所有已存在的配置
+    const existingConfigs = await this.prisma.runtimeConfig.findMany({
+      select: { key: true },
+    });
+    const existingKeys = new Set(existingConfigs.map((c) => c.key));
 
-      if (!existing) {
-        await this.prisma.runtimeConfig.create({
-          data: {
-            key: def.key,
-            value: JSON.stringify(def.defaultValue),
-            type: def.type,
-            category: def.category,
-            description: def.description,
-            isPublic: def.isPublic,
-          },
-        });
-      }
+    // 过滤出不存在的配置
+    const newConfigs = RUNTIME_CONFIG_DEFINITIONS.filter(
+      (def) => !existingKeys.has(def.key)
+    );
+
+    if (newConfigs.length === 0) {
+      return;
     }
+
+    // 批量创建新配置
+    await this.prisma.runtimeConfig.createMany({
+      data: newConfigs.map((def) => ({
+        key: def.key,
+        value: JSON.stringify(def.defaultValue),
+        type: def.type,
+        category: def.category,
+        description: def.description,
+        isPublic: def.isPublic,
+      })),
+      skipDuplicates: true,
+    });
+
+    console.log(
+      `运行时配置同步完成: 创建 ${newConfigs.length} 个配置，耗时 ${Date.now() - startTime}ms`
+    );
   }
 
   /**

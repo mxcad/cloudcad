@@ -7,7 +7,6 @@ export type ActionType =
   | 'upload_external_reference'
   | 'download'
   | 'view_version_history'
-  | 'add_to_gallery'
   | 'rename'
   | 'move'
   | 'copy'
@@ -56,11 +55,10 @@ export interface FileActionCheckProps {
   canDownload?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
-  canAddToGallery?: boolean;
   canViewVersionHistory?: boolean;
+  canManageExternalReference?: boolean;
   canManageTrash?: boolean;
   onDownload?: boolean;
-  onAddToGallery?: boolean;
   onShowVersionHistory?: boolean;
   onEdit?: boolean;
   onShowMembers?: boolean;
@@ -231,13 +229,13 @@ const Icons = {
 export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   upload_external_reference: {
     type: 'upload_external_reference',
-    label: '上传外部参照',
-    tooltip: '上传外部参照',
+    label: '外部参照管理',
+    tooltip: '管理外部参照',
     icon: <Icons.Upload />,
     colorClass: 'text-amber-600',
     hoverClass: 'hover:bg-amber-50',
-    visibilityCheck: ({ isCadFile, hasMissingExternalReferences }) =>
-      isCadFile && hasMissingExternalReferences,
+    visibilityCheck: ({ isCadFile, canManageExternalReference }) =>
+      isCadFile && canManageExternalReference === true,
   },
   download: {
     type: 'download',
@@ -260,20 +258,6 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
       isCadFile && !isFolder && !!onShowVersionHistory,
     permissionCheck: ({ canViewVersionHistory }) =>
       canViewVersionHistory !== false,
-  },
-  add_to_gallery: {
-    type: 'add_to_gallery',
-    label: '添加到图库',
-    tooltip: '添加到图库',
-    icon: <Icons.Gallery />,
-    colorClass: 'text-indigo-600',
-    hoverClass: 'hover:bg-indigo-50',
-    visibilityCheck: ({ isFolder, onAddToGallery }) =>
-      !isFolder && !!onAddToGallery,
-    permissionCheck: ({ canAddToGallery }) => canAddToGallery !== false,
-    props: {
-      'data-tour': 'context-menu-add-gallery'
-    }
   },
   rename: {
     type: 'rename',
@@ -366,8 +350,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isRoot, isTrash, onShowMembers }) =>
       isRoot && !isTrash && !!onShowMembers,
     props: {
-      'data-tour': 'menu-show-members'
-    }
+      'data-tour': 'menu-show-members',
+    },
   },
   show_roles: {
     type: 'show_roles',
@@ -379,8 +363,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isRoot, isTrash, onShowRoles }) =>
       isRoot && !isTrash && !!onShowRoles,
     props: {
-      'data-tour': 'menu-show-roles'
-    }
+      'data-tour': 'menu-show-roles',
+    },
   },
 };
 
@@ -402,7 +386,10 @@ export const getAvailableActions = (
 
   return Object.values(FILE_ACTIONS).filter((action) => {
     // 排除移动和复制操作（用于侧边栏）
-    if (props.excludeMoveCopy && (action.type === 'move' || action.type === 'copy')) {
+    if (
+      props.excludeMoveCopy &&
+      (action.type === 'move' || action.type === 'copy')
+    ) {
       return false;
     }
 

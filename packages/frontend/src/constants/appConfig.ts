@@ -63,38 +63,10 @@ export { cachedBrandConfig };
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
- * 获取协同服务 URL
- * - 如果环境变量以 http://localhost 开头，动态替换为当前访问的域名
- * - 否则使用环境变量配置的值
+ * 协同服务 URL
+ * 通过后端 /api/cooperate 代理到协同服务，无需直接访问 3091 端口
  */
-function getCooperateUrl(): string {
-  const envUrl =
-    import.meta.env.VITE_APP_COOPERATE_URL || 'http://localhost:3091';
-
-  // 如果是 localhost 地址，在生产环境动态替换域名
-  if (envUrl.startsWith('http://localhost')) {
-    const protocol = window.location.protocol; // http: 或 https:
-    const hostname = window.location.hostname;
-    // 提取端口号（如 3091）
-    const port = envUrl.split(':')[2] || '3091';
-    return `${protocol}//${hostname}:${port}`;
-  }
-
-  return envUrl;
-}
-
-/** 协同 URL */
-export const APP_COOPERATE_URL = getCooperateUrl();
-
-/**
- * 图库配置
- */
-export const GALLERY_CONFIG = {
-  /** 分类最大层级（支持三级分类） */
-  MAX_TYPE_LEVEL: 3,
-  /** 默认分页大小 */
-  DEFAULT_PAGE_SIZE: 20,
-} as const;
+export const APP_COOPERATE_URL = '/api/cooperate';
 
 /**
  * 分页配置

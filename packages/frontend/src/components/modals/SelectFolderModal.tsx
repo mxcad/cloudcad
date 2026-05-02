@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { FileNameText } from '../ui/TruncateText';
-import Folder from 'lucide-react/dist/esm/icons/folder';
-import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
-import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
-import Check from 'lucide-react/dist/esm/icons/check';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import { Folder } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { projectsApi } from '../../services/projectsApi';
 import { FileSystemNode } from '../../types/filesystem';
 
@@ -16,6 +16,8 @@ interface SelectFolderModalProps {
   projectId?: string; // 项目 ID
   onClose: () => void;
   onConfirm: (targetParentId: string) => void;
+  /** 确认按钮文字，默认为"确认" */
+  confirmButtonText?: string;
 }
 
 interface FolderNode extends FileSystemNode {
@@ -42,6 +44,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   projectId,
   onClose,
   onConfirm,
+  confirmButtonText = '确认',
 }) => {
   const [folderTree, setFolderTree] = useState<FolderNode[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -55,46 +58,78 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       try {
         const childrenResponse = await projectsApi.getChildren(nodeId);
 
-        // API 返回格式: { data: { nodes: nodes[], total: number, ... } }
-        // 解包后 childrenResponse.data 是 NodeListResponseDto = { nodes: nodes[], total: number, ... }
         let children: FileSystemNode[] = [];
 
         if (childrenResponse.data) {
           const responseData = childrenResponse.data;
           if (Array.isArray(responseData.nodes)) {
-            // 正确格式: { nodes: nodes[], total: number, ... }
             children = responseData.nodes as unknown as FileSystemNode[];
           }
         }
 
-        // 过滤出文件夹，并排除当前节点及其子节点
+        console.log(
+          'loadChildren nodeId:',
+          nodeId,
+          'children count:',
+          children.length
+        );
+
+        // 调试：打印第一个child的isFolder值
+        if (children.length > 0) {
+          console.log('first child:', children[0]);
+        }
+
+        // 只显示文件夹
         const folders: FolderNode[] = children
           .filter((child) => {
-            const isFolder = child.isFolder;
+            console.log(
+              'checking child, id:',
+              child.id,
+              'name:',
+              child.name,
+              'isFolder:',
+              child.isFolder
+            );
+            const isFolder = child.isFolder === true;
             const isExcluded = child.id === excludeNodeId;
-            return isFolder && !isExcluded && child.id; // 确保 id 存在
+            return isFolder && !isExcluded && child.id;
           })
           .map((folder) => ({
             ...folder,
-            id: folder.id!, // 断言 id 存在（已通过 filter 过滤）
+            id: folder.id!,
             expanded: false,
             children: [],
             loading: false,
             hasChildren: true,
           }));
 
+        console.log('filtered folders count:', folders.length);
         return folders;
       } catch (err) {
-        // 错误已通过 setError 显示
+        console.error('loadChildren error:', err);
         return [];
       }
     },
     []
   );
 
-  // 加载项目根文件夹
+  // 加载根文件夹
   const loadFolderTree = useCallback(async () => {
-    if (!projectId || !isOpen) {
+    if (!isOpen) {
+      return;
+    }
+
+    const rootId = projectId;
+    console.log(
+      'loadFolderTree called, projectId:',
+      projectId,
+      'rootId:',
+      rootId
+    );
+
+    if (!rootId) {
+      setError('请先选择保存位置');
+      setLoading(false);
       return;
     }
 
@@ -102,31 +137,13 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     setError(null);
 
     try {
-      // 获取项目根节点
-      const projectResponse = await projectsApi.get(projectId);
-
-      const project = projectResponse.data;
-
-      if (!project) {
-        setError('项目不存在');
-        setLoading(false);
-        return;
-      }
-
-      setProjectName(project.name);
-
-      // 验证 project.id
-      if (!project.id) {
-        setError('项目 ID 无效');
-        setLoading(false);
-        return;
-      }
-
-      // 只加载第一层文件夹，不递归加载
-      const tree = await loadChildren(project.id, currentNodeId);
-
+      // 直接加载子文件夹
+      const tree = await loadChildren(rootId, currentNodeId);
+      console.log('loadFolderTree result, tree length:', tree.length);
       setFolderTree(tree);
+      setProjectName('根目录');
     } catch (err) {
+      console.error('loadFolderTree error:', err);
       setError('加载文件夹列表失败');
     } finally {
       setLoading(false);
@@ -136,9 +153,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadFolderTree();
-      setSelectedFolderId(null);
+      // 默认选择项目根目录
+      if (projectId) {
+        setSelectedFolderId(projectId);
+      } else {
+        setSelectedFolderId(null);
+      }
     }
-  }, [isOpen, loadFolderTree]);
+  }, [isOpen, loadFolderTree, projectId]);
 
   // 切换文件夹展开/折叠（懒加载）
   const toggleExpand = useCallback(
@@ -301,20 +323,31 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
             onClick={handleConfirm}
             disabled={!selectedFolderId || loading}
           >
-            确认移动
+            {confirmButtonText}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         {/* 项目信息 */}
-        {projectName && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-            <Folder size={16} className="text-amber-500" />
-            <span className="text-sm font-medium text-slate-700">
+        {projectName && projectId && (
+          <div 
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer
+              ${selectedFolderId === projectId ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 border-slate-200'}
+            `}
+            onClick={() => selectFolder(projectId)}
+          >
+            <Folder 
+              size={16} 
+              className={selectedFolderId === projectId ? 'text-indigo-600' : 'text-amber-500'} 
+            />
+            <span className={`text-sm font-medium ${selectedFolderId === projectId ? 'text-indigo-700' : 'text-slate-700'}`}>
               {projectName}
             </span>
             <span className="text-xs text-slate-500 ml-auto">项目根目录</span>
+            {selectedFolderId === projectId && (
+              <Check size={16} className="text-indigo-600" />
+            )}
           </div>
         )}
 

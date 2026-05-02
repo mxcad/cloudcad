@@ -10,15 +10,21 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseModule } from '../database/database.module';
+import { CommonModule } from '../common/common.module';
 
 // Providers
 import { L1CacheProvider } from './providers/l1-cache.provider';
 import { L2CacheProvider } from './providers/l2-cache.provider';
 import { L3CacheProvider } from './providers/l3-cache.provider';
+
+// Strategies
+import { HotDataStrategy } from './strategies/hot-data.strategy';
+import { PermissionStrategy } from './strategies/permission.strategy';
+import { RoleStrategy } from './strategies/role.strategy';
 
 // Services
 import { MultiLevelCacheService } from './services/multi-level-cache.service';
@@ -42,7 +48,7 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
  */
 @Global()
 @Module({
-  imports: [ConfigModule, ScheduleModule.forRoot()],
+  imports: [ConfigModule, ScheduleModule.forRoot(), DatabaseModule, forwardRef(() => CommonModule)],
   controllers: [CacheMonitorController],
   providers: [
     // 缓存提供者
@@ -50,20 +56,27 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
     L2CacheProvider,
     L3CacheProvider,
 
+    // 预热策略
+    HotDataStrategy,
+    PermissionStrategy,
+    RoleStrategy,
+
     // 缓存服务
     MultiLevelCacheService,
     CacheWarmupService,
     CacheMonitorService,
     CacheVersionService,
-
-    // DatabaseService
-    DatabaseService,
   ],
   exports: [
     // 导出缓存提供者
     L1CacheProvider,
     L2CacheProvider,
     L3CacheProvider,
+
+    // 导出预热策略
+    HotDataStrategy,
+    PermissionStrategy,
+    RoleStrategy,
 
     // 导出缓存服务
     MultiLevelCacheService,

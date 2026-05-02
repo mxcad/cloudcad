@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { EmptyFolderIcon, RefreshIcon } from '../FileIcons';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import { AlertCircle } from 'lucide-react';
 import { FileItem } from '../FileItem';
 import { FileSystemNode } from '../../types/filesystem';
 import { Pagination } from '../ui/Pagination';
@@ -33,7 +33,6 @@ interface FileSystemContentProps {
   onShowMembers?: (e: React.MouseEvent) => void;
   onMove?: (node: FileSystemNode) => void;
   onCopy?: (node: FileSystemNode) => void;
-  onAddToGallery?: (node: FileSystemNode) => void;
   onDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragLeave?: () => void;
@@ -66,7 +65,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onShowMembers,
   onMove,
   onCopy,
-  onAddToGallery,
   onDragStart,
   onDragOver,
   onDragLeave,
@@ -168,12 +166,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
             onShowMembers={node.isRoot ? onShowMembers : undefined}
             onMove={!node.isRoot ? onMove : undefined}
             onCopy={!node.isRoot ? onCopy : undefined}
-            onAddToGallery={
-              !node.isFolder &&
-              (node.extension === '.dwg' || node.extension === '.dxf')
-                ? onAddToGallery
-                : undefined
-            }
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}

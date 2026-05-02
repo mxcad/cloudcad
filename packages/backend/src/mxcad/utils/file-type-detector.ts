@@ -21,6 +21,11 @@ export class FileTypeDetector {
   private static readonly CAD_EXTENSIONS = ['.dwg', '.dxf'];
 
   /**
+   * MXWeb文件扩展名
+   */
+  private static readonly MXWEB_EXTENSION = '.mxweb';
+
+  /**
    * 图片文件扩展名
    */
   private static readonly IMAGE_EXTENSIONS = [
@@ -66,6 +71,16 @@ export class FileTypeDetector {
   static isCadFile(fileName: string): boolean {
     const ext = this.getFileExtension(fileName);
     return this.CAD_EXTENSIONS.includes(ext);
+  }
+
+  /**
+   * 检查是否为MXWeb文件
+   * @param fileName 文件名
+   * @returns 是否为MXWeb文件
+   */
+  static isMxwebFile(fileName: string): boolean {
+    const ext = this.getFileExtension(fileName);
+    return ext === this.MXWEB_EXTENSION;
   }
 
   /**

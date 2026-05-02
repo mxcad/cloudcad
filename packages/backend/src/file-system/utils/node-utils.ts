@@ -40,9 +40,10 @@ export class NodeUtils {
     '.jpeg',
     '.gif',
     '.bmp',
-    '.webp',
+    'webp',
     // MxCAD 文件
     '.mxweb',
+    '.mxwbe',
   ];
 
   // MIME 类型映射
@@ -347,7 +348,7 @@ export class NodeUtils {
    */
   static isMxCADFile(filename: string): boolean {
     const extension = this.getExtension(filename).toLowerCase();
-    return extension === '.mxweb';
+    return extension === '.mxweb' || extension === '.mxwbe';
   }
 
   /**

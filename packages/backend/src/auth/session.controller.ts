@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Controller, Post, Get, Req, Res, Body, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Public } from './decorators/public.decorator';
 
@@ -30,6 +31,8 @@ declare module 'express-session' {
 @Controller('session')
 export class SessionController {
   private readonly logger = new Logger(SessionController.name);
+
+  constructor(private readonly configService: ConfigService) {}
 
   /**
    * 设置用户 Session
@@ -102,7 +105,8 @@ export class SessionController {
         res.status(500).json({ success: false, message: 'Session 销毁失败' });
         return;
       }
-      res.clearCookie('mxcad.sid');
+      const sessionName = this.configService.get('session.name');
+      res.clearCookie(sessionName);
       res.json({ success: true, message: 'Session 已销毁' });
     });
   }

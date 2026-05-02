@@ -29,7 +29,7 @@ import { Permission as PrismaPermission } from '@prisma/client';
 export class PolicyConfigDto {
   @ApiProperty({
     description: '策略类型',
-    enum: PolicyType,
+    enum: Object.values(PolicyType), enumName: 'PolicyType',
     example: PolicyType.TIME,
   })
   @IsEnum(PolicyType)
@@ -61,7 +61,7 @@ export class PolicyConfigDto {
 
   @ApiProperty({
     description: '关联的权限',
-    enum: PrismaPermission,
+    enum: Object.values(PrismaPermission), enumName: 'PrismaPermission',
     isArray: true,
     example: [PrismaPermission.SYSTEM_USER_DELETE],
   })
@@ -90,7 +90,7 @@ export class PolicyConfigDto {
 export class PolicyConfigListDto {
   @ApiProperty({
     description: '策略配置列表',
-    type: [PolicyConfigDto],
+    type: () => [PolicyConfigDto],
   })
   policies: PolicyConfigDto[];
 

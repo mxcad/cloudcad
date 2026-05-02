@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import 'reflect-metadata';
+import { SetMetadata, applyDecorators } from '@nestjs/common';
 import { ProjectPermission } from '../enums/permissions.enum';
 
 /**
@@ -37,72 +37,36 @@ export const REQUIRE_PROJECT_PERMISSION_MODE_KEY =
 /**
  * 要求特定项目权限的装饰器
  *
+ * 使用 NestJS 官方的 SetMetadata + applyDecorators 组合，
+ * 确保元数据能被 Reflector.getAllAndOverride 正确读取。
+ *
  * @example
  * // 要求单个权限
  * @RequireProjectPermission(ProjectPermission.FILE_READ)
  *
  * @example
  * // 要求所有权限（AND 逻辑，默认）
- * @RequireProjectPermission(ProjectPermission.FILE_READ, ProjectPermission.FILE_WRITE)
+ * @RequireProjectPermission([ProjectPermission.FILE_READ, ProjectPermission.FILE_WRITE])
  *
  * @example
  * // 要求任意一个权限（OR 逻辑）
  * @RequireProjectPermission(
- *   ProjectPermission.FILE_READ,
- *   ProjectPermission.FILE_WRITE,
- *   { mode: ProjectPermissionCheckMode.ANY }
+ *   [ProjectPermission.FILE_READ, ProjectPermission.FILE_WRITE],
+ *   ProjectPermissionCheckMode.ANY
  * )
  *
  * @param permissions 项目权限列表
- * @param options 可选配置，包含 mode 检查模式
+ * @param mode 权限检查模式，默认为 ALL
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function RequireProjectPermission(
-  ...permissions: (ProjectPermission | { mode: ProjectPermissionCheckMode })[]
-): MethodDecorator & ClassDecorator {
-  // 提取选项（最后一个参数如果是对象则认为是选项）
-  const lastArg = permissions[permissions.length - 1];
-  const options =
-    typeof lastArg === 'object' && 'mode' in lastArg
-      ? (lastArg as { mode: ProjectPermissionCheckMode })
-      : { mode: ProjectPermissionCheckMode.ALL };
+export const RequireProjectPermission = (
+  permissions: ProjectPermission | ProjectPermission[],
+  mode: ProjectPermissionCheckMode = ProjectPermissionCheckMode.ALL
+) => {
+  // 支持单个权限或数组
+  const permissionArray = Array.isArray(permissions) ? permissions : [permissions];
 
-  // 提取实际的权限列表
-  const actualPermissions = permissions.filter(
-    (p): p is ProjectPermission => typeof p === 'string'
+  return applyDecorators(
+    SetMetadata(REQUIRE_PROJECT_PERMISSION_KEY, permissionArray),
+    SetMetadata(REQUIRE_PROJECT_PERMISSION_MODE_KEY, mode)
   );
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (target: any, propertyKey?: any, descriptor?: any): any => {
-    // 支持类装饰器和方法装饰器
-    if (propertyKey === undefined || descriptor === undefined) {
-      // 类装饰器
-      Reflect.defineMetadata(
-        REQUIRE_PROJECT_PERMISSION_KEY,
-        actualPermissions,
-        target
-      );
-      Reflect.defineMetadata(
-        REQUIRE_PROJECT_PERMISSION_MODE_KEY,
-        options.mode,
-        target
-      );
-      return target;
-    }
-
-    // 方法装饰器
-    Reflect.defineMetadata(
-      REQUIRE_PROJECT_PERMISSION_KEY,
-      actualPermissions,
-      target,
-      propertyKey
-    );
-    Reflect.defineMetadata(
-      REQUIRE_PROJECT_PERMISSION_MODE_KEY,
-      options.mode,
-      target,
-      propertyKey
-    );
-    return descriptor;
-  };
-}
+};

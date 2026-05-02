@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 添加文件或目录到SVN版本控制
@@ -22,13 +22,13 @@ function svnAdd(targetPaths, isRecursive, callback) {
     command += ' --depth empty';
   }
   
-  exec(command, { windowsHide: true }, (error, stdout, stderr) => {
-    if (error) {
-      callback(error);
-    } else {
+  executeCommand(command)
+    .then(stdout => {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnAdd;

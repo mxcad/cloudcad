@@ -122,7 +122,7 @@ export function useSidebarSettings() {
   // 设置宽度
   const setWidth = useCallback((width: number) => {
     // 限制宽度范围
-    const clampedWidth = Math.max(300, Math.min(600, width));
+    const clampedWidth = Math.max(320, Math.min(600, width));
     updateSettings({ width: clampedWidth });
   }, [updateSettings]);
 

@@ -23,7 +23,10 @@ import {
   Query,
   Request,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { DatabaseService } from '../database/database.service';
 import {
   ApiTags,
   ApiOperation,
@@ -47,6 +50,14 @@ import {
   UserDashboardStatsDto,
 } from './dto/user-response.dto';
 import {
+  DeactivateAccountDto,
+  DeactivateAccountApiResponseDto,
+} from './dto/deactivate-account.dto';
+import {
+  RestoreAccountDto,
+  RestoreAccountResponseDto,
+} from './dto/restore-account.dto';
+import {
   ChangePasswordDto,
   ChangePasswordResponseDto,
   ChangePasswordApiResponseDto,
@@ -58,7 +69,10 @@ import type { AuthenticatedRequest } from '../common/types/request.types';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly databaseService: DatabaseService
+  ) {}
 
   @Post()
   @RequirePermissions([SystemPermission.SYSTEM_USER_CREATE])
@@ -108,10 +122,12 @@ export class UsersController {
     description: '搜索成功',
     type: UserListResponseDto,
   })
-  @RequirePermissions([SystemPermission.SYSTEM_USER_READ])
   @HttpCode(HttpStatus.OK)
-  searchUsers(@Query() query: QueryUsersDto) {
-    return this.usersService.findAll(query);
+  searchUsers(
+    @Query() query: QueryUsersDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    return this.usersService.findAll(query, req.user.id);
   }
 
   @Get('profile/me')
@@ -147,12 +163,67 @@ export class UsersController {
     type: UserProfileResponseDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
-  updateProfile(
+  async updateProfile(
     @Request() req: AuthenticatedRequest,
     @Body() updateUserDto: UpdateUserDto
   ) {
     // 用户只能更新自己的信息，排除角色ID和状态字段
     const { roleId, status, ...profileData } = updateUserDto;
+    
+    // 检查用户名修改限制（一月最多3次）
+    if (updateUserDto.username) {
+      const existingUser = await this.usersService.findOne(req.user.id);
+      
+      // 检查用户名是否有变化
+      if (updateUserDto.username !== existingUser.username) {
+        // 获取用户的修改次数和时间
+        const userWithCount = await this.databaseService.user.findUnique({
+          where: { id: req.user.id },
+          select: {
+            usernameChangeCount: true,
+            lastUsernameChangeAt: true,
+          },
+        });
+        
+        const now = new Date();
+        const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        
+        // 如果上次修改时间超过一个月，重置修改次数
+        if (!userWithCount?.lastUsernameChangeAt || userWithCount.lastUsernameChangeAt < oneMonthAgo) {
+          await this.databaseService.user.update({
+            where: { id: req.user.id },
+            data: {
+              usernameChangeCount: 0,
+              lastUsernameChangeAt: null,
+            },
+          });
+        }
+
+        // 检查修改次数是否超过限制
+        const updatedUserWithCount = await this.databaseService.user.findUnique({
+          where: { id: req.user.id },
+          select: {
+            usernameChangeCount: true,
+          },
+        });
+
+        if (updatedUserWithCount && updatedUserWithCount.usernameChangeCount >= 3) {
+          throw new BadRequestException('用户名一月内只能修改3次');
+        }
+        
+        // 更新用户名时增加修改次数和时间
+        await this.databaseService.user.update({
+          where: { id: req.user.id },
+          data: {
+            usernameChangeCount: {
+              increment: 1,
+            },
+            lastUsernameChangeAt: new Date(),
+          },
+        });
+      }
+    }
+    
     return this.usersService.update(req.user.id, profileData);
   }
 
@@ -185,11 +256,33 @@ export class UsersController {
   @Delete(':id')
   @RequirePermissions([SystemPermission.SYSTEM_USER_DELETE])
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '删除用户' })
-  @ApiResponse({ status: 200, description: '删除用户成功' })
+  @ApiOperation({ summary: '注销用户账户（软删除）' })
+  @ApiResponse({ status: 200, description: '账户注销成功' })
   @ApiResponse({ status: 404, description: '用户不存在' })
   remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+    return this.usersService.softDelete(id);
+  }
+
+  @Post(':id/delete-immediately')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '立即注销指定用户账户（软删除 + 立即清理）' })
+  @ApiResponse({ status: 200, description: '账户立即注销成功' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: 403, description: '权限不足' })
+  @RequirePermissions([SystemPermission.SYSTEM_USER_DELETE])
+  deleteImmediately(@Param('id') id: string) {
+    return this.usersService.deleteImmediately(id);
+  }
+
+  @Post(':id/restore')
+  @RequirePermissions([SystemPermission.SYSTEM_USER_DELETE])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '恢复已注销用户' })
+  @ApiResponse({ status: 200, description: '用户恢复成功' })
+  @ApiResponse({ status: 400, description: '用户未注销' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  restore(@Param('id') id: string) {
+    return this.usersService.restore(id);
   }
 
   @Patch(':id/status')
@@ -207,6 +300,50 @@ export class UsersController {
     @Body('status') status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   ) {
     return this.usersService.updateStatus(id, status);
+  }
+
+  @Post('deactivate-account')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '注销用户账户' })
+  @ApiResponse({
+    status: 200,
+    description: '账户注销成功',
+    type: DeactivateAccountApiResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '账户已注销或验证失败' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  async deactivateAccount(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: DeactivateAccountDto
+  ) {
+    return this.usersService.deactivateAccount(
+      req.user.id,
+      dto.password,
+      dto.phoneCode,
+      dto.emailCode,
+      dto.wechatConfirm
+    );
+  }
+
+  @Post('me/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '恢复已注销账户（冷静期内）' })
+  @ApiResponse({
+    status: 200,
+    description: '账户恢复成功',
+    type: RestoreAccountResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '账户未注销或已过冷静期' })
+  @ApiResponse({ status: 401, description: '验证失败' })
+  async restoreAccount(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: RestoreAccountDto
+  ) {
+    return this.usersService.restoreAccount(
+      req.user.id,
+      dto.verificationMethod,
+      dto.code
+    );
   }
 
   @Post('change-password')

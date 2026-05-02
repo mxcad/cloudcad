@@ -349,7 +349,7 @@
 }
 
 /* 响应式 */
-@container subTabBar (max-width: 340px) {
+@container subTabBar (max-width: 390px) {
   .subTab {
     padding: 12px 10px;
   }
@@ -357,7 +357,7 @@
   .subTab span {
     display: none;
   }
-  
+
   .subTab svg {
     width: 16px;
     height: 16px;
@@ -432,6 +432,15 @@
     transparent 100%
   );
   box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
+}
+
+/* 顶部工具包装器 */
+.topToolWrapper {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px 0;
+  position: relative;
+  z-index: 1;
 }
 
 /* 工具区容器 */
@@ -739,7 +748,63 @@
   background-color: var(--bg-secondary);
 }
 
+/* 刷新按钮（工具栏） */
+.refreshButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 6px;
+  background: var(--bg-secondary, #fff);
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background: var(--bg-hover, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+  border-color: var(--border-hover, #cbd5e1);
+}
+
+[data-theme="dark"] .refreshButton {
+  background: var(--sidebar-bg, #212832);
+  border-color: var(--sidebar-border, #3A4352);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .refreshButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refreshButton:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* 公共资源库面板 */
+.libraryPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+}
+
 [data-theme="dark"] .projectDrawingsPanel {
+  background: var(--sidebar-bg, #212832);
+}
+
+[data-theme="dark"] .libraryPanel {
   background: var(--sidebar-bg, #212832);
 }
 
@@ -863,6 +928,40 @@
 
 [data-theme="dark"] .breadcrumbSeparator {
   color: rgba(255, 255, 255, 0.3);
+}
+
+/* 面包屑返回按钮 */
+.breadcrumbBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  margin-right: 4px;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .breadcrumbBack {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.breadcrumbBack:hover {
+  color: var(--primary-500);
+  background-color: var(--primary-50);
+  border-color: var(--primary-200);
+  transform: translateX(-2px);
+}
+
+[data-theme="dark"] .breadcrumbBack:hover {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.2);
 }
 
 /* 悬停时分隔符高亮 */
@@ -1991,4 +2090,129 @@
   box-shadow:
     0 2px 8px rgba(96, 165, 250, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================
+   21. 登录提示容器
+   ============================================ */
+
+.loginPromptContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .loginPromptContainer {
+  background: var(--sidebar-bg, #212832);
+}
+
+.loginPromptContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 320px;
+}
+
+.loginPromptIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 24px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--primary-100) 0%,
+    var(--primary-50) 100%
+  );
+  color: var(--primary-500);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .loginPromptIcon {
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.2) 0%,
+    rgba(96, 165, 250, 0.1) 100%
+  );
+  color: #60a5fa;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+.loginPromptTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+[data-theme="dark"] .loginPromptTitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.loginPromptDescription {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .loginPromptDescription {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.loginPromptButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
+  border: none;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 4px 12px rgba(99, 102, 241, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.loginPromptButton:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(99, 102, 241, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.loginPromptButton:active {
+  transform: translateY(0);
+}
+
+[data-theme="dark"] .loginPromptButton {
+  background: linear-gradient(
+    135deg,
+    #60a5fa 0%,
+    #3b82f6 100%
+  );
+  box-shadow:
+    0 4px 12px rgba(96, 165, 250, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .loginPromptButton:hover {
+  box-shadow:
+    0 6px 20px rgba(96, 165, 250, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }

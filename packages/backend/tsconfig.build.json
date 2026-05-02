@@ -10,7 +10,10 @@
     "strictBindCallApply": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "composite": false,
+    "incremental": false,
+    "forceConsistentCasingInFileNames": false
   },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "scripts"]
 }

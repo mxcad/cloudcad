@@ -66,7 +66,7 @@ const getPickerEl = (): PickerElement => {
     picker = document.createElement('input');
     picker.id = pickerId;
     picker.type = 'file';
-    picker.accept = '.dwg,.dxf';
+    picker.accept = '.dwg,.dxf,.mxweb,.mxwbe';
     picker.style.display = 'none';
     document.body.appendChild(picker);
   }

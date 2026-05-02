@@ -15,12 +15,12 @@ import { useTour } from '../../contexts/TourContext';
 import type { TourGuide, TourCategory } from '../../types/tour';
 
 // Lucide 图标导入
-import Search from 'lucide-react/dist/esm/icons/search';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import Circle from 'lucide-react/dist/esm/icons/circle';
-import PlayCircle from 'lucide-react/dist/esm/icons/play-circle';
-import Clock from 'lucide-react/dist/esm/icons/clock';
-import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
+import { Search } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { Circle } from 'lucide-react';
+import { PlayCircle } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 
 /** z-index 层级（与引导遮罩层一致） */
 const TOUR_CENTER_Z_INDEX = 10002;

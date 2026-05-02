@@ -66,7 +66,7 @@ module.exports = {
         ecmaVersion: 2022,
         sourceType: 'module',
       },
-      plugins: ['@typescript-eslint', 'unused-imports'],
+      plugins: ['@typescript-eslint', 'unused-imports', 'custom-rules'],
       extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
@@ -74,7 +74,7 @@ module.exports = {
       ],
       rules: {
         '@typescript-eslint/no-unused-vars': 'off',
-        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-explicit-any': 'error',
         '@typescript-eslint/interface-name-prefix': 'off',
         '@typescript-eslint/explicit-function-return-type': 'off',
         '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -82,6 +82,7 @@ module.exports = {
         'no-console': 'off',
         'unused-imports/no-unused-imports': 'error',
         'unused-imports/no-unused-vars': 'off',
+        'custom-rules/no-prisma-enum-in-api-property': 'error',
       },
     },
   ],

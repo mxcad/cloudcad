@@ -1,104 +1,134 @@
-# AGENTS.md - CloudCAD 项目上下文
+# PROJECT KNOWLEDGE BASE
 
-> **稳定规则 | 不随项目变动而改变**
-> 一、**只要有1%的可能性适用，就必须调用 Skill (强制性)**
-> 二、**涉及 API 定义或使用或修改，必须调用 api-contracts 技能 (强制性)**
+**Generated:** 2026-04-15T02:56:24.894Z
+**Commit:** unknown
+**Branch:** unknown
 
----
+## OVERVIEW
 
-## 元约束
+CloudCAD is a web-based CAD collaboration platform supporting online editing, version control, and team collaboration.
 
-| 约束 | 说明 |
-|------|------|
-| 100% 中文 | zh-CN 简体，技术术语可保留英文 |
-| 100% pnpm | 禁止 npm/yarn |
-| 100% PowerShell | Windows 环境 |
-| 100% Express | NestJS 后端必须使用 Express |
-| 100% 禁止 any | TypeScript 严格模式 |
+## STRUCTURE
 
----
+```
+cloudcad/
+├── .agents/              # OpenCode agent skills and configurations
+├── .claude/              # Claude Code configuration
+├── .gitnexus/            # GitNexus code intelligence index
+├── data/                 # Runtime data storage (files, SVN repos)
+├── docker/               # Docker deployment configurations
+├── docs/                 # Documentation files
+├── documents/            # User guide assets and images
+├── packages/             # Monorepo packages
+│   ├── backend/          # NestJS backend service (port 3001)
+│   ├── frontend/         # React frontend application (port 5173)
+│   ├── config-service/   # Deployment configuration center (port 3002)
+│   └── svnVersionTool/   # SVN version control utility
+├── runtime/              # Offline runtime dependencies
+├── scripts/              # Build and deployment scripts
+└── temp/                 # Temporary files
+```
 
-## 技术栈
+## WHERE TO LOOK
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19.2.1 + Vite 6.2.0 + Tailwind CSS 4.1.18 |
-| 后端 | NestJS 11.x + Prisma 7.1.0 |
-| 数据库 | PostgreSQL + Redis |
-| 运行时 | Node.js >= 20.19.5, pnpm >= 9.15.9 |
+| Task                     | Location                 | Notes                                              |
+| ------------------------ | ------------------------ | -------------------------------------------------- |
+| Backend API development  | packages/backend/        | NestJS with Express, Prisma ORM                    |
+| Frontend UI development  | packages/frontend/       | React 19 + Vite + Tailwind CSS                     |
+| Configuration management | packages/config-service/ | Deployment configuration center                    |
+| SVN tools                | packages/svnVersionTool/ | SVN version control utilities                      |
+| Docker deployment        | docker/                  | Docker-compose files and configurations            |
+| Offline deployment       | runtime/                 | Offline runtime dependencies (Windows/Linux)       |
+| Build scripts            | scripts/                 | Packaging, deployment, verification scripts        |
+| Agent skills             | .agents/                 | Custom skills for API contracts, permissions, etc. |
+| Claude configuration     | .claude/                 | Claude Code settings and skills                    |
 
----
+## CODE MAP
 
-## Monorepo 包
+<skip reason="Project has many files (>10), LSP symbol extraction skipped for brevity">
 
-| 包 | 端口 | 说明 |
-|----|------|------|
-| packages/backend | 3001 | NestJS 后端服务 |
-| packages/frontend | 5173 | React 前端应用 |
-| packages/config-service | 3002 | 部署配置中心 |
-| packages/svnVersionTool | - | SVN 版本控制工具 |
+## CONVENTIONS
 
----
+- **Package Manager**: 100% pnpm (npm/yarn prohibited)
+- **Runtime**: 100% PowerShell (Windows environment)
+- **Backend Framework**: NestJS must use Express (not Fastify/etc.)
+- **TypeScript**: Strict mode enabled (`any` prohibited)
+- **Code Formatting**: Prettier with single quotes, 80-char width, semicolons
+- **Backend Structure**: Controllers, DTOs, services follow NestJS standards
+- **Frontend Structure**: React hooks + Zustand state management
+- **Styling**: Tailwind CSS with CSS variables (no hardcoded colors)
 
-## 模块索引
+## ANTI-PATTERNS (THIS PROJECT)
 
-### 后端模块
+- Using npm or yarn instead of pnpm
+- Using any type in TypeScript (strict mode enforced)
+- Using non-Express frameworks with NestJS
+- Hardcoding color values in frontend (must use CSS variables)
+- Defining components inside components (causes remounting)
+- Mutating state directly (must use Zustand setters)
+- Using index.ts barrel exports excessively
+- Using `any` type in Prisma schema definitions
+- Ignoring database migration requirements (must use migrations, not db push)
 
-| 模块 | 说明 | 详细文档 |
-|------|------|----------|
-| auth/users/roles/common | 认证授权 | [auth.md](documents/lcd/backend/auth.md) |
-| file-system/storage/mxcad/version-control | 文件系统 | [file-system.md](documents/lcd/backend/file-system.md) |
-| cache-architecture/redis/config/runtime-config | 缓存与配置 | [cache-config.md](documents/lcd/backend/cache-config.md) |
-| admin/audit/fonts/gallery/health/policy-engine/database | 功能模块 | [features.md](documents/lcd/backend/features.md) |
+## UNIQUE STYLES
 
-### 前端模块
+- **Monorepo Structure**: pnpm workspace with clearly scoped packages
+- **Dual Configuration**: Separate runtime and deployment configuration centers
+- **SVN Integration**: Custom SVN version control tool package
+- **Real-time Collaboration**: Dedicated cooperation service on port 3091
 
-| 模块 | 说明 | 详细文档 |
-|------|------|----------|
-| pages | 页面组件 | [pages.md](documents/lcd/frontend/pages.md) |
-| components | UI 组件 | [components.md](documents/lcd/frontend/components.md) |
-| hooks | React Hooks | [hooks.md](documents/lcd/frontend/hooks.md) |
-| services/stores/contexts/utils | 服务与工具 | [services.md](documents/lcd/frontend/services.md) |
+## COMMANDS
 
-### 共享文档
+```bash
+# Development
+pnpm dev          # Start all development services
+pnpm build        # Build all packages
+pnpm lint         # Run ESLint checks
+pnpm lint:fix     # Auto-fix lint issues
+pnpm format       # Format code with Prettier
+pnpm type-check   # Run TypeScript type checking
+pnpm check        # Full check (lint + format + type-check)
 
-| 文档 | 说明 |
-|------|------|
-| [architecture.md](documents/lcd/shared/architecture.md) | 架构概览 |
-| [guidelines.md](documents/lcd/shared/guidelines.md) | 开发规范 |
-| [commands.md](documents/lcd/shared/commands.md) | 常用命令 |
+# Backend specific (in packages/backend)
+pnpm prisma generate     # Generate Prisma Client
+pnpm prisma db push      # Push schema to database
+pnpm prisma migrate dev  # Run migrations in dev
+pnpm test                # Run all tests
+pnpm test:unit          # Run unit tests only
+pnpm test:integration    # Run integration tests only
 
----
+# Frontend specific (in packages/frontend)
+pnpm test                # Run Vitest tests
+pnpm test:ui             # Run UI mode tests
 
-## 强制技能触发
+# Deployment
+pnpm deploy              # Deploy with Docker
+pnpm deploy:logs         # View deployment logs
+pnpm deploy:rebuild      # Force rebuild containers
+pnpm deploy:reset        # Reset all data (development only)
 
-| 触发条件 | 技能 |
-|----------|------|
-| API 定义或修改 | api-contracts |
-| 主题/CSS 变量 | perfect-theme-system |
-| 后端配置修改 | config-management |
-| 权限/角色 | permission-system |
-| React 性能优化 | vercel-react-best-practices |
-| UI/UX 设计 | ui-ux-pro-max |
+# Offline packaging
+pnpm pack:offline:win    # Create Windows offline package
+pnpm pack:offline:linux  # Create Linux offline package
+pnpm pack:offline:all    # Create all platform packages
 
----
+# Code generation
+pnpm generate:api-types          # Generate API type definitions
+pnpm generate:frontend-permissions # Generate frontend permission constants
+```
 
-## 可用技能
+## NOTES
 
-| 技能 | 用途 |
-|------|------|
-| api-contracts | API 契约一致性检查 |
-| code-concise | 代码简洁性审查 |
-| config-management | 后端配置管理规范 |
-| perfect-theme-system | 主题系统设计规范 |
-| permission-system | 权限系统规范 |
-| ui-ux-pro-max | UI/UX 设计指南 |
-| vercel-react-best-practices | React 性能最佳实践 |
-| writing-documentation | 文档编写规范 |
-| layered-context | 分层上下文文档生成 |
-| find-skills | 技能发现与安装 |
-
----
-
-**文档版本**: 4.0.0 (分层结构)
-**更新日期**: 2026-03-27
+- **SVN Requirement**: Subversion 1.14.x is required for version control functionality
+- **MxCAD Dependency**: The platform requires MxCAD assembly for CAD file operations
+- **Environment Variables**: Critical variables must be set in `.env` files:
+  - Backend: `DATABASE_URL`, `JWT_SECRET`, `DB_PASSWORD`, `MXCAD_ASSEMBLY_PATH`
+  - Docker: `DB_PASSWORD`, `JWT_SECRET` in `docker/.env`
+- **Ports**:
+  - Frontend: 5173
+  - Backend API: 3001
+  - Config Service: 3002
+  - Cooperation Service: 3091
+- **Authentication**: JWT-based with access tokens (1h) and refresh tokens (7d)
+- **Database**: PostgreSQL with Prisma ORM, requires proper migration workflow
+- **Cache**: Redis for session storage and caching

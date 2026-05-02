@@ -22,6 +22,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import * as os from 'os';
+import { RateLimiter } from '../../common/concurrency/rate-limiter';
 
 const execAsync = promisify(exec);
 
@@ -32,10 +33,28 @@ export class FileConversionService implements IFileConversionService {
   private readonly mxCadBinPath: string;
   private readonly mxCadFileExt: string;
   private readonly compression: boolean;
+  private readonly conversionRateLimiter: RateLimiter;
 
   constructor(private readonly configService: ConfigService) {
     // 获取 MxCAD 配置
     const mxcadConfig = this.configService.get('mxcad', { infer: true });
+
+    // 获取上传并发配置
+    const uploadConfig = this.configService.get('upload', { infer: true });
+    // 文件转换是 CPU 密集型任务，并发数关联 CPU 核心数
+    // 默认使用 CPU 核心数，但最多配置的并发数（避免过度争抢 CPU）
+    const cpuCount = os.cpus().length;
+    const configMaxConcurrent = uploadConfig?.maxConcurrent;
+    const maxConversionConcurrent = uploadConfig?.conversionMaxConcurrent || 4;
+    const maxConcurrent = configMaxConcurrent
+      ? Math.min(configMaxConcurrent, cpuCount, maxConversionConcurrent)
+      : Math.min(cpuCount, maxConversionConcurrent);
+
+    // 初始化文件转换限流器
+    this.conversionRateLimiter = new RateLimiter(maxConcurrent);
+    this.logger.log(
+      `文件转换限流器初始化: CPU核心数=${cpuCount}, 最大并发数=${maxConcurrent}`
+    );
     
     // 检测操作系统
     const isLinux = os.platform() === 'linux';
@@ -95,7 +114,19 @@ export class FileConversionService implements IFileConversionService {
     return os.platform() === 'linux';
   }
 
+  /**
+   * 执行文件转换（带并发限制）
+   */
   async convertFile(options: ConversionOptions): Promise<ConversionResult> {
+    return this.conversionRateLimiter.execute(async () => {
+      return this.executeConversion(options);
+    });
+  }
+
+  /**
+   * 实际执行文件转换（内部方法）
+   */
+  private async executeConversion(options: ConversionOptions): Promise<ConversionResult> {
     let stdout = '';
     let stderr = '';
     const originalDir = process.cwd();
@@ -119,7 +150,7 @@ export class FileConversionService implements IFileConversionService {
       const absoluteSrcPath = this.resolveToAbsolutePath(srcPath);
 
       // 构建完整的 param 对象
-      const param: any = {
+      const param: Record<string, unknown> = {
         srcpath: absoluteSrcPath.replace(/\\/g, '/'),
         src_file_md5: fileHash,
         create_preloading_data: createPreloadingData,
@@ -222,17 +253,17 @@ export class FileConversionService implements IFileConversionService {
           error: e.message,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 确保 stdout 和 stderr 是字符串
-      const errorStdout = error.stdout
-        ? Buffer.isBuffer(error.stdout)
-          ? error.stdout.toString()
-          : error.stdout
+      const errorStdout = (error as { stdout?: Buffer | string }).stdout
+        ? Buffer.isBuffer((error as { stdout?: Buffer | string }).stdout)
+          ? ((error as { stdout?: Buffer | string }).stdout as Buffer).toString()
+          : (error as { stdout?: Buffer | string }).stdout
         : stdout || '';
-      const errorStderr = error.stderr
-        ? Buffer.isBuffer(error.stderr)
-          ? error.stderr.toString()
-          : error.stderr
+      const errorStderr = (error as { stderr?: Buffer | string }).stderr
+        ? Buffer.isBuffer((error as { stderr?: Buffer | string }).stderr)
+          ? ((error as { stderr?: Buffer | string }).stderr as Buffer).toString()
+          : (error as { stderr?: Buffer | string }).stderr
         : stderr || '';
 
       // 检查 stdout 或 stderr 是否包含成功的结果（mxcadassembly 可能退出码非0但实际成功）
@@ -240,11 +271,14 @@ export class FileConversionService implements IFileConversionService {
 
       if (outputToCheck) {
         try {
+          // 确保 outputToCheck 是字符串
+          const outputStr = typeof outputToCheck === 'string' ? outputToCheck : outputToCheck.toString();
+          
           // 查找 JSON 位置
-          const iPos = outputToCheck.lastIndexOf('{"code"');
+          const iPos = outputStr.lastIndexOf('{"code"');
 
           if (iPos !== -1) {
-            const strOutput = outputToCheck.substring(iPos);
+            const strOutput = outputStr.substring(iPos);
             const ret = JSON.parse(strOutput);
 
             // 如果输出包含成功的结果，视为转换成功
@@ -259,15 +293,18 @@ export class FileConversionService implements IFileConversionService {
       }
 
       // 只有在真正失败时才输出错误日志
-      this.logger.error(`文件转换异常: ${error.message}`);
-      this.logger.error(`退出码: ${error.code}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorCode = (error as { code?: string | number }).code;
+      
+      this.logger.error(`文件转换异常: ${errorMessage}`);
+      this.logger.error(`退出码: ${errorCode}`);
       this.logger.error(`stdout: [${errorStdout}]`);
       this.logger.error(`stderr: [${errorStderr}]`);
 
       return {
         isOk: false,
-        ret: { code: -1, message: error.message },
-        error: error.message,
+        ret: { code: -1, message: errorMessage },
+        error: errorMessage,
       };
     } finally {
       // 恢复原始工作目录

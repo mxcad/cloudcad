@@ -20,6 +20,14 @@ export class QueryUsersDto {
   @IsString()
   search?: string;
 
+  @ApiProperty({
+    description: '用户状态筛选（ACTIVE/INACTIVE/SUSPENDED/DELETED）',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
   @ApiProperty({ description: '用户角色ID筛选', required: false })
   @IsOptional()
   @IsString()
@@ -64,4 +72,12 @@ export class QueryUsersDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @ApiProperty({
+    description: '项目ID（用于权限检查）',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  projectId?: string;
 }

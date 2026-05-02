@@ -53,5 +53,17 @@ export interface SessionRequest {
     userId?: string;
     userRole?: string;
     userEmail?: string;
+    save: () => Promise<void>;
   };
+}
+
+/**
+ * 微信临时 Token Payload
+ */
+export interface WechatTempPayload {
+  sub: string;
+  type: 'wechat_temp';
+  wechatId: string;
+  nickname?: string;
+  avatar?: string;
 }

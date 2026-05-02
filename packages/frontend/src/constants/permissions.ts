@@ -1,18 +1,7 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-// The code, documentation, and related materials of this software belong to
-// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
-// Technology Co., Ltd. to use this software, its documentation, or related
-// materials.
-// https://www.mxdraw.com/
-///////////////////////////////////////////////////////////////////////////////
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-03-25T06:20:16.728Z
+ * 生成时间: 2026-04-14T02:55:19.424Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -43,7 +32,10 @@ export const SystemPermission = {
   SYSTEM_MONITOR: 'SYSTEM_MONITOR',
   SYSTEM_CONFIG_READ: 'SYSTEM_CONFIG_READ',
   SYSTEM_CONFIG_WRITE: 'SYSTEM_CONFIG_WRITE',
-  SYSTEM_TEMPLATE_READ: 'SYSTEM_TEMPLATE_READ',
+  LIBRARY_DRAWING_MANAGE: 'LIBRARY_DRAWING_MANAGE',
+  LIBRARY_BLOCK_MANAGE: 'LIBRARY_BLOCK_MANAGE',
+  STORAGE_QUOTA: 'STORAGE_QUOTA',
+  PROJECT_CREATE: 'PROJECT_CREATE',
 } as const;
 
 /**
@@ -69,7 +61,6 @@ export const ProjectPermission = {
   FILE_COPY: 'FILE_COPY',
   CAD_SAVE: 'CAD_SAVE',
   CAD_EXTERNAL_REFERENCE: 'CAD_EXTERNAL_REFERENCE',
-  GALLERY_ADD: 'GALLERY_ADD',
   VERSION_READ: 'VERSION_READ',
 } as const;
 
@@ -126,7 +117,6 @@ export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
   'FILE_DOWNLOAD': ["FILE_OPEN"],
   'CAD_SAVE': ["FILE_OPEN"],
   'CAD_EXTERNAL_REFERENCE': ["FILE_OPEN"],
-  'GALLERY_ADD': ["FILE_OPEN"],
   'VERSION_READ': ["FILE_OPEN"],
 };
 
@@ -170,7 +160,25 @@ export const PERMISSION_GROUPS = {
         { key: 'SYSTEM_MONITOR', label: '系统监控' },
         { key: 'SYSTEM_CONFIG_READ', label: '查看配置' },
         { key: 'SYSTEM_CONFIG_WRITE', label: '修改配置' },
-        { key: 'SYSTEM_TEMPLATE_READ', label: '查看模板库' },
+      ],
+    },
+    {
+      label: '公共资源库',
+      items: [
+        { key: 'LIBRARY_DRAWING_MANAGE', label: '管理图纸库' },
+        { key: 'LIBRARY_BLOCK_MANAGE', label: '管理图块库' },
+      ],
+    },
+    {
+      label: '项目管理',
+      items: [
+        { key: 'PROJECT_CREATE', label: '创建项目' },
+      ],
+    },
+    {
+      label: '存储管理',
+      items: [
+        { key: 'STORAGE_QUOTA', label: '存储配额管理' },
       ],
     },
   ],
@@ -206,12 +214,6 @@ export const PERMISSION_GROUPS = {
       items: [
         { key: 'CAD_SAVE', label: '保存图纸' },
         { key: 'CAD_EXTERNAL_REFERENCE', label: '管理外部参照' },
-      ],
-    },
-    {
-      label: '图库权限',
-      items: [
-        { key: 'GALLERY_ADD', label: '添加到图库' },
       ],
     },
     {

@@ -9,15 +9,15 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 
 // Lucide 图标
-import MailIcon from 'lucide-react/dist/esm/icons/mail';
-import Loader2Icon from 'lucide-react/dist/esm/icons/loader-2';
-import AlertCircleIcon from 'lucide-react/dist/esm/icons/alert-circle';
-import CheckCircleIcon from 'lucide-react/dist/esm/icons/check-circle';
-import ArrowLeftIcon from 'lucide-react/dist/esm/icons/arrow-left';
-import RefreshCwIcon from 'lucide-react/dist/esm/icons/refresh-cw';
-import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
-import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
-import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
+import { Mail } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { Boxes } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -42,16 +42,32 @@ export const EmailVerification: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
   const appLogo = brandConfig?.logo || '/logo.png';
 
+  // 绑定模式：用户没有邮箱，需要先输入邮箱再验证
+  const bindMode = location.state?.mode === 'bind';
+  const tempToken = location.state?.tempToken || '';
+  
+  // 手机号注册相关信息
+  const phoneRegisterData = location.state?.phone ? {
+    phone: location.state.phone,
+    code: location.state.code,
+    username: location.state.username,
+    password: location.state.password,
+    nickname: location.state.nickname,
+  } : null;
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState<string>('');
+  const [emailSent, setEmailSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState<string>('');
 
   // 重发验证码相关状态
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendSuccess, setResendSuccess] = useState(false);
+
+  const hasAutoSent = React.useRef(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -62,6 +78,20 @@ export const EmailVerification: React.FC = () => {
     const stateEmail = location.state?.email;
     if (stateEmail) {
       setEmail(stateEmail);
+      // 非绑定模式下已有邮箱，自动发送验证码
+      if (location.state?.mode !== 'bind' && !hasAutoSent.current) {
+        hasAutoSent.current = true;
+        setEmailSent(true);
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        authApi.resendVerification(stateEmail).catch((err) => {
+          const errorMessage =
+            (err as Error & { response?: { data?: { message?: string } } }).response
+              ?.data?.message ||
+            (err as Error).message ||
+            '发送验证码失败，请手动点击重发';
+          setError(errorMessage);
+        });
+      }
     }
   }, [location, navigate, isAuthenticated]);
 
@@ -88,7 +118,7 @@ export const EmailVerification: React.FC = () => {
       return;
     }
     if (!email) {
-      setError('邮箱地址缺失，请重新注册');
+      setError(bindMode ? '请输入邮箱地址' : '邮箱地址缺失，请重新注册');
       return;
     }
 
@@ -96,11 +126,43 @@ export const EmailVerification: React.FC = () => {
     setError(null);
 
     try {
-      await verifyEmailAndLogin(email, verificationCode.trim());
+      if (bindMode) {
+        // 绑定模式：调用绑定邮箱接口，返回 token 后存储并通过刷新更新 AuthContext
+        const response = await authApi.bindEmailAndLogin(tempToken, email, verificationCode.trim());
+        const { accessToken, refreshToken, user: userData } = (response.data || response) as {
+          accessToken: string; refreshToken: string; user: unknown;
+        };
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        // 直接刷新页面，让 AuthContext 从 localStorage 重新初始化
+        window.location.href = '/';
+        return;
+      } else if (phoneRegisterData) {
+        // 手机号注册场景：验证邮箱后完成手机号注册
+        const response = await authApi.verifyEmailAndRegisterPhone(
+          email,
+          verificationCode.trim(),
+          phoneRegisterData
+        );
+        const { accessToken, refreshToken, user: userData } = (response.data || response) as {
+          accessToken: string; refreshToken: string; user: unknown;
+        };
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        // 直接刷新页面，让 AuthContext 从 localStorage 重新初始化
+        window.location.href = '/';
+        return;
+      } else {
+        // 验证模式：调用验证邮箱接口
+        await verifyEmailAndLogin(email, verificationCode.trim());
+      }
       setSuccess(true);
+      // 验证成功（自动登录），直接跳转到首页
       setTimeout(() => {
-        navigate('/login', { replace: true });
-      }, 2000);
+        navigate('/', { replace: true });
+      }, 1500);
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
@@ -115,7 +177,13 @@ export const EmailVerification: React.FC = () => {
 
   const handleResendEmail = useCallback(async () => {
     if (!email) {
-      setError('邮箱地址缺失，请重新注册');
+      setError('请先输入邮箱地址');
+      return;
+    }
+
+    // 验证邮箱格式
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('请输入有效的邮箱地址');
       return;
     }
 
@@ -128,6 +196,7 @@ export const EmailVerification: React.FC = () => {
     try {
       await authApi.resendVerification(email);
       setResendSuccess(true);
+      setEmailSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
       setTimeout(() => setResendSuccess(false), 5000);
     } catch (err) {
@@ -154,7 +223,7 @@ export const EmailVerification: React.FC = () => {
           <div className="auth-card">
             <div className="success-content">
               <div className="success-icon">
-                <CheckCircleIcon size={32} />
+                <CheckCircle size={32} />
               </div>
               <h2 className="success-title">邮箱验证成功！</h2>
               <p className="success-subtitle">
@@ -199,15 +268,19 @@ export const EmailVerification: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">验证您的邮箱地址</p>
+            <p className="app-tagline">{bindMode ? '绑定您的邮箱地址' : phoneRegisterData ? '验证邮箱完成注册' : '验证您的邮箱地址'}</p>
           </div>
 
           {/* 邮件提示 */}
           <div className="email-notice">
             <div className="email-icon">
-              <MailIcon size={24} />
+              <Mail size={24} />
             </div>
-            {email ? (
+            {bindMode && !emailSent ? (
+              <p className="email-text">您的账号需要绑定邮箱才能继续使用</p>
+            ) : phoneRegisterData && !email ? (
+              <p className="email-text">请输入您的邮箱地址用于完成注册</p>
+            ) : email ? (
               <p className="email-text">
                 我们已向 <span className="email-highlight">{email}</span>{' '}
                 发送了验证码
@@ -217,10 +290,32 @@ export const EmailVerification: React.FC = () => {
             )}
           </div>
 
+          {/* 手机号注册和绑定模式下：显示邮箱输入框 */}
+          {(bindMode || phoneRegisterData) && !emailSent && (
+            <div className="code-section" style={{ marginBottom: '1.25rem' }}>
+              <label htmlFor="email" className="code-label">
+                邮箱地址
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="请输入邮箱地址"
+                className="code-input"
+                style={{ fontSize: '1rem', fontWeight: 400, letterSpacing: 'normal', textAlign: 'left' }}
+                disabled={loading}
+              />
+            </div>
+          )}
+
           {/* 错误提示 */}
           {error && (
             <div className="alert alert-error">
-              <AlertCircleIcon size={18} className="alert-icon" />
+              <AlertCircle size={18} className="alert-icon" />
               <span>{error}</span>
             </div>
           )}
@@ -228,48 +323,50 @@ export const EmailVerification: React.FC = () => {
           {/* 成功提示 */}
           {resendSuccess && (
             <div className="alert alert-success">
-              <CheckCircleIcon size={18} className="alert-icon" />
+              <CheckCircle size={18} className="alert-icon" />
               <span>验证邮件已重新发送，请查收</span>
             </div>
           )}
 
-          {/* 验证码输入 */}
-          <div className="code-section">
-            <label htmlFor="code" className="code-label">
-              验证码
-            </label>
-            <input
-              id="code"
-              type="text"
-              maxLength={6}
-              value={verificationCode}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                setVerificationCode(value);
-                if (error) setError(null);
-              }}
-              placeholder="请输入6位数字验证码"
-              className="code-input"
-              disabled={loading}
-            />
-            <p className="code-hint">验证码为6位数字，请查看邮件</p>
-          </div>
+          {/* 验证码输入 - 只有输入了邮箱后才显示 */}
+          {email && (
+            <div className="code-section">
+              <label htmlFor="code" className="code-label">
+                验证码
+              </label>
+              <input
+                id="code"
+                type="text"
+                maxLength={6}
+                value={verificationCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setVerificationCode(value);
+                  if (error) setError(null);
+                }}
+                placeholder="请输入6位数字验证码"
+                className="code-input"
+                disabled={loading}
+              />
+              <p className="code-hint">验证码为6位数字，请查看邮件</p>
+            </div>
+          )}
 
-          {/* 验证按钮 */}
+          {/* 验证按钮 - 有邮箱且有验证码时才能点击 */}
           <button
             onClick={handleVerifyCode}
-            disabled={loading || verificationCode.length !== 6}
+            disabled={loading || !email || verificationCode.length !== 6}
             className="verify-button"
           >
             {loading ? (
               <>
-                <Loader2Icon size={18} className="animate-spin" />
+                <Loader2 size={18} className="animate-spin" />
                 <span>验证中...</span>
               </>
             ) : (
               <>
                 <span>验证</span>
-                <CheckCircleIcon size={18} />
+                <CheckCircle size={18} />
               </>
             )}
           </button>
@@ -293,24 +390,24 @@ export const EmailVerification: React.FC = () => {
             >
               {resendLoading ? (
                 <>
-                  <Loader2Icon size={16} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   <span>发送中...</span>
                 </>
               ) : resendCooldown > 0 ? (
                 <>
-                  <RefreshCwIcon size={16} />
+                  <RefreshCw size={16} />
                   <span>{resendCooldown}秒后可重新发送</span>
                 </>
               ) : (
                 <>
-                  <RefreshCwIcon size={16} />
-                  <span>重新发送验证邮件</span>
+                  <RefreshCw size={16} />
+                  <span>{!emailSent && (bindMode || phoneRegisterData) ? '发送验证邮件' : '重新发送验证邮件'}</span>
                 </>
               )}
             </button>
 
             <button onClick={() => navigate('/login')} className="back-button">
-              <ArrowLeftIcon size={16} />
+              <ArrowLeft size={16} />
               <span>返回登录</span>
             </button>
           </div>
@@ -318,13 +415,13 @@ export const EmailVerification: React.FC = () => {
           {/* 特性图标 */}
           <div className="features-bar">
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
-              <CpuIcon size={14} />
+              <Cpu size={14} />
             </div>
             <div className="feature-dot" data-tooltip="多用户实时协同编辑">
-              <BoxesIcon size={14} />
+              <Boxes size={14} />
             </div>
             <div className="feature-dot" data-tooltip="企业级数据安全保障">
-              <ShieldCheckIcon size={14} />
+              <ShieldCheck size={14} />
             </div>
           </div>
         </div>

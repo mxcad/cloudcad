@@ -10,11 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { ExtractJwt } from 'passport-jwt';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
+import { IS_OPTIONAL_AUTH_KEY } from './decorators/optional-auth.decorator';
 
 @Injectable()
 export class JwtStrategyExecutor extends AuthGuard('jwt') {
@@ -24,7 +25,7 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
     super();
   }
 
-  async canActivate(context: any): Promise<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
     // 添加详细日志排查问题
@@ -41,6 +42,12 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
       return true;
     }
 
+    // 检查是否为可选认证路由
+    const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
+      IS_OPTIONAL_AUTH_KEY,
+      [context.getHandler(), context.getClass()]
+    );
+
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
     // 如果没有Token，检查 Session
@@ -53,12 +60,22 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
           id: request.session.userId,
           role: request.session.userRole,
           email: request.session.userEmail,
+          phone: request.session.userPhone,
         };
         // Session 认证成功，直接返回 true，不要调用 super.canActivate
         return true;
       }
 
-      // 既没有 Token 也没有 Session，抛出异常
+      // 既没有 Token 也没有 Session
+      if (isOptionalAuth) {
+        // 可选认证模式：允许未登录用户继续访问
+        this.logger.debug(
+          `[JWT] ${request.method} ${request.path} - 可选认证模式：允许未登录用户继续访问`
+        );
+        return true;
+      }
+
+      // 强制认证模式：抛出异常
       this.logger.warn(
         `[JWT] ${request.method} ${request.path} - 认证失败: 无Token且无Session`
       );

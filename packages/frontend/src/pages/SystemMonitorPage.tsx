@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { healthApi } from '../services/healthApi';
+import { adminApi } from '../services/adminApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
 
 // Lucide 图标导入
-import Activity from 'lucide-react/dist/esm/icons/activity';
-import Database from 'lucide-react/dist/esm/icons/database';
-import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
-import Server from 'lucide-react/dist/esm/icons/server';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
-import Clock from 'lucide-react/dist/esm/icons/clock';
-import Shield from 'lucide-react/dist/esm/icons/shield';
-import Info from 'lucide-react/dist/esm/icons/info';
+import { Activity } from 'lucide-react';
+import { Database } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
+import { Server } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 // 健康状态接口
 interface HealthStatus {
@@ -52,6 +53,13 @@ export const SystemMonitorPage: React.FC = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [refreshCountdown, setRefreshCountdown] = useState(30);
+  
+  // 存储清理相关状态
+  const [cleanupStats, setCleanupStats] = useState<{ total: number; expiryDate: string; delayDays: number } | null>(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupError, setCleanupError] = useState<string | null>(null);
+  const [cleanupSuccess, setCleanupSuccess] = useState<string | null>(null);
+  const [cleanupResult, setCleanupResult] = useState<{ deletedNodes: number; deletedDirectories: number; freedSpace: number; errors: string[] } | null>(null);
 
   // 检查权限
   useEffect(() => {
@@ -98,16 +106,52 @@ export const SystemMonitorPage: React.FC = () => {
     }
   }, []);
 
+  // 获取存储清理统计信息
+  const fetchCleanupStats = useCallback(async () => {
+    try {
+      const response = await adminApi.getCleanupStats();
+      if (response.data) {
+        setCleanupStats(response.data);
+      }
+    } catch (err) {
+      console.error('获取存储清理统计失败:', err);
+    }
+  }, []);
+
+  // 执行存储清理
+  const handleCleanupStorage = useCallback(async () => {
+    setCleanupLoading(true);
+    setCleanupError(null);
+    setCleanupSuccess(null);
+    setCleanupResult(null);
+    try {
+      const response = await adminApi.cleanupStorage(0); // 0表示立即清理
+      if (response.data) {
+        setCleanupSuccess('存储清理完成');
+        setCleanupResult(response.data);
+        // 重新获取统计信息
+        await fetchCleanupStats();
+      }
+    } catch (err) {
+      setCleanupError('存储清理失败');
+      console.error('存储清理失败:', err);
+    } finally {
+      setCleanupLoading(false);
+    }
+  }, [fetchCleanupStats]);
+
   // 自动刷新逻辑
   useEffect(() => {
     if (!permissionChecked || !hasAccess) return;
     
     fetchSystemHealth();
+    fetchCleanupStats();
     
     const interval = setInterval(() => {
       setRefreshCountdown((prev) => {
         if (prev <= 1) {
           fetchSystemHealth();
+          fetchCleanupStats();
           return 30;
         }
         return prev - 1;
@@ -115,7 +159,7 @@ export const SystemMonitorPage: React.FC = () => {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [permissionChecked, hasAccess, fetchSystemHealth]);
+  }, [permissionChecked, hasAccess, fetchSystemHealth, fetchCleanupStats]);
 
   // 等待权限检查
   if (!permissionChecked) {
@@ -286,6 +330,81 @@ export const SystemMonitorPage: React.FC = () => {
                 <span className="info-value">v1.0.0</span>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* 存储清理 */}
+        <section className="section">
+          <div className="section-header">
+            <h2>存储清理</h2>
+          </div>
+          
+          <div className="cleanup-section">
+            {/* 清理统计 */}
+            <div className="cleanup-stats">
+              <div className="cleanup-stats-grid">
+                <div className="cleanup-stat-card">
+                  <HardDrive size={20} />
+                  <div className="stat-content">
+                    <span className="stat-label">待清理文件</span>
+                    <span className="stat-value">{cleanupStats?.total || 0}</span>
+                  </div>
+                </div>
+                <div className="cleanup-stat-card">
+                  <Clock size={20} />
+                  <div className="stat-content">
+                    <span className="stat-label">延迟天数</span>
+                    <span className="stat-value">{cleanupStats?.delayDays || 30} 天</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 清理操作 */}
+            <div className="cleanup-actions">
+              <button 
+                className="cleanup-button" 
+                onClick={handleCleanupStorage} 
+                disabled={cleanupLoading}
+              >
+                <HardDrive size={16} className={cleanupLoading ? 'animate-spin' : ''} />
+                <span>{cleanupLoading ? '清理中...' : '立即清理存储'}</span>
+              </button>
+              <p className="cleanup-hint">
+                清理已标记为删除的文件，释放存储空间
+              </p>
+            </div>
+            
+            {/* 清理结果 */}
+            {cleanupSuccess && (
+              <div className="cleanup-result success">
+                <CheckCircle size={20} />
+                <div className="result-content">
+                  <h4>{cleanupSuccess}</h4>
+                  {cleanupResult && (
+                    <div className="result-details">
+                      <p>删除文件: {cleanupResult.deletedNodes} 个</p>
+                      <p>清理目录: {cleanupResult.deletedDirectories} 个</p>
+                      {cleanupResult.errors && cleanupResult.errors.length > 0 && (
+                        <p className="error-count">
+                          错误: {cleanupResult.errors.length} 个
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {cleanupError && (
+              <div className="cleanup-result error">
+                <XCircle size={20} />
+                <div className="result-content">
+                  <h4>{cleanupError}</h4>
+                  <p>请检查系统日志以了解详细信息</p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -694,6 +813,159 @@ const baseStyles = `
     color: var(--text-primary);
   }
 
+  /* 存储清理样式 */
+  .cleanup-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .cleanup-stats {
+    margin-bottom: 1.5rem;
+  }
+
+  .cleanup-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .cleanup-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    transition: all 0.2s;
+  }
+
+  .cleanup-stat-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .cleanup-stat-card svg {
+    color: var(--primary-500);
+    flex-shrink: 0;
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .cleanup-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .cleanup-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.3);
+  }
+
+  .cleanup-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px -2px rgba(99, 102, 241, 0.4);
+  }
+
+  .cleanup-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .cleanup-hint {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    margin: 0;
+  }
+
+  .cleanup-result {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .cleanup-result.success {
+    background: var(--success-dim);
+    border: 1px solid var(--success);
+  }
+
+  .cleanup-result.error {
+    background: var(--error-dim);
+    border: 1px solid var(--error);
+  }
+
+  .cleanup-result svg {
+    color: var(--success);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .cleanup-result.error svg {
+    color: var(--error);
+  }
+
+  .result-content {
+    flex: 1;
+  }
+
+  .result-content h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem;
+  }
+
+  .result-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .result-details p {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .error-count {
+    color: var(--error) !important;
+  }
+
   /* 响应式 */
   @media (max-width: 768px) {
     .monitor-page {
@@ -717,6 +989,20 @@ const baseStyles = `
     .info-grid {
       grid-template-columns: 1fr;
     }
+
+    .cleanup-actions {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .cleanup-button {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .cleanup-stats-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* 深色主题增强 */
@@ -729,6 +1015,23 @@ const baseStyles = `
   }
 
   [data-theme="dark"] .refresh-button:hover:not(:disabled) {
+    box-shadow: 0 6px 16px -2px rgba(34, 211, 238, 0.3);
+  }
+
+  [data-theme="dark"] .cleanup-section {
+    background: rgba(26, 29, 33, 0.8);
+    backdrop-filter: blur(10px);
+  }
+
+  [data-theme="dark"] .cleanup-stat-card {
+    background: rgba(17, 20, 23, 0.8);
+  }
+
+  [data-theme="dark"] .cleanup-button {
+    box-shadow: 0 4px 12px -2px rgba(34, 211, 238, 0.2);
+  }
+
+  [data-theme="dark"] .cleanup-button:hover:not(:disabled) {
     box-shadow: 0 6px 16px -2px rgba(34, 211, 238, 0.3);
   }
 `;

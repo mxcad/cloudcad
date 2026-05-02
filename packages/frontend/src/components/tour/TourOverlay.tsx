@@ -25,6 +25,8 @@ interface TourOverlayProps {
   onSkip: () => void;
   /** 跳过当前步骤（自动跳到下一步） */
   onSkipStep: () => void;
+  /** 下一步 */
+  onNext: () => void;
   /** 用户完成交互操作回调（交互模式） */
   onInteractionComplete?: () => void;
 }
@@ -235,6 +237,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
   children,
   onSkip,
   onSkipStep,
+  onNext,
   onInteractionComplete,
 }) => {
   const [highlight, setHighlight] = useState<HighlightState>({
@@ -522,6 +525,11 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
           width: '100%',
           height: '100%',
           pointerEvents: isInteractiveMode ? 'none' : 'auto', // 交互模式下让点击穿透
+        }}
+        onClick={() => {
+          if (!isInteractiveMode) {
+            onNext();
+          }
         }}
       >
         <defs>

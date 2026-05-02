@@ -10,13 +10,20 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import {
   ProjectPermission,
   ProjectRole,
 } from '../common/enums/permissions.enum';
 import { ProjectPermissionService } from '../roles/project-permission.service';
 import { DatabaseService } from '../database/database.service';
+import { FileTreeService } from './services/file-tree.service';
 
 /**
  * 文件系统权限服务
@@ -32,7 +39,9 @@ export class FileSystemPermissionService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly projectPermissionService: ProjectPermissionService
+    private readonly projectPermissionService: ProjectPermissionService,
+    @Inject(forwardRef(() => FileTreeService))
+    private readonly fileTreeService: FileTreeService
   ) {}
 
   /**
@@ -63,7 +72,7 @@ export class FileSystemPermissionService {
     if (node.isRoot) {
       projectId = nodeId;
     } else {
-      projectId = await this.findProjectRootId(nodeId);
+      projectId = await this.fileTreeService.getProjectId(nodeId);
       if (!projectId) {
         return false;
       }
@@ -88,7 +97,7 @@ export class FileSystemPermissionService {
     userId: string,
     nodeId: string
   ): Promise<string | null> {
-    // 1. 获取节点信息，包括 ownerId 和项目根节点信息
+    // 1. 获取节点信息
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
       select: { ownerId: true, isRoot: true, parentId: true },
@@ -98,20 +107,25 @@ export class FileSystemPermissionService {
       return null;
     }
 
-    // 2. 找到项目根节点 ID
+    // 2. 检查是否是公共资源库（新增）
+    const isLibrary = await this.isLibraryNode(nodeId);
+    if (isLibrary) {
+      // 公共资源库允许任何人访问，返回 VIEWER 角色
+      return ProjectRole.VIEWER;
+    }
+
+    // 3. 找到项目根节点 ID
     let projectId: string | null;
     if (node.isRoot) {
-      // 如果是项目根节点，直接使用
       projectId = nodeId;
     } else {
-      // 如果是子节点，需要向上查找项目根节点
-      projectId = await this.findProjectRootId(nodeId);
+      projectId = await this.fileTreeService.getProjectId(nodeId);
       if (!projectId) {
         return null;
       }
     }
 
-    // 3. 检查是否是项目所有者
+    // 4. 检查是否是项目所有者
     const project = await this.prisma.fileSystemNode.findUnique({
       where: { id: projectId },
       select: { ownerId: true },
@@ -121,7 +135,7 @@ export class FileSystemPermissionService {
       return ProjectRole.OWNER;
     }
 
-    // 4. 检查是否是项目成员
+    // 5. 检查是否是项目成员
     const member = await this.prisma.projectMember.findUnique({
       where: {
         projectId_userId: {
@@ -138,53 +152,13 @@ export class FileSystemPermissionService {
   }
 
   /**
-   * 最大递归深度限制，防止循环引用导致的无限递归
+   * 检查节点是否属于公共资源库
+   * @param nodeId 节点 ID
+   * @returns 是否属于公共资源库
    */
-  private static readonly MAX_RECURSION_DEPTH = 50;
-
-  /**
-   * 查找节点的项目根节点 ID
-   * @param nodeId 节点ID
-   * @param depth 当前递归深度（内部使用）
-   * @returns 项目根节点ID
-   */
-  private async findProjectRootId(
-    nodeId: string,
-    depth: number = 0
-  ): Promise<string | null> {
-    // 检查递归深度，防止无限递归
-    if (depth > FileSystemPermissionService.MAX_RECURSION_DEPTH) {
-      this.logger.error(
-        `[findProjectRootId] 超过最大递归深度限制，可能存在循环引用: ${nodeId}`
-      );
-      return null;
-    }
-
-    try {
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { isRoot: true, parentId: true },
-      });
-
-      if (!node) {
-        return null;
-      }
-
-      // 如果是项目根节点，直接返回
-      if (node.isRoot) {
-        return nodeId;
-      }
-
-      // 如果有父节点，递归查找
-      if (node.parentId) {
-        return this.findProjectRootId(node.parentId, depth + 1);
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error(`[findProjectRootId] 查找项目根节点失败: ${error}`);
-      return null;
-    }
+  async isLibraryNode(nodeId: string): Promise<boolean> {
+    const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
+    return libraryKey !== null;
   }
 
   /**

@@ -217,3 +217,14 @@ export function svnUpdate(
   password: string | null,
   callback: SvnCallback
 ): void;
+
+/**
+ * 清理 SVN 工作副本锁定
+ * 用于解决 "Working copy locked" 错误
+ * @param targetPath - 目标路径
+ * @param callback - 回调函数
+ */
+export function svnCleanup(
+  targetPath: string,
+  callback: SvnCallback
+): void;

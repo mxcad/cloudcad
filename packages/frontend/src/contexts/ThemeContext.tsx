@@ -18,14 +18,19 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = 'mx-user-dark';
 
 /**
- * 从 localStorage 读取主题设置
+ * 从 localStorage 读取主题设置并立即应用到 DOM
+ * 在 useState 初始化时调用,确保首次渲染前主题已正确应用
  */
 function getStoredTheme(): boolean {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     // 默认为暗色主题（与 mxcad-app 默认一致）
-    return stored ? stored === 'true' : true;
+    const isDark = stored ? stored === 'true' : true;
+    // 立即应用到 DOM,防止闪烁
+    applyThemeToDOM(isDark);
+    return isDark;
   } catch {
+    applyThemeToDOM(true);
     return true;
   }
 }
@@ -71,15 +76,6 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDark, setIsDark] = useState<boolean>(getStoredTheme);
-  const initializedRef = useRef(false);
-
-  // 初始化时应用主题
-  useEffect(() => {
-    if (!initializedRef.current) {
-      applyThemeToDOM(isDark);
-      initializedRef.current = true;
-    }
-  }, [isDark]);
 
   // 监听 localStorage 变化（来自 CAD 编辑器的主题切换）
   useEffect(() => {

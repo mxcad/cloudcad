@@ -29,7 +29,7 @@ export interface AuthenticatedUser {
  * 认证请求对象
  * 用于替换 @Req() req: any
  */
-export interface AuthenticatedRequest {
+export interface AuthenticatedRequest extends Express.Request {
   user: AuthenticatedUser;
 }
 

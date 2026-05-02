@@ -100,9 +100,10 @@ function startCooperate() {
       cwd: path.dirname(mxcadAssembly),
       env: {
         ...process.env,
-        LD_LIBRARY_PATH: IS_LINUX
-          ? `${path.join(path.dirname(mxcadAssembly), 'mx', 'so')}:${process.env.LD_LIBRARY_PATH || ''}`
-          : undefined,
+        // 不设置 LD_LIBRARY_PATH，让 mxcad 使用系统 glibc
+        // LD_LIBRARY_PATH: IS_LINUX
+        //   ? `${path.join(path.dirname(mxcadAssembly), 'mx', 'so')}:${process.env.LD_LIBRARY_PATH || ''}`
+        //   : undefined,
       },
     });
     

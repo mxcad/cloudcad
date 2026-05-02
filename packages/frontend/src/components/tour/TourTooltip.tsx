@@ -13,9 +13,9 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { TourStep, TooltipPlacement, StepMode } from '../../types/tour';
 import { Button } from '../ui/Button';
-import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
-import X from 'lucide-react/dist/esm/icons/x';
-import MousePointerClick from 'lucide-react/dist/esm/icons/mouse-pointer-click';
+import { ChevronRight } from 'lucide-react';
+import { X } from 'lucide-react';
+import { MousePointerClick } from 'lucide-react';
 
 interface TourTooltipProps {
   /** 当前步骤配置 */
@@ -450,41 +450,8 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
           跳过引导
         </Button>
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* 交互模式不显示下一步按钮，用户需要完成操作 */}
-          {!isInteractiveMode && (
-            <Button
-              variant="primary"
-              size="sm"
-              icon={isLastStep ? undefined : ChevronRight}
-              onClick={onNext}
-            >
-              {isLastStep ? '完成' : '下一步'}
-            </Button>
-          )}
-          {/* 交互模式显示等待提示 */}
-          {isInteractiveMode && (
-            <span
-              style={{
-                fontSize: 13,
-                color: 'var(--text-muted)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  border: '2px solid var(--primary-500)',
-                  borderTopColor: 'transparent',
-                  borderRadius: '50%',
-                  animation: 'tooltip-spin 1s linear infinite',
-                }}
-              />
-              等待操作...
-            </span>
-          )}
+
+
         </div>
       </div>
 

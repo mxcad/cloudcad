@@ -45,7 +45,7 @@ export class CacheStatsResponseDto {
   @ApiProperty({ description: '提示消息' })
   message: string;
 
-  @ApiProperty({ description: '缓存统计数据', type: CacheStatsDto })
+  @ApiProperty({ description: '缓存统计数据', type: () => CacheStatsDto })
   data: CacheStatsDto;
 }
 
@@ -64,7 +64,7 @@ export class UserPermissionInfoDto {
   @ApiProperty({ description: '用户角色' })
   userRole: string;
 
-  @ApiProperty({ description: '权限列表', type: [String] })
+  @ApiProperty({ description: '权限列表', type: () => [String] })
   permissions: string[];
 }
 
@@ -75,7 +75,7 @@ export class UserPermissionsResponseDto {
   @ApiProperty({ description: '提示消息' })
   message: string;
 
-  @ApiProperty({ description: '用户权限信息', type: UserPermissionInfoDto })
+  @ApiProperty({ description: '用户权限信息', type: () => UserPermissionInfoDto })
   data: UserPermissionInfoDto;
 }
 

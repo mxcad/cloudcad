@@ -8,15 +8,15 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import Shield from 'lucide-react/dist/esm/icons/shield';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import Search from 'lucide-react/dist/esm/icons/search';
-import Users from 'lucide-react/dist/esm/icons/users';
-import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import { Shield } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
+import { XCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -1365,3 +1365,5 @@ const roleManagementStyles = `
     }
   }
 `;
+
+export default RoleManagement;

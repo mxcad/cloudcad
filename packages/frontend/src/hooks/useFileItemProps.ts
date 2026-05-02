@@ -52,8 +52,8 @@ export const getFileItemPermissionProps = (
   canEdit: boolean;
   canDelete: boolean;
   canDownload: boolean;
-  canAddToGallery: boolean;
   canViewVersionHistory: boolean;
+  canManageExternalReference: boolean;
   canManageMembers?: boolean;
   canManageRoles?: boolean;
 } => {
@@ -74,9 +74,10 @@ export const getFileItemPermissionProps = (
       ? (rootPerms.canDelete ?? false)
       : (projectPermissions[ProjectPermission.FILE_DELETE] ?? false),
     canDownload: projectPermissions[ProjectPermission.FILE_DOWNLOAD] ?? false,
-    canAddToGallery: projectPermissions[ProjectPermission.GALLERY_ADD] ?? false,
     canViewVersionHistory:
       projectPermissions[ProjectPermission.VERSION_READ] ?? false,
+    canManageExternalReference:
+      projectPermissions[ProjectPermission.CAD_EXTERNAL_REFERENCE] ?? false,
     canManageMembers: isRoot ? rootPerms.canManageMembers : undefined,
     canManageRoles: isRoot ? rootPerms.canManageRoles : undefined,
   };
@@ -94,7 +95,10 @@ export const useFileItemPermissionProps = (
   options: UseFileItemPropsOptions
 ): Map<string, ReturnType<typeof getFileItemPermissionProps>> => {
   return useMemo(() => {
-    const map = new Map<string, ReturnType<typeof getFileItemPermissionProps>>();
+    const map = new Map<
+      string,
+      ReturnType<typeof getFileItemPermissionProps>
+    >();
     for (const node of nodes) {
       map.set(node.id, getFileItemPermissionProps(node, options));
     }

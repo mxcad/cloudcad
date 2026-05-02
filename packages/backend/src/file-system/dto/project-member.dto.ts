@@ -59,7 +59,7 @@ export class UpdateProjectMemberDto {
  * 批量添加项目成员 DTO
  */
 export class BatchAddProjectMembersDto {
-  @ApiProperty({ description: '成员列表', type: [AddProjectMemberDto] })
+  @ApiProperty({ description: '成员列表', type: () => [AddProjectMemberDto] })
   @IsArray()
   @IsNotEmpty({ each: true })
   members: AddProjectMemberDto[];

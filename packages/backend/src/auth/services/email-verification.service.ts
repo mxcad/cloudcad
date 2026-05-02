@@ -20,6 +20,7 @@ import Redis from 'ioredis';
 export class EmailVerificationService {
   private readonly codeTTL: number;
   private readonly rateLimitTTL: number;
+  private readonly maxVerifyAttempts: number;
 
   constructor(
     private readonly emailService: EmailService,
@@ -29,6 +30,7 @@ export class EmailVerificationService {
     const cacheTTL = this.configService.get('cacheTTL', { infer: true });
     this.codeTTL = cacheTTL.verificationCode;
     this.rateLimitTTL = cacheTTL.verificationRateLimit;
+    this.maxVerifyAttempts = 5;
   }
 
   private getCodeKey(email: string): string {
@@ -37,6 +39,11 @@ export class EmailVerificationService {
 
   private getRateLimitKey(email: string): string {
     return `email_verification:rate_limit:${email}`;
+  }
+
+  private getVerifyAttemptsKey(email: string): string {
+    const today = new Date().toISOString().slice(0, 10);
+    return `email_verification:verify_attempts:${email}:${today}`;
   }
 
   async generateVerificationToken(email: string): Promise<string> {
@@ -67,8 +74,13 @@ export class EmailVerificationService {
     await this.redis.setex(rateLimitKey, this.rateLimitTTL, '1');
   }
 
-  async verifyEmail(email: string, code: string): Promise<boolean> {
+  async verifyEmail(
+    email: string,
+    code: string,
+  ): Promise<{ valid: boolean; message: string; remainingAttempts?: number }> {
     const key = this.getCodeKey(email);
+    const attemptsKey = this.getVerifyAttemptsKey(email);
+    const rateLimitKey = this.getRateLimitKey(email);
     const storedCode = await this.redis.get(key);
 
     if (!storedCode) {
@@ -76,13 +88,31 @@ export class EmailVerificationService {
     }
 
     if (storedCode !== code) {
-      throw new BadRequestException('验证码错误');
+      const attempts = parseInt((await this.redis.get(attemptsKey)) || '0', 10);
+      const remainingAttempts = this.maxVerifyAttempts - attempts;
+
+      if (remainingAttempts <= 0) {
+        await this.redis.del(key);
+        await this.redis.del(attemptsKey);
+        throw new BadRequestException('验证次数已用完，请重新获取验证码');
+      }
+
+      await this.redis.incr(attemptsKey);
+      const ttl = await this.redis.ttl(key);
+      if (ttl > 0) {
+        await this.redis.expire(attemptsKey, ttl);
+      }
+
+      throw new BadRequestException(
+        `验证码错误，剩余 ${remainingAttempts - 1} 次尝试机会`,
+      );
     }
 
-    // 验证成功后删除验证码
     await this.redis.del(key);
+    await this.redis.del(attemptsKey);
+    await this.redis.del(rateLimitKey);
 
-    return true;
+    return { valid: true, message: '验证成功' };
   }
 
   async resendVerificationEmail(email: string): Promise<void> {

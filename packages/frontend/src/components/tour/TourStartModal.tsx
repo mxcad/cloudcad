@@ -12,10 +12,10 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 
 // Lucide 图标导入
-import Compass from 'lucide-react/dist/esm/icons/compass';
-import BookOpen from 'lucide-react/dist/esm/icons/book-open';
-import Target from 'lucide-react/dist/esm/icons/target';
-import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
+import { Compass } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import { Target } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 /** z-index 层级 */
 const START_MODAL_Z_INDEX = 10002;

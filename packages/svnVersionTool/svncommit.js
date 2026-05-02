@@ -1,8 +1,8 @@
-const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeSpawn } = require('./svn-executor');
 
 /**
  * 向SVN仓库提交更改
@@ -51,45 +51,27 @@ function svnCommit(
     args.push('--password', password);
   }
 
-  const child = spawn(svnPath, args, { windowsHide: true });
-
-  let stdout = '';
-  let stderr = '';
-
-  child.stdout.on('data', (data) => {
-    stdout += data.toString('utf8');
-  });
-
-  child.stderr.on('data', (data) => {
-    stderr += data.toString('utf8');
-  });
-
-  child.on('close', (code) => {
-    if (tempFile && fs.existsSync(tempFile)) {
-      try {
-        fs.unlinkSync(tempFile);
-      } catch (e) {
-        /* ignore */
+  executeSpawn(svnPath, args)
+    .then(stdout => {
+      if (tempFile && fs.existsSync(tempFile)) {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (e) {
+          /* ignore */
+        }
       }
-    }
-
-    if (code !== 0) {
-      callback(new Error(stderr || `SVN commit failed with code ${code}`));
-    } else {
       callback(null, stdout);
-    }
-  });
-
-  child.on('error', (err) => {
-    if (tempFile && fs.existsSync(tempFile)) {
-      try {
-        fs.unlinkSync(tempFile);
-      } catch (e) {
-        /* ignore */
+    })
+    .catch(error => {
+      if (tempFile && fs.existsSync(tempFile)) {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (e) {
+          /* ignore */
+        }
       }
-    }
-    callback(err);
-  });
+      callback(error);
+    });
 }
 
 module.exports = svnCommit;

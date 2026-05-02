@@ -29,9 +29,14 @@ export interface UIState {
   openModal: (modalId: string) => void;
   closeModal: () => void;
 
-  // Loading state
+  // Global loading state
   globalLoading: boolean;
-  setGlobalLoading: (loading: boolean) => void;
+  loadingMessage: string;
+  loadingProgress: number;
+  setGlobalLoading: (loading: boolean, message?: string) => void;
+  setLoadingMessage: (message: string) => void;
+  setLoadingProgress: (progress: number) => void;
+  resetLoading: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -57,5 +62,11 @@ export const useUIStore = create<UIState>((set) => ({
   closeModal: () => set({ activeModal: null }),
 
   globalLoading: false,
-  setGlobalLoading: (loading) => set({ globalLoading: loading }),
+  loadingMessage: '',
+  loadingProgress: 0,
+  setGlobalLoading: (loading, message = '') =>
+    set({ globalLoading: loading, loadingMessage: message, loadingProgress: loading ? 0 : 0 }),
+  setLoadingMessage: (message) => set({ loadingMessage: message }),
+  setLoadingProgress: (progress) => set({ loadingProgress: progress }),
+  resetLoading: () => set({ globalLoading: false, loadingMessage: '', loadingProgress: 0 }),
 }));

@@ -14,6 +14,11 @@ const { spawn, spawnSync } = require('child_process');
 const net = require('net');
 
 const brand = require('./brand');
+const uiConfig = require('./ui-config');
+const themeConfig = require('./theme-config');
+const serverConfig = require('./server-config');
+const sketchesConfig = require('./sketches-config');
+const quickCommandConfig = require('./quick-command-config');
 
 // ==================== 配置 ====================
 
@@ -27,6 +32,7 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const BACKEND_DIR = path.join(PROJECT_ROOT, 'packages', 'backend');
 const ENV_PATH = path.join(BACKEND_DIR, '.env');
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const FRONTEND_DIST_DIR = path.join(__dirname, '..', 'frontend', 'dist');
 const RUNTIME_DIR = path.join(PROJECT_ROOT, 'runtime');
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PM2_HOME = path.join(DATA_DIR, 'pm2');
@@ -184,6 +190,210 @@ function updateEnvFile(filePath, updates) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
+// ==================== 数据库备份与恢复 ====================
+
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+
+function listBackupFiles() {
+  if (!fs.existsSync(BACKUP_DIR)) return [];
+
+  return fs
+    .readdirSync(BACKUP_DIR)
+    .filter((file) => file.startsWith('db_backup_') && file.endsWith('.sql'))
+    .map((file) => {
+      const fullPath = path.join(BACKUP_DIR, file);
+      const stats = fs.statSync(fullPath);
+      return {
+        name: file,
+        path: fullPath,
+        size: stats.size,
+        modified: stats.mtime,
+      };
+    })
+    .sort((a, b) => b.modified - a.modified);
+}
+
+function formatBackupSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function getPgDumpPath() {
+  const isWindows = process.platform === 'win32';
+  const platformDir = isWindows ? 'windows' : 'linux';
+  const runtimePath = path.join(RUNTIME_DIR, platformDir);
+
+  if (fs.existsSync(runtimePath)) {
+    return isWindows
+      ? path.join(runtimePath, 'postgresql', 'pgsql', 'bin', 'pg_dump.exe')
+      : path.join(runtimePath, 'postgres', 'bin', 'pg_dump');
+  }
+  return isWindows ? 'pg_dump.exe' : 'pg_dump';
+}
+
+function getPsqlPath() {
+  const isWindows = process.platform === 'win32';
+  const platformDir = isWindows ? 'windows' : 'linux';
+  const runtimePath = path.join(RUNTIME_DIR, platformDir);
+
+  if (fs.existsSync(runtimePath)) {
+    return isWindows
+      ? path.join(runtimePath, 'postgresql', 'pgsql', 'bin', 'psql.exe')
+      : path.join(runtimePath, 'postgres', 'bin', 'psql');
+  }
+  return isWindows ? 'psql.exe' : 'psql';
+}
+
+function getPostgresLibPath() {
+  const isWindows = process.platform === 'win32';
+  const platformDir = isWindows ? 'windows' : 'linux';
+  return path.join(RUNTIME_DIR, platformDir, 'postgres', 'lib');
+}
+
+function getDbEnv() {
+  const envConfig = parseEnvFile(ENV_PATH);
+  const isWindows = process.platform === 'win32';
+
+  return {
+    env: {
+      ...process.env,
+      PGPASSWORD: envConfig.DB_PASSWORD || '',
+      ...(!isWindows && fs.existsSync(getPostgresLibPath())
+        ? {
+            LD_LIBRARY_PATH: getPostgresLibPath(),
+          }
+        : {}),
+    },
+    config: envConfig,
+  };
+}
+
+async function backupDatabase() {
+  if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `db_backup_${timestamp}.sql`;
+  const backupFile = path.join(BACKUP_DIR, filename);
+
+  const { env, config: envConfig } = getDbEnv();
+  const pgDumpPath = getPgDumpPath();
+
+  if (!fs.existsSync(pgDumpPath)) {
+    log('error', `pg_dump 不存在: ${pgDumpPath}`);
+    return { success: false, error: 'pg_dump 工具不存在' };
+  }
+
+  const args = [
+    '-h',
+    envConfig.DB_HOST || 'localhost',
+    '-p',
+    envConfig.DB_PORT || '5432',
+    '-U',
+    envConfig.DB_USERNAME || 'postgres',
+    '-d',
+    envConfig.DB_DATABASE || 'cloudcad',
+    '-f',
+    backupFile,
+    '--no-owner',
+    '--no-privileges',
+    '--clean',
+    '--if-exists',
+  ];
+
+  log('info', `执行数据库备份: ${args.join(' ')}`);
+
+  const result = spawnSync(pgDumpPath, args, {
+    env,
+    shell: process.platform === 'win32',
+    stdio: 'pipe',
+    timeout: 120000,
+  });
+
+  if (result.status === 0 && fs.existsSync(backupFile)) {
+    const size = fs.statSync(backupFile).size;
+    log('info', `数据库备份成功: ${filename} (${formatBackupSize(size)})`);
+    return { success: true, filename, size };
+  } else {
+    const error = result.stderr ? result.stderr.toString() : '未知错误';
+    log('error', `数据库备份失败: ${error}`);
+    return { success: false, error };
+  }
+}
+
+async function restoreDatabase(filename) {
+  const backupFile = path.join(BACKUP_DIR, filename);
+
+  if (!fs.existsSync(backupFile)) {
+    return { success: false, error: '备份文件不存在' };
+  }
+
+  const { env, config: envConfig } = getDbEnv();
+  const psqlPath = getPsqlPath();
+
+  if (!fs.existsSync(psqlPath)) {
+    return { success: false, error: 'psql 工具不存在' };
+  }
+
+  const args = [
+    '-h',
+    envConfig.DB_HOST || 'localhost',
+    '-p',
+    envConfig.DB_PORT || '5432',
+    '-U',
+    envConfig.DB_USERNAME || 'postgres',
+    '-d',
+    envConfig.DB_DATABASE || 'cloudcad',
+    '-f',
+    backupFile,
+  ];
+
+  log('info', `恢复数据库: ${filename}`);
+
+  const result = spawnSync(psqlPath, args, {
+    env,
+    shell: process.platform === 'win32',
+    stdio: 'pipe',
+    timeout: 180000,
+  });
+
+  if (result.status === 0) {
+    log('info', `数据库恢复成功: ${filename}`);
+    return { success: true };
+  } else {
+    const error = result.stderr ? result.stderr.toString() : '未知错误';
+    log('error', `数据库恢复失败: ${error}`);
+    return { success: false, error };
+  }
+}
+
+async function cleanupOldBackups(maxBackups = 10) {
+  const backups = listBackupFiles();
+  if (backups.length <= maxBackups) {
+    return { deleted: 0, kept: backups.length };
+  }
+
+  const toDelete = backups.slice(maxBackups);
+  let deleted = 0;
+
+  for (const backup of toDelete) {
+    try {
+      fs.unlinkSync(backup.path);
+      deleted++;
+    } catch (err) {
+      log('warn', `清理备份失败: ${backup.name} - ${err.message}`);
+    }
+  }
+
+  log(
+    'info',
+    `清理旧备份完成: 删除 ${deleted} 个，保留 ${backups.length - deleted} 个`
+  );
+  return { deleted, kept: backups.length - deleted };
+}
+
 // ==================== 配置项定义 ====================
 
 /**
@@ -312,6 +522,7 @@ const CONFIG_GROUPS = [
 
 const sessions = new Map();
 const loginAttempts = new Map();
+const downloadTokens = new Map(); // 一次性下载凭证
 
 function createSession(username) {
   const token = generateToken();
@@ -336,6 +547,31 @@ function validateSession(token) {
 
 function destroySession(token) {
   sessions.delete(token);
+}
+
+// 生成一次性下载凭证（5分钟有效）
+function createDownloadToken(filename) {
+  const downloadToken = generateToken();
+  downloadTokens.set(downloadToken, {
+    filename,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5分钟
+  });
+  return downloadToken;
+}
+
+// 验证并消费一次性下载凭证
+function consumeDownloadToken(downloadToken) {
+  const data = downloadTokens.get(downloadToken);
+  if (!data) return null;
+
+  if (Date.now() > data.expiresAt) {
+    downloadTokens.delete(downloadToken);
+    return null;
+  }
+
+  downloadTokens.delete(downloadToken); // 一次性使用
+  return data.filename;
 }
 
 function checkLoginLock(ip) {
@@ -575,7 +811,7 @@ function authMiddleware(req, res) {
 
 // ==================== API 路由 ====================
 
-async function handleApi(req, res, pathname) {
+async function handleApi(req, res, pathname, searchParams) {
   const method = req.method;
 
   // CORS
@@ -919,6 +1155,489 @@ async function handleApi(req, res, pathname) {
     return;
   }
 
+  // ========== 数据库备份与恢复 ==========
+
+  // 获取备份列表
+  if (pathname === '/api/db/backups' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const backups = listBackupFiles();
+    sendJson(res, 200, { success: true, backups });
+    return;
+  }
+
+  // 执行备份
+  if (pathname === '/api/db/backup' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const result = await backupDatabase();
+    sendJson(res, result.success ? 200 : 500, result);
+    return;
+  }
+
+  // 恢复数据库
+  if (pathname === '/api/db/restore' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const { filename, confirm } = body;
+
+    if (!confirm) {
+      sendJson(res, 400, { success: false, error: '需要确认恢复操作' });
+      return;
+    }
+
+    if (!filename) {
+      sendJson(res, 400, { success: false, error: '需要指定备份文件名' });
+      return;
+    }
+
+    const result = await restoreDatabase(filename);
+    sendJson(res, result.success ? 200 : 500, result);
+    return;
+  }
+
+  // 清理旧备份
+  if (pathname === '/api/db/cleanup' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const maxBackups = body.maxBackups || 10;
+
+    const result = await cleanupOldBackups(maxBackups);
+    sendJson(res, 200, { success: true, ...result });
+    return;
+  }
+
+  // 下载备份文件（使用一次性凭证）
+  if (pathname.match(/^\/api\/db\/download\//) && method === 'GET') {
+    // 从 URL 查询参数获取下载凭证
+    const downloadToken = searchParams.get('token');
+
+    if (!downloadToken) {
+      sendJson(res, 401, { error: '缺少下载凭证' });
+      return;
+    }
+
+    const filename = consumeDownloadToken(downloadToken);
+    if (!filename) {
+      sendJson(res, 401, { error: '下载凭证无效或已过期' });
+      return;
+    }
+
+    const filePath = path.join(BACKUP_DIR, filename);
+
+    if (!fs.existsSync(filePath)) {
+      sendJson(res, 404, { error: '备份文件不存在' });
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'application/sql',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': fs.statSync(filePath).size,
+    });
+    fs.createReadStream(filePath).pipe(res);
+    return;
+  }
+
+  // 获取下载凭证（需要会话认证）
+  if (pathname === '/api/db/download-token' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const { filename } = body;
+
+    if (!filename) {
+      sendJson(res, 400, { error: '需要指定文件名' });
+      return;
+    }
+
+    const downloadToken = createDownloadToken(filename);
+    sendJson(res, 200, { success: true, downloadToken });
+    return;
+  }
+
+  // 删除备份文件
+  if (pathname.match(/^\/api\/db\/backup\//) && method === 'DELETE') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const filename = decodeURIComponent(pathname.split('/').pop());
+    const filePath = path.join(BACKUP_DIR, filename);
+
+    if (!fs.existsSync(filePath)) {
+      sendJson(res, 404, { success: false, error: '备份文件不存在' });
+      return;
+    }
+
+    try {
+      fs.unlinkSync(filePath);
+      log('info', `已删除备份: ${filename}`);
+      sendJson(res, 200, { success: true, message: '已删除' });
+    } catch (err) {
+      log('error', `删除备份失败: ${err.message}`);
+      sendJson(res, 500, { success: false, error: '删除失败' });
+    }
+    return;
+  }
+
+  // ========== UI 配置 ==========
+
+  // 获取 UI 配置
+  if (pathname === '/api/ui-config' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = uiConfig.getConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 更新 UI 配置
+  if (pathname === '/api/ui-config' && method === 'PUT') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = uiConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = uiConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 重置 UI 配置为默认
+  if (pathname === '/api/ui-config/reset' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = uiConfig.resetConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 导出 UI 配置
+  if (pathname === '/api/ui-config/export' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = uiConfig.getConfig();
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition': 'attachment; filename="myUiConfig.json"',
+    });
+    res.end(JSON.stringify(config, null, 2));
+    return;
+  }
+
+  // 导入 UI 配置
+  if (pathname === '/api/ui-config/import' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = uiConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = uiConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // ========== 主题配置 ==========
+
+  // 获取主题配置
+  if (pathname === '/api/theme-config' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = themeConfig.getConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 更新主题配置
+  if (pathname === '/api/theme-config' && method === 'PUT') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = themeConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = themeConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 重置主题配置为默认
+  if (pathname === '/api/theme-config/reset' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = themeConfig.resetConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 导出主题配置
+  if (pathname === '/api/theme-config/export' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = themeConfig.getConfig();
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition': 'attachment; filename="myVuetifyThemeConfig.json"',
+    });
+    res.end(JSON.stringify(config, null, 2));
+    return;
+  }
+
+  // 导入主题配置
+  if (pathname === '/api/theme-config/import' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = themeConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = themeConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // ========== 服务器配置 ==========
+
+  // 获取服务器配置
+  if (pathname === '/api/server-config' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = serverConfig.getConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 更新服务器配置
+  if (pathname === '/api/server-config' && method === 'PUT') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = serverConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = serverConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 导出服务器配置
+  if (pathname === '/api/server-config/export' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = serverConfig.getConfig();
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition': 'attachment; filename="myServerConfig.json"',
+    });
+    res.end(JSON.stringify(config, null, 2));
+    return;
+  }
+
+  // 导入服务器配置
+  if (pathname === '/api/server-config/import' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = serverConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = serverConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // ========== 草图配置 ==========
+
+  // 获取草图配置
+  if (pathname === '/api/sketches-config' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = sketchesConfig.getConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 更新草图配置
+  if (pathname === '/api/sketches-config' && method === 'PUT') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = sketchesConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = sketchesConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 重置草图配置为默认
+  if (pathname === '/api/sketches-config/reset' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = sketchesConfig.resetConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 导出草图配置
+  if (pathname === '/api/sketches-config/export' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = sketchesConfig.getConfig();
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition':
+        'attachment; filename="mySketchesAndNotesUiConfig.json"',
+    });
+    res.end(JSON.stringify(config, null, 2));
+    return;
+  }
+
+  // 导入草图配置
+  if (pathname === '/api/sketches-config/import' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = sketchesConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = sketchesConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // ========== 命令别名配置 ==========
+
+  // 获取命令别名配置
+  if (pathname === '/api/quick-command' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = quickCommandConfig.getConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 更新命令别名配置
+  if (pathname === '/api/quick-command' && method === 'PUT') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = quickCommandConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = quickCommandConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 重置命令别名配置为默认
+  if (pathname === '/api/quick-command/reset' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = quickCommandConfig.resetConfig();
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
+  // 导出命令别名配置
+  if (pathname === '/api/quick-command/export' && method === 'GET') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const config = quickCommandConfig.getConfig();
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition': 'attachment; filename="myQuickCommand.json"',
+    });
+    res.end(JSON.stringify(config, null, 2));
+    return;
+  }
+
+  // 导入命令别名配置
+  if (pathname === '/api/quick-command/import' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const errors = quickCommandConfig.validateConfig(body);
+
+    if (errors && errors.length > 0) {
+      sendJson(res, 400, { success: false, error: '校验失败', errors });
+      return;
+    }
+
+    const config = quickCommandConfig.updateConfig(body);
+    sendJson(res, 200, { success: true, data: config });
+    return;
+  }
+
   // 404
   sendJson(res, 404, { error: '接口不存在' });
 }
@@ -928,11 +1647,21 @@ async function handleApi(req, res, pathname) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
+  const searchParams = url.searchParams; // 获取查询参数
+
+  // 健康检查端点
+  if (pathname === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() })
+    );
+    return;
+  }
 
   // API 请求
   if (pathname.startsWith('/api/')) {
     try {
-      await handleApi(req, res, pathname);
+      await handleApi(req, res, pathname, searchParams);
     } catch (err) {
       log('error', `API 错误: ${err.message}`);
       sendJson(res, 500, { error: '服务器内部错误' });
@@ -946,8 +1675,16 @@ const server = http.createServer(async (req, res) => {
     pathname === '/' ? 'index.html' : pathname
   );
 
+  // 如果 public 找不到 /brand/ 文件,回退到 frontend/dist
+  if (!fs.existsSync(filePath) && pathname.startsWith('/brand/')) {
+    filePath = path.join(FRONTEND_DIST_DIR, pathname);
+  }
+
   // 安全检查：防止目录遍历
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  if (
+    !filePath.startsWith(PUBLIC_DIR) &&
+    !filePath.startsWith(FRONTEND_DIST_DIR)
+  ) {
     res.writeHead(403);
     res.end('Forbidden');
     return;

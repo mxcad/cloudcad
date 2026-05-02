@@ -12,8 +12,8 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { AuditAction, ResourceType, Prisma } from '@prisma/client';
-
+import {  Prisma } from '@prisma/client';
+import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 /**
  * 审计日志服务
  *

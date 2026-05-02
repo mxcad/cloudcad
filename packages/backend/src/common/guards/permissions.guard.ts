@@ -18,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PermissionService } from '../services/permission.service';
+import { Request } from 'express';
 import {
   PERMISSIONS_KEY,
   PERMISSIONS_MODE_KEY,
@@ -89,9 +90,9 @@ export class PermissionsGuard implements CanActivate {
   /**
    * 从请求中提取上下文信息
    */
-  private extractContext(request: any): PermissionContext {
+  private extractContext(request: Request): PermissionContext {
     return {
-      ipAddress: request.ip || request.connection.remoteAddress,
+      ipAddress: request.ip || (request.connection as { remoteAddress?: string })?.remoteAddress,
       userAgent: request.headers['user-agent'],
       time: new Date(),
       // 可以根据需要添加更多上下文信息

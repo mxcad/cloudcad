@@ -1,14 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  engineType = "library"
-  // 跨平台部署支持：包含 Windows 和 Linux 的 Prisma 引擎
-  // - native: 当前编译平台
-  // - windows: Windows 系统
-  // - debian-openssl-1.1.x: Debian 10/11, Ubuntu 20.04 (OpenSSL 1.1)
-  // - debian-openssl-3.0.x: Debian 12, Ubuntu 22.04+ (OpenSSL 3.0)
-  // - rhel-openssl-3.0.x: Rocky 9, RHEL 9, AlmaLinux 9 (OpenSSL 3.0)
-  // - linux-musl: Alpine Linux
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "windows", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "rhel-openssl-3.0.x", "linux-musl"]
+  engineType    = "library"
 }
 
 datasource db {
@@ -16,45 +9,49 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String?  @unique
-  username  String   @unique
-  password  String
-  nickname  String?
-  avatar    String?
-  roleId    String
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  status    UserStatus @default(INACTIVE)
-  emailVerified    Boolean  @default(false)
-  emailVerifiedAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String           @id @default(cuid())
+  email                String?          @unique
+  username             String           @unique
+  password             String?
+  nickname             String?
+  avatar               String?
+  roleId               String
+  status               UserStatus       @default(INACTIVE)
+  emailVerified        Boolean          @default(false)
+  emailVerifiedAt      DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  phone                String?          @unique
+  phoneVerified        Boolean          @default(false)
+  phoneVerifiedAt      DateTime?
+  wechatId             String?          @unique
+  provider             String           @default("LOCAL")
+  deletedAt            DateTime?
+  lastUsernameChangeAt DateTime?
+  usernameChangeCount  Int              @default(0)
+  auditLogs            AuditLog[]
+  ownedNodes           FileSystemNode[] @relation("NodeOwner")
+  projectMembers       ProjectMember[]
+  role                 Role             @relation(fields: [roleId], references: [id])
 
-  // 关联关系
-  ownedNodes         FileSystemNode[] @relation("NodeOwner")
-  projectMembers     ProjectMember[]
-  auditLogs          AuditLog[]
-  galleryItems       GalleryItem[]
-
+  @@index([deletedAt])
   @@map("users")
 }
 
 model Role {
-  id          String       @id @default(cuid())
-  name        String       // 角色名称，用于显示
+  id          String           @id @default(cuid())
+  name        String
   description String?
-  parentId    String?      // 父角色ID（支持角色层级继承）
-  parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children    Role[]       @relation("RoleHierarchy")
-  category    RoleCategory @default(SYSTEM) // 角色类别
-  level       Int          @default(0)      // 角色层级深度（用于优化继承查询）
-  isSystem    Boolean      @default(false)  // 是否为系统角色（不可删除）
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  // 关联关系
-  users       User[]
+  parentId    String?
+  category    RoleCategory     @default(SYSTEM)
+  level       Int              @default(0)
+  isSystem    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   permissions RolePermission[]
+  parent      Role?            @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Role[]           @relation("RoleHierarchy")
+  users       User[]
 
   @@index([parentId])
   @@index([category])
@@ -63,123 +60,101 @@ model Role {
 }
 
 model RolePermission {
-  id          String   @id @default(cuid())
-  roleId      String
-  permission  Permission
-  createdAt   DateTime @default(now())
-
-  // 关联关系
-  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  roleId     String
+  permission Permission
+  createdAt  DateTime   @default(now())
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permission])
   @@map("role_permissions")
 }
 
-// ============ 文件系统统一模型 ============
 model FileSystemNode {
-  id          String   @id @default(cuid())
-  name        String
-  isFolder    Boolean  @default(false)  // true=文件夹, false=文件
-  isRoot      Boolean  @default(false)  // true=项目根目录
-  
-  // 树形结构（自引用）
-  parentId    String?
-  parent      FileSystemNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children    FileSystemNode[] @relation("NodeHierarchy")
-  
-  // 文件专属字段（文件夹时为null）
-  originalName String?   // 原始文件名
-  path         String?   // 文件访问路径（如：/mxcad/file/xxx.dwg.mxweb）
-  size         Int?      // 文件大小（字节）
-  mimeType     String?   // MIME类型
-  extension    String?   // 文件扩展名（.dwg, .dxf）
-  fileStatus   FileStatus? // 文件状态
-  fileHash     String?   // 文件SHA-256哈希值（用于去重）
-  
-  // 项目专属字段（仅根节点使用）
-  description    String?          // 项目描述
-  projectStatus  ProjectStatus?   // 项目状态
-  personalSpaceKey String? @unique(map: "unique_personal_space")  // 私人空间标识（值为 ownerId）
+  id                             String           @id @default(cuid())
+  name                           String
+  isFolder                       Boolean          @default(false)
+  isRoot                         Boolean          @default(false)
+  parentId                       String?
+  originalName                   String?
+  path                           String?
+  size                           Int?
+  mimeType                       String?
+  extension                      String?
+  fileStatus                     FileStatus?
+  fileHash                       String?
+  description                    String?
+  projectStatus                  ProjectStatus?
+  personalSpaceKey               String?          @unique(map: "unique_personal_space")
+  libraryKey                     String?
+  hasMissingExternalReferences   Boolean          @default(false)
+  missingExternalReferencesCount Int              @default(0)
+  externalReferencesJson         String?
+  ownerId                        String
+  createdAt                      DateTime         @default(now())
+  updatedAt                      DateTime         @updatedAt
+  deletedAt                      DateTime?
+  deletedByCascade               Boolean          @default(false)
+  deletedFromStorage             DateTime?
+  projectId                      String?
+  storageQuota                   Int?             @default(0)
+  owner                          User             @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  parent                         FileSystemNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children                       FileSystemNode[] @relation("NodeHierarchy")
+  project                        FileSystemNode?  @relation("NodeProject", fields: [projectId], references: [id], onDelete: Cascade)
+  files                          FileSystemNode[] @relation("NodeProject")
+  projectMembers                 ProjectMember[]
+  projectRoles                   ProjectRole[]
 
-  // 外部参照相关字段（仅文件使用）
-  hasMissingExternalReferences  Boolean @default(false)  // 是否有缺失的外部参照
-  missingExternalReferencesCount Int    @default(0)      // 缺失的外部参照数量
-  externalReferencesJson        String?                // 完整的外部参照信息（JSON格式）
-
-  // 权限与审计
-  ownerId     String
-  owner       User     @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime? // 软删除时间（回收站功能）
-  deletedByCascade Boolean @default(false) // 是否因父节点删除而被自动删除
-  deletedFromStorage DateTime? // 从本地存储删除的时间（用于定期清理）
-
-  // 关联关系
-  projectMembers ProjectMember[]
-  projectRoles   ProjectRole[]
-  galleryItems   GalleryItem[]
-
-  // 索引优化
-
-  // 索引优化
   @@index([parentId])
   @@index([ownerId])
   @@index([isRoot])
   @@index([isFolder])
   @@index([deletedAt])
   @@index([personalSpaceKey])
+  @@index([libraryKey])
+  @@index([projectId])
+  @@index([storageQuota])
   @@map("file_system_nodes")
 }
 
-// ============ 项目成员模块 ============
-
-// 项目角色（系统角色全局共享，自定义角色绑定到项目）
 model ProjectRole {
-  id          String   @id @default(cuid())
-  projectId   String?  // 项目 ID（系统角色为null，自定义角色绑定到项目）
-  name        String   // 角色名称
-  description String?  // 角色描述
-  isSystem    Boolean  @default(false) // 是否为系统角色
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 关联关系
-  project     FileSystemNode? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id          String                  @id @default(cuid())
+  projectId   String?
+  name        String
+  description String?
+  isSystem    Boolean                 @default(false)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
   members     ProjectMember[]
   permissions ProjectRolePermission[]
+  project     FileSystemNode?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, name]) // 项目内唯一（projectId为null时表示全局唯一）
+  @@unique([projectId, name])
   @@index([projectId])
   @@map("project_roles")
 }
 
-// 项目角色权限关联
 model ProjectRolePermission {
-  id          String   @id @default(cuid())
-  projectRoleId String // 项目角色ID
-  permission  ProjectPermission // 项目权限
-  createdAt   DateTime @default(now())
-
-  // 关联关系
-  projectRole ProjectRole @relation(fields: [projectRoleId], references: [id], onDelete: Cascade)
+  id            String            @id @default(cuid())
+  projectRoleId String
+  permission    ProjectPermission
+  createdAt     DateTime          @default(now())
+  projectRole   ProjectRole       @relation(fields: [projectRoleId], references: [id], onDelete: Cascade)
 
   @@unique([projectRoleId, permission])
   @@map("project_role_permissions")
 }
 
-// 项目成员（用户与项目的关联，使用项目角色）
 model ProjectMember {
-  id        String      @id @default(cuid())
-  projectId String      // 项目ID
-  userId    String      // 用户ID
-  projectRoleId String  // 项目角色ID
-  createdAt DateTime    @default(now())
-
-  // 关联关系
-  project   FileSystemNode @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectRole ProjectRole    @relation(fields: [projectRoleId], references: [id], onDelete: Restrict)
+  id            String         @id @default(cuid())
+  projectId     String
+  userId        String
+  projectRoleId String
+  createdAt     DateTime       @default(now())
+  project       FileSystemNode @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectRole   ProjectRole    @relation(fields: [projectRoleId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@index([userId])
@@ -189,7 +164,7 @@ model ProjectMember {
 }
 
 model Asset {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   description String?
   category    String
@@ -198,21 +173,21 @@ model Asset {
   size        Int
   mimeType    String
   status      AssetStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@map("assets")
 }
 
 model Font {
-  id          String    @id @default(cuid())
-  name        String
-  family      String
-  path        String
-  size        Int
-  status      FontStatus @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String     @id @default(cuid())
+  name      String
+  family    String
+  path      String
+  size      Int
+  status    FontStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@map("fonts")
 }
@@ -227,24 +202,19 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-// ============ 审计日志模块 ============
-
-// 审计日志表
 model AuditLog {
-  id          String      @id @default(cuid())
-  action      AuditAction // 操作类型
-  resourceType ResourceType // 资源类型
-  resourceId  String?     // 资源 ID
-  userId      String      // 操作用户 ID
-  details     String?     // 详细信息（JSON 格式）
-  ipAddress   String?     // IP 地址
-  userAgent   String?     // 用户代理
-  success     Boolean     // 操作是否成功
-  errorMessage String?    // 错误信息
-  createdAt   DateTime    @default(now())
-
-  // 关联关系
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  action       AuditAction
+  resourceType ResourceType
+  resourceId   String?
+  userId       String
+  details      String?
+  ipAddress    String?
+  userAgent    String?
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([resourceType, resourceId])
@@ -254,68 +224,100 @@ model AuditLog {
 }
 
 model UploadSession {
-  id          String   @id @default(cuid())
-  uploadId    String   @unique  // 上传会话唯一标识符
-  storageKey  String   // 存储键名
-  fileName    String   // 原始文件名
-  fileSize    Int      // 文件总大小
-  fileId      String?  // 关联的文件ID（完成后设置）
-  projectId   String?  // 项目ID
-  parentId    String?  // 父节点ID
-  ownerId     String   // 上传者ID
-  status      String   @default("INITIATED") // INITIATED, UPLOADING, COMPLETED, FAILED, ABORTED
-  totalParts  Int?     // 总分片数
-  uploadedParts Int    @default(0) // 已上传分片数
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  uploadId      String   @unique
+  storageKey    String
+  fileName      String
+  fileSize      Int
+  fileId        String?
+  projectId     String?
+  parentId      String?
+  ownerId       String
+  status        String   @default("INITIATED")
+  totalParts    Int?
+  uploadedParts Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("upload_sessions")
 }
 
-// ============ 图库模块 ============
+model CacheEntry {
+  id             String    @id @default(cuid())
+  key            String    @unique
+  value          String
+  expiresAt      DateTime?
+  lastAccessedAt DateTime  @default(now())
+  accessCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-// 图库分类
-model GalleryType {
-  id          Int      @id @default(autoincrement())
-  pid         Int      @default(0)  // 父分类 ID，0 表示一级分类
+  @@index([expiresAt])
+  @@index([lastAccessedAt])
+  @@index([accessCount])
+  @@map("cache_entries")
+}
+
+model PermissionPolicy {
+  id          String             @id @default(cuid())
+  type        PolicyType
   name        String
-  status      Int      @default(1)  // 状态：1=启用，0=禁用
-  galleryType String  // 图库类型：'drawings' 或 'blocks'
-  ownerId     String   // 分类所有者 ID
+  description String?
+  config      Json
+  enabled     Boolean            @default(true)
+  priority    Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  permissions PolicyPermission[]
+
+  @@index([type])
+  @@index([enabled])
+  @@index([priority])
+  @@map("permission_policies")
+}
+
+model PolicyPermission {
+  id         String           @id @default(cuid())
+  policyId   String
+  permission Permission
+  createdAt  DateTime         @default(now())
+  policy     PermissionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, permission])
+  @@index([permission])
+  @@map("policy_permissions")
+}
+
+model RuntimeConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String
+  category    String
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedBy   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([pid])
-  @@index([galleryType])
-  @@index([ownerId])
-  @@map("gallery_types")
+  @@index([category])
+  @@map("runtime_configs")
 }
 
-// 图库收藏关系
-model GalleryItem {
-  id              String   @id @default(cuid())
-  userId          String   // 用户 ID
-  nodeId          String   // 文件节点 ID
-  galleryType     String   // 图库类型：'drawings' 或 'blocks'
-  firstType       Int      // 一级分类 ID
-  secondType      Int      // 二级分类 ID
-  thirdType       Int?     // 三级分类 ID（可选）
-  lookNum         Int      @default(0)  // 浏览次数
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model RuntimeConfigLog {
+  id         String   @id @default(cuid())
+  key        String
+  oldValue   String?
+  newValue   String
+  operatorId String?
+  operatorIp String?
+  createdAt  DateTime @default(now())
 
-  // 关联关系
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  node            FileSystemNode  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, nodeId, galleryType, secondType])  // 防止重复添加
-  @@index([userId])
-  @@index([nodeId])
-  @@index([galleryType])
-  @@map("gallery_items")
+  @@index([key])
+  @@index([createdAt])
+  @@map("runtime_config_logs")
 }
 
-// 枚举类型
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -323,40 +325,30 @@ enum UserStatus {
 }
 
 enum Permission {
-  // ========== 用户管理 ==========
   SYSTEM_USER_READ
   SYSTEM_USER_CREATE
   SYSTEM_USER_UPDATE
   SYSTEM_USER_DELETE
-
-  // ========== 角色权限管理 ==========
   SYSTEM_ROLE_READ
   SYSTEM_ROLE_CREATE
   SYSTEM_ROLE_UPDATE
   SYSTEM_ROLE_DELETE
   SYSTEM_ROLE_PERMISSION_MANAGE
-
-  // ========== 字体库管理 ==========
   SYSTEM_FONT_READ
   SYSTEM_FONT_UPLOAD
   SYSTEM_FONT_DELETE
   SYSTEM_FONT_DOWNLOAD
-
-  // ========== 系统管理 ==========
   SYSTEM_ADMIN
   SYSTEM_MONITOR
-
-  // ========== 运行时配置管理 ==========
   SYSTEM_CONFIG_READ
   SYSTEM_CONFIG_WRITE
-
-  // ========== 模板库管理 ==========
-  SYSTEM_TEMPLATE_READ
+  LIBRARY_DRAWING_MANAGE
+  LIBRARY_BLOCK_MANAGE
+  STORAGE_QUOTA
+  PROJECT_CREATE
 }
 
-// 项目权限枚举（与系统权限完全解耦）
 enum ProjectPermission {
-  // ========== 项目管理权限 ==========
   PROJECT_UPDATE
   PROJECT_DELETE
   PROJECT_MEMBER_MANAGE
@@ -364,8 +356,6 @@ enum ProjectPermission {
   PROJECT_TRANSFER
   PROJECT_ROLE_MANAGE
   PROJECT_ROLE_PERMISSION_MANAGE
-
-  // ========== 文件操作权限 ==========
   FILE_CREATE
   FILE_UPLOAD
   FILE_OPEN
@@ -375,15 +365,8 @@ enum ProjectPermission {
   FILE_DOWNLOAD
   FILE_MOVE
   FILE_COPY
-
-  // ========== CAD 图纸权限 ==========
   CAD_SAVE
   CAD_EXTERNAL_REFERENCE
-
-  // ========== 图库权限 ==========
-  GALLERY_ADD
-
-  // ========== 版本管理权限 ==========
   VERSION_READ
 }
 
@@ -413,7 +396,6 @@ enum FontStatus {
   DELETED
 }
 
-// 审计操作类型
 enum AuditAction {
   PERMISSION_GRANT
   PERMISSION_REVOKE
@@ -434,7 +416,6 @@ enum AuditAction {
   TRANSFER_OWNERSHIP
 }
 
-// 资源类型
 enum ResourceType {
   SYSTEM
   USER
@@ -445,107 +426,14 @@ enum ResourceType {
   FOLDER
 }
 
-// 角色类别
 enum RoleCategory {
-  SYSTEM   // 系统角色（ADMIN, USER）
-  PROJECT  // 项目角色（PROJECT_OWNER, PROJECT_ADMIN, PROJECT_MEMBER, PROJECT_EDITOR, PROJECT_VIEWER）
-  CUSTOM   // 自定义角色
+  SYSTEM
+  PROJECT
+  CUSTOM
 }
 
-// ============ 缓存架构模块 ============
-
-// L3 缓存条目表（数据库缓存）
-model CacheEntry {
-  id               String   @id @default(cuid())
-  key              String   @unique
-  value            String   // JSON 序列化的缓存值
-  expiresAt        DateTime? // 过期时间（null 表示永不过期）
-  lastAccessedAt   DateTime @default(now()) // 最后访问时间
-  accessCount      Int      @default(0) // 访问次数
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@index([expiresAt])
-  @@index([lastAccessedAt])
-  @@index([accessCount])
-  @@map("cache_entries")
-}
-
-// ============ 权限策略引擎模块 ============
-
-// 权限策略类型
 enum PolicyType {
-  TIME      // 时间策略
-  IP        // IP 地址策略
-  DEVICE    // 设备策略
-}
-
-// 权限策略表
-model PermissionPolicy {
-  id          String   @id @default(cuid())
-  type        PolicyType // 策略类型
-  name        String   // 策略名称
-  description String?  // 策略描述
-  config      Json     // 策略配置（JSON 格式）
-  enabled     Boolean  @default(true) // 是否启用
-  priority    Int      @default(0) // 优先级（数值越大优先级越高）
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 关联关系
-  permissions PolicyPermission[]
-
-  @@index([type])
-  @@index([enabled])
-  @@index([priority])
-  @@map("permission_policies")
-}
-
-// 策略-权限关联表
-model PolicyPermission {
-  id          String   @id @default(cuid())
-  policyId    String   // 策略 ID
-  permission  Permission // 权限
-  createdAt   DateTime @default(now())
-
-  // 关联关系
-  policy      PermissionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
-
-  @@unique([policyId, permission])
-  @@index([permission])
-  @@map("policy_permissions")
-}
-
-// ============ 运行时配置模块 ============
-
-// 运行时配置表
-model RuntimeConfig {
-  id          String   @id @default(cuid())
-  key         String   @unique  // 配置键名
-  value       String            // 配置值（JSON 序列化）
-  type        String            // string | number | boolean
-  category    String            // 分类：mail, support, file, user, system
-  description String?           // 配置说明
-  isPublic    Boolean @default(false)  // 是否公开给前端
-  updatedBy   String?           // 最后修改人 ID
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([category])
-  @@map("runtime_configs")
-}
-
-// 运行时配置日志表
-model RuntimeConfigLog {
-  id        String   @id @default(cuid())
-  key       String   // 配置键名
-  oldValue  String?  // 旧值
-  newValue  String   // 新值
-  operatorId String? // 操作人 ID
-  operatorIp String? // 操作 IP
-  createdAt DateTime @default(now())
-
-  @@index([key])
-  @@index([createdAt])
-  @@map("runtime_config_logs")
+  TIME
+  IP
+  DEVICE
 }

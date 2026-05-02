@@ -18,9 +18,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FileUploadManagerService } from './services/file-upload-manager.service';
+import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileConversionService } from './services/file-conversion.service';
+import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { VersionControlService } from '../version-control/version-control.service';
 import { DatabaseService } from '../database/database.service';
@@ -30,10 +31,13 @@ import {
   ExternalReferenceStats,
   ExternalReferenceInfo,
 } from './types/external-reference.types';
+import { MxCadContext, ConvertServerFileParam } from './types/mxcad-context.types';
+import { Request } from 'express';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
 import { AppConfig } from '../config/app.config';
+import { findThumbnail, findThumbnailSync, getThumbnailFileName, getMimeType, THUMBNAIL_FORMATS, type ThumbnailFormat } from './services/thumbnail-utils';
 
 @Injectable()
 export class MxCadService {
@@ -42,10 +46,11 @@ export class MxCadService {
 
   constructor(
     private readonly configService: ConfigService<AppConfig>,
-    @Inject(forwardRef(() => FileUploadManagerService))
-    private readonly fileUploadManager: FileUploadManagerService,
+    @Inject(forwardRef(() => FileUploadManagerFacadeService))
+    private readonly fileUploadManager: FileUploadManagerFacadeService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
+    private readonly externalReferenceUpdateService: ExternalReferenceUpdateService,
     private readonly storageManager: StorageManager,
     private readonly versionControlService: VersionControlService,
     private readonly prisma: DatabaseService
@@ -62,7 +67,7 @@ export class MxCadService {
     size: number,
     chunks: number,
     fileName: string,
-    context?: any
+    context?: MxCadContext
   ): Promise<{ ret: string }> {
     return this.fileUploadManager.checkChunkExist({
       hash: fileHash,
@@ -80,7 +85,7 @@ export class MxCadService {
   async checkFileExist(
     filename: string,
     fileHash: string,
-    context?: any
+    context?: MxCadContext
   ): Promise<{ ret: string }> {
     return this.fileUploadManager.checkFileExist(
       filename,
@@ -155,7 +160,7 @@ export class MxCadService {
     size: number,
     chunk: number,
     chunks: number,
-    context?: any
+    context?: MxCadContext
   ): Promise<{ ret: string; tz?: boolean }> {
     return this.fileUploadManager.uploadChunk({
       hash,
@@ -190,7 +195,7 @@ export class MxCadService {
   /**
    * 转换服务器文件
    */
-  async convertServerFile(param: any): Promise<any> {
+  async convertServerFile(param: ConvertServerFileParam): Promise<unknown> {
     try {
       // 检查参数是否为 null 或 undefined
       if (!param) {
@@ -199,13 +204,13 @@ export class MxCadService {
 
       // 构建转换选项
       const conversionOptions: ConversionOptions = {
-        srcPath: param.srcpath,
-        fileHash: param.src_file_md5,
+        srcPath: param.srcPath || param.srcpath || '',
+        fileHash: param.fileHash || param.src_file_md5 || '',
         createPreloadingData: true,
         outname: param.outname,
         cmd: param.cmd,
-        width: param.width,
-        height: param.height,
+        width: param.width ? String(param.width) : undefined,
+        height: param.height ? String(param.height) : undefined,
         colorPolicy: param.colorPolicy,
         outjpg: param.outjpg,
       };
@@ -217,7 +222,7 @@ export class MxCadService {
           .then((taskId) => {
             // 这里应该发送回调，暂时省略
             this.logger.log(
-              `异步转换完成: ${param.srcpath}, 任务ID: ${taskId}`
+              `异步转换完成: ${param.srcPath || param.srcpath}, 任务ID: ${taskId}`
             );
           });
         return { code: 0, message: 'async calling' };
@@ -242,161 +247,12 @@ export class MxCadService {
   }
 
   /**
-   * 获取节点的存储根路径
-   * @param nodeId 节点 ID
-   * @returns 存储根路径，如果找不到节点则返回 uploads 路径（兼容旧文件）
-   */
-  private async getStorageRootPath(nodeId: string): Promise<string> {
-    try {
-      // 通过 nodeId 查找节点
-      const sourceNode = await this.fileSystemNodeService.findById(nodeId);
-
-      if (sourceNode && sourceNode.path) {
-        // 节点存在，返回节点目录（YYYYMM[/N]/nodeId）
-        // 注意：需要使用 path.dirname() 提取目录路径，因为 sourceNode.path 包含文件名
-        const fullPath = this.storageManager.getFullPath(sourceNode.path);
-        const directoryPath = path.dirname(fullPath);
-        return directoryPath;
-      }
-    } catch (error) {
-      this.logger.warn(`[getStorageRootPath] 查找节点失败: ${error.message}`);
-    }
-
-    // 节点不存在或查找失败，降级到 uploads 目录（兼容旧文件）
-    return this.mxcadUploadPath;
-  }
-
-  /**
    * 获取外部参照预加载数据
    * @param nodeId 文件系统节点 ID 或文件哈希值（兼容旧版本）
    * @returns 预加载数据，如果文件不存在则返回 null
    */
   async getPreloadingData(nodeId: string): Promise<PreloadingDataDto | null> {
-    try {
-      // 通过 nodeId 获取节点信息
-      const node = await this.fileSystemNodeService.findById(nodeId);
-
-      if (!node) {
-        this.logger.warn(`[getPreloadingData] 节点不存在: nodeId=${nodeId}`);
-        return null;
-      }
-
-      if (node.isFolder) {
-        this.logger.warn(
-          `[getPreloadingData] 节点是文件夹，不是文件: nodeId=${nodeId}, name=${node.name}`
-        );
-        return null;
-      }
-
-      if (!node.fileHash) {
-        this.logger.warn(
-          `[getPreloadingData] 文件节点没有 fileHash: nodeId=${nodeId}, name=${node.name}, fileStatus=${node.fileStatus}`
-        );
-        return null;
-      }
-
-      const fileHash = node.fileHash;
-
-      // 验证哈希值格式
-      if (!this.isValidFileHash(fileHash)) {
-        this.logger.warn(`无效的文件哈希格式: ${fileHash}`);
-        return null;
-      }
-
-      // 获取存储根路径
-      const storageRootPath = await this.getStorageRootPath(nodeId);
-      this.logger.debug(`[getPreloadingData] 存储根路径: ${storageRootPath}`);
-
-      // 构造预加载数据文件路径
-      // 文件名格式：{nodeId}.dwg.mxweb_preloading.json
-      const preloadingFileName = `${nodeId}.dwg.mxweb_preloading.json`;
-      const preloadingFilePath = path.join(storageRootPath, preloadingFileName);
-
-      // 检查文件是否存在
-      try {
-        const content = await fsPromises.readFile(preloadingFilePath, 'utf-8');
-        const data = JSON.parse(content) as PreloadingDataDto;
-
-        this.logger.debug(
-          `成功获取预加载数据: nodeId=${nodeId}, 外部参照数: ${data.externalReference?.length || 0}, 图片数: ${data.images?.length || 0}`
-        );
-        return data;
-      } catch (readError) {
-        if (readError.code === 'ENOENT') {
-          this.logger.warn(
-            `[getPreloadingData] 预加载数据文件不存在: ${preloadingFilePath}`
-          );
-        } else {
-          this.logger.error(
-            `[getPreloadingData] 读取文件失败: ${readError.message}`,
-            readError.stack
-          );
-        }
-        return null;
-      }
-    } catch (error) {
-      this.logger.error(`获取预加载数据失败: ${error.message}`, error.stack);
-      return null;
-    }
-  }
-
-  /**
-   * 获取外部参照目录名称
-   * 从源图纸的 preloading.json 文件中读取 src_file_md5 字段作为目录名
-   * @param nodeId 源图纸节点 ID
-   * @returns 外部参照目录名称（src_file_md5 值）
-   */
-  private async getExternalRefDirName(nodeId: string): Promise<string> {
-    try {
-      // 获取存储根路径
-      const storageRootPath = await this.getStorageRootPath(nodeId);
-
-      // 构建 preloading.json 文件路径
-      const preloadingFileName = `${nodeId}.dwg.mxweb_preloading.json`;
-      const preloadingFilePath = path.join(storageRootPath, preloadingFileName);
-
-      // 读取 preloading.json 文件
-      try {
-        const content = await fsPromises.readFile(preloadingFilePath, 'utf-8');
-        const data = JSON.parse(content);
-
-        // 提取 src_file_md5 字段
-        const srcFileMd5 = data.src_file_md5;
-
-        if (!srcFileMd5) {
-          this.logger.warn(
-            `[getExternalRefDirName] preloading.json 中没有 src_file_md5 字段: ${preloadingFilePath}`
-          );
-          // 如果字段不存在，降级使用 nodeId 作为目录名
-          return nodeId;
-        }
-
-        this.logger.log(
-          `[getExternalRefDirName] 获取到 src_file_md5: ${srcFileMd5}`
-        );
-        return srcFileMd5;
-      } catch (readError) {
-        if (readError.code === 'ENOENT') {
-          this.logger.warn(
-            `[getExternalRefDirName] preloading.json 文件不存在: ${preloadingFilePath}`
-          );
-        } else {
-          this.logger.error(
-            `[getExternalRefDirName] 读取文件失败: ${readError.message}`,
-            readError.stack
-          );
-        }
-        // 如果文件不存在或读取失败，降级使用 nodeId 作为目录名
-        return nodeId;
-      }
-    } catch (error) {
-      this.logger.error(
-        `[getExternalRefDirName] 获取失败: ${error.message}`,
-        error.stack
-      );
-      // 发生错误时，降级使用 nodeId 作为目录名
-      return nodeId;
-    }
+    return this.externalReferenceUpdateService.getPreloadingData(nodeId);
   }
 
   /**
@@ -409,81 +265,13 @@ export class MxCadService {
     nodeId: string,
     fileName: string
   ): Promise<boolean> {
-    try {
-      // 通过 nodeId 获取源图纸节点
-      const sourceNode = await this.fileSystemNodeService.findById(nodeId);
-
-      if (!sourceNode || !sourceNode.path) {
-        this.logger.warn(
-          `[checkExternalReferenceExists] 源图纸节点不存在或没有 path: nodeId=${nodeId}`
-        );
-        return false;
-      }
-
-      // 获取存储根路径（已包含 YYYYMM[/N]/sourceNodeId）
-      const storageRootPath = await this.getStorageRootPath(nodeId);
-
-      // 获取外部参照目录名称（从 preloading.json 中提取 src_file_md5）
-      const externalRefDirName = await this.getExternalRefDirName(nodeId);
-
-      // 判断文件类型
-      const ext = path.extname(fileName).toLowerCase();
-      const isDwgFile = ['.dwg', '.dxf'].includes(ext);
-      const isImageFile = [
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.webp',
-        '.bmp',
-      ].includes(ext);
-
-      // 构建目标文件名
-      let targetFileName: string;
-      if (isDwgFile) {
-        // DWG 文件：检查 {fileName}.mxweb
-        targetFileName = `${fileName}.mxweb`;
-      } else if (isImageFile) {
-        // 图片文件：检查 {fileName}
-        targetFileName = fileName;
-      } else {
-        // 其他文件类型：假设为 DWG 处理
-        targetFileName = `${fileName}.mxweb`;
-      }
-
-      // 外部参照文件统一存储在 storageRootPath/{src_file_md5}/ 目录中
-      const targetFilePath = path.join(
-        storageRootPath,
-        externalRefDirName,
-        targetFileName
-      );
-
-      // 检查文件是否存在
-      try {
-        await fsPromises.access(targetFilePath);
-        this.logger.log(
-          `[checkExternalReferenceExists] 文件存在: nodeId=${nodeId}, fileName=${fileName}, target=${targetFilePath}`
-        );
-        return true;
-      } catch (error) {
-        this.logger.log(
-          `[checkExternalReferenceExists] 文件不存在: nodeId=${nodeId}, fileName=${fileName}, target=${targetFilePath}`
-        );
-        return false;
-      }
-    } catch (error) {
-      this.logger.error(
-        `[checkExternalReferenceExists] 检查失败: ${error.message}`,
-        error.stack
-      );
-      return false;
-    }
+    return this.externalReferenceUpdateService.checkExists(nodeId, fileName);
   }
 
   /**
    * 为 MxCAD-App 推断上下文信息
    */
-  async inferContextForMxCadApp(fileHash: string, request: any): Promise<any> {
+  async inferContextForMxCadApp(fileHash: string, request: Request): Promise<import('./services/filesystem-node.service').FileSystemNodeContext | null> {
     return this.fileSystemNodeService.inferContextForMxCadApp(
       fileHash,
       request
@@ -500,7 +288,7 @@ export class MxCadService {
     size: number,
     chunk: number,
     chunks: number,
-    context?: any
+    context?: MxCadContext
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
     const result = await this.fileUploadManager.uploadChunk({
       hash,
@@ -522,7 +310,7 @@ export class MxCadService {
     name: string,
     size: number,
     chunks: number,
-    context?: any,
+    context?: MxCadContext,
     srcDwgNodeId?: string
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
     const result = await this.fileUploadManager.mergeChunksWithPermission({
@@ -545,7 +333,7 @@ export class MxCadService {
     hash: string,
     name: string,
     size: number,
-    context?: any
+    context?: MxCadContext
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
     return this.fileUploadManager.uploadAndConvertFileWithPermission({
       filePath,
@@ -559,7 +347,7 @@ export class MxCadService {
   /**
    * 公共日志方法，供其他模块使用
    */
-  logError(message: string, error?: any): void {
+  logError(message: string, error?: unknown): void {
     this.logger.error(message, error);
   }
 
@@ -574,7 +362,7 @@ export class MxCadService {
   /**
    * 验证和标准化上下文
    */
-  private validateContext(context: any): any {
+  private validateContext(context?: MxCadContext): MxCadContext {
     // 在测试环境中，如果 context 为空，返回一个 mock context
     if (!context) {
       // 检查是否是测试环境
@@ -584,6 +372,7 @@ export class MxCadService {
           userId: 'test-user-id',
           username: 'test-user',
           role: 'USER',
+          userRole: 'USER',
           nodeId: 'test-node-id',
         };
       }
@@ -599,6 +388,11 @@ export class MxCadService {
       throw new BadRequestException('上下文缺少节点ID');
     }
 
+    // 确保 userRole 有值
+    if (!context.userRole) {
+      context.userRole = context.role || 'USER';
+    }
+
     return context;
   }
 
@@ -610,55 +404,7 @@ export class MxCadService {
   async getExternalReferenceStats(
     nodeId: string
   ): Promise<ExternalReferenceStats> {
-    const preloadingData = await this.getPreloadingData(nodeId);
-
-    if (!preloadingData) {
-      return {
-        hasMissing: false,
-        missingCount: 0,
-        totalCount: 0,
-        references: [],
-      };
-    }
-
-    // 过滤掉 http/https 开头的 URL
-    const missingImages = preloadingData.images.filter(
-      (name: string) => !name.startsWith('http:') && !name.startsWith('https:')
-    );
-    const missingRefs = preloadingData.externalReference;
-
-    const references: ExternalReferenceInfo[] = [];
-
-    // 检查 DWG 外部参照
-    for (const name of missingRefs) {
-      const exists = await this.checkExternalReferenceExists(nodeId, name);
-      references.push({
-        name,
-        type: 'dwg',
-        exists,
-        required: true,
-      });
-    }
-
-    // 检查图片外部参照
-    for (const name of missingImages) {
-      const exists = await this.checkExternalReferenceExists(nodeId, name);
-      references.push({
-        name,
-        type: 'image',
-        exists,
-        required: true,
-      });
-    }
-
-    const missingCount = references.filter((ref) => !ref.exists).length;
-
-    return {
-      hasMissing: missingCount > 0,
-      missingCount,
-      totalCount: references.length,
-      references,
-    };
+    return this.externalReferenceUpdateService.getStats(nodeId);
   }
 
   /**
@@ -670,27 +416,7 @@ export class MxCadService {
     nodeId: string,
     stats: ExternalReferenceStats
   ): Promise<void> {
-    try {
-      const node = await this.fileSystemNodeService.findById(nodeId);
-
-      if (!node) {
-        this.logger.warn(`文件节点不存在: nodeId=${nodeId}`);
-        return;
-      }
-
-      await this.fileSystemNodeService.updateExternalReferenceInfo(
-        node.id,
-        stats.hasMissing,
-        stats.missingCount,
-        stats.references
-      );
-
-      this.logger.log(
-        `更新外部参照信息成功: nodeId=${nodeId}, fileHash=${node.fileHash}, 缺失数量: ${stats.missingCount}`
-      );
-    } catch (error) {
-      this.logger.error(`更新外部参照信息失败: ${error.message}`, error.stack);
-    }
+    return this.externalReferenceUpdateService.updateInfo(nodeId, stats);
   }
 
   /**
@@ -698,24 +424,7 @@ export class MxCadService {
    * @param nodeId 文件系统节点 ID
    */
   async updateExternalReferenceAfterUpload(nodeId: string): Promise<void> {
-    try {
-      // 添加短暂延迟，确保文件系统已经完成写入
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const stats = await this.getExternalReferenceStats(nodeId);
-
-      if (stats.totalCount > 0) {
-        await this.updateExternalReferenceInfo(nodeId, stats);
-        this.logger.log(
-          `上传完成后更新外部参照信息成功: nodeId=${nodeId}, 缺失数量=${stats.missingCount}`
-        );
-      }
-    } catch (error) {
-      this.logger.error(
-        `上传完成后更新外部参照信息失败（不影响主流程）: ${error.message}`,
-        error.stack
-      );
-    }
+    return this.externalReferenceUpdateService.updateAfterUpload(nodeId);
   }
 
   /**
@@ -726,7 +435,7 @@ export class MxCadService {
     srcDwgNodeId: string,
     extRefFileName: string,
     srcFilePath: string,
-    context: any
+    context: MxCadContext
   ): Promise<void> {
     return this.fileUploadManager.handleExternalReferenceImage(
       fileHash,
@@ -789,13 +498,6 @@ export class MxCadService {
   }
 
   /**
-   * 验证哈希值格式（32位十六进制）
-   */
-  private isValidFileHash(fileHash: string): boolean {
-    return /^[a-f0-9]{32}$/i.test(fileHash);
-  }
-
-  /**
    * 根据存储路径查找文件节点（用于路径转换）
    * @param storagePath 本地存储路径
    * @returns 文件节点或 null
@@ -835,24 +537,21 @@ export class MxCadService {
         return { exists: false, location: 'none' };
       }
 
-      // 构建缩略图路径：filesData/YYYYMM[/N]/nodeId/thumbnail.jpg
+      // 构建缩略图路径：filesData/YYYYMM[/N]/nodeId/thumbnail.{webp|jpg|png}
       // 注意：node.path 包含文件名，需要先提取目录路径
       const nodeFullPath = this.storageManager.getFullPath(node.path);
       const nodeDir = path.dirname(nodeFullPath);
-      const thumbnailPath = path.join(nodeDir, 'thumbnail.jpg');
+      const thumbnail = await findThumbnail(nodeDir);
 
-      // 检查文件是否存在
-      try {
-        await fsPromises.access(thumbnailPath);
+      if (thumbnail) {
         return {
           exists: true,
           location: 'local',
-          fileName: 'thumbnail.jpg',
-          mimeType: 'image/jpeg',
+          fileName: thumbnail.fileName,
+          mimeType: thumbnail.mimeType,
         };
-      } catch (error) {
-        return { exists: false, location: 'none' };
       }
+      return { exists: false, location: 'none' };
     } catch (error) {
       return { exists: false, location: 'none' };
     }
@@ -890,29 +589,26 @@ export class MxCadService {
         };
       }
 
-      // 获取文件扩展名
+      // 获取文件扩展名并映射到标准缩略图格式
       const ext = path.extname(filePath).toLowerCase();
-
-      // 验证是否为支持的图片格式
-      const supportedExtensions = [
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.bmp',
-        '.webp',
-      ];
-      if (!supportedExtensions.includes(ext)) {
+      const extMap: Record<string, string> = {
+        '.png': 'png',
+        '.jpg': 'jpg',
+        '.jpeg': 'jpg',
+        '.webp': 'webp',
+      };
+      const thumbnailFormat = extMap[ext];
+      if (!thumbnailFormat) {
         return {
           success: false,
-          message: `不支持的图片格式: ${ext}`,
+          message: `不支持的图片格式: ${ext}，仅支持 ${THUMBNAIL_FORMATS.join(', ')}`,
         };
       }
 
-      // 构建目标文件名（固定为 thumbnail.jpg）
-      const targetFileName = 'thumbnail.jpg';
+      // 构建目标文件名（使用上传文件的格式）
+      const targetFileName = getThumbnailFileName(thumbnailFormat as ThumbnailFormat);
 
-      // 构建目标路径：filesData/YYYYMM[/N]/nodeId/thumbnail.jpg
+      // 构建目标路径：filesData/YYYYMM[/N]/nodeId/thumbnail.{format}
       // 注意：node.path 包含文件名，需要先提取目录路径
       const nodeFullPath = this.storageManager.getFullPath(node.path);
       const nodeDir = path.dirname(nodeFullPath);
@@ -985,6 +681,7 @@ export class MxCadService {
    * @param userId 用户 ID（可选）
    * @param userName 用户名称（可选）
    * @param commitMessage 提交信息（可选）
+   * @param skipBinGeneration 是否跳过生成 bin 文件（公开资源库使用）
    * @returns 保存结果
    */
   async saveMxwebFile(
@@ -992,7 +689,8 @@ export class MxCadService {
     file: Express.Multer.File,
     userId?: string,
     userName?: string,
-    commitMessage?: string
+    commitMessage?: string,
+    skipBinGeneration = false
   ): Promise<{ success: boolean; message: string; path?: string }> {
     try {
       this.logger.log(
@@ -1011,6 +709,20 @@ export class MxCadService {
       const node = await this.fileSystemNodeService.findById(nodeId);
 
       if (!node) {
+        this.logger.error(`[saveMxwebFile] 节点不存在: nodeId=${nodeId}`);
+        return {
+          success: false,
+          message: '节点不存在',
+        };
+      }
+
+      // 获取完整节点信息（包含 libraryKey）
+      const fullNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { libraryKey: true, name: true, path: true },
+      });
+
+      if (!fullNode) {
         this.logger.error(`[saveMxwebFile] 节点不存在: nodeId=${nodeId}`);
         return {
           success: false,
@@ -1070,30 +782,41 @@ export class MxCadService {
       });
       this.logger.log(`[saveMxwebFile] 更新节点时间戳: ${nodeId}`);
 
-      // 调用 mxcadassembly 生成 bin 文件
-      await this.generateBinFiles(targetPath, node.name);
-
-      // 提交节点目录到 SVN 版本控制（排除 .mxweb 文件）
-      const nodeDirectory = path.dirname(targetPath);
-      const message = commitMessage
-        ? `Save: ${node.name} - ${commitMessage}`
-        : `Save: ${node.name}`;
-
-      this.logger.log(
-        `[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`
-      );
-      const commitResult = await this.versionControlService.commitNodeDirectory(
-        nodeDirectory,
-        message,
-        userId,
-        userName
-      );
-
-      if (commitResult.success) {
-        this.logger.log(`节点目录已提交到 SVN: ${node.name}`);
+      // 调用 mxcadassembly 生成 bin 文件（公开资源库跳过）
+      if (!skipBinGeneration) {
+        await this.generateBinFiles(targetPath, node.name);
       } else {
-        this.logger.warn(
-          `节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
+        this.logger.log(`[saveMxwebFile] 跳过生成 bin 文件: ${node.name}`);
+      }
+
+      // 只有非公共资源库（libraryKey 为 null）才提交到 SVN 版本控制
+      // 公共资源库（图纸库、图块库等）的文件不参与 SVN 版本管理
+      if (!fullNode.libraryKey) {
+        const nodeDirectory = path.dirname(targetPath);
+        const message = commitMessage
+          ? `Save: ${node.name} - ${commitMessage}`
+          : `Save: ${node.name}`;
+
+        this.logger.log(
+          `[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`
+        );
+        const commitResult = await this.versionControlService.commitNodeDirectory(
+          nodeDirectory,
+          message,
+          userId,
+          userName
+        );
+
+        if (commitResult.success) {
+          this.logger.log(`节点目录已提交到 SVN: ${node.name}`);
+        } else {
+          this.logger.warn(
+            `节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
+          );
+        }
+      } else {
+        this.logger.log(
+          `[saveMxwebFile] 跳过 SVN 提交: ${node.name} (公共资源库: ${node.libraryKey})`
         );
       }
 
@@ -1122,12 +845,12 @@ export class MxCadService {
     }
   }
 
-  /**
-   * 调用 mxcadassembly 生成 bin 文件
-   * @param mxwebPath mxweb 文件完整路径
-   * @param nodeName 节点名称（用于日志）
-   */
-  private async generateBinFiles(
+   /**
+    * 调用 mxcadassembly 生成 bin 文件
+    * @param mxwebPath mxweb 文件完整路径
+    * @param nodeName 节点名称（用于日志）
+    */
+  async generateBinFiles(
     mxwebPath: string,
     nodeName: string
   ): Promise<void> {

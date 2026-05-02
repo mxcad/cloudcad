@@ -6,9 +6,9 @@ import { useBrandConfig } from '../contexts/BrandContext';
 import { Link } from 'react-router-dom';
 
 // 导入 lucide 图标
-import CpuIcon from 'lucide-react/dist/esm/icons/cpu';
-import BoxesIcon from 'lucide-react/dist/esm/icons/boxes';
-import ShieldCheckIcon from 'lucide-react/dist/esm/icons/shield-check';
+import { Cpu } from 'lucide-react';
+import { Boxes } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -81,13 +81,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           {showFeatures && (
             <div className="features-bar">
               <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
-                <CpuIcon size={14} />
+                <Cpu size={14} />
               </div>
               <div className="feature-dot" data-tooltip="多用户实时协同编辑">
-                <BoxesIcon size={14} />
+                <Boxes size={14} />
               </div>
               <div className="feature-dot" data-tooltip="企业级数据安全保障">
-                <ShieldCheckIcon size={14} />
+                <ShieldCheck size={14} />
               </div>
             </div>
           )}

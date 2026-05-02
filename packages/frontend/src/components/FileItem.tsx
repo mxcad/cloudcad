@@ -2,9 +2,14 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
+import { FileNameText } from './ui/TruncateText';
 
 import { handleError } from '../utils/errorHandler';
-import { getOriginalFileUrl, formatRelativeTime, formatFileSize } from '../utils/fileUtils';
+import {
+  getOriginalFileUrl,
+  formatRelativeTime,
+  formatFileSize,
+} from '../utils/fileUtils';
 import {
   Thumbnail,
   FileItemSelection,
@@ -21,24 +26,34 @@ import { FileSystemNode } from '../types/filesystem';
 import { Tooltip } from './ui/Tooltip';
 
 // Lucide 图标（用于 compact 模式）
-import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
+import { FolderOpen } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 interface FileItemProps {
   node: FileSystemNode;
+  /** @deprecated Use isSelected instead */
+  selected?: boolean;
   isSelected?: boolean;
+  isTrashView?: boolean;
+  isDragging?: boolean;
   viewMode?: 'grid' | 'list';
   /** 紧凑模式：用于 Dashboard 等简化场景，隐藏菜单和选择框 */
   compact?: boolean;
+  /** 图库模式：网格模式图片完全占据容器，文件名在底部，不显示大小；列表模式图片放大，去除后缀标签 */
+  galleryMode?: boolean;
   isMultiSelectMode?: boolean;
   isTrash?: boolean;
   canUpload?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   canDownload?: boolean;
-  canAddToGallery?: boolean;
   canViewVersionHistory?: boolean;
   canManageTrash?: boolean;
+  canManageExternalReference?: boolean;
+  /** 是否需要双击打开（默认 false，单击打开） */
+  doubleClickToOpen?: boolean;
+  /** 文件名字体大小，默认不设置（继承父元素字体大小） */
+  fontSize?: number | string;
   onSelect?: (
     nodeId: string,
     isMultiSelect?: boolean,
@@ -57,7 +72,6 @@ interface FileItemProps {
   onRestore?: (node: FileSystemNode) => void;
   onMove?: (node: FileSystemNode) => void;
   onCopy?: (node: FileSystemNode) => void;
-  onAddToGallery?: (node: FileSystemNode) => void;
   onShowVersionHistory?: (node: FileSystemNode) => void;
   onDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
@@ -71,15 +85,18 @@ export const FileItem: React.FC<FileItemProps> = ({
   isSelected = false,
   viewMode = 'list',
   compact = false,
+  galleryMode = false,
   isMultiSelectMode = false,
   isTrash = false,
   canUpload = false,
   canEdit = false,
   canDelete = false,
   canDownload = false,
-  canAddToGallery = false,
   canViewVersionHistory = false,
+  canManageExternalReference = false,
   canManageTrash = false,
+  doubleClickToOpen = false,
+  fontSize,
   onSelect,
   onEnter,
   onDownload,
@@ -94,7 +111,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   onRestore,
   onMove,
   onCopy,
-  onAddToGallery,
   onShowVersionHistory,
   onDragStart,
   onDragOver,
@@ -117,11 +133,14 @@ export const FileItem: React.FC<FileItemProps> = ({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageSrc, setPreviewImageSrc] = useState('');
   const [useCompactActions, setUseCompactActions] = useState(false);
+  const [showDoubleClickTip, setShowDoubleClickTip] = useState(false);
   const isRoot = node.isRoot;
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
   const blockItemClickRef = useRef(false);
   const listItemRef = useRef<HTMLDivElement | null>(null);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clickCountRef = useRef(0);
 
   const externalReferenceUpload = useExternalReferenceUpload({
     nodeId: node.id,
@@ -149,9 +168,14 @@ export const FileItem: React.FC<FileItemProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       try {
-        // 总是调用 checkMissingReferences 打开上传框
-        // 用户可以选择覆盖已存在的文件
-        await externalReferenceUpload.checkMissingReferences();
+        // 调用 checkMissingReferences 打开外部参照管理弹框
+        // forceOpen = true，手动点击时即使没有外部参照也弹框显示提示
+        const hasExternalReference = await externalReferenceUpload.checkMissingReferences(undefined, false, true);
+        
+        // 如果没有外部参照，提示用户
+        if (!hasExternalReference) {
+          console.info(`[FileItem] 文件 "${node.name}" 没有外部参照`);
+        }
       } catch (error) {
         handleError(error, '检查外部参照失败');
       } finally {
@@ -160,13 +184,13 @@ export const FileItem: React.FC<FileItemProps> = ({
         }, 1000);
       }
     },
-    [node.id, externalReferenceUpload]
+    [node.id, node.name, externalReferenceUpload]
   );
 
   const isCadFile = useCallback(() => {
     if (node.isFolder || node.isRoot) return false;
     const ext = node.extension?.toLowerCase();
-    return ext === '.dwg' || ext === '.dxf';
+    return ext === '.dwg' || ext === '.dxf' || ext === '.mxweb' || ext === '.mxwbe';
   }, [node.extension, node.isFolder, node.isRoot]);
 
   const isImageFile = useCallback(() => {
@@ -205,6 +229,24 @@ export const FileItem: React.FC<FileItemProps> = ({
         // - Ctrl+点击：切换选中状态（isMulti=true, isShift=false）
         // - Shift+点击：范围选择（isMulti=true, isShift=true）
         onSelect?.(node.id, true, isShift);
+      } else if (doubleClickToOpen) {
+        // 双击模式：等待用户完成双击，只有确定是单击才显示提示
+        clickCountRef.current++;
+        if (clickCountRef.current === 1) {
+          // 第一次点击，启动定时器
+          clickTimerRef.current = setTimeout(() => {
+            // 超过时间没有第二次点击，确定是单击
+            if (!showDoubleClickTip) {
+              setShowDoubleClickTip(true);
+              setTimeout(() => {
+                setShowDoubleClickTip(false);
+              }, 2000);
+            }
+            clickCountRef.current = 0;
+            clickTimerRef.current = null;
+          }, 300);
+        }
+        return;
       } else {
         if (isImageFile()) {
           handleImagePreview();
@@ -220,15 +262,28 @@ export const FileItem: React.FC<FileItemProps> = ({
       onEnter,
       isImageFile,
       handleImagePreview,
+      doubleClickToOpen,
     ]
   );
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      // 清除单击定时器（如果存在）
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      clickCountRef.current = 0;
+      setShowDoubleClickTip(false);
+
       if (isPreviewOpen) return;
-      onEnter(node);
+      if (isImageFile()) {
+        handleImagePreview();
+      } else {
+        onEnter(node);
+      }
     },
-    [node, onEnter, isPreviewOpen]
+    [node, onEnter, isPreviewOpen, isImageFile, handleImagePreview]
   );
 
   const handleToggleMenu = useCallback(
@@ -264,10 +319,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     view_version_history: (e) => {
       e.stopPropagation();
       onShowVersionHistory?.(node);
-    },
-    add_to_gallery: (e) => {
-      e.stopPropagation();
-      onAddToGallery?.(node);
     },
     rename: (e) => {
       e.stopPropagation();
@@ -318,11 +369,10 @@ export const FileItem: React.FC<FileItemProps> = ({
     canDownload,
     canEdit,
     canDelete,
-    canAddToGallery,
     canViewVersionHistory,
+    canManageExternalReference,
     canManageTrash: !!onRestore || !!onPermanentlyDelete,
     onDownload: !!onDownload,
-    onAddToGallery: !!onAddToGallery,
     onShowVersionHistory: !!onShowVersionHistory,
     onEdit: !!onEdit,
     onShowMembers: !!onShowMembers,
@@ -379,6 +429,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   if (viewMode === 'grid') {
     const showSelection = isMultiSelectMode && isSelected;
+    const thumbnailSize = galleryMode ? 120 : 64;
 
     return (
       <div
@@ -429,28 +480,52 @@ export const FileItem: React.FC<FileItemProps> = ({
           isGrid
         />
 
-        <div className="p-6 pb-4">
-          <div
-            className={`w-16 h-16 mx-auto mb-4 transition-transform duration-200 
-              ${isHovered && !showSelection ? 'scale-110' : ''}
-              ${showSelection ? 'scale-105' : ''}
-            `}
-          >
-            <Thumbnail
-              node={node}
-              size={64}
-              onPreview={(src) => {
-                setPreviewImageSrc(src);
-                setIsPreviewOpen(true);
-              }}
-            />
+        {galleryMode ? (
+          <div className="flex flex-col h-full p-2">
+            <div
+              className="flex-1 flex items-center justify-center overflow-hidden rounded-lg mb-2"
+            >
+              <Thumbnail
+                node={node}
+                size={thumbnailSize}
+                galleryMode={galleryMode}
+                onPreview={(src) => {
+                  setPreviewImageSrc(src);
+                  setIsPreviewOpen(true);
+                }}
+              />
+            </div>
+            <div className="flex flex-col items-center pb-2">
+              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} />
+              <FileItemExternalReferenceWarning node={node} isGrid />
+            </div>
           </div>
+        ) : (
+          <div className="p-6 pb-4">
+            <div
+              className="mx-auto mb-4 flex items-center justify-center transition-transform duration-200 
+                ${isHovered && !showSelection ? 'scale-110' : ''}
+                ${showSelection ? 'scale-105' : ''}
+              "
+              style={{ width: thumbnailSize, height: thumbnailSize }}
+            >
+              <Thumbnail
+                node={node}
+                size={thumbnailSize}
+                galleryMode={galleryMode}
+                onPreview={(src) => {
+                  setPreviewImageSrc(src);
+                  setIsPreviewOpen(true);
+                }}
+              />
+            </div>
 
-          <div className="flex flex-col items-center">
-            <FileItemInfo node={node} isGrid />
-            <FileItemExternalReferenceWarning node={node} isGrid />
+            <div className="flex flex-col items-center">
+              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} />
+              <FileItemExternalReferenceWarning node={node} isGrid />
+            </div>
           </div>
-        </div>
+        )}
 
         <div
           className={`absolute top-3 right-3 transition-opacity duration-200 z-20 pointer-events-auto ${
@@ -476,15 +551,14 @@ export const FileItem: React.FC<FileItemProps> = ({
             onRestore={onRestore}
             onMove={onMove}
             onCopy={onCopy}
-            onAddToGallery={onAddToGallery}
             onShowVersionHistory={onShowVersionHistory}
             onUploadExternalReference={handleUploadExternalReference}
             isCadFile={isCadFile}
             canDownload={canDownload}
             canEdit={canEdit}
             canDelete={canDelete}
-            canAddToGallery={canAddToGallery}
             canViewVersionHistory={canViewVersionHistory}
+            canManageExternalReference={canManageExternalReference}
             canManageTrash={canManageTrash}
           />
         </div>
@@ -505,6 +579,15 @@ export const FileItem: React.FC<FileItemProps> = ({
           src={previewImageSrc}
           alt={node.name}
         />
+
+        {/* 双击提示 */}
+        {showDoubleClickTip && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl z-10">
+            <div className="px-4 py-2 bg-gray-900/90 text-white text-sm rounded-lg shadow-lg backdrop-blur-sm" style={{ animation: 'fade-in 0.3s ease' }}>
+              请双击打开图纸
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -524,7 +607,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           style={{
             background: node.isFolder
               ? 'var(--primary-100)'
-              : 'var(--accent-100)'
+              : 'var(--accent-100)',
           }}
         >
           {node.isFolder ? (
@@ -537,12 +620,17 @@ export const FileItem: React.FC<FileItemProps> = ({
         {/* 内容 */}
         <div className="flex-1 min-w-0">
           <h4
-            className="font-medium text-sm truncate"
+            className="font-medium text-sm"
             style={{ color: 'var(--text-primary)' }}
           >
-            {node.name}
+            <FileNameText maxWidth="100%" showTooltip={true}>
+              {node.name}
+            </FileNameText>
           </h4>
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div
+            className="flex items-center gap-2 text-xs"
+            style={{ color: 'var(--text-muted)' }}
+          >
             <span>{formatRelativeTime(node.updatedAt)}</span>
             {node.size && (
               <>
@@ -560,12 +648,15 @@ export const FileItem: React.FC<FileItemProps> = ({
     <div
       ref={listItemRef}
       data-tour="file-item"
-      className={`group flex items-center gap-4 p-3 rounded-lg transition-all duration-200 cursor-pointer
+      className={`group relative flex items-center rounded-lg transition-all duration-200 cursor-pointer
+        ${galleryMode ? 'gap-2' : 'gap-4'}
         ${showListSelection ? '' : 'hover:border-[var(--border-default)]'}
       `}
       style={{
         background: showListSelection ? 'var(--primary-50)' : 'transparent',
-        border: showListSelection ? '1px solid var(--primary-200)' : '1px solid transparent',
+        border: showListSelection
+          ? '1px solid var(--primary-200)'
+          : '1px solid transparent',
       }}
       onMouseEnter={(e) => {
         setIsHovered(true);
@@ -588,16 +679,19 @@ export const FileItem: React.FC<FileItemProps> = ({
       onDragOver={(e) => onDragOver?.(e, node)}
       onDrop={(e) => onDrop?.(e, node)}
     >
-      <FileItemSelection
-        isSelected={isSelected}
-        isMultiSelectMode={isMultiSelectMode}
-        onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
-      />
+      <div className="p-2">
+        <FileItemSelection
+          isSelected={isSelected}
+          isMultiSelectMode={isMultiSelectMode}
+          onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
+        />
+      </div>
 
-      <div className="w-10 h-10 flex-shrink-0">
+      <div className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? 'w-14 h-14' : 'w-10 h-10'}`}>
         <Thumbnail
           node={node}
-          size={40}
+          size={galleryMode ? 56 : 40}
+          galleryMode={false}
           onPreview={(src) => {
             setPreviewImageSrc(src);
             setIsPreviewOpen(true);
@@ -605,13 +699,20 @@ export const FileItem: React.FC<FileItemProps> = ({
         />
       </div>
 
-      <FileItemInfo node={node} />
+      <div className={`flex-1 min-w-0 ${galleryMode ? 'p-2' : 'p-3'}`}>
+        <FileItemInfo node={node} galleryMode={galleryMode} fontSize={fontSize} />
+      </div>
 
-      <FileItemTypeTag node={node} />
+      {/* 图库模式下不显示文件后缀标签 */}
+      {!galleryMode && (
+        <div className="p-3">
+          <FileItemTypeTag node={node} />
+        </div>
+      )}
 
       <div
         data-tour="file-item-actions"
-        className="flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0"
+        className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? 'p-2' : 'p-3'}`}
       >
         {useCompactActions ? (
           // 紧凑模式：显示菜单按钮
@@ -634,15 +735,14 @@ export const FileItem: React.FC<FileItemProps> = ({
             onRestore={onRestore}
             onMove={onMove}
             onCopy={onCopy}
-            onAddToGallery={onAddToGallery}
             onShowVersionHistory={onShowVersionHistory}
             onUploadExternalReference={handleUploadExternalReference}
             isCadFile={isCadFile}
             canDownload={canDownload}
             canEdit={canEdit}
             canDelete={canDelete}
-            canAddToGallery={canAddToGallery}
             canViewVersionHistory={canViewVersionHistory}
+            canManageExternalReference={canManageExternalReference}
             canManageTrash={canManageTrash}
           />
         ) : (
@@ -684,6 +784,25 @@ export const FileItem: React.FC<FileItemProps> = ({
         src={previewImageSrc}
         alt={node.name}
       />
+
+      <ExternalReferenceModal
+        isOpen={externalReferenceUpload.isOpen}
+        files={externalReferenceUpload.files}
+        loading={externalReferenceUpload.loading}
+        onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
+        onComplete={externalReferenceUpload.complete}
+        onSkip={externalReferenceUpload.skip}
+        onClose={externalReferenceUpload.close}
+      />
+
+      {/* 双击提示 */}
+      {showDoubleClickTip && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg z-10">
+          <div className="px-4 py-2 bg-gray-900/90 text-white text-sm rounded-lg shadow-lg backdrop-blur-sm" style={{ animation: 'fade-in 0.3s ease' }}>
+            请双击打开图纸
+          </div>
+        </div>
+      )}
     </div>
   );
 };

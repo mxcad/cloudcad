@@ -1,8 +1,8 @@
 /**
  * CloudCAD 前端静态文件服务
- * 
+ *
  * 用法: node serve-static.js [options]
- * 
+ *
  * 选项:
  *   --port <number>     服务端口 (默认: 3000)
  *   --dir <path>        静态文件目录 (默认: ../../packages/frontend/dist)
@@ -20,9 +20,9 @@ const { URL } = require('url');
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
-    port: 3000,
+    port: parseInt(process.env.FRONTEND_PORT || '3000', 10),
     dir: path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist'),
-    apiTarget: 'http://localhost:3001',
+    apiTarget: process.env.BACKEND_URL || 'http://localhost:3001',
     spa: true,
   };
 
@@ -85,7 +85,7 @@ function getMimeType(filePath) {
 function proxyRequest(req, res, target) {
   const targetUrl = new URL(target);
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-  
+
   const options = {
     hostname: targetUrl.hostname,
     port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
@@ -94,17 +94,39 @@ function proxyRequest(req, res, target) {
     headers: {
       ...req.headers,
       host: targetUrl.host,
+      // 建议：传递真实的客户端 IP，方便后端记录日志或做限流
+      'x-forwarded-for': req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+      'x-forwarded-proto': req.headers['x-forwarded-proto'] || 'http',
     },
   };
 
   const protocol = targetUrl.protocol === 'https:' ? https : http;
-  
+
   const proxyReq = protocol.request(options, (proxyRes) => {
-    // 复制响应头
-    const headers = { ...proxyRes.headers };
     
-    // 处理 CORS
+    // 1. 复制所有响应头
+    const headers = { ...proxyRes.headers };
+
+    // 2. 特殊处理 Set-Cookie
+    // proxyRes.headers['set-cookie'] 通常是一个数组 ['cookie1=...', 'cookie2=...']
+    // 如果直接展开 {...headers}，数组会变成逗号分隔的字符串，导致浏览器无法识别
+    if (proxyRes.headers['set-cookie']) {
+      // 强制设置为数组形式，确保浏览器能正确解析
+      res.setHeader('set-cookie', proxyRes.headers['set-cookie']);
+    }
+
+    // 3. 处理 CORS (如果需要跨域)
+    // 如果前端端口和代理端口不一致，需要允许跨域凭证
+    // 注意：Access-Control-Allow-Origin 不能是 *，必须是具体域名或镜像请求头的 Origin
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+
+    // 4. 发送响应头
     res.writeHead(proxyRes.statusCode, headers);
+
     proxyRes.pipe(res);
   });
 

@@ -35,7 +35,7 @@ export class QueryProjectsDto {
 
   @ApiProperty({
     description: '项目状态',
-    enum: ProjectStatus,
+    enum: Object.values(ProjectStatus), enumName: 'ProjectStatus',
     required: false,
   })
   @IsOptional()
@@ -85,7 +85,7 @@ export class QueryProjectsDto {
   @ApiProperty({
     description: '项目过滤类型：all-全部，owned-我创建的，joined-我加入的',
     required: false,
-    enum: ProjectFilterType,
+    enum: Object.values(ProjectFilterType), enumName: 'ProjectFilterType',
     default: ProjectFilterType.ALL,
   })
   @IsOptional()

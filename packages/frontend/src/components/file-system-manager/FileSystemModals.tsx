@@ -4,7 +4,6 @@ import { RenameModal } from '../modals/RenameModal';
 import { ProjectModal } from '../modals/ProjectModal';
 import { MembersModal } from '../modals/MembersModal';
 import { SelectFolderModal } from '../modals/SelectFolderModal';
-import { AddToGalleryModal } from '../modals/AddToGalleryModal';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface FileSystemModalsProps {
@@ -13,7 +12,6 @@ interface FileSystemModalsProps {
   isProjectModalOpen: boolean;
   isMembersModalOpen: boolean;
   showSelectFolderModal: boolean;
-  showAddToGalleryModal: boolean;
   folderName: string;
   editingNode: FileSystemNode | null;
   editingProject: FileSystemNode | null;
@@ -22,7 +20,6 @@ interface FileSystemModalsProps {
   loading: boolean;
   moveSourceNode: FileSystemNode | null;
   copySourceNode: FileSystemNode | null;
-  selectedNodeForGallery: FileSystemNode | null;
   projectId: string;
   onFolderNameChange: (name: string) => void;
   onCreateFolder: () => void;
@@ -38,7 +35,6 @@ interface FileSystemModalsProps {
   onCloseProjectModal: () => void;
   onCloseMembersModal: () => void;
   onCloseSelectFolderModal: () => void;
-  onCloseAddToGalleryModal: () => void;
 }
 
 export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
@@ -47,7 +43,6 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
   isProjectModalOpen,
   isMembersModalOpen,
   showSelectFolderModal,
-  showAddToGalleryModal,
   folderName,
   editingNode,
   editingProject,
@@ -56,7 +51,6 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
   loading,
   moveSourceNode,
   copySourceNode,
-  selectedNodeForGallery,
   projectId,
   onFolderNameChange,
   onCreateFolder,
@@ -69,7 +63,6 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
   onCloseProjectModal,
   onCloseMembersModal,
   onCloseSelectFolderModal,
-  onCloseAddToGalleryModal,
 }) => {
   return (
     <>
@@ -118,14 +111,6 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = ({
         projectId={projectId}
         onClose={onCloseSelectFolderModal}
         onConfirm={onConfirmMoveOrCopy}
-      />
-
-      <AddToGalleryModal
-        isOpen={showAddToGalleryModal}
-        onClose={onCloseAddToGalleryModal}
-        onSuccess={() => {}} // 可根据需要添加回调
-        nodeId={selectedNodeForGallery?.id || ''}
-        fileName={selectedNodeForGallery?.name || ''}
       />
     </>
   );

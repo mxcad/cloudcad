@@ -4,9 +4,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
-import X from 'lucide-react/dist/esm/icons/x';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Users from 'lucide-react/dist/esm/icons/users';
+import { X } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { MxFun } from 'mxdraw';
 import { SidebarTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
 import styles from './sidebar.module.css';
@@ -19,7 +21,7 @@ interface SidebarTabBarProps {
 
 const TABS: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
   { id: 'drawings', label: '图纸', icon: <FileText size={14} /> },
-  { id: 'collaborate', label: '协同', icon: <Users size={14} /> },
+  { id: 'collaborate', label: '实时协同', icon: <Users size={14} /> },
 ];
 
 /**
@@ -36,8 +38,21 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   onTabChange,
   onCloseClick,
 }) => {
+  const handleReturnToCloudMap = () => {
+    MxFun.sendStringToExecute('return-to-cloud-map-management');
+  };
+
   return (
     <div className={styles.tabBar}>
+      <Tooltip content="返回" position="bottom" delay={100}>
+        <button
+          className={styles.tabBarButton}
+          onClick={handleReturnToCloudMap}
+          aria-label="返回"
+        >
+          <ArrowLeft size={18} />
+        </button>
+      </Tooltip>
       <div className={styles.tabList}>
         {TABS.map((tab) => (
           <button

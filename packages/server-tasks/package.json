@@ -1,0 +1,11 @@
+{
+  "name": "server-tasks",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "resize:images": "node tasks/resize-images.js"
+  },
+  "dependencies": {
+    "sharp": "^0.33.2"
+  }
+}

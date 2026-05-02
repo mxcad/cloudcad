@@ -29,6 +29,9 @@ export class StoragePathConstants {
 
   /** MXWEB 文件扩展名 */
   static readonly MXWEB_EXTENSION = '.mxweb';
+
+  /** 本地 mxweb 文件缓存路径前缀（用于 IndexedDB 缓存键） */
+  static readonly LOCAL_MXWEB_CACHE_PREFIX = 'local';
 }
 
 /**

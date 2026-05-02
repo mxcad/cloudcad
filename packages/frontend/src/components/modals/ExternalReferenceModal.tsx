@@ -4,11 +4,11 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { FileNameText } from '../ui/TruncateText';
 import { ExternalReferenceFile } from '../../types/filesystem';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import Upload from 'lucide-react/dist/esm/icons/upload';
-import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import { CheckCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Upload } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 interface ExternalReferenceModalProps {
   /** 模态框是否打开 */
@@ -68,18 +68,18 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   const getStatusIcon = (file: ExternalReferenceFile) => {
     // 优先显示上传状态
     if (file.uploadState === 'success') {
-      return <CheckCircle size={16} className="text-green-500" />;
+      return <CheckCircle size={16} style={{ color: 'var(--success)' }} />;
     }
     if (file.uploadState === 'fail') {
-      return <XCircle size={16} className="text-red-500" />;
+      return <XCircle size={16} style={{ color: 'var(--error)' }} />;
     }
     if (file.uploadState === 'uploading') {
-      return <Loader2 size={16} className="text-blue-500 animate-spin" />;
+      return <Loader2 size={16} style={{ color: 'var(--info)' }} className="animate-spin" />;
     }
 
     // 如果文件已存在，显示绿色对勾
     if (file.exists) {
-      return <CheckCircle size={16} className="text-green-500" />;
+      return <CheckCircle size={16} style={{ color: 'var(--success)' }} />;
     }
 
     // 默认状态
@@ -144,25 +144,27 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           >
             取消
           </Button>
-          <Button
-            onClick={() => {
-              onSelectAndUpload();
-            }}
-            disabled={hasUploading}
-            variant="primary"
-          >
-            {hasUploading ? (
-              <>
-                <Loader2 size={16} className="mr-2 animate-spin" />
-                上传中...
-              </>
-            ) : (
-              <>
-                <Upload size={16} className="mr-2" />
-                选择并上传
-              </>
-            )}
-          </Button>
+          {files.length > 0 && (
+            <Button
+              onClick={() => {
+                onSelectAndUpload();
+              }}
+              disabled={hasUploading}
+              variant="primary"
+            >
+              {hasUploading ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  上传中...
+                </>
+              ) : (
+                <>
+                  <Upload size={16} className="mr-2" />
+                  选择并上传
+                </>
+              )}
+            </Button>
+          )}
           <Button
             onClick={() => {
               onComplete();
@@ -176,36 +178,65 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
     >
       <div className="space-y-4">
         {/* 提示信息 */}
-        {missingCount > 0 ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+        {files.length === 0 ? (
+          <div className="rounded-lg p-3" style={{
+            backgroundColor: 'var(--info-light)',
+            border: '1px solid var(--info-dim)',
+          }}>
             <div className="flex items-start gap-2">
               <AlertTriangle
                 size={16}
-                className="text-amber-600 mt-0.5 flex-shrink-0"
+                className="mt-0.5 flex-shrink-0"
+                style={{ color: 'var(--info)' }}
               />
-              <div className="text-sm text-amber-800">
+              <div className="text-sm" style={{ color: 'var(--info)' }}>
+                <p className="font-medium mb-1">
+                  该文件没有外部参照
+                </p>
+                <p>
+                  此 CAD 文件不包含任何外部参照文件。如果您需要添加外部参照，可以在 CAD 软件中插入外部参照后重新保存文件。
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : missingCount > 0 ? (
+          <div className="rounded-lg p-3" style={{
+            backgroundColor: 'var(--warning-light)',
+            border: '1px solid var(--warning-dim)',
+          }}>
+            <div className="flex items-start gap-2">
+              <AlertTriangle
+                size={16}
+                className="mt-0.5 flex-shrink-0"
+                style={{ color: 'var(--warning)' }}
+              />
+              <div className="text-sm" style={{ color: 'var(--warning)' }}>
                 <p className="font-medium mb-1">
                   检测到 {missingCount} 个缺失的外部参照文件（共 {files.length}{' '}
                   个）
                 </p>
-                <p className="text-amber-700">
+                <p>
                   这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="rounded-lg p-3" style={{
+            backgroundColor: 'var(--info-light)',
+            border: '1px solid var(--info-dim)',
+          }}>
             <div className="flex items-start gap-2">
               <AlertTriangle
                 size={16}
-                className="text-blue-600 mt-0.5 flex-shrink-0"
+                className="mt-0.5 flex-shrink-0"
+                style={{ color: 'var(--info)' }}
               />
-              <div className="text-sm text-blue-800">
+              <div className="text-sm" style={{ color: 'var(--info)' }}>
                 <p className="font-medium mb-1">
                   所有外部参照文件已存在（共 {files.length} 个）
                 </p>
-                <p className="text-blue-700">
+                <p>
                   图纸可以正常显示。如果您需要更新外部参照文件，可以选择覆盖已存在的文件。
                 </p>
               </div>
@@ -214,101 +245,120 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         )}
 
         {/* 文件列表 */}
-        <div
-          className="border border-slate-200 rounded-lg overflow-hidden"
-          data-tour="xref-list"
-        >
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium text-slate-700 w-20">
-                  状态
-                </th>
-                <th className="px-4 py-2 text-left text-sm font-medium text-slate-700">
-                  文件名
-                </th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-slate-700 w-24">
-                  类型
-                </th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-slate-700 w-28">
-                  进度
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {files.map((file, index) => (
-                <tr
-                  key={index}
-                  className={`hover:bg-slate-50 ${file.exists && file.uploadState === 'notSelected' ? 'bg-green-50/50' : ''}`}
-                >
-                  <td className="px-4 py-2">
-                    <div className="flex items-center justify-center">
-                      {getStatusIcon(file)}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex flex-col gap-1">
-                      <span
-                        className={`text-sm ${file.exists && file.uploadState === 'notSelected' ? 'text-slate-500' : 'text-slate-900'}`}
-                      >
-                        <FileNameText>{file.name}</FileNameText>
-                      </span>
-                      <span className={`text-xs ${getStatusColor(file)}`}>
-                        {getStatusText(file)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600">
-                      {file.type === 'img' ? '图片' : 'DWG'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    {file.uploadState === 'uploading' ? (
-                      <span className="text-xs text-slate-600">
-                        {Math.round(file.progress)}%
-                      </span>
-                    ) : file.uploadState === 'success' ? (
-                      <span className="text-xs text-green-600">100%</span>
-                    ) : file.uploadState === 'fail' ? (
-                      <span className="text-xs text-red-600">失败</span>
-                    ) : file.exists ? (
-                      <span className="text-xs text-slate-500">可覆盖</span>
-                    ) : (
-                      <span className="text-xs text-slate-400">-</span>
-                    )}
-                  </td>
+        {files.length > 0 && (
+          <div
+            className="rounded-lg overflow-hidden"
+            style={{ border: '1px solid var(--border-default)' }}
+            data-tour="xref-list"
+          >
+            <table className="w-full">
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <th className="px-4 py-2 text-left text-sm font-medium w-20" style={{ color: 'var(--text-secondary)' }}>
+                    状态
+                  </th>
+                  <th className="px-4 py-2 text-left text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    文件名
+                  </th>
+                  <th className="px-4 py-2 text-right text-sm font-medium w-24" style={{ color: 'var(--text-secondary)' }}>
+                    类型
+                  </th>
+                  <th className="px-4 py-2 text-right text-sm font-medium w-28" style={{ color: 'var(--text-secondary)' }}>
+                    进度
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {files.map((file, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-[var(--bg-tertiary)]"
+                    style={{
+                      borderBottom: '1px solid var(--border-subtle)',
+                      backgroundColor: file.exists && file.uploadState === 'notSelected' ? 'var(--success-light)' : 'transparent',
+                    }}
+                  >
+                    <td className="px-4 py-2">
+                      <div className="flex items-center justify-center">
+                        {getStatusIcon(file)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className="text-sm"
+                          style={{
+                            color: file.exists && file.uploadState === 'notSelected' ? 'var(--text-muted)' : 'var(--text-primary)',
+                          }}
+                        >
+                          <FileNameText>{file.name}</FileNameText>
+                        </span>
+                        <span className={`text-xs ${getStatusColor(file)}`}>
+                          {getStatusText(file)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span className="text-xs px-2 py-1 rounded" style={{
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: 'var(--text-secondary)',
+                      }}>
+                        {file.type === 'img' ? '图片' : 'DWG'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {file.uploadState === 'uploading' ? (
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          {Math.round(file.progress)}%
+                        </span>
+                      ) : file.uploadState === 'success' ? (
+                        <span className="text-xs" style={{ color: 'var(--success)' }}>100%</span>
+                      ) : file.uploadState === 'fail' ? (
+                        <span className="text-xs" style={{ color: 'var(--error)' }}>失败</span>
+                      ) : file.exists ? (
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>可覆盖</span>
+                      ) : (
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {hasUploading && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">正在上传...</span>
-              <span className="text-slate-600">
+              <span style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
+              <span style={{ color: 'var(--text-secondary)' }}>
                 {files.filter((f) => f.uploadState === 'success').length} /{' '}
                 {files.length}
               </span>
             </div>
-            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 animate-pulse" />
+            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
+              <div className="h-full animate-pulse" style={{ backgroundColor: 'var(--primary)' }} />
             </div>
           </div>
         )}
 
         {hasFailures && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="rounded-lg p-3" style={{
+            backgroundColor: 'var(--error-light)',
+            border: '1px solid var(--error-dim)',
+          }}>
             <div className="flex items-start gap-2">
               <XCircle
                 size={16}
-                className="text-red-600 mt-0.5 flex-shrink-0"
+                className="mt-0.5 flex-shrink-0"
+                style={{ color: 'var(--error)' }}
               />
-              <div className="text-sm text-red-800">
-                <p className="font-medium mb-1">部分文件上传失败</p>
-                <p className="text-red-700">
+              <div className="text-sm" style={{ color: 'var(--error)' }}>
+                <p className="font-medium mb-1">
+                  部分文件上传失败
+                </p>
+                <p>
                   请检查文件是否正确，然后重新选择文件上传。
                 </p>
               </div>
@@ -317,15 +367,19 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         )}
 
         {allSuccess && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <div className="rounded-lg p-3" style={{
+            backgroundColor: 'var(--success-light)',
+            border: '1px solid var(--success-dim)',
+          }}>
             <div className="flex items-start gap-2">
               <CheckCircle
                 size={16}
-                className="text-green-600 mt-0.5 flex-shrink-0"
+                className="mt-0.5 flex-shrink-0"
+                style={{ color: 'var(--success)' }}
               />
-              <div className="text-sm text-green-800">
+              <div className="text-sm" style={{ color: 'var(--success)' }}>
                 <p className="font-medium">所有外部参照文件上传成功</p>
-                <p className="text-green-700">图纸现在可以正常显示了。</p>
+                <p>图纸现在可以正常显示了。</p>
               </div>
             </div>
           </div>

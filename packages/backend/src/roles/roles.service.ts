@@ -19,6 +19,7 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { Prisma } from '@prisma/client';
 import { RoleDto } from './dto/role.dto';
 import { RoleCategory } from '../common/enums/permissions.enum';
 import { isValidPermission } from '../common/utils/permission.util';
@@ -208,9 +209,10 @@ export class RolesService {
 
     this.logger.log(`更新角色成功: ${updatedRole.name} (${updatedRole.id})`);
 
-    // 如果修改了权限，清理所有用户的角色缓存
+    // 如果修改了权限，立即清除该角色的所有用户缓存
     if (updateRoleDto.permissions) {
-      this.cacheService.cleanup();
+      await this.cacheService.clearRoleCache(role.name);
+      this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
     }
 
     return this.mapToRoleDto(updatedRole);
@@ -299,8 +301,9 @@ export class RolesService {
       `为角色添加权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
     );
 
-    // 清理所有用户的角色缓存
-    this.cacheService.cleanup();
+    // 立即清除该角色的所有用户缓存
+    await this.cacheService.clearRoleCache(role.name);
+    this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
 
     return this.findOne(roleId);
   }
@@ -339,8 +342,9 @@ export class RolesService {
       `从角色移除权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
     );
 
-    // 清理所有用户的角色缓存
-    this.cacheService.cleanup();
+    // 立即清除该角色的所有用户缓存
+    await this.cacheService.clearRoleCache(role.name);
+    this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
 
     return this.findOne(roleId);
   }
@@ -386,15 +390,17 @@ export class RolesService {
    * 将 Prisma Role 对象映射到 RoleDto
    * 返回数据库存储的原始权限值（大写格式）
    */
-  private mapToRoleDto(role: any): RoleDto {
+  private mapToRoleDto(
+    role: Prisma.RoleGetPayload<{ include: { permissions: { select: { permission: true } } } }>
+  ): RoleDto {
     return {
       id: role.id,
       name: role.name,
-      description: role.description,
-      category: role.category,
+      description: role.description ?? undefined,
+      category: RoleCategory[role.category as keyof typeof RoleCategory],
       level: role.level,
       isSystem: role.isSystem,
-      permissions: role.permissions.map((p: any) => p.permission), // 直接返回数据库存储的原始值（大写）
+      permissions: role.permissions.map((p) => p.permission), // 直接返回数据库存储的原始值（大写）
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     };

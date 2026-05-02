@@ -22,9 +22,17 @@
 ARG BASE_IMAGE=node:20-bullseye-slim
 FROM ${BASE_IMAGE}
 
+# 避免 Ubuntu/Debian 交互式提示
+ENV DEBIAN_FRONTEND=noninteractive
+
 # 安装最小依赖（curl 用于健康检查, procps 用于进程管理）
 # Debian/Ubuntu 使用 apt-get, CentOS/RHEL 使用 yum/dnf
 RUN if command -v apt-get &> /dev/null; then \
+      # 使用阿里云镜像加速 \
+      if grep -q "ubuntu" /etc/os-release 2>/dev/null; then \
+        sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+        sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list; \
+      fi && \
       apt-get update && apt-get install -y curl procps && rm -rf /var/lib/apt/lists/*; \
     elif command -v dnf &> /dev/null; then \
       dnf install -y --allowerasing curl procps-ng && dnf clean all; \
@@ -47,7 +55,7 @@ COPY release/${PACKAGE} /tmp/
 RUN tar -xzf /tmp/${PACKAGE} -C /app && rm /tmp/${PACKAGE}
 
 # 设置环境变量
-ENV PM2_HOME=/app/offline-data/pm2
+ENV PM2_HOME=/app/data/pm2
 
 # 运行验证脚本（使用内嵌的 Node.js）
 # 脚本内部处理所有初始化：创建目录、创建用户、启动服务等

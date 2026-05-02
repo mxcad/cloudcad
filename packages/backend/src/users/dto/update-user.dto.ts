@@ -17,6 +17,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
 } from 'class-validator';
 
@@ -25,6 +26,16 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @ApiProperty({
+    description: '手机号（中国大陆）',
+    example: '13800138000',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: '手机号必须是字符串' })
+  @Matches(/^1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  phone?: string;
 
   @ApiProperty({ description: '用户名', required: false, minLength: 3 })
   @IsOptional()
@@ -53,7 +64,7 @@ export class UpdateUserDto {
   @IsString({ message: '角色ID必须是字符串' })
   roleId?: string;
 
-  @ApiProperty({ description: '用户状态', enum: UserStatus, required: false })
+  @ApiProperty({ description: '用户状态', enum: Object.values(UserStatus), enumName: 'UserStatusEnum', required: false })
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;

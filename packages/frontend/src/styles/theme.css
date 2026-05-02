@@ -283,30 +283,37 @@
 }
 
 /* ============================================
-   3. 主题过渡动画（已禁用 - 主题切换瞬间完成）
+   3. 主题过渡动画（启用平滑过渡）
    ============================================ */
-/* 
- * 注意：主题切换过渡已被移除，以实现瞬间切换效果
- * 如需恢复动画，取消注释以下代码：
- */
-/*
-[data-theme],
-[data-theme] *,
-[data-theme] *::before,
-[data-theme] *::after {
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease,
-    box-shadow 0.3s ease;
-}
 
-[data-theme],
-[data-theme] * {
-  transition:
-    color 0.3s ease,
-    background-color 0.3s ease,
-    border-color 0.3s ease,
-    box-shadow 0.3s ease;
+/*
+ * 主题切换过渡效果
+ * - 已禁用所有过渡动画，避免主题切换时闪烁
+ * - 确保主题切换瞬间完成，无视觉延迟
+ */
+
+/* 已禁用过渡动画 - 防止主题切换闪烁 */
+/* 
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme],
+  [data-theme] *,
+  [data-theme] *::before,
+  [data-theme] *::after {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  // 排除不需要过渡的元素 
+  [data-theme] img,
+  [data-theme] video,
+  [data-theme] canvas,
+  [data-theme] svg,
+  [data-theme] svg * {
+    transition: none;
+  }
 }
 */
 

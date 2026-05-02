@@ -33,7 +33,7 @@ export class RoleDto {
   @ApiProperty({ description: '角色描述', required: false })
   description?: string;
 
-  @ApiProperty({ description: '角色类别', enum: RoleCategory })
+  @ApiProperty({ description: '角色类别', enum: Object.values(RoleCategory), enumName: 'RoleCategoryEnum' })
   category: RoleCategory;
 
   @ApiProperty({ description: '角色级别（用于权限继承）' })
@@ -45,7 +45,8 @@ export class RoleDto {
   @ApiProperty({
     description: '权限列表',
     type: [String],
-    enum: ALL_PERMISSIONS,
+    enum: Object.values(ALL_PERMISSIONS),
+    enumName: 'AllPermissionsEnum',
     example: ['system:user:read', 'system:role:read', 'system:font:read'],
   })
   permissions: string[];
@@ -67,7 +68,7 @@ export class ProjectRolePermissionDto {
   @ApiProperty({ description: '项目角色 ID' })
   projectRoleId: string;
 
-  @ApiProperty({ description: '权限名称', enum: ProjectPermission })
+  @ApiProperty({ description: '权限名称', enum: Object.values(ProjectPermission), enumName: 'ProjectPermissionEnum' })
   permission: ProjectPermission;
 
   @ApiProperty({ description: '创建时间' })
@@ -93,7 +94,7 @@ export class ProjectRoleDto {
   @ApiProperty({ description: '是否为系统角色' })
   isSystem: boolean;
 
-  @ApiProperty({ description: '权限列表', type: [ProjectRolePermissionDto] })
+  @ApiProperty({ description: '权限列表', type: () => [ProjectRolePermissionDto] })
   permissions: ProjectRolePermissionDto[];
 
   @ApiProperty({ description: '成员数量', required: false })

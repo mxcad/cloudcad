@@ -9,6 +9,7 @@ const svnLog = require('./svnlog');
 const svnCat = require('./svncat');
 const svnPropset = require('./svnpropset');
 const svnUpdate = require('./svnupdate');
+const svnCleanup = require('./svncleanup');
 const {
   checkSvnAvailable,
   checkSvnAvailableSync,
@@ -28,6 +29,7 @@ module.exports = {
   svnCat,
   svnPropset,
   svnUpdate,
+  svnCleanup,
   checkSvnAvailable,
   checkSvnAvailableSync,
   getPlatformInfo,

@@ -34,10 +34,6 @@ export enum CacheKeyPrefix {
   FILE_METADATA = 'file:metadata',
   FILE_CONTENT = 'file:content',
 
-  // 图库相关
-  GALLERY = 'gallery',
-  GALLERY_ITEMS = 'gallery:items',
-
   // 字体相关
   FONT = 'font',
   FONT_LIST = 'font:list',
@@ -115,20 +111,6 @@ export class CacheKeyUtil {
    */
   static fileContent(fileId: number): string {
     return `${CacheKeyPrefix.FILE_CONTENT}:${fileId}`;
-  }
-
-  /**
-   * 生成图库缓存键
-   */
-  static gallery(galleryId: number): string {
-    return `${CacheKeyPrefix.GALLERY}:${galleryId}`;
-  }
-
-  /**
-   * 生成图库项目缓存键
-   */
-  static galleryItems(galleryId: number): string {
-    return `${CacheKeyPrefix.GALLERY_ITEMS}:${galleryId}`;
   }
 
   /**

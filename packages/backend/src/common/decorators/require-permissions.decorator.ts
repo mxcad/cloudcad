@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { SetMetadata, applyDecorators } from '@nestjs/common';
 import { Permission } from '../enums/permissions.enum';
 
 /**
@@ -35,9 +36,12 @@ export const PERMISSIONS_MODE_KEY = 'permissions_mode';
 /**
  * 要求特定权限的装饰器
  *
+ * 使用 NestJS 官方的 SetMetadata + applyDecorators 组合，
+ * 确保元数据能被 Reflector.getAllAndOverride 正确读取。
+ *
  * @example
- * // 要求所有权限（AND 逻辑）
- * @RequirePermissions(Permission.FILE_READ, Permission.FILE_WRITE)
+ * // 要求所有权限（AND 逻辑，默认）
+ * @RequirePermissions([Permission.FILE_READ, Permission.FILE_WRITE])
  *
  * @example
  * // 要求任意一个权限（OR 逻辑）
@@ -50,22 +54,8 @@ export const RequirePermissions = (
   permissions: Permission[],
   mode: PermissionCheckMode = PermissionCheckMode.ALL
 ) => {
-  return (
-    target: any,
-    propertyKey?: string,
-    descriptor?: PropertyDescriptor
-  ) => {
-    // 支持类装饰器（propertyKey 和 descriptor 为 undefined）
-    if (propertyKey === undefined || descriptor === undefined) {
-      // 使用 Reflect.defineMetadata 将元数据附加到类构造函数
-      Reflect.defineMetadata(PERMISSIONS_KEY, permissions, target);
-      Reflect.defineMetadata(PERMISSIONS_MODE_KEY, mode, target);
-      return target;
-    }
-
-    // 支持方法装饰器 - 使用 Reflect.defineMetadata 正确设置元数据
-    Reflect.defineMetadata(PERMISSIONS_KEY, permissions, target, propertyKey);
-    Reflect.defineMetadata(PERMISSIONS_MODE_KEY, mode, target, propertyKey);
-    return descriptor;
-  };
+  return applyDecorators(
+    SetMetadata(PERMISSIONS_KEY, permissions),
+    SetMetadata(PERMISSIONS_MODE_KEY, mode)
+  );
 };

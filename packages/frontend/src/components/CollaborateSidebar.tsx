@@ -8,11 +8,11 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import Users from 'lucide-react/dist/esm/icons/users';
-import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import Check from 'lucide-react/dist/esm/icons/check';
+import { Users } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';

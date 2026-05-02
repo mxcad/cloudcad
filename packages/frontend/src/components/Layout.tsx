@@ -19,21 +19,22 @@ import { InteractiveBackground } from './InteractiveBackground';
 import { useTour } from '../contexts/TourContext';
 
 // Lucide 图标导入
-import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
-import FolderOpen from 'lucide-react/dist/esm/icons/folder-open';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Users from 'lucide-react/dist/esm/icons/users';
-import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
-import Type from 'lucide-react/dist/esm/icons/type';
-import Activity from 'lucide-react/dist/esm/icons/activity';
-import Settings from 'lucide-react/dist/esm/icons/settings';
-import Settings2 from 'lucide-react/dist/esm/icons/settings-2';
-import LogOut from 'lucide-react/dist/esm/icons/log-out';
-import Menu from 'lucide-react/dist/esm/icons/menu';
-import X from 'lucide-react/dist/esm/icons/x';
-import HardDrive from 'lucide-react/dist/esm/icons/hard-drive';
-import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
-import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+import { LayoutDashboard } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { Type } from 'lucide-react';
+import { Activity } from 'lucide-react';
+import { Settings } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { X } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
+import { Library } from 'lucide-react';
 
 interface NavItemProps {
   to: string;
@@ -147,12 +148,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const location = useLocation();
-
-  // 如果是 CAD 编辑器页面，不渲染布局（CAD 编辑器有自己的全屏布局）
-  // 返回一个空的占位符，避免 React Router 认为没有匹配到路由
-  if (location.pathname.startsWith('/cad-editor/')) {
-    return <div style={{ display: 'none' }} />;
-  }
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
   const { hasPermission } = usePermission();
@@ -161,9 +156,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const { isDark } = useTheme();
   const { isActive: isTourActive, openTourCenter } = useTour();
 
-  const appName = brandConfig?.title || 'CloudCAD';
-
-  // UI 状态
+  // UI 状态（必须在条件返回之前调用所有 Hooks）
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -191,7 +184,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     if (user && !loading) {
       setStorageLoading(true);
       projectsApi
-        .getStorageInfo()
+        .getQuota()
         .then((response) => {
           if (response.data) {
             setStorageInfo(response.data);
@@ -217,7 +210,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     setIsLoggingOut(true);
     try {
       await logout();
-      navigate('/login');
+      // logout() 内部已经会执行 window.location.href = '/login'，无需再次跳转
     } finally {
       setIsLoggingOut(false);
       setShowLogoutConfirm(false);
@@ -263,6 +256,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         label: '我的图纸',
         visible: true,
         dataTour: 'sidebar-personal-space',
+      },
+      {
+        to: '/library',
+        icon: Library,
+        label: '公共资源库',
+        visible:
+          hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE) ||
+          hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE),
       },
       {
         to: '/font-library',
@@ -326,11 +327,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     return 'from-emerald-500 to-emerald-600';
   }, [storageInfo]);
 
+  // 如果是 CAD 编辑器页面，不渲染布局（CAD 编辑器有自己的全屏布局）
+  // 注意：必须在所有 Hooks 调用之后返回，以遵守 React Hooks 规则
+  if (location.pathname.startsWith('/cad-editor/')) {
+    return <div style={{ display: 'none' }} />;
+  }
+
+  const appName = brandConfig?.title || 'CloudCAD';
+
   return (
     <div
       className="flex h-screen overflow-hidden font-[var(--font-family-base)]"
       style={{ background: 'transparent' }}
-      onClick={() => {
+      onClick={(e) => {
+        // 只有点击主内容区域时才关闭菜单，侧边栏内部点击不关闭
+        const target = e.target as HTMLElement;
+        if (target.closest('aside')) return;
         if (showSettings) setShowSettings(false);
         if (showUserMenu) setShowUserMenu(false);
       }}
@@ -496,6 +508,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     {formatFileSize(storageInfo.total)}
                   </span>
                 </div>
+
+                {/* 配额超额警告 */}
+                {storageInfo.usagePercent > 100 && (
+                  <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-xs text-red-500 font-medium">
+                      ⚠️ 存储空间已超额
+                    </p>
+                    <p className="text-xs text-red-400 mt-1">
+                      请联系管理员增加配额或删除不需要的文件
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -754,8 +778,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--error-dim)]"
                     style={{ color: 'var(--error)' }}
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={() => {
                       setShowLogoutConfirm(true);
                       setShowSettings(false);
                     }}

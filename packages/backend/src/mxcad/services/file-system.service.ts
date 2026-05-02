@@ -129,7 +129,11 @@ export class FileSystemService implements IFileSystemService {
         }
 
         const list = fs.readdirSync(chunkDir);
-        const aryList: any[] = [];
+        interface ChunkInfo {
+          num: number;
+          file: string;
+        }
+        const aryList: ChunkInfo[] = [];
 
         list.forEach((val: string) => {
           const strNum = val.substring(0, val.indexOf('_'));
@@ -208,8 +212,8 @@ export class FileSystemService implements IFileSystemService {
   }
 
   private streamMergeRecursive(
-    fileList: any[],
-    fileWriteStream: any,
+    fileList: { name: string; filePath: string }[],
+    fileWriteStream: fs.WriteStream,
     resultCall: (code: number) => void
   ): void {
     if (!fileList.length) {

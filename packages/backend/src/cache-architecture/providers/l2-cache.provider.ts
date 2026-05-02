@@ -68,8 +68,15 @@ export class L2CacheProvider<T = unknown>
 
   async onModuleInit() {
     try {
-      await this.client.connect();
+      // 添加 5 秒超时控制
+      const connectPromise = this.client.connect();
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Redis 连接超时 (5000ms)')), 5000)
+      );
+
+      await Promise.race([connectPromise, timeoutPromise]);
       this.isConnected = true;
+      this.logger.log('Redis L2 缓存连接成功');
     } catch (error) {
       this.logger.error('Redis 连接失败', error);
       this.isConnected = false;

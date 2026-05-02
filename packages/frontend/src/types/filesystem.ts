@@ -3,8 +3,7 @@
 // All rights reserved.
 // The code, documentation, and related materials of this software belong to
 // Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
+// software should reach an agreement with Chengdu Dream Kaide
 // Technology Co., Ltd. to use this software, its documentation, or related
 // materials.
 // https://www.mxdraw.com/
@@ -164,8 +163,10 @@ export interface ExternalReferenceFile {
  * useExternalReferenceUpload 配置
  */
 export interface UseExternalReferenceUploadConfig {
-  /** 节点 ID（用于权限验证和API调用） */
-  nodeId: string;
+  /** 节点 ID（用于已登录用户） */
+  nodeId?: string;
+  /** 文件 hash（用于未登录用户） */
+  fileHash?: string;
   /** 上传成功回调 */
   onSuccess?: () => void;
   /** 上传失败回调 */
@@ -184,8 +185,13 @@ export interface UseExternalReferenceUploadReturn {
   files: ExternalReferenceFile[];
   /** 是否正在上传 */
   loading: boolean;
-  /** 检查缺失的外部参照 */
-  checkMissingReferences: (nodeId?: string) => Promise<boolean>;
+  /**
+   * 检查缺失的外部参照
+   * @param identifier 可选的节点ID或文件hash
+   * @param shouldRetry 是否启用重试逻辑（上传后为 true，手动点击为 false）
+   * @param forceOpen 是否强制打开弹框（手动点击为 true，上传后为 false）
+   */
+  checkMissingReferences: (identifier?: string, shouldRetry?: boolean, forceOpen?: boolean) => Promise<boolean>;
   /** 选择文件 */
   selectFiles: () => void;
   /** 上传文件 */
@@ -243,15 +249,15 @@ export function toFileSystemNode(dto: FileSystemNodeDto): FileSystemNode {
 }
 
 /**
- * 将 ProjectDto 转换为 FileSystemNode（用于统一显示）
+ * 将 ProjectDto 或 FileSystemNodeDto 转换为 FileSystemNode（用于统一显示）
  */
-export function projectToNode(project: ProjectDto): FileSystemNode {
+export function projectToNode(project: FileSystemNodeDto): FileSystemNode {
   return {
     ...project,
     isFolder: true,
+    isRoot: true,
     extension: undefined,
     originalName: project.name,
-    childrenCount: project.memberCount,
   };
 }
 

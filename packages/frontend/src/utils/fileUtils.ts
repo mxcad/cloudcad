@@ -133,7 +133,7 @@ export const getCadThumbnailUrl = (node: FileSystemNode): string => {
   if (!node.id) return '';
 
   const extension = node.extension?.toLowerCase() || '';
-  const cadExtensions = ['.dwg', '.dxf'];
+  const cadExtensions = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
   if (!cadExtensions.includes(extension)) {
     return '';
   }
@@ -151,7 +151,7 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
 
   // CAD 文件使用缩略图路径预览
   const extension = node.extension?.toLowerCase() || '';
-  const cadExtensions = ['.dwg', '.dxf'];
+  const cadExtensions = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
   if (cadExtensions.includes(extension)) {
     return `${API_BASE_URL}/file-system/nodes/${node.id}/thumbnail`;
   }
@@ -159,3 +159,98 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
   // 图片文件返回原图下载链接
   return `${API_BASE_URL}/file-system/nodes/${node.id}/download`;
 };
+
+// ========== 文件类型检查 ==========
+
+/** 图纸文件扩展名 */
+export const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt'];
+
+/** 图块文件扩展名 */
+export const BLOCK_EXTENSIONS = ['.dwg', '.dxf', '.dwt', '.blk'];
+
+/**
+ * 检查是否为图纸文件
+ * @param fileName 文件名
+ * @returns 是否为图纸文件
+ */
+export function isDrawingFile(fileName: string): boolean {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return false;
+  const ext = fileName.toLowerCase().slice(lastDot);
+  return DRAWING_EXTENSIONS.includes(ext);
+}
+
+/**
+ * 检查是否为图块文件
+ * @param fileName 文件名
+ * @returns 是否为图块文件
+ */
+export function isBlockFile(fileName: string): boolean {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return false;
+  const ext = fileName.toLowerCase().slice(lastDot);
+  return BLOCK_EXTENSIONS.includes(ext);
+}
+
+/**
+ * 检查是否为 CAD 文件（基于文件名）
+ * @param fileName 文件名
+ * @returns 是否为 CAD 文件
+ */
+export function isCadFileByName(fileName: string): boolean {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return false;
+  const ext = fileName.toLowerCase().slice(lastDot);
+  return DRAWING_EXTENSIONS.includes(ext);
+}
+
+// ========== 文件名处理 ==========
+
+/**
+ * 清理文件名，移除不安全字符
+ * @param name 原始文件名
+ * @returns 清理后的文件名
+ */
+export function sanitizeFileName(name: string): string {
+  return name.replace(/[<>:"/\\|?*]/g, '_');
+}
+
+/**
+ * 验证文件夹名称是否合法
+ * @param name 文件夹名称
+ * @returns 验证结果
+ */
+export function validateFolderName(
+  name: string
+): { valid: boolean; error?: string } {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return { valid: false, error: '名称不能为空' };
+  }
+
+  if (trimmedName.length > 255) {
+    return { valid: false, error: '名称长度不能超过 255 个字符' };
+  }
+
+  const illegalChars = /[<>:"|?*/\\]/;
+  if (illegalChars.test(trimmedName)) {
+    return { valid: false, error: '名称包含非法字符：< > : " | ? * / \\' };
+  }
+
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
+    return { valid: false, error: '名称包含非法字符' };
+  }
+
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedNames.test(trimmedName)) {
+    return { valid: false, error: '该名称为系统保留名称' };
+  }
+
+  if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
+    return { valid: false, error: '名称不能以点开头或结尾' };
+  }
+
+  return { valid: true };
+}

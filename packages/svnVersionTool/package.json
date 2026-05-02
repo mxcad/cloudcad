@@ -30,6 +30,7 @@
     "svncat.js",
     "svnpropset.js",
     "svnupdate.js",
+    "svncleanup.js",
     "svnpath.js",
     "svnadminpath.js",
     "svncheck.js",

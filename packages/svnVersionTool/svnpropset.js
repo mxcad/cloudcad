@@ -1,8 +1,8 @@
-const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 设置 SVN 属性
@@ -33,22 +33,29 @@ function svnPropset(targetPath, propertyName, propertyValue, callback) {
     command = `${svnPath} propset ${propertyName} "${escapedValue}" "${targetPath}" --force`;
   }
   
-  exec(command, { windowsHide: true }, (error, stdout, stderr) => {
-    // 清理临时文件
-    if (tempFile && fs.existsSync(tempFile)) {
-      try {
-        fs.unlinkSync(tempFile);
-      } catch (e) {
-        /* ignore */
+  executeCommand(command)
+    .then(stdout => {
+      // 清理临时文件
+      if (tempFile && fs.existsSync(tempFile)) {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (e) {
+          /* ignore */
+        }
       }
-    }
-    
-    if (error) {
-      callback(error);
-    } else {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      // 清理临时文件
+      if (tempFile && fs.existsSync(tempFile)) {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      callback(error);
+    });
 }
 
 module.exports = svnPropset;

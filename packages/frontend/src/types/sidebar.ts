@@ -10,12 +10,15 @@
 
 /**
  * 侧边栏 Tab 类型
- * 注意：'gallery' 已合并到 'drawings' 的子 Tab 中（drawings-gallery / blocks-gallery）
  */
 export type SidebarTab = 'drawings' | 'collaborate';
 
 /** 图纸子 Tab 类型 */
-export type DrawingsSubTab = 'my-project' | 'my-drawings' | 'drawings-gallery' | 'blocks-gallery';
+export type DrawingsSubTab = 
+  | 'my-project'        // 我的项目
+  | 'my-drawings'       // 我的图纸（私人空间）
+  | 'drawings-gallery'  // 公共资源库 - 图纸库
+  | 'blocks-gallery';   // 公共资源库 - 图块库
 
 /** 侧边栏设置 */
 export interface SidebarSettings {
@@ -38,8 +41,8 @@ export interface SidebarSettings {
 /** 默认设置 */
 export const DEFAULT_SIDEBAR_SETTINGS: SidebarSettings = {
   defaultTab: 'drawings',
-  defaultDrawingsSubTab: 'my-project',
-  width: 300,
+  defaultDrawingsSubTab: 'drawings-gallery',  // 默认显示图纸库（无需登录即可访问）
+  width: 320,
   rememberState: true,
   lastActiveTab: null,
   lastDrawingsSubTab: null,

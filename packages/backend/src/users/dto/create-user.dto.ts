@@ -19,6 +19,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -31,6 +32,16 @@ export class CreateUserDto {
   @IsOptional()
   @IsEmail({}, { message: '请输入有效的邮箱地址' })
   email?: string;
+
+  @ApiProperty({
+    description: '手机号（中国大陆）',
+    example: '13800138000',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: '手机号必须是字符串' })
+  @Matches(/^1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  phone?: string;
 
   @ApiProperty({
     description: '用户名',
@@ -79,4 +90,24 @@ export class CreateUserDto {
   @IsOptional()
   @IsString({ message: '角色ID必须是字符串' })
   roleId?: string;
+
+  @ApiProperty({ description: '手机号是否已验证', required: false, default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'phoneVerified 必须是布尔值' })
+  phoneVerified?: boolean;
+
+  @ApiProperty({ description: '邮箱是否已验证', required: false, default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'emailVerified 必须是布尔值' })
+  emailVerified?: boolean;
+
+  @ApiProperty({ description: '微信 OpenID', required: false })
+  @IsOptional()
+  @IsString()
+  wechatId?: string;
+
+  @ApiProperty({ description: '登录方式 (LOCAL | WECHAT)', required: false, default: 'LOCAL' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }

@@ -313,6 +313,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <div
       ref={triggerRef}
       className="relative inline-flex"
+      style={{ minWidth: 0 }}
       {...getEventHandlers()}
     >
       {children}

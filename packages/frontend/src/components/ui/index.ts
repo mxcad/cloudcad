@@ -31,3 +31,5 @@ export { ConfirmDialog } from './ConfirmDialog';
 export { Pagination } from './Pagination';
 export { Tooltip, SimpleTooltip } from './Tooltip';
 export type { TooltipProps, TooltipPosition, TooltipTrigger, SimpleTooltipProps } from './Tooltip';
+
+export { PageSkeleton } from './PageSkeleton';

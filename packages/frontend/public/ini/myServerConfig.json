@@ -8,8 +8,8 @@
       "swf": "https://www.mxdraw3d.com/webuploader/Uploader.swf",
       "server": "/mxcad/files/uploadFiles",
       "accept": {
-        "extensions": "mxweb,dwg,dxf",
-        "mimeTypes": ".mxweb,.dwg,.dxf"
+        "extensions": "mxweb,mxwbe,dwg,dxf",
+        "mimeTypes": ".mxweb,.mxwbe,.dwg,.dxf"
       }
     },
     "?fileisExist": "通过文件的md5参数检查文件是否已经存在",

@@ -3,16 +3,29 @@
  * - dismissed 状态持久化到 localStorage
  * - 其他状态仅内存存储（会话级别）
  */
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import type { TourContextValue, TourGuide, TourStep, UICondition } from '../types/tour';
+import type {
+  TourContextValue,
+  TourGuide,
+  TourStep,
+  UICondition,
+} from '../types/tour';
 import { tourGuides as defaultGuides } from '../config/tourGuides';
 import { useAuth } from './AuthContext';
 
 /** localStorage 存储键名（仅用于 dismissed 状态） */
 const TOUR_DISMISSED_KEY = 'cloudcad_tour_dismissed';
 
-/** 
+/**
  * 引导模式运行时状态（模块级变量，用于跨组件通信）
  * 不持久化，仅在当前会话中有效
  */
@@ -60,22 +73,22 @@ function saveDismissedState(dismissed: boolean): void {
 function getStartRoute(guide: TourGuide): string | null {
   // 优先使用 startPage，如果没有则使用 initialRoute（向后兼容）
   const startPage = guide.startPage ?? guide.initialRoute;
-  
+
   if (!startPage) {
     // 默认跳转到首页仪表盘
     return '/';
   }
-  
+
   // 'dashboard' 表示首页仪表盘
   if (startPage === 'dashboard') {
     return '/';
   }
-  
+
   // 'current' 表示保持当前页面
   if (startPage === 'current') {
     return null; // null 表示不需要跳转
   }
-  
+
   // 自定义路由路径
   return startPage;
 }
@@ -149,23 +162,23 @@ function resolveStepConfig(step: TourStep): TourStep {
 function isRouteMatch(currentPath: string, targetRoute: string): boolean {
   // 精确匹配
   if (currentPath === targetRoute) return true;
-  
+
   // 动态路由匹配（如 /projects/:projectId/files 匹配 /projects/abc/files）
   const currentParts = currentPath.split('/').filter(Boolean);
   const targetParts = targetRoute.split('/').filter(Boolean);
-  
+
   if (currentParts.length !== targetParts.length) return false;
-  
+
   for (let i = 0; i < targetParts.length; i++) {
     const targetPart = targetParts[i]!;
     const currentPart = currentParts[i]!;
-    
+
     // 动态参数（以 : 开头）可以匹配任意值
     if (targetPart.startsWith(':')) continue;
-    
+
     if (targetPart !== currentPart) return false;
   }
-  
+
   return true;
 }
 
@@ -179,18 +192,18 @@ interface TourProviderProps {
 
 /** 过滤掉 isHide 为 true 的引导（引导中心不显示隐藏的引导） */
 function filterVisibleGuides(guides: TourGuide[]): TourGuide[] {
-  return guides.filter(guide => !guide.isHide);
+  return guides.filter((guide) => !guide.isHide);
 }
 
-export const TourProvider: React.FC<TourProviderProps> = ({ 
+export const TourProvider: React.FC<TourProviderProps> = ({
   children,
-  guides = defaultGuides 
+  guides = defaultGuides,
 }) => {
   // 过滤掉隐藏的引导，仅显示在引导中心
   const visibleGuides = useMemo(() => filterVisibleGuides(guides), [guides]);
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // 内存状态（不持久化）
   const [completedGuides, setCompletedGuides] = useState<string[]>([]);
   const [isActive, setIsActive] = useState(false);
@@ -200,13 +213,19 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isTourCenterOpen, setIsTourCenterOpen] = useState(false);
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
-  
+
   // 等待路由跳转后激活引导
   const pendingActivationRef = useRef(false);
-  
+
   // 防止重复初始化（登录后只检查一次）
   const initializedAfterLoginRef = useRef(false);
-  
+
+  // 标记用户是否主动关闭了引导弹框（防止 useEffect 重新打开）
+  const userDismissedRef = useRef(false);
+
+  // 保存用户开始引导前的原始位置
+  const originalLocationRef = useRef<string | null>(null);
+
   // 获取用户登录状态
   const { isAuthenticated } = useAuth();
 
@@ -216,19 +235,47 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     if (!isAuthenticated) {
       return;
     }
-    
+
     // 防止重复检查
     if (initializedAfterLoginRef.current) {
       return;
     }
+
+    // 定义不应该显示首次引导弹框的路径
+    const excludedPaths = [
+      '/login',
+      '/register',
+      '/forgot-password',
+      '/reset-password',
+      '/verify-email',
+      '/cad-editor',
+    ];
+
+    // 检查当前路径是否在排除列表中
+    const currentPath = location.pathname;
+    const shouldExclude = excludedPaths.some(
+      (path) => currentPath === path || currentPath.startsWith('/cad-editor/')
+    );
+
+    // 如果在不应该显示的页面，标记为已初始化但不显示弹框
+    if (shouldExclude) {
+      initializedAfterLoginRef.current = true;
+      return;
+    }
+
     initializedAfterLoginRef.current = true;
-    
+
+    // 如果用户主动关闭了弹框，不再显示
+    if (userDismissedRef.current) {
+      return;
+    }
+
     // 从 localStorage 检查 dismissed 状态
     const dismissed = loadDismissedState();
     if (!dismissed) {
       setIsStartModalOpen(true);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, location.pathname]);
 
   // 监听路由变化，在跳转完成后激活引导
   useEffect(() => {
@@ -260,14 +307,20 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   /**
    * 开始引导（带前置条件处理）
    * 检测前置条件，不满足时自动执行解决方案
-   * 
+   *
    * 返回值：
    * - canStart: true 表示所有条件满足，可以开始引导
    * - needsWait: true 表示需要先完成前置引导
    * - prerequisiteGuideId: 需要先完成的前置引导 ID
    */
   const startTourWithPreconditions = useCallback(
-    async (guideId: string): Promise<{ canStart: boolean; needsWait?: boolean; prerequisiteGuideId?: string }> => {
+    async (
+      guideId: string
+    ): Promise<{
+      canStart: boolean;
+      needsWait?: boolean;
+      prerequisiteGuideId?: string;
+    }> => {
       const guide = guides.find((g) => g.id === guideId);
       if (!guide) {
         console.warn(`[Tour] Guide not found: ${guideId}`);
@@ -281,7 +334,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({
         try {
           met = await condition.check();
         } catch (error) {
-          console.warn(`[Tour] Precondition check failed: ${condition.description}`, error);
+          console.warn(
+            `[Tour] Precondition check failed: ${condition.description}`,
+            error
+          );
           met = false;
         }
 
@@ -292,21 +348,33 @@ export const TourProvider: React.FC<TourProviderProps> = ({
           if (condition.resolve?.guideId) {
             // 将当前目标引导压入栈
             pendingTargetGuidesStack.push(guideId);
-            console.log(`[Tour] Pushed target guide to stack: ${guideId}, stack: [${pendingTargetGuidesStack.join(', ')}]`);
-            
+            console.log(
+              `[Tour] Pushed target guide to stack: ${guideId}, stack: [${pendingTargetGuidesStack.join(', ')}]`
+            );
+
             // 获取前置引导
-            const prerequisiteGuide = guides.find((g) => g.id === condition.resolve!.guideId);
+            const prerequisiteGuide = guides.find(
+              (g) => g.id === condition.resolve!.guideId
+            );
             if (!prerequisiteGuide) {
-              console.warn(`[Tour] Prerequisite guide not found: ${condition.resolve.guideId}`);
+              console.warn(
+                `[Tour] Prerequisite guide not found: ${condition.resolve.guideId}`
+              );
               // 移除压入的引导
               pendingTargetGuidesStack.pop();
               return { canStart: false };
             }
 
-            console.log(`[Tour] Starting prerequisite guide: ${condition.resolve.guideId}`);
-            
+            console.log(
+              `[Tour] Starting prerequisite guide: ${condition.resolve.guideId}`
+            );
+
             // 返回需要等待，由外部启动前置引导
-            return { canStart: false, needsWait: true, prerequisiteGuideId: condition.resolve.guideId };
+            return {
+              canStart: false,
+              needsWait: true,
+              prerequisiteGuideId: condition.resolve.guideId,
+            };
           } else if (condition.resolve?.steps) {
             // 直接插入步骤执行
             await executeInsertedSteps(condition.resolve.steps);
@@ -315,7 +383,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({
             await condition.resolve.handler();
           } else {
             // 无法解决，返回失败
-            console.warn(`[Tour] No resolve method for precondition: ${condition.description}`);
+            console.warn(
+              `[Tour] No resolve method for precondition: ${condition.description}`
+            );
             return { canStart: false };
           }
 
@@ -326,7 +396,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({
             met = false;
           }
           if (!met) {
-            console.warn(`[Tour] Precondition still not met after resolve: ${condition.description}`);
+            console.warn(
+              `[Tour] Precondition still not met after resolve: ${condition.description}`
+            );
             return { canStart: false };
           }
         }
@@ -343,6 +415,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({
    */
   const startTourInternal = useCallback(
     (guide: TourGuide): void => {
+      // 保存用户的原始位置
+      originalLocationRef.current = location.pathname;
+
       // 开启引导模式
       setIsTourMode(true);
       tourModeState = true;
@@ -381,17 +456,19 @@ export const TourProvider: React.FC<TourProviderProps> = ({
 
       // 检测前置条件
       const result = await startTourWithPreconditions(guideId);
-      
+
       if (result.needsWait && result.prerequisiteGuideId) {
         // 需要先完成前置引导
-        const prerequisiteGuide = guides.find((g) => g.id === result.prerequisiteGuideId);
+        const prerequisiteGuide = guides.find(
+          (g) => g.id === result.prerequisiteGuideId
+        );
         if (prerequisiteGuide) {
           // 递归启动前置引导（会继续检查前置引导的前置条件）
           await startTour(result.prerequisiteGuideId);
         }
         return;
       }
-      
+
       if (!result.canStart) {
         console.warn(`[Tour] Preconditions not met for guide: ${guideId}`);
         return;
@@ -404,51 +481,67 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   );
 
   /** 恢复引导 */
-  const resumeTour = useCallback((guideId: string, stepIndex: number) => {
-    const guide = guides.find(g => g.id === guideId);
-    if (!guide) {
-      console.warn(`[Tour] Guide not found: ${guideId}`);
-      return;
-    }
+  const resumeTour = useCallback(
+    (guideId: string, stepIndex: number) => {
+      const guide = guides.find((g) => g.id === guideId);
+      if (!guide) {
+        console.warn(`[Tour] Guide not found: ${guideId}`);
+        return;
+      }
 
-    // 确保步骤索引在有效范围内
-    const validStepIndex = Math.max(0, Math.min(stepIndex, guide.steps.length - 1));
-    
-    setCurrentGuide(guide);
-    setCurrentStep(validStepIndex);
-    setIsActive(true);
-  }, [guides]);
+      // 确保步骤索引在有效范围内
+      const validStepIndex = Math.max(
+        0,
+        Math.min(stepIndex, guide.steps.length - 1)
+      );
+
+      setCurrentGuide(guide);
+      setCurrentStep(validStepIndex);
+      setIsActive(true);
+    },
+    [guides]
+  );
 
   /** 完成引导 */
   const completeTour = useCallback(() => {
     if (!currentGuide) return;
 
     const guideId = currentGuide.id;
-    
+
     setIsActive(false);
     setCurrentGuide(null);
     setCurrentStep(0);
-    
+
     // 更新已完成引导列表（内存中）
-    setCompletedGuides(prev => 
+    setCompletedGuides((prev) =>
       prev.includes(guideId) ? prev : [...prev, guideId]
     );
 
     // 检查栈是否有待继续的引导
     if (pendingTargetGuidesStack.length > 0) {
       const nextGuideId = pendingTargetGuidesStack.pop()!;
-      console.log(`[Tour] Popped target guide from stack: ${nextGuideId}, remaining: [${pendingTargetGuidesStack.join(', ')}]`);
-      
+      console.log(
+        `[Tour] Popped target guide from stack: ${nextGuideId}, remaining: [${pendingTargetGuidesStack.join(', ')}]`
+      );
+
       // 延迟启动，等待当前引导完全关闭，并重新检查前置条件
       setTimeout(() => {
         startTour(nextGuideId);
       }, 300);
       return;
     }
-    
+
     // 没有待继续的引导，关闭引导模式
     setIsTourMode(false);
     tourModeState = false;
+
+    // 导航回用户原本的页面（使用 window.location 重新访问）
+    if (originalLocationRef.current) {
+      console.log(`[Tour] Navigating back to original location: ${originalLocationRef.current}`);
+      window.location.href = originalLocationRef.current;
+      // 清空保存的位置，避免影响下一次引导
+      originalLocationRef.current = null;
+    }
   }, [currentGuide, startTour]);
 
   /** 下一步 */
@@ -456,7 +549,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     if (!currentGuide) return;
 
     const nextIndex = currentStep + 1;
-    
+
     if (nextIndex >= currentGuide.steps.length) {
       // 引导完成
       completeTour();
@@ -492,22 +585,26 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     setCurrentGuide(null);
     setCurrentStep(0);
 
-    // 检查栈是否有待继续的引导
+    // 清空待继续的引导栈，防止跳过当前引导后继续启动栈中的引导
     if (pendingTargetGuidesStack.length > 0) {
-      const nextGuideId = pendingTargetGuidesStack.pop()!;
-      console.log(`[Tour] Popped target guide from stack (after skip): ${nextGuideId}`);
-      
-      // 延迟启动，重新检查前置条件
-      setTimeout(() => {
-        startTour(nextGuideId);
-      }, 300);
-      return;
+      console.log(
+        `[Tour] Clearing pending target guides stack on skip: [${pendingTargetGuidesStack.join(', ')}]`
+      );
+      pendingTargetGuidesStack.length = 0;
     }
-    
-    // 没有待继续的引导，关闭引导模式
+
+    // 关闭引导模式
     setIsTourMode(false);
     tourModeState = false;
-  }, [startTour]);
+
+    // 导航回用户原本的页面（使用 window.location 重新访问）
+    if (originalLocationRef.current) {
+      console.log(`[Tour] Navigating back to original location: ${originalLocationRef.current}`);
+      window.location.href = originalLocationRef.current;
+      // 清空保存的位置，避免影响下一次引导
+      originalLocationRef.current = null;
+    }
+  }, []);
 
   /** 打开引导中心 */
   const openTourCenter = useCallback(() => {
@@ -521,14 +618,21 @@ export const TourProvider: React.FC<TourProviderProps> = ({
 
   /** 关闭首次登录提示 */
   const dismissStartModal = useCallback(() => {
-    setIsStartModalOpen(false);
+    // 先设置标记，防止 useEffect 重新打开
+    userDismissedRef.current = true;
     // 持久化 dismissed 状态
     saveDismissedState(true);
+    // 再关闭弹框
+    setIsStartModalOpen(false);
   }, []);
 
   // 计算解析后的当前步骤配置
   const resolvedCurrentStep = useMemo(() => {
-    if (!currentGuide || currentStep < 0 || currentStep >= currentGuide.steps.length) {
+    if (
+      !currentGuide ||
+      currentStep < 0 ||
+      currentStep >= currentGuide.steps.length
+    ) {
       return null;
     }
     const step = currentGuide.steps[currentStep];
@@ -545,7 +649,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     completedGuides,
     resolvedCurrentStep,
     isTourMode,
-    
+
     // 操作
     startTour,
     nextStep,
@@ -554,18 +658,14 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     openTourCenter,
     closeTourCenter,
     resumeTour,
-    
+
     // 弹窗状态
     isTourCenterOpen,
     isStartModalOpen,
     dismissStartModal,
   };
 
-  return (
-    <TourContext.Provider value={value}>
-      {children}
-    </TourContext.Provider>
-  );
+  return <TourContext.Provider value={value}>{children}</TourContext.Provider>;
 };
 
 /**

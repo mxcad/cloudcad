@@ -1,8 +1,8 @@
 import React from 'react';
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
-import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
-import ChevronsLeft from 'lucide-react/dist/esm/icons/chevrons-left';
-import ChevronsRight from 'lucide-react/dist/esm/icons/chevrons-right';
+import { ChevronLeft } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { ChevronsLeft } from 'lucide-react';
+import { ChevronsRight } from 'lucide-react';
 import { Button } from './Button';
 
 export interface PaginationMeta {
@@ -31,8 +31,9 @@ export const Pagination: React.FC<PaginationProps> = ({
 }) => {
   const { total, page, limit, totalPages } = meta;
 
-  // 如果只有一页，不显示分页
-  if (totalPages <= 1 && !showSizeChanger) {
+  // 始终显示分页（即使只有一页）
+  // 如果只有一页且不需要显示每页数量选择器，返回空
+  if (totalPages <= 1 && !showSizeChanger && total === 0) {
     return null;
   }
 

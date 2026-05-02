@@ -21,6 +21,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ExtractJwt } from 'passport-jwt';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { IS_OPTIONAL_AUTH_KEY } from '../decorators/optional-auth.decorator';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -44,6 +45,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
+    // 检查是否为可选认证路由
+    const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
+      IS_OPTIONAL_AUTH_KEY,
+      [context.getHandler(), context.getClass()]
+    );
+
     const request = context.switchToHttp().getRequest();
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
@@ -54,6 +61,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(
       `Session: ${request.session?.userId ? 'present' : 'missing'}`
     );
+    this.logger.debug(`OptionalAuth: ${isOptionalAuth}`);
 
     // 如果没有Token，检查 Session
     if (!token) {
@@ -70,7 +78,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         return true;
       }
 
-      // 既没有 Token 也没有 Session，抛出异常
+      // 既没有 Token 也没有 Session
+      if (isOptionalAuth) {
+        // 可选认证模式：允许未登录用户继续访问
+        this.logger.debug('可选认证模式：允许未登录用户继续访问');
+        return true;
+      }
+
+      // 强制认证模式：抛出异常
       this.logger.debug('请求未提供Token且无有效Session');
       throw new UnauthorizedException('未登录或登录已过期');
     }

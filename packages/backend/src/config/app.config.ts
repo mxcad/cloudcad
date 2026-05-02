@@ -44,17 +44,34 @@ export interface UploadConfig {
   maxFilesPerUpload: number; // 单次上传最大文件数
   allowedExtensions: string[]; // 允许的文件扩展名
   blockedExtensions: string[]; // 禁止的文件扩展名
+  maxConcurrent: number; // 最大并发上传/转换任务数
+  chunkMaxConcurrent: number; // 分片上传最大并发数
 }
 
 export interface SessionConfig {
   secret: string;
   maxAge: number; // Session 有效期（毫秒）
   name: string; // Session cookie 名称
+  cookieDomain?: string; // Cookie 域名
+  cookieSameSite: 'none' | 'lax' | 'strict'; // Cookie sameSite 策略
+  cookieSecure: boolean; // 是否使用 secure Cookie
 }
 
 export interface CacheConfig {
   l2DefaultTTL: number; // L2 缓存默认 TTL（秒）
   versionMaxAge: number; // 缓存版本最大有效期（毫秒）
+}
+
+/**
+ * 用户注销数据清理配置
+ */
+export interface UserCleanupConfig {
+  /** 注销后延迟清理天数 */
+  delayDays: number;
+  /** 是否启用自动清理 */
+  enabled: boolean;
+  /** Cron 表达式（默认每天凌晨 4 点执行） */
+  cronExpression: string;
 }
 
 export interface FileLockConfig {
@@ -223,6 +240,80 @@ export interface LogConfig {
   levels: ('error' | 'warn' | 'log' | 'debug' | 'verbose')[];
 }
 
+/**
+ * 短信服务商类型
+ */
+export type SmsProviderType = 'aliyun' | 'tencent' | 'mock';
+
+/**
+ * 阿里云短信配置
+ */
+export interface AliyunSmsConfig {
+  accessKeyId: string;
+  accessKeySecret: string;
+  signName: string;
+  templateCode: string;
+  regionId?: string;
+}
+
+/**
+ * 腾讯云短信配置
+ */
+export interface TencentSmsConfig {
+  secretId: string;
+  secretKey: string;
+  appId: string;
+  signName: string;
+  templateId: string;
+  region?: string;
+}
+
+/**
+ * 短信配置
+ * 注意：短信服务开关（smsEnabled）已迁移到运行时配置系统
+ */
+export interface SmsConfig {
+  /** 服务商类型 */
+  provider: SmsProviderType;
+  /** 阿里云配置 */
+  aliyun: AliyunSmsConfig;
+  /** 腾讯云配置 */
+  tencent: TencentSmsConfig;
+  /** 发送限制配置 */
+  limits: SmsLimitsConfig;
+}
+
+/**
+ * 短信发送限制配置
+ */
+export interface SmsLimitsConfig {
+  /** 每个手机号每日发送上限 */
+  dailyLimitPerPhone: number;
+  /** 每个 IP 每小时发送上限 */
+  hourlyLimitPerIp: number;
+}
+
+/**
+ * 缩略图自动生成配置
+ */
+export interface ThumbnailConfig {
+  /** MxWebDwg2Jpg.exe 路径（用于将 mxweb 转换为 jpg 缩略图） */
+  dwg2JpgPath: string;
+  /** 是否启用后端自动生成缩略图 */
+  autoGenerateEnabled: boolean;
+  /** 缩略图宽度（像素） */
+  width: number;
+  /** 缩略图高度（像素） */
+  height: number;
+  /** 缩略图背景颜色，十六进制 RGB 格式，默认黑色 */
+  backgroundColor: string;
+}
+
+export interface CooperateConfig {
+  /** 协同服务地址 */
+  url: string;
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -233,6 +324,7 @@ export interface AppConfig {
   upload: UploadConfig;
   session: SessionConfig;
   cache: CacheConfig;
+  userCleanup: UserCleanupConfig;
   fileLock: FileLockConfig;
   mail: MailConfig;
   mxcad: MxCadConfig;
@@ -251,4 +343,7 @@ export interface AppConfig {
   storage: StorageConfig; // 存储配置
   svn: SvnConfig; // SVN 配置
   log: LogConfig; // 日志配置
+  sms: SmsConfig; // 短信配置
+  thumbnail: ThumbnailConfig; // 缩略图自动生成配置
+  cooperate: CooperateConfig; // 协同服务配置
 }

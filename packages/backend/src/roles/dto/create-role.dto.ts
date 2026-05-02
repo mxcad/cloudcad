@@ -41,7 +41,7 @@ export class CreateRoleDto {
 
   @ApiProperty({
     description: '角色类别',
-    enum: RoleCategory,
+    enum: Object.values(RoleCategory), enumName: 'RoleCategory',
     example: RoleCategory.CUSTOM,
     required: false,
   })

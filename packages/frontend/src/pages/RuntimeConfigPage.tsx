@@ -7,21 +7,24 @@ import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 
 // Lucide 图标导入
-import Settings from 'lucide-react/dist/esm/icons/settings';
-import Save from 'lucide-react/dist/esm/icons/save';
-import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import Shield from 'lucide-react/dist/esm/icons/shield';
-import Globe from 'lucide-react/dist/esm/icons/globe';
-import Mail from 'lucide-react/dist/esm/icons/mail';
-import Users from 'lucide-react/dist/esm/icons/users';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Cpu from 'lucide-react/dist/esm/icons/cpu';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import Eye from 'lucide-react/dist/esm/icons/eye';
-import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
-import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
+import { Settings } from 'lucide-react';
+import { Save } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { Globe } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Eye } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 
 interface ConfigGroup {
   category: string;
@@ -32,10 +35,13 @@ interface ConfigGroup {
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = {
   mail: { label: '邮件配置', icon: Mail },
+  sms: { label: '短信配置', icon: Smartphone },
   support: { label: '客服信息', icon: Globe },
   file: { label: '文件配置', icon: FileText },
   user: { label: '用户管理', icon: Users },
   system: { label: '系统配置', icon: Cpu },
+  wechat: { label: '微信配置', icon: MessageCircle },
+  storage: { label: '存储配置', icon: HardDrive },
 };
 
 /**
@@ -188,10 +194,26 @@ export const RuntimeConfigPage: React.FC = () => {
     return sensitivePatterns.some((pattern) => key.toLowerCase().includes(pattern));
   };
 
+  /**
+   * 获取配置项的单位
+   */
+  const getConfigUnit = (key: string): string | null => {
+    const unitMap: Record<string, string> = {
+      // 存储配额（GB）
+      userStorageQuota: 'GB',
+      projectStorageQuota: 'GB',
+      libraryStorageQuota: 'GB',
+      // 文件大小限制（MB）
+      maxFileSize: 'MB',
+    };
+    return unitMap[key] || null;
+  };
+
   const renderConfigInput = (item: RuntimeConfigItem) => {
     const value = parseValue(item);
     const isSensitive = isSensitiveKey(item.key);
     const isHidden = hiddenValues.has(item.key);
+    const unit = getConfigUnit(item.key);
 
     if (item.type === 'boolean') {
       return (
@@ -208,13 +230,17 @@ export const RuntimeConfigPage: React.FC = () => {
 
     if (item.type === 'number') {
       return (
-        <input
-          type="number"
-          value={value as number}
-          onChange={(e) => handleValueChange(item.key, Number(e.target.value))}
-          className="config-input number-input"
-          disabled={!canManageConfig}
-        />
+        <div className="number-input-wrapper">
+          <input
+            type="number"
+            value={value as number}
+            onChange={(e) => handleValueChange(item.key, Number(e.target.value))}
+            className={`config-input number-input ${unit ? 'has-unit' : ''}`}
+            disabled={!canManageConfig}
+            min={0}
+          />
+          {unit && <span className="input-unit">{unit}</span>}
+        </div>
       );
     }
 
@@ -809,6 +835,31 @@ const styles = `
   .number-input {
     width: 120px;
     text-align: right;
+  }
+
+  .number-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .number-input-wrapper .number-input {
+    width: 100px;
+  }
+
+  .number-input-wrapper .number-input.has-unit {
+    width: 80px;
+  }
+
+  .input-unit {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    white-space: nowrap;
   }
 
   .sensitive-input-wrapper {

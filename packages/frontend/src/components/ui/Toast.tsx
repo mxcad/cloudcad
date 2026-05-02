@@ -1,8 +1,8 @@
 import React from 'react';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import Info from 'lucide-react/dist/esm/icons/info';
-import X from 'lucide-react/dist/esm/icons/x';
+import { CheckCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -56,7 +56,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   onRemove,
 }) => {
   return (
-    <div className="fixed top-4 right-4 z-[10000] space-y-2">
+    <div className="fixed top-4 right-4 space-y-2" style={{ zIndex: 100010 }}>
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

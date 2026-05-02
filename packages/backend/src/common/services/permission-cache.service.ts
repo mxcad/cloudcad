@@ -320,12 +320,19 @@ export class PermissionCacheService implements OnModuleDestroy {
    * 清除角色缓存（公共接口）
    */
   async clearRoleCache(roleName: string): Promise<void> {
-    // 更新版本号
+    // 更新角色权限版本
     if (this.cacheVersionService) {
       await this.cacheVersionService.updateVersion(
         CacheVersionType.ROLE_PERMISSIONS,
         roleName,
         `Role ${roleName} permissions updated`
+      );
+
+      // 同时更新用户权限版本，使 system_perm 缓存失效
+      await this.cacheVersionService.updateVersion(
+        CacheVersionType.USER_PERMISSIONS,
+        'global',
+        `Role ${roleName} permissions updated, invalidating all user permission caches`
       );
     }
 

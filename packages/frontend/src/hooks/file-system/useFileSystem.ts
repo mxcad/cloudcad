@@ -323,15 +323,18 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     }
 
     setPagination((prev) => ({ ...prev, page: 1 }));
+    // 直接使用 loadData，不将其放入依赖项（loadData 内部使用 ref 管理，不会捕获过时的闭包）
     loadData();
-  }, [urlProjectId, urlNodeId, refreshCount, loadData, setPagination]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlProjectId, urlNodeId, refreshCount, setPagination]);
 
   // 监听 pagination 变化
   useEffect(() => {
     if (checkShouldLoadData()) {
       loadData();
     }
-  }, [pagination, checkShouldLoadData, loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination, checkShouldLoadData]);
 
   // 监听 searchTerm 变化
   const prevSearchTermRef = useRef('');
@@ -450,11 +453,13 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
 
     // 回收站相关操作
     isTrashView,
+    setIsTrashView,
     handleToggleTrashView,
     handleRestoreNode,
     handleClearProjectTrash,
     handleClearTrash,
     isProjectTrashView,
+    setIsProjectTrashView,
     handleToggleProjectTrashView,
     trashApi,
   };

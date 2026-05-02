@@ -6,7 +6,7 @@ node_modules/
 # Runtime binaries (scripts are kept for version control)
 runtime/windows/
 runtime/linux/
-offline-data
+data
 release
 # Generated entry scripts (use offline node only in project directory)
 node.cmd
@@ -61,11 +61,20 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 
+# Deploy lock hash (记录已安装的依赖版本，不应提交)
+.deploy-lock-hash
+
 # Generated files
 swagger_json.json
 
 # Data directory (all user data)
 data/
+
+# 保留外置配置目录结构 (用户配置文件不提交)
+!data/configs/.gitkeep
+!data/configs/frontend/.gitkeep
+!data/configs/frontend/ini/.gitkeep
+!data/configs/frontend/brand/.gitkeep
 
 # Temporary/debug files
 *.bak
@@ -83,3 +92,12 @@ test-sidebar.html
 .agents/
 .qwen/
 runtime/cache/
+
+# Git worktrees
+.worktrees/
+.gitnexus
+
+# SVN
+.svn/
+
+temp

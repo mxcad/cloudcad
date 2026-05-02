@@ -21,7 +21,7 @@ const DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 // Mock 配置
 const mockUploadConfig = {
-  allowedExtensions: ['.dwg', '.dxf', '.mxweb'],
+  allowedExtensions: ['.dwg', '.dxf', '.mxweb', '.mxwbe'],
   maxSize: 100 * 1024 * 1024,
   maxFilesPerUpload: 10,
   blockedExtensions: ['.exe', '.bat', '.cmd', '.sh', '.ps1'],

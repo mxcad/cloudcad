@@ -135,10 +135,14 @@ export class RateLimiter {
     if (this.timeout > 0 && taskState.startedAt) {
       const timeout = setTimeout(() => {
         this.logger.warn(`任务执行超时: ${taskState.id}`);
+        // 超时后清理任务，释放并发槽位
+        this.running.delete(taskState.id);
         taskState.reject(new Error(`任务执行超时 (${this.timeout}ms)`));
+        // 处理下一个任务
+        this.processNext();
       }, this.timeout);
 
-      // 清理定时器
+      // 清理定时器（任务正常完成时）
       taskState.promise.finally(() => {
         clearTimeout(timeout);
       });

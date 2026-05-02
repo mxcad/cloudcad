@@ -41,7 +41,7 @@ export class QueryChildrenDto {
 
   @ApiProperty({
     description: '文件状态',
-    enum: FileStatus,
+    enum: Object.values(FileStatus), enumName: 'FileStatus',
     required: false,
   })
   @IsOptional()

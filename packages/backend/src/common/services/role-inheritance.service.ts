@@ -338,6 +338,7 @@ export class RoleInheritanceService implements OnModuleInit {
       const rolePermissions = await this.getRolePermissions(roleName);
 
       this.logger.log(`角色 ${roleName} 的权限数量: ${rolePermissions.length}`);
+      this.logger.log(`角色 ${roleName} 的权限列表: ${rolePermissions.join(', ')}`);
 
       const hasPermission = rolePermissions.includes(permission);
       this.logger.log(
@@ -527,11 +528,24 @@ export class RoleInheritanceService implements OnModuleInit {
   }
 
   /**
-   * 模块初始化时预热缓存（强制刷新）
+   * 模块初始化时预热缓存（异步执行，不阻塞启动）
    */
   async onModuleInit(): Promise<void> {
+    // 异步执行预热，不阻塞模块启动
+    this.warmupCacheAsync().catch((error) => {
+      this.logger.error(
+        `预热角色权限缓存失败: ${error.message}`,
+        error.stack
+      );
+    });
+  }
+
+  /**
+   * 异步预热缓存（后台执行）
+   */
+  private async warmupCacheAsync(): Promise<void> {
     try {
-      this.logger.log('开始预热角色权限缓存...');
+      this.logger.log('开始预热角色权限缓存（后台异步）...');
 
       const systemRoles = await this.prisma.role.findMany({
         where: { isSystem: true },
@@ -562,7 +576,6 @@ export class RoleInheritanceService implements OnModuleInit {
         `预热角色权限缓存失败: ${(error as Error).message}`,
         (error as Error).stack
       );
-      // 不抛出异常，避免影响模块启动
     }
   }
 

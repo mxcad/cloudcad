@@ -197,7 +197,7 @@ pnpm type-check
 | `DATABASE_URL` | 数据库连接字符串 | - |
 | `REDIS_HOST` | Redis 主机 | localhost |
 | `JWT_SECRET` | JWT 密钥 | - |
-| `FILES_DATA_PATH` | 文件存储路径 | filesData |
+| `FILES_DATA_PATH` | 文件存储路径 | data/files |
 
 ## 部署
 

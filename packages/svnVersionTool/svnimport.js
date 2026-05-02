@@ -1,8 +1,8 @@
-const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * SVN import - 将未版本控制的目录树导入仓库
@@ -33,22 +33,31 @@ function svnImport(importPath, repoUrl, message, callback) {
     command += ` -m ""`;
   }
 
-  exec(command, { encoding: 'utf8', windowsHide: true }, (error, stdout, _stderr) => {
-    // 清理临时文件
-    if (tempFile && fs.existsSync(tempFile)) {
-      try {
-        fs.unlinkSync(tempFile);
-      } catch (cleanupError) {
-        // 忽略清理错误
+  executeCommand(command, {
+    encoding: 'utf8'
+  })
+    .then(stdout => {
+      // 清理临时文件
+      if (tempFile && fs.existsSync(tempFile)) {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (cleanupError) {
+          // 忽略清理错误
+        }
       }
-    }
-
-    if (error) {
-      callback(error);
-    } else {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      // 清理临时文件
+      if (tempFile && fs.existsSync(tempFile)) {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (cleanupError) {
+          // 忽略清理错误
+        }
+      }
+      callback(error);
+    });
 }
 
 module.exports = svnImport;

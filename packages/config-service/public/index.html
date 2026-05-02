@@ -1,862 +1,2965 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CloudCAD 部署配置中心</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
-    
-    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-    
-    .header { text-align: center; padding: 40px 0; }
-    .header h1 { font-size: 28px; color: #00d9ff; margin-bottom: 10px; }
-    .header p { color: #888; }
-    
-    .card { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
-    
-    .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #0d0d1a; border-radius: 8px; padding: 4px; }
-    .tab { flex: 1; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; transition: all 0.2s; color: #888; }
-    .tab:hover { color: #fff; }
-    .tab.active { background: #00d9ff; color: #000; font-weight: 500; }
-    
-    .login-form { max-width: 400px; margin: 0 auto; }
-    .login-form h2 { text-align: center; margin-bottom: 20px; color: #00d9ff; }
-    
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 6px; color: #aaa; font-size: 14px; }
-    .form-group input { 
-      width: 100%; padding: 12px; border: 1px solid #333; border-radius: 8px; 
-      background: #1a1a2e; color: #fff; font-size: 14px;
-    }
-    .form-group input:focus { outline: none; border-color: #00d9ff; }
-    
-    .btn { 
-      padding: 10px 16px; border: none; border-radius: 6px; 
-      font-size: 14px; cursor: pointer; transition: all 0.2s;
-    }
-    .btn-block { width: 100%; padding: 12px; font-size: 16px; }
-    .btn-primary { background: #00d9ff; color: #000; }
-    .btn-primary:hover { background: #00b8d9; }
-    .btn-secondary { background: #333; color: #fff; }
-    .btn-secondary:hover { background: #444; }
-    .btn-success { background: #2ecc71; color: #fff; }
-    .btn-success:hover { background: #27ae60; }
-    .btn-danger { background: #e74c3c; color: #fff; }
-    .btn-danger:hover { background: #c0392b; }
-    .btn-warning { background: #f39c12; color: #000; }
-    .btn-warning:hover { background: #e67e22; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-group { display: flex; gap: 8px; }
-    
-    .error { color: #e74c3c; text-align: center; margin-top: 10px; font-size: 14px; }
-    
-    .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 20px; border-bottom: 1px solid #333; }
-    .status-bar .user { color: #aaa; }
-    .status-bar .logout { color: #e74c3c; cursor: pointer; font-size: 14px; }
-    .status-bar .logout:hover { text-decoration: underline; }
-    
-    .toast { position: fixed; bottom: 20px; right: 20px; padding: 16px 24px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 1000; animation: slideIn 0.3s ease; }
-    .toast.success { background: #2ecc71; }
-    .toast.error { background: #e74c3c; }
-    .toast.info { background: #3498db; }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    
-    .hidden { display: none; }
-    
-    /* 服务列表 */
-    .service-list { display: grid; gap: 12px; }
-    .service-item { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #0d0d1a; border-radius: 8px; }
-    .service-info { display: flex; align-items: center; gap: 12px; }
-    .service-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .service-dot.online { background: #2ecc71; }
-    .service-dot.offline { background: #e74c3c; }
-    .service-dot.starting { background: #f39c12; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .service-name { font-weight: 500; }
-    .service-status { font-size: 12px; color: #888; margin-left: 8px; }
-    .service-actions { display: flex; gap: 8px; }
-    
-    /* 配置表单 */
-    .config-group-header { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-radius: 8px; margin-bottom: 16px; }
-    .config-group-header .icon { font-size: 20px; }
-    .config-group-header span:not(.icon) { font-weight: 600; font-size: 16px; }
-    .config-group-header small { margin-left: auto; font-size: 12px; opacity: 0.8; }
-    
-    .config-group-header.controllable { background: linear-gradient(135deg, #1a3a2e 0%, #0d1f1a 100%); border: 1px solid #2ecc71; }
-    .config-group-header.controllable span:not(.icon):not(small) { color: #2ecc71; }
-    .config-group-header.controllable small { color: #6dbf7b; }
-    
-    .config-group-header.uncontrollable { background: linear-gradient(135deg, #3a2a1a 0%, #1f1a0d 100%); border: 1px solid #f39c12; }
-    .config-group-header.uncontrollable span:not(.icon):not(small) { color: #f39c12; }
-    .config-group-header.uncontrollable small { color: #d4a84b; }
-    
-    .config-section { margin-bottom: 24px; }
-    .config-section h3 { color: #00d9ff; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; }
-    .config-section h3 small { font-size: 12px; color: #888; font-weight: normal; margin-left: auto; }
-    
-    .config-section.warning { background: rgba(243, 156, 18, 0.05); border-radius: 8px; padding: 16px; margin-bottom: 24px; }
-    .config-section.warning h3 { color: #f39c12; border-bottom-color: rgba(243, 156, 18, 0.3); }
-    
-    .config-item { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
-    .config-item label { width: 140px; flex-shrink: 0; color: #aaa; font-size: 14px; }
-    .config-item input { flex: 1; padding: 10px; border: 1px solid #333; border-radius: 6px; background: #1a1a2e; color: #fff; font-size: 14px; }
-    .config-item input:focus { outline: none; border-color: #00d9ff; }
-    .config-item input:read-only { background: #0d0d1a; color: #666; }
-    .config-select { flex: 1; padding: 10px; border: 1px solid #333; border-radius: 6px; background: #1a1a2e; color: #fff; font-size: 14px; cursor: pointer; }
-    .config-select:focus { outline: none; border-color: #00d9ff; }
-    
-    .config-actions { display: flex; gap: 12px; margin-top: 20px; }
-    
-    .restart-notice { background: #2c3e50; padding: 16px; border-radius: 8px; margin-top: 20px; text-align: center; }
-    .restart-notice p { margin-bottom: 12px; color: #f39c12; }
-    
-    /* 模态框 */
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal.hidden { display: none; }
-    .modal-content { background: #16213e; border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; }
-    .modal-content h3 { color: #00d9ff; margin-bottom: 20px; text-align: center; }
-    .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
-    .modal-actions .btn { flex: 1; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>CloudCAD 部署配置中心</h1>
-      <p>管理服务器环境配置</p>
-    </div>
-    
-    <!-- 登录页 -->
-    <div id="loginPage" class="card">
-      <div class="login-form">
-        <h2>管理员登录</h2>
-        <div class="form-group">
-          <label>管理员密码</label>
-          <input type="password" id="password" placeholder="请输入管理员密码" autofocus>
-        </div>
-        <button class="btn btn-primary btn-block" id="loginBtn">登 录</button>
-        <div id="loginError" class="error hidden"></div>
-      </div>
-    </div>
-    
-    <!-- 主界面 -->
-    <div id="mainPage" class="hidden">
-      <div class="status-bar">
-        <span class="user">已登录: 管理员</span>
-        <div>
-          <span class="logout" id="changePasswordBtn" style="color: #00d9ff; margin-right: 16px; cursor: pointer;">修改密码</span>
-          <span class="logout" id="logoutBtn">退出登录</span>
-        </div>
-      </div>
-      
-      <!-- 修改密码模态框 -->
-      <div id="passwordModal" class="modal hidden">
-        <div class="modal-content">
-          <h3>修改管理员密码</h3>
-          <div class="form-group">
-            <label>旧密码</label>
-            <input type="password" id="oldPassword" placeholder="请输入旧密码">
-          </div>
-          <div class="form-group">
-            <label>新密码</label>
-            <input type="password" id="newPassword" placeholder="请输入新密码（至少8位）">
-          </div>
-          <div class="form-group">
-            <label>确认新密码</label>
-            <input type="password" id="confirmPassword" placeholder="请再次输入新密码">
-          </div>
-          <div id="passwordError" class="error hidden"></div>
-          <div class="modal-actions">
-            <button class="btn btn-secondary" id="cancelPasswordBtn">取消</button>
-            <button class="btn btn-primary" id="confirmPasswordBtn">确认修改</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 标签页 -->
-      <div class="tabs">
-        <div class="tab" data-tab="services">服务管理</div>
-        <div class="tab active" data-tab="config">环境配置</div>
-      </div>
-      
-      <!-- 服务管理 -->
-      <div id="servicesTab" class="card hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0; border: none; padding: 0;">PM2 服务状态</h3>
-          <button class="btn btn-secondary" id="refreshServicesBtn">刷新</button>
-        </div>
-        <div class="service-list" id="serviceList">
-          <div style="text-align: center; color: #888; padding: 20px;">加载中...</div>
-        </div>
-      </div>
-      
-      <!-- 环境配置 -->
-      <div id="configTab" class="card">
-        <div id="configList"></div>
-        
-        <div class="restart-notice hidden" id="restartNotice">
-          <p>配置已保存，需要重启后端服务才能生效</p>
-          <button class="btn btn-primary" id="restartBackendBtn">重启后端服务</button>
-        </div>
-        
-        <div class="config-actions">
-          <button class="btn btn-secondary" id="refreshConfigBtn">刷新配置</button>
-          <button class="btn btn-primary" id="saveConfigBtn">保存配置</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <script>
-    let token = localStorage.getItem('config_token') || '';
-    let configSchema = [];
-    let needsRestart = false;
-    
-    // 初始化
-    document.addEventListener('DOMContentLoaded', () => {
-      // 绑定事件
-      document.getElementById('loginBtn').addEventListener('click', login);
-      document.getElementById('logoutBtn').addEventListener('click', logout);
-      document.getElementById('refreshServicesBtn').addEventListener('click', loadServices);
-      document.getElementById('refreshConfigBtn').addEventListener('click', loadConfig);
-      document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
-      document.getElementById('restartBackendBtn').addEventListener('click', () => restartService('backend'));
-      
-      // 修改密码
-      document.getElementById('changePasswordBtn').addEventListener('click', showPasswordModal);
-      document.getElementById('cancelPasswordBtn').addEventListener('click', hidePasswordModal);
-      document.getElementById('confirmPasswordBtn').addEventListener('click', changePassword);
-      
-      document.getElementById('password').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') login();
-      });
-      
-      // 点击模态框背景关闭
-      document.getElementById('passwordModal').addEventListener('click', (e) => {
-        if (e.target.id === 'passwordModal') hidePasswordModal();
-      });
-      
-      // 标签页切换
-      document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          
-          const tabName = tab.dataset.tab;
-          document.getElementById('servicesTab').classList.toggle('hidden', tabName !== 'services');
-          document.getElementById('configTab').classList.toggle('hidden', tabName !== 'config');
-          
-          if (tabName === 'services') loadServices();
-          if (tabName === 'config') loadConfig();
-        });
-      });
-      
-      // 检查登录状态
-      if (token) {
-        checkAuth();
-      } else {
-        showLogin();
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudCAD 部署配置中心</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-    });
-    
-    function showLogin() {
-      document.getElementById('loginPage').classList.remove('hidden');
-      document.getElementById('mainPage').classList.add('hidden');
-      document.getElementById('password').focus();
-    }
-    
-    function showMain() {
-      document.getElementById('loginPage').classList.add('hidden');
-      document.getElementById('mainPage').classList.remove('hidden');
-    }
-    
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/auth/status', { 
-          headers: { 'Authorization': 'Bearer ' + token } 
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #1a1a2e;
+        color: #eee;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        text-align: center;
+        padding: 40px 0;
+      }
+      .header h1 {
+        font-size: 28px;
+        color: #00d9ff;
+        margin-bottom: 10px;
+      }
+      .header p {
+        color: #888;
+      }
+
+      .card {
+        background: #16213e;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 20px;
+        background: #0d0d1a;
+        border-radius: 8px;
+        padding: 4px;
+      }
+      .tab {
+        flex: 1;
+        padding: 12px;
+        text-align: center;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #888;
+      }
+      .tab:hover {
+        color: #fff;
+      }
+      .tab.active {
+        background: #00d9ff;
+        color: #000;
+        font-weight: 500;
+      }
+
+      .login-form {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      .login-form h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #00d9ff;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #aaa;
+        font-size: 14px;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 14px;
+      }
+      .form-group input:focus {
+        outline: none;
+        border-color: #00d9ff;
+      }
+
+      .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-block {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+      }
+      .btn-primary {
+        background: #00d9ff;
+        color: #000;
+      }
+      .btn-primary:hover {
+        background: #00b8d9;
+      }
+      .btn-secondary {
+        background: #333;
+        color: #fff;
+      }
+      .btn-secondary:hover {
+        background: #444;
+      }
+      .btn-success {
+        background: #2ecc71;
+        color: #fff;
+      }
+      .btn-success:hover {
+        background: #27ae60;
+      }
+      .btn-danger {
+        background: #e74c3c;
+        color: #fff;
+      }
+      .btn-danger:hover {
+        background: #c0392b;
+      }
+      .btn-warning {
+        background: #f39c12;
+        color: #000;
+      }
+      .btn-warning:hover {
+        background: #e67e22;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .error {
+        color: #e74c3c;
+        text-align: center;
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #333;
+      }
+      .status-bar .user {
+        color: #aaa;
+      }
+      .status-bar .logout {
+        color: #e74c3c;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .status-bar .logout:hover {
+        text-decoration: underline;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 14px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+      }
+      .toast.success {
+        background: #2ecc71;
+      }
+      .toast.error {
+        background: #e74c3c;
+      }
+      .toast.info {
+        background: #3498db;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      /* 服务列表 */
+      .service-list {
+        display: grid;
+        gap: 12px;
+      }
+      .service-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        background: #0d0d1a;
+        border-radius: 8px;
+      }
+      .service-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .service-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .service-dot.online {
+        background: #2ecc71;
+      }
+      .service-dot.offline {
+        background: #e74c3c;
+      }
+      .service-dot.starting {
+        background: #f39c12;
+        animation: pulse 1s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .service-name {
+        font-weight: 500;
+      }
+      .service-status {
+        font-size: 12px;
+        color: #888;
+        margin-left: 8px;
+      }
+      .service-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* 配置表单 */
+      .config-group-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+      .config-group-header .icon {
+        font-size: 20px;
+      }
+      .config-group-header span:not(.icon) {
+        font-weight: 600;
+        font-size: 16px;
+      }
+      .config-group-header small {
+        margin-left: auto;
+        font-size: 12px;
+        opacity: 0.8;
+      }
+
+      .config-group-header.controllable {
+        background: linear-gradient(135deg, #1a3a2e 0%, #0d1f1a 100%);
+        border: 1px solid #2ecc71;
+      }
+      .config-group-header.controllable span:not(.icon):not(small) {
+        color: #2ecc71;
+      }
+      .config-group-header.controllable small {
+        color: #6dbf7b;
+      }
+
+      .config-group-header.uncontrollable {
+        background: linear-gradient(135deg, #3a2a1a 0%, #1f1a0d 100%);
+        border: 1px solid #f39c12;
+      }
+      .config-group-header.uncontrollable span:not(.icon):not(small) {
+        color: #f39c12;
+      }
+      .config-group-header.uncontrollable small {
+        color: #d4a84b;
+      }
+
+      .config-section {
+        margin-bottom: 24px;
+      }
+      .config-section h3 {
+        color: #00d9ff;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .config-section h3 small {
+        font-size: 12px;
+        color: #888;
+        font-weight: normal;
+        margin-left: auto;
+      }
+
+      .config-section.warning {
+        background: rgba(243, 156, 18, 0.05);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+      }
+      .config-section.warning h3 {
+        color: #f39c12;
+        border-bottom-color: rgba(243, 156, 18, 0.3);
+      }
+
+      .config-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        gap: 12px;
+      }
+      .config-item label {
+        width: 140px;
+        flex-shrink: 0;
+        color: #aaa;
+        font-size: 14px;
+      }
+      .config-item input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 14px;
+      }
+      .config-item input:focus {
+        outline: none;
+        border-color: #00d9ff;
+      }
+      .config-item input:read-only {
+        background: #0d0d1a;
+        color: #666;
+      }
+      .config-select {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .config-select:focus {
+        outline: none;
+        border-color: #00d9ff;
+      }
+
+      .config-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .restart-notice {
+        background: #2c3e50;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 20px;
+        text-align: center;
+      }
+      .restart-notice p {
+        margin-bottom: 12px;
+        color: #f39c12;
+      }
+
+      /* 模态框 */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal.hidden {
+        display: none;
+      }
+      .modal-content {
+        background: #16213e;
+        border-radius: 12px;
+        padding: 24px;
+        width: 400px;
+        max-width: 90%;
+      }
+      .modal-content h3 {
+        color: #00d9ff;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .modal-actions .btn {
+        flex: 1;
+      }
+
+      /* Toast 容器 */
+      .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1001;
+      }
+      .toast {
+        padding: 16px 24px;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 14px;
+        margin-top: 8px;
+        animation: slideIn 0.3s ease;
+      }
+      .toast.success {
+        background: #2ecc71;
+      }
+      .toast.error {
+        background: #e74c3c;
+      }
+      .toast.info {
+        background: #3498db;
+      }
+      .toast.hiding {
+        animation: slideOut 0.3s ease;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
+      /* 通用按钮样式 */
+      .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .btn-primary {
+        background: #00d9ff;
+        color: #000;
+      }
+      .btn-primary:hover {
+        background: #00b8d9;
+      }
+      .btn-secondary {
+        background: #333;
+        color: #fff;
+      }
+      .btn-secondary:hover {
+        background: #444;
+      }
+      .btn-success {
+        background: #2ecc71;
+        color: #fff;
+      }
+      .btn-success:hover {
+        background: #27ae60;
+      }
+      .btn-danger {
+        background: #e74c3c;
+        color: #fff;
+      }
+      .btn-danger:hover {
+        background: #c0392b;
+      }
+      .btn-warning {
+        background: #f39c12;
+        color: #000;
+      }
+      .btn-warning:hover {
+        background: #e67e22;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn.loading .btn-text {
+        display: none;
+      }
+      .btn.loading .btn-loading {
+        display: inline;
+      }
+
+      /* 模态框 */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background: #16213e;
+        border-radius: 12px;
+        padding: 24px;
+        width: 400px;
+        max-width: 90%;
+      }
+      .modal-content h4 {
+        color: #00d9ff;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .modal-actions .btn {
+        flex: 1;
+      }
+
+      /* 表单样式 */
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #aaa;
+        font-size: 14px;
+      }
+      .form-group input[type='text'],
+      .form-group input[type='password'],
+      .form-group input[type='number'],
+      .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 14px;
+      }
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #00d9ff;
+      }
+
+      /* 配置区块 */
+      .config-section {
+        margin-bottom: 24px;
+      }
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: #0d0d1a;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 12px;
+      }
+      .section-header.collapsed span:first-child {
+        transform: rotate(-90deg);
+      }
+      .section-header span:first-child {
+        transition: transform 0.2s;
+      }
+      .section-content {
+        padding: 12px;
+        background: #0d0d1a;
+        border-radius: 8px;
+      }
+
+      /* 配置子区块 */
+      .config-subsection {
+        margin-bottom: 24px;
+        padding: 16px;
+        background: #0d0d1a;
+        border-radius: 8px;
+      }
+      .config-subsection h4 {
+        color: #00d9ff;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+      }
+      .config-subsection h5 {
+        color: #888;
+        font-size: 14px;
+        margin: 16px 0 8px;
+      }
+
+      /* 表单网格 */
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .field-group {
+        display: flex;
+        flex-direction: column;
+      }
+      .field-group label {
+        color: #aaa;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+      .field-inline {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .field-inline label {
+        color: #aaa;
+        font-size: 13px;
+      }
+      .field-inline input,
+      .field-inline select {
+        padding: 8px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 13px;
+      }
+
+      /* Checkbox 内联 */
+      .checkbox-inline {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #aaa;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .checkbox-inline input[type='checkbox'] {
+        cursor: pointer;
+      }
+
+      /* Radio 内联 */
+      .radio-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #aaa;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      /* 复杂卡片 */
+      .complex-card {
+        background: #0d0d1a;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .card-title {
+        color: #00d9ff;
+        font-weight: 500;
+      }
+      .card-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .complex-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        background: #1a1a2e;
+        border-radius: 6px;
+      }
+      .complex-item .item-fields {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .complex-item .field-inline {
+        min-width: 150px;
+      }
+      .complex-item .item-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .complex-item.child-item {
+        margin-left: 20px;
+        background: #16213e;
+      }
+      .menu-children {
+        margin-top: 8px;
+        padding-left: 16px;
+      }
+      .children-label {
+        color: #666;
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      .children-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .empty-hint {
+        color: #666;
+        font-size: 13px;
+        padding: 20px;
+        text-align: center;
+      }
+
+      /* 主题配置 */
+      .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 12px;
+      }
+      .theme-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .theme-field label {
+        color: #aaa;
+        font-size: 13px;
+      }
+      .theme-field-input {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .theme-field-input .color-picker {
+        width: 50px;
+        height: 36px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .theme-field-input .color-text {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 13px;
+        font-family: monospace;
+      }
+      .theme-field-number input[type='range'] {
+        flex: 1;
+      }
+      .theme-field-number input[type='number'] {
+        width: 80px;
+        padding: 8px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 13px;
+      }
+
+      /* 草图配置树 */
+      .sketches-menu-tree {
+        margin: 16px 0;
+      }
+      .menu-tree-item {
+        margin: 4px 0;
+      }
+      .menu-item-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: #1a1a2e;
+        border-radius: 6px;
+        margin-bottom: 4px;
+      }
+      .menu-item-row:hover {
+        background: #1f2a4a;
+      }
+      .expand-btn {
+        width: 20px;
+        text-align: center;
+        cursor: pointer;
+        color: #666;
+        font-size: 12px;
+      }
+      .menu-name {
+        color: #fff;
+        font-weight: 500;
+        min-width: 100px;
+      }
+      .menu-cmd {
+        color: #888;
+        font-size: 12px;
+        margin-left: 8px;
+      }
+      .divider-label {
+        color: #666;
+        font-style: italic;
+      }
+      .menu-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+      .add-root-menu-btn {
+        margin-top: 12px;
+        width: 100%;
+      }
+
+      /* 快速命令 */
+      .quick-command-list {
+        margin: 16px 0;
+      }
+      .quick-command-item {
+        padding: 12px;
+        background: #0d0d1a;
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+      .qc-item-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .qc-main-cmd {
+        color: #00d9ff;
+        font-weight: 600;
+        min-width: 120px;
+      }
+      .qc-aliases {
+        flex: 1;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .qc-alias {
+        padding: 4px 8px;
+        background: #1a1a2e;
+        border-radius: 4px;
+        color: #aaa;
+        font-size: 12px;
+      }
+      .qc-no-alias {
+        color: #666;
+        font-size: 12px;
+      }
+      .qc-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* 服务器配置 */
+      .server-config-actions,
+      .theme-config-actions,
+      .sketches-config-actions,
+      .quick-command-actions,
+      .ui-config-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .section-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      /* 品牌配置 */
+      .brand-form {
+        padding: 16px 0;
+      }
+
+      /* 前端配置容器 */
+      .frontend-config-container {
+        padding: 0;
+      }
+      .frontend-config-title {
+        color: #00d9ff;
+        margin: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+        font-size: 18px;
+      }
+
+      /* 前端配置头部（固定） */
+      .frontend-config-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #16213e;
+        padding: 16px 20px;
+        border-bottom: 2px solid #00d9ff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .frontend-config-header .frontend-config-title {
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .frontend-config-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .frontend-config-content {
+        padding: 20px;
+      }
+
+      .section-content {
+        padding: 16px;
+        background: #0d0d1a;
+      }
+
+      /* ========== 前端配置模块样式 ========== */
+
+      /* 配置区块 */
+      .frontend-config-container .config-section {
+        margin-bottom: 16px;
+        background: #0d0d1a;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .frontend-config-container .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        background: #1a1a2e;
+        cursor: pointer;
+        transition: background 0.2s;
+        border: none;
+        margin: 0;
+      }
+
+      .frontend-config-container .section-header:hover {
+        background: #1f2a4a;
+      }
+
+      .frontend-config-container .section-header.collapsed {
+        background: #1a1a2e;
+      }
+
+      .frontend-config-container .section-header span:first-child {
+        display: inline-block;
+        transition: transform 0.2s;
+        color: #00d9ff;
+        font-size: 12px;
+      }
+
+      .frontend-config-container .section-header.collapsed span:first-child {
+        transform: rotate(-90deg);
+      }
+
+      .frontend-config-container .section-header .section-title {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .frontend-config-container .section-header .section-title strong {
+        color: #fff;
+        font-size: 14px;
+      }
+
+      .frontend-config-container .section-header .section-title small {
+        color: #666;
+        font-size: 12px;
+      }
+
+      .frontend-config-container .section-content {
+        padding: 16px;
+        background: #0d0d1a;
+      }
+
+      /* UI 配置表单 */
+      .ui-config-section,
+      .sketches-config-section,
+      .server-config-section,
+      .quick-command-section,
+      .theme-config-section,
+      .brand-config-section {
+        padding: 8px 0;
+      }
+
+      /* 表单网格 */
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .field-group label {
+        color: #aaa;
+        font-size: 13px;
+      }
+
+      .field-group input,
+      .field-group select {
+        padding: 8px 10px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 13px;
+      }
+
+      .field-group input:focus,
+      .field-group select:focus {
+        outline: none;
+        border-color: #00d9ff;
+      }
+
+      .field-inline {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 150px;
+      }
+
+      .field-inline label {
+        color: #aaa;
+        font-size: 12px;
+      }
+
+      .field-inline input,
+      .field-inline select {
+        padding: 6px 8px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 12px;
+      }
+
+      /* Checkbox 样式 */
+      .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #aaa;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 8px;
+        background: #1a1a2e;
+        border-radius: 4px;
+      }
+
+      .checkbox-field input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+
+      .checkbox-inline {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #aaa;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 6px 8px;
+        background: #1a1a2e;
+        border-radius: 4px;
+      }
+
+      .checkbox-inline input[type='checkbox'] {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+      }
+
+      /* Radio 样式 */
+      .radio-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #aaa;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .radio-label input[type='radio'] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+
+      .theme-default-select {
+        display: flex;
+        gap: 24px;
+      }
+
+      /* 复杂卡片（按钮、菜单配置） */
+      .complex-card {
+        background: #1a1a2e;
+        border: 1px solid #333;
+        border-radius: 6px;
+        margin-bottom: 12px;
+      }
+
+      .complex-card .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid #333;
+      }
+
+      .complex-card .card-title {
+        color: #00d9ff;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .complex-card .card-items {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .complex-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px;
+        background: #0d0d1a;
+        border-radius: 4px;
+        flex-wrap: wrap;
+      }
+
+      .complex-item .item-fields {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-width: 200px;
+      }
+
+      .complex-item .item-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .complex-item.child-item {
+        margin-left: 20px;
+        background: #16213e;
+      }
+
+      .complex-item .field-inline {
+        min-width: 120px;
+      }
+
+      .complex-item .field-inline input {
+        width: 100%;
+        min-width: 100px;
+      }
+
+      .menu-children {
+        margin-top: 8px;
+        padding-left: 16px;
+        border-left: 2px solid #333;
+      }
+
+      .children-label {
+        color: #666;
+        font-size: 11px;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+
+      .children-items {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .empty-hint {
+        color: #666;
+        font-size: 13px;
+        padding: 20px;
+        text-align: center;
+      }
+
+      /* 按钮操作区 */
+      .ui-config-actions,
+      .server-config-actions,
+      .theme-config-actions,
+      .sketches-config-actions,
+      .quick-command-actions,
+      .section-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      /* 主题配置 */
+      .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+      }
+
+      .theme-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .theme-field label {
+        color: #aaa;
+        font-size: 12px;
+      }
+
+      .theme-field-input {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .theme-field-input .color-picker {
+        width: 50px;
+        height: 36px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        cursor: pointer;
+        background: #1a1a2e;
+      }
+
+      .theme-field-input .color-text {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 12px;
+        font-family: 'Consolas', monospace;
+      }
+
+      .theme-field-number {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .theme-field-number input[type='range'] {
+        flex: 1;
+        height: 4px;
+        background: #333;
+        border-radius: 2px;
+        -webkit-appearance: none;
+      }
+
+      .theme-field-number input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: #00d9ff;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      .theme-field-number input[type='number'] {
+        width: 70px;
+        padding: 6px 8px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 12px;
+      }
+
+      /* 草图配置树 */
+      .sketches-menu-tree {
+        margin: 8px 0;
+      }
+
+      .menu-tree-item {
+        margin: 4px 0;
+      }
+
+      .menu-item-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: #1a1a2e;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+
+      .menu-item-row:hover {
+        background: #1f2a4a;
+      }
+
+      .expand-btn {
+        width: 20px;
+        text-align: center;
+        cursor: pointer;
+        color: #666;
+        font-size: 11px;
+        user-select: none;
+      }
+
+      .expand-btn:hover {
+        color: #00d9ff;
+      }
+
+      .menu-name {
+        color: #fff;
+        font-weight: 500;
+        min-width: 100px;
+        font-size: 13px;
+      }
+
+      .menu-cmd {
+        color: #666;
+        font-size: 11px;
+        font-family: 'Consolas', monospace;
+      }
+
+      .divider-label {
+        color: #666;
+        font-style: italic;
+        font-size: 12px;
+      }
+
+      .menu-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
+      }
+
+      .add-root-menu-btn {
+        margin-top: 12px;
+        width: 100%;
+        padding: 10px;
+      }
+
+      /* 快速命令列表 */
+      .quick-command-list {
+        margin: 8px 0;
+      }
+
+      .quick-command-item {
+        padding: 10px 12px;
+        background: #1a1a2e;
+        border-radius: 4px;
+        margin-bottom: 6px;
+        border: 1px solid #333;
+      }
+
+      .qc-item-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .qc-main-cmd {
+        color: #00d9ff;
+        font-weight: 600;
+        min-width: 120px;
+        font-size: 13px;
+        font-family: 'Consolas', monospace;
+      }
+
+      .qc-aliases {
+        flex: 1;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .qc-alias {
+        padding: 3px 8px;
+        background: #0d0d1a;
+        border-radius: 3px;
+        color: #888;
+        font-size: 11px;
+        font-family: 'Consolas', monospace;
+        border: 1px solid #333;
+      }
+
+      .qc-no-alias {
+        color: #444;
+        font-size: 11px;
+        font-style: italic;
+      }
+
+      .qc-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      /* 品牌配置 */
+      .brand-form {
+        padding: 8px 0;
+      }
+
+      .brand-form .form-group {
+        margin-bottom: 16px;
+      }
+
+      .brand-form label {
+        display: block;
+        color: #aaa;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .brand-form input[type='text'] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 14px;
+      }
+
+      .brand-form input[type='file'] {
+        color: #aaa;
+        font-size: 13px;
+      }
+
+      /* 服务器配置子区块 */
+      .config-subsection {
+        margin-bottom: 20px;
+        padding: 12px;
+        background: #1a1a2e;
+        border-radius: 6px;
+      }
+
+      .config-subsection h4 {
+        color: #00d9ff;
+        font-size: 14px;
+        margin: 0 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+      }
+
+      .config-subsection h5 {
+        color: #888;
+        font-size: 12px;
+        margin: 16px 0 8px 0;
+      }
+
+      /* 小按钮 */
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+
+      /* 模态框 */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-overlay.hidden {
+        display: none;
+      }
+
+      .modal-overlay .modal-content {
+        background: #16213e;
+        border-radius: 12px;
+        padding: 24px;
+        width: 450px;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .modal-overlay .modal-content h4 {
+        color: #00d9ff;
+        margin: 0 0 20px 0;
+        text-align: center;
+        font-size: 16px;
+      }
+
+      .modal-overlay .modal-content .modal-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .modal-overlay .modal-content .modal-extra {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #333;
+      }
+
+      .modal-overlay .modal-content .modal-extra h5 {
+        color: #888;
+        font-size: 13px;
+        margin: 0 0 12px 0;
+      }
+
+      .modal-overlay .modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .modal-overlay .modal-actions .btn {
+        flex: 1;
+      }
+
+      /* Toast 容器 */
+      .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1001;
+      }
+
+      .toast {
+        padding: 12px 20px;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 13px;
+        margin-top: 8px;
+        animation: slideIn 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .toast.success {
+        background: #2ecc71;
+      }
+
+      .toast.error {
+        background: #e74c3c;
+      }
+
+      .toast.info {
+        background: #3498db;
+      }
+
+      .toast.hiding {
+        animation: slideOut 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
+      /* 加载状态 */
+      .btn.loading {
+        position: relative;
+        pointer-events: none;
+      }
+
+      .btn.loading .btn-text {
+        display: none;
+      }
+
+      .btn.loading .btn-loading {
+        display: inline;
+      }
+
+      .btn-loading::after {
+        content: '';
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-left: 6px;
+        border: 2px solid transparent;
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* 滚动条美化 */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #0d0d1a;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #444;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>CloudCAD 部署配置中心</h1>
+        <p>管理服务器环境配置</p>
+      </div>
+
+      <!-- 登录页 -->
+      <div id="loginPage" class="card">
+        <div class="login-form">
+          <h2>管理员登录</h2>
+          <div class="form-group">
+            <label>管理员密码</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="请输入管理员密码"
+              autofocus
+            />
+          </div>
+          <button class="btn btn-primary btn-block" id="loginBtn">登 录</button>
+          <div id="loginError" class="error hidden"></div>
+        </div>
+      </div>
+
+      <!-- 主界面 -->
+      <div id="mainPage" class="hidden">
+        <div class="status-bar">
+          <span class="user">已登录: 管理员</span>
+          <div>
+            <span
+              class="logout"
+              id="changePasswordBtn"
+              style="color: #00d9ff; margin-right: 16px; cursor: pointer"
+              >修改密码</span
+            >
+            <span class="logout" id="logoutBtn">退出登录</span>
+          </div>
+        </div>
+
+        <!-- 修改密码模态框 -->
+        <div id="passwordModal" class="modal hidden">
+          <div class="modal-content">
+            <h3>修改管理员密码</h3>
+            <div class="form-group">
+              <label>旧密码</label>
+              <input
+                type="password"
+                id="oldPassword"
+                placeholder="请输入旧密码"
+              />
+            </div>
+            <div class="form-group">
+              <label>新密码</label>
+              <input
+                type="password"
+                id="newPassword"
+                placeholder="请输入新密码（至少8位）"
+              />
+            </div>
+            <div class="form-group">
+              <label>确认新密码</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                placeholder="请再次输入新密码"
+              />
+            </div>
+            <div id="passwordError" class="error hidden"></div>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" id="cancelPasswordBtn">
+                取消
+              </button>
+              <button class="btn btn-primary" id="confirmPasswordBtn">
+                确认修改
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="tabs">
+          <div class="tab" data-tab="services">服务管理</div>
+          <div class="tab" data-tab="frontend">前端配置</div>
+          <div class="tab" data-tab="config">环境配置</div>
+          <div class="tab" data-tab="database">数据库备份</div>
+        </div>
+
+        <!-- 服务管理 -->
+        <div id="servicesTab" class="card hidden">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 16px;
+            "
+          >
+            <h3 style="margin: 0; border: none; padding: 0">PM2 服务状态</h3>
+            <button class="btn btn-secondary" id="refreshServicesBtn">
+              刷新
+            </button>
+          </div>
+          <div class="service-list" id="serviceList">
+            <div style="text-align: center; color: #888; padding: 20px">
+              加载中...
+            </div>
+          </div>
+        </div>
+
+        <!-- 前端配置 -->
+        <div id="frontendTab" class="card hidden">
+          <div id="frontendConfigContent"></div>
+        </div>
+
+        <!-- 环境配置 -->
+        <div id="configTab" class="card">
+          <div id="configList"></div>
+
+          <div class="restart-notice hidden" id="restartNotice">
+            <p>配置已保存，需要重启后端服务才能生效</p>
+            <button class="btn btn-primary" id="restartBackendBtn">
+              重启后端服务
+            </button>
+          </div>
+
+          <div class="config-actions">
+            <button class="btn btn-secondary" id="refreshConfigBtn">
+              刷新配置
+            </button>
+            <button class="btn btn-primary" id="saveConfigBtn">保存配置</button>
+          </div>
+        </div>
+
+        <!-- 数据库备份 -->
+        <div id="databaseTab" class="card hidden">
+          <!-- 备份操作区 -->
+          <div class="db-actions">
+            <button class="btn btn-primary" id="backupDbBtn">
+              <span class="btn-text">立即备份</span>
+              <span class="btn-loading" style="display:none">备份中...</span>
+            </button>
+            <button class="btn btn-secondary" id="refreshBackupsBtn">刷新列表</button>
+          </div>
+
+          <!-- 备份列表 -->
+          <div class="db-backup-list">
+            <h3 style="color:#00d9ff;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px">备份文件列表</h3>
+            <table id="backupTable" style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:#0d0d1a;color:#aaa;font-size:13px">
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid #333">序号</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid #333">文件名</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid #333">大小</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid #333">创建时间</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid #333">操作</th>
+                </tr>
+              </thead>
+              <tbody id="backupTableBody">
+                <tr><td colspan="5" style="text-align:center;color:#888;padding:20px">加载中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 清理操作区 -->
+          <div class="db-cleanup" style="margin-top:24px;padding-top:16px;border-top:1px solid #333">
+            <h3 style="color:#00d9ff;margin-bottom:16px">清理设置</h3>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <label style="color:#aaa;font-size:14px">保留备份数量：</label>
+              <input type="number" id="maxBackups" value="10" min="1" max="100"
+                style="width:80px;padding:8px;border:1px solid #333;border-radius:6px;background:#1a1a2e;color:#fff;font-size:14px" />
+              <button class="btn btn-warning" id="cleanupBtn">清理旧备份</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 恢复确认模态框 -->
+        <div id="restoreModal" class="modal-overlay hidden">
+          <div class="modal-content">
+            <h4>⚠️ 恢复数据库确认</h4>
+            <p style="color:#e74c3c;margin-bottom:16px">恢复操作将覆盖当前数据库，此操作不可逆！</p>
+            <p style="margin-bottom:16px">目标备份：<strong id="restoreFilename" style="color:#00d9ff"></strong></p>
+            <div class="form-group">
+              <label>请输入 "CONFIRM" 确认恢复</label>
+              <input type="text" id="restoreConfirmInput" placeholder="输入 CONFIRM" />
+            </div>
+            <div id="restoreError" class="error hidden"></div>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" id="cancelRestoreBtn">取消</button>
+              <button class="btn btn-danger" id="confirmRestoreBtn" disabled>确认恢复</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let token = localStorage.getItem('config_token') || '';
+      let configSchema = [];
+      let needsRestart = false;
+
+      // 初始化
+      document.addEventListener('DOMContentLoaded', () => {
+        // 绑定事件
+        document.getElementById('loginBtn').addEventListener('click', login);
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document
+          .getElementById('refreshServicesBtn')
+          .addEventListener('click', loadServices);
+        document
+          .getElementById('refreshConfigBtn')
+          .addEventListener('click', loadConfig);
+        document
+          .getElementById('saveConfigBtn')
+          .addEventListener('click', saveConfig);
+        document
+          .getElementById('restartBackendBtn')
+          .addEventListener('click', () => restartService('backend'));
+
+        // 修改密码
+        document
+          .getElementById('changePasswordBtn')
+          .addEventListener('click', showPasswordModal);
+        document
+          .getElementById('cancelPasswordBtn')
+          .addEventListener('click', hidePasswordModal);
+        document
+          .getElementById('confirmPasswordBtn')
+          .addEventListener('click', changePassword);
+
+        document
+          .getElementById('password')
+          .addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+          });
+
+        // 点击模态框背景关闭
+        document
+          .getElementById('passwordModal')
+          .addEventListener('click', (e) => {
+            if (e.target.id === 'passwordModal') hidePasswordModal();
+          });
+
+        // 标签页切换
+        document.querySelectorAll('.tab').forEach((tab) => {
+          tab.addEventListener('click', () => {
+            document
+              .querySelectorAll('.tab')
+              .forEach((t) => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const tabName = tab.dataset.tab;
+            document
+              .getElementById('servicesTab')
+              .classList.toggle('hidden', tabName !== 'services');
+            document
+              .getElementById('frontendTab')
+              .classList.toggle('hidden', tabName !== 'frontend');
+            document
+              .getElementById('configTab')
+              .classList.toggle('hidden', tabName !== 'config');
+            document
+              .getElementById('databaseTab')
+              .classList.toggle('hidden', tabName !== 'database');
+
+            if (tabName === 'services') loadServices();
+            if (tabName === 'frontend') loadFrontendConfig();
+            if (tabName === 'config') loadConfig();
+            if (tabName === 'database') loadBackups();
+          });
         });
-        if (res.ok) {
-          showMain();
-          loadConfig();
+
+        // 数据库备份事件绑定
+        document
+          .getElementById('backupDbBtn')
+          .addEventListener('click', backupDatabase);
+        document
+          .getElementById('refreshBackupsBtn')
+          .addEventListener('click', loadBackups);
+        document
+          .getElementById('cleanupBtn')
+          .addEventListener('click', cleanupBackups);
+        document
+          .getElementById('cancelRestoreBtn')
+          .addEventListener('click', hideRestoreModal);
+        document
+          .getElementById('confirmRestoreBtn')
+          .addEventListener('click', executeRestore);
+        document
+          .getElementById('restoreConfirmInput')
+          .addEventListener('input', (e) => {
+            document.getElementById('confirmRestoreBtn').disabled =
+              e.target.value !== 'CONFIRM';
+          });
+
+        if (token) {
+          checkAuth();
         } else {
-          localStorage.removeItem('config_token');
-          token = '';
           showLogin();
         }
-      } catch (e) {
-        showLogin();
-      }
-    }
-    
-    async function login() {
-      const password = document.getElementById('password').value;
-      const errorEl = document.getElementById('loginError');
-      
-      if (!password) {
-        errorEl.textContent = '请输入密码';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-          token = data.token;
-          localStorage.setItem('config_token', token);
-          showMain();
-          loadConfig();
-        } else {
-          errorEl.textContent = data.error || '登录失败';
-          errorEl.classList.remove('hidden');
-        }
-      } catch (e) {
-        errorEl.textContent = '网络错误';
-        errorEl.classList.remove('hidden');
-      }
-    }
-    
-    function logout() {
-      fetch('/api/auth/logout', { 
-        method: 'POST', 
-        headers: { 'Authorization': 'Bearer ' + token } 
       });
-      localStorage.removeItem('config_token');
-      token = '';
-      showLogin();
-    }
-    
-    // ========== 修改密码 ==========
-    
-    function showPasswordModal() {
-      document.getElementById('passwordModal').classList.remove('hidden');
-      document.getElementById('oldPassword').value = '';
-      document.getElementById('newPassword').value = '';
-      document.getElementById('confirmPassword').value = '';
-      document.getElementById('passwordError').classList.add('hidden');
-      document.getElementById('oldPassword').focus();
-    }
-    
-    function hidePasswordModal() {
-      document.getElementById('passwordModal').classList.add('hidden');
-    }
-    
-    async function changePassword() {
-      const oldPassword = document.getElementById('oldPassword').value;
-      const newPassword = document.getElementById('newPassword').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-      const errorEl = document.getElementById('passwordError');
-      
-      if (!oldPassword || !newPassword || !confirmPassword) {
-        errorEl.textContent = '请填写所有字段';
-        errorEl.classList.remove('hidden');
-        return;
+
+      function showLogin() {
+        document.getElementById('loginPage').classList.remove('hidden');
+        document.getElementById('mainPage').classList.add('hidden');
+        document.getElementById('password').focus();
       }
-      
-      if (newPassword !== confirmPassword) {
-        errorEl.textContent = '两次输入的新密码不一致';
-        errorEl.classList.remove('hidden');
-        return;
+
+      function showMain() {
+        document.getElementById('loginPage').classList.add('hidden');
+        document.getElementById('mainPage').classList.remove('hidden');
       }
-      
-      if (newPassword.length < 8) {
-        errorEl.textContent = '新密码长度至少 8 位';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/auth/change-password', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token 
-          },
-          body: JSON.stringify({ oldPassword, newPassword })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-          toast('密码修改成功', 'success');
-          hidePasswordModal();
-        } else {
-          errorEl.textContent = data.error || '修改失败';
-          errorEl.classList.remove('hidden');
-        }
-      } catch (e) {
-        errorEl.textContent = '网络错误';
-        errorEl.classList.remove('hidden');
-      }
-    }
-    
-    // ========== 服务管理 ==========
-    
-    async function loadServices() {
-      try {
-        const res = await fetch('/api/service/status', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        if (res.status === 401) {
-          localStorage.removeItem('config_token');
-          token = '';
-          showLogin();
-          return;
-        }
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          renderServices(data.services);
-        } else {
-          document.getElementById('serviceList').innerHTML = 
-            '<div style="text-align: center; color: #e74c3c; padding: 20px;">加载失败: ' + (data.error || '未知错误') + '</div>';
-        }
-      } catch (e) {
-        document.getElementById('serviceList').innerHTML = 
-          '<div style="text-align: center; color: #e74c3c; padding: 20px;">网络错误</div>';
-      }
-    }
-    
-    function renderServices(services) {
-      const container = document.getElementById('serviceList');
-      
-      const serviceOrder = ['backend', 'frontend', 'postgresql', 'redis', 'cooperate', 'config-service'];
-      const serviceNames = {
-        'backend': '后端服务',
-        'frontend': '前端服务',
-        'postgresql': 'PostgreSQL',
-        'redis': 'Redis',
-        'cooperate': '协同服务',
-        'config-service': '配置中心'
-      };
-      
-      let html = '';
-      
-      serviceOrder.forEach(name => {
-        const service = services[name];
-        if (!service) return;
-        
-        const isOnline = service.status === 'online';
-        const isStarting = service.status === 'launching';
-        const isConfigService = name === 'config-service';
-        
-        let dotClass = isOnline ? 'online' : (isStarting ? 'starting' : 'offline');
-        let statusText = isOnline ? '运行中' : (isStarting ? '启动中' : '已停止');
-        
-        if (isOnline && service.uptime > 0) {
-          const uptime = formatUptime(Date.now() - service.uptime);
-          statusText += ' (' + uptime + ')';
-        }
-        
-        html += '<div class="service-item">';
-        html += '<div class="service-info">';
-        html += '<span class="service-dot ' + dotClass + '"></span>';
-        html += '<span class="service-name">' + (serviceNames[name] || name) + '</span>';
-        html += '<span class="service-status">' + statusText + '</span>';
-        html += '</div>';
-        html += '<div class="service-actions">';
-        
-        if (isConfigService) {
-          html += '<span style="color: #888; font-size: 12px;">当前服务</span>';
-        } else {
-          if (isOnline) {
-            html += '<button class="btn btn-warning" onclick="restartService(\'' + name + '\')">重启</button>';
-            html += '<button class="btn btn-danger" onclick="stopService(\'' + name + '\')">停止</button>';
+
+      async function checkAuth() {
+        try {
+          const res = await fetch('/api/auth/status', {
+            headers: { Authorization: 'Bearer ' + token },
+          });
+          if (res.ok) {
+            showMain();
+            loadConfig();
           } else {
-            html += '<button class="btn btn-success" onclick="startService(\'' + name + '\')">启动</button>';
+            localStorage.removeItem('config_token');
+            token = '';
+            showLogin();
           }
-        }
-        
-        html += '</div></div>';
-      });
-      
-      container.innerHTML = html;
-    }
-    
-    function formatUptime(ms) {
-      const seconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
-      
-      if (days > 0) return days + '天' + (hours % 24) + '小时';
-      if (hours > 0) return hours + '小时' + (minutes % 60) + '分';
-      if (minutes > 0) return minutes + '分' + (seconds % 60) + '秒';
-      return seconds + '秒';
-    }
-    
-    async function restartService(name) {
-      if (!confirm('确定要重启 ' + name + ' 服务吗？')) return;
-      
-      try {
-        const res = await fetch('/api/service/' + name + '/restart', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          toast('服务已重启', 'success');
-          setTimeout(loadServices, 1000);
-        } else {
-          toast(data.error || '重启失败', 'error');
-        }
-      } catch (e) {
-        toast('操作失败', 'error');
-      }
-    }
-    
-    async function stopService(name) {
-      if (!confirm('确定要停止 ' + name + ' 服务吗？')) return;
-      
-      try {
-        const res = await fetch('/api/service/' + name + '/stop', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          toast('服务已停止', 'success');
-          loadServices();
-        } else {
-          toast(data.error || '停止失败', 'error');
-        }
-      } catch (e) {
-        toast('操作失败', 'error');
-      }
-    }
-    
-    async function startService(name) {
-      try {
-        const res = await fetch('/api/service/' + name + '/start', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          toast('服务已启动', 'success');
-          setTimeout(loadServices, 1000);
-        } else {
-          toast(data.error || '启动失败', 'error');
-        }
-      } catch (e) {
-        toast('操作失败', 'error');
-      }
-    }
-    
-    // ========== 配置管理 ==========
-    
-    async function loadConfig() {
-      try {
-        const [schemaRes, configRes] = await Promise.all([
-          fetch('/api/config/schema', { headers: { 'Authorization': 'Bearer ' + token } }),
-          fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + token } })
-        ]);
-        
-        if (schemaRes.status === 401 || configRes.status === 401) {
-          localStorage.removeItem('config_token');
-          token = '';
+        } catch (e) {
           showLogin();
+        }
+      }
+
+      async function login() {
+        const password = document.getElementById('password').value;
+        const errorEl = document.getElementById('loginError');
+
+        if (!password) {
+          errorEl.textContent = '请输入密码';
+          errorEl.classList.remove('hidden');
           return;
         }
-        
-        configSchema = (await schemaRes.json()).groups;
-        const configData = await configRes.json();
-        
-        renderConfig(configSchema, configData.config);
-      } catch (e) {
-        toast('加载配置失败', 'error');
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            token = data.token;
+            localStorage.setItem('config_token', token);
+            showMain();
+            loadConfig();
+          } else {
+            errorEl.textContent = data.error || '登录失败';
+            errorEl.classList.remove('hidden');
+          }
+        } catch (e) {
+          errorEl.textContent = '网络错误';
+          errorEl.classList.remove('hidden');
+        }
       }
-    }
-    
-    function renderConfig(groups, config) {
-      const container = document.getElementById('configList');
-      container.innerHTML = '';
-      
-      // 分离可控和不可控配置
-      const controllableGroups = groups.filter(g => g.controllable);
-      const uncontrollableGroups = groups.filter(g => !g.controllable);
-      
-      // 渲染可控配置
-      if (controllableGroups.length > 0) {
-        const header = document.createElement('div');
-        header.className = 'config-group-header controllable';
-        header.innerHTML = '<span class="icon">✅</span><span>应用配置</span><small>修改后重启服务即可生效</small>';
-        container.appendChild(header);
-        
-        controllableGroups.forEach(group => {
-          renderConfigSection(container, group, config, true);
+
+      function logout() {
+        fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
         });
+        localStorage.removeItem('config_token');
+        token = '';
+        showLogin();
       }
-      
-      // 渲染不可控配置
-      if (uncontrollableGroups.length > 0) {
-        const header = document.createElement('div');
-        header.className = 'config-group-header uncontrollable';
-        header.innerHTML = '<span class="icon">⚠️</span><span>基础设施配置</span><small>修改需同时调整对应服务，否则会导致连接失败</small>';
-        container.appendChild(header);
-        
-        uncontrollableGroups.forEach(group => {
-          renderConfigSection(container, group, config, false);
+
+      // ========== 修改密码 ==========
+
+      function showPasswordModal() {
+        document.getElementById('passwordModal').classList.remove('hidden');
+        document.getElementById('oldPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('passwordError').classList.add('hidden');
+        document.getElementById('oldPassword').focus();
+      }
+
+      function hidePasswordModal() {
+        document.getElementById('passwordModal').classList.add('hidden');
+      }
+
+      async function changePassword() {
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword =
+          document.getElementById('confirmPassword').value;
+        const errorEl = document.getElementById('passwordError');
+
+        if (!oldPassword || !newPassword || !confirmPassword) {
+          errorEl.textContent = '请填写所有字段';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          errorEl.textContent = '两次输入的新密码不一致';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        if (newPassword.length < 8) {
+          errorEl.textContent = '新密码长度至少 8 位';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token,
+            },
+            body: JSON.stringify({ oldPassword, newPassword }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            toast('密码修改成功', 'success');
+            hidePasswordModal();
+          } else {
+            errorEl.textContent = data.error || '修改失败';
+            errorEl.classList.remove('hidden');
+          }
+        } catch (e) {
+          errorEl.textContent = '网络错误';
+          errorEl.classList.remove('hidden');
+        }
+      }
+
+      // ========== 服务管理 ==========
+
+      async function loadFrontendConfig() {
+        const container = document.getElementById('frontendConfigContent');
+        if (!container) return;
+
+        try {
+          // 初始化前端配置模块
+          if (typeof FRONTEND_CONFIG !== 'undefined') {
+            FRONTEND_CONFIG.init(token);
+            await FRONTEND_CONFIG.loadConfig();
+            FRONTEND_CONFIG.renderForm(container);
+          } else {
+            container.innerHTML =
+              '<div style="text-align:center;color:#e74c3c;padding:40px">配置模块加载失败，请刷新页面重试</div>';
+          }
+        } catch (e) {
+          container.innerHTML =
+            '<div style="text-align:center;color:#e74c3c;padding:40px">加载配置失败：' +
+            (e.message || '未知错误') +
+            '</div>';
+        }
+      }
+
+      async function loadServices() {
+        try {
+          const res = await fetch('/api/service/status', {
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          if (res.status === 401) {
+            localStorage.removeItem('config_token');
+            token = '';
+            showLogin();
+            return;
+          }
+
+          const data = await res.json();
+
+          if (data.success) {
+            renderServices(data.services);
+          } else {
+            document.getElementById('serviceList').innerHTML =
+              '<div style="text-align: center; color: #e74c3c; padding: 20px;">加载失败: ' +
+              (data.error || '未知错误') +
+              '</div>';
+          }
+        } catch (e) {
+          document.getElementById('serviceList').innerHTML =
+            '<div style="text-align: center; color: #e74c3c; padding: 20px;">网络错误</div>';
+        }
+      }
+
+      function renderServices(services) {
+        const container = document.getElementById('serviceList');
+
+        const serviceOrder = [
+          'backend',
+          'frontend',
+          'postgresql',
+          'redis',
+          'cooperate',
+          'config-service',
+        ];
+        const serviceNames = {
+          backend: '后端服务',
+          frontend: '前端服务',
+          postgresql: 'PostgreSQL',
+          redis: 'Redis',
+          cooperate: '协同服务',
+          'config-service': '配置中心',
+        };
+
+        let html = '';
+
+        serviceOrder.forEach((name) => {
+          const service = services[name];
+          if (!service) return;
+
+          const isOnline = service.status === 'online';
+          const isStarting = service.status === 'launching';
+          const isConfigService = name === 'config-service';
+
+          let dotClass = isOnline
+            ? 'online'
+            : isStarting
+              ? 'starting'
+              : 'offline';
+          let statusText = isOnline
+            ? '运行中'
+            : isStarting
+              ? '启动中'
+              : '已停止';
+
+          if (isOnline && service.uptime > 0) {
+            const uptime = formatUptime(Date.now() - service.uptime);
+            statusText += ' (' + uptime + ')';
+          }
+
+          html += '<div class="service-item">';
+          html += '<div class="service-info">';
+          html += '<span class="service-dot ' + dotClass + '"></span>';
+          html +=
+            '<span class="service-name">' +
+            (serviceNames[name] || name) +
+            '</span>';
+          html += '<span class="service-status">' + statusText + '</span>';
+          html += '</div>';
+          html += '<div class="service-actions">';
+
+          if (isConfigService) {
+            html +=
+              '<span style="color: #888; font-size: 12px;">当前服务</span>';
+          } else {
+            if (isOnline) {
+              html +=
+                '<button class="btn btn-warning" onclick="restartService(\'' +
+                name +
+                '\')">重启</button>';
+              html +=
+                '<button class="btn btn-danger" onclick="stopService(\'' +
+                name +
+                '\')">停止</button>';
+            } else {
+              html +=
+                '<button class="btn btn-success" onclick="startService(\'' +
+                name +
+                '\')">启动</button>';
+            }
+          }
+
+          html += '</div></div>';
         });
+
+        container.innerHTML = html;
       }
-    }
-    
-    function renderConfigSection(container, group, config, controllable) {
-      const section = document.createElement('div');
-      section.className = 'config-section' + (controllable ? '' : ' warning');
-      
-      let titleHtml = '<h3>' + group.name;
-      if (group.description) {
-        titleHtml += '<small>' + group.description + '</small>';
+
+      function formatUptime(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) return days + '天' + (hours % 24) + '小时';
+        if (hours > 0) return hours + '小时' + (minutes % 60) + '分';
+        if (minutes > 0) return minutes + '分' + (seconds % 60) + '秒';
+        return seconds + '秒';
       }
-      titleHtml += '</h3>';
-      section.innerHTML = titleHtml;
-      
-      group.items.forEach(item => {
-        const value = config[item.key] || '';
-        const div = document.createElement('div');
-        div.className = 'config-item';
-        
-        const label = document.createElement('label');
-        label.textContent = item.label;
-        div.appendChild(label);
-        
-        // 根据类型创建不同的输入控件
-        if (item.type === 'boolean') {
-          const select = document.createElement('select');
-          select.id = 'cfg_' + item.key;
-          select.dataset.key = item.key;
-          select.dataset.sensitive = 'false';
-          select.className = 'config-select';
-          
-          const optFalse = document.createElement('option');
-          optFalse.value = 'false';
-          optFalse.textContent = '关闭';
-          select.appendChild(optFalse);
-          
-          const optTrue = document.createElement('option');
-          optTrue.value = 'true';
-          optTrue.textContent = '开启';
-          select.appendChild(optTrue);
-          
-          select.value = (value === 'true' || value === true) ? 'true' : 'false';
-          div.appendChild(select);
-        } else {
-          const input = document.createElement('input');
-          input.type = item.type === 'number' ? 'number' : 'text';
-          input.id = 'cfg_' + item.key;
-          input.dataset.key = item.key;
-          input.dataset.sensitive = item.sensitive ? 'true' : 'false';
-          
+
+      async function restartService(name) {
+        if (!confirm('确定要重启 ' + name + ' 服务吗？')) return;
+
+        try {
+          const res = await fetch('/api/service/' + name + '/restart', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('服务已重启', 'success');
+            setTimeout(loadServices, 1000);
+          } else {
+            toast(data.error || '重启失败', 'error');
+          }
+        } catch (e) {
+          toast('操作失败', 'error');
+        }
+      }
+
+      async function stopService(name) {
+        if (!confirm('确定要停止 ' + name + ' 服务吗？')) return;
+
+        try {
+          const res = await fetch('/api/service/' + name + '/stop', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('服务已停止', 'success');
+            loadServices();
+          } else {
+            toast(data.error || '停止失败', 'error');
+          }
+        } catch (e) {
+          toast('操作失败', 'error');
+        }
+      }
+
+      async function startService(name) {
+        try {
+          const res = await fetch('/api/service/' + name + '/start', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('服务已启动', 'success');
+            setTimeout(loadServices, 1000);
+          } else {
+            toast(data.error || '启动失败', 'error');
+          }
+        } catch (e) {
+          toast('操作失败', 'error');
+        }
+      }
+
+      // ========== 配置管理 ==========
+
+      async function loadConfig() {
+        try {
+          const [schemaRes, configRes] = await Promise.all([
+            fetch('/api/config/schema', {
+              headers: { Authorization: 'Bearer ' + token },
+            }),
+            fetch('/api/config', {
+              headers: { Authorization: 'Bearer ' + token },
+            }),
+          ]);
+
+          if (schemaRes.status === 401 || configRes.status === 401) {
+            localStorage.removeItem('config_token');
+            token = '';
+            showLogin();
+            return;
+          }
+
+          configSchema = (await schemaRes.json()).groups;
+          const configData = await configRes.json();
+
+          renderConfig(configSchema, configData.config);
+        } catch (e) {
+          toast('加载配置失败', 'error');
+        }
+      }
+
+      function renderConfig(groups, config) {
+        const container = document.getElementById('configList');
+        container.innerHTML = '';
+
+        // 分离可控和不可控配置
+        const controllableGroups = groups.filter((g) => g.controllable);
+        const uncontrollableGroups = groups.filter((g) => !g.controllable);
+
+        // 渲染可控配置
+        if (controllableGroups.length > 0) {
+          const header = document.createElement('div');
+          header.className = 'config-group-header controllable';
+          header.innerHTML =
+            '<span class="icon">✅</span><span>应用配置</span><small>修改后重启服务即可生效</small>';
+          container.appendChild(header);
+
+          controllableGroups.forEach((group) => {
+            renderConfigSection(container, group, config, true);
+          });
+        }
+
+        // 渲染不可控配置
+        if (uncontrollableGroups.length > 0) {
+          const header = document.createElement('div');
+          header.className = 'config-group-header uncontrollable';
+          header.innerHTML =
+            '<span class="icon">⚠️</span><span>基础设施配置</span><small>修改需同时调整对应服务，否则会导致连接失败</small>';
+          container.appendChild(header);
+
+          uncontrollableGroups.forEach((group) => {
+            renderConfigSection(container, group, config, false);
+          });
+        }
+      }
+
+      function renderConfigSection(container, group, config, controllable) {
+        const section = document.createElement('div');
+        section.className = 'config-section' + (controllable ? '' : ' warning');
+
+        let titleHtml = '<h3>' + group.name;
+        if (group.description) {
+          titleHtml += '<small>' + group.description + '</small>';
+        }
+        titleHtml += '</h3>';
+        section.innerHTML = titleHtml;
+
+        group.items.forEach((item) => {
+          const value = config[item.key] || '';
+          const div = document.createElement('div');
+          div.className = 'config-item';
+
+          const label = document.createElement('label');
+          label.textContent = item.label;
+          div.appendChild(label);
+
+          // 根据类型创建不同的输入控件
+          if (item.type === 'boolean') {
+            const select = document.createElement('select');
+            select.id = 'cfg_' + item.key;
+            select.dataset.key = item.key;
+            select.dataset.sensitive = 'false';
+            select.className = 'config-select';
+
+            const optFalse = document.createElement('option');
+            optFalse.value = 'false';
+            optFalse.textContent = '关闭';
+            select.appendChild(optFalse);
+
+            const optTrue = document.createElement('option');
+            optTrue.value = 'true';
+            optTrue.textContent = '开启';
+            select.appendChild(optTrue);
+
+            select.value =
+              value === 'true' || value === true ? 'true' : 'false';
+            div.appendChild(select);
+          } else {
+            const input = document.createElement('input');
+            input.type = item.type === 'number' ? 'number' : 'text';
+            input.id = 'cfg_' + item.key;
+            input.dataset.key = item.key;
+            input.dataset.sensitive = item.sensitive ? 'true' : 'false';
+
+            if (item.sensitive) {
+              input.value = value;
+              input.readOnly = true;
+            } else {
+              input.value = value;
+            }
+
+            div.appendChild(input);
+          }
+
+          // 添加测试按钮（数据库和 Redis）
+          if (group.key === 'database' && item.key === 'DB_HOST') {
+            const testBtn = document.createElement('button');
+            testBtn.className = 'btn btn-secondary';
+            testBtn.textContent = '测试连接';
+            testBtn.onclick = () => testDatabase();
+            div.appendChild(testBtn);
+          }
+
+          if (group.key === 'redis' && item.key === 'REDIS_HOST') {
+            const testBtn = document.createElement('button');
+            testBtn.className = 'btn btn-secondary';
+            testBtn.textContent = '测试连接';
+            testBtn.onclick = () => testRedis();
+            div.appendChild(testBtn);
+          }
+
           if (item.sensitive) {
-            input.value = value;
-            input.readOnly = true;
-          } else {
-            input.value = value;
+            if (item.canGenerate) {
+              const btn = document.createElement('button');
+              btn.className = 'btn btn-secondary';
+              btn.textContent = '重新生成';
+              btn.onclick = () => regenerateJwt();
+              div.appendChild(btn);
+            } else {
+              const btn = document.createElement('button');
+              btn.className = 'btn btn-secondary';
+              btn.textContent = '修改';
+              btn.onclick = () => promptUpdate(item.key, item.label);
+              div.appendChild(btn);
+            }
           }
+
+          section.appendChild(div);
+        });
+
+        container.appendChild(section);
+      }
+
+      async function saveConfig() {
+        const updates = {};
+
+        // 处理 input 元素
+        document.querySelectorAll('input[id^="cfg_"]').forEach((input) => {
+          const key = input.dataset.key;
+          const isSensitive = input.dataset.sensitive === 'true';
+          const value = input.value;
+
+          if (isSensitive) {
+            if (value && value !== '(已设置)' && value !== '(未设置)') {
+              updates[key] = value;
+            }
+          } else {
+            if (input.defaultValue !== value) {
+              updates[key] = value;
+            }
+          }
+        });
+
+        // 处理 select 元素
+        document.querySelectorAll('select[id^="cfg_"]').forEach((select) => {
+          const key = select.dataset.key;
+          const value = select.value;
+          if (select.defaultValue !== value) {
+            updates[key] = value;
+          }
+        });
+
+        if (Object.keys(updates).length === 0) {
+          toast('没有修改任何配置', 'error');
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/config', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token,
+            },
+            body: JSON.stringify({ updates }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            toast('配置已保存', 'success');
+            needsRestart = true;
+            document.getElementById('restartNotice').classList.remove('hidden');
+            // 更新默认值
+            document.querySelectorAll('input[id^="cfg_"]').forEach((input) => {
+              input.defaultValue = input.value;
+            });
+            document
+              .querySelectorAll('select[id^="cfg_"]')
+              .forEach((select) => {
+                select.defaultValue = select.value;
+              });
+          } else {
+            toast(data.error || '保存失败', 'error');
+          }
+        } catch (e) {
+          toast('保存失败', 'error');
+        }
+      }
+
+      function promptUpdate(key, label) {
+        const newValue = prompt('请输入新的 ' + label + ':');
+        if (newValue !== null && newValue.trim()) {
+          const input = document.getElementById('cfg_' + key);
+          input.value = newValue.trim();
+          input.defaultValue = '(已设置)';
+        }
+      }
+
+      async function regenerateJwt() {
+        if (
+          !confirm('确定要重新生成 JWT 密钥吗？这将使用所有用户需要重新登录。')
+        )
+          return;
+
+        try {
+          const res = await fetch('/api/config/regenerate-jwt', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            toast('JWT 密钥已重新生成', 'success');
+            needsRestart = true;
+            document.getElementById('restartNotice').classList.remove('hidden');
+            document.getElementById('cfg_JWT_SECRET').value = '(已设置)';
+          } else {
+            toast(data.error || '操作失败', 'error');
+          }
+        } catch (e) {
+          toast('操作失败', 'error');
+        }
+      }
+
+      async function testDatabase() {
+        toast('正在测试数据库连接...', 'info');
+
+        try {
+          const res = await fetch('/api/test/database', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('✅ 数据库连接成功', 'success');
+          } else {
+            toast('❌ 数据库连接失败: ' + (data.error || '未知错误'), 'error');
+          }
+        } catch (e) {
+          toast('❌ 测试失败: 网络错误', 'error');
+        }
+      }
+
+      async function testRedis() {
+        toast('正在测试 Redis 连接...', 'info');
+
+        try {
+          const res = await fetch('/api/test/redis', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('✅ Redis 连接成功', 'success');
+          } else {
+            toast('❌ Redis 连接失败: ' + (data.error || '未知错误'), 'error');
+          }
+        } catch (e) {
+          toast('❌ 测试失败: 网络错误', 'error');
+        }
+      }
+
+      function toast(message, type) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+
+        const el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.textContent = message;
+        document.body.appendChild(el);
+
+        setTimeout(() => el.remove(), 3000);
+      }
+
+      // ========== 数据库备份与恢复 ==========
+
+      let currentRestoreFile = null;
+
+      async function loadBackups() {
+        try {
+          const res = await fetch('/api/db/backups', {
+            headers: { Authorization: 'Bearer ' + token }
+          });
+
+          if (res.status === 401) {
+            localStorage.removeItem('config_token');
+            token = '';
+            showLogin();
+            return;
+          }
+
+          const data = await res.json();
+
+          if (data.success) {
+            renderBackups(data.backups);
+          } else {
+            document.getElementById('backupTableBody').innerHTML =
+              '<tr><td colspan="5" style="text-align:center;color:#e74c3c;padding:20px">加载失败</td></tr>';
+          }
+        } catch (e) {
+          document.getElementById('backupTableBody').innerHTML =
+            '<tr><td colspan="5" style="text-align:center;color:#e74c3c;padding:20px">网络错误</td></tr>';
+        }
+      }
+
+      function renderBackups(backups) {
+        const tbody = document.getElementById('backupTableBody');
+
+        if (backups.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">暂无备份</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = backups.map((backup, index) => `
+          <tr style="background:#1a1a2e;border-bottom:1px solid #333">
+            <td style="padding:10px;color:#fff">${index + 1}</td>
+            <td style="padding:10px;color:#00d9ff;font-family:monospace;font-size:12px">${backup.name}</td>
+            <td style="padding:10px;color:#aaa;font-size:12px">${formatSize(backup.size)}</td>
+            <td style="padding:10px;color:#aaa;font-size:12px">${new Date(backup.modified).toLocaleString('zh-CN')}</td>
+            <td style="padding:10px">
+              <button class="btn btn-warning btn-sm" onclick="showRestoreModal('${backup.name}')" style="margin-right:4px">恢复</button>
+              <button class="btn btn-secondary btn-sm" onclick="downloadBackup('${backup.name}')" style="margin-right:4px">下载</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.name}')">删除</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+      }
+
+      async function backupDatabase() {
+        const btn = document.getElementById('backupDbBtn');
+        const btnText = btn.querySelector('.btn-text');
+        const btnLoading = btn.querySelector('.btn-loading');
+
+        btn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline';
+
+        try {
+          const res = await fetch('/api/db/backup', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token }
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast(`备份成功 (${formatSize(data.size)})`, 'success');
+            loadBackups();
+          } else {
+            toast(data.error || '备份失败', 'error');
+          }
+        } catch (e) {
+          toast('备份失败: 网络错误', 'error');
+        } finally {
+          btn.disabled = false;
+          btnText.style.display = 'inline';
+          btnLoading.style.display = 'none';
+        }
+      }
+
+      function showRestoreModal(filename) {
+        currentRestoreFile = filename;
+        document.getElementById('restoreFilename').textContent = filename;
+        document.getElementById('restoreConfirmInput').value = '';
+        document.getElementById('confirmRestoreBtn').disabled = true;
+        document.getElementById('restoreError').classList.add('hidden');
+        document.getElementById('restoreModal').classList.remove('hidden');
+      }
+
+      function hideRestoreModal() {
+        document.getElementById('restoreModal').classList.add('hidden');
+        currentRestoreFile = null;
+      }
+
+      async function executeRestore() {
+        const confirmText = document.getElementById('restoreConfirmInput').value;
+        const errorEl = document.getElementById('restoreError');
+
+        if (confirmText !== 'CONFIRM') {
+          errorEl.textContent = '请输入 CONFIRM 确认';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        const btn = document.getElementById('confirmRestoreBtn');
+        btn.disabled = true;
+        btn.textContent = '恢复中...';
+
+        try {
+          const res = await fetch('/api/db/restore', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token
+            },
+            body: JSON.stringify({
+              filename: currentRestoreFile,
+              confirm: true
+            })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('恢复成功', 'success');
+            hideRestoreModal();
+            loadBackups();
+          } else {
+            errorEl.textContent = data.error || '恢复失败';
+            errorEl.classList.remove('hidden');
+          }
+        } catch (e) {
+          errorEl.textContent = '恢复失败: 网络错误';
+          errorEl.classList.remove('hidden');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '确认恢复';
+        }
+      }
+
+      async function downloadBackup(filename) {
+        try {
+          // 第一步：通过认证接口获取一次性下载凭证
+          const res = await fetch('/api/db/download-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ filename })
+          });
+
+          if (res.status === 401) {
+            toast('会话已过期，请重新登录', 'error');
+            return;
+          }
+
+          const data = await res.json();
           
-          div.appendChild(input);
+          if (!data.success || !data.downloadToken) {
+            toast('获取下载凭证失败', 'error');
+            return;
+          }
+
+          // 第二步：使用一次性凭证下载文件
+          const downloadUrl = `/api/db/download/${encodeURIComponent(filename)}?token=${data.downloadToken}`;
+          
+          // 使用 fetch + Blob 避免 token 暴露在浏览器历史
+          const downloadRes = await fetch(downloadUrl);
+          
+          if (!downloadRes.ok) {
+            toast('下载失败', 'error');
+            return;
+          }
+
+          const blob = await downloadRes.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          toast('下载成功', 'success');
+        } catch (e) {
+          console.error('下载失败:', e);
+          toast('下载失败: 网络错误', 'error');
         }
-        
-        // 添加测试按钮（数据库和 Redis）
-        if (group.key === 'database' && item.key === 'DB_HOST') {
-          const testBtn = document.createElement('button');
-          testBtn.className = 'btn btn-secondary';
-          testBtn.textContent = '测试连接';
-          testBtn.onclick = () => testDatabase();
-          div.appendChild(testBtn);
-        }
-        
-        if (group.key === 'redis' && item.key === 'REDIS_HOST') {
-          const testBtn = document.createElement('button');
-          testBtn.className = 'btn btn-secondary';
-          testBtn.textContent = '测试连接';
-          testBtn.onclick = () => testRedis();
-          div.appendChild(testBtn);
-        }
-        
-        if (item.sensitive) {
-          if (item.canGenerate) {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-secondary';
-            btn.textContent = '重新生成';
-            btn.onclick = () => regenerateJwt();
-            div.appendChild(btn);
+      }
+
+      async function deleteBackup(filename) {
+        if (!confirm(`确定要删除备份 "${filename}" 吗？`)) return;
+
+        try {
+          const res = await fetch(`/api/db/backup/${encodeURIComponent(filename)}`, {
+            method: 'DELETE',
+            headers: { Authorization: 'Bearer ' + token }
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast('已删除', 'success');
+            loadBackups();
           } else {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-secondary';
-            btn.textContent = '修改';
-            btn.onclick = () => promptUpdate(item.key, item.label);
-            div.appendChild(btn);
+            toast(data.error || '删除失败', 'error');
           }
+        } catch (e) {
+          toast('删除失败: 网络错误', 'error');
         }
-        
-        section.appendChild(div);
-      });
-      
-      container.appendChild(section);
-    }
-    
-    async function saveConfig() {
-      const updates = {};
-      
-      // 处理 input 元素
-      document.querySelectorAll('input[id^="cfg_"]').forEach(input => {
-        const key = input.dataset.key;
-        const isSensitive = input.dataset.sensitive === 'true';
-        const value = input.value;
-        
-        if (isSensitive) {
-          if (value && value !== '(已设置)' && value !== '(未设置)') {
-            updates[key] = value;
+      }
+
+      async function cleanupBackups() {
+        const maxBackups = parseInt(document.getElementById('maxBackups').value, 10);
+
+        if (isNaN(maxBackups) || maxBackups < 1) {
+          toast('请输入有效的保留数量', 'error');
+          return;
+        }
+
+        if (!confirm(`确定要清理旧备份吗？将保留最新的 ${maxBackups} 个备份。`)) return;
+
+        try {
+          const res = await fetch('/api/db/cleanup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token
+            },
+            body: JSON.stringify({ maxBackups })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            toast(`清理完成：删除 ${data.deleted} 个，保留 ${data.kept} 个`, 'success');
+            loadBackups();
+          } else {
+            toast('清理失败', 'error');
           }
-        } else {
-          if (input.defaultValue !== value) {
-            updates[key] = value;
-          }
+        } catch (e) {
+          toast('清理失败: 网络错误', 'error');
         }
-      });
-      
-      // 处理 select 元素
-      document.querySelectorAll('select[id^="cfg_"]').forEach(select => {
-        const key = select.dataset.key;
-        const value = select.value;
-        if (select.defaultValue !== value) {
-          updates[key] = value;
-        }
-      });
-      
-      if (Object.keys(updates).length === 0) {
-        toast('没有修改任何配置', 'error');
-        return;
       }
-      
-      try {
-        const res = await fetch('/api/config', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ updates })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-          toast('配置已保存', 'success');
-          needsRestart = true;
-          document.getElementById('restartNotice').classList.remove('hidden');
-          // 更新默认值
-          document.querySelectorAll('input[id^="cfg_"]').forEach(input => { input.defaultValue = input.value; });
-          document.querySelectorAll('select[id^="cfg_"]').forEach(select => { select.defaultValue = select.value; });
-        } else {
-          toast(data.error || '保存失败', 'error');
-        }
-      } catch (e) {
-        toast('保存失败', 'error');
-      }
-    }
-    
-    function promptUpdate(key, label) {
-      const newValue = prompt('请输入新的 ' + label + ':');
-      if (newValue !== null && newValue.trim()) {
-        const input = document.getElementById('cfg_' + key);
-        input.value = newValue.trim();
-        input.defaultValue = '(已设置)';
-      }
-    }
-    
-    async function regenerateJwt() {
-      if (!confirm('确定要重新生成 JWT 密钥吗？这将使用所有用户需要重新登录。')) return;
-      
-      try {
-        const res = await fetch('/api/config/regenerate-jwt', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-          toast('JWT 密钥已重新生成', 'success');
-          needsRestart = true;
-          document.getElementById('restartNotice').classList.remove('hidden');
-          document.getElementById('cfg_JWT_SECRET').value = '(已设置)';
-        } else {
-          toast(data.error || '操作失败', 'error');
-        }
-      } catch (e) {
-        toast('操作失败', 'error');
-      }
-    }
-    
-    async function testDatabase() {
-      toast('正在测试数据库连接...', 'info');
-      
-      try {
-        const res = await fetch('/api/test/database', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          toast('✅ 数据库连接成功', 'success');
-        } else {
-          toast('❌ 数据库连接失败: ' + (data.error || '未知错误'), 'error');
-        }
-      } catch (e) {
-        toast('❌ 测试失败: 网络错误', 'error');
-      }
-    }
-    
-    async function testRedis() {
-      toast('正在测试 Redis 连接...', 'info');
-      
-      try {
-        const res = await fetch('/api/test/redis', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          toast('✅ Redis 连接成功', 'success');
-        } else {
-          toast('❌ Redis 连接失败: ' + (data.error || '未知错误'), 'error');
-        }
-      } catch (e) {
-        toast('❌ 测试失败: 网络错误', 'error');
-      }
-    }
-    
-    function toast(message, type) {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const el = document.createElement('div');
-      el.className = 'toast ' + type;
-      el.textContent = message;
-      document.body.appendChild(el);
-      
-      setTimeout(() => el.remove(), 3000);
-    }
-  </script>
-</body>
+    </script>
+
+    <!-- 引入配置模块 -->
+    <script src="ui-config.js"></script>
+    <script src="sketches-config.js"></script>
+    <script src="server-config.js"></script>
+    <script src="quick-command-config.js"></script>
+    <script src="theme-config.js"></script>
+    <script src="frontend-config.js"></script>
+  </body>
 </html>

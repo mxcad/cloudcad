@@ -29,7 +29,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuditLogService } from './audit-log.service';
-import { AuditAction, ResourceType } from '@prisma/client';
+import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -65,8 +65,8 @@ export class AuditLogController {
   })
   async findAll(
     @Query('userId') userId?: string,
-    @Query('action') action?: AuditAction,
-    @Query('resourceType') resourceType?: ResourceType,
+    @Query('action') action?: string,
+    @Query('resourceType') resourceType?: string,
     @Query('resourceId') resourceId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -76,8 +76,8 @@ export class AuditLogController {
   ) {
     const filters: Record<string, unknown> = {};
     if (userId) filters.userId = userId;
-    if (action) filters.action = action;
-    if (resourceType) filters.resourceType = resourceType;
+    if (action) filters.action = action as AuditAction;
+    if (resourceType) filters.resourceType = resourceType as ResourceType;
     if (resourceId) filters.resourceId = resourceId;
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);

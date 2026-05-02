@@ -67,6 +67,34 @@ export class StorageCleanupScheduler {
   }
 
   /**
+   * 每天凌晨 4 点执行回收站清理任务
+   */
+  @Cron('0 4 * * *')
+  async handleTrashCleanup() {
+    this.logger.log('Starting scheduled trash cleanup task');
+
+    try {
+      // 执行回收站清理
+      const result = await this.storageCleanupService.cleanupExpiredTrash();
+
+      this.logger.log(
+        `Scheduled trash cleanup completed: Deleted ${result.deletedNodes} items, cleaned ${result.deletedDirectories} empty directories`
+      );
+
+      if (result.errors.length > 0) {
+        this.logger.warn(
+          `Trash cleanup task encountered ${result.errors.length} errors`
+        );
+        result.errors.forEach((error, index) => {
+          this.logger.warn(`Error ${index + 1}: ${error}`);
+        });
+      }
+    } catch (error) {
+      this.logger.error('Scheduled trash cleanup task failed', error.stack);
+    }
+  }
+
+  /**
    * 每周清理一次过期锁文件
    */
   @Cron(CronExpression.EVERY_WEEK)

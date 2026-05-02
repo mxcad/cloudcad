@@ -6,59 +6,66 @@ import { FileNameText, DescriptionText } from '../ui/TruncateText';
 interface FileItemInfoProps {
   node: FileSystemNode;
   isGrid?: boolean;
+  galleryMode?: boolean;
+  fontSize?: number | string;
 }
 
 export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
-  ({ node, isGrid = false }) => {
+  ({ node, isGrid = false, galleryMode = false, fontSize }) => {
     const isRoot = node.isRoot;
 
     const descriptionText = useMemo(
-      () =>
-        isRoot
-          ? node.description || '暂无描述'
-          : node.isFolder
-            ? `${node._count?.children || 0} 个项目`
-            : formatFileSize(node.size),
+      () => {
+        if (isRoot) {
+          return node.description || '暂无描述';
+        }
+        if (node.isFolder) {
+          return `${node._count?.children || 0} 个项目`;
+        }
+        if (galleryMode) {
+          return formatDate(node.updatedAt);
+        }
+        return formatFileSize(node.size);
+      },
       [
         isRoot,
         node.description,
         node.isFolder,
         node._count?.children,
         node.size,
+        node.updatedAt,
+        galleryMode,
       ]
     );
 
     if (isGrid) {
       return (
         <>
-          <h3 className="font-medium text-slate-900 text-center px-2 overflow-hidden max-w-full">
-            <FileNameText maxWidth="100%">{node.name}</FileNameText>
+          <h3 className="font-medium text-slate-900 overflow-hidden w-full" style={{ minWidth: 0, display: 'flex', justifyContent: 'center', fontSize }}>
+            <FileNameText showTooltip={true} style={{ minWidth: 0, width: '100%', fontSize }}>
+              {node.name}
+            </FileNameText>
           </h3>
-          <p className="text-xs text-slate-500 text-center mt-1 px-2 overflow-hidden max-w-full">
-            <DescriptionText maxWidth="100%">{descriptionText}</DescriptionText>
-          </p>
+          {!galleryMode && (
+            <p className="text-xs text-slate-500 text-center mt-1 overflow-hidden w-full" style={{ minWidth: 0 }}>
+              <DescriptionText showTooltip={true}>{descriptionText}</DescriptionText>
+            </p>
+          )}
         </>
       );
     }
 
     return (
       <div className="flex-1 min-w-0">
-        <h3
-          className="font-medium text-slate-900 truncate"
-          style={{
-            direction: 'rtl',
-            textAlign: 'left',
-          }}
-          title={node.name}
-        >
-          <span style={{ direction: 'ltr', unicodeBidi: 'embed' }}>
+        <h3 className="font-medium text-slate-900 overflow-hidden w-full" style={{ minWidth: 0, fontSize }}>
+          <FileNameText showTooltip={true} style={{ fontSize }}>
             {node.name}
-          </span>
+          </FileNameText>
         </h3>
         <div className="flex items-center gap-2">
           <p className="text-xs text-slate-500">
             {formatDate(node.updatedAt)}
-            {!node.isFolder && ` • ${formatFileSize(node.size)}`}
+            {!node.isFolder && !galleryMode && ` • ${formatFileSize(node.size)}`}
           </p>
         </div>
       </div>

@@ -28,10 +28,10 @@ const PLATFORM_DIR = IS_WINDOWS
   ? path.join(RUNTIME_DIR, 'windows')
   : path.join(RUNTIME_DIR, 'linux');
 
-// 离线 node 目录
+// 离线 node 目录（使用绝对路径）
 const OFFLINE_NODE_DIR = IS_WINDOWS
-  ? path.join(PLATFORM_DIR, 'node')
-  : path.join(PLATFORM_DIR, 'node', 'bin');
+  ? path.join(PROJECT_ROOT, 'runtime', 'windows', 'node')
+  : path.join(PROJECT_ROOT, 'runtime', 'linux', 'node', 'bin');
 
 const OFFLINE_NODE_EXE = IS_WINDOWS
   ? path.join(OFFLINE_NODE_DIR, 'node.exe')
@@ -151,7 +151,8 @@ function createLinuxShellWrapper(command, targetPath, scriptDir) {
 
   // 计算从脚本目录到项目根目录的回退层数
   const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
-  const backPath = backLevels > 0 ? Array(backLevels).join('../') : '';
+  // 修复：Array(n).join('x') 产生 n-1 个 x，所以需要 backLevels + 1
+  const backPath = backLevels > 0 ? Array(backLevels + 1).join('../') : '';
 
   return `#!/bin/bash
 # Auto-generated wrapper for ${command}
@@ -171,7 +172,8 @@ function createLinuxNodeWrapper(command, nodePath, scriptPath, scriptDir) {
 
   // 计算从脚本目录到项目根目录的回退层数
   const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
-  const backPath = backLevels > 0 ? Array(backLevels).join('../') : '';
+  // 修复：Array(n).join('x') 产生 n-1 个 x，所以需要 backLevels + 1
+  const backPath = backLevels > 0 ? Array(backLevels + 1).join('../') : '';
 
   // pnpm 需要禁用 Corepack，避免从网络下载
   const extraEnv = command === 'pnpm'
@@ -289,6 +291,35 @@ function checkOfflineNode() {
     return false;
   }
   return true;
+}
+
+/**
+ * 设置 runtime 目录的执行权限（仅 Linux）
+ * 解压后可能丢失执行权限，需要修复
+ * @returns {boolean} true 表示成功或无需修复
+ */
+function setRuntimePermissions() {
+  if (!IS_LINUX) {
+    return true; // Windows 不需要
+  }
+
+  const runtimeLinuxDir = path.join(RUNTIME_DIR, 'linux');
+  if (!fs.existsSync(runtimeLinuxDir)) {
+    return true; // 目录不存在，跳过
+  }
+
+  log('设置 runtime/linux 执行权限...');
+
+  try {
+    // 设置所有文件和目录的权限为 755
+    execSync(`chmod -R 755 "${runtimeLinuxDir}"`, { stdio: 'pipe' });
+    log('  ✓ runtime/linux 权限设置完成');
+    return true;
+  } catch (err) {
+    error(`设置权限失败: ${err.message}`);
+    error('请手动执行: chmod -R 755 runtime/linux/');
+    return false;
+  }
 }
 
 function ensureDir(dir) {
@@ -482,6 +513,116 @@ function setupNodeModulesBin() {
     count++;
   }
 
+  // 4. 修复所有 node_modules/.bin 中的硬编码路径脚本
+  // pnpm install 时会创建包含绝对路径的脚本，需要修复为正确的 node 路径
+  count += fixBinScripts();
+
+  return count;
+}
+
+/**
+ * 修复所有 node_modules/.bin 目录中脚本的硬编码路径
+ * pnpm 在安装时会创建包含绝对路径的脚本，部署到不同目录后会失效
+ * 
+ * 解决方案：重写整个脚本，使用动态计算的 PROJECT_ROOT 变量
+ * @returns {number} 修复的脚本数量
+ */
+function fixBinScripts() {
+  let count = 0;
+  
+  // 需要修复的 .bin 目录列表
+  const binDirs = [
+    NODE_MODULES_BIN, // 根目录 node_modules/.bin
+    path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
+    path.join(PROJECT_ROOT, 'packages', 'frontend', 'node_modules', '.bin'),
+    path.join(PROJECT_ROOT, 'packages', 'config-service', 'node_modules', '.bin'),
+  ];
+  
+  for (const binDir of binDirs) {
+    if (!fs.existsSync(binDir)) continue;
+    
+    const binFiles = fs.readdirSync(binDir).filter(f => 
+      !f.endsWith('.cmd') && !f.endsWith('.ps1') && !f.startsWith('.')
+    );
+    
+    for (const binFile of binFiles) {
+      const binPath = path.join(binDir, binFile);
+      try {
+        let content = fs.readFileSync(binPath, 'utf8');
+        
+        // 检查是否需要修复（包含硬编码路径或绝对路径）
+        const needsFix = 
+          content.includes('/runtime/') ||
+          (content.includes('/node_modules/') && content.includes('node')) ||
+          content.match(/^#![^\n]*\/(usr|app|home)\//m);
+        
+        if (needsFix) {
+          // 计算 node 的相对路径
+          const nodeRelPath = path.relative(binDir, OFFLINE_NODE_EXE);
+          
+          // 解析原始脚本中的目标 JS 文件路径
+          // pnpm 格式：exec "$basedir/../node_modules/xxx/build/index.js" "$@"
+          // 或者：node "$basedir/../xxx.js" "$@"
+          let targetJs = null;
+          
+          // 方法1：解析 pnpm 标准格式
+          const pnpmMatch = content.match(/exec\s+["']?\$basedir\/(.+?)["']?\s+\$@/);
+          if (pnpmMatch) {
+            targetJs = path.resolve(binDir, pnpmMatch[1].replace(/^\.\.\//g, '../'));
+          }
+          
+          // 方法2：解析 node + 路径格式
+          if (!targetJs) {
+            const nodeMatch = content.match(/node\s+["']?\$basedir\/(.+?)["']?\s+/);
+            if (nodeMatch) {
+              targetJs = path.resolve(binDir, nodeMatch[1].replace(/^\.\.\//g, '../'));
+            }
+          }
+          
+          // 方法3：直接查找 node_modules 中的入口文件
+          if (!targetJs || !fs.existsSync(targetJs)) {
+            // 尝试查找对应的包
+            const pkgDir = path.join(binDir, '..', binFile);
+            const buildIndex = path.join(pkgDir, 'build', 'index.js');
+            const distIndex = path.join(pkgDir, 'dist', 'index.js');
+            const cliIndex = path.join(pkgDir, 'cli.js');
+            
+            for (const candidate of [buildIndex, distIndex, cliIndex]) {
+              if (fs.existsSync(candidate)) {
+                targetJs = candidate;
+                break;
+              }
+            }
+          }
+          
+          if (targetJs && fs.existsSync(targetJs)) {
+            const targetRelPath = path.relative(binDir, targetJs);
+            
+            // 生成新的脚本内容
+            const newScript = `#!/bin/sh
+# CloudCAD fixed wrapper - dynamically resolves paths
+basedir=\$(dirname "\$(echo "\$0" | sed -e 's,\\\\,/,g')")
+
+case \`uname\` in
+    *CYGWIN*) basedir=\`cygpath -w "\$basedir"\`;;
+esac
+
+exec "\$basedir/${nodeRelPath}" "\$basedir/${targetRelPath}" "\$@"
+`;
+            fs.writeFileSync(binPath, newScript, { mode: 0o755 });
+            log(`重写脚本: ${path.relative(PROJECT_ROOT, binPath)}`);
+            count++;
+          } else {
+            // 无法找到目标文件，跳过
+            log(`跳过脚本（找不到入口）: ${path.relative(PROJECT_ROOT, binPath)}`);
+          }
+        }
+      } catch (e) {
+        // 忽略二进制文件或读取错误
+      }
+    }
+  }
+  
   return count;
 }
 
@@ -1069,21 +1210,96 @@ exec "$PROJECT_ROOT/${rootRelativeNodeExe}" "$PROJECT_ROOT/${rootRelativePm2Js}"
 }
 
 /**
+ * 计算 pnpm-lock.yaml 的 SHA256 哈希值
+ * @returns {string|null} 哈希值，文件不存在时返回 null
+ */
+function calcLockHash() {
+  const crypto = require('crypto');
+  const lockFile = path.join(PROJECT_ROOT, 'pnpm-lock.yaml');
+  if (!fs.existsSync(lockFile)) return null;
+  return crypto.createHash('sha256')
+    .update(fs.readFileSync(lockFile))
+    .digest('hex');
+}
+
+/**
+ * 检查是否需要重新安装依赖
+ * 通过对比已记录的 Lock Hash 与当前 lock 文件的哈希值来判断
+ * @returns {boolean} true 表示需要重新安装
+ */
+function shouldReinstallDependencies() {
+  const deployHashFile = path.join(PROJECT_ROOT, '.deploy-lock-hash');
+  const currentLockFile = path.join(PROJECT_ROOT, 'pnpm-lock.yaml');
+  const nodeModulesDir = path.join(PROJECT_ROOT, 'node_modules');
+
+  // 1. node_modules 不存在 → 需要安装
+  if (!fs.existsSync(nodeModulesDir)) {
+    log('⚠ node_modules 不存在，需要安装依赖');
+    return true;
+  }
+
+  // 2. 没有 .deploy-lock-hash → 首次部署或标记丢失
+  if (!fs.existsSync(deployHashFile)) {
+    log('⚠ 未找到版本标记，需要安装依赖');
+    return true;
+  }
+
+  // 3. 没有 lock 文件 → 异常情况
+  if (!fs.existsSync(currentLockFile)) {
+    log('⚠ pnpm-lock.yaml 不存在');
+    return true;
+  }
+
+  // 4. 对比哈希值
+  const installedHash = fs.readFileSync(deployHashFile, 'utf8').trim();
+  const currentHash = calcLockHash();
+
+  // 防御性检查：理论上不会走到这里，因为前面已检查过
+  if (!currentHash) {
+    log('⚠ 无法计算 lock 文件哈希，需要重新安装');
+    return true;
+  }
+
+  if (installedHash !== currentHash) {
+    log('⚠ 检测到依赖更新！');
+    log(`  已安装: ${installedHash.substring(0, 8)}...`);
+    log(`  当前:   ${currentHash.substring(0, 8)}...`);
+    return true;
+  }
+
+  log('  ✓ node_modules 已存在且版本匹配，跳过安装');
+  return false;
+}
+
+/**
+ * 记录当前已安装的 Lock Hash
+ * 在安装完成后调用，用于下次启动时对比
+ */
+function markInstalledVersion() {
+  const deployHashFile = path.join(PROJECT_ROOT, '.deploy-lock-hash');
+  const currentHash = calcLockHash();
+  if (currentHash) {
+    fs.writeFileSync(deployHashFile, currentHash);
+    log('  ✓ 已记录依赖版本标记');
+  }
+}
+
+/**
  * 运行 pnpm install --offline 重建 node_modules
  * 这是离线安装的关键步骤，从 .pnpm-store 创建硬链接
- * 
+ *
  * 注意：
  * 1. 不需要 --ignore-scripts，postinstall 会自动执行
  * 2. 需要在 PATH 中加入离线 node，让 postinstall 能找到 node 命令
  * 3. env 修改只影响当前进程，不会影响系统环境
  * 4. Linux 使用 .pnpm-store-linux，Windows 使用 .pnpm-store
- * 
+ *
  * @param {Object} options - 配置选项
  * @param {boolean} options.deployBackendOnly - 只安装后端依赖（部署模式）
  */
 function runPnpmInstallOffline(options = {}) {
   const { deployBackendOnly = false } = options;
-  
+
   // 检查 pnpm 是否可用
   const pnpmJs = findPnpmJs();
   if (!pnpmJs) {
@@ -1091,19 +1307,10 @@ function runPnpmInstallOffline(options = {}) {
     return false;
   }
 
-  // 检查 node_modules 是否已存在（部署包可能已包含）
-  // pnpm 结构：根目录 node_modules/.pnpm 存储实际内容，packages/*/node_modules 是符号链接
-  const pnpmStoreExists = fs.existsSync(path.join(PROJECT_ROOT, 'node_modules', '.pnpm'));
-  const backendModulesExists = fs.existsSync(path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules'));
-  
-  if (pnpmStoreExists && backendModulesExists) {
-    log('  ✓ node_modules 已存在，跳过安装');
-    return true;
-  }
-  
-  if (pnpmStoreExists) {
-    log('  ✓ node_modules/.pnpm 已存在，只需重建符号链接');
-    // pnpm install 会重建符号链接，但不下载新包
+  // 【新增】检查是否需要重新安装依赖
+  const needReinstall = shouldReinstallDependencies();
+  if (!needReinstall) {
+    return true; // 跳过安装
   }
 
   // 查找 pnpm store
@@ -1118,7 +1325,7 @@ function runPnpmInstallOffline(options = {}) {
       break;
     }
   }
-  
+
   if (!storePath) {
     error('pnpm store 不存在，无法进行离线安装');
     error('请确保离线包包含 .pnpm-store 或 .pnpm-store-deploy 目录');
@@ -1129,10 +1336,10 @@ function runPnpmInstallOffline(options = {}) {
   const installArgs = deployBackendOnly
     ? ['--filter', 'backend', 'install', '--offline', '--prod']
     : ['install', '--offline'];
-  
+
   log(deployBackendOnly ? '安装后端依赖...' : '运行 pnpm install --offline 重建依赖...');
   log(`  → 执行: pnpm ${installArgs.join(' ')}`);
-  
+
   try {
     const nodeDir = IS_LINUX ? path.join(PLATFORM_DIR, 'node', 'bin') : OFFLINE_NODE_DIR;
     const env = {
@@ -1149,6 +1356,10 @@ function runPnpmInstallOffline(options = {}) {
     });
 
     log(deployBackendOnly ? '  ✓ 后端依赖安装完成' : '  ✓ pnpm install --offline 完成');
+
+    // 【新增】安装完成后记录哈希
+    markInstalledVersion();
+
     return true;
   } catch (err) {
     error(`pnpm ${installArgs.join(' ')} 失败`);
@@ -1264,6 +1475,9 @@ function setup(options = {}) {
     return false;
   }
 
+  // 0. 设置 runtime 目录执行权限（Linux 解压后可能丢失）
+  setRuntimePermissions();
+
   // 1. 运行 pnpm install --offline 重建依赖
   // deployBackendOnly 时只安装后端依赖
   if (!runPnpmInstallOffline({ deployBackendOnly })) {
@@ -1351,6 +1565,9 @@ module.exports = {
   runPnpmInstallOffline,
   copyEnvExampleToEnv,
   checkPrismaClientExists,
+  calcLockHash,
+  shouldReinstallDependencies,
+  markInstalledVersion,
   OFFLINE_NODE_DIR,
   OFFLINE_NODE_EXE,
   NODE_MODULES_BIN,

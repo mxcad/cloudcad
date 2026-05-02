@@ -12,6 +12,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { useTour } from '../../contexts/TourContext';
 import { TourOverlay } from './TourOverlay';
 import { TourTooltip } from './TourTooltip';
@@ -39,6 +40,8 @@ export const GlobalTourRenderer: React.FC = () => {
     startTour,
   } = useTour();
 
+  const location = useLocation();
+
   // 确保 Portal 容器在客户端渲染时才创建
   const [container, setContainer] = useState<HTMLElement | null>(null);
 
@@ -54,6 +57,21 @@ export const GlobalTourRenderer: React.FC = () => {
     };
   }, []);
 
+  // 定义不应该显示首次引导弹框的路径
+  const excludedPaths = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+    '/cad-editor',
+  ];
+
+  // 检查当前路径是否应该显示引导弹框
+  const shouldShowStartModal = !excludedPaths.some(
+    path => location.pathname === path || location.pathname.startsWith('/cad-editor/')
+  );
+
   if (!container) {
     return null;
   }
@@ -66,9 +84,9 @@ export const GlobalTourRenderer: React.FC = () => {
         onClose={closeTourCenter}
       />
 
-      {/* 首次登录引导提示弹窗 */}
+      {/* 首次登录引导提示弹窗 - 只在合适的页面显示 */}
       <TourStartModal
-        isOpen={isStartModalOpen}
+        isOpen={isStartModalOpen && shouldShowStartModal}
         onDismiss={dismissStartModal}
         onViewNow={() => {
           dismissStartModal();
@@ -84,6 +102,7 @@ export const GlobalTourRenderer: React.FC = () => {
           isActive={isTourActive}
           onSkip={skipTour}
           onSkipStep={nextStep}
+          onNext={nextStep}
           onInteractionComplete={nextStep}
         >
           {({ targetRect, hasTarget }) => (

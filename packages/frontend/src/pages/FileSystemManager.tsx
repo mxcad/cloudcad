@@ -1,7 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
-import FolderPlus from 'lucide-react/dist/esm/icons/folder-plus';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import { createPortal } from 'react-dom';
+import {
+  useNavigate,
+  useParams,
+  useLocation,
+  useSearchParams,
+} from 'react-router-dom';
+import { FolderPlus } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ToastContainer } from '../components/ui/Toast';
@@ -20,6 +26,11 @@ import { useFileSystemStore } from '../stores/fileSystemStore';
 import { projectsApi } from '../services/projectsApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
+  FileSystemToolbar,
+  BatchActionsBar,
+  ProjectFilterTabs,
+} from './components';
+import {
   EmptyFolderIcon,
   RefreshIcon,
   SearchIcon,
@@ -34,7 +45,6 @@ import { MembersModal } from '../components/modals/MembersModal';
 import { ProjectRolesModal } from '../components/modals/ProjectRolesModal';
 import { SelectFolderModal } from '../components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
-import { AddToGalleryModal } from '../components/modals/AddToGalleryModal';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '../components/modals/VersionHistoryModal';
 import { versionControlApi } from '../services/versionControlApi';
@@ -133,6 +143,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleDeleteProject,
     handlePermanentlyDeleteProject,
     isTrashView,
+    setIsTrashView,
     handleToggleTrashView,
     handleRestoreNode,
     handleClearProjectTrash,
@@ -171,6 +182,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     showToast,
   });
 
+  // 获取私人空间 ID 失败次数（避免无限重试）
+  const [personalSpaceErrorCount, setPersonalSpaceErrorCount] = useState(0);
+  const MAX_RETRY_COUNT = 3;
+
   // 获取私人空间 ID（使用缓存，避免每次进入都重新获取）
   useEffect(() => {
     if (mode !== 'personal-space') return;
@@ -185,29 +200,53 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       return;
     }
 
+    // 超过最大重试次数，停止请求
+    if (personalSpaceErrorCount >= MAX_RETRY_COUNT) {
+      console.error(
+        `[FileSystemManager] 获取私人空间失败次数超过限制 (${MAX_RETRY_COUNT} 次)，停止重试`
+      );
+      showToast('获取私人空间失败，请刷新页面重试', 'error');
+      return;
+    }
+
     const fetchPersonalSpace = async () => {
       setPersonalSpaceIdLoading(true);
       try {
         const response = await projectsApi.getPersonalSpace();
         if (response.data?.id) {
           setPersonalSpaceId(response.data.id);
+          setPersonalSpaceErrorCount(0); // 成功则重置错误计数
         }
       } catch (error) {
         // 检测请求是否被取消（用户切换页面时正常行为）
         if (isAbortError(error)) {
-          console.info('[FileSystemManager] 获取私人空间请求被取消（正常行为）');
+          console.info(
+            '[FileSystemManager] 获取私人空间请求被取消（正常行为）'
+          );
           return;
         }
 
         console.error('获取私人空间失败:', error);
-        showToast('获取私人空间失败', 'error');
+        setPersonalSpaceErrorCount((prev) => prev + 1);
+        showToast(
+          `获取私人空间失败 (${personalSpaceErrorCount + 1}/${MAX_RETRY_COUNT})`,
+          'error'
+        );
       } finally {
         setPersonalSpaceIdLoading(false);
       }
     };
 
     fetchPersonalSpace();
-  }, [mode, personalSpaceId, personalSpaceIdLoading, setPersonalSpaceId, setPersonalSpaceIdLoading, showToast]);
+  }, [
+    mode,
+    personalSpaceId,
+    personalSpaceIdLoading,
+    setPersonalSpaceId,
+    setPersonalSpaceIdLoading,
+    showToast,
+    personalSpaceErrorCount,
+  ]);
 
   // 权限管理 hook
   const { hasPermission } = usePermission();
@@ -234,7 +273,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const [permissionsLoading, setPermissionsLoading] = useState(false);
 
   // 项目文件权限（使用统一的权限加载 Hook）
-  const { permissions: projectPermissions } = useProjectPermissions(urlProjectId);
+  const { permissions: projectPermissions } =
+    useProjectPermissions(urlProjectId);
 
   // 移动/拷贝状态（支持批量操作标记）
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
@@ -244,11 +284,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const [copySourceNode, setCopySourceNode] = useState<
     FileSystemNode | { id: 'batch' } | null
   >(null);
-
-  // 图库相关状态
-  const [showAddToGalleryModal, setShowAddToGalleryModal] = useState(false);
-  const [selectedNodeForGallery, setSelectedNodeForGallery] =
-    useState<FileSystemNode | null>(null);
 
   // 版本历史相关状态
   const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
@@ -462,10 +497,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         // 清除 URL 参数，避免刷新后重复触发
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete('action');
-        navigate(
-          { search: newSearchParams.toString() },
-          { replace: true }
-        );
+        navigate({ search: newSearchParams.toString() }, { replace: true });
       }
     }, 300);
 
@@ -535,26 +567,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setMoveSourceNode(null);
     setShowSelectFolderModal(true);
   }, []);
-
-  /**
-   * 添加到图库
-   */
-  const handleAddToGallery = useCallback(
-    (node: FileSystemNode) => {
-      if (!projectPermissions[ProjectPermission.GALLERY_ADD]) {
-        showToast('您没有权限添加到图库', 'warning');
-        return;
-      }
-      setSelectedNodeForGallery(node);
-      setShowAddToGalleryModal(true);
-    },
-    [
-      setSelectedNodeForGallery,
-      setShowAddToGalleryModal,
-      projectPermissions,
-      showToast,
-    ]
-  );
 
   /**
    * 显示版本历史
@@ -757,11 +769,33 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             onClick={
               isPersonalSpaceMode
                 ? isAtRoot
-                  ? () => navigate('/personal-space')
-                  : handleGoBack
+                  ? () => {
+                      setSearchQuery('');
+                      navigate('/personal-space');
+                    }
+                  : () => {
+                      // 如果当前在回收站模式，点击返回时退出回收站
+                      if (isTrashView) {
+                        setIsTrashView(false);
+                      } else {
+                        setSearchQuery('');
+                        handleGoBack();
+                      }
+                    }
                 : isAtRoot
-                  ? () => navigate('/projects')
-                  : handleGoBack
+                  ? () => {
+                      setSearchQuery('');
+                      navigate('/projects');
+                    }
+                  : () => {
+                      // 如果当前在回收站模式，点击返回时退出回收站
+                      if (isTrashView) {
+                        setIsTrashView(false);
+                      } else {
+                        setSearchQuery('');
+                        handleGoBack();
+                      }
+                    }
             }
             className="p-2 rounded-xl transition-all flex-shrink-0"
             style={{ color: 'var(--text-tertiary)' }}
@@ -802,6 +836,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             <BreadcrumbNavigation
               breadcrumbs={breadcrumbs}
               onNavigate={(crumb) => {
+                // 清空搜索状态
+                setSearchQuery('');
+                // 如果当前在回收站模式，点击面包屑时退出回收站
+                if (isTrashView) {
+                  setIsTrashView(false);
+                }
                 if (isPersonalSpaceMode) {
                   // 私人空间模式下的导航
                   if (crumb.isRoot) {
@@ -844,7 +884,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               disabled={loading}
               className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
               style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
-              title={isTrashView ? '返回文件列表' : '回收站'}
+              title={isTrashView ? '返回文件列表' : '文件回收站'}
             >
               <svg
                 width="16"
@@ -853,28 +893,32 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
+                className="mr-1"
               >
                 <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
               </svg>
+              文件回收站
             </Button>
           )}
 
           {isAtRoot ? (
             <>
               {/* 私人空间模式或回收站视图不显示新建项目按钮 */}
-              {canCreateProject && !isPersonalSpaceMode && !isProjectTrashView && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={openCreateProject}
-                  className="hover:bg-[var(--bg-tertiary)]"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  title="新建项目"
-                  data-tour="create-project-btn"
-                >
-                  <FolderPlus size={16} />
-                </Button>
-              )}
+              {canCreateProject &&
+                !isPersonalSpaceMode &&
+                !isProjectTrashView && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={openCreateProject}
+                    className="hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-tertiary)' }}
+                    title="新建项目"
+                    data-tour="create-project-btn"
+                  >
+                    <FolderPlus size={16} />
+                  </Button>
+                )}
             </>
           ) : (
             <>
@@ -972,372 +1016,35 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
       {/* 项目标签页 - 仅在项目根目录模式下显示 */}
       {isAtRoot && (
-        <div
-          className="flex items-center gap-2 border-b"
-          style={{ borderColor: 'var(--border-default)' }}
-        >
-          {/* 一级 Tab：我的项目 / 回收站 */}
-          <button
-            onClick={() => isProjectTrashView && handleToggleProjectTrashView()}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-              !isProjectTrashView
-                ? 'border-primary-600'
-                : 'border-transparent'
-            }`}
-            style={{
-              color: !isProjectTrashView
-                ? 'var(--primary-500)'
-                : 'var(--text-tertiary)',
-            }}
-            onMouseEnter={(e) => {
-              if (isProjectTrashView) {
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (isProjectTrashView) {
-                e.currentTarget.style.color = 'var(--text-tertiary)';
-              }
-            }}
-          >
-            我的项目
-          </button>
-          <button
-            onClick={() =>
-              !isProjectTrashView && handleToggleProjectTrashView()
-            }
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-              isProjectTrashView
-                ? 'border-primary-600'
-                : 'border-transparent'
-            }`}
-            style={{
-              color: isProjectTrashView
-                ? 'var(--primary-500)'
-                : 'var(--text-tertiary)',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProjectTrashView) {
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isProjectTrashView) {
-                e.currentTarget.style.color = 'var(--text-tertiary)';
-              }
-            }}
-          >
-            回收站
-          </button>
-
-          {/* 二级 Tab：项目过滤（仅在"我的项目"视图下显示） */}
-          {!isProjectTrashView && isProjectRootMode && (
-            <div className="flex items-center gap-1 ml-4 pl-4 border-l" style={{ borderColor: 'var(--border-default)' }}>
-              {projectFilterTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setProjectFilter(tab.key)}
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  style={{
-                    background: projectFilter === tab.key ? 'var(--bg-tertiary)' : 'transparent',
-                    color: projectFilter === tab.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (projectFilter !== tab.key) {
-                      e.currentTarget.style.color = 'var(--text-secondary)';
-                      e.currentTarget.style.background = 'var(--bg-tertiary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (projectFilter !== tab.key) {
-                      e.currentTarget.style.color = 'var(--text-tertiary)';
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
-          {isProjectTrashView && nodes.length > 0 && (
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearTrash}
-                style={{ color: 'var(--error)', borderColor: 'var(--error-dim)' }}
-                className="hover:bg-[var(--error-dim)]"
-                title="清空回收站"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="mr-1"
-                >
-                  <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                </svg>
-                清空回收站
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={loading}
-                style={{ color: 'var(--text-tertiary)' }}
-                title="刷新"
-              >
-                <RefreshIcon
-                  size={14}
-                  className={loading ? 'animate-spin mr-1' : 'mr-1'}
-                />
-                刷新
-              </Button>
-            </div>
-          )}
-        </div>
+        <ProjectFilterTabs
+          isProjectTrashView={isProjectTrashView}
+          onToggleProjectTrashView={handleToggleProjectTrashView}
+          projectFilter={projectFilter}
+          onProjectFilterChange={setProjectFilter}
+          isProjectRootMode={isProjectRootMode}
+          nodesCount={nodes.length}
+          onClearTrash={handleClearTrash}
+          onRefresh={handleRefresh}
+          loading={loading}
+        />
       )}
 
-      <div
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2"
-        style={{ borderTop: '1px solid var(--border-subtle)' }}
-      >
-        <div className="relative group flex-1 max-w-xs" data-tour="search-input">
-          <SearchIcon
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-          />
-          <input
-            type="text"
-            placeholder={
-              isAtRoot && isProjectTrashView
-                ? '搜索已删除的项目...'
-                : '搜索文件或项目...'
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSearchSubmit();
-              }
-            }}
-            className="w-full pl-9 pr-20 py-2 text-sm rounded-xl transition-all outline-none"
-            style={{
-              background: 'var(--bg-primary)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'var(--primary-500)';
-              e.target.style.boxShadow = '0 0 0 2px var(--primary-100)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'var(--border-default)';
-              e.target.style.boxShadow = 'none';
-            }}
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="transition-colors p-1"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }}
-                title="清除搜索"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={handleSearchSubmit}
-              className="text-primary-500 hover:text-primary-600 transition-colors p-1"
-              title="搜索"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            variant={isMultiSelectMode ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => {
-              setIsMultiSelectMode(!isMultiSelectMode);
-              if (isMultiSelectMode) {
-                selectedNodes.clear();
-              }
-            }}
-            className={isMultiSelectMode ? '' : 'hover:bg-[var(--bg-tertiary)]'}
-            style={isMultiSelectMode ? {} : { color: 'var(--text-tertiary)' }}
-            title="多选模式"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
-            </svg>
-          </Button>
-
-          {/* 全选/取消全选按钮 - 仅在多选模式下显示 */}
-          {isMultiSelectMode && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSelectAll}
-              className="hover:bg-[var(--bg-tertiary)]"
-              style={{ color: 'var(--text-tertiary)' }}
-              title={selectedNodes.size === nodes.length ? '取消全选' : '全选'}
-            >
-              {selectedNodes.size === nodes.length ? (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <path d="M9 9l6 6M15 9l-6 6" />
-                </svg>
-              ) : (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
-              )}
-            </Button>
-          )}
-
-          <div
-            className="flex items-center rounded-xl overflow-hidden"
-      
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-            }}
-          >
-            <button
-              onClick={() => setViewMode('grid')}
-              className="p-2 transition-colors"
-              style={{
-                background:
-                  viewMode === 'grid' ? 'var(--primary-50)' : 'transparent',
-                color:
-                  viewMode === 'grid'
-                    ? 'var(--primary-600)'
-                    : 'var(--text-tertiary)',
-              }}
-              onMouseEnter={(e) => {
-                if (viewMode !== 'grid') {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (viewMode !== 'grid') {
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <GridIcon size={14} />
-            </button>
-            <div
-              className="w-px h-4"
-              style={{ background: 'var(--border-default)' }}
-            />
-            <button
-              onClick={() => setViewMode('list')}
-              className="p-2 transition-colors"
-              data-tour="view-toggle-list"
-              style={{
-                background:
-                  viewMode === 'list' ? 'var(--primary-50)' : 'transparent',
-                color:
-                  viewMode === 'list'
-                    ? 'var(--primary-600)'
-                    : 'var(--text-tertiary)',
-              }}
-              onMouseEnter={(e) => {
-                if (viewMode !== 'list') {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (viewMode !== 'list') {
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <ListIcon size={14} />
-            </button>
-          </div>
-
-          {/* 清空回收站按钮 - 仅在回收站视图显示 */}
-          {isTrashView && nodes.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearProjectTrash}
-              style={{ color: 'var(--error)', borderColor: 'var(--error-dim)' }}
-              className="hover:bg-[var(--error-dim)]"
-              title="清空回收站"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-            </Button>
-          )}
-        </div>
-      </div>
+      <FileSystemToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onSearchSubmit={handleSearchSubmit}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        isMultiSelectMode={isMultiSelectMode}
+        onMultiSelectModeChange={setIsMultiSelectMode}
+        selectedNodes={selectedNodes}
+        nodesCount={nodes.length}
+        onSelectAll={handleSelectAll}
+        loading={loading}
+        isTrashView={isTrashView}
+        onClearTrash={handleClearProjectTrash}
+        isAtRoot={isAtRoot}
+      />
     </div>
   );
 
@@ -1371,17 +1078,20 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 ? '开始创建您的第一个项目'
                 : '上传文件或创建文件夹来开始使用'}
       </p>
-      {isProjectsEmpty && canCreateProject && !isProjectTrashView && !isTrashView && (
-        <Button
-          onClick={openCreateProject}
-          variant="outline"
-          size="sm"
-          className="hover:shadow-md transition-all"
-        >
-          <FolderPlus size={14} className="mr-2" />
-          创建项目
-        </Button>
-      )}
+      {isProjectsEmpty &&
+        canCreateProject &&
+        !isProjectTrashView &&
+        !isTrashView && (
+          <Button
+            onClick={openCreateProject}
+            variant="outline"
+            size="sm"
+            className="hover:shadow-md transition-all"
+          >
+            <FolderPlus size={14} className="mr-2" />
+            创建项目
+          </Button>
+        )}
     </div>
   );
 
@@ -1396,10 +1106,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           data-view-mode={viewMode}
           className={
             viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6'
+              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
               : 'divide-y'
           }
-          style={viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}}
+          style={
+            viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
+          }
         >
           {displayNodes.map((node) => {
             // 获取节点权限信息
@@ -1493,13 +1205,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     ? handleCopy
                     : undefined
                 }
-                onAddToGallery={
-                  !node.isFolder &&
-                  !isTrashView &&
-                  (node.extension === '.dwg' || node.extension === '.dxf')
-                    ? handleAddToGallery
-                    : undefined
-                }
                 onShowVersionHistory={
                   !node.isFolder &&
                   !isTrashView &&
@@ -1521,42 +1226,50 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           })}
         </div>
 
-        {/* 分页组件 */}
-        {paginationMeta && (
-          <div
-            className="px-6 py-4"
-            style={{ borderTop: '1px solid var(--border-subtle)' }}
-          >
-            <Pagination
-              meta={paginationMeta}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-              showSizeChanger={true}
-            />
-          </div>
-        )}
+        {/* 分页组件 - 始终显示，Pagination 组件会自行决定何时隐藏 */}
+        <div
+          className="px-6 py-4"
+          style={{ borderTop: '1px solid var(--border-subtle)' }}
+        >
+          <Pagination
+            meta={
+              paginationMeta || { total: 0, page: 1, limit: 20, totalPages: 1 }
+            }
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            showSizeChanger={true}
+          />
+        </div>
       </>
     );
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 relative">
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    <>
+      {createPortal(
+        <ToastContainer toasts={toasts} onRemove={removeToast} />,
+        document.body
+      )}
 
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmText={confirmDialog.confirmText || '确定'}
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={closeConfirm}
-        type={confirmDialog.type}
-      />
+      {createPortal(
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmText={confirmDialog.confirmText || '确定'}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={closeConfirm}
+          type={confirmDialog.type}
+        />,
+        document.body
+      )}
 
-      {renderHeader()}
+      <div className="max-w-7xl mx-auto space-y-6 relative">
+        {renderHeader()}
+      </div>
 
       <div
-        className="rounded-2xl relative min-h-[400px] shadow-sm overflow-visible"
+        className="max-w-7xl mx-auto mt-6 rounded-2xl relative min-h-[400px] shadow-sm overflow-visible"
         style={{
           background: 'var(--bg-secondary)',
           border: '1px solid var(--border-default)',
@@ -1871,18 +1584,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         onConfirm={handleConfirmMoveOrCopy}
       />
 
-      {/* 添加到图库模态框 */}
-      <AddToGalleryModal
-        isOpen={showAddToGalleryModal}
-        onClose={() => {
-          setShowAddToGalleryModal(false);
-          setSelectedNodeForGallery(null);
-        }}
-        onSuccess={handleRefresh}
-        nodeId={selectedNodeForGallery?.id || ''}
-        fileName={selectedNodeForGallery?.name || ''}
-      />
-
       {/* 版本历史模态框 */}
       <VersionHistoryModal
         isOpen={showVersionHistoryModal}
@@ -1920,7 +1621,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         }
         onUploadExternalReference={handleUploadExternalReference}
       />
-    </div>
+    </>
   );
 };
 

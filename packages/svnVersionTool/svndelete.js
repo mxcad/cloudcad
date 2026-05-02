@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const svnPath = require('./svnpath');
+const { default: svnPath } = require('./svnpath');
+const { executeCommand } = require('./svn-executor');
 
 /**
  * 从SVN工作副本中删除文件或目录（仅标记删除，不提交）
@@ -35,13 +35,13 @@ function svnDelete(
     command += ` --password ${password}`;
   }
 
-  exec(command, { windowsHide: true }, (error, stdout, _stderr) => {
-    if (error) {
-      callback(error);
-    } else {
+  executeCommand(command)
+    .then(stdout => {
       callback(null, stdout);
-    }
-  });
+    })
+    .catch(error => {
+      callback(error);
+    });
 }
 
 module.exports = svnDelete;

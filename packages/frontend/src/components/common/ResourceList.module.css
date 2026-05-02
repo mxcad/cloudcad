@@ -169,7 +169,7 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-2);
+  padding: 2px;
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
 }
 
@@ -227,6 +227,13 @@
   gap: 4px;
 }
 
+/* 图库模式列表视图 */
+.listViewGallery {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .listItem {
   display: flex;
   align-items: center;
@@ -237,6 +244,13 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
   position: relative;
+}
+
+/* 图库模式列表项 - 更小的内边距和间隙 */
+.listViewGallery .listItem {
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
 }
 
 /* 悬停光效背景 */
@@ -313,6 +327,13 @@
   transition: all 0.2s ease;
 }
 
+/* 图库模式列表项图标 - 更大的图片 */
+.listViewGallery .itemIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+}
+
 .listItem:hover .itemIcon {
   transform: scale(1.05);
   border-color: var(--border-default);
@@ -373,6 +394,53 @@
   flex-shrink: 0;
 }
 
+/* 操作按钮区域 */
+.listItemActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  position: relative;
+  z-index: 1;
+}
+
+/* 下载按钮 */
+.downloadButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin-left: var(--space-1);
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.downloadButton:hover {
+  color: var(--primary-500);
+  background: var(--primary-dim);
+  border-color: var(--primary-500);
+  transform: scale(1.1);
+}
+
+[data-theme="dark"] .downloadButton {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .downloadButton:hover {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
+}
+
 /* 删除按钮 */
 .deleteButton {
   display: flex;
@@ -381,7 +449,7 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  margin-left: var(--space-2);
+  margin-left: var(--space-1);
   color: var(--text-muted);
   background: var(--bg-tertiary);
   border: 1px solid var(--border-default);
@@ -417,6 +485,20 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: var(--space-3);
+}
+
+/* 图库模式网格视图 - 固定宽度卡片 */
+.gridViewGallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: 6px;
+}
+
+/* 图库模式网格视图中的卡片 - 固定宽度 */
+.gridViewGallery > * {
+  width: 140px;
+  flex-shrink: 0;
 }
 
 .gridItem {
@@ -525,6 +607,47 @@
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 图库模式网格项 */
+.gridItemGallery {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-secondary);
+  position: relative;
+}
+
+.gridItemGallery:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gridItemGallery .gridItemPreview {
+  aspect-ratio: 1;
+  background: var(--bg-tertiary);
+}
+
+.gridItemGallery .gridItemInfo {
+  padding: var(--space-2);
+  background: rgba(0, 0, 0, 0.6);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.gridItemGallery .gridItemName {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
 .gridFolderIcon,
 .gridFileIcon {
   display: flex;
@@ -605,6 +728,39 @@
 .gridItem:hover .gridVersionButton {
   opacity: 1;
   transform: scale(1);
+}
+
+/* 网格视图下载按钮 */
+.gridDownloadButton {
+  position: absolute;
+  top: 6px;
+  right: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: white;
+  background: rgba(96, 165, 250, 0.8);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+  transform: scale(0.8);
+  backdrop-filter: blur(4px);
+}
+
+.gridItem:hover .gridDownloadButton {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.gridDownloadButton:hover {
+  background: var(--primary-500);
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
 }
 
 .gridItemInfo {
@@ -928,6 +1084,43 @@
   }
 }
 
+/* ==================== 自定义渲染项包装器 ==================== */
+
+.renderItemWrapper {
+  cursor: pointer;
+}
+
+/* ==================== 双击提示 ==================== */
+
+.doubleClickTip {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: var(--space-3) var(--space-6);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: 1000;
+  animation: fadeInUp 0.3s ease;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* ==================== 深色主题特定覆盖 ==================== */
 
 [data-theme="dark"] .resourceList {
@@ -938,6 +1131,209 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* ==================== 总数显示 ==================== */
+
+.totalCount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted, #5a6a7a);
+  white-space: nowrap;
+}
+
+.totalCountNumber {
+  font-weight: 600;
+  color: var(--text-secondary, #8b95a5);
+}
+
+
 [data-theme="dark"] .gridItemPreview {
   background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* ==================== 分页控件 ==================== */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.paginationButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--text-secondary, #8b95a5);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sidebar-border, #212832);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.paginationButton:hover:not(:disabled) {
+  color: var(--text-primary, #e8eaed);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.paginationButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.paginationInfo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #8b95a5);
+  white-space: nowrap;
+  padding: 0 var(--space-2);
+}
+
+.paginationCurrent {
+  font-weight: 600;
+  color: var(--text-primary, #e8eaed);
+}
+
+.paginationJump {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.paginationInput {
+  width: 56px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--text-primary, #e8eaed);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sidebar-border, #212832);
+  border-radius: var(--radius-md);
+  outline: none;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.paginationInput::placeholder {
+  color: var(--text-muted, #5a6a7a);
+  font-size: 0.75rem;
+}
+
+.paginationInput:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.paginationInput::-webkit-outer-spin-button,
+.paginationInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.paginationInput[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.paginationJumpButton {
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary, #e8eaed);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(99, 102, 241, 0.2) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.paginationJumpButton:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0.3) 100%);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+/* 窄屏幕模式样式 */
+.paginationNarrow {
+  gap: var(--space-1);
+}
+
+.paginationNarrow .paginationJump {
+  gap: 2px;
+}
+
+.paginationNarrow .paginationInput {
+  width: 48px;
+}
+
+.paginationJumpButtonNarrow {
+  padding: 0 var(--space-2);
+  font-size: 0.75rem;
+}
+
+/* ==================== 紧凑布局分类选择框 ==================== */
+
+.cascadeSelectGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.cascadeSelect {
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.75rem;
+  color: var(--text-primary, #e5e7eb);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sidebar-border, #212832);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  min-width: 80px;
+  max-width: 120px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 14px;
+}
+
+.cascadeSelect:hover:not(:disabled) {
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.cascadeSelect:focus {
+  outline: none;
+  border-color: var(--primary-500, #6366f1);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.cascadeSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cascadeClearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--text-secondary, #8b95a5);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sidebar-border, #212832);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+}
+
+.cascadeClearBtn:hover {
+  color: var(--text-primary, #e5e7eb);
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }

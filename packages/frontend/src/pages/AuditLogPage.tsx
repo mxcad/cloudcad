@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Filter from 'lucide-react/dist/esm/icons/filter';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import { Filter } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { auditApi } from '../services/auditApi';
@@ -535,3 +535,5 @@ export const AuditLogPage: React.FC = () => {
     </div>
   );
 };
+
+export default AuditLogPage;

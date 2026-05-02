@@ -22,7 +22,7 @@ export class SaveMxwebDto {
     type: 'string',
     format: 'binary',
   })
-  file: any;
+  file?: Express.Multer.File;
 
   @ApiProperty({
     description: '提交信息',
