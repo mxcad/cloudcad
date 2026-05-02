@@ -95,11 +95,7 @@ describe('AuthFacadeService', () => {
     create: jest.fn(),
   };
 
-  const mockRedis = {
-    set: jest.fn(),
-    get: jest.fn(),
-    del: jest.fn(),
-  };
+  // Redis is globally mocked in setup.ts
 
   const mockRegistrationService = {
     register: jest.fn(),
@@ -155,7 +151,7 @@ describe('AuthFacadeService', () => {
         { provide: InitializationService, useValue: mockInitializationService },
         { provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
         { provide: USER_SERVICE, useValue: mockUserService },
-        { provide: 'default_IORedisModuleConnectionToken', useValue: mockRedis },
+        { provide: 'default_IORedisModuleConnectionToken', useValue: {} as any },
         { provide: RegistrationService, useValue: mockRegistrationService },
         { provide: LoginService, useValue: mockLoginService },
         { provide: PasswordService, useValue: mockPasswordService },
@@ -344,7 +340,7 @@ describe('AuthFacadeService', () => {
           user: {
             ...mockUser,
             nickname: mockUser.nickname,
-            avatar: mockUser.avatar,
+            avatar: mockUser.avatar || undefined,
             role: mockUser.role,
             status: mockUser.status,
           },
@@ -417,8 +413,8 @@ describe('AuthFacadeService', () => {
           const result = await service.loginByPhone(phone, code, req);
 
           expect(mockUserService.create).toHaveBeenCalledWith({
-            username: expect.stringMatching(/^u_2345678(_\d+)?$/),
-            password: expect.stringMatching(/^[a-zA-Z0-9!Aa]+$/),
+            username: expect.stringMatching(/^u_12345678(_\d+)?$/),
+            password: expect.stringMatching(/^[0-9a-z.]{12}!Aa$/),
             nickname: '用户5678',
             phone: formattedPhone,
             phoneVerified: true,
@@ -432,7 +428,7 @@ describe('AuthFacadeService', () => {
             .mockResolvedValueOnce(null) // First call for user check
             .mockResolvedValueOnce({ id: 'existing' }) // First username check returns existing
             .mockResolvedValueOnce(null) // Second username check returns null
-            .mockResolvedValueOnce({ id: 'newuser123' }); // After creation
+            .mockResolvedValueOnce({ id: 'newuser123', status: 'ACTIVE', role: { name: 'USER' } }); // After creation
 
           mockUserService.create.mockResolvedValue({ id: 'newuser123' });
           mockAuthTokenService.generateTokens.mockResolvedValue({
@@ -442,9 +438,9 @@ describe('AuthFacadeService', () => {
 
           await service.loginByPhone(phone, code, req);
 
-          // Should call findUnique for username 'u_2345678' and then 'u_2345678_1'
-          expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({ where: { username: 'u_2345678' } });
-          expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({ where: { username: 'u_2345678_1' } });
+          // Should call findUnique for username 'u_12345678' and then 'u_12345678_1'
+          expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({ where: { username: 'u_12345678' } });
+          expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({ where: { username: 'u_12345678_1' } });
         });
       });
 
@@ -898,7 +894,7 @@ describe('AuthFacadeService', () => {
         user: {
           ...mockUser,
           nickname: mockUser.nickname,
-          avatar: mockUser.avatar,
+          avatar: mockUser.avatar || undefined,
           role: mockUser.role,
           status: mockUser.status,
           hasPassword: true,
