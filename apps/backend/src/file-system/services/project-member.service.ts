@@ -14,7 +14,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { FileSystemPermissionService } from '../file-system-permission.service';
+import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { ProjectRole } from '../../common/enums/permissions.enum';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';

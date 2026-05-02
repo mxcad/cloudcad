@@ -30,8 +30,8 @@ import {
   NotFoundException,
   ForbiddenException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
-import { Logger } from '@nestjs/common';
 import type { Response, Request as ExpressRequest } from 'express';
 
 import {

@@ -19,7 +19,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as crypto from 'crypto';
-import { FileSystemPermissionService } from '../../file-system/file-system-permission.service';
+import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { DatabaseService } from '../../database/database.service';
 

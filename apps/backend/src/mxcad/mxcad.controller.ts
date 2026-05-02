@@ -74,7 +74,7 @@ import { MxCadRequest } from './types/request.types';
 import { MxCadContext } from './types/mxcad-context.types';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
-import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
+import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { PermissionService } from '../common/services/permission.service';
 import { ProjectPermissionService } from '../roles/project-permission.service';

@@ -13,7 +13,7 @@ import { FileHashModule } from './file-hash/file-hash.module';
 import { FileValidationModule } from './file-validation/file-validation.module';
 import { StorageQuotaModule } from './storage-quota/storage-quota.module';
 import { FileTreeModule } from './file-tree/file-tree.module';
-import { FileSystemPermissionService } from './file-system-permission.service';
+import { FilePermissionModule } from './file-permission/file-permission.module';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
@@ -44,11 +44,11 @@ import {
     FileValidationModule,
     StorageQuotaModule,
     FileTreeModule,
+    FilePermissionModule,
   ],
   controllers: [FileSystemController],
   providers: [
     FileSystemService,
-    FileSystemPermissionService,
     FileDownloadHandlerService,
     RequireProjectPermissionGuard,
     FileDownloadExportService,
@@ -61,7 +61,7 @@ import {
     FileValidationModule,
     StorageQuotaModule,
     FileTreeModule,
-    FileSystemPermissionService,
+    FilePermissionModule,
     FileDownloadHandlerService,
     FileDownloadExportService,
     ProjectMemberService,

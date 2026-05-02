@@ -19,7 +19,7 @@ import {
 } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
-import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
+import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
 import { PersonalSpaceService } from '../personal-space/personal-space.service';
 import { CreateProjectDto } from '../file-system/dto/create-project.dto';
 import { CreateFolderDto } from '../file-system/dto/create-folder.dto';

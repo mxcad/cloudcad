@@ -20,10 +20,10 @@ import {
 import {
   ProjectPermission,
   ProjectRole,
-} from '../common/enums/permissions.enum';
-import { ProjectPermissionService } from '../roles/project-permission.service';
-import { DatabaseService } from '../database/database.service';
-import { FileTreeService } from './file-tree/file-tree.service';
+} from '../../common/enums/permissions.enum';
+import { ProjectPermissionService } from '../../roles/project-permission.service';
+import { DatabaseService } from '../../database/database.service';
+import { FileTreeService } from '../file-tree/file-tree.service';
 
 /**
  * 文件系统权限服务

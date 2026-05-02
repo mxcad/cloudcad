@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SearchDto, SearchScope, SearchType } from '../dto/search.dto';
-import { FileSystemPermissionService } from '../file-system-permission.service';
+import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { Prisma, FileStatus } from '@prisma/client';
 import { NodeListResponseDto, FileSystemNodeDto } from '../dto/file-system-response.dto';

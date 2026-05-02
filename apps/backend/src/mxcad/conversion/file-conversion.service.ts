@@ -273,7 +273,7 @@ export class FileConversionService implements IFileConversionService {
         try {
           // 确保 outputToCheck 是字符串
           const outputStr = typeof outputToCheck === 'string' ? outputToCheck : outputToCheck.toString();
-          
+
           // 查找 JSON 位置
           const iPos = outputStr.lastIndexOf('{"code"');
 
@@ -295,7 +295,7 @@ export class FileConversionService implements IFileConversionService {
       // 只有在真正失败时才输出错误日志
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorCode = (error as { code?: string | number }).code;
-      
+
       this.logger.error(`文件转换异常: ${errorMessage}`);
       this.logger.error(`退出码: ${errorCode}`);
       this.logger.error(`stdout: [${errorStdout}]`);

@@ -19,7 +19,7 @@ import { DatabaseService } from '../../database/database.service';
 import { LocalStorageProvider } from '../../storage/local-storage.provider';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
-import { FileSystemPermissionService } from '../file-system-permission.service';
+import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { CadDownloadFormat } from '../dto/download-node.dto';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';

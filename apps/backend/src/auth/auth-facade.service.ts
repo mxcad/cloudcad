@@ -8,7 +8,17 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, UnauthorizedException, BadRequestException, ConflictException, HttpException, HttpStatus, InternalServerErrorException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  InternalServerErrorException,
+  Inject,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
