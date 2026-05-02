@@ -6,22 +6,22 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
-import { FileSystemService as MxFileSystemService } from './file-system.service';
-import { FileConversionService } from './file-conversion.service';
+import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
 import { FileSystemNodeService, FileSystemNodeContext } from './filesystem-node.service';
-import { CacheManagerService } from './cache-manager.service';
+import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { MergeOptions, MergeResult } from './file-upload-manager.types';
 import { ExternalRefService } from './external-ref.service';
 import { UploadUtilityService } from './upload-utility.service';
-import { ThumbnailGenerationService } from './thumbnail-generation.service';
+import { ThumbnailGenerationService } from '../infra/thumbnail-generation.service';
 import {
   getThumbnailFileName,
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
-} from './thumbnail-utils';
+} from '../infra/thumbnail-utils';
 import { FileTypeDetector } from '../utils/file-type-detector';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';

@@ -19,7 +19,7 @@ import {
   CreateNodeOptions,
   NodeCreationContext,
 } from '../services/node-creation.service';
-import { FileConversionService } from '../services/file-conversion.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
 import { FileTypeDetector } from '../utils/file-type-detector';
 

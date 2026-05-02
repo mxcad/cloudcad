@@ -15,11 +15,11 @@ import { ConfigService } from '@nestjs/config';
 import type {
   IFileSystemService,
   MergeOptions,
-} from '../interfaces/file-system.interface';
+} from '../../interfaces/file-system.interface';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createReadStream, createWriteStream, statSync } from 'fs';
-import { AppConfig } from '../../config/app.config';
+import { AppConfig } from '../../../config/app.config';
 
 @Injectable()
 export class FileSystemService implements IFileSystemService {

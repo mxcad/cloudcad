@@ -24,8 +24,8 @@ import { AppConfig } from '../../config/app.config';
 import { FileUtils } from '../../common/utils/file-utils';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
 import { CheckChunkDto, MergeChunksDto } from '../dto';
-import { FileConversionService } from '../../mxcad/services/file-conversion.service';
-import { FileSystemService } from '../../mxcad/services/file-system.service';
+import { FileConversionService } from '../../mxcad/conversion/file-conversion.service';
+import { FileSystemService } from '../../mxcad/infra/file-system.service';
 
 /**
  * 合并分片响应

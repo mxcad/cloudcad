@@ -84,10 +84,10 @@ import {
   getMimeType,
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
-} from './services/thumbnail-utils';
+} from './infra/thumbnail-utils';
 import { VersionControlService } from '../version-control/version-control.service';
 import { AppConfig } from '../config/app.config';
-import { FileConversionService } from './services/file-conversion.service';
+import { FileConversionService } from './conversion/file-conversion.service';
 import { SaveAsService } from './services/save-as.service';
 import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
 import { ProjectPermission } from '../common/enums/permissions.enum';

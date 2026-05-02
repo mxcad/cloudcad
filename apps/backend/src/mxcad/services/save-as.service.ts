@@ -14,7 +14,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { FileSystemService as MainFileSystemService } from '../../file-system/file-system.service';
 import { FileSystemNodeService } from './filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { FileConversionService } from './file-conversion.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';

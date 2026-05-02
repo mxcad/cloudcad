@@ -6,13 +6,13 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
-import { FileSystemService as MxFileSystemService } from './file-system.service';
-import { FileConversionService } from './file-conversion.service';
+import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
 import {
   FileSystemNodeService,
   FileSystemNodeContext,
 } from './filesystem-node.service';
-import { CacheManagerService } from './cache-manager.service';
+import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { ExternalReferenceUpdateService } from './external-reference-update.service';
@@ -21,7 +21,7 @@ import { UploadFileOptions } from './file-upload-manager.types';
 import { ExternalRefService } from './external-ref.service';
 import { UploadUtilityService } from './upload-utility.service';
 import { FileMergeService } from './file-merge.service';
-import { ThumbnailGenerationService } from './thumbnail-generation.service';
+import { ThumbnailGenerationService } from '../infra/thumbnail-generation.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { FileTypeDetector } from '../utils/file-type-detector';

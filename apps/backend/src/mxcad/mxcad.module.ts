@@ -13,9 +13,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MxCadController } from './mxcad.controller';
 import { MxCadService } from './mxcad.service';
-import { FileConversionService } from './services/file-conversion.service';
-import { FileSystemService } from './services/file-system.service';
-import { CacheManagerService } from './services/cache-manager.service';
+import { MxcadInfraModule } from './infra/mxcad-infra.module';
+import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { FileSystemNodeService } from './services/filesystem-node.service';
 import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
 import { ChunkUploadService } from './services/chunk-upload.service';
@@ -29,9 +28,7 @@ import { NodeCreationService } from './services/node-creation.service';
 import { SaveAsService } from './services/save-as.service';
 import { ExternalReferenceHandler } from './services/external-reference-handler.service';
 import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
-import { ThumbnailGenerationService } from './services/thumbnail-generation.service';
 import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
-import { LinuxInitService } from './services/linux-init.service';
 import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
 import { StorageCheckService } from '../storage/storage-check.service';
 import { MulterModule } from '@nestjs/platform-express';
@@ -116,6 +113,8 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
       },
       inject: [ConfigService],
     }),
+    MxcadInfraModule,
+    MxcadConversionModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
@@ -124,16 +123,12 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
   controllers: [MxCadController],
   providers: [
     MxCadService,
-    FileConversionService,
-    FileSystemService,
-    CacheManagerService,
     FileSystemNodeService,
     FileUploadManagerFacadeService,
     ExternalReferenceHandler,
     MxcadFileHandlerService,
     ExternalReferenceUpdateService,
     // 新服务
-    LinuxInitService,
     StorageCheckService,
     ChunkUploadService,
     ChunkUploadManagerService,
@@ -145,7 +140,6 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     NodeCreationService,
     SaveAsService,
     UploadOrchestrator,
-    ThumbnailGenerationService,
     // 来自 FileSystemModule 的 FileSystemService 别名
     {
       provide: 'FileSystemServiceMain',
@@ -159,11 +153,8 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxCadService,
     FileUploadManagerFacadeService,
     UploadOrchestrator,
-    FileConversionService,
-    FileSystemService,
     ExternalReferenceHandler,
     MxcadFileHandlerService,
-    ThumbnailGenerationService,
     ExternalReferenceUpdateService,
   ],
 })

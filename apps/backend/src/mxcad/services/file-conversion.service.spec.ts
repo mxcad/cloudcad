@@ -12,7 +12,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { FileConversionService } from './file-conversion.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
 
 describe('FileConversionService', () => {
   let service: FileConversionService;

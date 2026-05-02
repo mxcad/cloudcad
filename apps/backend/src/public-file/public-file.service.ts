@@ -21,7 +21,7 @@ import {
   CheckFileResponseDto,
 } from './dto';
 import { PublicFileUploadService } from './services/public-file-upload.service';
-import { FileConversionService } from '../mxcad/services/file-conversion.service';
+import { FileConversionService } from '../mxcad/conversion/file-conversion.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
