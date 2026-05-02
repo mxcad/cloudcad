@@ -10,10 +10,13 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { promisify } from 'util';
+import * as fs from 'fs';
+import * as path from 'path';
+
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/app.config';
-import { promisify } from 'util';
 import {
   svnCheckout,
   svnAdd,
@@ -28,8 +31,6 @@ import {
   svnUpdate,
   svnCleanup,
 } from '@cloudcad/svn-version-tool';
-import * as path from 'path';
-import * as fs from 'fs';
 
 // 将回调函数转换为 Promise
 const svnCheckoutAsync = promisify(svnCheckout);
