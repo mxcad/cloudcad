@@ -18,14 +18,14 @@ import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
 import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module';
-import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
+import { MxcadFacadeModule } from './facade/mxcad-facade.module';
+import { FileUploadManagerFacadeService } from './facade/file-upload-manager-facade.service';
 import { ChunkUploadManagerService } from './services/chunk-upload-manager.service';
 import { FileMergeService } from './services/file-merge.service';
 import { UploadUtilityService } from './services/upload-utility.service';
 import { FileConversionUploadService } from './services/file-conversion-upload.service';
 import { SaveAsService } from './services/save-as.service';
 import { MxcadFileHandlerService } from './services/mxcad-file-handler.service';
-import { UploadOrchestrator } from './orchestrators/upload.orchestrator';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
@@ -113,6 +113,7 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     MxcadChunkModule,
     MxcadNodeModule,
     MxcadExternalRefModule,
+    MxcadFacadeModule,
     forwardRef(() => FileSystemModule),
     forwardRef(() => StorageModule),
     VersionControlModule,
@@ -129,7 +130,6 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     UploadUtilityService,
     FileConversionUploadService,
     SaveAsService,
-    UploadOrchestrator,
     // 来自 FileSystemModule 的 FileSystemService 别名
     {
       provide: 'FileSystemServiceMain',
@@ -137,12 +137,11 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     },
     // 权限守卫
     RequireProjectPermissionGuard,
-    // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxCadExceptionFilter
+    // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxcadExceptionFilter
   ],
   exports: [
     MxCadService,
     FileUploadManagerFacadeService,
-    UploadOrchestrator,
     MxcadFileHandlerService,
   ],
 })

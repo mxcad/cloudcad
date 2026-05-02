@@ -22,12 +22,12 @@ import {
   MergeOptions,
   MergeResult,
   UploadFileOptions,
-} from './file-upload-manager.types';
-import { ChunkUploadManagerService } from './chunk-upload-manager.service';
-import { FileMergeService } from './file-merge.service';
+} from '../services/file-upload-manager.types';
+import { ChunkUploadManagerService } from '../services/chunk-upload-manager.service';
+import { FileMergeService } from '../services/file-merge.service';
 import { ExternalRefService } from '../external-ref/external-ref.service';
-import { UploadUtilityService } from './upload-utility.service';
-import { FileConversionUploadService } from './file-conversion-upload.service';
+import { UploadUtilityService } from '../services/upload-utility.service';
+import { FileConversionUploadService } from '../services/file-conversion-upload.service';
 
 @Injectable()
 export class FileUploadManagerFacadeService {

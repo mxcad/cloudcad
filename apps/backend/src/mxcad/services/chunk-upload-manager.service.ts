@@ -6,7 +6,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
-import { FileSystemService as MxFileSystemService } from './file-system.service';
+import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { RateLimiter } from '../../common/concurrency/rate-limiter';
 import {
   UploadChunkOptions,
