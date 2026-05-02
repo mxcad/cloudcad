@@ -25,7 +25,7 @@ import { ConfigService } from '@nestjs/config';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
-import { StorageInfoService } from '../file-system/services/storage-info.service';
+import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { FileTreeService } from '../file-system/services/file-tree.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';

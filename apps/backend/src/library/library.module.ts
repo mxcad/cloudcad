@@ -10,62 +10,24 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module, forwardRef } from '@nestjs/common';
-import { MulterModule } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { join } from 'path';
-import * as fs from 'fs';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Module } from '@nestjs/common';
 import { LibraryService } from './library.service';
 import { LibraryController } from './library.controller';
 import { FileSystemModule } from '../file-system/file-system.module';
 import { CommonModule } from '../common/common.module';
-import { RolesModule } from '../roles/roles.module';
 import { DatabaseModule } from '../database/database.module';
-import { MxCadModule } from '../mxcad/mxcad.module';
-import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 
 /**
- * 公共资源库模块
+ * 公共资源库模块（仅保留只读功能）
  *
- * 复用文件系统的实现，提供图纸库和图块库功能
+ * 提供图纸库和图块库的只读访问功能
  * - 图纸库：libraryKey = 'drawing'
  * - 图块库：libraryKey = 'block'
+ *
+ * 注意：上传/保存/删除等写操作已废弃，统一走文件管理模块
  */
 @Module({
-  imports: [
-    DatabaseModule,
-    CommonModule,
-    FileSystemModule,
-    RolesModule,
-    RuntimeConfigModule,
-    forwardRef(() => MxCadModule),
-    MulterModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const config = configService.get('mxcadUploadPath', { infer: true });
-        // 确保目录存在
-        if (config && !fs.existsSync(config)) {
-          fs.mkdirSync(config, { recursive: true });
-        }
-        return {
-          storage: diskStorage({
-            destination: config,
-            filename: (req, file, cb) => {
-              const fileMd5 = req.body.hash;
-              if (fileMd5) {
-                const ext = file.originalname.split('.').pop();
-                cb(null, `${fileMd5}.${ext}`);
-              } else {
-                cb(null, file.originalname);
-              }
-            },
-          }),
-        };
-      },
-      inject: [ConfigService],
-    }),
-  ],
+  imports: [DatabaseModule, CommonModule, FileSystemModule],
   controllers: [LibraryController],
   providers: [LibraryService],
   exports: [LibraryService],

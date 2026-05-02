@@ -20,7 +20,7 @@ import { FileOperationsService } from './file-operations.service';
 import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
-import { StorageInfoService } from './storage-info.service';
+import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { FileTreeService } from './file-tree.service';
 
 describe('FileOperationsService', () => {

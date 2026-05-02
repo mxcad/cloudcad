@@ -11,6 +11,7 @@ import { FileSystemController } from './file-system.controller';
 import { FileSystemService } from './file-system.service';
 import { FileHashModule } from './file-hash/file-hash.module';
 import { FileValidationModule } from './file-validation/file-validation.module';
+import { StorageQuotaModule } from './storage-quota/storage-quota.module';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 import { DatabaseModule } from '../database/database.module';
@@ -26,9 +27,6 @@ import {
   FileTreeService,
   FileDownloadExportService,
   ProjectMemberService,
-  StorageInfoService,
-  StorageQuotaService,
-  QuotaEnforcementService,
   SearchService,
 } from './services';
 
@@ -44,6 +42,7 @@ import {
     PersonalSpaceModule,
     FileHashModule,
     FileValidationModule,
+    StorageQuotaModule,
   ],
   controllers: [FileSystemController],
   providers: [
@@ -51,30 +50,21 @@ import {
     FileSystemPermissionService,
     FileDownloadHandlerService,
     RequireProjectPermissionGuard,
-    ProjectCrudService,
     FileTreeService,
-    FileOperationsService,
     FileDownloadExportService,
     ProjectMemberService,
-    StorageInfoService,
-    StorageQuotaService,
-    QuotaEnforcementService,
     SearchService,
   ],
   exports: [
     FileSystemService,
     FileHashModule,
     FileValidationModule,
+    StorageQuotaModule,
     FileSystemPermissionService,
     FileDownloadHandlerService,
-    ProjectCrudService,
     FileTreeService,
-    FileOperationsService,
     FileDownloadExportService,
     ProjectMemberService,
-    StorageInfoService,
-    StorageQuotaService,
-    QuotaEnforcementService,
     SearchService,
   ],
 })

@@ -31,12 +31,12 @@ import { UpdateNodeDto } from './dto/update-node.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
 import { CadDownloadFormat } from './dto/download-node.dto';
-import { ProjectCrudService } from './services/project-crud.service';
+import { ProjectCrudService } from '../file-operations/project-crud.service';
 import { FileTreeService } from './services/file-tree.service';
-import { FileOperationsService } from './services/file-operations.service';
+import { FileOperationsService } from '../file-operations/file-operations.service';
 import { FileDownloadExportService } from './services/file-download-export.service';
 import { ProjectMemberService } from './services/project-member.service';
-import { StorageInfoService } from './services/storage-info.service';
+import { StorageInfoService } from './storage-quota/storage-info.service';
 
 /**
  * 文件系统服务 - Facade 外观类

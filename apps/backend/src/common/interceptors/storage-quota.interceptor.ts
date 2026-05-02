@@ -14,7 +14,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { QuotaEnforcementService } from '../../file-system/services/quota-enforcement.service';
+import { QuotaEnforcementService } from '../../file-system/storage-quota/quota-enforcement.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 
 /**
