@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { DatabaseService } from '../../database/database.service';
 import { FileSystemService } from '../../file-system/file-system.service';
-import { FileSystemNodeService } from './filesystem-node.service';
+import { FileSystemNodeService } from '../node/filesystem-node.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';

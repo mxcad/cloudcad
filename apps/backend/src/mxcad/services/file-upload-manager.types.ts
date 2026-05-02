@@ -9,7 +9,7 @@ export interface UploadChunkOptions {
   size: number;
   chunk: number;
   chunks: number;
-  context: import('./filesystem-node.service').FileSystemNodeContext;
+  context: import('../node/filesystem-node.service').FileSystemNodeContext;
 }
 
 export interface MergeOptions {
@@ -17,7 +17,7 @@ export interface MergeOptions {
   name: string;
   size: number;
   chunks: number;
-  context: import('./filesystem-node.service').FileSystemNodeContext;
+  context: import('../node/filesystem-node.service').FileSystemNodeContext;
   srcDwgNodeId?: string;
 }
 
@@ -32,5 +32,5 @@ export interface UploadFileOptions {
   hash: string;
   name: string;
   size: number;
-  context: import('./filesystem-node.service').FileSystemNodeContext;
+  context: import('../node/filesystem-node.service').FileSystemNodeContext;
 }

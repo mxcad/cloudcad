@@ -5,9 +5,9 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FileSystemService as MxFileSystemService } from './file-system.service';
-import { FileSystemNodeService } from './filesystem-node.service';
+import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { FileSystemNodeContext } from './filesystem-node.service';
+import { FileSystemNodeContext } from '../node/filesystem-node.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 

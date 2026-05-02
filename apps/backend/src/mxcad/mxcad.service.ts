@@ -19,7 +19,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileUploadManagerFacadeService } from './services/file-upload-manager-facade.service';
-import { FileSystemNodeService } from './services/filesystem-node.service';
+import { FileSystemNodeService } from './node/filesystem-node.service';
 import { FileConversionService } from './conversion/file-conversion.service';
 import { ExternalReferenceUpdateService } from './services/external-reference-update.service';
 import { StorageManager } from '../common/services/storage-manager.service';

@@ -24,7 +24,7 @@ import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager
 import { NodeUtils, CreateNodeOptions } from '../../common/utils/node-utils';
 import { FileUtils } from '../../common/utils/file-utils';
 import { FileStatus } from '@prisma/client';
-import { FileTreeService } from '../../file-system/services/file-tree.service';
+import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 
 // 重新导出 CreateNodeOptions 以供其他模块使用
 export { CreateNodeOptions } from '../../common/utils/node-utils';

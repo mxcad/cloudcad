@@ -7,7 +7,7 @@ import { Inject, Injectable, Logger, NotFoundException, BadRequestException } fr
 import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
 import { FileSystemService as MxFileSystemService } from './file-system.service';
-import { FileSystemNodeService } from './filesystem-node.service';
+import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import * as fs from 'fs';
 import * as path from 'path';

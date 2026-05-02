@@ -12,7 +12,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { FileSystemService as MainFileSystemService } from '../../file-system/file-system.service';
-import { FileSystemNodeService } from './filesystem-node.service';
+import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import * as path from 'path';

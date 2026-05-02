@@ -11,7 +11,7 @@ import { FileConversionService } from '../conversion/file-conversion.service';
 import {
   FileSystemNodeService,
   FileSystemNodeContext,
-} from './filesystem-node.service';
+} from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';

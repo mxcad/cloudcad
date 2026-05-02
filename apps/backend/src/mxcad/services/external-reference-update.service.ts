@@ -5,7 +5,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FileSystemNodeService } from './filesystem-node.service';
+import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import {

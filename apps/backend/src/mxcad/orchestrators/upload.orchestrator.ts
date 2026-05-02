@@ -12,13 +12,13 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import path from 'path';
-import { ChunkUploadService } from '../services/chunk-upload.service';
-import { FileCheckService } from '../services/file-check.service';
+import { ChunkUploadService } from '../chunk/chunk-upload.service';
+import { FileCheckService } from '../chunk/file-check.service';
 import {
   NodeCreationService,
   CreateNodeOptions,
   NodeCreationContext,
-} from '../services/node-creation.service';
+} from '../node/node-creation.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { ConcurrencyManager } from '../../common/concurrency/concurrency-manager';
 import { FileTypeDetector } from '../utils/file-type-detector';
