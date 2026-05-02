@@ -18,6 +18,7 @@ import {
 } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
+import { StorageService } from '../../storage/storage.service';
 import { QueryChildrenDto } from '../dto/query-children.dto';
 import { StorageInfoService } from '../storage-quota/storage-info.service';
 import * as path from 'path';
@@ -30,6 +31,7 @@ export class FileTreeService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storageManager: StorageManager,
+    private readonly storageService: StorageService,
     private readonly storageInfoService: StorageInfoService
   ) {}
 
@@ -151,9 +153,9 @@ export class FileTreeService {
 
       if (!skipFileCopy) {
         if (sourceFilePath) {
-          await fsPromises.copyFile(sourceFilePath, storageInfo.filePath);
+          await this.storageService.copyFromFs(sourceFilePath, storageInfo.fileRelativePath);
           this.logger.log(
-            `[createFileNode] 文件拷贝成功: ${sourceFilePath} -> ${storageInfo.filePath}`
+            `[createFileNode] 文件拷贝成功: ${sourceFilePath} -> ${storageInfo.fileRelativePath}`
           );
         } else if (sourceDirectoryPath) {
           const files = await fsPromises.readdir(sourceDirectoryPath);
@@ -164,12 +166,11 @@ export class FileTreeService {
           if (matchingFiles.length === 0) {
             this.logger.warn(`[createFileNode] 未找到匹配 ${fileHash} 的文件`);
           } else {
-            const nodeDirectory = storageInfo.nodeDirectoryPath;
             for (const file of matchingFiles) {
               const sourcePath = path.join(sourceDirectoryPath, file);
               const targetFileName = file.replace(fileHash, fileNode.id);
-              const targetPath = path.join(nodeDirectory, targetFileName);
-              await fsPromises.copyFile(sourcePath, targetPath);
+              const targetRelativePath = `${storageInfo.nodeDirectoryRelativePath}/${targetFileName}`;
+              await this.storageService.copyFromFs(sourcePath, targetRelativePath);
               this.logger.log(
                 `[createFileNode] 文件拷贝成功: ${file} -> ${targetFileName}`
               );

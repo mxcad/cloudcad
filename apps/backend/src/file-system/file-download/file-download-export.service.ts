@@ -11,18 +11,16 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { FileSystemNode as PrismaFileSystemNode } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
-import { LocalStorageProvider } from '../../storage/local-storage.provider';
+import { StorageService } from '../../storage/storage.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { CadDownloadFormat } from '../dto/download-node.dto';
 import * as path from 'path';
-import * as fsPromises from 'fs/promises';
 import * as archiver from 'archiver';
 import { PassThrough } from 'stream';
 
@@ -46,7 +44,7 @@ export class FileDownloadExportService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly storage: LocalStorageProvider,
+    private readonly storageService: StorageService,
     private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
     private readonly permissionService: FileSystemPermissionService,
@@ -102,7 +100,7 @@ export class FileDownloadExportService {
     filePath: string
   ): Promise<NodeJS.ReadableStream> {
     try {
-      return await this.storage.getFileStream(filePath);
+      return await this.storageService.getFileStream(filePath);
     } catch (error) {
       this.logger.error(`获取文件流失败: ${error.message}`, error.stack);
       throw error;
@@ -198,8 +196,7 @@ export class FileDownloadExportService {
       const isCadFile = ['.dwg', '.dxf'].includes(ext);
 
       if (!isCadFile) {
-        const storageDir = this.getStoragePath(node);
-        const fullPath = path.join(storageDir, originalFilename);
+        const fullPath = this.getStoragePath(node);
         const stream = await this.getFileStream(fullPath);
         const mimeType = this.getMimeType(originalFilename);
 
@@ -214,11 +211,7 @@ export class FileDownloadExportService {
       }
       const mxwebPath = node.path;
 
-      const mxwebFullPath = this.storageManager.getFullPath(mxwebPath);
-      const mxwebExists = await fsPromises
-        .access(mxwebFullPath)
-        .then(() => true)
-        .catch(() => false);
+      const mxwebExists = await this.storageService.fileExists(mxwebPath);
 
       if (!mxwebExists) {
         throw new NotFoundException('MXWEB 文件不存在，请确认文件已转换完成');
@@ -249,7 +242,7 @@ export class FileDownloadExportService {
           const targetFilename = `${path.basename(originalFilename, ext)}${targetExt}`;
 
           const conversionOptions: any = {
-            srcpath: mxwebFullPath.replace(/\\/g, '/'),
+            srcpath: this.storageManager.getFullPath(mxwebPath).replace(/\\/g, '/'),
             src_file_md5: node.fileHash || '',
             outname: targetFilename,
             create_preloading_data: false,
@@ -276,13 +269,8 @@ export class FileDownloadExportService {
 
           const mxwebDir = path.dirname(node.path);
           const targetRelativePath = `${mxwebDir}/${targetFilename}`;
-          const targetFullPath =
-            this.storageManager.getFullPath(targetRelativePath);
 
-          const targetExists = await fsPromises
-            .access(targetFullPath)
-            .then(() => true)
-            .catch(() => false);
+          const targetExists = await this.storageService.fileExists(targetRelativePath);
 
           if (!targetExists) {
             throw new NotFoundException(
@@ -295,22 +283,22 @@ export class FileDownloadExportService {
 
           convertedStream.on('end', async () => {
             try {
-              await fsPromises.unlink(targetFullPath);
-              this.logger.log(`临时转换文件已删除: ${targetFullPath}`);
+              await this.storageService.deleteFile(targetRelativePath);
+              this.logger.log(`临时转换文件已删除: ${targetRelativePath}`);
             } catch (error) {
               this.logger.warn(
-                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
+                `删除临时文件失败: ${targetRelativePath}, error: ${error.message}`
               );
             }
           });
 
           convertedStream.on('error', async () => {
             try {
-              await fsPromises.unlink(targetFullPath);
-              this.logger.log(`流出错时删除临时文件: ${targetFullPath}`);
+              await this.storageService.deleteFile(targetRelativePath);
+              this.logger.log(`流出错时删除临时文件: ${targetRelativePath}`);
             } catch (error) {
               this.logger.warn(
-                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
+                `删除临时文件失败: ${targetRelativePath}, error: ${error.message}`
               );
             }
           });
@@ -415,16 +403,17 @@ export class FileDownloadExportService {
         throw new BadRequestException(`文件大小超过限制: ${node.name}`);
       }
 
-      const storageDir = this.getStoragePath(node);
       const filename = node.originalName || node.name;
-      let actualFilename = filename;
-
       const ext = path.extname(filename).toLowerCase();
-      if (['.dwg', '.dxf'].includes(ext)) {
-        actualFilename = `${filename}.mxweb`;
-      }
+      const isCadFile = ['.dwg', '.dxf'].includes(ext);
 
-      const fullPath = path.join(storageDir, actualFilename);
+      let fullPath: string;
+      if (isCadFile) {
+        const nodeDir = path.dirname(this.storageManager.getFullPath(node.path));
+        fullPath = path.join(nodeDir, `${filename}.mxweb`);
+      } else {
+        fullPath = this.getStoragePath(node);
+      }
       let stream: NodeJS.ReadableStream | null = null;
 
       try {
