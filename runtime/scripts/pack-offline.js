@@ -565,33 +565,33 @@ function getDeployIncludeList(platform) {
   return [
     // 后端
     {
-      src: 'packages/backend/dist',
-      dest: 'packages/backend/dist',
+      src: 'apps/backend/dist',
+      dest: 'apps/backend/dist',
       isDir: true,
     },
     {
-      src: 'packages/backend/prisma',
-      dest: 'packages/backend/prisma',
+      src: 'apps/backend/prisma',
+      dest: 'apps/backend/prisma',
       isDir: true,
     },
     // Prisma 7.x 配置文件（定义 datasource URL）
     {
-      src: 'packages/backend/.env.example',
-      dest: 'packages/backend/.env.example',
+      src: 'apps/backend/.env.example',
+      dest: 'apps/backend/.env.example',
     },
     {
-      src: 'packages/backend/package.json',
-      dest: 'packages/backend/package.json',
+      src: 'apps/backend/package.json',
+      dest: 'apps/backend/package.json',
     },
     // 前端
     {
-      src: 'packages/frontend/dist',
-      dest: 'packages/frontend/dist',
+      src: 'apps/frontend/dist',
+      dest: 'apps/frontend/dist',
       isDir: true,
     },
     {
-      src: 'packages/frontend/package.json',
-      dest: 'packages/frontend/package.json',
+      src: 'apps/frontend/package.json',
+      dest: 'apps/frontend/package.json',
     },
     // SVN 版本工具
     {
@@ -1085,7 +1085,7 @@ async function packDeploy(platform) {
     log('');
     log('使用说明:');
     log('  1. 解压到目标目录');
-    log('  2. 配置 packages/backend/.env');
+    log('  2. 配置 apps/backend/.env');
     if (platform === 'linux') {
       log('  3. 运行: tar -xzf *.tar.gz && ./start.sh');
     } else {

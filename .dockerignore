@@ -3,8 +3,8 @@ node_modules
 **/node_modules
 
 # 构建产物 (保留 dist 用于某些情况)
-packages/backend/dist
-packages/frontend/dist
+apps/backend/dist
+apps/frontend/dist
 
 # 缓存目录
 .cache

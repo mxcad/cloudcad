@@ -17,7 +17,7 @@ module.exports = {
   overrides: [
     // 前端 React 配置
     {
-      files: ['packages/frontend/**/*.{js,jsx,ts,tsx}'],
+      files: ['apps/frontend/**/*.{js,jsx,ts,tsx}'],
       env: {
         browser: true,
       },
@@ -57,7 +57,7 @@ module.exports = {
     },
     // 后端 NestJS 配置
     {
-      files: ['packages/backend/**/*.ts'],
+      files: ['apps/backend/**/*.ts'],
       env: {
         node: true,
       },

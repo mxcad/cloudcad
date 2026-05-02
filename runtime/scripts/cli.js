@@ -1386,7 +1386,7 @@ async function runDatabaseMigration() {
   // 检查 .env 文件是否存在
   const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
   if (!fs.existsSync(envPath)) {
-    log('red', '[错误] packages/backend/.env 文件不存在');
+    log('red', '[错误] apps/backend/.env 文件不存在');
     log('cyan', '请先配置数据库连接信息');
     return false;
   }

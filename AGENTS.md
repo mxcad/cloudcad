@@ -15,14 +15,16 @@ cloudcad/
 ├── .agents/              # OpenCode agent skills and configurations
 ├── .claude/              # Claude Code configuration
 ├── .gitnexus/            # GitNexus code intelligence index
+├── apps/                 # Deployable applications
+│   ├── backend/          # NestJS backend service (port 3001)
+│   └── frontend/         # React frontend application (port 5173)
 ├── data/                 # Runtime data storage (files, SVN repos)
 ├── docker/               # Docker deployment configurations
 ├── docs/                 # Documentation files
 ├── documents/            # User guide assets and images
-├── packages/             # Monorepo packages
-│   ├── backend/          # NestJS backend service (port 3001)
-│   ├── frontend/         # React frontend application (port 5173)
+├── packages/             # Internal libraries and tools
 │   ├── config-service/   # Deployment configuration center (port 3002)
+│   ├── conversion-engine/# MxCAD conversion engine library
 │   └── svnVersionTool/   # SVN version control utility
 ├── runtime/              # Offline runtime dependencies
 ├── scripts/              # Build and deployment scripts
@@ -33,9 +35,10 @@ cloudcad/
 
 | Task                     | Location                 | Notes                                              |
 | ------------------------ | ------------------------ | -------------------------------------------------- |
-| Backend API development  | packages/backend/        | NestJS with Express, Prisma ORM                    |
-| Frontend UI development  | packages/frontend/       | React 19 + Vite + Tailwind CSS                     |
+| Backend API development  | apps/backend/            | NestJS with Express, Prisma ORM                    |
+| Frontend UI development  | apps/frontend/           | React 19 + Vite + Tailwind CSS                     |
 | Configuration management | packages/config-service/ | Deployment configuration center                    |
+| Conversion engine        | packages/conversion-engine/ | MxCAD conversion program wrapper                |
 | SVN tools                | packages/svnVersionTool/ | SVN version control utilities                      |
 | Docker deployment        | docker/                  | Docker-compose files and configurations            |
 | Offline deployment       | runtime/                 | Offline runtime dependencies (Windows/Linux)       |

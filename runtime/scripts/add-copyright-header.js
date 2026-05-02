@@ -44,8 +44,8 @@ let OLD_COPYRIGHT_HEADER = `////////////////////////////////////////////////////
 
 // 需要扫描的目录
 const SOURCE_DIRS = [
-  'packages/backend/src',
-  'packages/frontend/src',
+  'apps/backend/src',
+  'apps/frontend/src',
 ];
 
 // 排除的目录模式

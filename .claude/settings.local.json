@@ -1,6 +1,17 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx -p typescript tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node -e \"require\\('typescript'\\)\")",
+      "Bash(node -e \"const ts = require\\('typescript'\\); console.log\\(ts.version\\)\")",
+      "Bash(pnpm install *)",
+      "Bash(node *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "puppeteer"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

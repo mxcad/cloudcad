@@ -14,8 +14,8 @@ const __dirname = path.dirname(__filename);
 
 const SWAGGER_URL = 'http://localhost:3001/api/docs-json';
 const LOCAL_SWAGGER_FILE = path.join(__dirname, '../swagger_json.json');
-const OUTPUT_FILE = path.join(__dirname, '../packages/frontend/src/types/api-client.ts');
-const VALIDATION_FILE = path.join(__dirname, '../packages/frontend/src/utils/validation.ts');
+const OUTPUT_FILE = path.join(__dirname, '../apps/frontend/src/types/api-client.ts');
+const VALIDATION_FILE = path.join(__dirname, '../apps/frontend/src/utils/validation.ts');
 
 console.log('🚀 开始生成 OpenAPI 客户端类型...');
 
