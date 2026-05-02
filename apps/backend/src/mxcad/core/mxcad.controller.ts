@@ -78,6 +78,7 @@ import { FileSystemPermissionService } from '../../file-system/file-permission/f
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { PermissionService } from '../../common/services/permission.service';
 import { ProjectPermissionService } from '../../roles/project-permission.service';
+import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
 import {
   findThumbnail,
   getThumbnailFileName,

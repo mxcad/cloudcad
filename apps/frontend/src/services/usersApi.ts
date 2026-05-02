@@ -40,8 +40,6 @@ export const usersApi = {
 
   deleteImmediately: (id: string) => getApiClient().UsersController_deleteImmediately({ id }),
 
-  restore: (id: string) => getApiClient().UsersController_restore({ id }),
-
   getProfile: () => getApiClient().UsersController_getProfile(),
 
   updateProfile: (data: UpdateUserDto) =>

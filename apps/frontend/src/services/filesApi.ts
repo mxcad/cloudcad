@@ -17,7 +17,6 @@ import type {
   MoveNodeDto,
   CopyNodeDto,
   CreateFolderDto,
-  UploadFileDto,
   OperationMethods,
 } from '../types/api-client';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
@@ -25,32 +24,8 @@ import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 export const filesApi = {
   list: () => getApiClient().FileSystemController_getProjects(),
 
-  upload: async (file: File, parentId: string) => {
-    const fileContent = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        base64 && resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const data: UploadFileDto = {
-      fileName: file.name,
-      fileContent,
-      parentId,
-    };
-    return getApiClient().FileSystemController_uploadFile(null, data);
-  },
-
   get: (id: string) =>
     getApiClient().FileSystemController_getNode({ nodeId: id }),
-
-  /** 获取节点的根节点（项目根） */
-  getRoot: (id: string) =>
-    getApiClient().FileSystemController_getRootNode({ nodeId: id }),
 
   download: (id: string) =>
     getApiClient().FileSystemController_downloadNode({ nodeId: id }, null, {

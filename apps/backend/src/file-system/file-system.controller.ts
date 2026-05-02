@@ -61,7 +61,6 @@ import { ProjectPermissionService } from '../roles/project-permission.service';
 import { PermissionService } from '../common/services/permission.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
-import { CreateNodeDto } from './dto/create-node.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { MoveNodeDto } from './dto/move-node.dto';
 import { CopyNodeDto } from './dto/copy-node.dto';
@@ -72,7 +71,6 @@ import {
   DownloadNodeQueryDto,
   CadDownloadFormat,
 } from './dto/download-node.dto';
-import { UploadFileDto } from './dto/upload-file.dto';
 import { UpdateStorageQuotaDto } from './dto/update-storage-quota.dto';
 import { UpdateProjectMemberDto } from './dto/update-project-member.dto';
 import {
@@ -160,39 +158,6 @@ export class FileSystemController {
     return this.fileSystemService.getPersonalSpace(req.user.id);
   }
 
-  @Get('personal-space/by-user/:userId')
-  @RequirePermissions([
-    SystemPermission.SYSTEM_USER_UPDATE,
-    SystemPermission.STORAGE_QUOTA,
-  ])
-  @ApiOperation({ summary: '获取指定用户的私人空间（管理员）' })
-  @ApiResponse({
-    status: 200,
-    description: '获取私人空间成功',
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 403, description: '无权限' })
-  async getUserPersonalSpace(@Param('userId') userId: string) {
-    return this.fileSystemService.getPersonalSpace(userId);
-  }
-
-  @Get('projects/trash')
-  @ApiOperation({ summary: '获取已删除项目列表' })
-  @ApiResponse({
-    status: 200,
-    description: '获取已删除项目列表成功',
-    type: ProjectListResponseDto,
-  })
-  async getDeletedProjects(
-    @Request() req: ExpressRequest & { user: { id: string } },
-    @Query() query?: QueryProjectsDto
-  ) {
-    this.logger.log(
-      `获取已删除项目列表 - 用户ID: ${req.user?.id}, 查询参数: ${JSON.stringify(query)}`
-    );
-    return this.fileSystemService.getUserDeletedProjects(req.user.id, query);
-  }
-
   @Get('projects/:projectId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取项目详情' })
@@ -204,47 +169,6 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '项目不存在' })
   async getProject(@Param('projectId') projectId: string) {
     return this.fileSystemService.getProject(projectId);
-  }
-
-  @Patch('projects/:projectId')
-  @RequireProjectPermission(ProjectPermission.PROJECT_UPDATE)
-  @ApiOperation({ summary: '更新项目信息' })
-  @ApiResponse({
-    status: 200,
-    description: '更新项目信息成功',
-    type: ProjectDto,
-  })
-  @ApiResponse({ status: 404, description: '项目不存在' })
-  async updateProject(
-    @Param('projectId') projectId: string,
-    @Body() dto: UpdateNodeDto
-  ) {
-    return this.fileSystemService.updateProject(projectId, dto);
-  }
-
-  @Delete('projects/:projectId')
-  @RequireProjectPermission(ProjectPermission.PROJECT_DELETE)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '删除项目' })
-  @ApiResponse({
-    status: 200,
-    description: '删除项目成功',
-    type: OperationSuccessDto,
-  })
-  @ApiResponse({ status: 404, description: '项目不存在' })
-  async deleteProject(
-    @Param('projectId') projectId: string,
-    @Query('permanently') permanently?: boolean
-  ) {
-    this.logger.log(
-      `删除项目请求: projectId=${projectId}, permanently=${permanently}, userId=${this['request']?.user?.id}`
-    );
-    const result = await this.fileSystemService.deleteProject(
-      projectId,
-      permanently
-    );
-    this.logger.log(`删除项目响应: ${JSON.stringify(result)}`);
-    return result;
   }
 
   @Get('trash')
@@ -294,113 +218,6 @@ export class FileSystemController {
     return this.fileSystemService.clearTrash(req.user.id);
   }
 
-  // ========== 项目内回收站端点 ==========
-
-  /**
-   * 获取项目内回收站内容
-   */
-  @Get('projects/:projectId/trash')
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiOperation({ summary: '获取项目内回收站内容' })
-  @ApiResponse({
-    status: 200,
-    description: '成功获取项目回收站内容',
-    type: ProjectTrashResponseDto,
-  })
-  async getProjectTrash(
-    @Request() req,
-    @Param('projectId') projectId: string,
-    @Query() query?: QueryChildrenDto
-  ) {
-    return this.fileSystemService.getProjectTrash(
-      projectId,
-      req.user.id,
-      query
-    );
-  }
-
-  /**
-   * 恢复已删除的节点
-   */
-  @Post('nodes/:nodeId/restore')
-  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '恢复已删除的节点' })
-  @ApiResponse({
-    status: 200,
-    description: '节点恢复成功',
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 404, description: '节点不存在' })
-  async restoreNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.restoreNode(nodeId);
-  }
-
-  /**
-   * 清空项目回收站
-   */
-  @Delete('projects/:projectId/trash')
-  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '清空项目回收站' })
-  @ApiResponse({
-    status: 200,
-    description: '项目回收站已清空',
-    type: OperationSuccessDto,
-  })
-  async clearProjectTrash(
-    @Request() req,
-    @Param('projectId') projectId: string
-  ) {
-    return this.fileSystemService.clearProjectTrash(projectId, req.user.id);
-  }
-
-  // ========== 统一节点操作接口 ==========
-
-  /**
-   * 统一创建节点接口
-   *
-   * 规则：
-   * - parentId 为空 → 创建项目（isRoot=true）
-   * - parentId 有值 → 创建文件夹（isRoot=false）
-   *
-   * 项目 = 特殊的文件夹（有成员管理）
-   */
-  @Post('nodes')
-  @ApiOperation({ summary: '创建节点（项目或文件夹）' })
-  @ApiResponse({
-    status: 201,
-    description: '节点创建成功',
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  async createNode(@Request() req, @Body() dto: CreateNodeDto) {
-    return this.fileSystemService.createNode(req.user.id, dto.name, {
-      parentId: dto.parentId,
-      description: dto.description,
-    });
-  }
-
-  /**
-   * 创建文件夹（兼容旧 API）
-   */
-  @Post('nodes/:parentId/folders')
-  @RequireProjectPermission(ProjectPermission.FILE_CREATE)
-  @ApiOperation({ summary: '创建文件夹' })
-  @ApiResponse({
-    status: 201,
-    description: '创建文件夹成功',
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 404, description: '父节点不存在' })
-  async createFolder(
-    @Request() req,
-    @Param('parentId') parentId: string,
-    @Body() dto: CreateFolderDto
-  ) {
-    return this.fileSystemService.createFolder(req.user.id, parentId, dto);
-  }
-
   @Get('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取节点详情' })
@@ -412,22 +229,6 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '节点不存在' })
   async getNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getNodeTree(nodeId);
-  }
-
-  /**
-   * 获取节点的根节点
-   */
-  @Get('nodes/:nodeId/root')
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiOperation({ summary: '获取根节点' })
-  @ApiResponse({
-    status: 200,
-    description: '获取根节点成功',
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 404, description: '节点不存在' })
-  async getRootNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.getRootNode(nodeId);
   }
 
   @Get('nodes/:nodeId/children')
@@ -446,6 +247,7 @@ export class FileSystemController {
   ) {
     return this.fileSystemService.getChildren(nodeId, req.user.id, query);
   }
+
   @Patch('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_EDIT)
   @ApiOperation({ summary: '更新节点' })
@@ -505,52 +307,6 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: '节点不存在' })
   async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
-  }
-
-  @Post('files/upload')
-  @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
-  @ApiOperation({ summary: '上传文件' })
-  @ApiResponse({
-    status: 201,
-    description: '文件上传成功',
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  async uploadFile(@Request() req, @Body() dto: UploadFileDto) {
-    const { parentId, fileName, fileContent } = dto;
-    if (!fileName) {
-      throw new BadRequestException('缺少文件名称');
-    }
-
-    if (!parentId) {
-      throw new BadRequestException('缺少父节点ID');
-    }
-
-    const parentNode = await this.fileSystemService.getNode(parentId);
-    if (!parentNode) {
-      throw new NotFoundException('父节点不存在');
-    }
-
-    if (!parentNode.isFolder) {
-      throw new BadRequestException('只能上传文件到文件夹');
-    }
-
-    let buffer: Buffer;
-    if (fileContent) {
-      buffer = Buffer.from(fileContent, 'base64');
-    } else {
-      buffer = Buffer.from(`文件内容: ${fileName}`, 'utf-8');
-    }
-
-    const mockFile = {
-      originalname: fileName,
-      filename: `${Date.now()}-${fileName}`,
-      mimetype: this.getMimeType(fileName),
-      size: buffer.length,
-      buffer: buffer,
-    } as Express.Multer.File;
-
-    return this.fileSystemService.uploadFile(req.user.id, parentId, mockFile);
   }
 
   @Get('quota')
@@ -642,7 +398,6 @@ export class FileSystemController {
     @Body() dto: UpdateProjectMemberDto & { roleId?: string },
     @Request() req
   ) {
-    // 兼容处理：优先使用 projectRoleId，如果不存在则使用 roleId
     const projectRoleId = dto.projectRoleId || dto.roleId;
     if (!projectRoleId) {
       throw new BadRequestException('projectRoleId 或 roleId 不能为空');
@@ -679,100 +434,6 @@ export class FileSystemController {
     );
   }
 
-  @Post('projects/:projectId/transfer')
-  @RequireProjectPermission(ProjectPermission.PROJECT_TRANSFER)
-  @ApiOperation({ summary: '转移项目所有权' })
-  @ApiResponse({
-    status: 200,
-    description: '转移成功',
-    type: OperationSuccessDto,
-  })
-  @ApiResponse({ status: 401, description: '未登录' })
-  @ApiResponse({ status: 403, description: '无权限转移' })
-  @ApiResponse({ status: 400, description: '转移目标无效' })
-  @ApiResponse({ status: 404, description: '项目或成员不存在' })
-  @HttpCode(HttpStatus.OK)
-  async transferProjectOwnership(
-    @Param('projectId') projectId: string,
-    @Body('newOwnerId') newOwnerId: string,
-    @Request() req
-  ) {
-    return this.fileSystemService.transferProjectOwnership(
-      projectId,
-      newOwnerId,
-      req.user.id
-    );
-  }
-
-  @Post('projects/:projectId/members/batch')
-  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
-  @ApiOperation({ summary: '批量添加项目成员' })
-  @ApiResponse({
-    status: 201,
-    description: '批量添加成员成功',
-    type: BatchOperationResponseDto,
-  })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 401, description: '未登录' })
-  @ApiResponse({ status: 403, description: '无权限添加成员' })
-  @ApiResponse({ status: 404, description: '项目或用户不存在' })
-  async batchAddProjectMembers(
-    @Param('projectId') projectId: string,
-    @Body() body: { members: Array<{ userId: string; projectRoleId: string }> },
-    @Request() req
-  ) {
-    return this.fileSystemService.batchAddProjectMembers(
-      projectId,
-      body.members
-    );
-  }
-
-  @Patch('projects/:projectId/members/batch')
-  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
-  @ApiOperation({ summary: '批量更新项目成员角色' })
-  @ApiResponse({
-    status: 200,
-    description: '批量更新成员角色成功',
-    type: BatchOperationResponseDto,
-  })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 401, description: '未登录' })
-  @ApiResponse({ status: 403, description: '无权限修改成员角色' })
-  @ApiResponse({ status: 404, description: '项目或成员不存在' })
-  async batchUpdateProjectMembers(
-    @Param('projectId') projectId: string,
-    @Body() body: { updates: Array<{ userId: string; projectRoleId: string }> },
-    @Request() req
-  ) {
-    return this.fileSystemService.batchUpdateProjectMembers(
-      projectId,
-      body.updates
-    );
-  }
-
-  private getMimeType(fileName: string): string {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      dwg: 'application/acad',
-      dxf: 'application/dxf',
-      pdf: 'application/pdf',
-      png: 'image/png',
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      txt: 'text/plain',
-    };
-    return mimeTypes[ext || ''] || 'application/octet-stream';
-  }
-
-  /**
-   * 获取文件节点的缩略图
-   * 缩略图文件命名为 thumbnail.{webp|jpg|png}，位于节点目录下（按优先级查找）
-   * 缩略图不存在时返回 204 No Content，避免控制台 404 错误
-   *
-   * 权限说明：
-   * - 公开资源库（图库/块库）的缩略图：允许匿名访问
-   * - 项目文件的缩略图：需要登录并检查文件访问权限
-   */
   @Get('nodes/:nodeId/thumbnail')
   @OptionalAuth()
   @ApiOperation({ summary: '获取文件节点缩略图' })
@@ -787,31 +448,23 @@ export class FileSystemController {
     @Request() req: ExpressRequest,
     @Res() res: Response
   ) {
-    // 从 request.user 获取用户 ID（可选认证模式下可能为空）
     const userId = (req.user as { id?: string })?.id;
 
-    // 获取节点信息以判断是否为公开资源库
     const node = await this.fileSystemService.getNode(nodeId);
     if (!node) {
       throw new NotFoundException('文件节点不存在');
     }
 
-    // 检查是否为公开资源库节点
     const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
     const isLibraryNode = libraryKey !== null;
 
-    // 如果没有登录
     if (!userId) {
-      // 公开资源库允许匿名访问缩略图(只读)
       if (isLibraryNode) {
-        // 匿名用户可以访问公开资源库的缩略图
       } else {
         throw new UnauthorizedException('未登录');
       }
     } else {
-      // 已登录用户:检查权限
       if (isLibraryNode) {
-        // 公开资源库:检查系统权限
         const requiredPermission =
           libraryKey === 'drawing'
             ? SystemPermission.LIBRARY_DRAWING_MANAGE
@@ -827,7 +480,6 @@ export class FileSystemController {
           throw new ForbiddenException('无权限访问该资源库');
         }
       } else {
-        // 项目文件:检查文件访问权限
         const hasAccess = await this.fileSystemService.checkFileAccess(
           nodeId,
           userId
@@ -842,8 +494,6 @@ export class FileSystemController {
       throw new NotFoundException('文件节点不存在');
     }
 
-    // 构建缩略图完整路径：filesData/YYYYMM[/N]/nodeId/thumbnail.{webp|jpg|png}
-    // 注意：node.path 包含文件名，需要先提取目录部分
     const nodeFullPath = this.fileSystemService.getFullPath(node.path);
     const nodeDir = path.dirname(nodeFullPath);
     const thumbnail = findThumbnailSync(nodeDir);
@@ -854,24 +504,19 @@ export class FileSystemController {
 
     const thumbnailPath = thumbnail.path;
 
-    // 检查路径是否是目录
     const stats = fs.statSync(thumbnailPath);
     if (stats.isDirectory()) {
       this.logger.warn(`缩略图路径是目录而非文件: ${thumbnailPath}`);
       return res.status(204).end();
     }
 
-    // 创建文件流
     const fileStream = fs.createReadStream(thumbnailPath);
 
-    // 设置响应头（使用查找到的缩略图对应的 MIME 类型）
     res.setHeader('Content-Type', thumbnail.mimeType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
 
-    // 返回文件流
     fileStream.pipe(res);
 
-    // 处理错误
     fileStream.on('error', (error) => {
       this.logger.error(`读取缩略图失败: ${error.message}`, error.stack);
       if (!res.headersSent) {
@@ -880,10 +525,6 @@ export class FileSystemController {
     });
   }
 
-  /**
-   * 下载节点（文件或目录）
-   * 文件直接下载，目录压缩为 ZIP 下载
-   */
   @Options('nodes/:nodeId/download')
   @ApiOperation({ summary: '下载接口 OPTIONS 预检' })
   async downloadNodeOptions(
@@ -901,7 +542,7 @@ export class FileSystemController {
       'Access-Control-Allow-Headers',
       'Content-Type, Authorization'
     );
-    res.setHeader('Access-Control-Max-Age', '86400'); // 24小时
+    res.setHeader('Access-Control-Max-Age', '86400');
     res.status(204).end();
   }
 
@@ -926,13 +567,6 @@ export class FileSystemController {
     });
   }
 
-  /**
-   * 下载节点（支持多格式转换）
-   * @param nodeId 节点 ID
-   * @param req 请求对象
-   * @param res 响应对象
-   * @param query 查询参数（format、width、height、colorPolicy）
-   */
   @Get('nodes/:nodeId/download-with-format')
   @ApiOperation({
     summary: '下载节点（支持多格式转换）',
@@ -986,10 +620,8 @@ export class FileSystemController {
     }
 
     try {
-      // 设置默认格式
       const format = query.format || CadDownloadFormat.MXWEB;
 
-      // 构建 PDF 参数
       const pdfParams =
         format === CadDownloadFormat.PDF
           ? {
@@ -999,7 +631,6 @@ export class FileSystemController {
             }
           : undefined;
 
-      // 调用服务方法
       const { stream, filename, mimeType } =
         await this.fileSystemService.downloadNodeWithFormat(
           nodeId,
@@ -1008,8 +639,6 @@ export class FileSystemController {
           pdfParams
         );
 
-      // 设置响应头（在开始流传输之前）
-      // 1. CORS 头（放在最前面）
       const origin = req.headers.origin || '*';
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -1024,25 +653,20 @@ export class FileSystemController {
 
       this.logger.log(`[下载] CORS 头已设置: ${origin}`);
 
-      // 2. Content-Type
       res.setHeader('Content-Type', mimeType);
 
-      // 3. Content-Disposition
       const encodedFilename = encodeURIComponent(filename);
-      // eslint-disable-next-line no-control-regex
       const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, '_');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
       );
 
-      // 4. Cache-Control 和 ETag
       const node = await this.fileSystemService.getNode(nodeId);
       if (node && !node.isFolder && (node.fileHash || node.id)) {
         const etag = `"${node.fileHash || node.id}_${format}"`;
         res.setHeader('ETag', etag);
 
-        // 处理 If-None-Match
         if (req.headers['if-none-match'] === etag) {
           if (
             stream &&
@@ -1058,23 +682,18 @@ export class FileSystemController {
 
         res.setHeader('Cache-Control', 'public, max-age=3600');
       } else {
-        // 对于动态生成的文件或文件夹，不缓存
         res.setHeader('Cache-Control', 'no-cache');
       }
 
-      // 记录下载开始
       this.logger.log(
         `多格式下载开始: ${filename} (格式: ${format}) (${nodeId}) by user ${userId} from IP ${clientIp}`
       );
 
-      // 管道流传输
       stream.pipe(res);
 
-      // 错误处理
       stream.on('error', (error) => {
         this.logger.error(`文件流传输错误: ${error.message}`, error.stack);
 
-        // 清理资源
         if (
           stream &&
           typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
@@ -1086,12 +705,10 @@ export class FileSystemController {
         if (!res.headersSent) {
           res.status(500).json({ message: '文件下载失败' });
         } else if (!res.writableEnded) {
-          // 如果响应已发送但未结束，可以结束响应
           res.end();
         }
       });
 
-      // 完成处理
       stream.on('finish', () => {
         this.logger.log(
           `多格式下载完成: ${filename} (格式: ${format}) (${nodeId}) by user ${userId}`
@@ -1119,11 +736,6 @@ export class FileSystemController {
     }
   }
 
-  // ========== 项目权限检查端点 ==========
-
-  /**
-   * 获取用户在项目中的所有权限
-   */
   @Get('projects/:projectId/permissions')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取用户在项目中的权限列表' })
@@ -1147,9 +759,6 @@ export class FileSystemController {
     };
   }
 
-  /**
-   * 检查用户是否具有特定权限
-   */
   @Get('projects/:projectId/permissions/check')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '检查用户是否具有特定权限' })
@@ -1181,9 +790,6 @@ export class FileSystemController {
     };
   }
 
-  /**
-   * 获取用户在项目中的角色
-   */
   @Get('projects/:projectId/role')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取用户在项目中的角色' })
@@ -1204,19 +810,6 @@ export class FileSystemController {
     };
   }
 
-  // ========== 统一搜索接口 ==========
-
-  /**
-   * 统一搜索接口
-   *
-   * 支持多种搜索范围：
-   * - project: 搜索项目（项目列表级别）
-   * - project_files: 搜索指定项目内的文件（需提供 projectId）
-   * - all_projects: 搜索所有有权限访问的项目中的文件
-   * - library: 搜索公开资源库
-   * - project_files: 搜索项目内的文件（需要指定 projectId）
-   * - all_projects: 搜索所有有权限访问的项目中的文件
-   */
   @Get('search')
   @ApiOperation({
     summary: '统一搜索接口',

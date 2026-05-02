@@ -37,7 +37,6 @@ export const rolesApi = {
     getApiClient().RolesController_removePermissions({ id }, { permissions }),
 };
 
-// 项目角色 API
 export const projectRolesApi = {
   list: () => getApiClient().RolesController_getAllProjectRoles(),
 
@@ -45,8 +44,6 @@ export const projectRolesApi = {
 
   getByProject: (projectId: string) =>
     getApiClient().RolesController_getProjectRolesByProject({ projectId }),
-
-  get: (id: string) => getApiClient().RolesController_getProjectRole({ id }),
 
   create: (data: {
     projectId?: string;

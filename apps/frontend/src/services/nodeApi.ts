@@ -12,7 +12,6 @@
 
 import { getApiClient } from './apiClient';
 import type {
-  CreateNodeDto,
   UpdateNodeDto,
   CreateFolderDto,
   MoveNodeDto,
@@ -20,18 +19,6 @@ import type {
 } from '../types/api-client';
 
 export const nodeApi = {
-  // ========== 统一节点操作 ==========
-
-  /**
-   * 统一创建节点接口
-   *
-   * 规则：
-   * - parentId 为空 → 创建项目
-   * - parentId 有值 → 创建文件夹
-   */
-  createNode: (data: CreateNodeDto) =>
-    getApiClient().FileSystemController_createNode(null, data),
-
   // ========== 节点操作 ==========
 
   /**
@@ -104,10 +91,4 @@ export const nodeApi = {
     const data: CopyNodeDto = { targetParentId };
     return getApiClient().FileSystemController_copyNode({ nodeId }, data);
   },
-
-  /**
-   * 恢复节点
-   */
-  restoreNode: (nodeId: string) =>
-    getApiClient().FileSystemController_restoreNode({ nodeId }),
 };
