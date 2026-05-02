@@ -45,7 +45,7 @@ import { SystemPermission } from '../common/enums/permissions.enum';
 import { AuthenticatedRequest } from '../common/types/request.types';
 
 @ApiTags('roles')
-@Controller('roles')
+@Controller('v1/roles')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class RolesController {

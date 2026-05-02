@@ -53,7 +53,7 @@ import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
  */
 @ApiTags('字体管理')
 @ApiBearerAuth()
-@Controller('font-management')
+@Controller('v1/font-management')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class FontsController {
   private readonly logger = new Logger(FontsController.name);

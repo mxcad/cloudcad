@@ -96,7 +96,7 @@ import {
   THUMBNAIL_FORMATS,
 } from '../mxcad/infra/thumbnail-utils';
 
-@Controller('file-system')
+@Controller('v1/file-system')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard, PermissionsGuard)
 @UseInterceptors(StorageQuotaInterceptor)
 @ApiTags('文件系统')

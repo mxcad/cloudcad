@@ -44,7 +44,7 @@ import {
 
 @ApiTags('管理员')
 @ApiBearerAuth()
-@Controller('admin')
+@Controller('v1/admin')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AdminController {

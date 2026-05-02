@@ -73,8 +73,6 @@ import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../../storage/storage.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
-import { PermissionService } from '../../common/services/permission.service';
-import { ProjectPermissionService } from '../../roles/project-permission.service';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { AppConfig } from '../../config/app.config';
 import { FileConversionService } from '../conversion/file-conversion.service';
@@ -87,7 +85,7 @@ import { RequireProjectPermission } from '../../common/decorators/require-projec
 import { StorageQuotaInterceptor } from '../../common/interceptors/storage-quota.interceptor';
 
 @ApiTags('MxCAD 文件上传与转换')
-@Controller('mxcad')
+@Controller('v1/mxcad')
 @UseInterceptors(StorageQuotaInterceptor)
 export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
@@ -110,8 +108,6 @@ export class MxCadController {
     private readonly configService: ConfigService<AppConfig>,
     private readonly storageService: StorageService,
     private readonly permissionService: FileSystemPermissionService,
-    private readonly systemPermissionService: PermissionService,
-    private readonly projectPermissionService: ProjectPermissionService,
     private readonly versionControlService: VersionControlService,
     private readonly fileConversionService: FileConversionService,
     private readonly saveAsService: SaveAsService,
@@ -157,10 +153,10 @@ export class MxCadController {
 
   /**
    * 检查文件是否存在
-   * 注意：公共资源库（libraryKey='drawing'或'block'）使用系统权限检查，由 buildContextFromRequest 处理
    */
   @Post('files/fileisExist')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({
     status: 200,
@@ -191,10 +187,10 @@ export class MxCadController {
 
   /**
    * 检查目录中是否存在重复文件（相同文件名和hash）
-   * 注意：公共资源库使用系统权限检查，由 buildContextFromRequest 处理
    */
   @Post('files/checkDuplicate')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '检查目录中是否存在重复文件' })
   @ApiResponse({
@@ -364,12 +360,13 @@ export class MxCadController {
   /**
    * 上传文件（支持分片）
    *
-   * 注意：不使用 RequireProjectPermissionGuard，因为：
-   * 1. Guard 在 Multer 拦截器之前执行，此时 request.body 还未被解析
-   * 2. 权限检查已在 buildContextFromRequest 方法内部进行（Multer 解析之后）
+   * 注意：RequireProjectPermissionGuard 现在通过 nodeId → 数据库查询解析项目 ID。
+   * 对于 multipart 请求，客户端需确保 nodeId 可通过 query 参数传递，
+   * 因为 Multer 在 Guard 之后才解析 request.body。
    */
   @Post('files/uploadFiles')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
   @UseInterceptors(AnyFilesInterceptor())
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadFilesDto })
@@ -1928,58 +1925,8 @@ export class MxCadController {
         );
       }
 
-      // 5. 检查节点是否属于公共资源库，如果是则验证系统权限
+      // 5. 检查节点是否属于公共资源库（用于 isLibrary 字段）
       const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
-
-      // 如果是公共资源库节点，验证系统权限
-      if (libraryKey === 'drawing') {
-        const hasPermission =
-          await this.systemPermissionService.checkSystemPermission(
-            userData.id,
-            'LIBRARY_DRAWING_MANAGE' as any
-          );
-        if (!hasPermission) {
-          throw new UnauthorizedException('没有图纸库管理权限');
-        }
-      } else if (libraryKey === 'block') {
-        const hasPermission =
-          await this.systemPermissionService.checkSystemPermission(
-            userData.id,
-            'LIBRARY_BLOCK_MANAGE' as any
-          );
-        if (!hasPermission) {
-          throw new UnauthorizedException('没有图块库管理权限');
-        }
-      } else {
-        // 项目文件：检查项目权限
-        const node = await this.prisma.fileSystemNode.findUnique({
-          where: { id: nodeId },
-          select: { id: true, isRoot: true, projectId: true },
-        });
-
-        if (!node) {
-          throw new NotFoundException('节点不存在');
-        }
-
-        // 如果是根节点，nodeId 就是 projectId
-        const projectId = node.isRoot ? node.id : node.projectId;
-
-        if (!projectId) {
-          throw new BadRequestException('无法确定项目ID');
-        }
-
-        // 检查用户是否有该项目的 FILE_UPLOAD 权限
-        const hasPermission =
-          await this.projectPermissionService.checkPermission(
-            userData.id,
-            projectId,
-            ProjectPermission.FILE_UPLOAD
-          );
-
-        if (!hasPermission) {
-          throw new UnauthorizedException('没有该项目的文件上传权限');
-        }
-      }
 
       // 6. 构建上下文
       const context: MxCadContext & { isLibrary?: boolean } = {

@@ -71,7 +71,7 @@ import { UserProfileResponseDto } from '../users/dto/user-response.dto';
 import { ConfigService } from '@nestjs/config';
 
 @ApiTags('认证')
-@Controller('auth')
+@Controller('v1/auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthFacadeService,

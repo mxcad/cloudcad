@@ -55,7 +55,7 @@ import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.in
  * - 无版本管理、无回收站（删除即永久删除）
  */
 @ApiTags('library', '公共资源库')
-@Controller('library')
+@Controller('v1/library')
 @UseInterceptors(StorageQuotaInterceptor)
 export class LibraryController {
   private readonly logger = new Logger(LibraryController.name);

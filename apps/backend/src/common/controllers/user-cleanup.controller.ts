@@ -37,7 +37,7 @@ import { PermissionsGuard } from '../guards/permissions.guard';
 import { SystemPermission } from '../enums/permissions.enum';
 
 @ApiTags('user-cleanup')
-@Controller('user-cleanup')
+@Controller('v1/user-cleanup')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @RequirePermissions([SystemPermission.SYSTEM_USER_DELETE])
 @ApiBearerAuth()

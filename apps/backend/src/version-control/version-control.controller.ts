@@ -36,7 +36,7 @@ import { VersionControlService } from './version-control.service';
 import { SvnLogResponseDto, FileContentResponseDto } from './dto';
 
 @ApiTags('version-control')
-@Controller('version-control')
+@Controller('v1/version-control')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
 export class VersionControlController {
   constructor(private readonly versionControlService: VersionControlService) {}

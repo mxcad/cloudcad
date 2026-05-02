@@ -40,7 +40,7 @@ import { SystemPermission } from '../common/enums/permissions.enum';
 import type { Request } from 'express';
 
 @ApiTags('runtime-config')
-@Controller('runtime-config')
+@Controller('v1/runtime-config')
 export class RuntimeConfigController {
   constructor(private readonly runtimeConfigService: RuntimeConfigService) {}
 

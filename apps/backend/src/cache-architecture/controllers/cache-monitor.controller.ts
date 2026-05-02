@@ -53,7 +53,7 @@ import { WarmupStatsDto } from '../dto/cache-warmup-config.dto';
  * 提供缓存管理、监控和预热 API
  */
 @ApiTags('Cache Monitor')
-@Controller('cache-monitor')
+@Controller('v1/cache-monitor')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class CacheMonitorController {

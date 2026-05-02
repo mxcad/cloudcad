@@ -48,7 +48,7 @@ import { Permission as PrismaPermission } from '@prisma/client';
  * 提供策略配置的 CRUD API
  */
 @ApiTags('权限策略配置')
-@Controller('policy-config')
+@Controller('v1/policy-config')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class PolicyConfigController {

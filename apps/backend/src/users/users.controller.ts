@@ -66,7 +66,7 @@ import type { AuthenticatedRequest } from '../common/types/request.types';
 
 @ApiTags('用户管理')
 @ApiBearerAuth()
-@Controller('users')
+@Controller('v1/users')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class UsersController {
   constructor(
