@@ -19,10 +19,10 @@ import {
   FileSystemNode as PrismaFileSystemNode,
   Prisma,
 } from '@prisma/client';
-import { DatabaseService } from '../../database/database.service';
-import { StorageManager } from '../../common/services/storage-manager.service';
+import { DatabaseService } from '../database/database.service';
+import { StorageManager } from '../common/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
-import { VersionControlService } from '../../version-control/version-control.service';
+import { VersionControlService } from '../version-control/version-control.service';
 import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';

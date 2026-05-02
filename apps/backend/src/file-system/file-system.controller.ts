@@ -92,7 +92,7 @@ import {
 import { StorageInfoDto } from '../common/dto/storage-info.dto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { findThumbnail, findThumbnailSync, getMimeType, THUMBNAIL_FORMATS } from '../mxcad/services/thumbnail-utils';
+import { findThumbnail, findThumbnailSync, getMimeType, THUMBNAIL_FORMATS } from '../mxcad/infra/thumbnail-utils';
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard, PermissionsGuard)

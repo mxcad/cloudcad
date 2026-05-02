@@ -16,7 +16,7 @@ import type {
   IFileConversionService,
   ConversionResult,
   ConversionOptions,
-} from '../../interfaces/file-conversion.interface';
+} from '../interfaces/file-conversion.interface';
 import { FileTypeDetector } from '../../utils/file-type-detector';
 import { exec } from 'child_process';
 import { promisify } from 'util';
