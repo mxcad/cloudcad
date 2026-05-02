@@ -9,7 +9,7 @@
 import { Module } from '@nestjs/common';
 import { FileSystemController } from './file-system.controller';
 import { FileSystemService } from './file-system.service';
-import { FileHashService } from './file-hash.service';
+import { FileHashModule } from './file-hash/file-hash.module';
 import { FileValidationService } from './file-validation.service';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { FileDownloadHandlerService } from './file-download-handler.service';
@@ -44,11 +44,11 @@ import {
     VersionControlModule,
     RuntimeConfigModule,
     PersonalSpaceModule,
+    FileHashModule,
   ],
   controllers: [FileSystemController],
   providers: [
     FileSystemService,
-    FileHashService,
     FileValidationService,
     FileSystemPermissionService,
     FileDownloadHandlerService,
@@ -65,7 +65,7 @@ import {
   ],
   exports: [
     FileSystemService,
-    FileHashService,
+    FileHashModule,
     FileValidationService,
     FileSystemPermissionService,
     FileDownloadHandlerService,
