@@ -14,10 +14,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LocalStorageProvider } from './local-storage.provider';
 import { StorageService } from './storage.service';
+import { StorageCheckService } from './storage-check.service';
 
 @Module({
   imports: [ConfigModule],
-  providers: [LocalStorageProvider, StorageService],
-  exports: [LocalStorageProvider, StorageService],
+  providers: [LocalStorageProvider, StorageService, StorageCheckService],
+  exports: [LocalStorageProvider, StorageService, StorageCheckService],
 })
 export class StorageModule {}

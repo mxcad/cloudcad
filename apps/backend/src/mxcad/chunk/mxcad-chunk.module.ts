@@ -16,7 +16,6 @@ import { CommonModule } from '../../common/common.module';
 import { StorageModule } from '../../storage/storage.module';
 import { ChunkUploadService } from './chunk-upload.service';
 import { FileCheckService } from './file-check.service';
-import { StorageCheckService } from '../../storage/storage-check.service';
 
 /**
  * Mxcad 分片上传子模块
@@ -29,7 +28,7 @@ import { StorageCheckService } from '../../storage/storage-check.service';
  */
 @Module({
   imports: [ConfigModule, CommonModule, StorageModule],
-  providers: [ChunkUploadService, FileCheckService, StorageCheckService],
+  providers: [ChunkUploadService, FileCheckService],
   exports: [ChunkUploadService, FileCheckService],
 })
 export class MxcadChunkModule {}
