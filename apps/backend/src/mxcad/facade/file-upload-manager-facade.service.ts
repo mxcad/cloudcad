@@ -22,7 +22,7 @@ import {
   MergeOptions,
   MergeResult,
   UploadFileOptions,
-} from '../services/file-upload-manager.types';
+} from '../upload/file-upload-manager.types';
 import { ChunkUploadManagerService } from '../upload/chunk-upload-manager.service';
 import { FileMergeService } from '../upload/file-merge.service';
 import { ExternalRefService } from '../external-ref/external-ref.service';
