@@ -22,11 +22,9 @@ import { RolesModule } from '../../roles/roles.module';
 import { RuntimeConfigModule } from '../../runtime-config/runtime-config.module';
 import { MxcadInfraModule } from '../infra/mxcad-infra.module';
 import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
-import { MxcadChunkModule } from '../chunk/mxcad-chunk.module';
 import { MxcadNodeModule } from '../node/mxcad-node.module';
 import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.module';
 import { MxcadFacadeModule } from '../facade/mxcad-facade.module';
-import { MxcadUploadModule } from '../upload/mxcad-upload.module';
 import { MxcadSaveModule } from '../save/mxcad-save.module';
 import { MxCadService } from './mxcad.service';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
@@ -56,11 +54,9 @@ import { MxCadController } from './mxcad.controller';
     JwtModule,
     MxcadInfraModule,
     MxcadConversionModule,
-    MxcadChunkModule,
     MxcadNodeModule,
     MxcadExternalRefModule,
     MxcadFacadeModule,
-    MxcadUploadModule,
     MxcadSaveModule,
   ],
   controllers: [MxCadController],

@@ -13,7 +13,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CommonModule } from '../../common/common.module';
-import { MxcadChunkModule } from '../chunk/mxcad-chunk.module';
 import { MxcadNodeModule } from '../node/mxcad-node.module';
 import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { UploadOrchestrator } from './upload.orchestrator';
@@ -35,7 +34,6 @@ import { UploadOrchestrator } from './upload.orchestrator';
   imports: [
     ConfigModule,
     CommonModule,
-    MxcadChunkModule,
     MxcadNodeModule,
     MxcadConversionModule,
   ],
