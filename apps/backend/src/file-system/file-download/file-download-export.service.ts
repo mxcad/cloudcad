@@ -131,11 +131,6 @@ export class FileDownloadExportService {
     mimeType: string;
   }> {
     try {
-      const hasAccess = await this.checkFileAccess(nodeId, userId);
-      if (!hasAccess) {
-        throw new ForbiddenException('无权访问该文件');
-      }
-
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
       });
@@ -184,11 +179,6 @@ export class FileDownloadExportService {
     mimeType: string;
   }> {
     try {
-      const hasAccess = await this.checkFileAccess(nodeId, userId);
-      if (!hasAccess) {
-        throw new ForbiddenException('无权访问该文件');
-      }
-
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
       });

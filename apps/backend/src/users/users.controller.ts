@@ -286,34 +286,6 @@ export class UsersController {
     return this.usersService.deleteImmediately(id);
   }
 
-  @Post(':id/restore')
-  @RequirePermissions([SystemPermission.SYSTEM_USER_DELETE])
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '恢复已注销用户' })
-  @ApiResponse({ status: 200, description: '用户恢复成功' })
-  @ApiResponse({ status: 400, description: '用户未注销' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  restore(@Param('id') id: string) {
-    return this.usersService.restore(id);
-  }
-
-  @Patch(':id/status')
-  @RequirePermissions([SystemPermission.SYSTEM_USER_UPDATE])
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '更新用户状态' })
-  @ApiResponse({
-    status: 200,
-    description: '更新用户状态成功',
-    type: UserResponseDto,
-  })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
-  ) {
-    return this.usersService.updateStatus(id, status);
-  }
-
   @Post('deactivate-account')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '注销用户账户' })

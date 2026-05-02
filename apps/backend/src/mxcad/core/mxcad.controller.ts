@@ -63,9 +63,6 @@ import { CheckDuplicateFileResponseDto } from '../dto/check-duplicate-file-respo
 import { CheckReferenceResponseDto } from '../dto/check-reference-response.dto';
 import { RefreshExternalReferencesResponseDto } from '../dto/refresh-external-references-response.dto';
 import { UploadFileResponseDto } from '../dto/upload-file-response.dto';
-import { CheckThumbnailResponseDto } from '../dto/check-thumbnail-response.dto';
-import { UploadThumbnailResponseDto } from '../dto/upload-thumbnail-response.dto';
-import { UploadThumbnailDto } from '../dto/upload-thumbnail.dto';
 import { SaveMxwebResponseDto } from '../dto/save-mxweb-response.dto';
 import { SaveMxwebDto } from '../dto/save-mxweb.dto';
 import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
@@ -78,15 +75,6 @@ import { FileSystemPermissionService } from '../../file-system/file-permission/f
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { PermissionService } from '../../common/services/permission.service';
 import { ProjectPermissionService } from '../../roles/project-permission.service';
-import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
-import {
-  findThumbnail,
-  getThumbnailFileName,
-  getThumbnailFormatFromFileName,
-  getMimeType,
-  THUMBNAIL_FORMATS,
-  type ThumbnailFormat,
-} from '../infra/thumbnail-utils';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { AppConfig } from '../../config/app.config';
 import { FileConversionService } from '../conversion/file-conversion.service';
@@ -300,6 +288,8 @@ export class MxCadController {
    * @returns 文件是否存在
    */
   @Post('file/:nodeId/check-reference')
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @ApiResponse({
     status: 200,
     description: '成功检查文件存在性',
@@ -345,6 +335,8 @@ export class MxCadController {
    * @returns 刷新结果
    */
   @Post('file/:nodeId/refresh-external-references')
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @ApiResponse({
     status: 200,
     description: '刷新成功',
@@ -821,6 +813,8 @@ export class MxCadController {
    * 图片不需要转换，直接拷贝到源图纸的 hash 目录。
    */
   @Post('up_ext_reference_image')
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadExtReferenceFileDto })
@@ -978,342 +972,8 @@ export class MxCadController {
     }
   }
 
-  /**
-   * 查询缩略图是否存在
-   *
-   * 查询逻辑：通过 nodeId 检查本地存储中是否存在缩略图
-   * 缩略图文件名格式：thumbnail.webp / thumbnail.jpg / thumbnail.png（按优先级查找）
-   *
-   * @param nodeId 文件系统节点 ID
-   * @returns 缩略图是否存在
-   */
-  @Get('thumbnail/:nodeId')
-  @ApiResponse({
-    status: 200,
-    description: '查询成功',
-    type: CheckThumbnailResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: '请求参数错误',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '文件不存在',
-  })
-  async checkThumbnail(@Param('nodeId') nodeId: string, @Res() res: Response) {
-    this.logger.log(`[checkThumbnail] 查询缩略图, nodeId: ${nodeId}`);
 
-    try {
-      // 通过 nodeId 查询节点
-      const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
 
-      if (!node || !node.path) {
-        return res.status(404).json({
-          code: -1,
-          message: '文件不存在或没有 path',
-        });
-      }
-
-      this.logger.log(`[checkThumbnail] 获取到节点: ${nodeId}`);
-
-      const result = await this.mxCadService.checkThumbnailExists(nodeId);
-
-      return res.json({
-        code: 0,
-        message: 'ok',
-        exists: result.exists,
-      });
-    } catch (error) {
-      this.logger.error(
-        `[checkThumbnail] 查询缩略图失败: ${error.message}`,
-        error.stack
-      );
-      return res.status(500).json({
-        code: -1,
-        message: '查询缩略图失败',
-      });
-    }
-  }
-
-  /**
-   * 上传缩略图
-   *
-   * 通过 nodeId 获取 fileHash，上传到本地存储，并重命名为 {hash}.{图片后缀}
-   *
-   * @param nodeId 文件系统节点 ID
-   * @param file 上传的缩略图文件
-   * @returns 上传结果
-   */
-  @Post('thumbnail/:nodeId')
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadThumbnailDto })
-  @ApiResponse({
-    status: 200,
-    description: '上传成功',
-    type: UploadThumbnailResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: '请求参数错误',
-  })
-  @ApiResponse({
-    status: 500,
-    description: '上传失败',
-  })
-  async uploadThumbnail(
-    @Param('nodeId') nodeId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response
-  ) {
-    this.logger.log(`[uploadThumbnail] 上传缩略图, nodeId: ${nodeId}`);
-
-    // 验证文件是否存在
-    if (!file) {
-      return res.status(400).json({
-        code: -1,
-        message: '缺少文件',
-      });
-    }
-
-    // 详细日志记录
-    this.logger.log(
-      `[uploadThumbnail] 文件信息: path=${file.path}, originalname=${file.originalname}, size=${file.size}, mimetype=${file.mimetype}`
-    );
-
-    // 检查文件是否实际存在
-    if (!fs.existsSync(file.path)) {
-      this.logger.error(`[uploadThumbnail] 文件不存在: ${file.path}`);
-      return res.status(500).json({
-        code: -1,
-        message: '上传的文件不存在',
-      });
-    }
-
-    try {
-      // 通过 nodeId 查询节点
-      const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
-
-      if (!node || !node.path) {
-        return res.status(404).json({
-          code: -1,
-          message: '文件不存在或没有 path',
-        });
-      }
-
-      this.logger.log(
-        `[uploadThumbnail] 获取到节点: ${nodeId}, path=${node.path}`
-      );
-
-      // 构建目标目录路径
-      // 注意：node.path 包含完整路径（如：202602/nodeId/nodeId.dwg.mxweb）
-      // 需要提取目录部分（如：202602/nodeId）
-      const filesDataPath = this.configService.get('filesDataPath', {
-        infer: true,
-      });
-      const nodePathParts = node.path.split('/');
-      // 移除最后一个部分（文件名），保留目录部分
-      const dirParts = nodePathParts.slice(0, -1);
-      const targetDirPath = dirParts.join('/');
-      const targetDir = path.resolve(filesDataPath, targetDirPath);
-
-      // 确保目标目录存在
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-        this.logger.log(`[uploadThumbnail] 创建目录: ${targetDir}`);
-      }
-
-      // 构建目标文件名（根据上传文件扩展名映射）
-      const fileExt = path
-        .extname(file.originalname || file.filename)
-        .toLowerCase();
-      const extMap: Record<string, ThumbnailFormat> = {
-        '.png': 'png',
-        '.jpg': 'jpg',
-        '.jpeg': 'jpg',
-        '.webp': 'webp',
-      };
-      const thumbnailFormat = extMap[fileExt];
-      if (!thumbnailFormat) {
-        return res.status(400).json({
-          code: -1,
-          message: `不支持的图片格式: ${fileExt}，仅支持 ${THUMBNAIL_FORMATS.join(', ')}`,
-        });
-      }
-      const targetFileName = getThumbnailFileName(thumbnailFormat);
-      const targetFilePath = path.join(targetDir, targetFileName);
-
-      // 将文件从临时目录直接移动到目标目录
-      try {
-        // 如果目标文件已存在，先删除
-        if (fs.existsSync(targetFilePath)) {
-          fs.unlinkSync(targetFilePath);
-          this.logger.log(
-            `[uploadThumbnail] 删除已存在的缩略图: ${targetFilePath}`
-          );
-        }
-
-        // 移动文件（而不是拷贝）
-        fs.renameSync(file.path, targetFilePath);
-        file.path = targetFilePath; // 更新文件路径引用
-        this.logger.log(
-          `[uploadThumbnail] 缩略图已移动到目标位置: ${targetFilePath}`
-        );
-      } catch (moveError) {
-        this.logger.error(
-          `[uploadThumbnail] 移动文件失败: ${moveError.message}`,
-          moveError.stack
-        );
-        return res.status(500).json({
-          code: -1,
-          message: '移动缩略图失败',
-        });
-      }
-
-      return res.json({
-        code: 0,
-        message: '缩略图上传成功',
-        data: {
-          fileName: targetFileName,
-        },
-      });
-    } catch (error) {
-      this.logger.error(
-        `[uploadThumbnail] 上传缩略图失败: ${error.message}`,
-        error.stack
-      );
-      return res.status(500).json({
-        code: -1,
-        message: '上传缩略图失败',
-      });
-    }
-  }
-
-  /**
-   * 访问非 CAD 文件（图片、文档等）
-   * 从本地存储读取文件流并返回
-   *
-   * @param storageKey 存储键，格式: files/{userId}/{timestamp}-{filename}
-   * @param res Express Response 对象
-   * @returns 返回文件流或错误信息
-   */
-  @Get('files/:storageKey')
-  @ApiResponse({
-    status: 200,
-    description: '成功获取文件',
-    content: {
-      'application/octet-stream': {
-        schema: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: '文件不存在',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            code: { type: 'number', example: -1 },
-            message: { type: 'string', example: '文件不存在' },
-          },
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 500,
-    description: '服务器内部错误',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            code: { type: 'number', example: -1 },
-            message: { type: 'string', example: '获取文件失败' },
-          },
-        },
-      },
-    },
-  })
-  async getNonCadFile(
-    @Param('storageKey') storageKey: string,
-    @Res() res: Response
-  ) {
-    try {
-      // 验证 storageKey 格式，防止路径遍历攻击
-      if (
-        !storageKey ||
-        storageKey.includes('..') ||
-        storageKey.includes('\\')
-      ) {
-        this.logger.warn(`[getNonCadFile] 无效的 storageKey: ${storageKey}`);
-        return res.status(400).json({ code: -1, message: '无效的文件路径' });
-      }
-
-      // 处理存储路径：支持新旧路径格式
-      let actualStorageKey = storageKey;
-      if (storageKey.startsWith('files/')) {
-        // 旧路径格式：files/{userId}/{timestamp}-{filename}
-        // 尝试从数据库查询对应的节点，获取 fileHash
-        this.logger.log(`[getNonCadFile] 检测到旧路径格式: ${storageKey}`);
-        try {
-          const node =
-            await this.mxCadService.getFileSystemNodeByPath(storageKey);
-          if (node) {
-            const extension = node.extension?.toLowerCase() || '';
-            actualStorageKey = `mxcad/file/${node.id}${extension}`;
-            this.logger.log(
-              `[getNonCadFile] 路径转换: ${storageKey} -> ${actualStorageKey}`
-            );
-          }
-        } catch (queryError) {
-          this.logger.warn(
-            `[getNonCadFile] 查询节点失败，使用原路径: ${queryError.message}`
-          );
-        }
-      }
-
-      // 从本地存储获取文件流
-      const fileStream =
-        await this.storageService.getFileStream(actualStorageKey);
-
-      // 设置响应头
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader(
-        'Content-Disposition',
-        `inline; filename="${actualStorageKey.split('/').pop()}"`
-      );
-
-      // 返回文件流
-      fileStream.pipe(res);
-
-      // 处理流错误
-      fileStream.on('error', (error) => {
-        this.logger.error(
-          `[getNonCadFile] 文件流错误: ${error.message}`,
-          error
-        );
-        if (!res.headersSent) {
-          res.status(500).json({ code: -1, message: '获取文件失败' });
-        }
-      });
-    } catch (error: unknown) {
-      this.logger.error(`[getNonCadFile] 获取文件失败: ${storageKey}`, error);
-      if (
-        (error as { code?: string }).code === 'NotFound' ||
-        (error as { code?: string }).code === 'NoSuchKey'
-      ) {
-        return res.status(404).json({ code: -1, message: '文件不存在' });
-      }
-      return res.status(500).json({ code: -1, message: '获取文件失败' });
-    }
-  }
 
   /**
    * 访问 filesData 目录中的文件

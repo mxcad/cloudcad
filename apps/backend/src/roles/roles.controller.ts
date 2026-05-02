@@ -41,10 +41,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import {
-  SystemPermission,
-  RoleCategory,
-} from '../common/enums/permissions.enum';
+import { SystemPermission } from '../common/enums/permissions.enum';
 import { AuthenticatedRequest } from '../common/types/request.types';
 
 @ApiTags('roles')
@@ -67,21 +64,6 @@ export class RolesController {
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
   async findAll(): Promise<RoleDto[]> {
     return await this.rolesService.findAll();
-  }
-
-  @Get('category/:category')
-  @ApiOperation({ summary: '根据类别获取角色' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: '成功获取角色列表',
-    type: [RoleDto],
-  })
-  @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
-  async findByCategory(
-    @Param('category') category: string
-  ): Promise<RoleDto[]> {
-    const roleCategory = category as RoleCategory;
-    return await this.rolesService.findByCategory(roleCategory);
   }
 
   @Get(':id')
@@ -211,18 +193,6 @@ export class RolesController {
   })
   async getProjectRolesByProject(@Param('projectId') projectId: string) {
     return await this.projectRolesService.findByProject(projectId);
-  }
-
-  @Get('project-roles/:id')
-  @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
-  @ApiOperation({ summary: '获取项目角色详情' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: '成功获取项目角色',
-    type: ProjectRoleDto,
-  })
-  async getProjectRole(@Param('id') id: string) {
-    return await this.projectRolesService.findOne(id);
   }
 
   @Get('project-roles/:id/permissions')
