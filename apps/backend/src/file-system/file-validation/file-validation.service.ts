@@ -14,9 +14,9 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readFileSync } from 'fs';
 import * as path from 'path';
-import { FileUtils } from '../common/utils/file-utils';
-import { AppConfig } from '../config/app.config';
-import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
+import { FileUtils } from '../../common/utils/file-utils';
+import { AppConfig } from '../../config/app.config';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 
 export interface FileTypeConfig {
   extension: string;

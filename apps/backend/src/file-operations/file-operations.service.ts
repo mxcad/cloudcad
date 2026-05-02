@@ -23,10 +23,10 @@ import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
 import { VersionControlService } from '../../version-control/version-control.service';
-import { UpdateNodeDto } from '../dto/update-node.dto';
-import { QueryChildrenDto } from '../dto/query-children.dto';
-import { StorageInfoService } from './storage-info.service';
-import { FileTreeService } from './file-tree.service';
+import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
+import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
+import { StorageInfoService } from '../file-system/services/storage-info.service';
+import { FileTreeService } from '../file-system/services/file-tree.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 

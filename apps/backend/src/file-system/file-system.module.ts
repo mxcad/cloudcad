@@ -10,7 +10,7 @@ import { Module } from '@nestjs/common';
 import { FileSystemController } from './file-system.controller';
 import { FileSystemService } from './file-system.service';
 import { FileHashModule } from './file-hash/file-hash.module';
-import { FileValidationService } from './file-validation.service';
+import { FileValidationModule } from './file-validation/file-validation.module';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 import { DatabaseModule } from '../database/database.module';
@@ -23,9 +23,7 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { PersonalSpaceModule } from '../personal-space/personal-space.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import {
-  ProjectCrudService,
   FileTreeService,
-  FileOperationsService,
   FileDownloadExportService,
   ProjectMemberService,
   StorageInfoService,
@@ -45,11 +43,11 @@ import {
     RuntimeConfigModule,
     PersonalSpaceModule,
     FileHashModule,
+    FileValidationModule,
   ],
   controllers: [FileSystemController],
   providers: [
     FileSystemService,
-    FileValidationService,
     FileSystemPermissionService,
     FileDownloadHandlerService,
     RequireProjectPermissionGuard,
@@ -66,7 +64,7 @@ import {
   exports: [
     FileSystemService,
     FileHashModule,
-    FileValidationService,
+    FileValidationModule,
     FileSystemPermissionService,
     FileDownloadHandlerService,
     ProjectCrudService,

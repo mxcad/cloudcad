@@ -19,15 +19,15 @@ import {
 } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { FileSystemPermissionService } from '../file-system-permission.service';
+import { FileSystemPermissionService } from '../file-system/file-system-permission.service';
 import { PersonalSpaceService } from '../../personal-space/personal-space.service';
-import { CreateProjectDto } from '../dto/create-project.dto';
-import { CreateFolderDto } from '../dto/create-folder.dto';
-import { UpdateNodeDto } from '../dto/update-node.dto';
-import { QueryProjectsDto } from '../dto/query-projects.dto';
+import { CreateProjectDto } from '../file-system/dto/create-project.dto';
+import { CreateFolderDto } from '../file-system/dto/create-folder.dto';
+import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
+import { QueryProjectsDto } from '../file-system/dto/query-projects.dto';
 import { FileOperationsService } from './file-operations.service';
-import { FileTreeService } from './file-tree.service';
-import { NodeListResponseDto, FileSystemNodeDto } from '../dto/file-system-response.dto';
+import { FileTreeService } from '../file-system/services/file-tree.service';
+import { NodeListResponseDto, FileSystemNodeDto } from '../file-system/dto/file-system-response.dto';
 import * as path from 'path';
 
 @Injectable()

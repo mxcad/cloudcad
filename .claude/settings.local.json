@@ -7,7 +7,10 @@
       "Bash(node -e \"require\\('typescript'\\)\")",
       "Bash(node -e \"const ts = require\\('typescript'\\); console.log\\(ts.version\\)\")",
       "Bash(pnpm install *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(mkdir -p /d/project/cloudcad/apps/backend/src/file-system/file-validation)",
+      "Bash(mv /d/project/cloudcad/apps/backend/src/file-system/file-validation.service.ts /d/project/cloudcad/apps/backend/src/file-system/file-validation/)",
+      "Bash(mv /d/project/cloudcad/apps/backend/src/file-system/file-validation.service.spec.ts /d/project/cloudcad/apps/backend/src/file-system/file-validation/)"
     ]
   },
   "enableAllProjectMcpServers": true,
