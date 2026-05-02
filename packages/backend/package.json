@@ -41,7 +41,7 @@
     "@alicloud/openapi-client": "^0.4.15",
     "@alicloud/tea-util": "^1.4.11",
     "@cloudcad/svn-version-tool": "workspace:*",
-    "@css-inline/css-inline": "^0.20.0",
+    "@css-inline/css-inline": "^0.20.1",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^11.0.1",
