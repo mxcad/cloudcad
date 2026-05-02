@@ -12,6 +12,7 @@ import {
   Injectable,
   Logger,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -69,10 +70,10 @@ export class WechatService {
    */
   getAuthUrl(state: string): string {
     if (!this.appId) {
-      throw new Error('微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID');
+      throw new BadRequestException('微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID');
     }
     if (!this.callbackUrl) {
-      throw new Error(
+      throw new BadRequestException(
         '微信回调地址未配置，请在 .env 文件中设置 WECHAT_CALLBACK_URL'
       );
     }

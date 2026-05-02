@@ -8,8 +8,9 @@ import { BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SearchService } from './search.service';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
+import { PermissionService } from '../../common/services/permission.service';
 import { SearchScope, SearchType } from '../dto/search.dto';
-import { ProjectPermission } from '../../common/enums/permissions.enum';
+import { ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
 
 describe('SearchService', () => {
   let service: SearchService;
@@ -25,6 +26,12 @@ describe('SearchService', () => {
     checkNodePermission: jest.fn(),
   };
 
+  const mockSystemPermissionService = {
+    checkSystemPermission: jest.fn(),
+    checkSystemPermissionWithContext: jest.fn(),
+    checkSystemPermissionsBatch: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -33,6 +40,7 @@ describe('SearchService', () => {
         SearchService,
         { provide: DatabaseService, useValue: mockPrisma },
         { provide: FileSystemPermissionService, useValue: mockPermissionService },
+        { provide: PermissionService, useValue: mockSystemPermissionService },
       ],
     }).compile();
 

@@ -75,6 +75,6 @@ export const filesApi = {
 
   /** 获取文件缩略图 URL */
   getThumbnailUrl: (nodeId: string): string => {
-    return `${API_BASE_URL}/file-system/nodes/${nodeId}/thumbnail`;
+    return `${API_BASE_URL}/v1/file-system/nodes/${nodeId}/thumbnail`;
   },
 };

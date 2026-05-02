@@ -121,7 +121,7 @@ export const getThumbnailUrl = (node: FileSystemNode): string => {
   }
 
   // 使用后端代理 URL（通过 Session 认证）
-  return `${API_BASE_URL}/file-system/nodes/${node.id}/thumbnail`;
+  return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
 };
 
 /**
@@ -138,7 +138,7 @@ export const getCadThumbnailUrl = (node: FileSystemNode): string => {
     return '';
   }
 
-  return `${API_BASE_URL}/file-system/nodes/${node.id}/thumbnail`;
+  return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
 };
 
 /**
@@ -153,11 +153,11 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
   const extension = node.extension?.toLowerCase() || '';
   const cadExtensions = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
   if (cadExtensions.includes(extension)) {
-    return `${API_BASE_URL}/file-system/nodes/${node.id}/thumbnail`;
+    return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
   }
 
   // 图片文件返回原图下载链接
-  return `${API_BASE_URL}/file-system/nodes/${node.id}/download`;
+  return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/download`;
 };
 
 // ========== 文件类型检查 ==========

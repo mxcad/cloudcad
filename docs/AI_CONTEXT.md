@@ -1,6 +1,12 @@
-# AI_CONTEXT.md - CloudCAD 项目说明书
+# ⚠️ 此文档已废弃
 
-> 本文档是 CloudCAD 项目的 AI 阅读说明书，所有后续 AI 对话应以此为项目上下文基准。
+> **所有内容已合并到 AGENTS.md。请以 AGENTS.md 为唯一项目上下文文档。**
+
+---
+
+# AI_CONTEXT.md - CloudCAD 项目说明书 (已废弃)
+
+> ~~本文档是 CloudCAD 项目的 AI 阅读说明书，所有后续 AI 对话应以此为项目上下文基准。~~
 > 生成日期：2026-05-02
 
 ---

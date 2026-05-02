@@ -25,6 +25,7 @@ import { ExternalReferenceUpdateService } from '../external-ref/external-referen
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { VersionControlService } from '../../version-control/version-control.service';
 import { DatabaseService } from '../../database/database.service';
+import { FileSystemNode, Prisma } from '@prisma/client';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { ConversionOptions } from '../interfaces/file-conversion.interface';
 import {
@@ -899,6 +900,152 @@ export class MxCadService {
         `[generateBinFiles] bin 文件生成异常: ${nodeName}`,
         error.stack
       );
+    }
+  }
+
+  // ===== 数据库查询封装方法（Controller 迁移） =====
+
+  /**
+   * 根据 ID 查找文件系统节点（包含 deletedAt = null 过滤）
+   */
+  async findNodeByIdWithDeletedAt(id: string, select?: any): Promise<any> {
+    return this.prisma.fileSystemNode.findFirst({
+      where: { id, deletedAt: null },
+      ...(select ? { select } : {}),
+    });
+  }
+
+  /**
+   * 根据 ID 查找文件系统节点（不含 deletedAt 过滤）
+   */
+  async findNodeById(id: string, select?: any): Promise<any> {
+    return this.prisma.fileSystemNode.findUnique({
+      where: { id },
+      ...(select ? { select } : {}),
+    });
+  }
+
+  /**
+   * 查找非文件夹文件节点（未删除）
+   */
+  async findFileNodeByIdNotDeleted(id: string, select?: any): Promise<any> {
+    return this.prisma.fileSystemNode.findFirst({
+      where: { id, isFolder: false, deletedAt: null },
+      ...(select ? { select } : {}),
+    });
+  }
+
+  /**
+   * 根据 ID 查找用户
+   */
+  async findUserById(id: string, select?: any): Promise<any> {
+    return this.prisma.user.findUnique({
+      where: { id },
+      ...(select ? { select } : {}),
+    });
+  }
+
+  /**
+   * 获取父节点下的所有子节点
+   */
+  async findChildrenByParentId(parentId: string, select?: any): Promise<any[]> {
+    return this.prisma.fileSystemNode.findMany({
+      where: { parentId, deletedAt: null },
+      ...(select ? { select } : {}),
+    });
+  }
+
+  /**
+   * 获取项目中的所有节点ID（递归）
+   */
+  async getAllNodeIdsInProject(projectId: string): Promise<string[]> {
+    const nodeIds: string[] = [];
+
+    const collectNodeIds = async (nodeId: string): Promise<void> => {
+      const children = await this.prisma.fileSystemNode.findMany({
+        where: { parentId: nodeId, deletedAt: null },
+        select: { id: true, isFolder: true },
+      });
+
+      for (const child of children) {
+        nodeIds.push(child.id);
+        if (child.isFolder) {
+          await collectNodeIds(child.id);
+        }
+      }
+    };
+
+    nodeIds.push(projectId);
+    await collectNodeIds(projectId);
+
+    return nodeIds;
+  }
+
+  /**
+   * 通过文件哈希值查找 FileSystemNode
+   */
+  async findFileNodeByHash(
+    fileHash: string,
+    projectId?: string
+  ): Promise<Pick<
+    FileSystemNode,
+    'id' | 'name' | 'ownerId' | 'parentId' | 'isRoot' | 'fileHash'
+  > | null> {
+    try {
+      const where: Prisma.FileSystemNodeWhereInput = {
+        fileHash: fileHash,
+        isFolder: false,
+        deletedAt: null,
+      };
+
+      if (projectId) {
+        const allNodeIds = await this.getAllNodeIdsInProject(projectId);
+        where.id = { in: allNodeIds };
+      }
+
+      return this.prisma.fileSystemNode.findFirst({
+        where,
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          parentId: true,
+          isRoot: true,
+          fileHash: true,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`查找文件节点失败: ${error.message}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 根据节点 ID 查找项目根目录
+   */
+  async getProjectRootByNodeId(nodeId: string): Promise<any> {
+    try {
+      const currentNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+        select: { id: true, isRoot: true, parentId: true },
+      });
+
+      if (!currentNode) {
+        return null;
+      }
+
+      if (currentNode.isRoot) {
+        return currentNode;
+      }
+
+      if (currentNode.parentId) {
+        return this.getProjectRootByNodeId(currentNode.parentId);
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`查找项目根目录失败: ${error.message}`, error);
+      return null;
     }
   }
 }

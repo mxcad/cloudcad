@@ -23,7 +23,7 @@
  * - StorageInfoService: 存储信息查询
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotImplementedException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
@@ -253,7 +253,7 @@ export class FileSystemService {
     }
   ) {
     // uploadFile 方法尚未迁移到子服务，暂时保留原实现
-    throw new Error('uploadFile 方法尚未实现到子服务中');
+    throw new NotImplementedException('uploadFile 方法尚未实现到子服务中');
   }
 
   // ==================== 回收站管理 ====================
@@ -263,7 +263,7 @@ export class FileSystemService {
    */
   async getTrashItems(userId: string) {
     // getTrashItems 方法尚未迁移到子服务，暂时保留原实现
-    throw new Error('getTrashItems 方法尚未实现到子服务中');
+    throw new NotImplementedException('getTrashItems 方法尚未实现到子服务中');
   }
 
   /**
@@ -481,7 +481,7 @@ export class FileSystemService {
   async getNodeStorageQuota(userId: string, nodeId: string) {
     const node = await this.fileTreeService.getNode(nodeId);
     if (!node) {
-      throw new Error('节点不存在');
+      throw new NotFoundException('节点不存在');
     }
     return this.storageInfoService.getStorageQuota(userId, nodeId, node);
   }
@@ -492,7 +492,7 @@ export class FileSystemService {
   async updateNodeStorageQuota(nodeId: string, quota: number) {
     const node = await this.fileTreeService.getNode(nodeId);
     if (!node) {
-      throw new Error('节点不存在');
+      throw new NotFoundException('节点不存在');
     }
 
     const updatedNode = await this.prisma.fileSystemNode.update({

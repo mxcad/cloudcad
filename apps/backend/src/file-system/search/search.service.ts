@@ -2,7 +2,8 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SearchDto, SearchScope, SearchType } from '../dto/search.dto';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
-import { ProjectPermission } from '../../common/enums/permissions.enum';
+import { PermissionService } from '../../common/services/permission.service';
+import { ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
 import { Prisma, FileStatus } from '@prisma/client';
 import {
   NodeListResponseDto,
@@ -15,7 +16,8 @@ export class SearchService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly permissionService: FileSystemPermissionService
+    private readonly permissionService: FileSystemPermissionService,
+    private readonly systemPermissionService: PermissionService
   ) {}
 
   async search(userId: string, dto: SearchDto): Promise<NodeListResponseDto> {
@@ -416,6 +418,39 @@ export class SearchService {
       sortBy,
       sortOrder,
     } = params;
+
+    // ── 权限检查 ──
+    // 如果指定了 libraryKey，检查对应资源库的系统权限
+    // 如果未指定（搜索所有资源库），需要拥有两个权限中的一个
+    if (libraryKey === 'drawing') {
+      const hasPermission = await this.systemPermissionService.checkSystemPermission(
+        userId, SystemPermission.LIBRARY_DRAWING_MANAGE as any,
+      );
+      if (!hasPermission) {
+        this.logger.warn(`用户 ${userId} 无图纸库搜索权限`);
+        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
+      }
+    } else if (libraryKey === 'block') {
+      const hasPermission = await this.systemPermissionService.checkSystemPermission(
+        userId, SystemPermission.LIBRARY_BLOCK_MANAGE as any,
+      );
+      if (!hasPermission) {
+        this.logger.warn(`用户 ${userId} 无图块库搜索权限`);
+        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
+      }
+    } else {
+      // 未指定 libraryKey — 搜索所有资源库，需至少拥有一个权限
+      const hasDrawingAccess = await this.systemPermissionService.checkSystemPermission(
+        userId, SystemPermission.LIBRARY_DRAWING_MANAGE as any,
+      );
+      const hasBlockAccess = await this.systemPermissionService.checkSystemPermission(
+        userId, SystemPermission.LIBRARY_BLOCK_MANAGE as any,
+      );
+      if (!hasDrawingAccess && !hasBlockAccess) {
+        this.logger.warn(`用户 ${userId} 无任何资源库搜索权限`);
+        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
+      }
+    }
 
     this.logger.log(
       `[资源库搜索] 用户ID: ${userId}, 关键词: ${keyword}, libraryKey: ${libraryKey}, type: ${type}`

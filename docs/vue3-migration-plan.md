@@ -1,409 +1,610 @@
-# Vue 3 迁移预分析报告
+# Vue 3 迁移方案：基于 mxcad-app 集成的详细规划
 
 **生成日期**: 2026-05-02
 **当前分支**: refactor/circular-deps
-**前端框架**: React 19 + Vite + Tailwind CSS
-**状态管理**: Zustand + React Context
-**目标框架**: Vue 3 + Composition API + Pinia
-
-## 1. 前端代码结构概览
-
-### 1.1 主要目录结构
-```
-apps/frontend/src/
-├── pages/                    # 页面组件 (16个主要页面)
-├── hooks/                   # 自定义 Hooks (30+ 个)
-├── components/              # 可复用组件 (50+ 个)
-├── services/                # API 调用层 (20+ 个服务)
-├── utils/                   # 工具函数 (15+ 个)
-├── contexts/                # React Context 提供者
-├── types/                   # TypeScript 类型定义
-└── constants/               # 常量定义
-```
-
-### 1.2 技术栈分析
-- **UI 框架**: React 19 (函数组件 + Hooks)
-- **构建工具**: Vite
-- **样式方案**: Tailwind CSS + CSS 变量 (主题系统)
-- **状态管理**: 
-  - Zustand (全局状态)
-  - React Context (主题、认证、品牌配置等)
-- **路由**: React Router v6
-- **图标库**: Lucide React
-- **HTTP 客户端**: 基于 Axios 的自定义 API Client
-
-## 2. 页面组件迁移分析
-
-### 2.1 页面复杂度统计表
-
-| 页面组件 | 行数 | React Hooks 数量 | 自定义 Hooks 依赖 | API 服务依赖 | 复杂度评级 | 预估迁移工时(小时) |
-|---------|------|------------------|-------------------|--------------|------------|-------------------|
-| UserManagement.tsx | 2416 | 34 | usePermission, useDocumentTitle, useTheme | usersApi, rolesApi, runtimeConfigApi, projectsApi, userCleanupApi | 极高 | 24-32 |
-| CADEditorDirect.tsx | 1324 | 50 | useMxCadEditor, useMxCadInstance, useDocumentTitle | filesApi, projectsApi | 极高 | 20-28 |
-| FileSystemManager.tsx | 1628 | 38 | useFileSystem*, useDocumentTitle, useTheme | filesApi, projectsApi | 极高 | 20-28 |
-| Register.tsx | 1647 | 22 | useDocumentTitle, useBrandConfig, useTheme, useRuntimeConfig | authApi | 高 | 16-24 |
-| RoleManagement.tsx | 1368 | 25 | usePermission, useDocumentTitle, useTheme | rolesApi, runtimeConfigApi | 高 | 16-24 |
-| Login.tsx | 1521 | 21 | useDocumentTitle, useBrandConfig, useTheme, useRuntimeConfig, useAuth | authApi | 高 | 16-24 |
-| Profile.tsx | 1296 | 34 | useDocumentTitle, useTheme, useAuth | usersApi | 高 | 16-24 |
-| SystemMonitorPage.tsx | 1184 | 18 | useDocumentTitle, useTheme, useRuntimeConfig | healthApi, runtimeConfigApi, auditApi | 高 | 16-24 |
-| LibraryManager.tsx | 1195 | 45 | useLibrary*, useDocumentTitle, useTheme | libraryApi, filesApi | 高 | 16-24 |
-| Dashboard.tsx | 655 | 18 | useDocumentTitle, useAuth, useTheme, useBrandConfig | projectsApi, usersApi | 中等 | 8-16 |
-| FontLibrary.tsx | 1087 | 20 | useDocumentTitle, useTheme | fontsApi | 中等 | 8-16 |
-| AuditLogPage.tsx | 539 | 11 | useDocumentTitle, useTheme | auditApi | 中等 | 8-16 |
-| RuntimeConfigPage.tsx | 1119 | 8 | useDocumentTitle, useTheme | runtimeConfigApi | 中等 | 8-16 |
-| ForgotPassword.tsx | 767 | 9 | useDocumentTitle, useBrandConfig, useTheme, useRuntimeConfig | authApi | 中等 | 6-12 |
-| PhoneVerification.tsx | 452 | 13 | useDocumentTitle, useAuth, useBrandConfig, useTheme | authApi | 简单 | 4-8 |
-| EmailVerification.tsx | 490 | 14 | useDocumentTitle, useAuth, useBrandConfig, useTheme | authApi | 简单 | 4-8 |
-| ResetPassword.tsx | 435 | 7 | useDocumentTitle, useBrandConfig, useTheme, useRuntimeConfig | authApi | 简单 | 4-8 |
-
-**总计**: 16个页面，~19,823行代码，预估总工时: ~216-340小时
-
-### 2.2 迁移难度分类
-
-#### 🔴 需要人工重写的复杂页面 (6个)
-- **标准**: 超过1000行，依赖复杂状态管理，多个自定义 Hooks，复杂业务逻辑
-- **页面**: UserManagement, CADEditorDirect, FileSystemManager, Register, RoleManagement, Login
-- **挑战**:
-  - 复杂的状态管理 (Zustand + Context)
-  - 大量自定义 Hooks 依赖
-  - 复杂的表单验证和交互逻辑
-  - 第三方集成 (MxCAD 编辑器)
-  - 分页、筛选、搜索等高级功能
-
-#### 🟡 可半自动迁移的中等页面 (7个)
-- **标准**: 500-1000行，使用标准 React Hooks，相对简单的业务逻辑
-- **页面**: Dashboard, FontLibrary, AuditLogPage, RuntimeConfigPage, ForgotPassword, SystemMonitorPage, LibraryManager
-- **策略**:
-  - 使用迁移工具转换基础结构
-  - 手动重写复杂逻辑部分
-  - 复用现有的工具函数和 API 调用
-
-#### 🟢 可快速迁移的简单页面 (3个)
-- **标准**: 小于500行，简单表单或展示页面
-- **页面**: PhoneVerification, EmailVerification, ResetPassword
-- **策略**:
-  - 使用自动化转换工具 (如 `react-to-vue`)
-  - 手动检查和调整样式
-  - 快速验证功能完整性
-
-## 3. 可复用代码分析
-
-### 3.1 自定义 Hooks → Vue Composables (高度可复用)
-
-**总计**: 30+ 个自定义 Hooks，~9114行代码
-
-#### 核心业务 Hooks (可直接转换)
-1. **文件系统相关** (`hooks/file-system/`)
-   - `useFileSystem.ts` - 文件系统核心逻辑
-   - `useFileSystemCRUD.ts` - CRUD 操作
-   - `useFileSystemData.ts` - 数据管理
-   - `useFileSystemNavigation.ts` - 导航逻辑
-   - `useFileSystemSearch.ts` - 搜索功能
-   - `useFileSystemSelection.ts` - 选择功能
-   - `useFileSystemUI.ts` - UI 状态管理
-
-2. **库管理相关** (`hooks/library/`)
-   - `useLibraryOperations.ts` - 库操作逻辑
-   - `useLibrarySelection.ts` - 选择功能
-
-3. **通用工具 Hooks**
-   - `usePermission.ts` - 权限检查 → `usePermission()` composable
-   - `useDocumentTitle.ts` - 文档标题 → `useDocumentTitle()` composable
-   - `useTour.ts` - 用户引导 → `useTour()` composable
-   - `useWechatAuth.ts` - 微信认证 → `useWechatAuth()` composable
-   - `useMxCadEditor.ts` - MxCAD 编辑器 → `useMxCadEditor()` composable
-   - `useMxCadInstance.ts` - MxCAD 实例 → `useMxCadInstance()` composable
-
-**转换策略**: 
-- 将 React Hooks 转换为 Vue 3 Composables
-- 保持相同的函数签名和返回值类型
-- 使用 `ref()` 替代 `useState()`
-- 使用 `watch()` 和 `watchEffect()` 替代 `useEffect()`
-- 使用 `computed()` 替代 `useMemo()`
-
-### 3.2 工具函数 (完全可复用)
-
-**总计**: 15+ 个工具文件，完全可复用
-
-#### 可直接复用的工具函数:
-1. `utils/fileUtils.ts` - 文件操作工具
-2. `utils/dateUtils.ts` - 日期格式化
-3. `utils/validation.ts` - 表单验证
-4. `utils/errorHandler.ts` - 错误处理
-5. `utils/permissionUtils.ts` - 权限工具
-6. `utils/authCheck.ts` - 认证检查
-7. `utils/mxcadUtils.ts` - MxCAD 工具
-
-**优势**: 纯函数，无框架依赖，可直接复制到 Vue 项目
-
-### 3.3 API 服务层 (高度可复用)
-
-**总计**: 20+ 个 API 服务文件
-
-#### 服务结构:
-```typescript
-// 当前结构 (React)
-import { apiClient } from './apiClient';
-export const usersApi = {
-  getUsers: (params) => apiClient.get('/users', { params }),
-  createUser: (data) => apiClient.post('/users', data),
-  // ...
-};
-
-// 目标结构 (Vue)
-import { apiClient } from './apiClient';
-export const usersApi = {
-  getUsers: (params) => apiClient.get('/users', { params }),
-  createUser: (data) => apiClient.post('/users', data),
-  // ...
-};
-```
-
-**可复用性**: 100% 可复用，仅需调整导入语句
-
-### 3.4 类型定义 (完全可复用)
-
-**总计**: 完整的 TypeScript 类型定义
-
-#### 关键类型文件:
-1. `types/api-client.ts` - OpenAPI 生成的类型
-2. `types/filesystem.ts` - 文件系统类型
-3. `types/tour.ts` - 用户引导类型
-4. `types/theme.ts` - 主题类型
-
-**优势**: TypeScript 类型与框架无关，完全可复用
-
-## 4. 迁移策略与技术选型
-
-### 4.1 目标技术栈
-- **核心框架**: Vue 3.4+ (Composition API)
-- **状态管理**: Pinia (替代 Zustand)
-- **路由**: Vue Router 4
-- **UI 组件库**: Element Plus 或 Ant Design Vue
-- **HTTP 客户端**: Axios (复用现有配置)
-- **样式方案**: 
-  - 保留 Tailwind CSS
-  - 保留 CSS 变量主题系统
-  - 添加 `unocss` 优化构建
-- **图标库**: 
-  - 方案1: `@iconify/vue` (兼容 Lucide)
-  - 方案2: 直接使用 Lucide Vue
-- **构建工具**: Vite (保留配置)
-
-### 4.2 迁移优先级
-
-#### 阶段1: 基础设施迁移 (2-3周)
-1. 搭建 Vue 3 项目骨架
-2. 迁移工具函数和类型定义
-3. 迁移 API 服务层
-4. 设置主题系统和样式配置
-5. 配置路由和状态管理
-
-#### 阶段2: 简单页面迁移 (1-2周)
-1. PhoneVerification → `PhoneVerification.vue`
-2. EmailVerification → `EmailVerification.vue`
-3. ResetPassword → `ResetPassword.vue`
-4. 验证基本功能完整性
-
-#### 阶段3: 中等页面迁移 (3-4周)
-1. Dashboard → `Dashboard.vue`
-2. FontLibrary → `FontLibrary.vue`
-3. AuditLogPage → `AuditLogPage.vue`
-4. RuntimeConfigPage → `RuntimeConfigPage.vue`
-5. ForgotPassword → `ForgotPassword.vue`
-
-#### 阶段4: 复杂页面迁移 (6-8周)
-1. 用户管理相关:
-   - UserManagement → `UserManagement.vue`
-   - RoleManagement → `RoleManagement.vue`
-2. 文件系统相关:
-   - FileSystemManager → `FileSystemManager.vue`
-   - LibraryManager → `LibraryManager.vue`
-3. 认证相关:
-   - Login → `Login.vue`
-   - Register → `Register.vue`
-   - Profile → `Profile.vue`
-4. 编辑器相关:
-   - CADEditorDirect → `CADEditorDirect.vue`
-
-#### 阶段5: 组件库迁移与优化 (2-3周)
-1. 迁移可复用组件
-2. 性能优化
-3. 测试覆盖
-4. 文档更新
-
-### 4.3 自动化迁移工具建议
-
-1. **代码转换工具**:
-   - `react-to-vue` (开源工具，基础转换)
-   - 自定义 AST 转换脚本 (处理复杂逻辑)
-   - ChatGPT/Cursor 辅助重构
-
-2. **测试策略**:
-   - 保留现有 Jest/Vitest 测试
-   - 逐步迁移到 Vue Test Utils
-   - E2E 测试使用 Cypress 或 Playwright
-
-3. **质量保证**:
-   - ESLint + Vue ESLint
-   - TypeScript 严格模式
-   - 单元测试覆盖率 > 80%
-   - E2E 测试关键路径
-
-## 5. 风险评估与缓解措施
-
-### 5.1 技术风险
-| 风险 | 影响 | 概率 | 缓解措施 |
-|------|------|------|----------|
-| Vue 3 学习曲线 | 中等 | 高 | 提前培训，编写迁移指南，结对编程 |
-| Pinia 与 Zustand 差异 | 低 | 中 | 创建状态管理适配层，逐步迁移 |
-| 第三方库兼容性 | 高 | 低 | 提前评估关键依赖 (MxCAD)，准备备选方案 |
-| 性能退化 | 中等 | 低 | 性能基准测试，代码分割优化 |
-| 类型系统完整性 | 中等 | 中 | 保持 TypeScript 严格模式，逐步迁移类型 |
-
-### 5.2 业务风险
-| 风险 | 影响 | 概率 | 缓解措施 |
-|------|------|------|----------|
-| 迁移期间功能中断 | 高 | 低 | 分阶段迁移，功能开关，回滚预案 |
-| 用户界面不一致 | 中等 | 中 | 设计系统规范，UI 验收检查 |
-| 数据丢失或损坏 | 高 | 低 | 严格测试数据流，备份机制 |
-
-### 5.3 时间风险
-- **乐观估计**: 14-16周 (3.5-4个月)
-- **可能估计**: 18-20周 (4.5-5个月) 
-- **悲观估计**: 24周+ (6个月+)
-
-**建议**: 预留 20% 缓冲时间，并行维护两个代码库过渡期
-
-## 6. 工作量详细估算
-
-### 6.1 按页面类型估算
-| 页面类型 | 数量 | 单页面平均工时 | 总计工时 |
-|----------|------|----------------|----------|
-| 复杂页面 | 6 | 20-28小时 | 120-168小时 |
-| 中等页面 | 7 | 12-20小时 | 84-140小时 |
-| 简单页面 | 3 | 4-8小时 | 12-24小时 |
-| **页面迁移小计** | **16** | - | **216-332小时** |
-
-### 6.2 基础设施迁移
-| 任务 | 预估工时 |
-|------|----------|
-| 项目骨架搭建 | 16-24小时 |
-| 工具函数迁移 | 8-12小时 |
-| API 服务迁移 | 12-16小时 |
-| 主题系统迁移 | 16-24小时 |
-| 路由配置 | 8-12小时 |
-| 状态管理配置 | 12-16小时 |
-| **基础设施小计** | **72-104小时** |
-
-### 6.3 组件迁移
-| 组件类型 | 数量 | 预估工时 |
-|----------|------|----------|
-| 复杂组件 | 15 | 60-90小时 |
-| 中等组件 | 20 | 40-60小时 |
-| 简单组件 | 15 | 15-30小时 |
-| **组件迁移小计** | **50** | **115-180小时** |
-
-### 6.4 测试与优化
-| 任务 | 预估工时 |
-|------|----------|
-| 单元测试迁移 | 40-60小时 |
-| E2E 测试编写 | 32-48小时 |
-| 性能优化 | 24-40小时 |
-| 代码审查与重构 | 32-48小时 |
-| **测试优化小计** | **128-196小时** |
-
-### 6.5 总工时估算
-| 阶段 | 工时范围 | 占比 |
-|------|----------|------|
-| 页面迁移 | 216-332小时 | 35-40% |
-| 基础设施 | 72-104小时 | 12-15% |
-| 组件迁移 | 115-180小时 | 18-22% |
-| 测试优化 | 128-196小时 | 20-25% |
-| **总计** | **531-812小时** | **100%** |
-
-**人力配置**: 
-- 2名高级前端开发: 可并行工作，减少总时间
-- 1名测试工程师: 专注测试迁移
-- 预计实际耗时: 12-16周 (3-4个月)
-
-## 7. 迁移检查清单
-
-### 7.1 阶段完成标准
-- [ ] Vue 3 项目能成功构建
-- [ ] 所有工具函数通过测试
-- [ ] API 服务能正常调用
-- [ ] 主题系统正常工作
-- [ ] 路由能正确导航
-- [ ] 状态管理能正常工作
-- [ ] 第一个简单页面能正常运行
-- [ ] 所有页面迁移完成
-- [ ] 所有组件迁移完成
-- [ ] 单元测试覆盖率达标
-- [ ] E2E 测试通过
-- [ ] 性能指标达标
-- [ ] 文档更新完成
-- [ ] 用户验收测试通过
-
-### 7.2 质量门禁
-1. **代码质量**: ESLint 错误为 0，TypeScript 无 any 类型
-2. **测试覆盖率**: 单元测试 > 80%，关键路径 E2E 测试 100%
-3. **性能指标**: 首屏加载 < 3s，LCP < 2.5s，CLS < 0.1
-4. **兼容性**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-5. **无障碍**: WCAG 2.1 AA 标准
-
-## 8. 后续步骤建议
-
-1. **立即行动**:
-   - 评估团队 Vue 3 技能水平
-   - 创建概念验证 (PoC) 项目
-   - 确定迁移工具链
-   - 制定详细迁移计划
-
-2. **短期计划** (1-2周):
-   - 搭建开发环境
-   - 迁移基础设施
-   - 培训团队成员
-   - 建立代码规范
-
-3. **中期计划** (1-2月):
-   - 分批次迁移页面
-   - 建立自动化测试
-   - 进行性能优化
-   - 用户反馈收集
-
-4. **长期计划** (3-4月):
-   - 完成所有迁移
-   - 深度优化
-   - 建立监控体系
-   - 知识沉淀
-
-## 9. 附录
-
-### 9.1 关键文件路径
-- 页面组件: `apps/frontend/src/pages/`
-- 自定义 Hooks: `apps/frontend/src/hooks/`
-- 工具函数: `apps/frontend/src/utils/`
-- API 服务: `apps/frontend/src/services/`
-- 类型定义: `apps/frontend/src/types/`
-
-### 9.2 第三方依赖评估
-| 依赖库 | 当前版本 | Vue 兼容性 | 迁移策略 |
-|--------|----------|------------|----------|
-| Lucide React | 0.3+ | 需要替换 | 使用 `@iconify/vue` 或 `lucide-vue` |
-| React Router | v6 | 不兼容 | 迁移到 Vue Router 4 |
-| Zustand | 4.4+ | 不兼容 | 迁移到 Pinia |
-| Axios | 1.6+ | 兼容 | 直接复用 |
-| Tailwind CSS | 3.3+ | 兼容 | 直接复用 |
-
-### 9.3 团队技能评估建议
-- **Vue 3 基础培训**: 2-3天
-- **Pinia 状态管理**: 1天
-- **Vue Router**: 1天
-- **Vue Test Utils**: 1天
-- **实际项目练习**: 1周
+**目标**: 确定 Vue 3 项目如何复用 mxcad-app 的 Vuetify 3 依赖及状态同步方案
 
 ---
-**报告完成时间**: 2026-05-02  
-**分析者**: CodeBuddy Code  
-**下一步**: 评审此报告，确定迁移优先级和时间表
+
+## 1. mxcad-app Vuetify 3 集成现状分析
+
+### 1.1 当前集成架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              CloudCAD Frontend (React)                       │
+│  ┌─────────────────────┐  ┌─────────────────────────────┐ │
+│  │   ThemeContext      │  │    CADEditorDirect.tsx       │ │
+│  │   (主题状态管理)     │  │    (mxcad-app 容器)          │ │
+│  └──────────┬──────────┘  └──────────────┬──────────────┘ │
+└─────────────┼────────────────────────────┼────────────────┘
+              │                            │
+              │ CustomEvent                │ 动态 import
+              │ mxcad-theme-changed        ▼
+              │                   ┌─────────────────┐
+              │                   │   mxcad-app     │
+              │                   │   (Vue + Vuetify)│
+              │                   │   getVuetify()   │
+              │                   └─────────────────┘
+```
+
+### 1.2 mxcad-app 暴露的关键 API
+
+| API 方法 | 返回类型 | 用途 | Vue 3 可复用性 |
+|---------|---------|------|----------------|
+| `mxcadApp.getVuetify()` | `Vuetify` 实例 | 获取 Vuetify 主题管理器 | ✅ 完全可复用 |
+| `mxcadApp.setStaticAssetPath()` | `void` | 设置静态资源路径 | ✅ 完全可复用 |
+| `mxcadApp.initConfig()` | `void` | 初始化 JSON 配置 | ✅ 完全可复用 |
+| `mxcadApp.getMxCADView()` | `MxCADView` | 获取 CAD 视图实例 | ✅ 完全可复用 |
+
+### 1.3 Vuetify 3 在 mxcad-app 中的使用场景
+
+| 组件/功能 | 配置来源 | 说明 |
+|----------|---------|------|
+| 主题系统 | `myVuetifyThemeConfig.json` | 明暗主题切换 |
+| 工具栏按钮 | `myUiConfig.json` → `mTopButtonBarData` | CAD 操作工具栏 |
+| 菜单栏 | `myUiConfig.json` → `mMenuBarData` | 文件/编辑/视图菜单 |
+| 右键菜单 | `myUiConfig.json` → `mRightMenuData` | 绘图区域上下文菜单 |
+| 对话框 | `myUiConfig.json` → `Mx_SetAppDialog` | 设置、关于等对话框 |
+| 侧边抽屉 | `myUiConfig.json` → `leftDrawerComponents` | 图块库、图纸库 |
+
+---
+
+## 2. Vue 3 项目复用 Vuetify 3 依赖的方案
+
+### 2.1 方案对比
+
+| 方案 | 优点 | 缺点 | 推荐度 |
+|-----|------|------|--------|
+| **A. 共享 mxcad-app 的 Vuetify 实例** | 无需重复打包 Vuetify，保持主题同步 | 依赖 mxcad-app 加载 | ⭐⭐⭐⭐⭐ |
+| B. Vue 3 项目独立引入 Vuetify | 完全独立 | 增加包体积 (~150KB)，主题需手动同步 | ⭐⭐⭐ |
+| C. 使用其他 UI 组件库 | 不依赖 Vuetify | 无法使用 mxcad-app 的 UI 配置 | ⭐⭐ |
+
+### 2.2 推荐方案：共享 mxcad-app 的 Vuetify 实例
+
+**核心思路**: Vue 3 项目通过 `mxcadApp.getVuetify()` 获取 Vuetify 实例，无需单独安装 Vuetify 依赖。
+
+#### 2.2.1 Vite 配置调整
+
+**文件**: `apps/frontend/vite.config.ts` (Vue 3 版本)
+
+```typescript
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { mxcadAssetsPlugin } from 'mxcad-app/vite';
+
+// 共享 Vuetify 的 chunks 配置（mxcad-app 已包含）
+const sharedLibraries = ['vue', 'vuetify'];
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    mxcadAssetsPlugin({
+      libraryNames: sharedLibraries,
+    }),
+  ],
+  optimizeDeps: {
+    // 预构建时包含共享库
+    include: [...sharedLibraries, 'axios', 'pinia'],
+    exclude: ['mxcad-app'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vue 核心
+          'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          // 共享 Vuetify（来自 mxcad-app）
+          'vendor-vuetify': ['vuetify'],
+          // mxcad-app CAD 核心
+          'vendor-cad': ['mxcad-app'],
+        },
+      },
+    },
+  },
+});
+```
+
+#### 2.2.2 Vuetify 初始化封装
+
+**文件**: `src/plugins/vuetify.ts` (新建)
+
+```typescript
+import type { Vuetify } from 'vuetify';
+
+let vuetifyInstance: Vuetify | null = null;
+
+export async function getSharedVuetify(): Promise<Vuetify> {
+  if (vuetifyInstance) {
+    return vuetifyInstance;
+  }
+
+  // 从 mxcad-app 获取 Vuetify 实例
+  const { mxcadApp } = await import('mxcad-app');
+  vuetifyInstance = await mxcadApp.getVuetify();
+  
+  return vuetifyInstance;
+}
+
+export async function initVuetifyTheme(configUrl: string) {
+  const vuetify = await getSharedVuetify();
+  
+  // 注册主题变更监听
+  const { watch } = await import('vue');
+  watch(
+    () => vuetify.theme.global.name.value,
+    (themeName) => {
+      const isDark = themeName === 'dark';
+      // 通知外部（Vue/Pinia store）
+      window.dispatchEvent(
+        new CustomEvent('vue-theme-changed', {
+          detail: { isDark },
+        })
+      );
+    }
+  );
+
+  return vuetify;
+}
+```
+
+#### 2.2.3 Vue 3 应用入口调整
+
+**文件**: `src/main.ts` (新建 Vue 3 入口)
+
+```typescript
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import App from './App.vue';
+import router from './router';
+import { initVuetifyTheme } from './plugins/vuetify';
+import './styles/main.css';
+
+const app = createApp(App);
+const pinia = createPinia();
+
+app.use(pinia);
+app.use(router);
+
+// 初始化 Vuetify 主题同步
+const configUrl = window.location.origin;
+initVuetifyTheme(configUrl).then((vuetify) => {
+  // 将 vuetify 实例提供给 Vue 应用（如需要）
+  app.provide('vuetify', vuetify);
+});
+
+app.mount('#app');
+```
+
+---
+
+## 3. React 与 Vue 状态同步清单
+
+### 3.1 需要同步的状态
+
+| 状态类型 | React 端实现 | Vue 3 端实现 | 同步机制 | 同步方向 |
+|---------|-------------|--------------|---------|---------|
+| **主题（明/暗）** | `ThemeContext` + `localStorage` | Pinia store + `useTheme()` | CustomEvent + `localStorage` | 双向同步 |
+| **用户认证** | `AuthContext` + JWT | Pinia store + `useAuth()` | `localStorage` (JWT) + API | 单向（无状态） |
+| **当前文件** | `CADEditorDirect` state | Pinia store | CustomEvent | 双向同步 |
+| **UI 配置** | `myUiConfig.json` | 同 JSON 文件 | mxcad-app 内部 | 不需要同步 |
+| **服务器配置** | `myServerConfig.json` | 同 JSON 文件 | mxcad-app 内部 | 不需要同步 |
+
+### 3.2 主题同步详细方案
+
+#### 3.2.1 主题同步流程图
+
+```
+┌─────────────────────┐         ┌─────────────────────┐
+│   React 应用         │         │   Vue 3 应用         │
+│   (当前前端)          │         │   (迁移目标)         │
+│                      │         │                      │
+│  ThemeContext        │         │  useTheme()          │
+│  - isDark            │         │  - isDark            │
+│  - toggleTheme()     │         │  - toggleTheme()    │
+│         │            │         │         │            │
+└─────────┼─────────────┘         └─────────┼─────────────┘
+          │                                │
+          │     ┌─────────────────┐       │
+          │     │  localStorage   │       │
+          │     │  mx-user-dark   │       │
+          │     └────────┬────────┘       │
+          │              │                │
+          │     ┌────────┴────────┐       │
+          │     │  mxcad-app     │       │
+          │     │  (共享 Vuetify) │       │
+          │     │  getVuetify()  │       │
+          │     └────────┬────────┘       │
+          │              │                │
+          │    CustomEvent               │
+          │    mxcad-theme-changed        │
+          └──────────────┼────────────────┘
+                         │
+              ┌──────────┴──────────┐
+              │   同步状态到 DOM    │
+              │  data-theme="dark"  │
+              │  body.dark-theme   │
+              └───────────────────┘
+```
+
+#### 3.2.2 Vue 3 主题 Pinia Store
+
+**文件**: `src/stores/theme.ts` (新建)
+
+```typescript
+import { defineStore } from 'pinia';
+import { ref, watch } from 'vue';
+import { getSharedVuetify } from '../plugins/vuetify';
+
+const THEME_STORAGE_KEY = 'mx-user-dark';
+
+export const useThemeStore = defineStore('theme', () => {
+  const isDark = ref<boolean>(
+    localStorage.getItem(THEME_STORAGE_KEY) === 'true'
+  );
+
+  async function toggleTheme() {
+    const vuetify = await getSharedVuetify();
+    vuetify.theme.toggle(['light', 'dark']);
+  }
+
+  async function setTheme(dark: boolean) {
+    const vuetify = await getSharedVuetify();
+    vuetify.theme.change(dark ? 'dark' : 'light');
+  }
+
+  // 监听来自 mxcad-app 的主题变更事件
+  if (typeof window !== 'undefined') {
+    window.addEventListener('vue-theme-changed', ((e: CustomEvent) => {
+      isDark.value = e.detail.isDark;
+      localStorage.setItem(THEME_STORAGE_KEY, String(e.detail.isDark));
+    }) as EventListener);
+
+    // 监听 localStorage 变化（多标签页同步）
+    window.addEventListener('storage', (e: StorageEvent) => {
+      if (e.key === THEME_STORAGE_KEY) {
+        isDark.value = e.newValue === 'true';
+      }
+    });
+  }
+
+  return { isDark, toggleTheme, setTheme };
+});
+```
+
+#### 3.2.3 Vue 3 useTheme Composable
+
+**文件**: `src/composables/useTheme.ts` (新建)
+
+```typescript
+import { computed } from 'vue';
+import { useThemeStore } from '../stores/theme';
+
+export function useTheme() {
+  const store = useThemeStore();
+
+  const isDark = computed(() => store.isDark);
+  const toggleTheme = () => store.toggleTheme();
+  const setTheme = (dark: boolean) => store.setTheme(dark);
+
+  return { isDark, toggleTheme, setTheme };
+}
+```
+
+### 3.3 用户认证同步方案
+
+#### 3.3.1 认证状态来源
+
+| 来源 | React 端 | Vue 3 端 |
+|------|---------|----------|
+| JWT Token | `localStorage` (`auth_token`) | `localStorage` (`auth_token`) |
+| 用户信息 | `AuthContext` | Pinia `useAuthStore` |
+| 刷新机制 | `apiClient` 拦截器 | 同上（复用） |
+
+#### 3.3.2 Vue 3 认证 Pinia Store
+
+**文件**: `src/stores/auth.ts` (新建)
+
+```typescript
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { authApi } from '../services/authApi';
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  // ... 其他字段
+}
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<User | null>(null);
+  const token = ref<string | null>(localStorage.getItem('auth_token'));
+
+  const isAuthenticated = computed(() => !!token.value);
+
+  async function login(credentials: { email: string; password: string }) {
+    const response = await authApi.login(credentials);
+    token.value = response.data.access_token;
+    localStorage.setItem('auth_token', response.data.access_token);
+    user.value = response.data.user;
+    return response.data;
+  }
+
+  function logout() {
+    token.value = null;
+    user.value = null;
+    localStorage.removeItem('auth_token');
+  }
+
+  return { user, token, isAuthenticated, login, logout };
+});
+```
+
+---
+
+## 4. mxcad-app 初始化配置在 Vue 3 中的调整
+
+### 4.1 配置文件清单
+
+| 配置文件 | 路径 | 用途 | Vue 3 是否需要调整 |
+|---------|------|------|-------------------|
+| `myUiConfig.json` | `public/ini/` | UI 菜单、工具栏配置 | ❌ 不需要 |
+| `myVuetifyThemeConfig.json` | `public/ini/` | 主题明暗配置 | ❌ 不需要 |
+| `myServerConfig.json` | `public/ini/` | API、上传配置 | ❌ 不需要 |
+| `myQuickCommand.json` | `public/ini/` | 快捷命令配置 | ❌ 不需要 |
+| `mySketchesAndNotesUiConfig.json` | `public/ini/` | 草图笔记 UI | ❌ 不需要 |
+
+### 4.2 配置文件在 Vue 3 中的加载方式
+
+**结论**: 所有 JSON 配置文件**不需要调整**，可以直接复用。
+
+#### 4.2.1 配置加载代码对比
+
+**React (当前)**:
+```typescript
+// CADEditorDirect.tsx:349-362
+const initMxCADConfig = async () => {
+  const { mxcadApp } = await import('mxcad-app');
+  const configUrl = window.location.origin;
+  
+  mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
+  mxcadApp.initConfig({
+    uiConfig: `${configUrl}/ini/myUiConfig.json`,
+    themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`,
+    serverConfig: `${configUrl}/ini/myServerConfig.json`,
+    // ...
+  });
+};
+```
+
+**Vue 3 (迁移后)**:
+```typescript
+// src/plugins/mxcad.ts (新建)
+export async function initMxCADConfig() {
+  const { mxcadApp } = await import('mxcad-app');
+  const configUrl = window.location.origin;
+  
+  mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
+  mxcadApp.initConfig({
+    uiConfig: `${configUrl}/ini/myUiConfig.json`,
+    themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`,
+    serverConfig: `${configUrl}/ini/myServerConfig.json`,
+    quickCommandConfig: `${configUrl}/ini/myQuickCommand.json`,
+    sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
+  });
+}
+```
+
+#### 4.2.2 静态资源路径说明
+
+| 资源类型 | React 前端路径 | Vue 3 前端路径 | 是否需要调整 |
+|---------|--------------|--------------|------------|
+| 公共 JSON 配置 | `public/ini/*.json` | `public/ini/*.json` | ❌ 不需要 |
+| mxcad-app 静态资源 | `/mxcadAppAssets/` | `/mxcadAppAssets/` | ❌ 不需要 |
+| Vue 组件 | `src/components/` | `src/components/` | ❌ 不需要 |
+| 样式文件 | `src/styles/` | `src/styles/` | ⚠️ 需要调整 |
+
+### 4.3 Vite 公共路径配置
+
+**文件**: `vite.config.ts` (Vue 3 版本)
+
+```typescript
+export default defineConfig({
+  base: '/',
+  build: {
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: {
+        main: './index.html',
+      },
+    },
+  },
+  // 确保 public 目录的静态资源路径正确
+  publicDir: 'public',
+});
+```
+
+---
+
+## 5. Vue 3 项目结构规划
+
+### 5.1 目录结构
+
+```
+apps/frontend/                    # 前端项目根目录
+├── src/                         # Vue 3 源码
+│   ├── assets/                  # 静态资源
+│   ├── components/              # Vue 组件
+│   │   ├── ui/                  # 基础 UI 组件
+│   │   ├── file-system/         # 文件系统组件
+│   │   ├── cad-editor/          # CAD 编辑器组件
+│   │   └── auth/                # 认证相关组件
+│   ├── composables/             # Vue Composables (替代 React Hooks)
+│   │   ├── useTheme.ts          # 主题
+│   │   ├── useAuth.ts           # 认证
+│   │   ├── usePermission.ts     # 权限
+│   │   ├── useFileSystem.ts     # 文件系统
+│   │   └── useMxCadEditor.ts    # CAD 编辑器
+│   ├── stores/                  # Pinia Stores
+│   │   ├── theme.ts             # 主题状态
+│   │   ├── auth.ts              # 认证状态
+│   │   ├── fileSystem.ts        # 文件系统状态
+│   │   └── permission.ts        # 权限状态
+│   ├── services/                # API 服务 (复用现有)
+│   │   ├── apiClient.ts         # Axios 实例
+│   │   ├── authApi.ts           # 认证 API
+│   │   ├── filesApi.ts          # 文件 API
+│   │   └── ...
+│   ├── plugins/                 # Vue 插件
+│   │   ├── vuetify.ts           # Vuetify 初始化
+│   │   └── mxcad.ts             # mxcad-app 初始化
+│   ├── router/                  # Vue Router
+│   │   └── index.ts
+│   ├── views/                   # 页面视图
+│   │   ├── Login.vue
+│   │   ├── Dashboard.vue
+│   │   ├── FileSystemManager.vue
+│   │   └── CADEditor.vue
+│   ├── styles/                  # 样式
+│   │   ├── main.css             # 主样式 (复用)
+│   │   └── variables.css        # CSS 变量
+│   ├── App.vue                  # 根组件
+│   └── main.ts                  # 入口文件
+├── public/                      # 公共静态资源 (复用)
+│   ├── ini/                     # mxcad-app JSON 配置
+│   └── mxcadAppAssets/          # mxcad-app 静态资源
+├── vite.config.ts               # Vite 配置
+└── package.json                 # 依赖配置
+```
+
+### 5.2 Composables 与 React Hooks 对照表
+
+| React Hook | Vue 3 Composable | 说明 |
+|------------|-----------------|------|
+| `useTheme()` | `useTheme()` | 主题状态 |
+| `useAuth()` | `useAuth()` | 认证状态 |
+| `usePermission()` | `usePermission()` | 权限检查 |
+| `useDocumentTitle()` | `useDocumentTitle()` | 文档标题 |
+| `useMxCadEditor()` | `useMxCadEditor()` | CAD 编辑器 |
+| `useFileSystem()` | `useFileSystem()` | 文件系统核心 |
+| `useFileSystemCRUD()` | 合并到 `useFileSystem()` | 文件 CRUD |
+| `useFileSystemNavigation()` | 合并到 `useFileSystem()` | 导航 |
+| `useFileSystemSelection()` | 合并到 `useFileSystem()` | 选择 |
+| `useFileSystemSearch()` | 合并到 `useFileSystem()` | 搜索 |
+| `useFileSystemUI()` | 合并到 `useFileSystem()` | UI 状态 |
+| `useMxCadUploadNative()` | `useMxCadUpload()` | 文件上传 |
+| `useExternalReferenceUpload()` | `useExternalReference()` | 外部参照 |
+| `useLibrary()` | `useLibrary()` | 库管理 |
+| `useLibraryPanel()` | `useLibraryPanel()` | 库面板 |
+| `useProjectManagement()` | `useProject()` |项目管理 |
+| `useBreadcrumbCollapse()` | `useBreadcrumb()` | 面包屑 |
+| `useDirectoryImport()` | `useDirectoryImport()` | 目录导入 |
+| `useFileListPagination()` | `usePagination()` | 分页 |
+| `useFileListSearch()` | `useSearch()` | 搜索 |
+| `useSidebarSettings()` | `useSidebar()` | 侧边栏 |
+| `useTourVisibility()` | `useTour()` | 导览 |
+| `useTour()` | `useTour()` | 导览 |
+
+---
+
+## 6. 迁移任务分解
+
+### 6.1 阶段一：基础设施搭建
+
+| 任务 | 文件 | 说明 | 优先级 |
+|------|------|------|--------|
+| 创建 Vue 3 项目结构 | `src/` | 目录规划 | P0 |
+| 配置 Vite | `vite.config.ts` | Vue 插件 + mxcad 插件 | P0 |
+| 迁移样式文件 | `src/styles/` | CSS 变量系统 | P0 |
+| 创建 Vuetify 插件 | `src/plugins/vuetify.ts` | 共享 Vuetify 实例 | P0 |
+| 创建 mxcad 插件 | `src/plugins/mxcad.ts` | 初始化配置 | P0 |
+| 配置 Pinia | `src/stores/` | 状态管理 | P0 |
+| 配置 Vue Router | `src/router/` | 路由系统 | P0 |
+| 创建主题 Store | `src/stores/theme.ts` | Pinia 主题状态 | P0 |
+| 创建认证 Store | `src/stores/auth.ts` | Pinia 认证状态 | P0 |
+
+### 6.2 阶段二：核心功能迁移
+
+| 任务 | 文件 | 说明 | 优先级 |
+|------|------|------|--------|
+| 迁移 API 服务 | `src/services/` | 复用现有配置 | P0 |
+| 创建 useTheme Composable | `src/composables/useTheme.ts` | 主题 composable | P0 |
+| 创建 useAuth Composable | `src/composables/useAuth.ts` | 认证 composable | P0 |
+| 创建 usePermission Composable | `src/composables/usePermission.ts` | 权限 composable | P0 |
+| 创建 useMxCadEditor Composable | `src/composables/useMxCadEditor.ts` | CAD 编辑器 | P0 |
+| 迁移简单页面 | `views/PhoneVerification.vue` 等 | 简单页面 | P1 |
+| 迁移中等页面 | `views/Dashboard.vue` 等 | 中等页面 | P1 |
+| 迁移复杂页面 | `views/FileSystemManager.vue` 等 | 复杂页面 | P2 |
+
+### 6.3 阶段三：组件迁移
+
+| 任务 | 说明 | 优先级 |
+|------|------|--------|
+| 迁移基础 UI 组件 | Button, Modal, Toast 等 | P0 |
+| 迁移文件系统组件 | FileItem, FileGrid 等 | P1 |
+| 迁移 CAD 编辑器组件 | CADEditorDirect 内部组件 | P2 |
+| 迁移权限相关组件 | PermissionAssignment 等 | P1 |
+
+---
+
+## 7. 关键技术决策
+
+### 7.1 为什么选择共享 Vuetify 实例？
+
+1. **包体积优化**: mxcad-app 已包含 Vuetify，无需重复打包
+2. **主题同步简化**: 同一 Vuetify 实例，主题变更自动同步
+3. **UI 配置复用**: mxcad-app 的 JSON UI 配置直接可用
+
+### 7.2 状态同步策略
+
+1. **主题**: localStorage + CustomEvent 双向同步
+2. **认证**: localStorage JWT，API 层自动处理刷新
+3. **文件**: CustomEvent 同步（CAD 编辑器内部状态）
+
+### 7.3 Composables vs Hooks 转换规则
+
+| React Hook 模式 | Vue 3 Composable 模式 |
+|----------------|----------------------|
+| `useState()` | `ref()` / `reactive()` |
+| `useEffect()` | `onMounted()` + `watch()` |
+| `useCallback()` | `useCallback()` (VueUse) |
+| `useMemo()` | `computed()` |
+| `useContext()` | `inject()` + `provide()` |
+| `useRef()` | `ref()` |
+
+---
+
+## 8. 风险与缓解措施
+
+| 风险 | 影响 | 概率 | 缓解措施 |
+|------|------|------|----------|
+| mxcad-app 版本升级破坏兼容性 | 高 | 低 | 锁定版本，定期回归测试 |
+| Vuetify 实例在 Vue 3 中行为异常 | 中 | 低 | 充分测试主题切换功能 |
+| 主题同步事件丢失 | 中 | 低 | localStorage 作为 fallback |
+| Vue 3 与 Vue 2 (mxcad-app) 冲突 | 高 | 中 | mxcad-app 使用独立 Vue 实例 |
+
+---
+
+## 9. 后续步骤
+
+1. **立即行动**:
+   - 确认 mxcad-app 版本 (~1.0.60)
+   - 创建 Vue 3 概念验证 (PoC) 项目
+   - 测试 `getVuetify()` API 在 Vue 3 环境中的可用性
+
+2. **短期计划** (1-2周):
+   - 完成基础设施搭建
+   - 完成主题系统迁移
+   - 完成认证系统迁移
+
+3. **中期计划** (1-2月):
+   - 分批次迁移页面组件
+   - 进行功能回归测试
+   - 性能优化
+
+---
+
+**文档版本**: 1.0
+**审核状态**: 待审核
+**下一步**: 评审此方案，确定迁移时间表

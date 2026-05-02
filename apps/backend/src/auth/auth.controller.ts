@@ -93,9 +93,12 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '请求参数错误' })
   async register(
     @Body() registerDto: RegisterDto,
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.register(registerDto, req);
+    const result = await this.authService.register(registerDto, req);
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('login')
@@ -110,9 +113,12 @@ export class AuthController {
   @ApiResponse({ status: 401, description: '账号或密码错误' })
   async login(
     @Body() loginDto: LoginDto,
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto, req);
+    const result = await this.authService.login(loginDto, req);
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('refresh')
@@ -126,9 +132,12 @@ export class AuthController {
   @ApiResponse({ status: 401, description: '无效的刷新Token' })
   @Public()
   async refreshToken(
-    @Body() refreshTokenDto: RefreshTokenDto
+    @Body() refreshTokenDto: RefreshTokenDto,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+    const result = await this.authService.refreshToken(refreshTokenDto.refreshToken);
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('logout')
@@ -148,6 +157,7 @@ export class AuthController {
     // 清除 Cookie
     const sessionName = this.configService.get('session.name');
     response.clearCookie(sessionName);
+    response.clearCookie('auth_token', { path: '/' });
 
     return { message: '登出成功' };
   }
@@ -194,9 +204,18 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '验证码无效或已过期' })
   async verifyEmail(
     @Body() dto: VerifyEmailDto,
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.verifyEmailAndActivate(dto.email, dto.code, req);
+    const result = await this.authService.verifyEmailAndActivate(
+      dto.email,
+      dto.code,
+      req
+    );
+    if (result.accessToken) {
+      this.setAuthCookie(response, result.accessToken);
+    }
+    return result;
   }
 
   @Post('verify-email-and-register-phone')
@@ -221,9 +240,10 @@ export class AuthController {
       password: string;
       nickname?: string;
     },
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.verifyEmailAndRegisterPhone(
+    const result = await this.authService.verifyEmailAndRegisterPhone(
       dto.email,
       dto.code,
       {
@@ -235,6 +255,10 @@ export class AuthController {
       },
       req
     );
+    if (result.accessToken) {
+      this.setAuthCookie(response, result.accessToken);
+    }
+    return result;
   }
 
   @Post('resend-verification')
@@ -266,14 +290,17 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '验证码无效或令牌过期' })
   async bindEmailAndLogin(
     @Body() dto: { tempToken: string; email: string; code: string },
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.bindEmailAndLogin(
+    const result = await this.authService.bindEmailAndLogin(
       dto.tempToken,
       dto.email,
       dto.code,
       req
     );
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('bind-phone-and-login')
@@ -288,14 +315,17 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '验证码无效或令牌过期' })
   async bindPhoneAndLogin(
     @Body() dto: { tempToken: string; phone: string; code: string },
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.bindPhoneAndLogin(
+    const result = await this.authService.bindPhoneAndLogin(
       dto.tempToken,
       dto.phone,
       dto.code,
       req
     );
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('verify-phone')
@@ -310,9 +340,12 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '验证码无效或已过期' })
   async verifyPhone(
     @Body() dto: { phone: string; code: string },
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.verifyPhoneAndLogin(dto.phone, dto.code, req);
+    const result = await this.authService.verifyPhoneAndLogin(dto.phone, dto.code, req);
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('forgot-password')
@@ -521,9 +554,14 @@ export class AuthController {
   @ApiResponse({ status: 409, description: '手机号或用户名已存在' })
   async registerByPhone(
     @Body() registerDto: RegisterDto & { phone: string; code: string },
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.registerByPhone(registerDto, req);
+    const result = await this.authService.registerByPhone(registerDto, req);
+    if (result.accessToken) {
+      this.setAuthCookie(response, result.accessToken);
+    }
+    return result;
   }
 
   @Post('login-phone')
@@ -539,9 +577,12 @@ export class AuthController {
   @ApiResponse({ status: 412, description: '手机号未注册，需要跳转注册页' })
   async loginByPhone(
     @Body() dto: { phone: string; code: string },
-    @Req() req: SessionRequest
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
-    return this.authService.loginByPhone(dto.phone, dto.code, req);
+    const result = await this.authService.loginByPhone(dto.phone, dto.code, req);
+    this.setAuthCookie(response, result.accessToken);
+    return result;
   }
 
   @Post('bind-phone')
@@ -766,6 +807,7 @@ export class AuthController {
 
     try {
       const result = await this.authService.loginWithWechat(code, state);
+      this.setAuthCookie(res, result.accessToken);
       redirectToFrontend('/login', { ...result });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '未知错误';
@@ -809,5 +851,21 @@ export class AuthController {
     @Request() req: AuthenticatedRequest
   ): Promise<WechatUnbindResponseDto> {
     return this.authService.unbindWechat(req.user.id);
+  }
+
+  /**
+   * 设置 JWT Cookie，用于 <img> 标签等无法携带 Authorization 头的请求
+   */
+  private setAuthCookie(response: ExpressResponse, accessToken: string): void {
+    const cookieSecure = this.configService.get<boolean>('session.cookieSecure');
+    const maxAge = 60 * 60 * 1000; // 1 小时，与 JWT token 过期时间一致
+
+    response.cookie('auth_token', accessToken, {
+      httpOnly: true,
+      secure: cookieSecure ?? false,
+      sameSite: 'lax',
+      maxAge,
+      path: '/',
+    });
   }
 }

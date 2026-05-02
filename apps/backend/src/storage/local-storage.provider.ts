@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -157,7 +157,7 @@ export class LocalStorageProvider implements StorageProvider {
     try {
       const absolutePath = this.getAbsolutePath(key);
       if (!(await this.fileExists(key))) {
-        throw new Error(`文件不存在: ${key}`);
+        throw new NotFoundException(`文件不存在: ${key}`);
       }
       const data = await fsPromises.readFile(absolutePath);
       this.logger.log(`文件下载成功: ${key}`);
@@ -195,13 +195,13 @@ export class LocalStorageProvider implements StorageProvider {
 
       // 检查路径是否存在
       if (!(await this.fileExists(key))) {
-        throw new Error(`文件不存在: ${key}`);
+        throw new NotFoundException(`文件不存在: ${key}`);
       }
 
       // 检查路径是否是目录
       const stats = await fsPromises.stat(absolutePath);
       if (stats.isDirectory()) {
-        throw new Error(`路径是目录而非文件: ${key}`);
+        throw new BadRequestException(`路径是目录而非文件: ${key}`);
       }
 
       return createReadStream(absolutePath);

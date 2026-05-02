@@ -43,6 +43,7 @@ import {
   ApiProduces,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
@@ -182,6 +183,7 @@ export class FileSystemController {
   }
 
   @Post('trash/restore')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '恢复回收站项目' })
   @ApiResponse({
@@ -194,6 +196,7 @@ export class FileSystemController {
   }
 
   @Delete('trash/items')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '永久删除回收站项目' })
   @ApiResponse({
@@ -206,6 +209,7 @@ export class FileSystemController {
   }
 
   @Delete('trash')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '清空回收站' })
   @ApiResponse({
@@ -434,6 +438,7 @@ export class FileSystemController {
   }
 
   @Get('nodes/:nodeId/thumbnail')
+  @Public()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取文件节点缩略图' })
   @ApiProduces('image/jpeg')

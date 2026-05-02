@@ -15,6 +15,7 @@ import {
   Logger,
   OnModuleInit,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
@@ -336,7 +337,7 @@ export class CacheWarmupService implements OnModuleInit {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error(
+      throw new InternalServerErrorException(
         `预热用户 ${userId} 失败: ${error instanceof Error ? error.message : '未知错误'}`
       );
     }
@@ -396,7 +397,7 @@ export class CacheWarmupService implements OnModuleInit {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error(
+      throw new InternalServerErrorException(
         `预热项目 ${projectId} 失败: ${error instanceof Error ? error.message : '未知错误'}`
       );
     }

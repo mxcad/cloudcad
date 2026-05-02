@@ -49,8 +49,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { MxCadService } from './mxcad.service';
-import { DatabaseService } from '../../database/database.service';
-import { FileSystemNode, Prisma } from '@prisma/client';
+import { FileSystemNode } from '@prisma/client';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
 import { UploadFilesDto } from '../dto/upload-files.dto';
@@ -103,7 +102,6 @@ export class MxCadController {
 
   constructor(
     private readonly mxCadService: MxCadService,
-    private readonly prisma: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<AppConfig>,
     private readonly storageService: StorageService,
@@ -574,10 +572,10 @@ export class MxCadController {
 
     // ==================== 权限验证 ====================
     // 1. 验证目标父节点存在
-    const targetParentNode = await this.prisma.fileSystemNode.findUnique({
-      where: { id: dto.targetParentId, deletedAt: null },
-      select: { id: true, isFolder: true, personalSpaceKey: true },
-    });
+    const targetParentNode = await this.mxCadService.findNodeByIdWithDeletedAt(
+      dto.targetParentId,
+      { id: true, isFolder: true, personalSpaceKey: true }
+    );
 
     if (!targetParentNode) {
       throw new BadRequestException('目标文件夹不存在');
@@ -595,10 +593,10 @@ export class MxCadController {
         dto.targetParentId
       );
       const rootNode = rootId
-        ? await this.prisma.fileSystemNode.findUnique({
-            where: { id: rootId },
-            select: { personalSpaceKey: true, ownerId: true },
-          })
+        ? await this.mxCadService.findNodeById(
+            rootId,
+            { personalSpaceKey: true, ownerId: true }
+          )
         : null;
 
       // 验证是否为当前用户的私人空间
@@ -1689,20 +1687,10 @@ export class MxCadController {
       );
 
       // 通过节点 ID 查找节点，验证用户是否有访问权限
-      const node = await this.prisma.fileSystemNode.findFirst({
-        where: {
-          id: nodeId,
-          isFolder: false,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          ownerId: true,
-          parentId: true,
-          isRoot: true,
-        },
-      });
+      const node = await this.mxCadService.findFileNodeByIdNotDeleted(
+        nodeId,
+        { id: true, name: true, ownerId: true, parentId: true, isRoot: true }
+      );
 
       this.logger.log(
         `查找文件节点: nodeId=${nodeId}, 找到=${node ? '是' : '否'}`
@@ -1885,17 +1873,10 @@ export class MxCadController {
       }
 
       // 2. 验证用户存在且状态正常
-      const userData = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          nickname: true,
-          roleId: true,
-          status: true,
-        },
-      });
+      const userData = await this.mxCadService.findUserById(
+        payload.sub,
+        { id: true, email: true, username: true, nickname: true, roleId: true, status: true }
+      );
 
       if (!userData) {
         throw new UnauthorizedException('用户不存在');
@@ -1976,10 +1957,10 @@ export class MxCadController {
       throw new UnauthorizedException('JWT token无效或已过期');
     }
 
-    const userData = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, status: true },
-    });
+    const userData = await this.mxCadService.findUserById(
+      payload.sub,
+      { id: true, status: true }
+    );
 
     if (!userData) {
       throw new UnauthorizedException('用户不存在');
@@ -1998,26 +1979,7 @@ export class MxCadController {
    * @returns 所有节点ID数组
    */
   private async getAllNodeIdsInProject(projectId: string): Promise<string[]> {
-    const nodeIds: string[] = [];
-
-    const collectNodeIds = async (nodeId: string): Promise<void> => {
-      const children = await this.prisma.fileSystemNode.findMany({
-        where: { parentId: nodeId, deletedAt: null },
-        select: { id: true, isFolder: true },
-      });
-
-      for (const child of children) {
-        nodeIds.push(child.id);
-        if (child.isFolder) {
-          await collectNodeIds(child.id);
-        }
-      }
-    };
-
-    nodeIds.push(projectId); // 包含项目根目录本身
-    await collectNodeIds(projectId);
-
-    return nodeIds;
+    return this.mxCadService.getAllNodeIdsInProject(projectId);
   }
 
   /**
@@ -2033,37 +1995,7 @@ export class MxCadController {
     FileSystemNode,
     'id' | 'name' | 'ownerId' | 'parentId' | 'isRoot' | 'fileHash'
   > | null> {
-    try {
-      const where: Prisma.FileSystemNodeWhereInput = {
-        fileHash: fileHash,
-        isFolder: false,
-        deletedAt: null,
-      };
-
-      // 如果指定了 projectId，只查找该项目中的节点
-      if (projectId) {
-        const allNodeIds = await this.getAllNodeIdsInProject(projectId);
-        where.id = { in: allNodeIds };
-      }
-
-      // 查找文件哈希匹配的文件节点
-      const node = await this.prisma.fileSystemNode.findFirst({
-        where,
-        select: {
-          id: true,
-          name: true,
-          ownerId: true,
-          parentId: true,
-          isRoot: true,
-          fileHash: true,
-        },
-      });
-
-      return node;
-    } catch (error) {
-      this.logger.error(`查找文件节点失败: ${error.message}`, error);
-      return null;
-    }
+    return this.mxCadService.findFileNodeByHash(fileHash, projectId);
   }
 
   /**
@@ -2072,31 +2004,7 @@ export class MxCadController {
    * @returns 项目根目录节点或 null
    */
   private async getProjectRootByNodeId(nodeId: string): Promise<any> {
-    try {
-      // 先检查当前节点是否是项目根目录
-      const currentNode = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { id: true, isRoot: true, parentId: true },
-      });
-
-      if (!currentNode) {
-        return null;
-      }
-
-      if (currentNode.isRoot) {
-        return currentNode;
-      }
-
-      // 如果不是根目录，递归查找父节点
-      if (currentNode.parentId) {
-        return this.getProjectRootByNodeId(currentNode.parentId);
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error(`查找项目根目录失败: ${error.message}`, error);
-      return null;
-    }
+    return this.mxCadService.getProjectRootByNodeId(nodeId);
   }
 
   /**
