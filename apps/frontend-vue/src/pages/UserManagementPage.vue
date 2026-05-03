@@ -4,7 +4,7 @@
     <v-snackbar v-model="showSuccess" color="success" :timeout="3000" location="top right">
       {{ successMessage }}
       <template v-slot:actions>
-        <v-btn color="white" variant="text" @click="showSuccess = false">关闭</v-btn>
+        <v-btn color="white" variant="text" @click="showSuccess = false">{{ t('common.close') }}</v-btn>
       </template>
     </v-snackbar>
 
@@ -22,7 +22,7 @@
         <span>{{ error }}</span>
         <v-btn variant="text" color="error" class="ml-auto" @click="loadData" :loading="loading">
           <v-icon size="small" class="mr-1">mdi-refresh</v-icon>
-          重试
+          {{ t('common.retry') }}
         </v-btn>
       </div>
     </v-alert>
@@ -30,9 +30,9 @@
     <!-- 访问被拒绝 -->
     <div v-if="!canAccess" class="text-center py-12">
       <v-icon size="64" color="error" class="mb-4">mdi-alert-circle</v-icon>
-      <h2 class="text-h4 font-weight-bold mb-2">访问被拒绝</h2>
-      <p class="text-body-1 mb-1">您没有权限访问此页面。</p>
-      <p class="text-body-2 text-medium-emphasis">请联系管理员获取用户管理权限。</p>
+      <h2 class="text-h4 font-weight-bold mb-2">{{ t('userManagement.accessDenied') }}</h2>
+      <p class="text-body-1 mb-1">{{ t('userManagement.noPermission') }}</p>
+      <p class="text-body-2 text-medium-emphasis">{{ t('userManagement.contactAdmin') }}</p>
     </div>
 
     <!-- 有限访问状态 -->
@@ -40,21 +40,21 @@
       <v-card variant="outlined" class="mx-auto" style="max-width: 500px;">
         <v-card-text class="text-center py-10">
           <v-icon size="48" color="warning" class="mb-4">mdi-alert-circle</v-icon>
-          <h2 class="text-h5 font-weight-bold mb-3">无法查看用户列表</h2>
-          <p class="text-body-1 mb-4">您没有查看用户列表的权限，但拥有以下操作权限：</p>
+          <h2 class="text-h5 font-weight-bold mb-3">{{ t('userManagement.cannotViewList') }}</h2>
+          <p class="text-body-1 mb-4">{{ t('userManagement.noListPermission') }}</p>
           <div class="d-flex flex-wrap justify-center gap-2 mb-4">
             <v-chip v-if="hasPermission('SYSTEM_USER_CREATE')" color="success" variant="tonal">
-              创建用户
+              {{ t('userManagement.createUser') }}
             </v-chip>
             <v-chip v-if="hasPermission('SYSTEM_USER_UPDATE')" color="primary" variant="tonal">
-              更新用户
+              {{ t('userManagement.updateUser') }}
             </v-chip>
             <v-chip v-if="hasPermission('SYSTEM_USER_DELETE')" color="error" variant="tonal">
-              删除用户
+              {{ t('userManagement.deleteUser') }}
             </v-chip>
           </div>
           <p class="text-body-2 text-medium-emphasis">
-            请联系管理员授予查看用户列表的权限（SYSTEM_USER_READ）
+            {{ t('userManagement.grantPermission') }}
           </p>
         </v-card-text>
       </v-card>
@@ -72,9 +72,9 @@
             <v-icon color="white">mdi-account-group</v-icon>
           </div>
           <div>
-            <h1 class="text-h4 font-weight-bold m-0">用户管理</h1>
+            <h1 class="text-h4 font-weight-bold m-0">{{ t('userManagement.title') }}</h1>
             <p class="text-body-2 text-medium-emphasis m-0 mt-1">
-              管理团队成员、分配角色及存储配额
+              {{ t('userManagement.subtitle') }}
             </p>
           </div>
         </div>
@@ -86,7 +86,7 @@
             :loading="loading"
           >
             <v-icon class="mr-1">mdi-sparkles</v-icon>
-            清理已注销用户
+            {{ t('userManagement.cleanupDeletedUsers') }}
           </v-btn>
           <v-btn
             v-if="hasPermission('SYSTEM_USER_CREATE')"
@@ -95,15 +95,15 @@
             :loading="loading"
           >
             <v-icon class="mr-1">mdi-account-plus</v-icon>
-            添加用户
+            {{ t('userManagement.addUser') }}
           </v-btn>
         </div>
       </div>
 
       <!-- 用户Tab切换 -->
       <v-tabs v-model="userTab" class="mb-6" bg-color="transparent">
-        <v-tab value="active">活跃用户</v-tab>
-        <v-tab value="deleted">已注销</v-tab>
+        <v-tab value="active">{{ t('userManagement.activeUsers') }}</v-tab>
+        <v-tab value="deleted">{{ t('userManagement.deleted') }}</v-tab>
       </v-tabs>
 
       <!-- 筛选和搜索 -->
@@ -114,7 +114,7 @@
               <v-text-field
                 v-model="searchQuery"
                 prepend-icon="mdi-magnify"
-                label="搜索用户（邮箱、用户名、昵称）"
+                :label="t('userManagement.searchPlaceholder')"
                 variant="outlined"
                 density="compact"
                 clearable
@@ -125,7 +125,7 @@
               <v-select
                 v-model="roleFilter"
                 :items="roleOptions"
-                label="角色筛选"
+                :label="t('userManagement.roleFilter')"
                 variant="outlined"
                 density="compact"
                 clearable
@@ -136,7 +136,7 @@
               <v-select
                 v-model="sortValue"
                 :items="sortOptions"
-                label="排序方式"
+                :label="t('userManagement.sortBy')"
                 variant="outlined"
                 density="compact"
                 @update:model-value="currentPage = 1"
@@ -147,7 +147,7 @@
           <v-row align="center" class="pt-4">
             <v-col>
               <span class="text-body-2 text-medium-emphasis">
-                共 <strong>{{ totalUsers }}</strong> 位用户，每页 {{ pageSize }} 条
+                {{ t('userManagement.totalUsers', { count: totalUsers, pageSize }) }}
               </span>
             </v-col>
             <v-col class="text-right">
@@ -167,7 +167,7 @@
         <!-- 加载状态 -->
         <div v-if="loading && users.length === 0" class="text-center py-12">
           <v-progress-circular indeterminate color="primary" size="48" class="mb-4" />
-          <p class="text-body-1 text-medium-emphasis">加载用户列表...</p>
+          <p class="text-body-1 text-medium-emphasis">{{ t('userManagement.loadingList') }}</p>
         </div>
 
         <!-- 空状态 -->
@@ -177,14 +177,14 @@
             <v-icon size="48" color="medium-emphasis">mdi-account-group</v-icon>
           </div>
           <h3 class="text-h5 font-weight-bold mb-2">
-            {{ userTab === 'deleted' ? '暂无已注销用户' : '暂无用户' }}
+            {{ userTab === 'deleted' ? t('userManagement.noDeletedUsers') : t('userManagement.noUsers') }}
           </h3>
           <p class="text-body-1 text-medium-emphasis mb-4" style="max-width: 400px; margin: 0 auto;">
             {{ searchQuery
-              ? '未找到匹配的用户，请尝试其他搜索条件'
+              ? t('userManagement.noMatch')
               : userTab === 'deleted'
-                ? '当前没有已注销的用户'
-                : '还没有任何用户，点击上方按钮添加第一个用户'
+                ? t('userManagement.noDeletedUsersNow')
+                : t('userManagement.noUsersHint')
             }}
           </p>
           <v-btn
@@ -193,7 +193,7 @@
             @click="openCreateModal"
           >
             <v-icon class="mr-1">mdi-account-plus</v-icon>
-            添加用户
+            {{ t('userManagement.addUser') }}
           </v-btn>
         </div>
 
@@ -226,12 +226,12 @@
 
           <template v-slot:item.email="{ item }">
             <span v-if="item.email">{{ item.email }}</span>
-            <span v-else class="text-medium-emphasis">未绑定</span>
+            <span v-else class="text-medium-emphasis">{{ t('userManagement.notBound') }}</span>
           </template>
 
           <template v-slot:item.phone="{ item }">
             <span v-if="item.phone">{{ item.phone }}</span>
-            <span v-else class="text-medium-emphasis">未绑定</span>
+            <span v-else class="text-medium-emphasis">{{ t('userManagement.notBound') }}</span>
           </template>
 
           <template v-slot:item.role="{ item }">
@@ -243,7 +243,7 @@
           <template v-slot:item.quota="{ item }">
             <v-btn variant="tonal" density="compact" @click="openQuotaModal(item)">
               <v-icon class="mr-1">mdi-harddisk</v-icon>
-              配额
+              {{ t('userManagement.quota') }}
             </v-btn>
           </template>
 
@@ -288,7 +288,7 @@
     <v-dialog v-model="showModal" max-width="600px">
       <v-card>
         <v-card-title>
-          {{ editingUser ? '编辑用户' : '添加新用户' }}
+          {{ editingUser ? t('userManagement.editUser') : t('userManagement.addNewUser') }}
         </v-card-title>
         <v-card-text>
           <v-form ref="formRef" v-model="validForm" @submit.prevent="handleSubmit">
@@ -296,7 +296,7 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="formData.username"
-                  label="用户名"
+                  :label="t('userManagement.username')"
                   :rules="usernameRules"
                   variant="outlined"
                   required
@@ -305,7 +305,7 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="formData.email"
-                  label="邮箱"
+                  :label="t('userManagement.email')"
                   :rules="emailRules"
                   variant="outlined"
                   :required="mailEnabled"
@@ -314,7 +314,7 @@
               <v-col v-if="smsEnabled" cols="12" md="6">
                 <v-text-field
                   v-model="formData.phone"
-                  label="手机号"
+                  :label="t('userManagement.phone')"
                   variant="outlined"
                   counter="11"
                 />
@@ -324,22 +324,22 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="formData.password"
-                  :label="editingUser ? '新密码' : '密码'"
+                  :label="editingUser ? t('userManagement.newPassword') : t('userManagement.password')"
                   type="password"
                   :rules="passwordRules"
                   variant="outlined"
                   :required="!editingUser"
                   :persistent-hint="true"
-                  :hint="editingUser ? '留空则不修改' : '至少8个字符'"
+                  :hint="editingUser ? t('userManagement.leaveEmptyNoChange') : t('userManagement.min8Chars')"
                 />
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="formData.nickname"
-                  label="昵称"
+                  :label="t('userManagement.nickname')"
                   variant="outlined"
                   persistent-hint
-                  hint="可选"
+                  :hint="t('userManagement.optional')"
                 />
               </v-col>
             </v-row>
@@ -348,7 +348,7 @@
                 <v-select
                   v-model="formData.roleId"
                   :items="roleSelectOptions"
-                  label="角色"
+                  :label="t('userManagement.role')"
                   variant="outlined"
                   required
                 />
@@ -359,7 +359,7 @@
                 <v-select
                   v-model="formData.status"
                   :items="statusOptions"
-                  label="账户状态"
+                  :label="t('userManagement.accountStatus')"
                   variant="outlined"
                 />
               </v-col>
@@ -367,10 +367,10 @@
           </v-form>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="showModal = false" :disabled="loading">取消</v-btn>
+          <v-btn variant="text" @click="showModal = false" :disabled="loading">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" @click="handleSubmit" :loading="loading">
             <v-icon v-if="loading" class="mr-1">mdi-loading</v-icon>
-            {{ editingUser ? '保存修改' : '创建用户' }}
+            {{ editingUser ? t('userManagement.saveChanges') : t('userManagement.createUser') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -379,30 +379,30 @@
     <!-- 删除确认模态框 -->
     <v-dialog v-model="showDeleteConfirm" max-width="500px">
       <v-card>
-        <v-card-title>确认删除用户</v-card-title>
+        <v-card-title>{{ t('userManagement.confirmDeleteUser') }}</v-card-title>
         <v-card-text>
           <v-alert type="warning" variant="tonal" class="mb-4">
             <div class="d-flex align-start gap-2">
               <v-icon size="24">mdi-alert-circle</v-icon>
               <div>
-                <p class="font-weight-medium mb-1">注销用户</p>
+                <p class="font-weight-medium mb-1">{{ t('userManagement.deactivateUser') }}</p>
                 <p class="text-body-2 m-0">
-                  {{ deleteImmediately ? '立即注销将彻底删除用户数据，无法恢复！' : '用户注销后将进入30天冷静期，冷静期后数据将自动清理。' }}
+                  {{ deleteImmediately ? t('userManagement.immediateDeleteWarning') : t('userManagement.deactivateGracePeriod') }}
                 </p>
               </div>
             </div>
           </v-alert>
-          <p class="text-body-1 mb-4">确定要注销该用户吗？</p>
+          <p class="text-body-1 mb-4">{{ t('userManagement.confirmDeactivate') }}</p>
           <v-checkbox
             v-model="deleteImmediately"
-            label="立即注销（不等待30天冷静期，直接清理数据）"
+            :label="t('userManagement.immediateDeactivateOption')"
           />
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="cancelDelete" :disabled="loading">取消</v-btn>
+          <v-btn variant="text" @click="cancelDelete" :disabled="loading">{{ t('common.cancel') }}</v-btn>
           <v-btn color="error" @click="confirmDelete" :loading="loading">
             <v-icon v-if="loading" class="mr-1">mdi-loading</v-icon>
-            {{ deleteImmediately ? '立即注销' : '确认删除' }}
+            {{ deleteImmediately ? t('userManagement.immediateDeactivate') : t('common.confirmDelete') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -411,7 +411,7 @@
     <!-- 存储配额配置模态框 -->
     <v-dialog v-model="showQuotaModal" max-width="450px">
       <v-card>
-        <v-card-title>配置存储配额</v-card-title>
+        <v-card-title>{{ t('userManagement.configureQuota') }}</v-card-title>
         <v-card-text>
           <div v-if="quotaUser" class="mb-6">
             <div class="d-flex align-center gap-3">
@@ -430,7 +430,7 @@
           <div class="mb-4">
             <label class="text-body-2 font-weight-medium mb-2 d-flex align-center gap-2">
               <v-icon size="16">mdi-harddisk</v-icon>
-              个人空间存储配额
+              {{ t('userManagement.personalSpaceQuota') }}
             </label>
             <v-text-field
               v-model.number="userQuota"
@@ -439,15 +439,15 @@
               variant="outlined"
               min="0"
             />
-            <p class="text-body-2 text-medium-emphasis mt-2">默认配额：{{ formatQuota(defaultQuota) }}</p>
+            <p class="text-body-2 text-medium-emphasis mt-2">{{ t('userManagement.defaultQuota') }}{{ formatQuota(defaultQuota) }}</p>
           </div>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="showQuotaModal = false" :disabled="quotaLoading">取消</v-btn>
+          <v-btn variant="text" @click="showQuotaModal = false" :disabled="quotaLoading">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" @click="saveUserQuota" :loading="quotaLoading">
             <v-icon v-if="quotaLoading" class="mr-1">mdi-loading</v-icon>
             <v-icon v-else class="mr-1">mdi-content-save</v-icon>
-            保存
+            {{ t('common.save') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -456,40 +456,40 @@
     <!-- 用户数据清理模态框 -->
     <v-dialog v-model="showCleanupModal" max-width="450px">
       <v-card>
-        <v-card-title>清理已注销用户数据</v-card-title>
+        <v-card-title>{{ t('userManagement.cleanupUserData') }}</v-card-title>
         <v-card-text>
           <div class="d-flex justify-around mb-6">
             <div class="text-center">
               <div class="text-h4 font-weight-bold">{{ cleanupStats?.pendingCleanup ?? 0 }}</div>
-              <div class="text-body-2 text-medium-emphasis">待清理用户</div>
+              <div class="text-body-2 text-medium-emphasis">{{ t('userManagement.pendingCleanup') }}</div>
             </div>
             <div class="text-center">
-              <div class="text-h4 font-weight-bold">{{ cleanupStats?.delayDays ?? 30 }} 天</div>
-              <div class="text-body-2 text-medium-emphasis">冷静期</div>
+              <div class="text-h4 font-weight-bold">{{ cleanupStats?.delayDays ?? 30 }} {{ t('userManagement.days') }}</div>
+              <div class="text-body-2 text-medium-emphasis">{{ t('userManagement.gracePeriod') }}</div>
             </div>
             <div class="text-center">
               <div class="text-h4 font-weight-bold">
-                {{ cleanupStats?.expiryDate ? new Date(cleanupStats.expiryDate).toLocaleDateString('zh-CN') : '-' }}
+                {{ cleanupStats?.expiryDate ? new Date(cleanupStats.expiryDate).toLocaleDateString() : '-' }}
               </div>
-              <div class="text-body-2 text-medium-emphasis">过期截止</div>
+              <div class="text-body-2 text-medium-emphasis">{{ t('userManagement.expiryDate') }}</div>
             </div>
           </div>
           <p class="text-body-1 mb-3">
-            点击"立即清理"将清理所有已注销超过 {{ cleanupStats?.delayDays ?? 30 }} 天的用户数据，包括：
+            {{ t('userManagement.cleanupDesc1') }} {{ cleanupStats?.delayDays ?? 30 }} {{ t('userManagement.cleanupDesc2') }}
           </p>
           <ul class="pl-4">
-            <li>项目成员关系</li>
-            <li>用户拥有的项目/个人空间</li>
-            <li>审计日志</li>
-            <li>文件存储（标记待清理）</li>
+            <li>{{ t('userManagement.projectMembership') }}</li>
+            <li>{{ t('userManagement.userProjects') }}</li>
+            <li>{{ t('userManagement.auditLogs') }}</li>
+            <li>{{ t('userManagement.fileStorage') }}</li>
           </ul>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="showCleanupModal = false" :disabled="cleanupLoading">取消</v-btn>
+          <v-btn variant="text" @click="showCleanupModal = false" :disabled="cleanupLoading">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" @click="handleCleanupTrigger" :loading="cleanupLoading">
             <v-icon v-if="cleanupLoading" class="mr-1">mdi-loading</v-icon>
             <v-icon v-else class="mr-1">mdi-sparkles</v-icon>
-            立即清理
+            {{ t('userManagement.cleanupNow') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -501,11 +501,14 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useTheme } from 'vuetify';
 import { useDocumentTitle } from '@/composables/useDocumentTitle';
+import { useI18n } from '@/composables/useI18n';
 import { usersApi, rolesApi, runtimeConfigApi, projectsApi, userCleanupApi } from '@/services/api';
 import { SystemPermission, getRoleDisplayName } from '@/constants/permissions';
 import { usePermission } from '@/composables/usePermission';
 
-useDocumentTitle('用户管理');
+const { t } = useI18n();
+
+useDocumentTitle(() => t('userManagement.title'));
 
 const { isDark } = useTheme();
 const { hasPermission } = usePermission();
@@ -569,19 +572,19 @@ const successMessage = ref('');
 const formRef = ref();
 const validForm = ref(false);
 const usernameRules = [
-  (v: string) => !!v || '用户名不能为空',
-  (v: string) => (v && v.length >= 3) || '用户名至少3个字符',
-  (v: string) => (v && v.length <= 20) || '用户名最多20个字符',
-  (v: string) => /^[a-zA-Z0-9_]+$/.test(v) || '用户名只能包含字母、数字和下划线'
+  (v: string) => !!v || t('userManagement.usernameRequired'),
+  (v: string) => (v && v.length >= 3) || t('userManagement.usernameMin3'),
+  (v: string) => (v && v.length <= 20) || t('userManagement.usernameMax20'),
+  (v: string) => /^[a-zA-Z0-9_]+$/.test(v) || t('userManagement.usernamePattern')
 ];
 const emailRules = [
-  (v: string) => !mailEnabled.value || !!v || '邮箱不能为空',
-  (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || '请输入有效的邮箱地址'
+  (v: string) => !mailEnabled.value || !!v || t('userManagement.emailRequired'),
+  (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('userManagement.invalidEmail')
 ];
 const passwordRules = [
-  (v: string) => editingUser.value || !!v || '密码不能为空',
-  (v: string) => !v || v.length >= 8 || '密码至少8个字符',
-  (v: string) => !v || v.length <= 50 || '密码最多50个字符'
+  (v: string) => editingUser.value || !!v || t('userManagement.passwordRequired'),
+  (v: string) => !v || v.length >= 8 || t('userManagement.passwordMin8'),
+  (v: string) => !v || v.length <= 50 || t('userManagement.passwordMax50')
 ];
 
 // 计算属性
@@ -596,17 +599,17 @@ const sortValue = computed({
   }
 });
 
-const sortOptions = [
-  { title: '创建时间（降序）', value: 'createdAt-desc' },
-  { title: '创建时间（升序）', value: 'createdAt-asc' },
-  { title: '用户名（升序）', value: 'username-asc' },
-  { title: '用户名（降序）', value: 'username-desc' },
-  { title: '邮箱（升序）', value: 'email-asc' },
-  { title: '邮箱（降序）', value: 'email-desc' }
-];
+const sortOptions = computed(() => [
+  { title: t('userManagement.createdAtDesc'), value: 'createdAt-desc' },
+  { title: t('userManagement.createdAtAsc'), value: 'createdAt-asc' },
+  { title: t('userManagement.usernameAsc'), value: 'username-asc' },
+  { title: t('userManagement.usernameDesc'), value: 'username-desc' },
+  { title: t('userManagement.emailAsc'), value: 'email-asc' },
+  { title: t('userManagement.emailDesc'), value: 'email-desc' }
+]);
 
 const roleOptions = computed(() => [
-  { title: '所有角色', value: '' },
+  { title: t('userManagement.allRoles'), value: '' },
   ...roles.value.map((r: any) => ({
     title: getRoleDisplayName(r.name, r.isSystem),
     value: r.id
@@ -621,20 +624,20 @@ const roleSelectOptions = computed(() =>
 );
 
 const statusOptions = [
-  { title: '正常', value: 'ACTIVE' },
-  { title: '未激活', value: 'INACTIVE' },
-  { title: '已禁用', value: 'SUSPENDED' }
+  { title: t('userManagement.active'), value: 'ACTIVE' },
+  { title: t('userManagement.inactive'), value: 'INACTIVE' },
+  { title: t('userManagement.suspended'), value: 'SUSPENDED' }
 ];
 
 const headers = computed(() => {
   const baseHeaders = [
-    { key: 'user', title: '用户', sortable: false },
-    ...(mailEnabled.value ? [{ key: 'email', title: '邮箱', sortable: false }] : []),
-    ...(smsEnabled.value ? [{ key: 'phone', title: '手机号', sortable: false }] : []),
-    { key: 'role', title: '角色', sortable: false },
-    { key: 'quota', title: '存储配额', sortable: false },
-    { key: 'status', title: '状态', sortable: false },
-    { key: 'actions', title: '操作', sortable: false }
+    { key: 'user', title: t('userManagement.user'), sortable: false },
+    ...(mailEnabled.value ? [{ key: 'email', title: t('userManagement.email'), sortable: false }] : []),
+    ...(smsEnabled.value ? [{ key: 'phone', title: t('userManagement.phone'), sortable: false }] : []),
+    { key: 'role', title: t('userManagement.role'), sortable: false },
+    { key: 'quota', title: t('userManagement.storageQuota'), sortable: false },
+    { key: 'status', title: t('userManagement.status'), sortable: false },
+    { key: 'actions', title: t('userManagement.actions'), sortable: false }
   ];
   return baseHeaders;
 });
@@ -663,7 +666,7 @@ const loadRuntimeConfig = async () => {
     mailEnabled.value = data?.mailEnabled === true;
     smsEnabled.value = data?.smsEnabled === true;
   } catch (err) {
-    console.error('加载运行时配置失败:', err);
+    console.error(t('userManagement.loadConfigFailed'), err);
     mailEnabled.value = false;
     smsEnabled.value = false;
   }
@@ -674,7 +677,7 @@ const loadRoles = async () => {
     const response = await rolesApi.list();
     roles.value = response.data;
   } catch (err) {
-    console.error('加载角色列表失败:', err);
+    console.error(t('userManagement.loadRolesFailed'), err);
   }
 };
 
@@ -694,7 +697,7 @@ const loadData = async () => {
     users.value = response.data?.users || [];
     totalUsers.value = response.data?.total || users.value.length;
   } catch (err) {
-    error.value = '加载用户列表失败';
+    error.value = t('userManagement.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -709,7 +712,7 @@ const loadCleanupStats = async () => {
       delayDays: response.data?.delayDays ?? 30
     };
   } catch (err) {
-    console.error('加载清理统计失败:', err);
+    console.error(t('userManagement.loadCleanupStatsFailed'), err);
   }
 };
 
@@ -723,16 +726,16 @@ const handleCleanupTrigger = async () => {
   try {
     const response = await userCleanupApi.trigger();
     if (response.data?.success) {
-      successMessage.value = `清理完成: 处理 ${response.data.processedUsers} 个用户，删除 ${response.data.deletedMembers} 个成员关系、${response.data.deletedProjects} 个项目`;
+      successMessage.value = t('userManagement.cleanupComplete', { processedUsers: response.data.processedUsers, deletedMembers: response.data.deletedMembers, deletedProjects: response.data.deletedProjects });
       showSuccess.value = true;
     } else {
-      const errMsg = response.data?.errors?.[0] || '未知错误';
-      error.value = `清理失败: ${errMsg}`;
+      const errMsg = response.data?.errors?.[0] || t('userManagement.unknownError');
+      error.value = t('userManagement.cleanupFailed', { error: errMsg });
     }
     showCleanupModal.value = false;
     await loadCleanupStats();
   } catch (err) {
-    error.value = '清理操作失败';
+    error.value = t('userManagement.cleanupOperationFailed');
   } finally {
     cleanupLoading.value = false;
   }
@@ -787,7 +790,7 @@ const handleSubmit = async () => {
         updateData.phone = formData.value.phone;
       }
       await usersApi.update(editingUser.value.id, updateData);
-      successMessage.value = '用户更新成功';
+      successMessage.value = t('userManagement.userUpdateSuccess');
     } else {
       const createData: any = {
         username: formData.value.username,
@@ -800,13 +803,13 @@ const handleSubmit = async () => {
         createData.phone = formData.value.phone;
       }
       await usersApi.create(createData);
-      successMessage.value = '用户创建成功';
+      successMessage.value = t('userManagement.userCreateSuccess');
     }
     showSuccess.value = true;
     showModal.value = false;
     await loadData();
   } catch (err) {
-    error.value = editingUser.value ? '更新用户失败' : '创建用户失败';
+    error.value = editingUser.value ? t('userManagement.updateUserFailed') : t('userManagement.createUserFailed');
   } finally {
     loading.value = false;
   }
@@ -825,15 +828,15 @@ const confirmDelete = async () => {
   try {
     if (deleteImmediately.value) {
       await usersApi.deleteImmediately(userToDelete.value);
-      successMessage.value = '用户立即注销成功';
+      successMessage.value = t('userManagement.userImmediateDeleteSuccess');
     } else {
       await usersApi.delete(userToDelete.value);
-      successMessage.value = '用户删除成功';
+      successMessage.value = t('userManagement.userDeleteSuccess');
     }
     showSuccess.value = true;
     await loadData();
   } catch (err) {
-    error.value = '删除用户失败';
+    error.value = t('userManagement.deleteUserFailed');
   } finally {
     loading.value = false;
     showDeleteConfirm.value = false;
@@ -852,11 +855,11 @@ const restoreUser = async (id: string) => {
   loading.value = true;
   try {
     await usersApi.restore(id);
-    successMessage.value = '用户已恢复';
+    successMessage.value = t('userManagement.userRestored');
     showSuccess.value = true;
     await loadData();
   } catch (err) {
-    error.value = '恢复用户失败';
+    error.value = t('userManagement.restoreUserFailed');
   } finally {
     loading.value = false;
   }
@@ -887,8 +890,8 @@ const openQuotaModal = async (user: any) => {
       userQuota.value = defaultQuota.value;
     }
   } catch (err) {
-    console.error('获取用户配额失败:', err);
-    error.value = '获取用户配额失败';
+    console.error(t('userManagement.getQuotaFailed'), err);
+    error.value = t('userManagement.cannotGetPersonalSpace');
   } finally {
     quotaLoading.value = false;
   }
@@ -903,17 +906,17 @@ const saveUserQuota = async () => {
     const personalSpace = personalSpaceResponse.data;
 
     if (!personalSpace || !personalSpace.id) {
-      error.value = '无法获取用户个人空间';
+      error.value = t('userManagement.cannotGetPersonalSpace');
       return;
     }
 
     await projectsApi.updateStorageQuota(personalSpace.id, userQuota.value);
-    successMessage.value = `用户 ${quotaUser.value.nickname || quotaUser.value.username} 的配额已更新为 ${userQuota.value} GB`;
+    successMessage.value = t('userManagement.quotaUpdated', { username: quotaUser.value.nickname || quotaUser.value.username, quota: userQuota.value });
     showSuccess.value = true;
     showQuotaModal.value = false;
   } catch (err: any) {
-    console.error('保存用户配额失败:', err);
-    error.value = err.response?.data?.message || '保存配额失败';
+    console.error(t('userManagement.saveQuotaFailed'), err);
+    error.value = err.response?.data?.message || t('userManagement.saveQuotaFailed');
   } finally {
     quotaLoading.value = false;
   }
@@ -934,9 +937,9 @@ const getStatusColor = (status: string) => {
 
 const getStatusText = (status: string) => {
   switch (status) {
-    case 'ACTIVE': return '正常';
-    case 'INACTIVE': return '未激活';
-    case 'SUSPENDED': return '已禁用';
+    case 'ACTIVE': return t('userManagement.statusActive');
+    case 'INACTIVE': return t('userManagement.statusInactive');
+    case 'SUSPENDED': return t('userManagement.statusSuspended');
     default: return status;
   }
 };

@@ -39,7 +39,7 @@
               @click="handleToggleTrashView"
             >
               <v-icon start size="16">mdi-delete</v-icon>
-              文件回收站
+              {{ t('projects.trash') }}
             </v-btn>
 
             <template v-if="isProjectRootMode">
@@ -81,9 +81,9 @@
           density="compact"
           class="mb-4"
         >
-          <v-tab value="all">全部</v-tab>
-          <v-tab value="owned">我创建的</v-tab>
-          <v-tab value="joined">我加入的</v-tab>
+          <v-tab value="all">{{ t('projects.all') }}</v-tab>
+          <v-tab value="owned">{{ t('projects.owned') }}</v-tab>
+          <v-tab value="joined">{{ t('projects.joined') }}</v-tab>
         </v-tabs>
 
         <!-- Toolbar -->
@@ -113,7 +113,7 @@
         <!-- Loading State -->
         <div v-if="loading && displayNodes.length === 0" class="d-flex flex-column align-center justify-center py-16">
           <v-progress-circular indeterminate color="primary" size="48" />
-          <p class="mt-4 text-medium-emphasis">加载中...</p>
+          <p class="mt-4 text-medium-emphasis">{{ t('projects.loading') }}</p>
         </div>
 
         <!-- Error State -->
@@ -122,7 +122,7 @@
           <p class="text-error mb-4">{{ error }}</p>
           <v-btn variant="outlined" @click="handleRefresh">
             <v-icon start>mdi-refresh</v-icon>
-            重试
+            {{ t('common.retry') }}
           </v-btn>
         </div>
 
@@ -135,10 +135,10 @@
             class="mb-6"
           />
           <h3 class="text-h6 mb-2">
-            {{ isProjectTrashView || isTrashView ? '回收站是空的' : displayNodes.length === 0 && searchQuery ? '没有找到匹配的内容' : '暂无项目' }}
+            {{ isProjectTrashView || isTrashView ? t('projects.trashEmpty') : (displayNodes.length === 0 && searchQuery ? t('projects.noResults') : t('projects.noProjects')) }}
           </h3>
           <p class="text-body-2 text-medium-emphasis mb-6">
-            {{ isProjectTrashView ? '删除的项目会出现在这里' : isTrashView ? '删除的文件和文件夹会出现在这里' : searchQuery ? '没有找到匹配的内容' : '开始创建您的第一个项目' }}
+            {{ isProjectTrashView ? t('projects.trashProjectsTip') : (isTrashView ? t('projects.trashFilesTip') : (searchQuery ? t('projects.noResults') : t('projects.createFirstProjectTip'))) }}
           </p>
           <v-btn
             v-if="canCreateProject && !isProjectTrashView && !isTrashView && isProjectRootMode"
@@ -146,7 +146,7 @@
             @click="handleOpenCreateProject"
           >
             <v-icon start>mdi-folder-plus</v-icon>
-            创建项目
+            {{ t('projects.createProject') }}
           </v-btn>
         </div>
 
@@ -230,35 +230,35 @@
         elevation="8"
       >
         <div class="d-flex align-center ga-4">
-          <span class="text-body-2">已选中 {{ selectedNodes.size }} 项</span>
+          <span class="text-body-2">{{ t('projects.selectedItems', { count: selectedNodes.size }) }}</span>
 
           <v-divider vertical />
 
           <template v-if="isTrashView || isProjectTrashView">
             <v-btn variant="text" color="success" @click="handleBatchRestore">
-              恢复
+              {{ t('projects.restore') }}
             </v-btn>
             <v-btn variant="text" color="error" @click="() => handleBatchDelete(true)">
-              彻底删除
+              {{ t('projects.deletePermanently') }}
             </v-btn>
           </template>
 
           <template v-else>
             <v-btn variant="text" @click="handleBatchMove">
-              移动
+              {{ t('projects.move') }}
             </v-btn>
             <v-btn variant="text" @click="handleBatchCopy">
-              复制
+              {{ t('projects.copy') }}
             </v-btn>
             <v-btn variant="text" color="error" @click="() => handleBatchDelete(false)">
-              删除
+              {{ t('projects.delete') }}
             </v-btn>
           </template>
 
           <v-divider vertical />
 
           <v-btn variant="text" @click="handleCancelSelection">
-            取消
+            {{ t('common.cancel') }}
           </v-btn>
         </div>
       </v-card>
@@ -276,7 +276,7 @@
       {{ toast.message }}
       <template #actions>
         <v-btn variant="text" @click="showToastMap[toast.id] = false">
-          关闭
+          {{ t('common.close') }}
         </v-btn>
       </template>
     </v-snackbar>
@@ -286,7 +286,7 @@
       :is-open="confirmDialog.isOpen"
       :title="confirmDialog.title"
       :message="confirmDialog.message"
-      :confirm-text="confirmDialog.confirmText || '确定'"
+      :confirm-text="confirmDialog.confirmText || t('common.confirm')"
       :type="confirmDialog.type || 'warning'"
       @update:is-open="confirmDialog.isOpen = $event"
       @confirm="confirmDialog.onConfirm"
@@ -338,7 +338,7 @@
     <!-- Download Format Modal -->
     <v-dialog v-model="showDownloadFormatModal" max-width="400">
       <v-card>
-        <v-card-title>选择下载格式</v-card-title>
+        <v-card-title>{{ t('projects.selectDownloadFormat') }}</v-card-title>
         <v-card-text>
           <v-list>
             <v-list-item
@@ -351,7 +351,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="showDownloadFormatModal = false">取消</v-btn>
+          <v-btn variant="text" @click="showDownloadFormatModal = false">{{ t('common.cancel') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -362,6 +362,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDocumentTitle } from '@/composables/useDocumentTitle';
+import { useI18n } from '@/composables/useI18n';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
 import { useFileSystemData, type FileSystemNode } from '@/composables/useFileSystemData';
@@ -382,12 +383,14 @@ import ProjectModal from '@/components/ProjectModal.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import SelectFolderModal from '@/components/SelectFolderModal.vue';
 
+const { t } = useI18n();
+
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const uiStore = useUIStore();
 
-useDocumentTitle(computed(() => isPersonalSpaceMode.value ? '我的图纸' : '项目管理'));
+useDocumentTitle(computed(() => isPersonalSpaceMode.value ? t('personalSpace.title') : t('projects.title')));
 
 const mode = computed(() => {
   const path = route.path;
@@ -494,10 +497,10 @@ const copySourceNode = ref<FileSystemNode | { id: 'batch' } | null>(null);
 const showSelectFolderModal = ref(false);
 
 const downloadFormats = [
-  { value: 'dwg', title: 'DWG 格式' },
-  { value: 'dxf', title: 'DXF 格式' },
-  { value: 'mxweb', title: 'MXWeb 格式' },
-  { value: 'pdf', title: 'PDF 格式' },
+  { value: 'dwg', title: t('projects.formatDwg') },
+  { value: 'dxf', title: t('projects.formatDxf') },
+  { value: 'mxweb', title: t('projects.formatMxweb') },
+  { value: 'pdf', title: t('projects.formatPdf') },
 ];
 
 const showToastMap = ref<Record<string, boolean>>({});
@@ -716,7 +719,7 @@ async function handleConfirmMoveOrCopy(targetParentId: string): Promise<void> {
     moveSourceNode.value = null;
     copySourceNode.value = null;
   } catch (error) {
-    showToast((error as Error).message || '操作失败，请重试', 'error');
+    showToast((error as Error).message || t('common.operationFailed'), 'error');
   }
 }
 
@@ -753,10 +756,10 @@ async function handleDrop(node: FileSystemNode, e: DragEvent): Promise<void> {
 
 function handleUpload(): void {
   if (!urlProjectId.value) {
-    showToast('请先选择一个项目再上传文件', 'warning');
+    showToast(t('projects.selectProjectFirst'), 'warning');
     return;
   }
-  showToast('上传功能已集成到 CAD 编辑器中', 'info');
+  showToast(t('projects.uploadInEditor'), 'info');
 }
 
 function handleDownloadWithFormat(format: string): void {

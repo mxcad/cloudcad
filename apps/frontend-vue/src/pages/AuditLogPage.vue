@@ -6,18 +6,18 @@
           <v-icon color="white">mdi-clipboard-list</v-icon>
         </div>
         <div>
-          <h1 class="text-h4 font-weight-bold mb-0">审计日志</h1>
-          <p class="text-body-2 text-medium-emphasis mb-0">查看系统操作和安全审计记录</p>
+          <h1 class="text-h4 font-weight-bold mb-0">{{ t('auditLog.title') }}</h1>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('auditLog.subtitle') }}</p>
         </div>
       </div>
       <div class="d-flex gap-2">
         <v-btn variant="outlined" @click="refresh" :loading="loading">
           <v-icon class="mr-1">mdi-refresh</v-icon>
-          刷新
+          {{ t('common.refresh') }}
         </v-btn>
         <v-btn color="primary" @click="exportLogs">
           <v-icon class="mr-1">mdi-download</v-icon>
-          导出
+          {{ t('common.export') }}
         </v-btn>
       </div>
     </div>
@@ -29,7 +29,7 @@
             <v-text-field
               v-model="searchTerm"
               prepend-icon="mdi-magnify"
-              label="搜索日志"
+              :label="t('auditLog.searchLog')"
               variant="outlined"
               density="compact"
               clearable
@@ -39,7 +39,7 @@
             <v-select
               v-model="selectedAction"
               :items="actionOptions"
-              label="操作类型"
+              :label="t('auditLog.actionType')"
               variant="outlined"
               density="compact"
               clearable
@@ -49,7 +49,7 @@
             <v-select
               v-model="selectedUser"
               :items="userOptions"
-              label="操作用户"
+              :label="t('auditLog.operatingUser')"
               variant="outlined"
               density="compact"
               clearable
@@ -59,7 +59,7 @@
             <v-select
               v-model="selectedResource"
               :items="resourceOptions"
-              label="资源类型"
+              :label="t('auditLog.resourceType')"
               variant="outlined"
               density="compact"
               clearable
@@ -85,13 +85,13 @@
                     </v-date-picker>
                   </v-card-text>
                   <v-card-actions class="justify-end gap-2">
-                    <v-btn text @click="selectedDates = null; $refs.menu?.close()">清除</v-btn>
-                    <v-btn color="primary" text @click="applyDateFilter">应用</v-btn>
+                    <v-btn text @click="selectedDates = null; $refs.menu?.close()">{{ t('common.clear') }}</v-btn>
+                    <v-btn color="primary" text @click="applyDateFilter">{{ t('common.apply') }}</v-btn>
                   </v-card-actions>
                 </v-card>
               </v-menu>
               <v-btn variant="outlined" @click="resetFilters">
-                重置
+                {{ t('common.reset') }}
               </v-btn>
             </div>
           </v-col>
@@ -119,13 +119,13 @@
 
         <template v-slot:item.status="{ item }">
           <v-chip :color="item.success ? 'success' : 'error'" variant="tonal" size="small">
-            {{ item.success ? '成功' : '失败' }}
+            {{ item.success ? t('common.success') : t('common.failure') }}
           </v-chip>
         </template>
 
         <template v-slot:item.details="{ item }">
           <v-btn icon="mdi-eye" variant="text" size="small" @click="showDetails(item)">
-            <v-tooltip location="top">详情</v-tooltip>
+            <v-tooltip location="top">{{ t('common.details') }}</v-tooltip>
           </v-btn>
         </template>
       </v-data-table>
@@ -133,54 +133,54 @@
 
     <v-dialog v-model="detailsDialogOpen" max-width="800">
       <v-card>
-        <v-card-title>日志详情</v-card-title>
+        <v-card-title>{{ t('auditLog.logDetails') }}</v-card-title>
         <v-card-text>
           <v-list density="compact">
             <v-list-item v-if="selectedLog">
               <template v-slot:prepend><v-icon>mdi-user</v-icon></template>
-              <v-list-item-title>操作用户</v-list-item-title>
-              <v-list-item-subtitle>{{ selectedLog.user?.name || selectedLog.username || '未知' }}</v-list-item-subtitle>
+              <v-list-item-title>{{ t('auditLog.operatingUser') }}</v-list-item-title>
+              <v-list-item-subtitle>{{ selectedLog.user?.name || selectedLog.username || t('common.unknown') }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item>
               <template v-slot:prepend><v-icon>mdi-cursor-default-click</v-icon></template>
-              <v-list-item-title>操作类型</v-list-item-title>
+              <v-list-item-title>{{ t('auditLog.actionType') }}</v-list-item-title>
               <v-list-item-subtitle>{{ getActionText(selectedLog?.action) }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item>
               <template v-slot:prepend><v-icon>mdi-folder</v-icon></template>
-              <v-list-item-title>资源类型</v-list-item-title>
+              <v-list-item-title>{{ t('auditLog.resourceType') }}</v-list-item-title>
               <v-list-item-subtitle>{{ getResourceText(selectedLog?.resourceType) }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item>
               <template v-slot:prepend><v-icon>mdi-tag</v-icon></template>
-              <v-list-item-title>资源ID</v-list-item-title>
-              <v-list-item-subtitle>{{ selectedLog?.resourceId || '无' }}</v-list-item-subtitle>
+              <v-list-item-title>{{ t('auditLog.resourceId') }}</v-list-item-title>
+              <v-list-item-subtitle>{{ selectedLog?.resourceId || t('common.none') }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item>
               <template v-slot:prepend><v-icon>mdi-clock</v-icon></template>
-              <v-list-item-title>操作时间</v-list-item-title>
+              <v-list-item-title>{{ t('auditLog.operatingTime') }}</v-list-item-title>
               <v-list-item-subtitle>{{ formatDate(selectedLog?.createdAt) }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item>
               <template v-slot:prepend><v-icon>mdi-lan</v-icon></template>
-              <v-list-item-title>IP地址</v-list-item-title>
-              <v-list-item-subtitle>{{ selectedLog?.ipAddress || '无' }}</v-list-item-subtitle>
+              <v-list-item-title>{{ t('auditLog.ipAddress') }}</v-list-item-title>
+              <v-list-item-subtitle>{{ selectedLog?.ipAddress || t('common.none') }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item>
               <template v-slot:prepend><v-icon>mdi-text</v-icon></template>
-              <v-list-item-title>描述</v-list-item-title>
-              <v-list-item-subtitle>{{ selectedLog?.description || '无描述' }}</v-list-item-subtitle>
+              <v-list-item-title>{{ t('auditLog.description') }}</v-list-item-title>
+              <v-list-item-subtitle>{{ selectedLog?.description || t('auditLog.noDescription') }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item v-if="selectedLog?.details">
               <template v-slot:prepend><v-icon>mdi-json</v-icon></template>
-              <v-list-item-title>详细信息</v-list-item-title>
+              <v-list-item-title>{{ t('auditLog.details') }}</v-list-item-title>
               <v-list-item-subtitle>
                 <pre class="bg-gray-100 p-3 rounded text-sm">{{ JSON.stringify(selectedLog.details, null, 2) }}</pre>
               </v-list-item-subtitle>
@@ -188,7 +188,7 @@
           </v-list>
         </v-card-text>
         <v-card-actions class="justify-end">
-          <v-btn variant="text" @click="detailsDialogOpen = false">关闭</v-btn>
+          <v-btn variant="text" @click="detailsDialogOpen = false">{{ t('common.close') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -198,9 +198,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useDocumentTitle } from '@/composables/useDocumentTitle';
+import { useI18n } from '@/composables/useI18n';
 import { auditApi } from '@/services/auditApi';
 
-useDocumentTitle('审计日志');
+const { t } = useI18n();
+
+useDocumentTitle(() => t('auditLog.title'));
 
 const loading = ref(false);
 const logs = ref<any[]>([]);
@@ -217,42 +220,42 @@ const detailsDialogOpen = ref(false);
 const selectedLog = ref<any>(null);
 
 const actionOptions = [
-  { title: '创建', value: 'CREATE' },
-  { title: '更新', value: 'UPDATE' },
-  { title: '删除', value: 'DELETE' },
-  { title: '登录', value: 'LOGIN' },
-  { title: '登出', value: 'LOGOUT' },
-  { title: '下载', value: 'DOWNLOAD' },
-  { title: '上传', value: 'UPLOAD' },
+  { title: t('auditLog.create'), value: 'CREATE' },
+  { title: t('auditLog.update'), value: 'UPDATE' },
+  { title: t('auditLog.delete'), value: 'DELETE' },
+  { title: t('auditLog.login'), value: 'LOGIN' },
+  { title: t('auditLog.logout'), value: 'LOGOUT' },
+  { title: t('auditLog.download'), value: 'DOWNLOAD' },
+  { title: t('auditLog.upload'), value: 'UPLOAD' },
 ];
 
 const userOptions = ref([
-  { title: '管理员', value: 'admin' },
-  { title: '用户1', value: 'user1' },
+  { title: t('auditLog.admin'), value: 'admin' },
+  { title: t('auditLog.user1'), value: 'user1' },
 ]);
 
 const resourceOptions = [
-  { title: '用户', value: 'USER' },
-  { title: '项目', value: 'PROJECT' },
-  { title: '文件', value: 'FILE' },
-  { title: '角色', value: 'ROLE' },
+  { title: t('auditLog.user'), value: 'USER' },
+  { title: t('auditLog.project'), value: 'PROJECT' },
+  { title: t('auditLog.file'), value: 'FILE' },
+  { title: t('auditLog.role'), value: 'ROLE' },
 ];
 
 const headers = [
   { key: 'id', title: 'ID', width: '80px' },
-  { key: 'user', title: '操作用户', width: '150px' },
-  { key: 'action', title: '操作类型', width: '120px' },
-  { key: 'resourceType', title: '资源类型', width: '120px' },
-  { key: 'resourceId', title: '资源ID', width: '120px' },
-  { key: 'ipAddress', title: 'IP地址', width: '120px' },
-  { key: 'status', title: '状态', width: '100px' },
-  { key: 'createdAt', title: '操作时间', width: '180px' },
-  { key: 'details', title: '操作', width: '80px' },
+  { key: 'user', title: t('auditLog.operatingUser'), width: '150px' },
+  { key: 'action', title: t('auditLog.actionType'), width: '120px' },
+  { key: 'resourceType', title: t('auditLog.resourceType'), width: '120px' },
+  { key: 'resourceId', title: t('auditLog.resourceId'), width: '120px' },
+  { key: 'ipAddress', title: t('auditLog.ipAddress'), width: '120px' },
+  { key: 'status', title: t('common.status'), width: '100px' },
+  { key: 'createdAt', title: t('auditLog.operatingTime'), width: '180px' },
+  { key: 'details', title: t('common.action'), width: '80px' },
 ];
 
 const dateRangeText = computed(() => {
-  if (!selectedDates.value?.start || !selectedDates.value?.end) return '选择日期';
-  return `${selectedDates.value.start.toLocaleDateString('zh-CN')} - ${selectedDates.value.end.toLocaleDateString('zh-CN')}`;
+  if (!selectedDates.value?.start || !selectedDates.value?.end) return t('auditLog.selectDate');
+  return `${selectedDates.value.start.toLocaleDateString()} - ${selectedDates.value.end.toLocaleDateString()}`;
 });
 
 const filteredLogs = computed(() => {
@@ -334,23 +337,23 @@ const getActionColor = (action: string) => {
 
 const getActionText = (action: string) => {
   const texts: Record<string, string> = {
-    CREATE: '创建',
-    UPDATE: '更新',
-    DELETE: '删除',
-    LOGIN: '登录',
-    LOGOUT: '登出',
-    DOWNLOAD: '下载',
-    UPLOAD: '上传',
+    CREATE: t('auditLog.create'),
+    UPDATE: t('auditLog.update'),
+    DELETE: t('auditLog.delete'),
+    LOGIN: t('auditLog.login'),
+    LOGOUT: t('auditLog.logout'),
+    DOWNLOAD: t('auditLog.download'),
+    UPLOAD: t('auditLog.upload'),
   };
   return texts[action] || action;
 };
 
 const getResourceText = (resource: string) => {
   const texts: Record<string, string> = {
-    USER: '用户',
-    PROJECT: '项目',
-    FILE: '文件',
-    ROLE: '角色',
+    USER: t('auditLog.user'),
+    PROJECT: t('auditLog.project'),
+    FILE: t('auditLog.file'),
+    ROLE: t('auditLog.role'),
   };
   return texts[resource] || resource;
 };

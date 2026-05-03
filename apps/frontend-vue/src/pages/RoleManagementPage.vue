@@ -22,9 +22,9 @@
         <div class="access-denied-icon">
           <v-icon icon="mdi-shield-lock" size="64" color="error" />
         </div>
-        <h2 class="text-h5 font-weight-bold text-center mb-2">访问被拒绝</h2>
+        <h2 class="text-h5 font-weight-bold text-center mb-2">{{ t('roleManagement.accessDenied') }}</h2>
         <p class="text-body-1 text-medium-emphasis text-center">
-          您没有权限访问角色管理。
+          {{ t('roleManagement.noPermission') }}
         </p>
       </v-card>
     </div>
@@ -38,8 +38,8 @@
             <v-icon icon="mdi-shield-account" size="28" color="white" />
           </v-avatar>
           <div>
-            <h1 class="text-h5 font-weight-bold">角色管理</h1>
-            <p class="text-body-2 text-medium-emphasis">管理系统角色及其权限</p>
+            <h1 class="text-h5 font-weight-bold">{{ t('roleManagement.title') }}</h1>
+            <p class="text-body-2 text-medium-emphasis">{{ t('roleManagement.subtitle') }}</p>
           </div>
         </div>
         <div class="d-flex ga-3">
@@ -50,7 +50,7 @@
             @click="handleOpenCreate"
           >
             <v-icon start icon="mdi-plus" />
-            添加角色
+            {{ t('roleManagement.addRole') }}
           </v-btn>
         </div>
       </div>
@@ -60,15 +60,15 @@
         <!-- 加载状态 -->
         <div v-if="loading && roles.length === 0" class="loading-container">
           <v-progress-circular indeterminate color="primary" size="48" />
-          <p class="text-body-1 text-medium-emphasis mt-4">加载角色列表...</p>
+          <p class="text-body-1 text-medium-emphasis mt-4">{{ t('roleManagement.loading') }}</p>
         </div>
 
         <!-- 空状态 -->
         <div v-else-if="roles.length === 0" class="empty-container">
           <v-icon icon="mdi-shield-account-outline" size="80" color="grey-lighten-1" />
-          <h3 class="text-h6 font-weight-bold mt-4">暂无角色</h3>
+          <h3 class="text-h6 font-weight-bold mt-4">{{ t('roleManagement.noRoles') }}</h3>
           <p class="text-body-2 text-medium-emphasis mt-2">
-            还没有任何角色，点击上方按钮添加第一个角色
+            {{ t('roleManagement.noRolesHint') }}
           </p>
           <v-btn
             v-if="hasPermission(SystemPermission.ROLE_CREATE)"
@@ -77,7 +77,7 @@
             @click="handleOpenCreate"
           >
             <v-icon start icon="mdi-plus" />
-            添加角色
+            {{ t('roleManagement.addRole') }}
           </v-btn>
         </div>
 
@@ -85,11 +85,11 @@
         <v-table v-else>
           <thead>
             <tr>
-              <th class="text-left">角色名称</th>
-              <th class="text-left">描述</th>
-              <th class="text-center">权限数量</th>
-              <th class="text-left">类型</th>
-              <th class="text-right">操作</th>
+              <th class="text-left">{{ t('roleManagement.roleName') }}</th>
+              <th class="text-left">{{ t('roleManagement.description') }}</th>
+              <th class="text-center">{{ t('roleManagement.permissionCount') }}</th>
+              <th class="text-left">{{ t('roleManagement.type') }}</th>
+              <th class="text-right">{{ t('roleManagement.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,7 +120,7 @@
                   color="error"
                   variant="tonal"
                 >
-                  系统角色
+                  {{ t('roleManagement.systemRole') }}
                 </v-chip>
                 <v-chip
                   v-else
@@ -128,7 +128,7 @@
                   color="success"
                   variant="tonal"
                 >
-                  自定义
+                  {{ t('roleManagement.custom') }}
                 </v-chip>
               </td>
               <td class="text-right">
@@ -177,7 +177,7 @@
     <v-dialog v-model="isModalOpen" max-width="600" persistent>
       <v-card rounded="xl">
         <v-card-title class="d-flex align-center justify-space-between pa-4">
-          <span class="text-h6 font-weight-bold">{{ editingRole ? '编辑角色' : '添加新角色' }}</span>
+          <span class="text-h6 font-weight-bold">{{ editingRole ? t('roleManagement.editRole') : t('roleManagement.addNewRole') }}</span>
           <v-btn icon variant="text" @click="isModalOpen = false">
             <v-icon icon="mdi-close" />
           </v-btn>
@@ -186,8 +186,8 @@
           <v-form @submit.prevent="handleSubmit">
             <v-text-field
               v-model="formData.name"
-              label="角色名称"
-              placeholder="请输入角色名称"
+              :label="t('roleManagement.roleName')"
+              :placeholder="t('roleManagement.enterRoleName')"
               :error-messages="formErrors.name"
               required
               variant="outlined"
@@ -196,8 +196,8 @@
             />
             <v-textarea
               v-model="formData.description"
-              label="角色描述"
-              placeholder="请输入角色描述（可选）"
+              :label="t('roleManagement.roleDescription')"
+              :placeholder="t('roleManagement.enterRoleDescription')"
               variant="outlined"
               density="compact"
               rows="3"
@@ -207,9 +207,9 @@
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer />
-          <v-btn variant="text" @click="isModalOpen = false">取消</v-btn>
+          <v-btn variant="text" @click="isModalOpen = false">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" :loading="submitting" @click="handleSubmit">
-            {{ submitting ? '处理中...' : (editingRole ? '保存修改' : '创建角色') }}
+            {{ submitting ? t('roleManagement.processing') : (editingRole ? t('roleManagement.saveChanges') : t('roleManagement.createRole')) }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -220,7 +220,7 @@
       <v-card rounded="xl">
         <v-card-title class="d-flex align-center justify-space-between pa-4">
           <span class="text-h6 font-weight-bold">
-            配置权限 - {{ getRoleDisplayName(selectedRole?.name, selectedRole?.isSystem) }}
+            {{ t('roleManagement.configurePermissions') }} {{ getRoleDisplayName(selectedRole?.name, selectedRole?.isSystem) }}
           </span>
           <v-btn icon variant="text" @click="permissionsModalOpen = false">
             <v-icon icon="mdi-close" />
@@ -228,8 +228,8 @@
         </v-card-title>
         <v-card-text class="pa-4">
           <v-tabs v-model="permissionTab" class="mb-4">
-            <v-tab value="system">系统权限</v-tab>
-            <v-tab value="project">项目权限</v-tab>
+            <v-tab value="system">{{ t('roleManagement.systemPermissions') }}</v-tab>
+            <v-tab value="project">{{ t('roleManagement.projectPermissions') }}</v-tab>
           </v-tabs>
 
           <v-window v-model="permissionTab">
@@ -302,14 +302,14 @@
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer />
-          <v-btn variant="text" @click="permissionsModalOpen = false">取消</v-btn>
+          <v-btn variant="text" @click="permissionsModalOpen = false">{{ t('common.cancel') }}</v-btn>
           <v-btn
             color="primary"
             :loading="permissionsSaving"
             :disabled="selectedRole?.isSystem"
             @click="handleSavePermissions"
           >
-            {{ permissionsSaving ? '保存中...' : '保存权限' }}
+            {{ permissionsSaving ? t('roleManagement.saving') : t('roleManagement.savePermissions') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -319,26 +319,26 @@
     <v-dialog v-model="deleteConfirmOpen" max-width="400" persistent>
       <v-card rounded="xl">
         <v-card-title class="pa-4">
-          <span class="text-h6 font-weight-bold">确认删除角色</span>
+          <span class="text-h6 font-weight-bold">{{ t('roleManagement.confirmDeleteRole') }}</span>
         </v-card-title>
         <v-card-text class="pa-4">
           <v-alert type="warning" variant="tonal" class="mb-4">
             <div class="d-flex align-start ga-2">
               <v-icon icon="mdi-alert-circle" class="mt-1" />
               <div>
-                <p class="font-weight-bold mb-1">删除角色</p>
+                <p class="font-weight-bold mb-1">{{ t('roleManagement.deleteRole') }}</p>
                 <p class="text-body-2 mb-0">
-                  删除后，该角色下的所有用户将失去相应权限。请确保没有用户依赖此角色。
+                  {{ t('roleManagement.deleteWarning') }}
                 </p>
               </div>
             </div>
           </v-alert>
-          <p class="text-body-2">确定要删除该角色吗？</p>
+          <p class="text-body-2">{{ t('roleManagement.confirmDelete') }}</p>
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer />
-          <v-btn variant="text" @click="deleteConfirmOpen = false">取消</v-btn>
-          <v-btn color="error" :loading="deleting" @click="confirmDelete">删除</v-btn>
+          <v-btn variant="text" @click="deleteConfirmOpen = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="error" :loading="deleting" @click="confirmDelete">{{ t('common.delete') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -353,6 +353,9 @@ import { useTheme } from 'vuetify';
 import { SystemPermission, getRoleDisplayName } from '@/constants/permissions';
 import { rolesApi, type RoleDto } from '@/services/rolesApi';
 import { useAuthStore } from '@/stores/auth.store';
+import { useI18n } from '@/composables/useI18n';
+
+const { t } = useI18n();
 
 const { isDark } = useTheme();
 const authStore = useAuthStore();
@@ -400,7 +403,7 @@ const roleToDelete = ref<string | null>(null);
 // 权限分组
 const systemPermissionGroups = [
   {
-    category: '用户管理',
+    category: t('roleManagement.userManagement'),
     icon: 'mdi-account-multiple',
     permissions: [
       'SYSTEM_USER_READ',
@@ -410,7 +413,7 @@ const systemPermissionGroups = [
     ],
   },
   {
-    category: '角色管理',
+    category: t('roleManagement.roleManagement'),
     icon: 'mdi-shield-account',
     permissions: [
       'ROLE_READ',
@@ -420,7 +423,7 @@ const systemPermissionGroups = [
     ],
   },
   {
-    category: '系统配置',
+    category: t('roleManagement.systemConfig'),
     icon: 'mdi-cog',
     permissions: [
       'SYSTEM_CONFIG_READ',
@@ -432,7 +435,7 @@ const systemPermissionGroups = [
 
 const projectPermissionGroups = [
   {
-    category: '项目管理',
+    category: t('roleManagement.projectManagement'),
     icon: 'mdi-folder',
     permissions: [
       'PROJECT_READ',
@@ -442,7 +445,7 @@ const projectPermissionGroups = [
     ],
   },
   {
-    category: '文件管理',
+    category: t('roleManagement.fileManagement'),
     icon: 'mdi-file',
     permissions: [
       'FILE_READ',
@@ -452,7 +455,7 @@ const projectPermissionGroups = [
     ],
   },
   {
-    category: '资源库管理',
+    category: t('roleManagement.libraryManagement'),
     icon: 'mdi-library',
     permissions: [
       'LIBRARY_READ',
@@ -485,7 +488,7 @@ const loadRoles = async () => {
     const response = await rolesApi.list();
     roles.value = response.data || [];
   } catch (error) {
-    showSnackbar('加载角色列表失败', 'error');
+    showSnackbar(t('roleManagement.loadFailed'), 'error');
   } finally {
     loading.value = false;
   }
@@ -533,11 +536,11 @@ const validateForm = (): boolean => {
   const errors = { name: '' };
 
   if (!formData.value.name) {
-    errors.name = '角色名称不能为空';
+    errors.name = t('roleManagement.roleNameRequired');
   } else if (formData.value.name.length < 2) {
-    errors.name = '角色名称至少2个字符';
+    errors.name = t('roleManagement.roleNameMin2');
   } else if (formData.value.name.length > 50) {
-    errors.name = '角色名称最多50个字符';
+    errors.name = t('roleManagement.roleNameMax50');
   }
 
   formErrors.value = errors;
@@ -555,20 +558,20 @@ const handleSubmit = async () => {
         name: formData.value.name,
         description: formData.value.description,
       });
-      showSnackbar('角色更新成功', 'success');
+      showSnackbar(t('roleManagement.updateSuccess'), 'success');
     } else {
       await rolesApi.create({
         name: formData.value.name,
         description: formData.value.description,
         permissions: [],
       });
-      showSnackbar('角色创建成功', 'success');
+      showSnackbar(t('roleManagement.createSuccess'), 'success');
     }
 
     isModalOpen.value = false;
     await loadRoles();
   } catch (error) {
-    showSnackbar(editingRole.value ? '更新角色失败' : '创建角色失败', 'error');
+    showSnackbar(editingRole.value ? t('roleManagement.updateFailed') : t('roleManagement.createFailed'), 'error');
   } finally {
     submitting.value = false;
   }
@@ -593,11 +596,11 @@ const handleSavePermissions = async () => {
       await rolesApi.removePermissions(selectedRole.value.id, toRemove);
     }
 
-    showSnackbar('权限更新成功', 'success');
+    showSnackbar(t('roleManagement.permissionsUpdateSuccess'), 'success');
     permissionsModalOpen.value = false;
     await loadRoles();
   } catch (error) {
-    showSnackbar('更新权限失败', 'error');
+    showSnackbar(t('roleManagement.permissionsUpdateFailed'), 'error');
   } finally {
     permissionsSaving.value = false;
   }
@@ -616,10 +619,10 @@ const confirmDelete = async () => {
   deleting.value = true;
   try {
     await rolesApi.delete(roleToDelete.value);
-    showSnackbar('角色删除成功', 'success');
+    showSnackbar(t('roleManagement.deleteSuccess'), 'success');
     await loadRoles();
   } catch (error) {
-    showSnackbar('删除角色失败', 'error');
+    showSnackbar(t('roleManagement.deleteFailed'), 'error');
   } finally {
     deleting.value = false;
     deleteConfirmOpen.value = false;

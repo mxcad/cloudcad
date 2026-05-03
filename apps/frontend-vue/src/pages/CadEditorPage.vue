@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useCadEngine } from '@/composables/useCadEngine';
 import { useCadCommands } from '@/composables/useCadCommands';
 import { useProgress } from '@/composables/useProgress';
@@ -86,6 +86,7 @@ import { useI18n } from '@/composables/useI18n';
 const { t } = useI18n();
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const cad = useCadEngine();
 const progress = useProgress();
@@ -114,7 +115,7 @@ async function onLocalFileSelected(files: File | File[] | null): Promise<void> {
   progress.start(t('cadEditor.openingFile'));
   try {
     if (cad.isMxwebFile(file.name)) {
-      await cad.openLocalMxwebFile(file);
+      await cad.openLocalFile(file);
     } else {
       const { useUpload } = await import('@/composables/useUpload');
       const up = useUpload();
@@ -171,7 +172,31 @@ function beforeUnload(e: BeforeUnloadEvent): void { if (cad.isDocumentModified) 
 onMounted(async () => {
   if (!cadContainerRef.value) return;
   progress.start(t('cadEditor.initializingEngine'));
-  try { await cad.initialize(cadContainerRef.value); progress.finish(); } catch { progress.update(t('cadEditor.engineInitFailed'), 0); }
+  try {
+    await cad.initialize(cadContainerRef.value);
+    progress.finish();
+
+    // 检查 URL 参数：支持 ?nodeId=xxx 直达文件
+    const nodeId = route.query.nodeId as string | undefined;
+    const library = route.query.library as string | undefined;
+    if (nodeId) {
+      progress.start(t('cadEditor.openingFile'));
+      try {
+        if (library === 'drawing') {
+          await cad.openLibraryDrawing(nodeId, '');
+        } else if (library === 'block') {
+          await cad.openLibraryBlock(nodeId, '');
+        } else {
+          const base = import.meta.env.VITE_API_BASE_URL || '';
+          await cad.openFile(`${base}/api/mxcad/filesData/${encodeURIComponent(nodeId)}`);
+        }
+        progress.finish();
+      } catch (err) {
+        console.error('[CadEditorPage] 打开文件失败:', err);
+        progress.update(t('cadEditor.openFileFailed'), 0);
+      }
+    }
+  } catch { progress.update(t('cadEditor.engineInitFailed'), 0); }
   window.addEventListener('beforeunload', beforeUnload);
 });
 onUnmounted(() => window.removeEventListener('beforeunload', beforeUnload));

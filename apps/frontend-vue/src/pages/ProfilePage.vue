@@ -108,9 +108,9 @@
                         <v-icon icon="mdi-account-circle" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">昵称</div>
-                        <div class="text-body-2 font-weight-medium">{{ user?.nickname || '-' }}</div>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.nickname') }}</div>
+                    <div class="text-body-2 font-weight-medium">{{ user?.nickname || '-' }}</div>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -122,12 +122,12 @@
                         <v-icon icon="mdi-email" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">邮箱地址</div>
-                        <div class="text-body-2 font-weight-medium d-flex align-center ga-1">
-                          {{ user?.email || '未绑定' }}
-                          <v-icon v-if="user?.email" size="14" color="success" icon="mdi-check-circle" />
-                        </div>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.email') }}</div>
+                    <div class="text-body-2 font-weight-medium d-flex align-center ga-1">
+                      {{ user?.email || t('profile.unbound') }}
+                      <v-icon v-if="user?.email" size="14" color="success" icon="mdi-check-circle" />
+                    </div>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -139,12 +139,12 @@
                         <v-icon icon="mdi-phone" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">手机号</div>
-                        <div class="text-body-2 font-weight-medium d-flex align-center ga-1">
-                          {{ user?.phone || '未绑定' }}
-                          <v-icon v-if="user?.phone && user?.phoneVerified" size="14" color="success" icon="mdi-check-circle" />
-                        </div>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.phone') }}</div>
+                    <div class="text-body-2 font-weight-medium d-flex align-center ga-1">
+                      {{ user?.phone || t('profile.unbound') }}
+                      <v-icon v-if="user?.phone && user?.phoneVerified" size="14" color="success" icon="mdi-check-circle" />
+                    </div>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -156,13 +156,13 @@
                         <v-icon icon="mdi-wechat" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">微信</div>
-                        <div class="text-body-2 font-weight-medium d-flex align-center ga-1">
-                          {{ user?.wechatId ? '已绑定' : '未绑定' }}
-                          <v-icon v-if="user?.wechatId" size="14" color="success" icon="mdi-check-circle" />
-                          <v-icon v-else size="14" color="grey" icon="mdi-close-circle" />
-                        </div>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.wechat') }}</div>
+                    <div class="text-body-2 font-weight-medium d-flex align-center ga-1">
+                      {{ user?.wechatId ? t('profile.bound') : t('profile.unbound') }}
+                      <v-icon v-if="user?.wechatId" size="14" color="success" icon="mdi-check-circle" />
+                      <v-icon v-else size="14" color="grey" icon="mdi-close-circle" />
+                    </div>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -174,11 +174,11 @@
                         <v-icon icon="mdi-shield" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">账户角色</div>
-                        <v-chip size="small" :color="isAdminUser ? 'primary' : 'default'" label>
-                          {{ isAdminUser ? '系统管理员' : '普通用户' }}
-                        </v-chip>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.accountRole') }}</div>
+                    <v-chip size="small" :color="isAdminUser ? 'primary' : 'default'" label>
+                      {{ isAdminUser ? t('profile.systemAdmin') : t('profile.normalUser') }}
+                    </v-chip>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -190,15 +190,15 @@
                         <v-icon icon="mdi-activity" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">账户状态</div>
-                        <v-chip
-                          size="small"
-                          :color="statusColor"
-                          label
-                        >
-                          {{ statusLabel }}
-                        </v-chip>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.accountStatus') }}</div>
+                    <v-chip
+                      size="small"
+                      :color="statusColor"
+                      label
+                    >
+                      {{ statusLabel }}
+                    </v-chip>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -210,9 +210,9 @@
                         <v-icon icon="mdi-calendar" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">创建时间</div>
-                        <div class="text-body-2 font-weight-medium">{{ formatDate(user.createdAt) }}</div>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.createdAt') }}</div>
+                    <div class="text-body-2 font-weight-medium">{{ formatDate(user.createdAt) }}</div>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -224,9 +224,9 @@
                         <v-icon icon="mdi-star-four-points" color="white" />
                       </v-avatar>
                       <div>
-                        <div class="text-caption text-medium-emphasis">最后登录</div>
-                        <div class="text-body-2 font-weight-medium">{{ formatDate(user.lastLoginAt) }}</div>
-                      </div>
+                    <div class="text-caption text-medium-emphasis">{{ t('profile.lastLoginAt') }}</div>
+                    <div class="text-body-2 font-weight-medium">{{ formatDate(user.lastLoginAt) }}</div>
+                  </div>
                     </div>
                   </v-card>
                 </v-col>
@@ -236,35 +236,35 @@
             <!-- 编辑个人信息表单 — 来源：ProfileInfoTab.tsx 行245-320 -->
             <div v-else class="edit-profile-form">
               <div class="d-flex justify-space-between align-center mb-4">
-                <h2 class="text-h6 font-weight-bold">编辑个人信息</h2>
+                <h2 class="text-h6 font-weight-bold">{{ t('profile.editPersonalInfo') }}</h2>
                 <v-btn variant="outlined" size="small" @click="cancelEditInfo">
                   <v-icon start size="16">mdi-close</v-icon>
-                  取消
+                  {{ t('common.cancel') }}
                 </v-btn>
               </div>
               <v-form @submit.prevent="handleUpdateProfile">
                 <v-text-field
                   v-model="infoForm.username"
-                  label="用户名"
-                  placeholder="请输入用户名"
+                  :label="t('profile.username')"
+                  :placeholder="t('profile.enterUsername')"
                   :minlength="3"
                   :maxlength="20"
                   required
                   variant="outlined"
                   class="mb-2"
                 />
-                <div class="text-caption text-medium-emphasis mb-4">用户名一月内最多修改3次</div>
+                <div class="text-caption text-medium-emphasis mb-4">{{ t('profile.usernameLimit') }}</div>
                 <v-text-field
                   v-model="infoForm.nickname"
-                  label="昵称"
-                  placeholder="请输入昵称"
+                  :label="t('profile.nickname')"
+                  :placeholder="t('profile.enterNickname')"
                   :maxlength="50"
                   variant="outlined"
                   class="mb-4"
                 />
                 <v-btn type="submit" color="primary" block :loading="infoLoading" size="large">
                   <v-icon start>mdi-content-save</v-icon>
-                  保存
+                  {{ t('common.save') }}
                 </v-btn>
               </v-form>
             </div>
@@ -276,29 +276,29 @@
             <v-form @submit.prevent="handlePasswordSubmit" class="password-form">
               <!-- hasPassword === false 时的提示 — ProfilePasswordTab.tsx 行87-100 -->
               <v-alert
-                v-if="user?.hasPassword === false"
-                type="info"
-                variant="tonal"
-                class="mb-6"
-              >
-                <div class="d-flex align-start ga-3">
-                  <v-icon icon="mdi-key" size="24" />
-                  <div>
-                    <div class="font-weight-bold">设置密码</div>
-                    <div class="text-body-2">
-                      您的账户是通过手机号或微信自动创建的，尚未设置密码。设置密码后可使用账号密码登录。
+                  v-if="user?.hasPassword === false"
+                  type="info"
+                  variant="tonal"
+                  class="mb-6"
+                >
+                  <div class="d-flex align-start ga-3">
+                    <v-icon icon="mdi-key" size="24" />
+                    <div>
+                      <div class="font-weight-bold">{{ t('profile.setPassword') }}</div>
+                      <div class="text-body-2">
+                        {{ t('profile.setPasswordTip') }}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </v-alert>
+                </v-alert>
 
               <!-- 当前密码 — ProfilePasswordTab.tsx 行47-85 -->
               <v-text-field
                 v-if="user?.hasPassword !== false"
                 v-model="passwordForm.oldPassword"
                 :type="showPassword.old ? 'text' : 'password'"
-                label="当前密码"
-                placeholder="请输入当前密码"
+                :label="t('profile.currentPassword')"
+                :placeholder="t('profile.enterCurrentPassword')"
                 :required="user?.hasPassword !== false"
                 variant="outlined"
                 class="mb-1"
@@ -307,7 +307,7 @@
               />
               <div v-if="user?.hasPassword !== false" class="text-right mb-4">
                 <v-btn variant="text" size="small" color="primary" @click="router.push('/forgot-password')">
-                  忘记密码？
+                  {{ t('profile.forgotPassword') }}
                 </v-btn>
               </div>
 
@@ -315,8 +315,8 @@
               <v-text-field
                 v-model="passwordForm.newPassword"
                 :type="showPassword.new ? 'text' : 'password'"
-                label="新密码"
-                placeholder="至少8位，包含大小写字母和数字"
+                :label="t('profile.newPassword')"
+                :placeholder="t('profile.newPasswordPlaceholder')"
                 required
                 variant="outlined"
                 class="mb-1"
@@ -341,8 +341,8 @@
               <v-text-field
                 v-model="passwordForm.confirmPassword"
                 :type="showPassword.confirm ? 'text' : 'password'"
-                label="确认新密码"
-                placeholder="再次输入新密码"
+                :label="t('profile.confirmNewPassword')"
+                :placeholder="t('profile.confirmNewPasswordPlaceholder')"
                 required
                 variant="outlined"
                 class="mb-4"
@@ -352,20 +352,20 @@
 
               <v-btn type="submit" color="primary" block :loading="loading" size="large">
                 <v-icon start>mdi-check-circle</v-icon>
-                {{ user?.hasPassword === false ? '设置密码' : '修改密码' }}
+                {{ user?.hasPassword === false ? t('profile.setPassword') : t('profile.changePassword') }}
               </v-btn>
 
               <!-- 安全建议 — ProfilePasswordTab.tsx 行195-206 -->
               <v-card variant="outlined" class="mt-6 pa-4">
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="16" icon="mdi-shield-outline" />
-                  <span class="text-body-2 font-weight-bold">安全建议</span>
+                  <span class="text-body-2 font-weight-bold">{{ t('profile.securityTips') }}</span>
                 </div>
                 <ul class="security-tips">
-                  <li>密码长度至少 8 个字符</li>
-                  <li>包含大小写字母和数字</li>
-                  <li>避免使用常见的密码组合</li>
-                  <li>不要在多个网站使用相同的密码</li>
+                  <li>{{ t('profile.tip1') }}</li>
+                  <li>{{ t('profile.tip2') }}</li>
+                  <li>{{ t('profile.tip3') }}</li>
+                  <li>{{ t('profile.tip4') }}</li>
                 </ul>
               </v-card>
             </v-form>
@@ -377,25 +377,25 @@
             <!-- 已绑定且不在编辑模式 — ProfileEmailTab.tsx 行53-88 -->
             <div v-if="user?.email && !isEditingEmail" class="text-center pa-4">
               <v-icon size="64" color="success" icon="mdi-check-circle" class="mb-4" />
-              <h3 class="text-h6 font-weight-bold mb-2">邮箱已绑定</h3>
+              <h3 class="text-h6 font-weight-bold mb-2">{{ t('profile.emailBound') }}</h3>
               <p class="text-body-1 text-primary font-weight-medium mb-4">{{ user.email }}</p>
               <v-card variant="outlined" rounded="lg" class="pa-4 mb-6 mx-auto" max-width="240">
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">找回密码</span>
+                  <span class="text-body-2">{{ t('profile.resetPassword') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">安全验证</span>
+                  <span class="text-body-2">{{ t('profile.securityVerification') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">重要通知</span>
+                  <span class="text-body-2">{{ t('profile.importantNotifications') }}</span>
                 </div>
               </v-card>
               <v-btn color="primary" @click="startEditEmail">
                 <v-icon start>mdi-email-outline</v-icon>
-                换绑邮箱
+                {{ t('profile.changeEmail') }}
               </v-btn>
             </div>
 
@@ -405,13 +405,13 @@
                 <v-alert type="warning" variant="tonal" class="mb-4">
                   <div class="d-flex align-center ga-2">
                     <v-icon size="16" icon="mdi-check-circle" />
-                    <span>需要先验证原邮箱才能换绑</span>
+                    <span>{{ t('profile.verifyOldEmailTip') }}</span>
                   </div>
                 </v-alert>
                 <v-text-field
                   v-model="emailForm.code"
-                  label="原邮箱验证码"
-                  placeholder="请输入原邮箱验证码"
+                  :label="t('profile.oldEmailCode')"
+                  :placeholder="t('profile.enterOldEmailCode')"
                   :maxlength="6"
                   required
                   variant="outlined"
@@ -425,15 +425,15 @@
                       :loading="sendingCode"
                       @click="handleSendUnbindEmailCode"
                     >
-                      {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                      {{ countdown > 0 ? `${countdown}s` : t('profile.getCode') }}
                     </v-btn>
                   </template>
                 </v-text-field>
                 <div class="d-flex ga-3">
-                  <v-btn variant="outlined" class="flex-grow-1" @click="cancelEditEmail">取消</v-btn>
+                  <v-btn variant="outlined" class="flex-grow-1" @click="cancelEditEmail">{{ t('common.cancel') }}</v-btn>
                   <v-btn color="primary" class="flex-grow-1" :loading="loading" type="submit">
                     <v-icon start>mdi-check-circle</v-icon>
-                    验证
+                    {{ t('profile.verify') }}
                   </v-btn>
                 </div>
               </v-form>
@@ -445,13 +445,13 @@
                 <v-alert v-if="emailStep === 'inputNew'" type="success" variant="tonal" class="mb-4">
                   <div class="d-flex align-center ga-2">
                     <v-icon size="16" icon="mdi-check-circle" />
-                    <span>原邮箱验证成功，请输入新邮箱</span>
+                    <span>{{ t('profile.oldEmailVerified') }}</span>
                   </div>
                 </v-alert>
                 <v-text-field
                   v-model="emailForm.email"
-                  :label="emailStep === 'verifyNew' ? '新邮箱地址' : '邮箱地址'"
-                  placeholder="请输入邮箱地址"
+                  :label="emailStep === 'verifyNew' ? t('profile.newEmail') : t('profile.email')"
+                  :placeholder="t('profile.enterEmail')"
                   type="email"
                   required
                   variant="outlined"
@@ -465,22 +465,22 @@
                       :loading="sendingCode"
                       @click="handleSendNewEmailCode"
                     >
-                      {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                      {{ countdown > 0 ? `${countdown}s` : t('profile.getCode') }}
                     </v-btn>
                   </template>
                 </v-text-field>
                 <v-text-field
                   v-if="emailStep === 'verifyNew'"
                   v-model="emailForm.code"
-                  label="验证码"
-                  placeholder="请输入 6 位验证码"
+                  :label="t('profile.verificationCode')"
+                  :placeholder="t('profile.enter6DigitCode')"
                   :maxlength="6"
                   required
                   variant="outlined"
                   class="mb-4"
                 />
                 <div class="d-flex ga-3">
-                  <v-btn variant="outlined" class="flex-grow-1" @click="cancelEditEmail">取消</v-btn>
+                  <v-btn variant="outlined" class="flex-grow-1" @click="cancelEditEmail">{{ t('common.cancel') }}</v-btn>
                   <v-btn
                     v-if="emailStep === 'inputNew'"
                     color="primary"
@@ -490,7 +490,7 @@
                     @click="handleSendNewEmailCode"
                   >
                     <v-icon start>mdi-email-outline</v-icon>
-                    发送验证码
+                    {{ t('profile.sendCode') }}
                   </v-btn>
                   <v-btn
                     v-if="emailStep === 'verifyNew'"
@@ -500,7 +500,7 @@
                     type="submit"
                   >
                     <v-icon start>mdi-check-circle</v-icon>
-                    确认换绑
+                    {{ t('profile.confirmChange') }}
                   </v-btn>
                 </div>
               </v-form>
@@ -512,12 +512,12 @@
               <div v-if="emailStep === 'input'">
                 <v-form @submit.prevent="handleSendBindCode">
                   <v-card variant="outlined" rounded="lg" class="pa-3 mb-4 text-center">
-                    <span class="text-body-2 text-medium-emphasis">绑定邮箱后，可以通过邮箱找回密码和接收重要通知</span>
+                    <span class="text-body-2 text-medium-emphasis">{{ t('profile.bindEmailTip') }}</span>
                   </v-card>
                   <v-text-field
                     v-model="emailForm.email"
-                    label="邮箱地址"
-                    placeholder="请输入邮箱地址"
+                    :label="t('profile.email')"
+                    :placeholder="t('profile.enterEmail')"
                     type="email"
                     required
                     variant="outlined"
@@ -525,7 +525,7 @@
                   />
                   <v-btn color="primary" block :loading="loading" type="submit">
                     <v-icon start>mdi-email-outline</v-icon>
-                    发送验证码
+                    {{ t('profile.sendCode') }}
                   </v-btn>
                 </v-form>
               </div>
@@ -541,8 +541,8 @@
                   </v-card>
                   <v-text-field
                     v-model="emailForm.code"
-                    label="验证码"
-                    placeholder="请输入 6 位验证码"
+                    :label="t('profile.verificationCode')"
+                    :placeholder="t('profile.enter6DigitCode')"
                     :maxlength="6"
                     required
                     variant="outlined"
@@ -550,11 +550,11 @@
                   />
                   <div class="d-flex ga-3">
                     <v-btn variant="outlined" class="flex-grow-1" @click="emailStep = 'input'; emailForm.email = ''; emailForm.code = ''">
-                      返回修改
+                      {{ t('profile.backAndEdit') }}
                     </v-btn>
                     <v-btn color="primary" class="flex-grow-1" :loading="loading" type="submit">
                       <v-icon start>mdi-check-circle</v-icon>
-                      确认绑定
+                      {{ t('profile.confirmBind') }}
                     </v-btn>
                   </div>
                 </v-form>
@@ -568,25 +568,25 @@
             <!-- 已绑定且不在编辑模式 — ProfilePhoneTab.tsx 行49-83 -->
             <div v-if="user?.phone && !isEditingPhone" class="text-center pa-4">
               <v-icon size="64" color="success" icon="mdi-check-circle" class="mb-4" />
-              <h3 class="text-h6 font-weight-bold mb-2">手机已绑定</h3>
+              <h3 class="text-h6 font-weight-bold mb-2">{{ t('profile.phoneBound') }}</h3>
               <p class="text-body-1 text-primary font-weight-medium mb-4">{{ user.phone }}</p>
               <v-card variant="outlined" rounded="lg" class="pa-4 mb-6 mx-auto" max-width="240">
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">快捷登录</span>
+                  <span class="text-body-2">{{ t('profile.quickLogin') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">安全验证</span>
+                  <span class="text-body-2">{{ t('profile.securityVerification') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">找回密码</span>
+                  <span class="text-body-2">{{ t('profile.resetPassword') }}</span>
                 </div>
               </v-card>
               <v-btn color="primary" @click="startEditPhone">
                 <v-icon start>mdi-phone-outline</v-icon>
-                换绑手机号
+                {{ t('profile.changePhone') }}
               </v-btn>
             </div>
 
@@ -596,13 +596,13 @@
                 <v-alert type="warning" variant="tonal" class="mb-4">
                   <div class="d-flex align-center ga-2">
                     <v-icon size="16" icon="mdi-alert-circle" />
-                    <span>请先验证原手机号</span>
+                    <span>{{ t('profile.verifyOldPhoneTip') }}</span>
                   </div>
                 </v-alert>
                 <v-text-field
                   v-model="phoneForm.code"
-                  label="验证码"
-                  placeholder="请输入 6 位验证码"
+                  :label="t('profile.verificationCode')"
+                  :placeholder="t('profile.enter6DigitCode')"
                   :maxlength="6"
                   required
                   variant="outlined"
@@ -616,15 +616,15 @@
                       :loading="sendingCode"
                       @click="handleSendUnbindPhoneCode"
                     >
-                      {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                      {{ countdown > 0 ? `${countdown}s` : t('profile.getCode') }}
                     </v-btn>
                   </template>
                 </v-text-field>
                 <div class="d-flex ga-3">
-                  <v-btn variant="outlined" class="flex-grow-1" @click="cancelEditPhone">取消</v-btn>
+                  <v-btn variant="outlined" class="flex-grow-1" @click="cancelEditPhone">{{ t('common.cancel') }}</v-btn>
                   <v-btn color="primary" class="flex-grow-1" :loading="loading" type="submit">
                     <v-icon start>mdi-check-circle</v-icon>
-                    确认验证
+                    {{ t('profile.confirmVerify') }}
                   </v-btn>
                 </div>
               </v-form>
@@ -637,21 +637,21 @@
               >
                 <!-- 首次绑定提示 — ProfilePhoneTab.tsx 行175-179 -->
                 <v-card v-if="!isRebindPhone" variant="outlined" rounded="lg" class="pa-3 mb-4 text-center">
-                  <span class="text-body-2 text-medium-emphasis">绑定手机号后，可以使用手机号快捷登录</span>
+                  <span class="text-body-2 text-medium-emphasis">{{ t('profile.bindPhoneTip') }}</span>
                 </v-card>
 
                 <!-- 换绑提示 — ProfilePhoneTab.tsx 行181-186 -->
                 <v-alert v-if="isRebindPhone && phoneStep === 'inputNew'" type="success" variant="tonal" class="mb-4">
                   <div class="d-flex align-center ga-2">
                     <v-icon size="16" icon="mdi-check-circle" />
-                    <span>原手机号验证成功，请输入新手机号</span>
+                    <span>{{ t('profile.oldPhoneVerified') }}</span>
                   </div>
                 </v-alert>
 
                 <v-text-field
                   v-model="phoneForm.phone"
-                  :label="isRebindPhone && phoneStep === 'verifyNew' ? '新手机号' : '手机号'"
-                  placeholder="请输入手机号"
+                  :label="isRebindPhone && phoneStep === 'verifyNew' ? t('profile.newPhone') : t('profile.phone')"
+                  :placeholder="t('profile.enterPhone')"
                   :maxlength="11"
                   required
                   variant="outlined"
@@ -666,7 +666,7 @@
                       :loading="sendingCode"
                       @click="isRebindPhone ? handleSendNewPhoneCode() : handleSendPhoneCode()"
                     >
-                      {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                      {{ countdown > 0 ? `${countdown}s` : t('profile.getCode') }}
                     </v-btn>
                   </template>
                 </v-text-field>
@@ -674,8 +674,8 @@
                 <v-text-field
                   v-if="phoneStep === 'verifyNew'"
                   v-model="phoneForm.code"
-                  label="验证码"
-                  placeholder="请输入 6 位验证码"
+                  :label="t('profile.verificationCode')"
+                  :placeholder="t('profile.enter6DigitCode')"
                   :maxlength="6"
                   required
                   variant="outlined"
@@ -685,7 +685,7 @@
 
                 <div class="d-flex ga-3">
                   <v-btn variant="outlined" class="flex-grow-1" @click="isRebindPhone ? cancelEditPhone() : undefined">
-                    {{ isRebindPhone ? '取消' : '返回' }}
+                    {{ isRebindPhone ? t('common.cancel') : t('profile.back') }}
                   </v-btn>
                   <v-btn
                     v-if="phoneStep === 'verifyNew'"
@@ -695,7 +695,7 @@
                     type="submit"
                   >
                     <v-icon start>mdi-check-circle</v-icon>
-                    {{ isRebindPhone ? '确认换绑' : '确认绑定' }}
+                    {{ isRebindPhone ? t('profile.confirmChange') : t('profile.confirmBind') }}
                   </v-btn>
                 </div>
               </v-form>
@@ -708,49 +708,49 @@
             <!-- 已绑定 — ProfileWechatTab.tsx 行17-52 -->
             <div v-if="user?.wechatId" class="text-center pa-4">
               <v-icon size="64" color="success" icon="mdi-check-circle" class="mb-4" />
-              <h3 class="text-h6 font-weight-bold mb-2">微信已绑定</h3>
-              <p class="text-body-2 text-medium-emphasis mb-4">您可以使用微信快捷登录</p>
+              <h3 class="text-h6 font-weight-bold mb-2">{{ t('profile.wechatBound') }}</h3>
+              <p class="text-body-2 text-medium-emphasis mb-4">{{ t('profile.wechatLoginTip') }}</p>
               <v-card variant="outlined" rounded="lg" class="pa-4 mb-6 mx-auto" max-width="240">
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">微信扫码快捷登录</span>
+                  <span class="text-body-2">{{ t('profile.wechatQuickLogin') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">无需记忆密码</span>
+                  <span class="text-body-2">{{ t('profile.noPasswordNeeded') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">账户安全提升</span>
+                  <span class="text-body-2">{{ t('profile.enhancedSecurity') }}</span>
                 </div>
               </v-card>
               <v-btn variant="outlined" color="error" :loading="loading" @click="handleUnbindWechat">
-                解绑微信
+                {{ t('profile.unbindWechat') }}
               </v-btn>
             </div>
 
             <!-- 未绑定 — ProfileWechatTab.tsx 行55-91 -->
             <div v-else class="text-center pa-4">
               <v-icon size="64" color="grey" icon="mdi-wechat" class="mb-4" />
-              <h3 class="text-h6 font-weight-bold mb-2">绑定微信</h3>
-              <p class="text-body-2 text-medium-emphasis mb-4">绑定后可使用微信快捷登录，无需记忆密码</p>
+              <h3 class="text-h6 font-weight-bold mb-2">{{ t('profile.bindWechat') }}</h3>
+              <p class="text-body-2 text-medium-emphasis mb-4">{{ t('profile.bindWechatTip') }}</p>
               <v-card variant="outlined" rounded="lg" class="pa-4 mb-6 mx-auto" max-width="240">
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">扫码快捷登录</span>
+                  <span class="text-body-2">{{ t('profile.scanQuickLogin') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">安全便捷</span>
+                  <span class="text-body-2">{{ t('profile.safeAndConvenient') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2">
                   <v-icon size="14" color="success" icon="mdi-check-circle" />
-                  <span class="text-body-2">实时消息通知</span>
+                  <span class="text-body-2">{{ t('profile.realTimeNotifications') }}</span>
                 </div>
               </v-card>
               <v-btn color="#07c160" :loading="loading" @click="handleBindWechat">
                 <v-icon start>mdi-wechat</v-icon>
-                绑定微信
+                {{ t('profile.bindWechat') }}
               </v-btn>
             </div>
           </div>
@@ -760,23 +760,23 @@
           <div v-if="activeTab === 'deactivate'">
             <div class="text-center pa-4 deactivate-content">
               <v-icon size="64" color="error" icon="mdi-alert-outline" class="mb-4" />
-              <h3 class="text-h5 font-weight-bold mb-2">注销账户</h3>
+              <h3 class="text-h5 font-weight-bold mb-2">{{ t('profile.deactivateAccount') }}</h3>
               <p class="text-body-2 text-medium-emphasis mb-4">
-                注销账户是一个不可逆的操作。注销后，您的所有数据将被永久删除，且无法恢复。
+                {{ t('profile.deactivateWarning') }}
               </p>
 
               <v-card variant="outlined" rounded="lg" class="pa-4 mb-6 text-left">
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="error" icon="mdi-alert-outline" />
-                  <span class="text-body-2">所有项目文件将被永久删除</span>
+                  <span class="text-body-2">{{ t('profile.warning1') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2 mb-2">
                   <v-icon size="14" color="error" icon="mdi-alert-outline" />
-                  <span class="text-body-2">所有收藏和历史记录将被清除</span>
+                  <span class="text-body-2">{{ t('profile.warning2') }}</span>
                 </div>
                 <div class="d-flex align-center ga-2">
                   <v-icon size="14" color="error" icon="mdi-alert-outline" />
-                  <span class="text-body-2">账户信息将无法再恢复</span>
+                  <span class="text-body-2">{{ t('profile.warning3') }}</span>
                 </div>
               </v-card>
 
@@ -786,7 +786,7 @@
                 :items="deactivateVerificationOptions"
                 item-title="title"
                 item-value="value"
-                label="选择验证方式"
+                :label="t('profile.selectVerification')"
                 variant="outlined"
                 class="mb-4"
               />
@@ -796,8 +796,8 @@
                 v-if="deactivateForm.verificationMethod === 'password'"
                 v-model="deactivateForm.password"
                 :type="showPassword.confirm ? 'text' : 'password'"
-                label="密码验证"
-                placeholder="请输入密码"
+                :label="t('profile.passwordVerification')"
+                :placeholder="t('profile.enterPassword')"
                 variant="outlined"
                 class="mb-4"
                 :append-inner-icon="showPassword.confirm ? 'mdi-eye-off' : 'mdi-eye'"
@@ -808,8 +808,8 @@
               <v-text-field
                 v-if="deactivateForm.verificationMethod === 'phone'"
                 v-model="deactivateForm.phoneCode"
-                label="手机验证码"
-                placeholder="请输入手机验证码"
+                :label="t('profile.phoneVerificationCode')"
+                :placeholder="t('profile.enterPhoneCode')"
                 variant="outlined"
                 class="mb-4"
               >
@@ -820,7 +820,7 @@
                     :disabled="deactivateCountdown > 0"
                     @click="handleSendDeactivatePhoneCode"
                   >
-                    {{ deactivateCountdown > 0 ? `${deactivateCountdown}s` : '获取验证码' }}
+                    {{ deactivateCountdown > 0 ? `${deactivateCountdown}s` : t('profile.getCode') }}
                   </v-btn>
                 </template>
               </v-text-field>
@@ -829,8 +829,8 @@
               <v-text-field
                 v-if="deactivateForm.verificationMethod === 'email'"
                 v-model="deactivateForm.emailCode"
-                label="邮箱验证码"
-                placeholder="请输入邮箱验证码"
+                :label="t('profile.emailVerificationCode')"
+                :placeholder="t('profile.enterEmailCode')"
                 variant="outlined"
                 class="mb-4"
               >
@@ -841,7 +841,7 @@
                     :disabled="deactivateCountdown > 0"
                     @click="handleSendDeactivateEmailCode"
                   >
-                    {{ deactivateCountdown > 0 ? `${deactivateCountdown}s` : '获取验证码' }}
+                    {{ deactivateCountdown > 0 ? `${deactivateCountdown}s` : t('profile.getCode') }}
                   </v-btn>
                 </template>
               </v-text-field>
@@ -851,26 +851,26 @@
                 <v-alert v-if="deactivateForm.wechatConfirm === 'confirmed'" type="success" variant="tonal">
                   <div class="d-flex align-center ga-2">
                     <v-icon icon="mdi-check-circle" />
-                    <span>微信验证成功</span>
+                    <span>{{ t('profile.wechatVerified') }}</span>
                   </div>
                 </v-alert>
                 <v-btn v-else color="#07c160" block @click="handleWechatDeactivateConfirm">
                   <v-icon start>mdi-wechat</v-icon>
-                  微信扫码验证
+                  {{ t('profile.wechatScanVerify') }}
                 </v-btn>
               </div>
 
               <!-- 确认复选框 — ProfileDeactivateTab.tsx 行262-284 -->
               <v-checkbox
                 v-model="deactivateForm.confirmed"
-                label="我已了解注销的后果，并确认注销"
+                :label="t('profile.confirmDeactivate')"
                 color="error"
                 hide-details
                 class="mb-2"
               />
               <v-checkbox
                 v-model="deactivateForm.immediate"
-                label="立即注销并清理所有数据（不等待30天）"
+                :label="t('profile.immediateDeactivate')"
                 color="error"
                 hide-details
                 class="mb-4"
@@ -885,7 +885,7 @@
                 @click="handleDeactivateConfirm"
               >
                 <v-icon start>mdi-alert-outline</v-icon>
-                确认注销
+                {{ t('profile.confirmDeactivateBtn') }}
               </v-btn>
             </div>
           </div>
@@ -896,12 +896,12 @@
     <!-- 解绑微信确认对话框 — Profile.tsx 行756-763 -->
     <v-dialog v-model="unbindWechatDialog" max-width="400">
       <v-card>
-        <v-card-title>解绑微信</v-card-title>
-        <v-card-text>确定要解绑微信吗？解绑后需要重新绑定。</v-card-text>
+        <v-card-title>{{ t('profile.unbindWechatTitle') }}</v-card-title>
+        <v-card-text>{{ t('profile.unbindWechatConfirm') }}</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="unbindWechatDialog = false">取消</v-btn>
-          <v-btn color="error" variant="text" @click="confirmUnbindWechat">确认解绑</v-btn>
+          <v-btn variant="text" @click="unbindWechatDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="error" variant="text" @click="confirmUnbindWechat">{{ t('profile.confirmUnbind') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -909,12 +909,12 @@
     <!-- 注销确认对话框 — ProfileDeactivateTab.tsx 行106-117 -->
     <v-dialog v-model="deactivateDialog" max-width="400">
       <v-card>
-        <v-card-title>确认注销</v-card-title>
-        <v-card-text>确定要注销您的账户吗？此操作不可恢复！</v-card-text>
+        <v-card-title>{{ t('profile.confirmDeactivateTitle') }}</v-card-title>
+        <v-card-text>{{ t('profile.confirmDeactivateText') }}</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="deactivateDialog = false">取消</v-btn>
-          <v-btn color="error" variant="text" @click="handleDeactivate">确定注销</v-btn>
+          <v-btn variant="text" @click="deactivateDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="error" variant="text" @click="handleDeactivate">{{ t('profile.confirmDeactivateBtn') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1029,11 +1029,11 @@ const passwordStrength = computed(() => {
   if (/\d/.test(password)) score++;
   if (/[^a-zA-Z0-9]/.test(password)) score++;
   const levels = [
-    { label: '太弱', color: '#ef4444' },
-    { label: '较弱', color: '#f97316' },
-    { label: '一般', color: '#eab308' },
-    { label: '较强', color: '#22c55e' },
-    { label: '很强', color: '#10b981' },
+    { label: t('profile.strengthWeak'), color: '#ef4444' },
+    { label: t('profile.strengthFair'), color: '#f97316' },
+    { label: t('profile.strengthMedium'), color: '#eab308' },
+    { label: t('profile.strengthStrong'), color: '#22c55e' },
+    { label: t('profile.strengthVeryStrong'), color: '#10b981' },
   ];
   return {
     strength: score,
@@ -1051,9 +1051,9 @@ const statusColor = computed(() => {
 });
 
 const statusLabel = computed(() => {
-  if (user.value?.status === 'ACTIVE') return '正常';
-  if (user.value?.status === 'INACTIVE') return '未激活';
-  return '已禁用';
+  if (user.value?.status === 'ACTIVE') return t('profile.statusActive');
+  if (user.value?.status === 'INACTIVE') return t('profile.statusInactive');
+  return t('profile.statusDisabled');
 });
 
 // 来源：ProfileDeactivateTab.tsx canSubmit 行80-104
@@ -1068,11 +1068,11 @@ const canDeactivate = computed(() => {
 
 // 来源：ProfileDeactivateTab.tsx 行147-161
 const deactivateVerificationOptions = computed(() => {
-  const opts: { title: string; value: string }[] = [{ title: '请选择验证方式', value: '' }];
-  if (user.value?.hasPassword) opts.push({ title: '密码验证', value: 'password' });
-  if (user.value?.phone && user.value.phoneVerified) opts.push({ title: '手机验证码', value: 'phone' });
-  if (user.value?.email) opts.push({ title: '邮箱验证码', value: 'email' });
-  if (user.value?.wechatId) opts.push({ title: '微信扫码验证', value: 'wechat' });
+  const opts: { title: string; value: string }[] = [{ title: t('profile.pleaseSelectVerification'), value: '' }];
+  if (user.value?.hasPassword) opts.push({ title: t('profile.passwordVerification'), value: 'password' });
+  if (user.value?.phone && user.value.phoneVerified) opts.push({ title: t('profile.phoneVerificationCode'), value: 'phone' });
+  if (user.value?.email) opts.push({ title: t('profile.emailVerificationCode'), value: 'email' });
+  if (user.value?.wechatId) opts.push({ title: t('profile.wechatScanVerify'), value: 'wechat' });
   return opts;
 });
 
@@ -1135,11 +1135,11 @@ async function handleUpdateProfile(): Promise<void> {
       username: infoForm.value.username,
       nickname: infoForm.value.nickname,
     });
-    success.value = '个人信息更新成功';
+    success.value = t('profile.profileUpdateSuccess');
     await refreshUser();
     isEditingInfo.value = false;
   } catch (err) {
-    error.value = extractError(err, '更新失败');
+    error.value = extractError(err, t('profile.updateFailed'));
   } finally {
     infoLoading.value = false;
   }
@@ -1173,19 +1173,19 @@ async function handlePasswordSubmit(): Promise<void> {
 
   // 来源：Profile.tsx 行278-280
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-    error.value = '两次输入的新密码不一致';
+    error.value = t('profile.passwordsNotMatch');
     loading.value = false;
     return;
   }
   // 来源：Profile.tsx 行282-284
   if (passwordForm.value.newPassword.length < 6) {
-    error.value = '新密码至少需要6个字符';
+    error.value = t('profile.passwordTooShort');
     loading.value = false;
     return;
   }
   // 来源：Profile.tsx 行286-289
   if (user.value?.hasPassword !== false && !passwordForm.value.oldPassword) {
-    error.value = '请输入当前密码';
+    error.value = t('profile.enterCurrentPassword');
     loading.value = false;
     return;
   }
@@ -1196,18 +1196,22 @@ async function handlePasswordSubmit(): Promise<void> {
       newPassword: passwordForm.value.newPassword,
     });
 
+    const action = user.value?.hasPassword === false ? t('profile.set') : t('profile.change');
+    const successMsg = user.value?.hasPassword === false ? t('profile.passwordSetSuccess') : t('profile.passwordChangeSuccess');
+    const redirectMsg = user.value?.hasPassword === false ? t('profile.passwordSetRedirectMsg') : t('profile.passwordChangeRedirectMsg');
+
     // 来源：Profile.tsx 行300-331 — 使用新密码自动登录
     if (user.value?.username) {
       try {
         await login(user.value.username, passwordForm.value.newPassword);
-        success.value = `密码已${user.value?.hasPassword === false ? '设置' : '修改'}成功`;
+        success.value = successMsg;
       } catch (loginErr) {
         console.error('Auto login error:', loginErr);
         // 自动登录失败时，强制退出登录 — Profile.tsx 行308-316
         try { await logout(); } catch (logoutErr) { console.error('Logout error:', logoutErr); }
         router.push({
           path: '/login',
-          state: { message: `密码已${user.value?.hasPassword === false ? '设置' : '修改'}成功，请使用新密码登录` },
+          state: { message: redirectMsg },
         });
       }
     } else {
@@ -1215,11 +1219,11 @@ async function handlePasswordSubmit(): Promise<void> {
       try { await logout(); } catch (logoutErr) { console.error('Logout error:', logoutErr); }
       router.push({
         path: '/login',
-        state: { message: `密码已${user.value?.hasPassword === false ? '设置' : '修改'}成功，请使用新密码登录` },
+        state: { message: redirectMsg },
       });
     }
   } catch (err) {
-    error.value = extractError(err, '密码修改失败');
+    error.value = extractError(err, t('profile.passwordChangeFailed'));
   } finally {
     loading.value = false;
   }
@@ -1232,16 +1236,16 @@ async function handleSendBindCode(): Promise<void> {
   loading.value = true;
   error.value = null;
   if (!emailForm.value.email) {
-    error.value = '请输入邮箱地址';
+    error.value = t('profile.enterEmail');
     loading.value = false;
     return;
   }
   try {
     await authApi.sendBindEmailCode(emailForm.value.email);
     emailStep.value = 'verify';
-    success.value = '验证码已发送到您的邮箱';
+    success.value = t('profile.codeSentToEmail');
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   } finally {
     loading.value = false;
   }
@@ -1253,12 +1257,12 @@ async function handleVerifyBindEmail(): Promise<void> {
   error.value = null;
   try {
     await authApi.verifyBindEmail(emailForm.value.email, emailForm.value.code);
-    success.value = '邮箱绑定成功';
+    success.value = t('profile.emailBindSuccess');
     emailStep.value = 'input';
     emailForm.value = { email: '', code: '' };
     await refreshUser();
   } catch (err) {
-    error.value = extractError(err, '验证失败');
+    error.value = extractError(err, t('profile.verifyFailed'));
   } finally {
     loading.value = false;
   }
@@ -1271,13 +1275,13 @@ async function handleSendUnbindEmailCode(): Promise<void> {
   try {
     const response = await authApi.sendUnbindEmailCode();
     if (response.data?.success) {
-      success.value = '验证码已发送到原邮箱';
+      success.value = t('profile.codeSentToOldEmail');
       startCountdown();
     } else {
-      error.value = response.data?.message || '发送验证码失败';
+      error.value = response.data?.message || t('profile.sendCodeFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -1289,22 +1293,22 @@ async function handleVerifyOldEmail(): Promise<void> {
   error.value = null;
   // 来源：Profile.tsx 行419
   if (!emailForm.value.code || !/^\d{6}$/.test(emailForm.value.code)) {
-    error.value = '请输入 6 位数字验证码';
+    error.value = t('profile.enter6DigitCode');
     loading.value = false;
     return;
   }
   try {
     const response = await authApi.verifyUnbindEmailCode(emailForm.value.code);
     if (response.data?.success) {
-      success.value = '原邮箱验证通过';
+      success.value = t('profile.oldEmailVerified');
       emailVerifyToken.value = response.data.token;
       emailStep.value = 'inputNew';
       emailForm.value = { email: '', code: '' };
     } else {
-      error.value = response.data?.message || '验证失败';
+      error.value = response.data?.message || t('profile.verifyFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '验证失败');
+    error.value = extractError(err, t('profile.verifyFailed'));
   } finally {
     loading.value = false;
   }
@@ -1331,18 +1335,18 @@ function cancelEditEmail(): void {
 // 来源：Profile.tsx 行465-490
 async function handleSendNewEmailCode(): Promise<void> {
   if (!emailForm.value.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.value.email)) {
-    error.value = '请输入正确的邮箱地址';
+    error.value = t('profile.enterValidEmail');
     return;
   }
   sendingCode.value = true;
   error.value = null;
   try {
     await authApi.sendBindEmailCode(emailForm.value.email, true);
-    success.value = '验证码已发送';
+    success.value = t('profile.codeSent');
     startCountdown();
     emailStep.value = 'verifyNew';
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -1353,34 +1357,34 @@ async function handleRebindEmail(): Promise<void> {
   loading.value = true;
   error.value = null;
   if (!emailForm.value.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.value.email)) {
-    error.value = '请输入正确的邮箱地址';
+    error.value = t('profile.enterValidEmail');
     loading.value = false;
     return;
   }
   if (!emailForm.value.code || !/^\d{6}$/.test(emailForm.value.code)) {
-    error.value = '请输入 6 位数字验证码';
+    error.value = t('profile.enter6DigitCode');
     loading.value = false;
     return;
   }
   if (!emailVerifyToken.value) {
-    error.value = '请先验证原邮箱';
+    error.value = t('profile.verifyOldEmailFirst');
     loading.value = false;
     return;
   }
   try {
     const response = await authApi.rebindEmail(emailForm.value.email, emailForm.value.code, emailVerifyToken.value);
     if (response.data?.success) {
-      success.value = '邮箱换绑成功';
+      success.value = t('profile.emailRebindSuccess');
       emailStep.value = 'input';
       emailForm.value = { email: '', code: '' };
       emailVerifyToken.value = '';
       isEditingEmail.value = false;
       await refreshUser();
     } else {
-      error.value = response.data?.message || '换绑失败';
+      error.value = response.data?.message || t('profile.rebindFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '换绑失败');
+    error.value = extractError(err, t('profile.rebindFailed'));
   } finally {
     loading.value = false;
   }
@@ -1406,7 +1410,7 @@ function onCodeInput(val: string): void {
 // 来源：Profile.tsx 行554-580
 async function handleSendPhoneCode(): Promise<void> {
   if (!phoneForm.value.phone || !/^1[3-9]\d{9}$/.test(phoneForm.value.phone)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('profile.enterValidPhone');
     return;
   }
   sendingCode.value = true;
@@ -1414,14 +1418,14 @@ async function handleSendPhoneCode(): Promise<void> {
   try {
     const response = await authApi.sendSmsCode(phoneForm.value.phone);
     if (response.data?.success) {
-      success.value = '验证码已发送';
+      success.value = t('profile.codeSent');
       startCountdown();
       phoneStep.value = 'verifyNew';
     } else {
-      error.value = response.data?.message || '发送验证码失败';
+      error.value = response.data?.message || t('profile.sendCodeFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -1434,13 +1438,13 @@ async function handleSendUnbindPhoneCode(): Promise<void> {
   try {
     const response = await authApi.sendUnbindPhoneCode();
     if (response.data?.success) {
-      success.value = '验证码已发送到原手机号';
+      success.value = t('profile.codeSentToOldPhone');
       startCountdown();
     } else {
-      error.value = response.data?.message || '发送验证码失败';
+      error.value = response.data?.message || t('profile.sendCodeFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -1451,23 +1455,23 @@ async function handleVerifyOldPhone(): Promise<void> {
   loading.value = true;
   error.value = null;
   if (!phoneForm.value.code || !/^\d{6}$/.test(phoneForm.value.code)) {
-    error.value = '请输入 6 位数字验证码';
+    error.value = t('profile.enter6DigitCode');
     loading.value = false;
     return;
   }
   try {
     const response = await authApi.verifyUnbindPhoneCode(phoneForm.value.code);
     if (response.data?.success) {
-      success.value = '原手机号验证通过';
+      success.value = t('profile.oldPhoneVerified');
       verifyToken.value = response.data.token;
       phoneStep.value = 'inputNew';
       phoneForm.value = { phone: '', code: '' };
       countdown.value = 0;
     } else {
-      error.value = response.data?.message || '验证失败';
+      error.value = response.data?.message || t('profile.verifyFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '验证失败');
+    error.value = extractError(err, t('profile.verifyFailed'));
   } finally {
     loading.value = false;
   }
@@ -1476,7 +1480,7 @@ async function handleVerifyOldPhone(): Promise<void> {
 // 来源：Profile.tsx 行637-663
 async function handleSendNewPhoneCode(): Promise<void> {
   if (!phoneForm.value.phone || !/^1[3-9]\d{9}$/.test(phoneForm.value.phone)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('profile.enterValidPhone');
     return;
   }
   sendingCode.value = true;
@@ -1484,14 +1488,14 @@ async function handleSendNewPhoneCode(): Promise<void> {
   try {
     const response = await authApi.sendSmsCode(phoneForm.value.phone);
     if (response.data?.success) {
-      success.value = '验证码已发送';
+      success.value = t('profile.codeSent');
       startCountdown();
       phoneStep.value = 'verifyNew';
     } else {
-      error.value = response.data?.message || '发送验证码失败';
+      error.value = response.data?.message || t('profile.sendCodeFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -1502,34 +1506,34 @@ async function handleRebindPhone(): Promise<void> {
   loading.value = true;
   error.value = null;
   if (!phoneForm.value.phone || !/^1[3-9]\d{9}$/.test(phoneForm.value.phone)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('profile.enterValidPhone');
     loading.value = false;
     return;
   }
   if (!phoneForm.value.code || !/^\d{6}$/.test(phoneForm.value.code)) {
-    error.value = '请输入 6 位数字验证码';
+    error.value = t('profile.enter6DigitCode');
     loading.value = false;
     return;
   }
   if (!verifyToken.value) {
-    error.value = '请先验证原手机号';
+    error.value = t('profile.verifyOldPhoneFirst');
     loading.value = false;
     return;
   }
   try {
     const response = await authApi.rebindPhone(phoneForm.value.phone, phoneForm.value.code, verifyToken.value);
     if (response.data?.success) {
-      success.value = '手机号换绑成功';
+      success.value = t('profile.phoneRebindSuccess');
       phoneStep.value = 'verifyOld';
       phoneForm.value = { phone: '', code: '' };
       verifyToken.value = '';
       isEditingPhone.value = false;
       await refreshUser();
     } else {
-      error.value = response.data?.message || '换绑失败';
+      error.value = response.data?.message || t('profile.rebindFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '换绑失败');
+    error.value = extractError(err, t('profile.rebindFailed'));
   } finally {
     loading.value = false;
   }
@@ -1540,28 +1544,28 @@ async function handleBindPhone(): Promise<void> {
   loading.value = true;
   error.value = null;
   if (!phoneForm.value.phone || !/^1[3-9]\d{9}$/.test(phoneForm.value.phone)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('profile.enterValidPhone');
     loading.value = false;
     return;
   }
   if (!phoneForm.value.code || !/^\d{6}$/.test(phoneForm.value.code)) {
-    error.value = '请输入6位数字验证码';
+    error.value = t('profile.enter6DigitCode');
     loading.value = false;
     return;
   }
   try {
     const response = await authApi.bindPhone(phoneForm.value.phone, phoneForm.value.code);
     if (response.data?.success) {
-      success.value = '手机号绑定成功';
+      success.value = t('profile.phoneBindSuccess');
       phoneStep.value = 'verifyOld';
       phoneForm.value = { phone: '', code: '' };
       isEditingPhone.value = false;
       await refreshUser();
     } else {
-      error.value = response.data?.message || '绑定失败';
+      error.value = response.data?.message || t('profile.bindFailed');
     }
   } catch (err) {
-    error.value = extractError(err, '绑定失败');
+    error.value = extractError(err, t('profile.bindFailed'));
   } finally {
     loading.value = false;
   }
@@ -1604,7 +1608,7 @@ async function handleBindWechat(): Promise<void> {
       `width=${w},height=${h},left=${(screen.width - w) / 2},top=${(screen.height - h) / 2},scrollbars=yes`,
     );
   } catch (err) {
-    error.value = extractError(err, '获取微信授权链接失败');
+    error.value = extractError(err, t('profile.getWechatAuthUrlFailed'));
   } finally {
     loading.value = false;
   }
@@ -1622,15 +1626,15 @@ async function confirmUnbindWechat(): Promise<void> {
     error.value = null;
     const response = await authApi.unbindWechat();
     if (response.data?.success) {
-      uiStore.addToast('微信解绑成功', 'success');
-      success.value = '微信解绑成功';
+      uiStore.addToast(t('profile.wechatUnbindSuccess'), 'success');
+      success.value = t('profile.wechatUnbindSuccess');
       await refreshUser();
     } else {
-      error.value = response.data?.message || '解绑失败';
-      uiStore.addToast(response.data?.message || '解绑失败', 'error');
+      error.value = response.data?.message || t('profile.unbindFailed');
+      uiStore.addToast(response.data?.message || t('profile.unbindFailed'), 'error');
     }
   } catch (err) {
-    const errorMsg = extractError(err, '解绑失败');
+    const errorMsg = extractError(err, t('profile.unbindFailed'));
     error.value = errorMsg;
     uiStore.addToast(errorMsg, 'error');
   } finally {
@@ -1659,13 +1663,13 @@ async function handleDeactivate(): Promise<void> {
       wechatConfirm: deactivateForm.value.wechatConfirm || undefined,
     });
 
-    success.value = '账户已注销，30天后自动清理数据';
+    success.value = t('profile.accountDeactivated');
 
     setTimeout(() => {
       logout();
     }, 1500);
   } catch (err) {
-    error.value = extractError(err, '注销失败');
+    error.value = extractError(err, t('profile.deactivateFailed'));
   } finally {
     deactivateLoading.value = false;
   }
@@ -1675,7 +1679,7 @@ async function handleDeactivate(): Promise<void> {
 async function handleSendDeactivatePhoneCode(): Promise<void> {
   try {
     if (!user.value?.phone) {
-      error.value = '手机号不存在';
+      error.value = t('profile.phoneNotExist');
       return;
     }
     await authApi.sendSmsCode(user.value.phone);
@@ -1688,7 +1692,7 @@ async function handleSendDeactivatePhoneCode(): Promise<void> {
       }
     }, 1000);
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   }
 }
 
@@ -1696,7 +1700,7 @@ async function handleSendDeactivatePhoneCode(): Promise<void> {
 async function handleSendDeactivateEmailCode(): Promise<void> {
   try {
     if (!user.value?.email) {
-      error.value = '邮箱不存在';
+      error.value = t('profile.emailNotExist');
       return;
     }
     await authApi.resendVerification(user.value.email);
@@ -1709,14 +1713,14 @@ async function handleSendDeactivateEmailCode(): Promise<void> {
       }
     }, 1000);
   } catch (err) {
-    error.value = extractError(err, '发送验证码失败');
+    error.value = extractError(err, t('profile.sendCodeFailed'));
   }
 }
 
 // 来源：ProfileDeactivateTab.tsx 行110-112 onWechatConfirm
 function handleWechatDeactivateConfirm(): void {
   deactivateForm.value.wechatConfirm = 'confirmed';
-  success.value = '微信验证成功';
+  success.value = t('profile.wechatVerified');
 }
 
 // ==================== 生命周期 & Watchers ====================

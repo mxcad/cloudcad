@@ -7,8 +7,8 @@
         <v-avatar size="80" color="grey-lighten-3" class="mb-4">
           <v-icon size="40" icon="mdi-file-code-outline" color="grey" />
         </v-avatar>
-        <div class="text-h6 font-weight-medium mb-2">无访问权限</div>
-        <div class="text-body-2 text-medium-emphasis">您没有查看字体库的权限</div>
+        <div class="text-h6 font-weight-medium mb-2">{{ t('fontLibrary.noAccess') }}</div>
+        <div class="text-body-2 text-medium-emphasis">{{ t('fontLibrary.noAccessDesc') }}</div>
       </div>
     </template>
 
@@ -18,8 +18,8 @@
         <!-- 页面头部 — 来源：FontLibrary.tsx:343-358 -->
         <div class="d-flex align-center justify-space-between mb-6">
           <div>
-            <div class="text-h5 font-weight-bold mb-1">字体库管理</div>
-            <div class="text-body-2 text-medium-emphasis">管理和维护 CAD 字体文件</div>
+            <div class="text-h5 font-weight-bold mb-1">{{ t('fontLibrary.title') }}</div>
+            <div class="text-body-2 text-medium-emphasis">{{ t('fontLibrary.subtitle') }}</div>
           </div>
           <v-btn
             v-if="canUploadFonts"
@@ -27,7 +27,7 @@
             @click="showUploadModal = true"
           >
             <v-icon start>mdi-upload</v-icon>
-            上传字体
+            {{ t('fontLibrary.uploadFont') }}
           </v-btn>
         </div>
 
@@ -40,7 +40,7 @@
               </v-avatar>
               <div>
                 <div class="text-h5 font-weight-bold">{{ stats.count }}</div>
-                <div class="text-caption text-medium-emphasis">字体总数</div>
+                <div class="text-caption text-medium-emphasis">{{ t('fontLibrary.totalFonts') }}</div>
               </div>
             </v-card>
           </v-col>
@@ -51,7 +51,7 @@
               </v-avatar>
               <div>
                 <div class="text-h5 font-weight-bold">{{ formatFileSize(stats.totalSize) }}</div>
-                <div class="text-caption text-medium-emphasis">总存储</div>
+                <div class="text-caption text-medium-emphasis">{{ t('fontLibrary.totalStorage') }}</div>
               </div>
             </v-card>
           </v-col>
@@ -62,7 +62,7 @@
               </v-avatar>
               <div>
                 <div class="text-h5 font-weight-bold">{{ stats.typeCount }}</div>
-                <div class="text-caption text-medium-emphasis">格式种类</div>
+                <div class="text-caption text-medium-emphasis">{{ t('fontLibrary.formatTypes') }}</div>
               </div>
             </v-card>
           </v-col>
@@ -72,11 +72,11 @@
         <v-tabs v-model="activeTab" class="mb-6" @update:model-value="onTabChange">
           <v-tab value="backend">
             <v-icon start size="16">mdi-harddisk</v-icon>
-            后端字体（转换程序）
+            {{ t('fontLibrary.backendFonts') }}
           </v-tab>
           <v-tab value="frontend">
             <v-icon start size="16">mdi-format-font</v-icon>
-            前端字体（资源目录）
+            {{ t('fontLibrary.frontendFonts') }}
           </v-tab>
         </v-tabs>
 
@@ -88,7 +88,7 @@
               v-model="filters.name"
               density="compact"
               variant="outlined"
-              placeholder="搜索字体名称..."
+              :placeholder="t('fontLibrary.searchPlaceholder')"
               prepend-inner-icon="mdi-magnify"
               hide-details
               style="min-width: 240px; max-width: 400px; flex: 1"
@@ -113,7 +113,7 @@
               @click="showFilters = !showFilters"
             >
               <v-icon start size="16">mdi-filter-outline</v-icon>
-              筛选
+              {{ t('fontLibrary.filter') }}
               <v-icon end size="14" :class="{ 'rotate-180': showFilters }">mdi-chevron-down</v-icon>
             </v-btn>
 
@@ -125,7 +125,7 @@
               @click="handleReset"
             >
               <v-icon start size="14">mdi-close</v-icon>
-              清除
+              {{ t('fontLibrary.clear') }}
             </v-btn>
 
             <!-- 视图切换 — 来源：FontLibrary.tsx:472-496 -->
@@ -136,10 +136,10 @@
               variant="outlined"
               class="ml-auto"
             >
-              <v-btn value="grid" size="small" title="网格视图">
+              <v-btn value="grid" size="small" :title="t('fontLibrary.gridView')">
                 <v-icon>mdi-view-grid-outline</v-icon>
               </v-btn>
-              <v-btn value="list" size="small" title="列表视图">
+              <v-btn value="list" size="small" :title="t('fontLibrary.listView')">
                 <v-icon>mdi-view-list-outline</v-icon>
               </v-btn>
             </v-btn-toggle>
@@ -152,7 +152,7 @@
                 <v-text-field
                   v-model="filters.startTime"
                   type="date"
-                  label="开始日期"
+                  :label="t('fontLibrary.startDate')"
                   density="compact"
                   variant="outlined"
                   prepend-inner-icon="mdi-calendar"
@@ -162,7 +162,7 @@
                 <v-text-field
                   v-model="filters.endTime"
                   type="date"
-                  label="结束日期"
+                  :label="t('fontLibrary.endDate')"
                   density="compact"
                   variant="outlined"
                   prepend-inner-icon="mdi-calendar"
@@ -182,15 +182,15 @@
                 :model-value="selectedFonts.size === fonts.length && fonts.length > 0"
                 @update:model-value="handleSelectAll"
                 density="compact"
-                hide-details
+                hide-details"
               />
               <span class="text-body-2">
-                已选择 <strong>{{ selectedFonts.size }}</strong> 个字体
+                {{ t('fontLibrary.selectedFonts', { count: selectedFonts.size }) }}
               </span>
             </div>
             <div class="d-flex align-center ga-2">
               <v-btn variant="text" size="small" @click="selectedFonts = new Set()">
-                取消选择
+                {{ t('fontLibrary.cancelSelection') }}
               </v-btn>
               <v-btn
                 v-if="canDeleteFonts"
@@ -200,7 +200,7 @@
                 @click="handleBatchDelete"
               >
                 <v-icon start size="14">mdi-delete-outline</v-icon>
-                批量删除
+                {{ t('fontLibrary.batchDelete') }}
               </v-btn>
             </div>
           </v-card>
@@ -208,7 +208,7 @@
 
         <!-- 排序选项 — 来源：FontLibrary.tsx:567-592 -->
         <div class="d-flex align-center ga-4 mb-4 text-body-2">
-          <span class="text-medium-emphasis">排序：</span>
+          <span class="text-medium-emphasis">{{ t('fontLibrary.sortBy') }}：</span>
           <v-btn
             v-for="sortOption in sortOptions"
             :key="sortOption.key"
@@ -238,16 +238,16 @@
             <v-avatar size="96" color="grey-lighten-3" class="mb-4">
               <v-icon size="40" icon="mdi-folder-open-outline" color="grey" />
             </v-avatar>
-            <div class="text-h6 font-weight-medium mb-1">暂无字体</div>
+            <div class="text-h6 font-weight-medium mb-1">{{ t('fontLibrary.noFonts') }}</div>
             <div class="text-body-2 text-medium-emphasis mb-4">
-              {{ filters.name || filters.extension ? '没有找到匹配的字体' : '当前位置没有字体文件' }}
+              {{ filters.name || filters.extension ? t('fontLibrary.noMatchingFonts') : t('fontLibrary.noFontFiles') }}
             </div>
             <v-btn
               v-if="canUploadFonts && !filters.name && !filters.extension"
               color="primary"
               @click="showUploadModal = true"
             >
-              上传第一个字体
+              {{ t('fontLibrary.uploadFirstFont') }}
             </v-btn>
           </div>
 
@@ -284,7 +284,7 @@
                     icon
                     size="x-small"
                     variant="tonal"
-                    title="下载"
+                    :title="t('fontLibrary.download')"
                     @click="handleDownload(font.name)"
                   >
                     <v-icon size="16">mdi-download</v-icon>
@@ -295,7 +295,7 @@
                     size="x-small"
                     variant="tonal"
                     color="error"
-                    title="删除"
+                    :title="t('fontLibrary.delete')"
                     @click="handleDelete(font.name)"
                   >
                     <v-icon size="16">mdi-delete-outline</v-icon>
@@ -343,14 +343,14 @@
                     :model-value="selectedFonts.size === fonts.length && fonts.length > 0"
                     @update:model-value="handleSelectAll"
                     density="compact"
-                    hide-details
+                    hide-details"
                   />
                 </th>
-                <th>字体文件</th>
-                <th style="width: 96px">格式</th>
-                <th style="width: 112px">大小</th>
-                <th style="width: 144px">修改时间</th>
-                <th style="width: 96px" class="text-right">操作</th>
+                <th>{{ t('fontLibrary.fontFile') }}</th>
+                <th style="width: 96px">{{ t('fontLibrary.format') }}</th>
+                <th style="width: 112px">{{ t('fontLibrary.size') }}</th>
+                <th style="width: 144px">{{ t('fontLibrary.modifiedTime') }}</th>
+                <th style="width: 96px" class="text-right">{{ t('fontLibrary.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -358,7 +358,7 @@
               <tr v-if="loading">
                 <td colspan="6" class="py-12 text-center">
                   <v-progress-circular indeterminate color="primary" size="24" class="mr-2" />
-                  <span class="text-medium-emphasis">加载中...</span>
+                  <span class="text-medium-emphasis">{{ t('fontLibrary.loading') }}</span>
                 </td>
               </tr>
               <!-- 空状态 — 来源：FontLibrary.tsx:737-750 -->
@@ -367,7 +367,7 @@
                   <v-avatar size="80" color="grey-lighten-3" class="mb-4">
                     <v-icon icon="mdi-folder-open-outline" color="grey" />
                   </v-avatar>
-                  <div class="text-medium-emphasis">暂无数据</div>
+                  <div class="text-medium-emphasis">{{ t('fontLibrary.noData') }}</div>
                 </td>
               </tr>
               <!-- 数据行 — 来源：FontLibrary.tsx:751-821 -->
@@ -397,7 +397,7 @@
                       <div class="font-weight-medium text-truncate" style="max-width: 260px" :title="font.name">
                         {{ font.name }}
                       </div>
-                      <div class="text-caption text-disabled">{{ font.creator || '系统管理员' }}</div>
+                      <div class="text-caption text-disabled">{{ font.creator || t('fontLibrary.systemAdmin') }}</div>
                     </div>
                   </div>
                 </td>
@@ -419,7 +419,7 @@
                     icon
                     size="x-small"
                     variant="text"
-                    title="下载"
+                    :title="t('fontLibrary.download')"
                     @click="handleDownload(font.name)"
                   >
                     <v-icon size="16">mdi-download</v-icon>
@@ -430,7 +430,7 @@
                     size="x-small"
                     variant="text"
                     color="error"
-                    title="删除"
+                    :title="t('fontLibrary.delete')"
                     @click="handleDelete(font.name)"
                   >
                     <v-icon size="16">mdi-delete-outline</v-icon>
@@ -443,9 +443,9 @@
 
         <!-- 底部统计 — 来源：FontLibrary.tsx:829-833 -->
         <div class="mt-6 text-center text-body-2 text-medium-emphasis">
-          共 <strong>{{ fonts.length }}</strong> 个字体文件
-          <template v-if="filters.name"> · 搜索 "{{ filters.name }}"</template>
-          <template v-if="filters.extension"> · 格式 {{ filters.extension }}</template>
+          {{ t('fontLibrary.totalFontFiles', { count: fonts.length }) }}
+          <template v-if="filters.name"> · {{ t('fontLibrary.searchFor', { query: filters.name }) }}</template>
+          <template v-if="filters.extension"> · {{ t('fontLibrary.formatLabel', { format: filters.extension }) }}</template>
         </div>
 
         <!-- 上传模态框 — 来源：FontLibrary.tsx:836-845 -->
@@ -458,8 +458,8 @@
                   <v-icon icon="mdi-upload" color="primary" />
                 </v-avatar>
                 <div>
-                  <div class="text-h6 font-weight-semibold">上传字体</div>
-                  <div class="text-caption text-medium-emphasis">支持 TTF、OTF、WOFF 等格式</div>
+                  <div class="text-h6 font-weight-semibold">{{ t('fontLibrary.uploadFont') }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ t('fontLibrary.supportedFormats') }}</div>
                 </div>
               </div>
               <v-btn icon variant="text" size="small" @click="showUploadModal = false">
@@ -499,7 +499,7 @@
                     {{ (uploadFile.size / 1024 / 1024).toFixed(2) }} MB
                   </div>
                   <v-btn variant="text" size="small" color="error" class="mt-2" @click.stop="uploadFile = null">
-                    移除文件
+                    {{ t('fontLibrary.removeFile') }}
                   </v-btn>
                 </template>
 
@@ -508,15 +508,15 @@
                   <v-avatar size="64" color="grey-lighten-3" rounded="xl" class="mb-3">
                     <v-icon icon="mdi-upload" color="grey" size="32" />
                   </v-avatar>
-                  <div class="font-weight-medium mb-1">点击或拖拽文件到此处</div>
-                  <div class="text-body-2 text-medium-emphasis">支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX</div>
-                  <div class="text-caption text-disabled mt-2">最大 10MB</div>
+                  <div class="font-weight-medium mb-1">{{ t('fontLibrary.clickOrDrag') }}</div>
+                  <div class="text-body-2 text-medium-emphasis">{{ t('fontLibrary.allSupportedFormats') }}</div>
+                  <div class="text-caption text-disabled mt-2">{{ t('fontLibrary.maxSize') }}</div>
                 </template>
               </div>
 
               <!-- 上传目标选择 — 来源：FontLibrary.tsx:1024-1055 -->
               <div class="mt-6">
-                <div class="text-body-2 font-weight-medium mb-3">上传位置</div>
+                <div class="text-body-2 font-weight-medium mb-3">{{ t('fontLibrary.uploadLocation') }}</div>
                 <v-row dense>
                   <v-col v-for="opt in targetOptions" :key="opt.value" cols="4">
                     <v-card
@@ -550,7 +550,7 @@
 
             <!-- 底部按钮 — 来源：FontLibrary.tsx:1059-1084 -->
             <v-card-actions class="pa-4 justify-end" style="border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity))">
-              <v-btn variant="outlined" :disabled="uploading" @click="showUploadModal = false">取消</v-btn>
+              <v-btn variant="outlined" :disabled="uploading" @click="showUploadModal = false">{{ t('common.cancel') }}</v-btn>
               <v-btn
                 color="primary"
                 :disabled="!uploadFile || uploading"
@@ -558,7 +558,7 @@
                 @click="handleUpload"
               >
                 <v-icon start>mdi-upload</v-icon>
-                上传
+                {{ t('common.upload') }}
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -570,8 +570,8 @@
             <v-card-title class="text-h6">{{ confirmDialog.title }}</v-card-title>
             <v-card-text class="text-body-2">{{ confirmDialog.message }}</v-card-text>
             <v-card-actions class="justify-end">
-              <v-btn variant="text" @click="resolveConfirm(false)">取消</v-btn>
-              <v-btn color="error" variant="flat" @click="resolveConfirm(true)">确认删除</v-btn>
+              <v-btn variant="text" @click="resolveConfirm(false)">{{ t('common.cancel') }}</v-btn>
+              <v-btn color="error" variant="flat" @click="resolveConfirm(true)">{{ t('common.confirmDelete') }}</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -589,16 +589,21 @@
 
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useDocumentTitle } from '@/composables/useDocumentTitle';
+import { useI18n } from '@/composables/useI18n';
 import { fontsApi } from '@/services/fontsApi';
 import type { FontInfo } from '@/services/fontsApi';
 import { useUIStore } from '@/stores/ui.store';
 import { SystemPermission } from '@/constants/permissions';
 
+const { t } = useI18n();
+
+useDocumentTitle(() => t('fontLibrary.title'));
+
 // ==================== 常量 ====================
 
 // 字体文件类型配置 — 来源：FontLibrary.tsx:32-41
 const FONT_TYPES = [
-  { value: '', label: '全部格式', color: '#6366f1', icon: 'mdi-folder-open' },
+  { value: '', label: t('fontLibrary.allFormats'), color: '#6366f1', icon: 'mdi-folder-open' },
   { value: '.ttf', label: 'TTF', color: '#22c55e', icon: 'mdi-format-font' },
   { value: '.otf', label: 'OTF', color: '#3b82f6', icon: 'mdi-file-document-outline' },
   { value: '.woff', label: 'WOFF', color: '#f59e0b', icon: 'mdi-file-box-outline' },
@@ -610,21 +615,17 @@ const FONT_TYPES = [
 
 // 排序选项 — 来源：FontLibrary.tsx:569-573
 const sortOptions = [
-  { key: 'createdAt', label: '修改时间' },
-  { key: 'name', label: '名称' },
-  { key: 'size', label: '大小' },
+  { key: 'createdAt', label: t('fontLibrary.modifiedTime') },
+  { key: 'name', label: t('fontLibrary.name') },
+  { key: 'size', label: t('fontLibrary.size') },
 ];
 
 // 上传目标选项 — 来源：FontLibrary.tsx:1029-1033
 const targetOptions = [
-  { value: 'both', label: '同时上传', desc: '后端和前端', icon: 'mdi-harddisk' },
-  { value: 'backend', label: '仅后端', desc: '转换程序', icon: 'mdi-harddisk' },
-  { value: 'frontend', label: '仅前端', desc: 'Web 显示', icon: 'mdi-format-font' },
+  { value: 'both', label: t('fontLibrary.uploadBoth'), desc: t('fontLibrary.backendAndFrontend'), icon: 'mdi-harddisk' },
+  { value: 'backend', label: t('fontLibrary.backendOnly'), desc: t('fontLibrary.conversionProgram'), icon: 'mdi-harddisk' },
+  { value: 'frontend', label: t('fontLibrary.frontendOnly'), desc: t('fontLibrary.webDisplay'), icon: 'mdi-format-font' },
 ];
-
-// ==================== Composables ====================
-
-useDocumentTitle('字体库');
 const uiStore = useUIStore();
 
 // ==================== 权限检查 — 来源：FontLibrary.tsx:90-93 ====================
@@ -855,7 +856,7 @@ function resolveConfirm(value: boolean) {
 
 // 删除字体 — 来源：FontLibrary.tsx:238-259
 async function handleDelete(fontName: string) {
-  const confirmed = await showConfirm('确认删除', `确定要删除字体 "${fontName}" 吗？`);
+  const confirmed = await showConfirm(t('common.confirmDelete'), t('fontLibrary.confirmDeleteFont', { name: fontName }));
   if (!confirmed) return;
 
   try {
@@ -864,21 +865,21 @@ async function handleDelete(fontName: string) {
     const newSet = new Set(selectedFonts.value);
     newSet.delete(fontName);
     selectedFonts.value = newSet;
-    uiStore.addToast('删除成功', 'success');
+    uiStore.addToast(t('common.deleteSuccess'), 'success');
   } catch (error) {
     console.error('删除字体失败:', error);
-    uiStore.addToast('删除字体失败', 'error');
+    uiStore.addToast(t('fontLibrary.deleteFontFailed'), 'error');
   }
 }
 
 // 批量删除 — 来源：FontLibrary.tsx:262-288
 async function handleBatchDelete() {
   if (selectedFonts.value.size === 0) {
-    uiStore.addToast('请先选择要删除的字体', 'warning');
+    uiStore.addToast(t('fontLibrary.selectFontsFirst'), 'warning');
     return;
   }
 
-  const confirmed = await showConfirm('确认批量删除', `确定要删除选中的 ${selectedFonts.value.size} 个字体吗？`);
+  const confirmed = await showConfirm(t('fontLibrary.confirmBatchDelete'), t('fontLibrary.confirmDeleteFonts', { count: selectedFonts.value.size }));
   if (!confirmed) return;
 
   try {
@@ -889,10 +890,10 @@ async function handleBatchDelete() {
     );
     selectedFonts.value = new Set();
     await fetchFonts();
-    uiStore.addToast('批量删除成功', 'success');
+    uiStore.addToast(t('fontLibrary.batchDeleteSuccess'), 'success');
   } catch (error) {
     console.error('批量删除失败:', error);
-    uiStore.addToast('批量删除失败', 'error');
+    uiStore.addToast(t('fontLibrary.batchDeleteFailed'), 'error');
   }
 }
 
@@ -910,10 +911,10 @@ async function handleDownload(fontName: string) {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-    uiStore.addToast('下载成功', 'success');
+    uiStore.addToast(t('common.downloadSuccess'), 'success');
   } catch (error) {
     console.error('下载字体失败:', error);
-    uiStore.addToast('下载字体失败', 'error');
+    uiStore.addToast(t('fontLibrary.downloadFailed'), 'error');
   }
 }
 
@@ -947,13 +948,13 @@ function validateAndSetFile(selectedFile: File | null) {
   const ext = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
 
   if (!validExtensions.includes(ext)) {
-    uiStore.addToast('不支持的文件类型，请上传字体文件', 'warning');
+    uiStore.addToast(t('fontLibrary.unsupportedFileType'), 'warning');
     return;
   }
 
   // 验证文件大小（10MB） — 来源：FontLibrary.tsx:886-889
   if (selectedFile.size > 10 * 1024 * 1024) {
-    uiStore.addToast('文件大小不能超过 10MB', 'warning');
+    uiStore.addToast(t('fontLibrary.fileTooLarge'), 'warning');
     return;
   }
 
@@ -978,21 +979,21 @@ function onFileDrop(event: DragEvent) {
 // 上传字体 — 来源：FontLibrary.tsx:894-911
 async function handleUpload() {
   if (!uploadFile.value) {
-    uiStore.addToast('请选择文件', 'warning');
+    uiStore.addToast(t('fontLibrary.selectFileFirst'), 'warning');
     return;
   }
 
   uploading.value = true;
   try {
     await fontsApi.uploadFont(uploadFile.value, uploadTarget.value);
-    uiStore.addToast('上传成功', 'success');
+    uiStore.addToast(t('common.uploadSuccess'), 'success');
     showUploadModal.value = false;
     uploadFile.value = null;
     uploadTarget.value = 'both';
     await fetchFonts();
   } catch (error) {
     console.error('上传失败:', error);
-    uiStore.addToast('上传失败', 'error');
+    uiStore.addToast(t('fontLibrary.uploadFailed'), 'error');
   } finally {
     uploading.value = false;
   }

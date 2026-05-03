@@ -6,17 +6,17 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
             <h1 class="text-2xl font-bold" style="background: linear-gradient(135deg, #3b82f6, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              公共资源库
+              {{ t('library.publicLibrary') }}
             </h1>
             <!-- 库类型切换 -->
             <v-tabs v-model="libraryType" bg-color="transparent" density="compact">
-              <v-tab value="drawing" :title="'图纸库'" />
-              <v-tab value="block" :title="'图块库'" />
+              <v-tab value="drawing" :title="t('library.drawingLibrary')" />
+              <v-tab value="block" :title="t('library.blockLibrary')" />
             </v-tabs>
             <!-- 存储配额按钮 -->
-            <v-btn v-if="canManage" variant="tonal" @click="openQuotaModal" :title="'配置存储配额'">
+            <v-btn v-if="canManage" variant="tonal" @click="openQuotaModal" :title="t('library.configureQuota')">
               <v-icon class="mr-1">mdi-harddisk</v-icon>
-              存储配额
+              {{ t('library.storageQuota') }}
             </v-btn>
           </div>
 
@@ -24,16 +24,16 @@
           <div v-if="canManage" class="flex items-center gap-2">
             <v-btn variant="outlined" @click="openCreateFolderModal">
               <v-icon class="mr-1">mdi-folder-plus</v-icon>
-              新建文件夹
+              {{ t('library.newFolder') }}
             </v-btn>
             <v-btn variant="outlined" @click="showDirectoryImport = true">
               <v-icon class="mr-1">mdi-folder-plus</v-icon>
-              批量导入
+              {{ t('library.batchImport') }}
             </v-btn>
             <!-- 上传按钮 -->
             <v-btn color="primary" @click="showUploader = true">
               <v-icon class="mr-1">mdi-upload</v-icon>
-              上传文件
+              {{ t('library.uploadFile') }}
             </v-btn>
           </div>
         </div>
@@ -56,7 +56,7 @@
             <v-text-field
               v-model="searchTerm"
               prepend-icon="mdi-magnify"
-              :placeholder="'搜索文件...'"
+              :placeholder="t('library.searchPlaceholder')"
               variant="outlined"
               density="compact"
               clearable
@@ -112,13 +112,13 @@
         <div v-else-if="nodes.length === 0" class="flex flex-col items-center justify-center py-16">
           <v-icon size="80" color="medium-emphasis" class="mb-6">mdi-folder-open</v-icon>
           <h3 class="text-xl font-bold mb-2">
-            {{ isFolderMode ? '文件夹是空的' : '资源库暂无内容' }}
+            {{ isFolderMode ? t('library.folderEmpty') : t('library.libraryEmpty') }}
           </h3>
           <p class="text-medium-emphasis text-sm mb-6">
-            {{ canManage ? '上传文件或创建文件夹开始使用' : '资源库暂无内容，请稍后再来' }}
+            {{ canManage ? t('library.uploadOrCreateHint') : t('library.libraryEmptyHint') }}
           </p>
           <v-btn v-if="canManage" variant="outlined" @click="openCreateFolderModal">
-            创建文件夹
+            {{ t('library.createFolder') }}
           </v-btn>
         </div>
         <div v-else>
@@ -155,13 +155,13 @@
                   <v-btn v-bind="props" icon="mdi-dots-vertical" variant="text" density="compact" @click.stop />
                 </template>
                 <v-list density="compact">
-                  <v-list-item v-if="!node.isFolder" @click="handleOpenInEditor(node)" title="在编辑器中打开" />
-                  <v-list-item v-if="!node.isFolder" @click="handleDownload(node)" title="下载" />
-                  <v-list-item @click="handleRename(node)" title="重命名" />
-                  <v-list-item @click="handleMove(node)" title="移动" />
-                  <v-list-item @click="handleCopy(node)" title="复制" />
+                  <v-list-item v-if="!node.isFolder" @click="handleOpenInEditor(node)" :title="t('library.openInEditor')" />
+                  <v-list-item v-if="!node.isFolder" @click="handleDownload(node)" :title="t('library.download')" />
+                  <v-list-item @click="handleRename(node)" :title="t('library.rename')" />
+                  <v-list-item @click="handleMove(node)" :title="t('library.move')" />
+                  <v-list-item @click="handleCopy(node)" :title="t('library.copy')" />
                   <v-divider />
-                  <v-list-item color="error" @click="handleDeleteConfirm(node)" title="删除" />
+                  <v-list-item color="error" @click="handleDeleteConfirm(node)" :title="t('library.delete')" />
                 </v-list>
               </v-menu>
             </div>
@@ -195,13 +195,13 @@
                       <v-btn v-bind="props" icon="mdi-dots-vertical" variant="text" density="compact" />
                     </template>
                     <v-list density="compact">
-                      <v-list-item v-if="!item.isFolder" @click="handleOpenInEditor(item)" title="在编辑器中打开" />
-                      <v-list-item v-if="!item.isFolder" @click="handleDownload(item)" title="下载" />
-                      <v-list-item @click="handleRename(item)" title="重命名" />
-                      <v-list-item @click="handleMove(item)" title="移动" />
-                      <v-list-item @click="handleCopy(item)" title="复制" />
+                      <v-list-item v-if="!item.isFolder" @click="handleOpenInEditor(item)" :title="t('library.openInEditor')" />
+                      <v-list-item v-if="!item.isFolder" @click="handleDownload(item)" :title="t('library.download')" />
+                      <v-list-item @click="handleRename(item)" :title="t('library.rename')" />
+                      <v-list-item @click="handleMove(item)" :title="t('library.move')" />
+                      <v-list-item @click="handleCopy(item)" :title="t('library.copy')" />
                       <v-divider />
-                      <v-list-item color="error" @click="handleDeleteConfirm(item)" title="删除" />
+                      <v-list-item color="error" @click="handleDeleteConfirm(item)" :title="t('library.delete')" />
                     </v-list>
                   </v-menu>
                 </td>
@@ -222,34 +222,34 @@
 
       <!-- 批量操作栏 -->
       <div v-if="isMultiSelectMode && selectedNodes.size > 0" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4" style="background: rgba(var(--v-theme-surface)); border: 1px solid rgba(var(--v-theme-border)); z-index: 100;">
-        <span class="text-sm font-semibold">已选中 {{ selectedNodes.size }} 项</span>
+        <span class="text-sm font-semibold">{{ t('library.selectedItems', { count: selectedNodes.size }) }}</span>
         <v-divider vertical inset style="height: 1.5rem;" />
         <template v-if="canManage">
-          <v-btn variant="text" @click="handleBatchMove">移动</v-btn>
-          <v-btn variant="text" @click="handleBatchCopy">复制</v-btn>
-          <v-btn variant="text" color="error" @click="handleBatchDelete">批量删除</v-btn>
+          <v-btn variant="text" @click="handleBatchMove">{{ t('library.move') }}</v-btn>
+          <v-btn variant="text" @click="handleBatchCopy">{{ t('library.copy') }}</v-btn>
+          <v-btn variant="text" color="error" @click="handleBatchDelete">{{ t('library.batchDelete') }}</v-btn>
         </template>
-        <v-btn variant="text" @click="clearSelection">取消选择</v-btn>
+        <v-btn variant="text" @click="clearSelection">{{ t('common.cancelSelection') }}</v-btn>
       </div>
     </div>
 
     <!-- 创建文件夹弹窗 -->
     <v-dialog v-model="isCreateFolderModalOpen" max-width="500">
       <v-card>
-        <v-card-title>新建文件夹</v-card-title>
+        <v-card-title>{{ t('library.createFolder') }}</v-card-title>
         <v-card-text>
           <v-form ref="folderForm">
             <v-text-field
               v-model="folderName"
-              label="文件夹名称"
+              :label="t('library.folderName')"
               variant="outlined"
               required
             />
           </v-form>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="isCreateFolderModalOpen = false">取消</v-btn>
-          <v-btn color="primary" @click="handleCreateFolder">创建</v-btn>
+          <v-btn variant="text" @click="isCreateFolderModalOpen = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" @click="handleCreateFolder">{{ t('common.create') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -257,20 +257,20 @@
     <!-- 重命名模态框 -->
     <v-dialog v-model="isRenameModalOpen" max-width="500">
       <v-card>
-        <v-card-title>重命名</v-card-title>
+        <v-card-title>{{ t('library.rename') }}</v-card-title>
         <v-card-text>
           <v-form ref="renameForm">
             <v-text-field
               v-model="renameName"
-              label="新名称"
+              :label="t('library.newName')"
               variant="outlined"
               required
             />
           </v-form>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="closeRenameModal">取消</v-btn>
-          <v-btn color="primary" @click="handleRenameSubmit">重命名</v-btn>
+          <v-btn variant="text" @click="closeRenameModal">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" @click="handleRenameSubmit">{{ t('library.rename') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -279,17 +279,17 @@
     <v-dialog v-model="showSelectFolderModal" max-width="600">
       <v-card>
         <v-card-title>
-          {{ moveSourceNode ? '选择目标文件夹' : '选择目标文件夹' }}
+          {{ t('library.selectTargetFolder') }}
         </v-card-title>
         <v-card-text>
           <!-- 简单的文件夹选择器，这里简化处理 -->
           <v-alert type="info" variant="tonal">
-            文件夹选择功能开发中...
+            {{ t('library.folderSelectInDevelopment') }}
           </v-alert>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="closeSelectFolderModal">取消</v-btn>
-          <v-btn color="primary" @click="handleSelectFolderConfirm">确定</v-btn>
+          <v-btn variant="text" @click="closeSelectFolderModal">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" @click="handleSelectFolderConfirm">{{ t('common.confirm') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -297,9 +297,9 @@
     <!-- 下载格式选择弹窗 -->
     <v-dialog v-model="showDownloadFormatModal" max-width="500">
       <v-card>
-        <v-card-title>下载格式</v-card-title>
+        <v-card-title>{{ t('library.selectDownloadFormat') }}</v-card-title>
         <v-card-text>
-          <p class="mb-4">选择下载格式：{{ downloadingFileName }}</p>
+          <p class="mb-4">{{ t('library.selectDownloadFormatFor', { fileName: downloadingFileName }) }}</p>
           <v-list density="compact">
             <v-list-item v-for="format in downloadFormats" :key="format" @click="handleDownloadWithFormat(format)">
               <template v-slot:prepend>
@@ -310,7 +310,7 @@
           </v-list>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="closeDownloadFormatModal">取消</v-btn>
+          <v-btn variant="text" @click="closeDownloadFormatModal">{{ t('common.cancel') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -321,8 +321,8 @@
         <v-card-title>{{ confirmDialog.title }}</v-card-title>
         <v-card-text>{{ confirmDialog.message }}</v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="confirmDialog.open = false">取消</v-btn>
-          <v-btn color="primary" @click="handleConfirm">确定</v-btn>
+          <v-btn variant="text" @click="confirmDialog.open = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" @click="handleConfirm">{{ t('common.confirm') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -330,15 +330,15 @@
     <!-- 批量导入对话框 -->
     <v-dialog v-model="showDirectoryImport" max-width="600">
       <v-card>
-        <v-card-title>批量导入</v-card-title>
+        <v-card-title>{{ t('library.batchImport') }}</v-card-title>
         <v-card-text>
           <v-alert type="info" variant="tonal">
-            批量导入功能开发中...
+            {{ t('library.batchImportInDevelopment') }}
           </v-alert>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="showDirectoryImport = false">取消</v-btn>
-          <v-btn color="primary">导入</v-btn>
+          <v-btn variant="text" @click="showDirectoryImport = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary">{{ t('library.import') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -346,15 +346,15 @@
     <!-- 上传对话框 -->
     <v-dialog v-model="showUploader" max-width="600">
       <v-card>
-        <v-card-title>上传文件</v-card-title>
+        <v-card-title>{{ t('library.uploadFile') }}</v-card-title>
         <v-card-text>
           <v-alert type="info" variant="tonal">
-            上传功能开发中...
+            {{ t('library.uploadInDevelopment') }}
           </v-alert>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="showUploader = false">取消</v-btn>
-          <v-btn color="primary">上传</v-btn>
+          <v-btn variant="text" @click="showUploader = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary">{{ t('library.upload') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -362,7 +362,7 @@
     <!-- 存储配额配置模态框 -->
     <v-dialog v-model="quotaModalOpen" max-width="500">
       <v-card>
-        <v-card-title>配置公共资源库存储配额</v-card-title>
+        <v-card-title>{{ t('library.configureQuota') }}</v-card-title>
         <v-card-text>
           <div class="mb-6">
             <div class="flex items-center gap-3 mb-4">
@@ -370,15 +370,15 @@
                 <v-icon size="24">mdi-harddisk</v-icon>
               </div>
               <div>
-                <p class="font-medium">{{ libraryType === 'drawing' ? '图纸库' : '图块库' }}</p>
-                <p class="text-sm text-medium-emphasis">公共资源库</p>
+                <p class="font-medium">{{ libraryType === 'drawing' ? t('library.drawingLibrary') : t('library.blockLibrary') }}</p>
+                <p class="text-sm text-medium-emphasis">{{ t('library.publicLibrary') }}</p>
               </div>
             </div>
             
             <div>
               <label class="text-sm font-medium mb-2 block">
                 <v-icon size="16" class="mr-1">mdi-harddisk</v-icon>
-                库存储配额
+                {{ t('library.libraryStorageQuota') }}
               </label>
               <v-text-field
                 v-model.number="libraryQuota"
@@ -388,7 +388,7 @@
                 min="0"
                 step="1"
               />
-              <p class="text-sm text-medium-emphasis mt-2">默认配额：{{ defaultLibraryQuota }} GB</p>
+              <p class="text-sm text-medium-emphasis mt-2">{{ t('library.defaultQuota', { quota: defaultLibraryQuota }) }}</p>
               
               <div v-if="libraryStorageInfo" class="mt-4">
                 <v-progress-linear
@@ -398,20 +398,20 @@
                   rounded
                 />
                 <p class="text-sm text-medium-emphasis mt-2">
-                  已使用：{{ formatFileSize(libraryStorageInfo.used) }} / {{ formatFileSize(libraryStorageInfo.total) }} ({{ (libraryStorageInfo.usagePercent || 0).toFixed(1) }}%)
+                  {{ t('library.usedQuota', { used: formatFileSize(libraryStorageInfo.used), total: formatFileSize(libraryStorageInfo.total), percent: (libraryStorageInfo.usagePercent || 0).toFixed(1) }) }}
                 </p>
               </div>
             </div>
           </div>
         </v-card-text>
         <v-card-actions class="justify-end gap-2">
-          <v-btn variant="text" @click="quotaModalOpen = false" :disabled="quotaLoading">取消</v-btn>
+          <v-btn variant="text" @click="quotaModalOpen = false" :disabled="quotaLoading">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" @click="saveLibraryQuota" :loading="quotaLoading">
             <template v-slot:prepend-icon v-if="quotaLoading">
               <v-icon class="mr-1">mdi-loading</v-icon>
             </template>
             <v-icon v-else class="mr-1">mdi-content-save</v-icon>
-            保存
+            {{ t('common.save') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -423,10 +423,13 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDocumentTitle } from '@/composables/useDocumentTitle';
+import { useI18n } from '@/composables/useI18n';
 import { usePermission } from '@/composables/usePermission';
 import { libraryApi, projectsApi, runtimeConfigApi } from '@/services/api';
 import { SystemPermission } from '@/constants/permissions';
 import { formatFileSize } from '@/utils/fileUtils';
+
+const { t } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
@@ -435,7 +438,7 @@ const router = useRouter();
 const libraryType = ref<'drawing' | 'block'>((route.params.libraryType as 'drawing' | 'block') || 'drawing');
 
 // 设置文档标题
-const documentTitle = computed(() => libraryType.value === 'drawing' ? '图纸库' : '图块库');
+const documentTitle = computed(() => libraryType.value === 'drawing' ? t('library.drawingLibrary') : t('library.blockLibrary'));
 useDocumentTitle(documentTitle);
 
 // 分页状态
@@ -504,15 +507,15 @@ const confirmDialog = ref({
 // 列表视图表头
 const listHeaders = [
   { key: 'select', title: '', width: '48px' },
-  { key: 'name', title: '名称' },
-  { key: 'size', title: '大小', width: '120px' },
-  { key: 'updatedAt', title: '更新时间', width: '160px' },
+  { key: 'name', title: t('library.name') },
+  { key: 'size', title: t('library.size'), width: '120px' },
+  { key: 'updatedAt', title: t('library.updatedAt'), width: '160px' },
   { key: 'actions', title: '', width: '64px' },
 ];
 
 // 面包屑项
 const breadcrumbItems = computed(() => [
-  { title: '公共资源库', to: `/library/${libraryType.value}` },
+  { title: t('library.publicLibrary'), to: `/library/${libraryType.value}` },
   ...breadcrumbs.value.map((b) => ({
     title: b.name,
     to: b.id === libraryId.value ? `/library/${libraryType.value}` : `/library/${libraryType.value}/${b.id}`,
@@ -553,7 +556,7 @@ const loadData = async () => {
     totalPages.value = 1;
     
   } catch (err: any) {
-    error.value = err.message || '加载数据失败';
+    error.value = err.message || t('library.loadDataFailed');
   } finally {
     loading.value = false;
   }
@@ -682,10 +685,10 @@ const getFormatIcon = (format: string) => {
 
 const getFormatLabel = (format: string) => {
   const labels: Record<string, string> = {
-    dwg: 'DWG 格式',
-    dxf: 'DXF 格式',
-    mxweb: 'MXWeb 格式',
-    pdf: 'PDF 格式',
+    dwg: t('library.formatDwg'),
+    dxf: t('library.formatDxf'),
+    mxweb: t('library.formatMxweb'),
+    pdf: t('library.formatPdf'),
   };
   return labels[format] || format.toUpperCase();
 };
@@ -773,8 +776,8 @@ const handleSelectFolderConfirm = async () => {
 const handleDeleteConfirm = (node: any) => {
   confirmDialog.value = {
     open: true,
-    title: '确认删除',
-    message: `确定要永久删除 "${node.name}" 吗？删除后无法恢复。`,
+    title: t('library.confirmDelete'),
+    message: t('library.confirmDeleteMessage', { name: node.name }),
     onConfirm: async () => {
       try {
         // await deleteNode(node.id);
@@ -794,13 +797,13 @@ const handleConfirm = async () => {
 
 // 批量操作
 const handleBatchMove = () => {
-  moveSourceNode.value = { id: 'batch', name: `${selectedNodes.value.size} 个项目` };
+  moveSourceNode.value = { id: 'batch', name: t('library.selectedItems', { count: selectedNodes.value.size }) };
   copySourceNode.value = null;
   showSelectFolderModal.value = true;
 };
 
 const handleBatchCopy = () => {
-  copySourceNode.value = { id: 'batch', name: `${selectedNodes.value.size} 个项目` };
+  copySourceNode.value = { id: 'batch', name: t('library.selectedItems', { count: selectedNodes.value.size }) };
   moveSourceNode.value = null;
   showSelectFolderModal.value = true;
 };
@@ -809,8 +812,8 @@ const handleBatchDelete = () => {
   const count = selectedNodes.value.size;
   confirmDialog.value = {
     open: true,
-    title: '确认删除',
-    message: `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`,
+    title: t('library.confirmDelete'),
+    message: t('library.confirmBatchDeleteMessage', { count }),
     onConfirm: async () => {
       try {
         const nodeIds = Array.from(selectedNodes.value);
