@@ -1,6 +1,11 @@
 import { MxFun } from 'mxdraw';
-import { FetchAttributes } from 'mxcad-app';
 import { useCadStore } from '@/stores/cad.store';
+
+const FetchAttributes = {
+  EMSCRIPTEN_FETCH_LOAD_TO_MEMORY: 1,
+  EMSCRIPTEN_FETCH_PERSIST_FILE: 2,
+  EMSCRIPTEN_FETCH_REPLACE: 4,
+} as const;
 import { useCadEngineInit } from './useCadEngineInit';
 
 const RETRY = { MAX: 3, DELAY_MS: 1000 } as const;
@@ -152,7 +157,7 @@ export function useCadFileOperations() {
               const isSafari = /^((?!chrome|android).)*safari/i.test(
                 navigator.userAgent,
               );
-              const blob = new Blob([data.buffer], {
+              const blob = new Blob([(data as Uint8Array).buffer], {
                 type: isSafari
                   ? 'application/octet-stream'
                   : 'application/octet-binary',

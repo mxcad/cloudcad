@@ -139,8 +139,8 @@ export function useFileSystemNavigation(options: UseFileSystemNavigationOptions)
   async function handleDownloadWithFormat(
     format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
     pdfOptions?: {
-      width?: string;
-      height?: string;
+      width?: number;
+      height?: number;
       colorPolicy?: 'mono' | 'color';
     }
   ): Promise<void> {
