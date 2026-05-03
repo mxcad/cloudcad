@@ -6,7 +6,7 @@
       size="large"
       block
       prepend-icon="mdi-upload"
-      :loading="progress.isActive"
+      :loading="progress.isActive.value"
       :disabled="!isAuthenticated"
       @click="handleSelectFiles"
     >
@@ -17,7 +17,7 @@
     <v-snackbar
       v-model="showToast"
       :timeout="3000"
-      location="top-right"
+      location="top right"
     >
       {{ message }}
     </v-snackbar>
@@ -29,7 +29,6 @@ import { ref, computed } from 'vue';
 import { useUppyUpload, type LoadFileParam } from '@/composables/useUppyUpload';
 import { useAuthStore } from '@/stores/auth.store';
 import { useProgress, PROGRESS_STAGES } from '@/composables/useProgress';
-import { useCadEngine } from '@/composables/useCadEngine';
 import { useI18n } from '@/composables/useI18n';
 
 const { t } = useI18n();
@@ -51,7 +50,6 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const progress = useProgress();
-const cadEngine = useCadEngine();
 const { selectFiles } = useUppyUpload();
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
@@ -73,7 +71,7 @@ async function handleSelectFiles(): Promise<void> {
   selectFiles({
     nodeId: props.nodeId,
     onFileQueued: (file) => {
-      progress.start(PROGRESS_STAGES.UPLOAD, t('upload.uploadingFile', { name: file.name }));
+      progress.start(PROGRESS_STAGES.UPLOAD);
     },
     onBeginUpload: () => {
       progress.update(t('upload.uploading'), 0);

@@ -18,9 +18,9 @@ export function useFileSystemSelection(options: UseFileSystemSelectionOptions) {
     isMultiSelect: boolean = false,
     isShift: boolean = false
   ): void {
-    setSelectedNodes((prev) => {
-      const newSet = new Set(prev);
-      const currentIndex = options.nodes.findIndex((node) => node.id === nodeId);
+    const prev = selectedNodes.value;
+    const newSet = new Set(prev);
+    const currentIndex = options.nodes.findIndex((node) => node.id === nodeId);
 
       if (isShift && lastSelectedNodeIdRef.value && lastSelectedIndexRef.value !== -1) {
         const lastIndex = lastSelectedIndexRef.value;
@@ -57,8 +57,7 @@ export function useFileSystemSelection(options: UseFileSystemSelectionOptions) {
         lastSelectedIndexRef.value = currentIndex;
       }
 
-      return newSet;
-    });
+    selectedNodes.value = newSet;
   }
 
   function handleSelectAll(): void {

@@ -279,7 +279,7 @@ export function useLogin() {
   }
 
   function handleLocationState(): void {
-    const state = route.state as { message?: string } | null;
+    const state = window.history.state as { message?: string } | null;
     if (state?.message) {
       success.value = state.message;
       window.history.replaceState({}, '');
@@ -290,7 +290,7 @@ export function useLogin() {
     () => [isAuthenticated.value, authLoading.value],
     ([authed, authing]) => {
       if (authed && !authing) {
-        const state = route.state as { from?: string } | null;
+        const state = window.history.state as { from?: string } | null;
         const from = state?.from || '/';
         router.push(from);
       }

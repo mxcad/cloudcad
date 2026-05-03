@@ -68,19 +68,19 @@ export function useCadCommands() {
       try {
         await processPendingImages();
 
-        progress.update({ key: msgKey, msg: '正在保存图纸...' });
+        progress.updateLoading({ key: msgKey, msg: '正在保存图纸...' });
 
         if (info.libraryKey === 'drawing') {
           const blob = await cad.saveToBlob();
-          progress.update({ key: msgKey, msg: '正在上传图纸...' });
+          progress.updateLoading({ key: msgKey, msg: '正在上传图纸...' });
           await libraryApi.saveDrawing(info.fileId, blob, (pct) => {
-            progress.update({ key: msgKey, msg: `正在上传图纸... ${Math.round(pct)}%` });
+            progress.updateLoading({ key: msgKey, msg: `正在上传图纸... ${Math.round(pct)}%` });
           });
         } else if (info.libraryKey === 'block') {
           const blob = await cad.saveToBlob();
-          progress.update({ key: msgKey, msg: '正在上传图块...' });
+          progress.updateLoading({ key: msgKey, msg: '正在上传图块...' });
           await libraryApi.saveBlock(info.fileId, blob, (pct) => {
-            progress.update({ key: msgKey, msg: `正在上传图块... ${Math.round(pct)}%` });
+            progress.updateLoading({ key: msgKey, msg: `正在上传图块... ${Math.round(pct)}%` });
           });
         } else {
           await filesApi.saveFile({
@@ -116,8 +116,8 @@ export function useCadCommands() {
 
   function registerExportCommand(): void {
     MxFun.addCommand('exportFile', async () => {
+      const msgKey = 'mx-export';
       try {
-        const msgKey = 'mx-export';
         progress.show({ key: msgKey, msg: '正在导出文件...', block: true });
 
         await cad.exportFile();

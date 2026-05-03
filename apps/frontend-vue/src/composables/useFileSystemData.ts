@@ -53,7 +53,7 @@ export function useFileSystemData(options: UseFileSystemDataOptions = {}) {
 
   const urlProjectId = computed(() => {
     if (mode === 'personal-space') {
-      return personalSpaceId.value || '';
+      return personalSpaceId || '';
     }
     const match = route.path.match(/\/projects\/([^/]+)/);
     return match ? match[1] : '';

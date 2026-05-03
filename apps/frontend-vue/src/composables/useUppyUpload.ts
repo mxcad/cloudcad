@@ -24,21 +24,8 @@ export interface MxCadUploadConfig {
   onFileQueued?: (file: File) => void;
 }
 
-interface UppyFileMeta {
-  fileHash?: string;
-  [key: string]: unknown;
-}
-
-interface UppyTotalProgress {
-  bytesTotal?: number;
-  bytesUploaded?: number;
-  [key: string]: unknown;
-}
-
-interface UppyCompleteResult {
-  successful?: Array<UppyFile<File, UppyFileMeta>>;
-  failed?: Array<{ file: UppyFile<File, UppyFileMeta>; error: unknown }>;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyUppyFile = UppyFile<any, Record<string, unknown>>;
 
 export function useUppyUpload() {
   const uppy = ref<Uppy | null>(null);
@@ -66,6 +53,9 @@ export function useUppyUpload() {
       },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const up = instance as any;
+
     instance.use(Tus, {
       endpoint: `${apiBaseUrl}/api/v1/files`,
       chunkSize: 5 * 1024 * 1024,
@@ -73,38 +63,34 @@ export function useUppyUpload() {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      metadata: (file: UppyFile<File, UppyFileMeta>) => {
+      metadata: (file: AnyUppyFile): Record<string, string> => {
         const fileMeta = file.meta || {};
         return {
           filename: file.name,
-          fileHash: fileMeta.fileHash || '',
-          fileSize: String(file.size),
+          fileHash: String(fileMeta.fileHash || ''),
+          fileSize: String(file.size ?? ''),
           nodeId: config.nodeId || '',
-          fileType: file.type,
+          fileType: file.type ?? '',
         };
       },
     });
 
-    instance.on('file-added', async (file: UppyFile<File, UppyFileMeta>) => {
+    up.on('file-added', async (file: AnyUppyFile) => {
       try {
-        const hash = await calculateFileHash(file.data);
+        const hash = await calculateFileHash(file.data as File);
         instance.setFileMeta(file.id, { fileHash: hash });
-        config.onFileQueued?.(file.data);
+        config.onFileQueued?.(file.data as File);
       } catch (error) {
         console.error('[useUppyUpload] 文件哈希计算失败:', error);
       }
     });
 
-    instance.on('upload-started', () => {
+    up.on('upload-started', () => {
       config.onBeginUpload?.();
     });
 
-    instance.on('total-progress', (progress: UppyTotalProgress) => {
-      if (
-        progress &&
-        typeof progress.bytesTotal === 'number' &&
-        progress.bytesTotal > 0
-      ) {
+    up.on('total-progress', (progress: { bytesTotal: number; bytesUploaded: number }) => {
+      if (progress.bytesTotal > 0) {
         const percentage = Math.round(
           (progress.bytesUploaded / progress.bytesTotal) * 100,
         );
@@ -112,36 +98,28 @@ export function useUppyUpload() {
       }
     });
 
-    instance.on('complete', (result: UppyCompleteResult) => {
-      if (result.successful && result.successful.length > 0) {
-        const file = result.successful[0];
+    up.on('complete', (result: AnyUppyFile[]) => {
+      if (result && result.length > 0) {
+        const file = result[0];
         const successParam: LoadFileParam = {
-          file: file.data,
+          file: file.data as File,
           id: file.meta?.fileHash || file.id,
           name: file.name,
-          size: file.size,
-          type: file.type,
+          size: file.size ?? 0,
+          type: file.type ?? '',
           hash: file.meta?.fileHash || '',
           isUseServerExistingFile: false,
           isInstantUpload: false,
           nodeId: config.nodeId,
         };
         config.onSuccess?.(successParam);
-      } else if (result.failed && result.failed.length > 0) {
-        const failedItem = result.failed[0];
-        const error = failedItem.error;
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : typeof error === 'string'
-              ? error
-              : '上传失败';
-        config.onError?.(errorMessage);
+      } else {
+        config.onError?.('上传失败');
       }
-      instance.close();
+      up.close();
     });
 
-    instance.on('upload-error', (file: UppyFile<File, UppyFileMeta>, error: unknown) => {
+    up.on('upload-error', (file: AnyUppyFile, error: unknown) => {
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -188,7 +166,7 @@ export function useUppyUpload() {
 
   function destroy(): void {
     if (uppy.value) {
-      uppy.value.close();
+      (uppy.value as any).close();
       uppy.value = null;
     }
   }

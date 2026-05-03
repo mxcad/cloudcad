@@ -70,7 +70,7 @@ export function useCadEngine() {
       FILE_READY_INTERVAL,
     );
     if (result) {
-      progress.update({ key: msgKey, msg: '文件转换完成，正在打开...' });
+      progress.updateLoading({ key: msgKey, msg: '文件转换完成，正在打开...' });
       progress.hide(msgKey);
       return result;
     }

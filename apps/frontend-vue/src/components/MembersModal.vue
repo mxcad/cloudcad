@@ -200,9 +200,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { projectsApi } from '@/services/projectsApi';
-import { rolesApi } from '@/services/rolesApi';
+import { projectRolesApi } from '@/services/rolesApi';
 import { usersApi } from '@/services/usersApi';
 import { useI18n } from '@/composables/useI18n';
 
@@ -215,10 +215,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
-const emit = defineEmits<{
-  'update:isOpen': [value: boolean];
-}>();
 
 const ROLE_NAME_MAP: Record<string, string> = {
   PROJECT_OWNER: '项目所有者',
@@ -274,7 +270,7 @@ function debouncedSearch(query: string) {
   searching.value = true;
   searchTimeout = setTimeout(async () => {
     try {
-      const response = await usersApi.search({ search: query, limit: 10 });
+      const response = await usersApi.search({ keyword: query, limit: 10 });
       const users = response.data?.users || [];
       const memberUserIds = members.value.map((m: any) => m.id);
       searchResults.value = (users as any[]).filter((u: any) => !memberUserIds.includes(u.id));
@@ -298,7 +294,7 @@ async function loadMembers() {
 
 async function loadProjectRoles() {
   try {
-    const response = await rolesApi.getByProject(props.projectId);
+    const response = await projectRolesApi.getByProject(props.projectId);
     projectRoles.value = (response.data as any[]) || [];
     const defaultRole = availableRoles.value.find((r: any) => r.name === 'PROJECT_MEMBER');
     if (defaultRole) {
@@ -320,7 +316,7 @@ async function handleAddMember() {
       projectRoleId: newRoleId.value,
     });
 
-    const memberData = response.data;
+    const memberData = response.data as any;
     members.value.push({
       id: memberData.user.id,
       userId: memberData.user.id,
