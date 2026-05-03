@@ -77,15 +77,15 @@
                 <v-card>
                   <v-card-text>
                     <v-date-picker v-model="selectedDates" multiple range header-input-level="2">
-                      <template v-slot:header="{ title }">
+                      <template v-slot:header>
                         <v-app-bar color="primary" density="compact">
-                          <v-app-bar-title>{{ title }}</v-app-bar-title>
+                          <v-app-bar-title>{{ t('auditLog.dateFilter') }}</v-app-bar-title>
                         </v-app-bar>
                       </template>
                     </v-date-picker>
                   </v-card-text>
                   <v-card-actions class="justify-end gap-2">
-                    <v-btn text @click="selectedDates = null; $refs.menu?.close()">{{ t('common.clear') }}</v-btn>
+                    <v-btn text @click="selectedDates = null">{{ t('common.clear') }}</v-btn>
                     <v-btn color="primary" text @click="applyDateFilter">{{ t('common.apply') }}</v-btn>
                   </v-card-actions>
                 </v-card>
@@ -203,7 +203,7 @@ import { auditApi } from '@/services/auditApi';
 
 const { t } = useI18n();
 
-useDocumentTitle(() => t('auditLog.title'));
+useDocumentTitle(t('auditLog.title'));
 
 const loading = ref(false);
 const logs = ref<any[]>([]);
@@ -283,7 +283,7 @@ const loadData = async () => {
       page: currentPage.value,
       limit: pageSize,
       search: searchTerm.value,
-      action: selectedAction.value,
+      action: selectedAction.value || undefined,
     });
     logs.value = response.data || [];
     totalLogs.value = logs.value.length;

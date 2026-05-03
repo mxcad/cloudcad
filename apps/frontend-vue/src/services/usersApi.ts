@@ -17,8 +17,10 @@ function patch<T>(path: string, data?: unknown) {
   return getApiClient().patch<T>(`/api/users${path}`, data);
 }
 
-function del<T>(path: string, data?: unknown) {
-  return getApiClient().delete<T>(`/api/users${path}`, data);
+function del<T>(path: string, data?: Record<string, unknown>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const config = data ? { data } as any : undefined;
+  return getApiClient().delete<T>(`/api/users${path}`, config);
 }
 
 export interface UserResponseDto {
@@ -79,7 +81,7 @@ export interface ListUsersResponse {
  */
 export const usersApi = {
   list: (params?: ListUsersParams) =>
-    get<ListUsersResponse>('/list', params),
+    get<ListUsersResponse>('/list', params as Record<string, unknown> | undefined),
 
   create: (data: CreateUserDto) =>
     post<UserResponseDto>('', data),

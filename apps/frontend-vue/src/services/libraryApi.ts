@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 import { getApiClient } from './apiClient';
 
@@ -13,8 +14,8 @@ function patch<T>(path: string, data?: unknown) {
   return getApiClient().patch<T>(`/api/library${path}`, data);
 }
 
-function del<T>(path: string, data?: unknown) {
-  return getApiClient().delete<T>(`/api/library${path}`, data);
+function del<T>(path: string, data?: Record<string, unknown>) {
+  return getApiClient().delete<T>(`/api/library${path}`, { data } as AxiosRequestConfig);
 }
 
 export interface LibraryNode {
@@ -140,7 +141,7 @@ export const libraryApi = {
     const response = await axios.post(`${baseURL}/api/library/drawing/nodes/${nodeId}/save`, formData, {
       headers: { Authorization: token ? `Bearer ${token}` : undefined },
       onUploadProgress: onProgress
-        ? (event) => {
+        ? (event: axios.AxiosProgressEvent) => {
             if (event.total) {
               onProgress((event.loaded / event.total) * 100);
             }
@@ -170,7 +171,7 @@ export const libraryApi = {
     const response = await axios.post(`${baseURL}/api/library/drawing/save-as`, formData, {
       headers: { Authorization: token ? `Bearer ${token}` : undefined },
       onUploadProgress: onProgress
-        ? (event) => {
+        ? (event: axios.AxiosProgressEvent) => {
             if (event.total) {
               onProgress((event.loaded / event.total) * 100);
             }
@@ -197,7 +198,7 @@ export const libraryApi = {
     const response = await axios.post(`${baseURL}/api/library/block/nodes/${nodeId}/save`, formData, {
       headers: { Authorization: token ? `Bearer ${token}` : undefined },
       onUploadProgress: onProgress
-        ? (event) => {
+        ? (event: axios.AxiosProgressEvent) => {
             if (event.total) {
               onProgress((event.loaded / event.total) * 100);
             }
@@ -227,7 +228,7 @@ export const libraryApi = {
     const response = await axios.post(`${baseURL}/api/library/block/save-as`, formData, {
       headers: { Authorization: token ? `Bearer ${token}` : undefined },
       onUploadProgress: onProgress
-        ? (event) => {
+        ? (event: axios.AxiosProgressEvent) => {
             if (event.total) {
               onProgress((event.loaded / event.total) * 100);
             }

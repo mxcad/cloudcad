@@ -3,9 +3,10 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useTheme } from '@/composables/useTheme';
 import { useBrandConfig } from '@/composables/useBrandConfig';
-import { projectsApi, type FileSystemNodeDto } from '@/services/projectsApi';
+import { projectsApi } from '@/services/projectsApi';
 import { usersApi, type UserDashboardStatsDto } from '@/services/usersApi';
 import { formatFileSize, formatRelativeTime, computeGreeting } from '@/utils/formatters';
+import { type FileSystemNode } from './useFileSystemData';
 
 export function useDashboard() {
   const router = useRouter();
@@ -16,8 +17,8 @@ export function useDashboard() {
 
   const appName = computed(() => brandConfig.value?.title || 'CloudCAD');
 
-  const projects = ref<FileSystemNodeDto[]>([]);
-  const personalFiles = ref<FileSystemNodeDto[]>([]);
+  const projects = ref<FileSystemNode[]>([]);
+  const personalFiles = ref<FileSystemNode[]>([]);
   const dashboardStats = ref<UserDashboardStatsDto | null>(null);
   const loading = ref(true);
   const error = ref<string | null>(null);
@@ -83,9 +84,9 @@ export function useDashboard() {
 
       if (projectsRes && projectsRes.data?.nodes) {
         const sortedProjects = projectsRes.data.nodes
-          .filter((p: FileSystemNodeDto) => p.status !== 'DELETED')
+          .filter((p: FileSystemNode) => p.status !== 'DELETED')
           .sort(
-            (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
+            (a: FileSystemNode, b: FileSystemNode) =>
               new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
         projects.value = sortedProjects;
@@ -135,9 +136,9 @@ export function useDashboard() {
       const projectsRes = await projectsApi.list();
       if (projectsRes && projectsRes.data?.nodes) {
         const sortedProjects = projectsRes.data.nodes
-          .filter((p: FileSystemNodeDto) => p.status !== 'DELETED')
+          .filter((p: FileSystemNode) => p.status !== 'DELETED')
           .sort(
-            (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
+            (a: FileSystemNode, b: FileSystemNode) =>
               new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
         projects.value = sortedProjects;
@@ -159,7 +160,7 @@ export function useDashboard() {
     router.push('/personal-space?action=upload');
   }
 
-  function handleFileClick(file: FileSystemNodeDto): void {
+  function handleFileClick(file: FileSystemNode): void {
     if (file.isFolder) {
       router.push(`/personal-space/${file.id}`);
     } else {
