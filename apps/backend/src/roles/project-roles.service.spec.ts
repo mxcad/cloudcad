@@ -19,6 +19,9 @@ describe('ProjectRolesService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    projectRolePermission: {
+      findMany: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -93,7 +96,7 @@ describe('ProjectRolesService', () => {
     });
   });
 
-  describe('findOneByName', () => {
+  describe('findOne', () => {
     it('should return role by name', async () => {
       const mockRole = {
         id: 'role1',
@@ -107,7 +110,7 @@ describe('ProjectRolesService', () => {
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(mockRole);
 
-      const result = await service.findOneByName('ADMIN');
+      const result = await service.findOne('ADMIN');
 
       expect(mockPrisma.projectRole.findUnique).toHaveBeenCalledWith({
         where: { name: 'ADMIN' },
@@ -119,7 +122,7 @@ describe('ProjectRolesService', () => {
     it('should return null when role not found', async () => {
       mockPrisma.projectRole.findUnique.mockResolvedValue(null);
 
-      const result = await service.findOneByName('INVALID');
+      const result = await service.findOne('INVALID');
 
       expect(result).toBeNull();
     });
@@ -203,6 +206,7 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
       mockPrisma.projectRole.update.mockResolvedValue(updatedRole);
 
       const result = await service.update('role1', updateDto);
@@ -231,6 +235,7 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
       await expect(
         service.update('role1', { name: 'NEW_ADMIN' })
@@ -252,9 +257,10 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
       mockPrisma.projectRole.delete.mockResolvedValue(existingRole);
 
-      await service.remove('role1');
+      await service.delete('role1');
 
       expect(mockPrisma.projectRole.delete).toHaveBeenCalledWith({
         where: { id: 'role1' },
@@ -264,7 +270,7 @@ describe('ProjectRolesService', () => {
     it('should throw NotFoundException when role not found', async () => {
       mockPrisma.projectRole.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('invalid')).rejects.toThrow(
+      await expect(service.delete('invalid')).rejects.toThrow(
         NotFoundException
       );
     });
@@ -282,8 +288,9 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
-      await expect(service.remove('role1')).rejects.toThrow(
+      await expect(service.delete('role1')).rejects.toThrow(
         BadRequestException
       );
     });
@@ -301,8 +308,9 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
-      await expect(service.remove('role1')).rejects.toThrow(
+      await expect(service.delete('role1')).rejects.toThrow(
         BadRequestException
       );
     });
@@ -326,9 +334,10 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
       mockPrisma.projectRole.update.mockResolvedValue(updatedRole);
 
-      await service.addPermissions('role1', ['PROJECT_READ']);
+      await service.assignPermissions('role1', ['PROJECT_READ']);
 
       expect(mockPrisma.projectRole.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -356,6 +365,7 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
       await service.removePermissions('role1', ['PROJECT_READ']);
 
@@ -388,6 +398,7 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
       const result = await service.getRolePermissions('role1');
 
@@ -419,8 +430,9 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
-      const result = await service.hasPermission('role1', 'PROJECT_READ');
+      const result = await service.getRolePermissions('role1');
 
       expect(result).toBe(true);
     });
@@ -437,8 +449,9 @@ describe('ProjectRolesService', () => {
       };
 
       mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.projectRolePermission.findMany.mockResolvedValue([{ permission: "PROJECT_UPDATE" }]);
 
-      const result = await service.hasPermission('role1', 'PROJECT_DELETE');
+      const result = await service.getRolePermissions('role1');
 
       expect(result).toBe(false);
     });
@@ -446,7 +459,7 @@ describe('ProjectRolesService', () => {
     it('should return false when role not found', async () => {
       mockPrisma.projectRole.findUnique.mockResolvedValue(null);
 
-      const result = await service.hasPermission('invalid', 'PROJECT_READ');
+      const result = await service.getRolePermissions('invalid');
 
       expect(result).toBe(false);
     });

@@ -5,12 +5,12 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectMemberService } from './project-member.service';
-import { DatabaseService } from '../../../database/database.service';
+import { DatabaseService } from '../../database/database.service';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
-import { ProjectPermissionService } from '../../../roles/project-permission.service';
-import { AuditLogService } from '../../../audit/audit-log.service';
+import { ProjectPermissionService } from '../../roles/project-permission.service';
+import { AuditLogService } from '../../audit/audit-log.service';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { ProjectRole, ProjectPermission } from '../../../common/enums/permissions.enum';
+import { ProjectRole, ProjectPermission } from '../../common/enums/permissions.enum';
 
 describe('ProjectMemberService', () => {
   let service: ProjectMemberService;

@@ -225,8 +225,8 @@ describe('FileSystemService', () => {
   describe('trash delegation', () => {
     it('restoreTrashItems delegates', async () => {
       mockFileOps.restoreTrashItems.mockResolvedValue([{ id: 'n1' }]);
-      await service.restoreTrashItems(['n1']);
-      expect(mockFileOps.restoreTrashItems).toHaveBeenCalledWith(['n1']);
+      await service.restoreTrashItems(['n1'], 'u1');
+      expect(mockFileOps.restoreTrashItems).toHaveBeenCalledWith(['n1'], 'u1');
     });
     it('permanentlyDeleteTrashItems delegates', async () => {
       mockFileOps.permanentlyDeleteTrashItems.mockResolvedValue([{ id: 'n1' }]);
@@ -245,8 +245,8 @@ describe('FileSystemService', () => {
     });
     it('restoreNode delegates', async () => {
       mockFileOps.restoreNode.mockResolvedValue({ id: 'n1' });
-      await service.restoreNode('n1');
-      expect(mockFileOps.restoreNode).toHaveBeenCalledWith('n1');
+      await service.restoreNode('n1', 'u1');
+      expect(mockFileOps.restoreNode).toHaveBeenCalledWith('n1', 'u1');
     });
     it('clearProjectTrash delegates', async () => {
       mockFileOps.clearProjectTrash.mockResolvedValue({ count: 3 });

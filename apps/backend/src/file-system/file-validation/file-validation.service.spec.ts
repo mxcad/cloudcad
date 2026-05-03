@@ -14,7 +14,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileValidationService } from './file-validation.service';
-import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 
 // 默认最大文件大小 (100MB)
 const DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;

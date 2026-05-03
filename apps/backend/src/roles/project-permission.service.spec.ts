@@ -56,7 +56,7 @@ describe('ProjectPermissionService', () => {
       const result = await service.checkPermission(
         'user1',
         'project1',
-        ProjectPermission.PROJECT_READ
+        ProjectPermission.PROJECT_UPDATE
       );
 
       expect(mockCacheService.get).toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe('ProjectPermissionService', () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
           permissions: [
-            { permission: ProjectPermission.PROJECT_READ },
+            { permission: ProjectPermission.PROJECT_UPDATE },
             { permission: ProjectPermission.PROJECT_UPDATE },
           ],
         },
@@ -77,7 +77,7 @@ describe('ProjectPermissionService', () => {
       const result = await service.checkPermission(
         'user1',
         'project1',
-        ProjectPermission.PROJECT_READ
+        ProjectPermission.PROJECT_UPDATE
       );
 
       expect(mockCacheService.set).toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe('ProjectPermissionService', () => {
       mockCacheService.get.mockResolvedValue(null);
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
-          permissions: [{ permission: ProjectPermission.PROJECT_READ }],
+          permissions: [{ permission: ProjectPermission.PROJECT_UPDATE }],
         },
       });
 
@@ -108,7 +108,7 @@ describe('ProjectPermissionService', () => {
       const result = await service.checkPermission(
         'user1',
         'project1',
-        ProjectPermission.PROJECT_READ
+        ProjectPermission.PROJECT_UPDATE
       );
 
       expect(result).toBe(false);
@@ -154,7 +154,7 @@ describe('ProjectPermissionService', () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
           permissions: [
-            { permission: ProjectPermission.PROJECT_READ },
+            { permission: ProjectPermission.PROJECT_UPDATE },
             { permission: ProjectPermission.PROJECT_UPDATE },
             { permission: ProjectPermission.FILE_READ },
           ],
@@ -164,7 +164,7 @@ describe('ProjectPermissionService', () => {
       const result = await service.getUserPermissions('user1', 'project1');
 
       expect(result).toEqual([
-        ProjectPermission.PROJECT_READ,
+        ProjectPermission.PROJECT_UPDATE,
         ProjectPermission.PROJECT_UPDATE,
         ProjectPermission.FILE_READ,
       ]);
@@ -312,13 +312,13 @@ describe('ProjectPermissionService', () => {
     it('should return true when user has any of the permissions', async () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
-          permissions: [{ permission: ProjectPermission.PROJECT_READ }],
+          permissions: [{ permission: ProjectPermission.PROJECT_UPDATE }],
         },
       });
 
       const result = await service.checkAnyPermission('user1', 'project1', [
         ProjectPermission.PROJECT_UPDATE,
-        ProjectPermission.PROJECT_READ,
+        ProjectPermission.PROJECT_UPDATE,
         ProjectPermission.PROJECT_DELETE,
       ]);
 
@@ -328,7 +328,7 @@ describe('ProjectPermissionService', () => {
     it('should return false when user has none of the permissions', async () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
-          permissions: [{ permission: ProjectPermission.PROJECT_READ }],
+          permissions: [{ permission: ProjectPermission.PROJECT_UPDATE }],
         },
       });
 
@@ -346,14 +346,14 @@ describe('ProjectPermissionService', () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
           permissions: [
-            { permission: ProjectPermission.PROJECT_READ },
+            { permission: ProjectPermission.PROJECT_UPDATE },
             { permission: ProjectPermission.PROJECT_UPDATE },
           ],
         },
       });
 
       const result = await service.checkAllPermissions('user1', 'project1', [
-        ProjectPermission.PROJECT_READ,
+        ProjectPermission.PROJECT_UPDATE,
         ProjectPermission.PROJECT_UPDATE,
       ]);
 
@@ -363,12 +363,12 @@ describe('ProjectPermissionService', () => {
     it('should return false when user missing one permission', async () => {
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: {
-          permissions: [{ permission: ProjectPermission.PROJECT_READ }],
+          permissions: [{ permission: ProjectPermission.PROJECT_UPDATE }],
         },
       });
 
       const result = await service.checkAllPermissions('user1', 'project1', [
-        ProjectPermission.PROJECT_READ,
+        ProjectPermission.PROJECT_UPDATE,
         ProjectPermission.PROJECT_UPDATE,
       ]);
 

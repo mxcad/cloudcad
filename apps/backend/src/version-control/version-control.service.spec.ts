@@ -30,7 +30,7 @@ jest.mock('fs', () => {
 const svnBehaviors: Record<string, Function> = {};
 
 function svnDispatcher(...args: any[]) {
-  const name = svnDispatcher._name!;
+  const name = (svnDispatcher as any)._name!;
   const cb = args[args.length - 1];
   const handler = svnBehaviors[name];
   if (handler) return handler(...args);
@@ -56,23 +56,22 @@ function svnFail(msg: string) {
   };
 }
 
-// Create named dispatchers
-const svnNames = [
-  'svnCheckout', 'svnAdd', 'svnCommit', 'svnDelete', 'svnadminCreate',
-  'svnImport', 'svnLog', 'svnCat', 'svnList', 'svnPropset', 'svnUpdate', 'svnCleanup',
-];
-const svnMockObj: Record<string, Function> = {};
-for (const name of svnNames) {
-  const dispatcher = (...args: any[]) => {
-    const handler = svnBehaviors[name];
-    if (handler) return handler(...args);
-    const cb = args[args.length - 1];
-    if (typeof cb === 'function') cb(null, '');
-  };
-  svnMockObj[name] = dispatcher;
-}
-
-jest.mock('@cloudcad/svn-version-tool', () => svnMockObj);
+jest.mock('@cloudcad/svn-version-tool', () => {
+  const names = [
+    'svnCheckout', 'svnAdd', 'svnCommit', 'svnDelete', 'svnadminCreate',
+    'svnImport', 'svnLog', 'svnCat', 'svnList', 'svnPropset', 'svnUpdate', 'svnCleanup',
+  ];
+  const obj: Record<string, Function> = {};
+  for (const name of names) {
+    obj[name] = (...args: any[]) => {
+      const handler = svnBehaviors[name];
+      if (handler) return handler(...args);
+      const cb = args[args.length - 1];
+      if (typeof cb === 'function') cb(null, '');
+    };
+  }
+  return obj;
+});
 
 // Default behaviors — set before each test
 function resetSvnDefaults() {

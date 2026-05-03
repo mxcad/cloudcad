@@ -5,11 +5,11 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileSystemPermissionService } from './file-system-permission.service';
-import { DatabaseService } from '../../../database/database.service';
-import { ProjectPermissionService } from '../../../roles/project-permission.service';
+import { DatabaseService } from '../../database/database.service';
+import { ProjectPermissionService } from '../../roles/project-permission.service';
 import { FileTreeService } from '../file-tree/file-tree.service';
 import { NotFoundException } from '@nestjs/common';
-import { ProjectRole, ProjectPermission } from '../../../common/enums/permissions.enum';
+import { ProjectRole, ProjectPermission } from '../../common/enums/permissions.enum';
 
 describe('FileSystemPermissionService', () => {
   let service: FileSystemPermissionService;
@@ -70,7 +70,7 @@ describe('FileSystemPermissionService', () => {
       const result = await service.checkNodePermission(
         'user1',
         'node1',
-        ProjectPermission.FILE_READ
+        ProjectPermission.FILE_OPEN
       );
 
       expect(mockPrisma.fileSystemNode.findUnique).toHaveBeenCalledWith({
@@ -80,7 +80,7 @@ describe('FileSystemPermissionService', () => {
       expect(mockProjectPermissionService.checkPermission).toHaveBeenCalledWith(
         'user1',
         'node1',
-        ProjectPermission.FILE_READ
+        ProjectPermission.FILE_OPEN
       );
       expect(result).toBe(true);
     });
@@ -92,7 +92,7 @@ describe('FileSystemPermissionService', () => {
         service.checkNodePermission(
           'user1',
           'invalid',
-          ProjectPermission.FILE_READ
+          ProjectPermission.FILE_OPEN
         )
       ).rejects.toThrow(NotFoundException);
     });
@@ -109,7 +109,7 @@ describe('FileSystemPermissionService', () => {
         service.checkNodePermission(
           'user1',
           'node1',
-          ProjectPermission.FILE_READ
+          ProjectPermission.FILE_OPEN
         )
       ).rejects.toThrow(NotFoundException);
     });
@@ -129,7 +129,7 @@ describe('FileSystemPermissionService', () => {
       await service.checkNodePermission(
         'user1',
         'node1',
-        ProjectPermission.FILE_READ
+        ProjectPermission.FILE_OPEN
       );
 
       expect(mockFileTreeService.getProjectId).toHaveBeenCalledWith('node1');
@@ -149,7 +149,7 @@ describe('FileSystemPermissionService', () => {
       const result = await service.checkNodePermission(
         'user1',
         'node1',
-        ProjectPermission.FILE_READ
+        ProjectPermission.FILE_OPEN
       );
 
       expect(result).toBe(false);
