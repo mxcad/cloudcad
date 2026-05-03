@@ -11,12 +11,12 @@ function post<T>(path: string, data?: unknown) {
   return getApiClient().post<T>(`${API}${path}`, data);
 }
 
-function get<T>(path: string, params?: Record<string, unknown>) {
-  return getApiClient().get<T>(`${API}${path}`, { params });
+function get<T>(path: string, params?: Record<string, unknown>, options?: { signal?: AbortSignal }) {
+  return getApiClient().get<T>(`${API}${path}`, { params, ...(options?.signal ? { signal: options.signal } : {}) });
 }
 
-function del<T>(path: string) {
-  return getApiClient().delete<T>(`${API}${path}`);
+function del<T>(path: string, data?: unknown) {
+  return getApiClient().delete<T>(`${API}${path}`, data ? { data } : undefined);
 }
 
 /**
@@ -50,11 +50,11 @@ export const projectsApi = {
 
   /** 删除项目 — 来源：projectsApi.delete */
   delete: (projectId: string, permanently?: boolean) =>
-    del(`/projects/${projectId}`),
+    del(`/projects/${projectId}`, { permanently }),
 
   /** 删除节点 — 来源：projectsApi.deleteNode */
   deleteNode: (nodeId: string, permanently?: boolean) =>
-    del(`/nodes/${nodeId}`),
+    del(`/nodes/${nodeId}`, { permanently }),
 
   /** 搜索 — 来源：projectsApi.search */
   search: (query: string, params: {
@@ -98,6 +98,34 @@ export const projectsApi = {
   /** 复制节点 — 来源：projectsApi.copyNode */
   copyNode: (nodeId: string, targetParentId: string) =>
     post(`/nodes/${nodeId}/copy`, { targetParentId }),
+
+  /** 获取项目成员列表 */
+  getMembers: (projectId: string) =>
+    get(`/${projectId}/members`),
+
+  /** 添加项目成员 */
+  addMember: (projectId: string, data: { userId: string; projectRoleId: string }) =>
+    post(`/${projectId}/members`, data),
+
+  /** 移除项目成员 */
+  removeMember: (projectId: string, userId: string) =>
+    del(`/${projectId}/members/${userId}`),
+
+  /** 更新项目成员角色 */
+  updateMember: (projectId: string, userId: string, data: { projectRoleId: string }) =>
+    post(`/${projectId}/members/${userId}`, data),
+
+  /** 转移项目所有权 */
+  transferOwnership: (projectId: string, newOwnerUserId: string) =>
+    post(`/${projectId}/transfer-ownership`, { newOwnerUserId }),
+
+  /** 批量操作节点 */
+  batchOperation: (params: { action: string; nodeIds: string[]; targetParentId?: string }) =>
+    post('/batch', params),
+
+  /** 永久删除节点 */
+  permanentlyDelete: (nodeId: string) =>
+    del(`/nodes/${nodeId}`, { permanently: true }),
 };
 
 /** 来源：apps/frontend/src/types/api-client.ts FileSystemNodeDto */

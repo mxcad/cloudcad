@@ -3,26 +3,23 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import axios from 'axios';
 import { getApiClient } from './apiClient';
 
 const API = '/api/mxcad';
 
-function post<T>(path: string, data?: unknown) {
-  return getApiClient().post<T>(`${API}${path}`, data);
+async function post<T>(path: string, data?: unknown): Promise<T> {
+  const res = await getApiClient().post<T>(`${API}${path}`, data);
+  return res.data;
 }
 
-function get<T>(path: string, params?: Record<string, unknown>) {
-  return getApiClient().get<T>(`${API}${path}`, { params });
+async function get<T>(path: string, params?: Record<string, unknown>): Promise<T> {
+  const res = await getApiClient().get<T>(`${API}${path}`, { params });
+  return res.data;
 }
 
 async function calculateFileHash(file: File): Promise<string> {
   const { calculateFileHash: calcHash } = await import('@/utils/hashUtils');
   return calcHash(file);
-}
-
-function asFormData<T>(formData: FormData): T {
-  return formData as unknown as T;
 }
 
 /**
@@ -60,7 +57,7 @@ export const mxcadApi = {
     file: File,
     nodeId: string,
     extRefFile: string,
-    onProgress?: (percentage: number) => void
+    _onProgress?: (percentage: number) => void
   ): Promise<void> => {
     const hash = await calculateFileHash(file);
     const formData = new FormData();
@@ -75,7 +72,7 @@ export const mxcadApi = {
     nodeId: string,
     extRefFile: string,
     updatePreloading?: boolean,
-    onProgress?: (percentage: number) => void
+    _onProgress?: (percentage: number) => void
   ): Promise<void> => {
     const hash = await calculateFileHash(file);
     const formData = new FormData();
@@ -92,7 +89,7 @@ export const mxcadApi = {
   saveMxwebFile: async (
     blob: Blob,
     nodeId: string,
-    onProgress?: (percentage: number) => void,
+    _onProgress?: (percentage: number) => void,
     commitMessage?: string,
     expectedTimestamp?: string
   ): Promise<void> => {
@@ -110,7 +107,7 @@ export const mxcadApi = {
     targetParentId: string,
     projectId: string | undefined,
     format: 'dwg' | 'dxf',
-    onProgress?: (percentage: number) => void,
+    _onProgress?: (percentage: number) => void,
     commitMessage?: string,
     fileName?: string
   ): Promise<{ nodeId: string }> => {

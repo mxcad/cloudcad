@@ -166,4 +166,12 @@ export function getApiClient(): ReturnType<typeof createApiClient> {
   return _client;
 }
 
+export interface SvnLogEntryDto {
+  revision: number;
+  author?: string;
+  userName?: string;
+  date: string | Date;
+  message: string;
+}
+
 export default getApiClient;
