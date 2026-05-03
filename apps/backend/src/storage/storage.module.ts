@@ -15,10 +15,25 @@ import { ConfigModule } from '@nestjs/config';
 import { LocalStorageProvider } from './local-storage.provider';
 import { StorageService } from './storage.service';
 import { StorageCheckService } from './storage-check.service';
+import { FlydriveStorageProvider } from './flydrive-storage.provider';
+import { IStorageProvider } from './interfaces/storage-provider.interface';
 
 @Module({
   imports: [ConfigModule],
-  providers: [LocalStorageProvider, StorageService, StorageCheckService],
-  exports: [LocalStorageProvider, StorageService, StorageCheckService],
+  providers: [
+    LocalStorageProvider,
+    StorageService,
+    StorageCheckService,
+    {
+      provide: IStorageProvider,
+      useClass: FlydriveStorageProvider,
+    },
+  ],
+  exports: [
+    LocalStorageProvider,
+    StorageService,
+    StorageCheckService,
+    IStorageProvider,
+  ],
 })
 export class StorageModule {}

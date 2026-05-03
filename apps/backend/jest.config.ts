@@ -4,12 +4,11 @@ const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   setupFiles: ['dotenv/config'],
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/src', '<rootDir>/test'],
   // 白名单机制：只运行核心测试文件
   testMatch: [
     '**/*.spec.ts',
     '!**/node_modules/**',
-    '!**/test/**',
   ],
   testPathIgnorePatterns: [
     '/node_modules/',

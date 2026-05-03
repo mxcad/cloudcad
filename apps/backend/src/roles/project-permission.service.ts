@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import {
   ProjectPermission,
@@ -19,6 +19,7 @@ import {
 import { ProjectRolesService } from './project-roles.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { CACHE_TTL } from '../common/constants/cache.constants';
+import { IPERMISSION_STORE, IPermissionStore } from '../common/interfaces/permission-store.interface';
 
 /**
  * 项目权限检查服务
@@ -31,7 +32,10 @@ export class ProjectPermissionService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly projectRolesService: ProjectRolesService,
-    private readonly cacheService: PermissionCacheService
+    private readonly cacheService: PermissionCacheService,
+    @Optional()
+    @Inject(IPERMISSION_STORE)
+    private readonly permissionStore?: IPermissionStore
   ) {}
 
   /**
@@ -48,6 +52,14 @@ export class ProjectPermissionService {
     permission: ProjectPermission
   ): Promise<boolean> {
     try {
+      if (this.permissionStore) {
+        return this.permissionStore.checkProjectPermission(
+          userId,
+          projectId,
+          permission
+        );
+      }
+
       // 1. 检查缓存
       const cacheKey = `project:permission:${userId}:${projectId}:${permission}`;
       const cached = await this.cacheService.get<boolean>(cacheKey);
@@ -82,6 +94,10 @@ export class ProjectPermissionService {
    */
   async isProjectOwner(userId: string, projectId: string): Promise<boolean> {
     try {
+      if (this.permissionStore) {
+        return this.permissionStore.isProjectOwner(userId, projectId);
+      }
+
       const cacheKey = `project:owner:${userId}:${projectId}`;
       const cached = await this.cacheService.get<boolean>(cacheKey);
       if (cached !== null) {
@@ -93,7 +109,6 @@ export class ProjectPermissionService {
         select: { ownerId: true },
       });
 
-      // 安全检查：确保项目存在、未被删除、是项目根节点
       const isOwner =
         project?.ownerId === userId && project?.ownerId !== undefined;
 
@@ -145,6 +160,10 @@ export class ProjectPermissionService {
     projectId: string
   ): Promise<ProjectPermission[]> {
     try {
+      if (this.permissionStore) {
+        return this.permissionStore.getUserProjectPermissions(userId, projectId);
+      }
+
       // 查询用户的项目角色权限
       const member = await this.prisma.projectMember.findUnique({
         where: {
@@ -183,6 +202,11 @@ export class ProjectPermissionService {
     projectId: string
   ): Promise<ProjectRole | null> {
     try {
+      if (this.permissionStore) {
+        const role = await this.permissionStore.getUserProjectRole(userId, projectId);
+        return (role as ProjectRole) || null;
+      }
+
       const cacheKey = `project:role:${userId}:${projectId}`;
       const cached = await this.cacheService.get<ProjectRole>(cacheKey);
       if (cached !== null) {
@@ -260,6 +284,11 @@ export class ProjectPermissionService {
    * - project:permission:${userId}:${projectId}:${permission} - 项目权限缓存
    */
   async clearUserCache(userId: string, projectId: string): Promise<void> {
+    if (this.permissionStore) {
+      await this.permissionStore.clearProjectCache(projectId);
+      return;
+    }
+
     // 清除项目所有者缓存
     this.cacheService.delete(`project:owner:${userId}:${projectId}`);
 

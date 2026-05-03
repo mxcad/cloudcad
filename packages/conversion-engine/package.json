@@ -1,5 +1,7 @@
 {
-  "name": "conversion-engine",
+  "name": "@cloudcad/conversion-engine",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "version": "0.0.1",
   "description": "MxCAD 转换引擎 — 封装外部转换程序调用",
   "private": true,

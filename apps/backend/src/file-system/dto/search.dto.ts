@@ -12,7 +12,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { FileStatus } from '@prisma/client';
 
 export enum SearchScope {
@@ -31,6 +31,7 @@ export enum SearchType {
 export class SearchDto {
   @ApiProperty({ description: '搜索关键词', required: true })
   @IsString()
+  @MaxLength(200, { message: '搜索关键词最长200个字符' })
   keyword: string;
 
   @ApiProperty({

@@ -10,11 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
 import { PolicyEngineService } from './services/policy-engine.service';
 import { PolicyConfigService } from './services/policy-config.service';
+import { PolicyFactoryService } from './services/policy-factory.service';
 import { PolicyConfigController } from './controllers/policy-config.controller';
 
 /**
@@ -23,10 +24,10 @@ import { PolicyConfigController } from './controllers/policy-config.controller';
  * 提供动态权限策略功能
  */
 @Module({
-  imports: [DatabaseModule, CommonModule],
+  imports: [DatabaseModule, forwardRef(() => CommonModule)],
   controllers: [PolicyConfigController],
-  providers: [PolicyEngineService, PolicyConfigService],
-  exports: [PolicyEngineService, PolicyConfigService],
+  providers: [PolicyFactoryService, PolicyEngineService, PolicyConfigService],
+  exports: [PolicyFactoryService, PolicyEngineService, PolicyConfigService],
 })
 export class PolicyEngineModule {
   constructor(

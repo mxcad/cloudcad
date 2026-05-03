@@ -13,23 +13,38 @@
 import { Module } from '@nestjs/common';
 import { LibraryService } from './library.service';
 import { LibraryController } from './library.controller';
-import { FileSystemModule } from '../file-system/file-system.module';
+import { FileSystemService } from '../file-system/file-system.service';
 import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
+import { FileSystemModule } from '../file-system/file-system.module';
+import { DatabaseService } from '../database/database.service';
+import {
+  PublicLibraryService,
+  createDrawingLibraryProvider,
+  createBlockLibraryProvider,
+  PUBLIC_LIBRARY_PROVIDER_DRAWING,
+  PUBLIC_LIBRARY_PROVIDER_BLOCK,
+} from './services/public-library.service';
 
-/**
- * 公共资源库模块（仅保留只读功能）
- *
- * 提供图纸库和图块库的只读访问功能
- * - 图纸库：libraryKey = 'drawing'
- * - 图块库：libraryKey = 'block'
- *
- * 注意：上传/保存/删除等写操作已废弃，统一走文件管理模块
- */
 @Module({
   imports: [DatabaseModule, CommonModule, FileSystemModule],
   controllers: [LibraryController],
-  providers: [LibraryService],
+  providers: [
+    LibraryService,
+    PublicLibraryService,
+    {
+      provide: PUBLIC_LIBRARY_PROVIDER_DRAWING,
+      useFactory: (prisma, fileSystemService) =>
+        createDrawingLibraryProvider(prisma, fileSystemService),
+      inject: [DatabaseService, FileSystemService],
+    },
+    {
+      provide: PUBLIC_LIBRARY_PROVIDER_BLOCK,
+      useFactory: (prisma, fileSystemService) =>
+        createBlockLibraryProvider(prisma, fileSystemService),
+      inject: [DatabaseService, FileSystemService],
+    },
+  ],
   exports: [LibraryService],
 })
 export class LibraryModule {}

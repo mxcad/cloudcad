@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -33,7 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const jwtSecret = configService.get<string>('jwt.secret');
 
     if (!jwtSecret) {
-      throw new Error('JWT_SECRET environment variable is required');
+      throw new BadRequestException('JWT_SECRET environment variable is required');
     }
 
     super({
@@ -78,7 +78,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (this.isDevelopment) {
         this.logger.warn(`用户已被禁用: ${payload.sub}`);
       }
-      throw new Error('用户已被禁用');
+      throw new UnauthorizedException('用户已被禁用');
     }
 
     // 快速查询：仅检查用户是否存在和状态
@@ -111,7 +111,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (this.isDevelopment) {
         this.logger.warn(`用户状态非ACTIVE: ${user.status}`);
       }
-      throw new Error('用户已被禁用');
+      throw new UnauthorizedException('用户已被禁用');
     }
 
     // 查询用户的角色和权限信息

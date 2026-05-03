@@ -14,7 +14,10 @@ import {
 } from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { VersionControlService } from '../../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../../version-control/interfaces/version-control.interface';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { MergeOptions, MergeResult } from './file-upload-manager.types';
 import { ExternalRefService } from '../external-ref/external-ref.service';
@@ -26,6 +29,7 @@ import {
   type ThumbnailFormat,
 } from '../infra/thumbnail-utils';
 import { FileTypeDetector } from '../utils/file-type-detector';
+import { StorageService } from '../../storage/storage.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 
@@ -68,11 +72,13 @@ export class FileMergeService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
     private readonly storageManager: StorageManager,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly fileConversionService: FileConversionService,
     private readonly externalRefService: ExternalRefService,
     private readonly uploadUtilityService: UploadUtilityService,
-    private readonly thumbnailGenerationService: ThumbnailGenerationService
+    private readonly thumbnailGenerationService: ThumbnailGenerationService,
+    private readonly storageService: StorageService
   ) {
     this.mxcadUploadPath =
       this.configService.get('mxcadUploadPath') || '../../uploads';
@@ -313,12 +319,13 @@ export class FileMergeService {
                     this.logger.log(
                       `[mergeConvertFile] 从缓存拷贝缩略图: ${newNodeId}`
                     );
-                    await fsPromises.copyFile(
+                    const thumbnailRelativeKey = `${storageInfo.nodeDirectoryRelativePath}/${getThumbnailFileName(THUMBNAIL_FORMATS[0])}`;
+                    await this.storageService.copyFromFs(
                       thumbnailCachePath,
-                      thumbnailTargetPath
+                      thumbnailRelativeKey
                     );
                     this.logger.log(
-                      `[mergeConvertFile] 缩略图拷贝成功: ${thumbnailTargetPath}`
+                      `[mergeConvertFile] 缩略图拷贝成功: ${thumbnailRelativeKey}`
                     );
                   } else if (this.thumbnailGenerationService.isEnabled()) {
                     // 生成缩略图（直接生成到缓存路径）
@@ -339,12 +346,13 @@ export class FileMergeService {
                       );
                     if (result.success) {
                       // 拷贝到节点目录
-                      await fsPromises.copyFile(
+                      const thumbnailRelativeKey = `${storageInfo.nodeDirectoryRelativePath}/${getThumbnailFileName(THUMBNAIL_FORMATS[0])}`;
+                      await this.storageService.copyFromFs(
                         thumbnailCachePath,
-                        thumbnailTargetPath
+                        thumbnailRelativeKey
                       );
                       this.logger.log(
-                        `[mergeConvertFile] 缩略图生成成功: ${thumbnailTargetPath}`
+                        `[mergeConvertFile] 缩略图生成成功: ${thumbnailRelativeKey}`
                       );
                     } else {
                       this.logger.warn(
@@ -519,7 +527,7 @@ export class FileMergeService {
             name
           );
 
-          await fsPromises.copyFile(mergedFilePath, storageInfo.filePath);
+          await this.storageService.copyFromFs(mergedFilePath, storageInfo.fileRelativePath);
           await this.fileSystemServiceMain.updateNodePath(
             newNodeId,
             storageInfo.fileRelativePath
@@ -730,12 +738,13 @@ export class FileMergeService {
                   this.logger.log(
                     `[performFileExistenceCheck] 拷贝缩略图: ${newNodeId}`
                   );
-                  await fsPromises.copyFile(
+                  const thumbnailRelativeKey = `${storageInfo.nodeDirectoryRelativePath}/${getThumbnailFileName(THUMBNAIL_FORMATS[0])}`;
+                  await this.storageService.copyFromFs(
                     thumbnailCachePath,
-                    thumbnailTargetPath
+                    thumbnailRelativeKey
                   );
                   this.logger.log(
-                    `[performFileExistenceCheck] 缩略图拷贝成功: ${thumbnailTargetPath}`
+                    `[performFileExistenceCheck] 缩略图拷贝成功: ${thumbnailRelativeKey}`
                   );
                 } else if (this.thumbnailGenerationService.isEnabled()) {
                   // 手动生成缩略图（直接生成到缓存路径）
@@ -756,12 +765,13 @@ export class FileMergeService {
                     );
                   if (result.success) {
                     // 拷贝到节点目录
-                    await fsPromises.copyFile(
+                    const thumbnailRelativeKey = `${storageInfo.nodeDirectoryRelativePath}/${getThumbnailFileName(THUMBNAIL_FORMATS[0])}`;
+                    await this.storageService.copyFromFs(
                       thumbnailCachePath,
-                      thumbnailTargetPath
+                      thumbnailRelativeKey
                     );
                     this.logger.log(
-                      `[performFileExistenceCheck] 缩略图生成成功: ${thumbnailTargetPath}`
+                      `[performFileExistenceCheck] 缩略图生成成功: ${thumbnailRelativeKey}`
                     );
                   } else {
                     this.logger.warn(

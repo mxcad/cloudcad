@@ -17,6 +17,7 @@ import {
   Inject,
   Optional,
   InternalServerErrorException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -47,9 +48,10 @@ export class PermissionCacheService implements OnModuleDestroy {
 
   constructor(
     @InjectRedis() private readonly redis: Redis,
+    @Inject(forwardRef(() => MultiLevelCacheService))
     private readonly multiLevelCache: MultiLevelCacheService,
     @Optional()
-    @Inject(CacheVersionService)
+    @Inject(forwardRef(() => CacheVersionService))
     private readonly cacheVersionService?: CacheVersionService
   ) {
     this.subscribeToInvalidationEvents();

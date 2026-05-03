@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as tencentcloud from 'tencentcloud-sdk-nodejs';
 import {
   SmsProvider,
@@ -40,7 +40,7 @@ export class TencentSmsProvider implements SmsProvider {
 
   constructor(config: SmsProviderConfig['tencent']) {
     if (!config) {
-      throw new Error('腾讯云短信配置缺失');
+      throw new BadRequestException('腾讯云短信配置缺失');
     }
 
     this.client = new SmsClient({

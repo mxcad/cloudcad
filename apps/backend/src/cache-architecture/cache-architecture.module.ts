@@ -14,7 +14,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from '../database/database.module';
-import { CommonModule } from '../common/common.module';
+import { RedisCacheService } from '../common/services/redis-cache.service';
 
 // Providers
 import { L1CacheProvider } from './providers/l1-cache.provider';
@@ -52,9 +52,7 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
     ConfigModule,
     ScheduleModule.forRoot(),
     DatabaseModule,
-    CommonModule,
-  ],
-  controllers: [CacheMonitorController],
+  ],controllers: [CacheMonitorController],
   providers: [
     // 缓存提供者
     L1CacheProvider,
@@ -71,6 +69,7 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
     CacheWarmupService,
     CacheMonitorService,
     CacheVersionService,
+    RedisCacheService,
   ],
   exports: [
     // 导出缓存提供者
@@ -88,6 +87,7 @@ import { CacheMonitorController } from './controllers/cache-monitor.controller';
     CacheWarmupService,
     CacheMonitorService,
     CacheVersionService,
+    RedisCacheService,
   ],
 })
 export class CacheArchitectureModule {

@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { MultiLevelCacheService } from './multi-level-cache.service';
 import { L1CacheProvider } from '../providers/l1-cache.provider';
 import { L2CacheProvider } from '../providers/l2-cache.provider';
@@ -36,12 +36,13 @@ interface PerformanceDataPoint {
  * 实时监控缓存性能和健康状态
  */
 @Injectable()
-export class CacheMonitorService {
+export class CacheMonitorService implements OnModuleDestroy {
   private readonly logger = new Logger(CacheMonitorService.name);
   private readonly performanceData: Map<string, PerformanceDataPoint[]> =
     new Map();
   private readonly maxDataPoints = 1000;
   private readonly monitoringInterval = 60000; // 1 分钟
+  private cleanupTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly cacheService: MultiLevelCacheService,
@@ -50,7 +51,17 @@ export class CacheMonitorService {
     private readonly l3Cache: L3CacheProvider
   ) {
     // 定期清理过期的性能数据
-    setInterval(() => this.cleanOldPerformanceData(), this.monitoringInterval);
+    this.cleanupTimer = setInterval(
+      () => this.cleanOldPerformanceData(),
+      this.monitoringInterval
+    );
+  }
+
+  onModuleDestroy() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
   }
 
   /**

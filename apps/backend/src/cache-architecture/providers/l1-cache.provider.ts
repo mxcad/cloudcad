@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { IL1CacheManager } from '../interfaces/cache-manager.interface';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheStrategy } from '../enums/cache-strategy.enum';
@@ -155,7 +155,7 @@ export class L1CacheProvider<T = unknown> implements IL1CacheManager<T> {
    */
   setMaxCapacity(capacity: number): void {
     if (capacity < 1) {
-      throw new Error('容量必须大于 0');
+      throw new BadRequestException('容量必须大于 0');
     }
     this.maxCapacity = capacity;
 

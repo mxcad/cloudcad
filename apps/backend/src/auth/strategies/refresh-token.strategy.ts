@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -33,7 +33,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
   ) {
     const jwtSecret = configService.get<string>('jwt.secret');
     if (!jwtSecret) {
-      throw new Error('JWT_SECRET environment variable is required');
+      throw new BadRequestException('JWT_SECRET environment variable is required');
     }
 
     super({
@@ -49,14 +49,14 @@ export class RefreshTokenStrategy extends PassportStrategy(
 
   async validate(payload: { sub: string; type: string }) {
     if (payload.type !== 'refresh') {
-      throw new Error('无效的刷新Token类型');
+      throw new BadRequestException('无效的刷新Token类型');
     }
 
     // 检查用户是否在黑名单中
     const isUserBlacklisted =
       await this.tokenBlacklistService.isUserBlacklisted(payload.sub);
     if (isUserBlacklisted) {
-      throw new Error('用户已被禁用');
+      throw new UnauthorizedException('用户已被禁用');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -73,7 +73,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
     });
 
     if (!user || user.status !== 'ACTIVE') {
-      throw new Error('用户不存在或已被禁用');
+      throw new UnauthorizedException('用户不存在或已被禁用');
     }
 
     return user;

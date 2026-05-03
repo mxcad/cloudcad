@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import Dysmsapi20170525, * as dysmsapi from '@alicloud/dysmsapi20170525';
 import * as OpenApi from '@alicloud/openapi-client';
 import {
@@ -36,7 +36,7 @@ export class AliyunSmsProvider implements SmsProvider {
 
   constructor(config: SmsProviderConfig['aliyun']) {
     if (!config) {
-      throw new Error('阿里云短信配置缺失');
+      throw new BadRequestException('阿里云短信配置缺失');
     }
 
     const openApiConfig = new OpenApi.Config({

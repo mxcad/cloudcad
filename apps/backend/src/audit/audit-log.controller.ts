@@ -20,6 +20,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -130,9 +131,11 @@ export class AuditLogController {
     status: HttpStatus.OK,
     description: '成功清理旧审计日志',
   })
-  async cleanupOldLogs(@Body() body: { daysToKeep: number }) {
+  async cleanupOldLogs(@Request() req: any, @Body() body: { daysToKeep: number }) {
+    const userId = req.user?.id || 'unknown';
     const deletedCount = await this.auditLogService.cleanupOldLogs(
-      body.daysToKeep
+      body.daysToKeep,
+      userId
     );
     return {
       message: `成功清理了 ${deletedCount} 条审计日志`,

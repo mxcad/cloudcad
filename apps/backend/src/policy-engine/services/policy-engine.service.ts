@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
 import {
@@ -18,9 +18,7 @@ import {
   PolicyContext,
   PolicyEvaluationResult,
 } from '../interfaces/permission-policy.interface';
-import { TimePolicy } from '../policies/time-policy';
-import { IpPolicy } from '../policies/ip-policy';
-import { DevicePolicy } from '../policies/device-policy';
+import { PolicyFactoryService } from './policy-factory.service';
 import { PolicyType } from '../enums/policy-type.enum';
 
 /**
@@ -44,31 +42,14 @@ export interface PolicyEvaluationSummary {
 export class PolicyEngineService {
   private readonly logger = new Logger(PolicyEngineService.name);
   private readonly policies: Map<string, IPermissionPolicy> = new Map();
-  private readonly policyFactories: Map<
-    PolicyType,
-    (id: string, config: unknown) => IPermissionPolicy
-  >;
   private readonly policyCacheTTL: number;
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly cacheService: PermissionCacheService
+    @Inject(forwardRef(() => PermissionCacheService))
+    private readonly cacheService: PermissionCacheService,
+    private readonly policyFactory: PolicyFactoryService
   ) {
-    // 初始化策略工厂
-    this.policyFactories = new Map();
-    this.policyFactories.set(
-      PolicyType.TIME,
-      (id, config) => new TimePolicy(id, config as never)
-    );
-    this.policyFactories.set(
-      PolicyType.IP,
-      (id, config) => new IpPolicy(id, config as never)
-    );
-    this.policyFactories.set(
-      PolicyType.DEVICE,
-      (id, config) => new DevicePolicy(id, config as never)
-    );
-
     const cacheTTL = this.configService.get('cacheTTL', { infer: true });
     this.policyCacheTTL = cacheTTL.policy * 1000; // 转为毫秒
   }
@@ -102,19 +83,7 @@ export class PolicyEngineService {
     policyId: string,
     config: Record<string, unknown>
   ): IPermissionPolicy {
-    const factory = this.policyFactories.get(type);
-    if (!factory) {
-      throw new BadRequestException(`未知的策略类型: ${type}`);
-    }
-
-    const policy = factory(policyId, config);
-
-    // 验证策略配置
-    if (!policy.validateConfig(config)) {
-      throw new BadRequestException(`策略配置验证失败: ${type}`);
-    }
-
-    return policy;
+    return this.policyFactory.createPolicy(type, policyId, config);
   }
 
   /**
@@ -125,12 +94,7 @@ export class PolicyEngineService {
     policyId: string,
     config: Record<string, unknown>
   ): IPermissionPolicy {
-    const factory = this.policyFactories.get(type);
-    if (!factory) {
-      throw new BadRequestException(`未知的策略类型: ${type}`);
-    }
-
-    return factory(policyId, config);
+    return this.policyFactory.createPolicyUnsafe(type, policyId, config);
   }
 
   /**
@@ -290,6 +254,6 @@ export class PolicyEngineService {
    * 获取支持的策略类型
    */
   getSupportedPolicyTypes(): PolicyType[] {
-    return Array.from(this.policyFactories.keys());
+    return this.policyFactory.getSupportedPolicyTypes();
   }
 }

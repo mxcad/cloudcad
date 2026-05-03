@@ -20,6 +20,7 @@ import {
   Logger,
   Res,
   UseInterceptors,
+  Inject,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -44,6 +45,11 @@ import {
 } from '../file-system/dto/file-system-response.dto';
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
 import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
+import {
+  IPublicLibraryProvider,
+  PUBLIC_LIBRARY_PROVIDER_DRAWING,
+  PUBLIC_LIBRARY_PROVIDER_BLOCK,
+} from './interfaces/public-library-provider.interface';
 
 /**
  * 公共资源库控制器（仅保留只读接口）
@@ -64,7 +70,11 @@ export class LibraryController {
     private readonly libraryService: LibraryService,
     private readonly fileSystemService: FileSystemService,
     private readonly fileDownloadHandler: FileDownloadHandlerService,
-    private readonly mxcadFileHandler: MxcadFileHandlerService
+    private readonly mxcadFileHandler: MxcadFileHandlerService,
+    @Inject(PUBLIC_LIBRARY_PROVIDER_DRAWING)
+    private readonly drawingLibraryProvider: IPublicLibraryProvider,
+    @Inject(PUBLIC_LIBRARY_PROVIDER_BLOCK)
+    private readonly blockLibraryProvider: IPublicLibraryProvider
   ) {}
 
   // ========== 图纸库接口（只读） ==========
@@ -81,7 +91,7 @@ export class LibraryController {
     type: FileSystemNodeDto,
   })
   async getDrawingLibrary() {
-    return this.libraryService.getLibrary('drawing');
+    return this.drawingLibraryProvider.getRootNode();
   }
 
   /**
@@ -102,7 +112,7 @@ export class LibraryController {
     const mockUserId = 'system';
     const actualNodeId =
       nodeId === 'root'
-        ? await this.libraryService.getLibraryId('drawing')
+        ? await this.drawingLibraryProvider.getLibraryId()
         : nodeId;
     return this.fileSystemService.getChildren(actualNodeId, mockUserId, query);
   }
@@ -125,7 +135,7 @@ export class LibraryController {
     const mockUserId = 'system';
     const actualNodeId =
       nodeId === 'root'
-        ? await this.libraryService.getLibraryId('drawing')
+        ? await this.drawingLibraryProvider.getLibraryId()
         : nodeId;
     return this.fileSystemService.getAllFilesUnderNode(
       actualNodeId,
@@ -219,7 +229,7 @@ export class LibraryController {
     type: FileSystemNodeDto,
   })
   async getBlockLibrary() {
-    return this.libraryService.getLibrary('block');
+    return this.blockLibraryProvider.getRootNode();
   }
 
   /**
@@ -240,7 +250,7 @@ export class LibraryController {
     const mockUserId = 'system';
     const actualNodeId =
       nodeId === 'root'
-        ? await this.libraryService.getLibraryId('block')
+        ? await this.blockLibraryProvider.getLibraryId()
         : nodeId;
     return this.fileSystemService.getChildren(actualNodeId, mockUserId, query);
   }
@@ -263,7 +273,7 @@ export class LibraryController {
     const mockUserId = 'system';
     const actualNodeId =
       nodeId === 'root'
-        ? await this.libraryService.getLibraryId('block')
+        ? await this.blockLibraryProvider.getLibraryId()
         : nodeId;
     return this.fileSystemService.getAllFilesUnderNode(
       actualNodeId,

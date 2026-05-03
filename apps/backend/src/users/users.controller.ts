@@ -275,6 +275,16 @@ export class UsersController {
     return this.usersService.softDelete(id);
   }
 
+  @Post(':id/restore')
+  @RequirePermissions([SystemPermission.SYSTEM_USER_DELETE])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '恢复已注销的用户账户' })
+  @ApiResponse({ status: 200, description: '账户恢复成功' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  restore(@Param('id') id: string) {
+    return this.usersService.restore(id);
+  }
+
   @Post(':id/delete-immediately')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '立即注销指定用户账户（软删除 + 立即清理）' })
@@ -300,7 +310,7 @@ export class UsersController {
     @Request() req: AuthenticatedRequest,
     @Body() dto: DeactivateAccountDto
   ) {
-    return this.usersService.deactivateAccount(
+    return this.usersService.deactivate(
       req.user.id,
       dto.password,
       dto.phoneCode,

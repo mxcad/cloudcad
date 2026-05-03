@@ -54,7 +54,7 @@ export class ConversionModule {
         ProcessRunnerService,
         OutputPathResolverService,
       ],
-      global: false,
+      global: true,
     };
   }
 }

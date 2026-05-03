@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SystemPermission, SystemRole } from '../enums/permissions.enum';
 import { PermissionCacheService } from './permission-cache.service';
@@ -21,6 +21,7 @@ import { PolicyConfigService } from '../../policy-engine/services/policy-config.
 import { PolicyEngineService } from '../../policy-engine/services/policy-engine.service';
 import { IPermissionPolicy } from '../../policy-engine/interfaces/permission-policy.interface';
 import { CACHE_TTL } from '../constants/cache.constants';
+import { IPERMISSION_STORE, IPermissionStore } from '../interfaces/permission-store.interface';
 
 export interface Role {
   id: string;
@@ -58,6 +59,9 @@ export class PermissionService {
     private readonly cacheService: PermissionCacheService,
     private readonly roleInheritanceService: RoleInheritanceService,
     @Optional()
+    @Inject(IPERMISSION_STORE)
+    private readonly permissionStore?: IPermissionStore,
+    @Optional()
     private readonly policyConfigService?: PolicyConfigService,
     @Optional()
     private readonly policyEngineService?: PolicyEngineService
@@ -79,6 +83,10 @@ export class PermissionService {
     let hasPermission = false;
 
     try {
+      if (this.permissionStore) {
+        return this.permissionStore.checkSystemPermission(userId, permission);
+      }
+
       // 1. 检查缓存
       const cacheKey = `system_perm:${userId}:${permission}`;
       const cached = await this.cacheService.get<boolean>(cacheKey);
@@ -434,9 +442,12 @@ export class PermissionService {
    * 清除用户权限缓存
    */
   async clearUserCache(userId: string): Promise<void> {
+    if (this.permissionStore) {
+      await this.permissionStore.clearUserCache(userId);
+      return;
+    }
     await this.cacheService.clearUserCache(userId);
 
-    // 同时清除用户角色的缓存
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { role: { select: { name: true } } },
@@ -461,6 +472,15 @@ export class PermissionService {
     permissions: SystemPermission[]
   ): Promise<Map<SystemPermission, boolean>> {
     const results = new Map<SystemPermission, boolean>();
+
+    if (this.permissionStore) {
+      const userPermissions = await this.permissionStore.getUserSystemPermissions(userId);
+      for (const permission of permissions) {
+        results.set(permission, userPermissions.includes(permission));
+      }
+      return results;
+    }
+
     const uncachedPermissions: SystemPermission[] = [];
 
     // 先从缓存中获取

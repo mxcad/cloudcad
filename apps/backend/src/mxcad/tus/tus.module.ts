@@ -3,10 +3,16 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module, forwardRef } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { MxcadInfraModule } from '../infra/mxcad-infra.module';
+import { MxcadCoreModule } from '../core/mxcad-core.module';
+import { FileSystemModule } from '../../file-system/file-system.module';
 import { TusService } from './tus.service';
 import { TusEventHandler } from './tus-event-handler.service';
+import { TusAuthMiddleware } from './tus-auth.middleware';
+import { AppConfig } from '../../config/app.config';
 
 /**
  * Tus 上传协议模块
@@ -24,8 +30,20 @@ import { TusEventHandler } from './tus-event-handler.service';
  *   onUploadFinish — 上传完成后触发文件转换和节点创建
  */
 @Module({
-  imports: [ConfigModule],
-  providers: [TusService, TusEventHandler],
-  exports: [TusService],
+  imports: [
+    ConfigModule,
+    MxcadInfraModule,
+    MxcadCoreModule,
+    forwardRef(() => FileSystemModule),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService<AppConfig>) => ({
+        secret: configService.get('jwt.secret', { infer: true }),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [TusService, TusEventHandler, TusAuthMiddleware],
+  exports: [TusService, TusAuthMiddleware],
 })
 export class TusModule {}

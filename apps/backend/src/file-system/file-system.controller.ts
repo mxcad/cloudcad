@@ -44,6 +44,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
+import { CsrfProtected } from '../auth/decorators/csrf-protected.decorator';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
@@ -116,6 +117,7 @@ export class FileSystemController {
 
   @Post('projects')
   @RequirePermissions([SystemPermission.PROJECT_CREATE])
+  @CsrfProtected()
   @ApiOperation({ summary: '创建项目' })
   @ApiResponse({
     status: 201,
@@ -184,6 +186,7 @@ export class FileSystemController {
 
   @Post('trash/restore')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+  @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '恢复回收站项目' })
   @ApiResponse({
@@ -191,12 +194,16 @@ export class FileSystemController {
     description: '恢复项目成功',
     type: BatchOperationResponseDto,
   })
-  async restoreTrashItems(@Body() body: { itemIds: string[] }) {
-    return this.fileSystemService.restoreTrashItems(body.itemIds);
+  async restoreTrashItems(
+    @Body() body: { itemIds: string[] },
+    @Request() req: ExpressRequest & { user: { id: string } }
+  ) {
+    return this.fileSystemService.restoreTrashItems(body.itemIds, req.user.id);
   }
 
   @Delete('trash/items')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+  @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '永久删除回收站项目' })
   @ApiResponse({
@@ -210,6 +217,7 @@ export class FileSystemController {
 
   @Delete('trash')
   @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+  @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '清空回收站' })
   @ApiResponse({
@@ -253,6 +261,7 @@ export class FileSystemController {
 
   @Patch('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_EDIT)
+  @CsrfProtected()
   @ApiOperation({ summary: '更新节点' })
   @ApiResponse({
     status: 200,
@@ -269,6 +278,7 @@ export class FileSystemController {
 
   @Delete('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_DELETE)
+  @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '删除节点' })
   @ApiResponse({
@@ -288,6 +298,7 @@ export class FileSystemController {
 
   @Post('nodes/:nodeId/move')
   @RequireProjectPermission(ProjectPermission.FILE_MOVE)
+  @CsrfProtected()
   @ApiOperation({ summary: '移动节点' })
   @ApiResponse({
     status: 200,
@@ -301,6 +312,7 @@ export class FileSystemController {
 
   @Post('nodes/:nodeId/copy')
   @RequireProjectPermission(ProjectPermission.FILE_COPY)
+  @CsrfProtected()
   @ApiOperation({ summary: '复制节点' })
   @ApiResponse({
     status: 201,
@@ -328,6 +340,7 @@ export class FileSystemController {
 
   @Post('quota/update')
   @RequirePermissions([SystemPermission.STORAGE_QUOTA])
+  @CsrfProtected()
   @ApiOperation({ summary: '更新节点存储配额' })
   @ApiResponse({
     status: 200,
@@ -343,7 +356,7 @@ export class FileSystemController {
   }
 
   @Get('projects/:projectId/members')
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
   @ApiOperation({ summary: '获取项目成员列表' })
   @ApiResponse({
     status: 200,
@@ -359,6 +372,7 @@ export class FileSystemController {
 
   @Post('projects/:projectId/members')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
+  @CsrfProtected()
   @ApiOperation({ summary: '添加项目成员' })
   @ApiResponse({
     status: 201,
@@ -385,6 +399,7 @@ export class FileSystemController {
 
   @Patch('projects/:projectId/members/:userId')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
+  @CsrfProtected()
   @ApiOperation({ summary: '更新项目成员角色' })
   @ApiResponse({
     status: 200,
@@ -415,6 +430,7 @@ export class FileSystemController {
 
   @Delete('projects/:projectId/members/:userId')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
+  @CsrfProtected()
   @ApiOperation({ summary: '移除项目成员' })
   @ApiResponse({
     status: 200,
@@ -774,7 +790,7 @@ export class FileSystemController {
   async checkProjectPermission(
     @Request() req,
     @Param('projectId') projectId: string,
-    @Query('permission') permission: string
+    @Query('permission') permission: ProjectPermission
   ) {
     if (!permission) {
       throw new BadRequestException('缺少 permission 参数');

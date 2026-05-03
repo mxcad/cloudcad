@@ -154,6 +154,89 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
   }
 
   /**
+   * 根据模式删除缓存
+   * 简单模式（单个 *）使用 Prisma 原生 startsWith/endsWith/contains，
+   * 复杂模式使用数据库层面 LIKE 查询，全程避免全量加载到内存再过滤
+   */
+  async deleteByPattern(pattern: string): Promise<number> {
+    try {
+      if (!pattern.includes('*') && !pattern.includes('?')) {
+        const result = await this.prisma.cacheEntry.deleteMany({
+          where: { key: pattern },
+        });
+        if (result.count > 0) {
+          this.logger.debug(
+            `根据模式删除了 ${result.count} 条 L3 缓存: ${pattern}`
+          );
+        }
+        return result.count;
+      }
+
+      const simpleWhere = this.tryBuildSimpleWhere(pattern);
+      if (simpleWhere !== null) {
+        const result = await this.prisma.cacheEntry.deleteMany({
+          where: simpleWhere,
+        });
+        if (result.count > 0) {
+          this.logger.debug(
+            `根据模式删除了 ${result.count} 条 L3 缓存: ${pattern}`
+          );
+        }
+        return result.count;
+      }
+
+      const likePattern = pattern
+        .replace(/\\/g, '\\\\')
+        .replace(/%/g, '\\%')
+        .replace(/_/g, '\\_')
+        .replace(/\*/g, '%')
+        .replace(/\?/g, '_');
+
+      const result = await this.prisma.$executeRaw`
+        DELETE FROM cache_entries
+        WHERE key LIKE ${likePattern}
+      `;
+
+      if (result > 0) {
+        this.logger.debug(
+          `根据模式删除了 ${result} 条 L3 缓存: ${pattern}`
+        );
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error(`根据模式删除 L3 缓存失败: ${pattern}`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * 尝试将简单通配符模式转换为 Prisma 原生 where 条件
+   * 仅处理单个 * 通配符，返回 null 表示需要回退到 LIKE
+   */
+  private tryBuildSimpleWhere(
+    pattern: string
+  ): Record<string, unknown> | null {
+    const starCount = (pattern.match(/\*/g) || []).length;
+    const qmarkCount = (pattern.match(/\?/g) || []).length;
+
+    if (qmarkCount > 0 || starCount !== 1) {
+      return null;
+    }
+
+    if (pattern === '*') {
+      return {};
+    }
+    if (pattern.startsWith('*') && pattern.endsWith('*')) {
+      return { key: { contains: pattern.slice(1, -1) } };
+    }
+    if (pattern.startsWith('*')) {
+      return { key: { endsWith: pattern.slice(1) } };
+    }
+    return { key: { startsWith: pattern.slice(0, -1) } };
+  }
+
+  /**
    * 清空所有缓存
    */
   async clear(): Promise<void> {

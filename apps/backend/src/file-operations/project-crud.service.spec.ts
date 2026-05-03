@@ -386,7 +386,7 @@ describe('ProjectCrudService', () => {
       expect(prisma.fileSystemNode.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: [{ ownerId: userId }, { projectMembers: { some: { userId } }],
+            OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
           }),
         })
       );
@@ -667,6 +667,5 @@ describe('ProjectCrudService', () => {
     it('should return the storage manager instance', () => {
       expect(service.getStorageManager()).toBeDefined();
     });
-  });
   });
 });

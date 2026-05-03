@@ -115,7 +115,7 @@ function readCachedHash(storeName) {
 function cleanNodeModules() {
   const paths = [
     path.join(PROJECT_ROOT, 'node_modules'),
-    path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules'),
+    path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules'),
     path.join(PROJECT_ROOT, 'packages', 'frontend', 'node_modules'),
   ];
   for (const p of paths) {
@@ -657,7 +657,7 @@ async function buildProject() {
 
   // 清理旧构建
   const dirs = [
-    path.join(PROJECT_ROOT, 'packages', 'backend', 'dist'),
+    path.join(PROJECT_ROOT, 'apps', 'backend', 'dist'),
     path.join(PROJECT_ROOT, 'packages', 'frontend', 'dist'),
   ];
   for (const dir of dirs) {

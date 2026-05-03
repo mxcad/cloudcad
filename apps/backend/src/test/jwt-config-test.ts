@@ -13,8 +13,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 
 async function testJwtConfig() {
+  const logger = new Logger('JwtConfigTest');
+
   // 模拟 ConfigService
   const mockConfigService = {
     get: (key: string) => {
@@ -48,7 +51,9 @@ async function testJwtConfig() {
     const token = jwtService.sign(payload);
     // 验证 token
     const decoded = jwtService.verify(token);
-  } catch (error) {}
+  } catch (error) {
+    logger.warn(`JWT 验证失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 // 如果直接运行此文件

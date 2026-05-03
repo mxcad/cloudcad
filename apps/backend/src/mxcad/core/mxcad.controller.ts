@@ -30,6 +30,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   UseGuards,
+  Inject,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -73,6 +74,10 @@ import { StorageService } from '../../storage/storage.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { VersionControlService } from '../../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../../version-control/interfaces/version-control.interface';
 import { AppConfig } from '../../config/app.config';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { SaveAsService } from '../save/save-as.service';
@@ -106,7 +111,8 @@ export class MxCadController {
     private readonly configService: ConfigService<AppConfig>,
     private readonly storageService: StorageService,
     private readonly permissionService: FileSystemPermissionService,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly fileConversionService: FileConversionService,
     private readonly saveAsService: SaveAsService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
@@ -498,6 +504,7 @@ export class MxCadController {
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('commitMessage') commitMessage: string,
+    @Body('expectedTimestamp') expectedTimestamp: string,
     @Req() request: MxCadRequest
   ) {
     this.logger.log(
@@ -515,7 +522,9 @@ export class MxCadController {
       file,
       userId,
       userName,
-      commitMessage
+      commitMessage,
+      false,
+      expectedTimestamp
     );
 
     if (!result.success) {

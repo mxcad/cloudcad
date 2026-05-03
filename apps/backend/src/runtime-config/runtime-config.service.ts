@@ -15,6 +15,7 @@ import {
   OnModuleInit,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -34,6 +35,8 @@ const CACHE_TTL = 3600; // 1 小时
 
 @Injectable()
 export class RuntimeConfigService implements OnModuleInit {
+  private readonly logger = new Logger(RuntimeConfigService.name);
+
   constructor(
     private readonly prisma: DatabaseService,
     @InjectRedis() private readonly redis: Redis
@@ -46,8 +49,7 @@ export class RuntimeConfigService implements OnModuleInit {
   async onModuleInit() {
     // 异步同步配置，不阻塞启动
     this.syncDefaultConfigs().catch((error) => {
-      // 记录错误但不影响启动
-      console.error('运行时配置同步失败:', error);
+      this.logger.error('运行时配置同步失败:', error);
     });
   }
 

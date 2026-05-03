@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { BadRequestException } from '@nestjs/common';
 import { BasePolicy } from './base-policy';
 import {
   IPermissionPolicy,
@@ -117,7 +118,7 @@ export class TimePolicy extends BasePolicy implements IPermissionPolicy {
   private parseTime(timeStr: string): [number, number] {
     const parts = timeStr.split(':');
     if (parts.length !== 2) {
-      throw new Error(`无效的时间格式: ${timeStr}`);
+      throw new BadRequestException('无效的时间格式');
     }
     const hour = parseInt(parts[0], 10);
     const minute = parseInt(parts[1], 10);
@@ -129,7 +130,7 @@ export class TimePolicy extends BasePolicy implements IPermissionPolicy {
       minute < 0 ||
       minute > 59
     ) {
-      throw new Error(`无效的时间值: ${timeStr}`);
+      throw new BadRequestException('无效的时间值');
     }
     return [hour, minute];
   }

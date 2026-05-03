@@ -269,8 +269,8 @@ export class FileSystemService {
   /**
    * 恢复回收站项目
    */
-  async restoreTrashItems(itemIds: string[]) {
-    return this.fileOperationsService.restoreTrashItems(itemIds);
+  async restoreTrashItems(itemIds: string[], userId: string) {
+    return this.fileOperationsService.restoreTrashItems(itemIds, userId);
   }
 
   /**
@@ -301,8 +301,8 @@ export class FileSystemService {
   /**
    * 恢复单个节点
    */
-  async restoreNode(nodeId: string) {
-    return this.fileOperationsService.restoreNode(nodeId);
+  async restoreNode(nodeId: string, userId: string) {
+    return this.fileOperationsService.restoreNode(nodeId, userId);
   }
 
   /**

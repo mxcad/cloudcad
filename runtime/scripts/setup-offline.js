@@ -533,7 +533,7 @@ function fixBinScripts() {
   // 需要修复的 .bin 目录列表
   const binDirs = [
     NODE_MODULES_BIN, // 根目录 node_modules/.bin
-    path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
+    path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules', '.bin'),
     path.join(PROJECT_ROOT, 'packages', 'frontend', 'node_modules', '.bin'),
     path.join(PROJECT_ROOT, 'packages', 'config-service', 'node_modules', '.bin'),
   ];
@@ -1379,7 +1379,7 @@ function copyEnvExampleToEnv() {
   // 需要处理的配置列表
   // target: 目标文件名，默认 .env（前端使用 .env.local）
   const envConfigs = [
-    { dir: path.join(PROJECT_ROOT, 'packages', 'backend'), target: '.env' },
+    { dir: path.join(PROJECT_ROOT, 'apps', 'backend'), target: '.env' },
     { dir: path.join(PROJECT_ROOT, 'packages', 'frontend'), target: '.env.local' },
     { dir: path.join(PROJECT_ROOT, 'docker'), target: '.env' },
   ];
@@ -1439,7 +1439,7 @@ function setupWrappers() {
  * @returns {boolean} true 表示已存在，无需生成
  */
 function checkPrismaClientExists() {
-  const prismaClientDir = path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.prisma', 'client');
+  const prismaClientDir = path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules', '.prisma', 'client');
   const indexPath = path.join(prismaClientDir, 'index.js');
   
   // 检查 Prisma Client 是否存在

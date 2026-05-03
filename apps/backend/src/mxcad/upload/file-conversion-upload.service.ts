@@ -14,7 +14,10 @@ import {
 } from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { VersionControlService } from '../../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../../version-control/interfaces/version-control.interface';
 import { ExternalReferenceUpdateService } from '../external-ref/external-reference-update.service';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { UploadFileOptions } from './file-upload-manager.types';
@@ -22,6 +25,7 @@ import { ExternalRefService } from '../external-ref/external-ref.service';
 import { UploadUtilityService } from './upload-utility.service';
 import { FileMergeService } from './file-merge.service';
 import { ThumbnailGenerationService } from '../infra/thumbnail-generation.service';
+import { StorageService } from '../../storage/storage.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { FileTypeDetector } from '../utils/file-type-detector';
@@ -65,13 +69,15 @@ export class FileConversionUploadService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
     private readonly storageManager: StorageManager,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly fileConversionService: FileConversionService,
     private readonly externalReferenceUpdateService: ExternalReferenceUpdateService,
     private readonly externalRefService: ExternalRefService,
     private readonly uploadUtilityService: UploadUtilityService,
     private readonly fileMergeService: FileMergeService,
-    private readonly thumbnailGenerationService: ThumbnailGenerationService
+    private readonly thumbnailGenerationService: ThumbnailGenerationService,
+    private readonly storageService: StorageService
   ) {
     this.mxcadUploadPath =
       this.configService.get('mxcadUploadPath') || '../../uploads';
@@ -301,7 +307,7 @@ export class FileConversionUploadService {
             mxwebFileName
           );
 
-          await fsPromises.copyFile(filePath, storageInfo.filePath);
+          await this.storageService.copyFromFs(filePath, storageInfo.fileRelativePath);
           await this.fileSystemServiceMain.updateNodePath(
             newNodeId,
             storageInfo.fileRelativePath
@@ -415,7 +421,7 @@ export class FileConversionUploadService {
             name
           );
 
-          await fsPromises.copyFile(filePath, storageInfo.filePath);
+          await this.storageService.copyFromFs(filePath, storageInfo.fileRelativePath);
           await this.fileSystemServiceMain.updateNodePath(
             newNodeId,
             storageInfo.fileRelativePath

@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { PermissionService } from '../common/services/permission.service';
 import { RoleInheritanceService } from '../common/services/role-inheritance.service';
@@ -191,18 +191,24 @@ export class PermissionTestRunner {
         };
       }
 
-      // 检查权限（仅处理系统权限）
+      // 检查用户是否有该权限
       const hasPermission = await this.permissionService.checkSystemPermission(
         testUser.id,
         testCase.permission as PrismaPermission
       );
 
-      // 验证期望结果
-      const shouldHavePermission = testCase.expectedRoles.includes(
+      // 验证用户是否应该有该权限（基于角色）
+      const roleHasPermission = testCase.expectedRoles.includes(
         testUser.role.name as SystemRole
       );
 
-      const passed = hasPermission === shouldHavePermission;
+      // 验证用户是否不应该有该权限（检查意外角色）
+      const roleUnexpectedlyHasPermission = testCase.unexpectedRoles?.includes(
+        testUser.role.name as SystemRole
+      );
+
+      // 通过条件：角色应该有权且角色不应该意外拥有权限
+      const passed = roleHasPermission && !roleUnexpectedlyHasPermission;
 
       const duration = Date.now() - startTime;
 
@@ -493,7 +499,7 @@ export class PermissionTestRunner {
     });
 
     if (!role) {
-      throw new Error(`角色 ${roleName} 不存在`);
+      throw new InternalServerErrorException(`测试环境错误：角色 ${roleName} 不存在`);
     }
 
     // 创建测试用户
@@ -545,7 +551,7 @@ export class PermissionTestRunner {
     // 检查所有角色是否存在
     for (const roleName of roleNames) {
       if (!roleMap.has(roleName)) {
-        throw new Error(`角色 ${roleName} 不存在`);
+        throw new InternalServerErrorException(`测试环境错误：角色 ${roleName} 不存在`);
       }
     }
 

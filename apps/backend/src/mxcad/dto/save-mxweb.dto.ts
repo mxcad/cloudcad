@@ -32,4 +32,13 @@ export class SaveMxwebDto {
   @IsString()
   @IsOptional()
   commitMessage?: string;
+
+  @ApiProperty({
+    description: '乐观锁时间戳（覆盖保存时必须提供，首次保存时不需要）',
+    required: false,
+    example: '2026-05-02T08:30:00.000Z',
+  })
+  @IsString()
+  @IsOptional()
+  expectedTimestamp?: string;
 }

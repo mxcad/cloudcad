@@ -307,7 +307,7 @@ export class AuditLogService {
 
      */
 
-  async cleanupOldLogs(daysToKeep: number): Promise<number> {
+  async cleanupOldLogs(daysToKeep: number, userId: string = 'unknown'): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
@@ -319,7 +319,7 @@ export class AuditLogService {
       },
     });
 
-    this.logger.log(`清理旧审计日志: 删除了 ${result.count} 条记录`);
+    this.logger.log(`用户 ${userId} 于 ${new Date().toISOString()} 执行了审计日志清理，删除了 ${result.count} 条记录`);
 
     return result.count;
   }

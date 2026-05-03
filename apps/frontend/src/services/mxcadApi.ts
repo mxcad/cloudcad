@@ -221,7 +221,8 @@ export const mxcadApi = {
     blob: Blob,
     nodeId: string,
     onProgress?: (percentage: number) => void,
-    commitMessage?: string
+    commitMessage?: string,
+    expectedTimestamp?: string
   ) => {
     return new Promise((resolve, reject) => {
       (async () => {
@@ -235,6 +236,9 @@ export const mxcadApi = {
           formData.append('file', file);
           if (commitMessage) {
             formData.append('commitMessage', commitMessage);
+          }
+          if (expectedTimestamp) {
+            formData.append('expectedTimestamp', expectedTimestamp);
           }
 
           const response = await getApiClient().MxCadController_saveMxwebToNode(

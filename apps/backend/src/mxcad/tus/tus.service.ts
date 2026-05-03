@@ -5,8 +5,10 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createServer } from '@tus/server';
+import { Server } from '@tus/server';
 import { FileStore } from '@tus/file-store';
+import { TusEventHandler } from './tus-event-handler.service';
+import { AppConfig } from '../../config/app.config';
 
 /**
  * Tus 上传服务器服务
@@ -20,9 +22,12 @@ import { FileStore } from '@tus/file-store';
 @Injectable()
 export class TusService implements OnModuleInit {
   private readonly logger = new Logger(TusService.name);
-  private server: ReturnType<typeof createServer>;
+  private server: Server;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService<AppConfig>,
+    private readonly tusEventHandler: TusEventHandler
+  ) {}
 
   /**
    * 模块初始化时启动 tus 服务器
@@ -37,19 +42,37 @@ export class TusService implements OnModuleInit {
       directory: tempPath,
     });
 
-    this.server = createServer({
+    this.server = new Server({
       path: '/api/v1/files',
       store,
       maxFileSize,
       async onUploadFinish(req, res, upload) {
-        // finish 事件由 TusEventHandler 处理
-        // 这里只记录日志
         const logger = new Logger('TusServer');
         logger.log(`上传完成: ${upload.id}, 文件: ${upload.metadata?.filename || 'unknown'}`);
+        
+        // 调用 TusEventHandler 处理上传完成事件
+        try {
+          const userId = (req as any).user?.id;
+          await tusEventHandler.handleUploadFinish(
+            upload.id,
+            '', // filePath 将在 handleUploadFinish 中通过 FileStore 获取
+            upload.metadata || {},
+            userId
+          );
+        } catch (error) {
+          logger.error(`处理上传完成事件失败: ${(error as Error).message}`, (error as Error).stack);
+        }
       },
     });
 
     this.logger.log('Tus 上传服务器初始化完成');
+  }
+
+  /**
+   * 获取 tus 服务器实例
+   */
+  getServer() {
+    return this.server;
   }
 
   /**

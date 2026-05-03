@@ -15,11 +15,13 @@ import {
   Logger,
   NotFoundException,
   InternalServerErrorException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { PermissionCacheService } from '../../common/services/permission-cache.service';
-import { PolicyEngineService } from './policy-engine.service';
+import { PolicyFactoryService } from './policy-factory.service';
 import { PolicyType } from '../enums/policy-type.enum';
 import {
   Permission as PrismaPermission,
@@ -54,8 +56,9 @@ export class PolicyConfigService {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: DatabaseService,
+    @Inject(forwardRef(() => PermissionCacheService))
     private readonly cacheService: PermissionCacheService,
-    private readonly policyEngine: PolicyEngineService
+    private readonly policyFactory: PolicyFactoryService
   ) {
     const cacheTTLConfig = this.configService.get('cacheTTL', { infer: true });
     this.cacheTTL = cacheTTLConfig.policy * 1000; // 转为毫秒
@@ -72,7 +75,7 @@ export class PolicyConfigService {
   > {
     try {
       // 验证策略配置
-      const policy = this.policyEngine.createPolicyUnsafe(
+      const policy = this.policyFactory.createPolicyUnsafe(
         config.type,
         `temp_${Date.now()}`,
         config.config
@@ -141,7 +144,7 @@ export class PolicyConfigService {
 
       // 如果更新了 config，验证新配置
       if (updates.config && updates.type) {
-        const policy = this.policyEngine.createPolicyUnsafe(
+        const policy = this.policyFactory.createPolicyUnsafe(
           updates.type,
           `temp_${Date.now()}`,
           updates.config

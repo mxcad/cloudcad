@@ -39,6 +39,8 @@ import { InitializationService } from '../common/services/initialization.service
 import { AppConfig } from '../config/app.config';
 import { EMAIL_VERIFICATION_SERVICE } from '../common/interfaces/verification.interface';
 import { USER_SERVICE } from '../common/interfaces/user-service.interface';
+import { AUTH_PROVIDER } from './interfaces/auth-provider.interface';
+import { LocalAuthProvider } from './providers/local-auth.provider';
 
 @Module({
   imports: [
@@ -104,9 +106,26 @@ import { USER_SERVICE } from '../common/interfaces/user-service.interface';
     EmailService,
     EmailVerificationService,
     InitializationService,
+    LocalAuthProvider,
     {
       provide: EMAIL_VERIFICATION_SERVICE,
       useExisting: EmailVerificationService,
+    },
+    {
+      provide: AUTH_PROVIDER,
+      useFactory: (
+        configService: ConfigService,
+        localAuthProvider: LocalAuthProvider
+      ) => {
+        const providerType = configService.get<string>('AUTH_PROVIDER', 'local');
+        
+        switch (providerType) {
+          case 'local':
+          default:
+            return localAuthProvider;
+        }
+      },
+      inject: [ConfigService, LocalAuthProvider],
     },
   ],
   exports: [

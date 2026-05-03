@@ -24,6 +24,8 @@ import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
 import configuration from './config/configuration';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { TusService } from './mxcad/tus/tus.service';
+import { TusAuthMiddleware } from './mxcad/tus/tus-auth.middleware';
 
 const logger = new Logger('Bootstrap');
 
@@ -145,19 +147,65 @@ async function bootstrap() {
   // 信任代理
   app.set('trust proxy', true);
 
-  // 启用 CORS
+  // CORS 配置：生产环境使用明确域名白名单，开发环境使用配置的前端地址
+  // 通过 FRONTEND_URL 环境变量配置，支持逗号分隔多个域名
+  const corsOrigins = config.nodeEnv === 'production'
+    ? (process.env.CORS_ORIGINS
+        ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+        : config.frontendUrl
+          ? [config.frontendUrl]
+          : ['http://localhost:3000'])
+    : [config.frontendUrl || 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:3000'];
+
   app.enableCors({
-    origin: true,
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Cookie',
+      'Tus-Resumable',
+      'Upload-Length',
+      'Upload-Metadata',
+      'Upload-Offset',
+      'X-CSRF-Token',
+    ],
   });
 
   // 全局设置 CORP 响应头，支持 MxCAD-App 的 SharedArrayBuffer 跨域访问
+  // 同时设置所有必要的安全响应头
   app.use((req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // 仅在 HTTPS 环境下设置 HSTS
+    if (req.protocol === 'https' || req.get('X-Forwarded-Proto') === 'https') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    // 基础 Content-Security-Policy（可根据需要调整）
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:"
+    );
     next();
   });
+
+  // 配置 Tus 上传端点
+  try {
+    const tusService = app.get(TusService);
+    const tusAuthMiddleware = app.get(TusAuthMiddleware);
+    
+    // 挂载 Tus 认证中间件和 Tus 服务器
+    server.use('/api/v1/files', (req, res, next) => tusAuthMiddleware.use(req, res, next));
+    server.use('/api/v1/files', tusService.getHandler());
+    
+    logger.log('✅ Tus 上传端点已挂载: /api/v1/files');
+  } catch (error) {
+    logger.warn('⚠️ Tus 服务挂载失败:', (error as Error).message);
+  }
 
   // 配置 Swagger 文档
   AppModule.configureSwagger(app);

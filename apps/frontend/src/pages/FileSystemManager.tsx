@@ -14,6 +14,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Pagination } from '../components/ui/Pagination';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
+import MxCadUppyUploader, { MxCadUppyUploaderRef } from '../components/MxCadUppyUploader';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useFileSystem } from '../hooks/file-system';

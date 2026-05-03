@@ -12,7 +12,7 @@
 
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { Logger } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 
 /**
  * 文件操作工具类
@@ -228,7 +228,7 @@ export class FileUtils {
    */
   static validatePath(inputPath: string, baseDir?: string): string {
     if (!inputPath) {
-      throw new Error('路径不能为空');
+      throw new BadRequestException('路径不能为空');
     }
 
     // 规范化路径，移除 .. 和 .
@@ -236,7 +236,7 @@ export class FileUtils {
 
     // 检查是否包含路径遍历尝试
     if (normalizedPath.includes('..') || normalizedPath.includes('~')) {
-      throw new Error(`路径包含非法字符: ${inputPath}`);
+      throw new BadRequestException('路径包含非法字符');
     }
 
     // 检查绝对路径
@@ -248,7 +248,7 @@ export class FileUtils {
 
         // 如果相对路径以 .. 开头，说明路径在基础目录之外
         if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-          throw new Error(`路径不在允许的目录内: ${inputPath}`);
+          throw new BadRequestException('路径不在允许的目录内');
         }
       }
     }
@@ -256,13 +256,13 @@ export class FileUtils {
     // 检查特殊文件名
     const basename = path.basename(normalizedPath);
     if (basename === '.' || basename === '..' || basename === '') {
-      throw new Error(`无效的文件名: ${basename}`);
+      throw new BadRequestException('无效的文件名');
     }
 
     // 检查 Windows 保留设备名称
     const windowsReservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
     if (windowsReservedNames.test(basename.split('.')[0])) {
-      throw new Error(`Windows 保留文件名: ${basename}`);
+      throw new BadRequestException('Windows 保留文件名');
     }
 
     return normalizedPath;
@@ -276,7 +276,7 @@ export class FileUtils {
    */
   static validateFilename(filename: string): string {
     if (!filename) {
-      throw new Error('文件名不能为空');
+      throw new BadRequestException('文件名不能为空');
     }
 
     // 移除路径部分，只保留文件名
@@ -284,24 +284,24 @@ export class FileUtils {
 
     // 检查文件名长度
     if (basename.length > 255) {
-      throw new Error(`文件名过长: ${basename.length} 字符（最大 255 字符）`);
+      throw new BadRequestException('文件名过长');
     }
 
     // 验证文件名字符（只允许字母、数字、下划线、连字符、点、空格、中文字符）
     const validFilenameRegex = /^[\u4e00-\u9fa5a-zA-Z0-9._\-\s]+$/;
     if (!validFilenameRegex.test(basename)) {
-      throw new Error(`文件名包含非法字符: ${basename}`);
+      throw new BadRequestException('文件名包含非法字符');
     }
 
     // 检查是否以点开头（隐藏文件）
     if (basename.startsWith('.')) {
-      throw new Error(`文件名不能以点开头: ${basename}`);
+      throw new BadRequestException('文件名不能以点开头');
     }
 
     // 检查是否包含特殊危险字符
     const dangerousChars = ['<', '>', ':', '"', '|', '?', '*', '\0'];
     if (dangerousChars.some((char) => basename.includes(char))) {
-      throw new Error(`文件名包含危险字符: ${basename}`);
+      throw new BadRequestException('文件名包含危险字符');
     }
 
     return basename;
@@ -314,7 +314,7 @@ export class FileUtils {
    */
   static sanitizeFilename(filename: string): string {
     if (!filename) {
-      throw new Error('文件名不能为空');
+      throw new BadRequestException('文件名不能为空');
     }
 
     // 移除路径部分，只保留文件名
@@ -338,7 +338,7 @@ export class FileUtils {
 
     // 确保文件名不为空
     if (!basename) {
-      throw new Error('清理后的文件名为空');
+      throw new BadRequestException('清理后的文件名为空');
     }
 
     return basename;

@@ -612,6 +612,7 @@ export const CADEditorDirect: React.FC = () => {
                 ? file.libraryKey
                 : undefined) as 'drawing' | 'block' | undefined,
           fromPlatform,
+          updatedAt: file.updatedAt,
         });
         setNavigateFunction(navigate);
 

@@ -1,3 +1,7 @@
+/**
+ * @deprecated 该 Hook 将被新的 Uppy 实现替换
+ * 请使用 useUppyUpload Hook 替代
+ */
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.

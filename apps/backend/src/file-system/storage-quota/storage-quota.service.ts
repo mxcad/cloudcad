@@ -6,8 +6,9 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { FileSystemNode } from '@prisma/client';
+import { DatabaseService } from '../../database/database.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 
 /**
@@ -38,7 +39,10 @@ export interface StorageQuotaInfo {
 export class StorageQuotaService {
   private readonly logger = new Logger(StorageQuotaService.name);
 
-  constructor(private readonly runtimeConfigService: RuntimeConfigService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly runtimeConfigService: RuntimeConfigService
+  ) {}
 
   /**
    * 判断节点的存储配额类型
@@ -103,7 +107,7 @@ export class StorageQuotaService {
   /**
    * 更新节点的存储配额
    * @param nodeId 节点 ID
-   * @param quotaGB 新配额值（GB）
+   * @param quotaGB 新配额值（GB），0 表示使用系统默认配额
    * @returns 更新后的节点
    */
   async updateNodeStorageQuota(
@@ -112,8 +116,25 @@ export class StorageQuotaService {
   ): Promise<FileSystemNode> {
     this.logger.log(`更新节点 ${nodeId} 的存储配额为 ${quotaGB} GB`);
 
-    // 注意：这里需要注入 DatabaseService，实际更新逻辑在调用方处理
-    // 此方法仅作为接口定义，实际实现在 FileSystemService 中
-    throw new Error('此方法应在 FileSystemService 中实现');
+    // 验证配额值
+    if (quotaGB < 0) {
+      throw new BadRequestException('存储配额不能为负数');
+    }
+
+    try {
+      const updatedNode = await this.prisma.fileSystemNode.update({
+        where: { id: nodeId },
+        data: { storageQuota: quotaGB },
+      });
+
+      this.logger.log(`节点 ${nodeId} 的存储配额已更新为 ${quotaGB} GB`);
+      return updatedNode;
+    } catch (error) {
+      this.logger.error(
+        `更新节点 ${nodeId} 的存储配额失败: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
   }
 }

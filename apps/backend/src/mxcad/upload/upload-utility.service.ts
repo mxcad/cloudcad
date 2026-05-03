@@ -15,6 +15,7 @@ import { FileSystemService } from '../../file-system/file-system.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
+import { StorageService } from '../../storage/storage.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -29,7 +30,8 @@ export class UploadUtilityService {
     @Inject('FileSystemServiceMain')
     private readonly fileSystemServiceMain: FileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly storageManager: StorageManager
+    private readonly storageManager: StorageManager,
+    private readonly storageService: StorageService
   ) {
     this.mxcadUploadPath =
       this.configService.get('mxcadUploadPath') || '../../uploads';
@@ -75,7 +77,7 @@ export class UploadUtilityService {
         newNode.id,
         originalName
       );
-      await fs.promises.copyFile(sourceFilePath, storageInfo.filePath);
+      await this.storageService.copyFromFs(sourceFilePath, storageInfo.fileRelativePath);
       await this.fileSystemServiceMain.updateNodePath(
         newNode.id,
         storageInfo.fileRelativePath

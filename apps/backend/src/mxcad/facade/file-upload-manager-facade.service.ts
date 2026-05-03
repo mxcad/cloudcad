@@ -14,7 +14,10 @@ import {
 } from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { VersionControlService } from '../../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../../version-control/interfaces/version-control.interface';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { RateLimiter } from '../../common/concurrency/rate-limiter';
 import {
@@ -47,7 +50,8 @@ export class FileUploadManagerFacadeService {
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly cacheManager: CacheManagerService,
     private readonly storageManager: StorageManager,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly chunkUploadManagerService: ChunkUploadManagerService,
     private readonly fileMergeService: FileMergeService,
     private readonly externalRefService: ExternalRefService,

@@ -35,8 +35,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       mxcadAssetsPlugin({
-        // 因为页面已动态加载，所以不要加入'axios'
-        libraryNames: ['vuetify', 'vue'],
+        libraryNames: ['vuetify', 'vue', 'axios'],
       }),
     ],
     define: {

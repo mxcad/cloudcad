@@ -15,7 +15,11 @@
       "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx jest --testPathPatterns=\"file-operations.service.spec\" --no-coverage)",
       "Bash(npx ts-node *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(pnpm type-check *)",
+      "Bash(npm install *)",
+      "Bash(pnpm add *)",
+      "Bash(npx vue-tsc *)"
     ]
   },
   "enableAllProjectMcpServers": true,

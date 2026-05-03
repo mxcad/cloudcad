@@ -104,6 +104,7 @@ let currentFileInfo: {
   personalSpaceId?: string | null; // 私人空间 ID，用于判断是否为私人空间模式
   libraryKey?: 'drawing' | 'block'; // 公共资源库标识
   fromPlatform?: boolean; // 是否从平台跳转进入
+  updatedAt?: string; // 乐观锁时间戳
 } | null = null;
 
 // 私人空间 ID 缓存（用于判断文件是否属于私人空间）
@@ -422,6 +423,7 @@ export function setCurrentFileInfo(fileInfo: {
   libraryKey?: 'drawing' | 'block';
   path?: string; // 节点完整路径(如: 202604/cmnsaru53000d4sufzcg9wjlg.dwg.mxweb)
   fromPlatform?: boolean; // 是否从平台跳转进入
+  updatedAt?: string; // 乐观锁时间戳
 }) {
   currentFileInfo = fileInfo;
 }
@@ -2050,12 +2052,18 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     (percentage) => {
       setLoadingMessage(`正在上传到服务器... ${percentage.toFixed(1)}%`);
     },
-    commitMessage
+    commitMessage,
+    currentFileInfo?.updatedAt
   );
 
   try {
     const fileInfoResponse = await filesApi.get(fileId);
     const fileInfo = fileInfoResponse.data;
+
+    // 保存成功后更新乐观锁时间戳
+    if (fileInfo.updatedAt && currentFileInfo) {
+      currentFileInfo = { ...currentFileInfo, updatedAt: fileInfo.updatedAt };
+    }
 
     if (fileInfo.path) {
       // 基础路径（不带 ?t=）

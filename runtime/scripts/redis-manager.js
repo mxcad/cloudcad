@@ -23,7 +23,7 @@ const PLATFORM_DIR = IS_WINDOWS
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
-const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
 
 // Redis 端口（从环境变量读取）
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);

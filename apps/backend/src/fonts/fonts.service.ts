@@ -73,32 +73,9 @@ export class FontsService {
   private readonly maxFileSize = 10 * 1024 * 1024;
 
   constructor(private configService: ConfigService) {
-    // 从配置服务获取字体目录路径
-    this.backendFontsDir = this.configService.get<string>(
-      'fonts.backendPath',
-      path.join(
-        process.cwd(),
-        '..',
-        '..',
-        'runtime',
-        'windows',
-        'mxcad',
-        'fonts'
-      )
-    );
-
-    this.frontendFontsDir = this.configService.get<string>(
-      'fonts.frontendPath',
-      path.join(
-        process.cwd(),
-        '..',
-        '..',
-        'runtime',
-        'windows',
-        'mxcad',
-        'fonts'
-      )
-    );
+    // 从配置服务获取字体目录路径（配置已在 configuration.ts 中正确解析为绝对路径）
+    this.backendFontsDir = this.configService.get<string>('fonts.backendPath')!;
+    this.frontendFontsDir = this.configService.get<string>('fonts.frontendPath')!;
 
     this.logger.log(`后端字体目录: ${this.backendFontsDir}`);
     this.logger.log(`前端字体目录: ${this.frontendFontsDir}`);

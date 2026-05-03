@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { FileSystemService as MainFileSystemService } from '../../file-system/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
@@ -20,7 +20,10 @@ import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as crypto from 'crypto';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
-import { VersionControlService } from '../../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
 
 export interface SaveMxwebAsOptions {
@@ -55,7 +58,8 @@ export class SaveAsService {
     private readonly storageManager: StorageManager,
     private readonly fileConversionService: FileConversionService,
     private readonly permissionService: FileSystemPermissionService,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly prisma: DatabaseService
   ) {}
 

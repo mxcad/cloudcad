@@ -6,15 +6,15 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
 import { StorageModule } from '../storage/storage.module';
+import { CacheArchitectureModule } from '../cache-architecture/cache-architecture.module';
 import { PermissionService } from './services/permission.service';
 import { PermissionCacheService } from './services/permission-cache.service';
 import { RolesCacheService } from './services/roles-cache.service';
-import { RedisCacheService } from './services/redis-cache.service';
 import { FileLockService } from './services/file-lock.service';
 import { DirectoryAllocator } from './services/directory-allocator.service';
 import { StorageManager } from './services/storage-manager.service';
@@ -32,12 +32,11 @@ import { UserCleanupController } from './controllers/user-cleanup.controller';
 import { ConcurrencyManager } from './concurrency/concurrency-manager';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, RedisModule, StorageModule],
+  imports: [ConfigModule, DatabaseModule, RedisModule, StorageModule, forwardRef(() => CacheArchitectureModule)],
   providers: [
     PermissionService,
     PermissionCacheService,
     RolesCacheService,
-    RedisCacheService,
     FileLockService,
     DirectoryAllocator,
     StorageManager,
@@ -57,7 +56,6 @@ import { ConcurrencyManager } from './concurrency/concurrency-manager';
     PermissionService,
     PermissionCacheService,
     RolesCacheService,
-    RedisCacheService,
     FileLockService,
     DirectoryAllocator,
     StorageManager,

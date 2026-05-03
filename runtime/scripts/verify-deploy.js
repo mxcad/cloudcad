@@ -32,7 +32,7 @@ const PM2_HOME = path.join(DATA_DIR, 'pm2');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
 
 // 从 .env 文件读取端口配置
-const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
 
 function parseEnvFileSimple(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -188,7 +188,7 @@ function runPnpm(args, options = {}) {
   // 添加 node_modules/.bin 到 PATH（pnpm exec 需要找到命令）
   const nodeModulesBinDirs = [
     path.join(PROJECT_ROOT, 'node_modules', '.bin'),
-    path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
+    path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules', '.bin'),
   ];
   
   const existingPath = process.env.PATH || '';
@@ -317,10 +317,10 @@ async function step1_SetupOffline() {
   logSuccess(`Node.js: ${nodeExe}`);
 
   // 复制 .env.example 到 .env（如果不存在）
-  const backendEnvPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  const backendEnvPath = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
   const backendEnvExample = path.join(
     PROJECT_ROOT,
-    'packages',
+    'apps',
     'backend',
     '.env.example'
   );
@@ -480,7 +480,7 @@ async function step4_DatabaseMigration() {
   logStep(4, 7, '执行数据库迁移...');
 
   // 检查 .env 文件
-  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  const envPath = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
   if (!fs.existsSync(envPath)) {
     logError('.env 文件不存在');
     return false;
@@ -545,7 +545,7 @@ async function step5_StartBackend() {
   const backendConfig = {
     name: 'backend',
     script: backendMain,
-    cwd: path.join(PROJECT_ROOT, 'packages', 'backend'),
+    cwd: path.join(PROJECT_ROOT, 'apps', 'backend'),
     autorestart: true,
     watch: false,
     max_restarts: 10,

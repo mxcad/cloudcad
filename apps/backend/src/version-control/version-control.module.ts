@@ -14,6 +14,8 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { VersionControlService } from './version-control.service';
 import { VersionControlController } from './version-control.controller';
+import { SvnVersionControlProvider } from './providers/svn-version-control.provider';
+import { VERSION_CONTROL_TOKEN } from './interfaces/version-control.interface';
 import { RolesModule } from '../roles/roles.module';
 import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
@@ -28,7 +30,14 @@ import { FileSystemModule } from '../file-system/file-system.module';
     forwardRef(() => FileSystemModule),
   ],
   controllers: [VersionControlController],
-  providers: [VersionControlService],
-  exports: [VersionControlService],
+  providers: [
+    VersionControlService,
+    SvnVersionControlProvider,
+    {
+      provide: VERSION_CONTROL_TOKEN,
+      useExisting: SvnVersionControlProvider,
+    },
+  ],
+  exports: [VersionControlService, VERSION_CONTROL_TOKEN],
 })
 export class VersionControlModule {}

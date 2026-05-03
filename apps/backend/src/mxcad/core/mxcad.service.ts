@@ -16,6 +16,7 @@ import {
   Logger,
   forwardRef,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileUploadManagerFacadeService } from '../facade/file-upload-manager-facade.service';
@@ -23,7 +24,10 @@ import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { ExternalReferenceUpdateService } from '../external-ref/external-reference-update.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { VersionControlService } from '../../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
 import { FileSystemNode, Prisma } from '@prisma/client';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
@@ -63,7 +67,8 @@ export class MxCadService {
     private readonly fileConversionService: FileConversionService,
     private readonly externalReferenceUpdateService: ExternalReferenceUpdateService,
     private readonly storageManager: StorageManager,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly prisma: DatabaseService
   ) {
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
@@ -707,7 +712,8 @@ export class MxCadService {
     userId?: string,
     userName?: string,
     commitMessage?: string,
-    skipBinGeneration = false
+    skipBinGeneration = false,
+    expectedTimestamp?: string
   ): Promise<{ success: boolean; message: string; path?: string }> {
     try {
       this.logger.log(
@@ -736,7 +742,7 @@ export class MxCadService {
       // 获取完整节点信息（包含 libraryKey）
       const fullNode = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
-        select: { libraryKey: true, name: true, path: true },
+        select: { libraryKey: true, name: true, path: true, updatedAt: true },
       });
 
       if (!fullNode) {
@@ -754,6 +760,20 @@ export class MxCadService {
           success: false,
           message: `不支持的文件格式: ${ext}，仅支持 .mxweb 文件`,
         };
+      }
+
+      // 乐观锁检查：覆盖保存时验证文件是否被他人修改
+      if (expectedTimestamp && fullNode.updatedAt) {
+        const expectedTime = new Date(expectedTimestamp).getTime();
+        const actualTime = fullNode.updatedAt.getTime();
+        if (expectedTime !== actualTime) {
+          this.logger.warn(
+            `[saveMxwebFile] 乐观锁冲突: nodeId=${nodeId}, expected=${expectedTimestamp}, actual=${fullNode.updatedAt.toISOString()}`
+          );
+          throw new ConflictException(
+            '文件已被他人修改，请刷新后重试'
+          );
+        }
       }
 
       // 获取节点目录路径
@@ -852,6 +872,10 @@ export class MxCadService {
         path: node.path,
       };
     } catch (error) {
+      // 乐观锁冲突等 HTTP 异常直接向上抛出，不包装为通用错误
+      if (error instanceof ConflictException) {
+        throw error;
+      }
       this.logger.error(
         `[saveMxwebFile] 保存失败: ${error.message}`,
         error.stack

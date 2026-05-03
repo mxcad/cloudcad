@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Inject } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
@@ -24,6 +24,8 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { Public } from '../auth/decorators/public.decorator';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 
 @ApiTags('健康检查')
 @Controller('health')
@@ -32,7 +34,8 @@ export class HealthController {
   constructor(
     private health: HealthCheckService,
     private databaseService: DatabaseService,
-    private storageService: StorageService
+    private storageService: StorageService,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
   @Get('live')
@@ -40,7 +43,40 @@ export class HealthController {
   @ApiOperation({ summary: '存活检查（Docker 健康检查）' })
   @ApiResponse({ status: 200, description: '服务存活' })
   async liveness() {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    const memUsage = process.memoryUsage();
+    
+    let databaseStatus = 'unknown';
+    let redisStatus = 'unknown';
+    
+    try {
+      const dbResult = await this.databaseService.healthCheck();
+      databaseStatus = dbResult.status === 'healthy' ? 'ok' : 'error';
+    } catch {
+      databaseStatus = 'error';
+    }
+    
+    try {
+      await this.redis.ping();
+      redisStatus = 'ok';
+    } catch {
+      redisStatus = 'error';
+    }
+    
+    const overallStatus = databaseStatus === 'ok' && redisStatus === 'ok' ? 'ok' : 'degraded';
+    
+    return {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      uptime: Math.round(process.uptime()) + 's',
+      memory: {
+        heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
+        heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB',
+      },
+      checks: {
+        database: databaseStatus,
+        redis: redisStatus,
+      },
+    };
   }
 
   @Get()

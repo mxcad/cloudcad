@@ -348,7 +348,7 @@ export class MultiLevelCacheService {
   async deleteByPattern(pattern: string): Promise<number> {
     const [l2Count, l3Count] = await Promise.all([
       this.l2Cache.deleteByPattern(pattern),
-      this.deleteL3ByPattern(pattern),
+      this.l3Cache.deleteByPattern(pattern),
     ]);
 
     this.logger.debug(
@@ -507,30 +507,4 @@ export class MultiLevelCacheService {
     await Promise.all(promises);
   }
 
-  /**
-   * 根据模式删除 L3 缓存
-   */
-  private async deleteL3ByPattern(pattern: string): Promise<number> {
-    // Prisma 不支持 LIKE 查询，需要获取所有键后过滤
-    const allEntries = await this.l3Cache.getHotData(1000000);
-    const keysToDelete = allEntries
-      .filter((entry) => this.matchPattern(entry.key, pattern))
-      .map((entry) => entry.key);
-
-    if (keysToDelete.length > 0) {
-      await this.l3Cache.deleteMany(keysToDelete);
-    }
-
-    return keysToDelete.length;
-  }
-
-  /**
-   * 简单的模式匹配
-   */
-  private matchPattern(key: string, pattern: string): boolean {
-    const regex = new RegExp(
-      '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
-    );
-    return regex.test(key);
-  }
 }

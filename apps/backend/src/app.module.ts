@@ -17,10 +17,12 @@ import { AdminModule } from './admin/admin.module';
 
 import { AuthModule } from './auth/auth.module';
 import { JwtStrategyExecutor } from './auth/jwt.strategy.executor';
+import { CsrfGuard } from './auth/guards/csrf.guard';
 import { CommonModule } from './common/common.module';
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CustomValidationPipe } from './common/pipes/validation.pipe';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { SchedulerModule } from './common/schedulers/scheduler.module';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
@@ -103,7 +105,15 @@ const envFilePaths = [
     },
     {
       provide: APP_GUARD,
+      useClass: RateLimitGuard,
+    },
+    {
+      provide: APP_GUARD,
       useClass: JwtStrategyExecutor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
   ],
 })

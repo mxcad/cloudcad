@@ -12,6 +12,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import {
   FileStatus,
@@ -22,13 +23,19 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
-import { VersionControlService } from '../version-control/version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from '../version-control/interfaces/version-control.interface';
 import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
+import { ProjectPermissionService } from '../roles/project-permission.service';
+import { PermissionService } from '../common/services/permission.service';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 import * as path from 'path';
-import * as fsPromises from 'fs/promises';
+import { IStorageProvider } from '../storage/interfaces/storage-provider.interface';
 
 @Injectable()
 export class FileOperationsService {
@@ -38,9 +45,14 @@ export class FileOperationsService {
     private readonly prisma: DatabaseService,
     private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
-    private readonly versionControlService: VersionControlService,
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
     private readonly storageInfoService: StorageInfoService,
-    private readonly fileTreeService: FileTreeService
+    private readonly fileTreeService: FileTreeService,
+    @Inject(IStorageProvider)
+    private readonly storageProvider: IStorageProvider,
+    private readonly projectPermissionService: ProjectPermissionService,
+    private readonly permissionService: PermissionService
   ) {}
 
   async checkNameUniqueness(
@@ -283,20 +295,39 @@ export class FileOperationsService {
         return { message: `${nodeType}已彻底删除` };
       }
 
-      const updateData: any = {
-        deletedAt: new Date(),
-        deletedByCascade: false,
-      };
+      // 收集所有子节点 ID，确保级联软删除
+      const nodesToUpdate: string[] = [];
+      await this.collectChildNodes(nodeId, nodesToUpdate);
+      nodesToUpdate.push(nodeId);
 
-      if (node.isRoot) {
-        updateData.projectStatus = ProjectStatus.DELETED;
-      } else {
-        updateData.fileStatus = FileStatus.DELETED;
-      }
+      await this.prisma.$transaction(async (tx) => {
+        const updateData: any = {
+          deletedAt: new Date(),
+          deletedByCascade: false,
+        };
 
-      await this.prisma.fileSystemNode.update({
-        where: { id: nodeId },
-        data: updateData,
+        if (node.isRoot) {
+          updateData.projectStatus = ProjectStatus.DELETED;
+        } else {
+          updateData.fileStatus = FileStatus.DELETED;
+        }
+
+        // 更新主节点
+        await tx.fileSystemNode.update({
+          where: { id: nodeId },
+          data: updateData,
+        });
+
+        // 级联更新子节点
+        if (nodesToUpdate.length > 1) {
+          await tx.fileSystemNode.updateMany({
+            where: { id: { in: nodesToUpdate.filter(id => id !== nodeId) } },
+            data: {
+              deletedAt: new Date(),
+              deletedByCascade: true,
+            },
+          });
+        }
       });
 
       // 清除配额缓存（软删除也会影响已用空间）
@@ -332,7 +363,32 @@ export class FileOperationsService {
     return this.deleteNode(projectId, permanently);
   }
 
-  async restoreNode(nodeId: string) {
+  private async getParentProjectId(nodeId: string): Promise<string | null> {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId },
+      select: { id: true, isRoot: true, projectId: true, parentId: true },
+    });
+
+    if (!node) {
+      return null;
+    }
+
+    if (node.isRoot) {
+      return node.id;
+    }
+
+    if (node.projectId) {
+      return node.projectId;
+    }
+
+    if (node.parentId) {
+      return this.getParentProjectId(node.parentId);
+    }
+
+    return null;
+  }
+
+  async restoreNode(nodeId: string, userId: string) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
@@ -370,6 +426,34 @@ export class FileOperationsService {
 
         if (parentNode.deletedAt) {
           throw new BadRequestException('父节点已被删除，无法恢复');
+        }
+
+        const libraryKey = await this.fileTreeService.getLibraryKey(node.parentId);
+        if (libraryKey) {
+          const requiredPermission =
+            libraryKey === 'drawing'
+              ? 'LIBRARY_DRAWING_MANAGE'
+              : 'LIBRARY_BLOCK_MANAGE';
+          const hasPermission = await this.permissionService.checkSystemPermission(
+            userId,
+            requiredPermission as any
+          );
+          if (!hasPermission) {
+            throw new ForbiddenException('没有访问该资源库的权限');
+          }
+        } else {
+          const parentProjectId = await this.getParentProjectId(node.parentId);
+          if (parentProjectId) {
+            const hasPermission =
+              await this.projectPermissionService.checkPermission(
+                userId,
+                parentProjectId,
+                ProjectPermission.FILE_OPEN
+              );
+            if (!hasPermission) {
+              throw new ForbiddenException('没有访问目标父节点的权限');
+            }
+          }
         }
       }
 
@@ -481,7 +565,7 @@ export class FileOperationsService {
       });
     }
 
-    await this.restoreNode(projectId);
+    await this.restoreNode(projectId, project.ownerId);
     return { message: '项目已从回收站恢复' };
   }
 
@@ -1078,8 +1162,9 @@ export class FileOperationsService {
         throw new BadRequestException(`路径验证失败，无法安全删除`);
       }
 
-      await fsPromises.rm(nodeDirectoryPath, { recursive: true, force: true });
-
+      const cleanPath = nodePath.replace(/^\/mxcad\/file\//, '');
+      const nodeDirRelativeKey = cleanPath.substring(0, cleanPath.lastIndexOf('/'));
+      await this.storageProvider.deleteAll(nodeDirRelativeKey);
       this.logger.log(`节点目录已删除: ${nodeDirectoryPath}`);
     } catch (error) {
       this.logger.error(
@@ -1117,6 +1202,21 @@ export class FileOperationsService {
         });
       }
       nodesToDelete.push(child.id);
+    }
+  }
+
+  async collectChildNodes(
+    nodeId: string,
+    nodesToCollect: string[]
+  ): Promise<void> {
+    const children = await this.prisma.fileSystemNode.findMany({
+      where: { parentId: nodeId },
+      select: { id: true },
+    });
+
+    for (const child of children) {
+      nodesToCollect.push(child.id);
+      await this.collectChildNodes(child.id, nodesToCollect);
     }
   }
 
@@ -1178,7 +1278,9 @@ export class FileOperationsService {
         return;
       }
 
-      await fsPromises.rm(nodeDirectoryPath, { recursive: true, force: true });
+      const cleanPath = nodePath.replace(/^\/mxcad\/file\//, '');
+      const nodeDirRelativeKey = cleanPath.substring(0, cleanPath.lastIndexOf('/'));
+      await this.storageProvider.deleteAll(nodeDirRelativeKey);
       this.logger.log(`节点目录已删除: ${nodeDirectoryPath}`);
     } catch (error) {
       this.logger.error(`删除物理文件失败: ${nodePath}`, error);
@@ -1409,7 +1511,7 @@ export class FileOperationsService {
     }
   }
 
-  async restoreTrashItems(itemIds: string[]) {
+  async restoreTrashItems(itemIds: string[], userId: string) {
     try {
       if (!itemIds || itemIds.length === 0) {
         return { message: '请选择要恢复的项目' };
@@ -1431,7 +1533,7 @@ export class FileOperationsService {
         if (item.isRoot) {
           await this.restoreProject(item.id);
         } else {
-          await this.restoreNode(item.id);
+          await this.restoreNode(item.id, userId);
         }
       }
 

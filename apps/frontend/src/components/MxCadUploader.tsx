@@ -1,3 +1,7 @@
+/**
+ * @deprecated 该组件将被新的 Uppy 实现替换
+ * 请使用 MxCadUppyUploader 替代，或直接使用 useUppyUpload Hook
+ */
 import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   useMxCadUploadNative,

@@ -32,6 +32,9 @@ import { RolesModule } from '../roles/roles.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { AppConfig } from '../config/app.config';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
+import { ConversionModule } from '@cloudcad/conversion-engine';
+import * as path from 'path';
+import * as os from 'os';
 
 @Module({
   imports: [
@@ -39,6 +42,18 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
     CommonModule,
     ConfigModule,
     RuntimeConfigModule,
+    ConversionModule.forRoot({
+      binPath: (() => {
+        const isLinux = os.platform() === 'linux';
+        const projectRoot = path.join(process.cwd(), '..', '..');
+        return isLinux
+          ? path.join(projectRoot, 'runtime', 'linux', 'mxcad', 'mxcadassembly')
+          : path.join(projectRoot, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe');
+      })(),
+      outputRoot: path.join(process.cwd(), '..', '..', 'data', 'conversion'),
+      maxConcurrency: Math.min(os.cpus().length, 4),
+      defaultTimeoutMs: 120000,
+    }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService<AppConfig>) => ({

@@ -15,8 +15,9 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
+import { ProjectPermissionService } from '../../roles/project-permission.service';
 import { AuditLogService } from '../../audit/audit-log.service';
-import { ProjectRole } from '../../common/enums/permissions.enum';
+import { ProjectRole, ProjectPermission } from '../../common/enums/permissions.enum';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 
 @Injectable()
@@ -26,6 +27,7 @@ export class ProjectMemberService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly permissionService: FileSystemPermissionService,
+    private readonly projectPermissionService: ProjectPermissionService,
     private readonly auditLogService: AuditLogService
   ) {}
 
@@ -91,6 +93,16 @@ export class ProjectMemberService {
     operatorId: string
   ) {
     try {
+      const hasPermission = await this.projectPermissionService.checkPermission(
+        operatorId,
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_MANAGE
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('无权限添加项目成员');
+      }
+
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
         select: { id: true, personalSpaceKey: true },
@@ -208,6 +220,16 @@ export class ProjectMemberService {
     operatorId: string
   ) {
     try {
+      const hasPermission = await this.projectPermissionService.checkPermission(
+        operatorId,
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_ASSIGN
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('无权限修改成员角色');
+      }
+
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
         select: { id: true, ownerId: true, personalSpaceKey: true },
@@ -328,6 +350,16 @@ export class ProjectMemberService {
     operatorId: string
   ) {
     try {
+      const hasPermission = await this.projectPermissionService.checkPermission(
+        operatorId,
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_MANAGE
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('无权限移除项目成员');
+      }
+
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId, isRoot: true },
         select: { id: true, ownerId: true, personalSpaceKey: true },

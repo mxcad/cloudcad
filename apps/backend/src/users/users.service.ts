@@ -19,8 +19,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { UserCleanupService } from '../common/services/user-cleanup.service';
 import { ConfigService } from '@nestjs/config';
@@ -31,16 +31,28 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Prisma, ProjectStatus } from '@prisma/client';
 import {
+  IUserService,
+  ICreatedUser,
+  IUserDetail,
+  IUserActionResponse,
+} from '../common/interfaces/user-service.interface';
+import {
   SMS_VERIFICATION_SERVICE,
   ISmsVerificationService,
   EMAIL_VERIFICATION_SERVICE,
   IEmailVerificationService,
 } from '../common/interfaces/verification.interface';
+import { PASSWORD_HASHER, IPasswordHasher } from './interfaces/password-hasher.interface';
+import {
+  VERIFICATION_STRATEGIES,
+  IAccountVerificationStrategy,
+  VerificationParams,
+} from './interfaces/account-verification-strategy.interface';
+import { UserLifecycleEventPayload } from './interfaces/user-lifecycle-event.interface';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements IUserService {
   private readonly logger = new Logger(UsersService.name);
-  private readonly saltRounds = 12;
 
   constructor(
     private readonly prisma: DatabaseService,
@@ -48,16 +60,21 @@ export class UsersService {
     private readonly userCleanupService: UserCleanupService,
     private readonly configService: ConfigService,
     private readonly runtimeConfigService: RuntimeConfigService,
+    @Inject(PASSWORD_HASHER)
+    private readonly passwordHasher: IPasswordHasher,
+    @Inject(VERIFICATION_STRATEGIES)
+    private readonly verificationStrategies: IAccountVerificationStrategy[],
     @Inject(SMS_VERIFICATION_SERVICE)
     private readonly smsVerificationService: ISmsVerificationService,
     @Inject(EMAIL_VERIFICATION_SERVICE)
-    private readonly emailVerificationService: IEmailVerificationService
+    private readonly emailVerificationService: IEmailVerificationService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
    * 创建用户（包含私人空间创建）
    */
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
     try {
       // 获取运行时配置
       const mailEnabled = await this.runtimeConfigService.getValue<boolean>(
@@ -122,9 +139,8 @@ export class UsersService {
       }
 
       // 加密密码
-      const hashedPassword = await bcrypt.hash(
-        createUserDto.password,
-        this.saltRounds
+      const hashedPassword = await this.passwordHasher.hash(
+        createUserDto.password
       );
 
       // 使用事务创建用户和私人空间
@@ -209,6 +225,15 @@ export class UsersService {
       this.logger.log(
         `用户创建成功：${user.username}${user.email ? ` (${user.email})` : ''}`
       );
+
+      // 发送用户创建事件（用于缓存预热、审计日志等）
+      this.eventEmitter.emit('user.created', {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        timestamp: new Date(),
+      } satisfies UserLifecycleEventPayload);
+
       return user;
     } catch (error) {
       this.logger.error(`用户创建失败：${error.message}`, error.stack);
@@ -335,9 +360,24 @@ export class UsersService {
   }
 
   /**
-   * 根据 ID 查询用户
+   * 根据 ID 查询用户（IUserService.findById）
+   */
+  async findById(id: string): Promise<IUserDetail> {
+    const user = await this.findByIdInternal(id);
+    return user;
+  }
+
+  /**
+   * 根据 ID 查询用户（控制器路由）
    */
   async findOne(id: string) {
+    return this.findByIdInternal(id);
+  }
+
+  /**
+   * findById 和 findOne 的内部实现
+   */
+  private async findByIdInternal(id: string) {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id },
@@ -349,7 +389,7 @@ export class UsersService {
           avatar: true,
           phone: true,
           phoneVerified: true,
-          password: true, // 需要查询密码字段以判断是否已设置密码
+          password: true,
           role: {
             select: {
               id: true,
@@ -373,7 +413,6 @@ export class UsersService {
         throw new NotFoundException('用户不存在');
       }
 
-      // 计算 hasPassword 并移除敏感字段
       const hasPassword = !!user.password;
       const { password: _, ...userWithoutPassword } = user;
 
@@ -390,7 +429,7 @@ export class UsersService {
   /**
    * 根据邮箱查询用户
    */
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<IUserDetail> {
     try {
       const user = await this.prisma.user.findUnique({
         where: { email },
@@ -402,7 +441,7 @@ export class UsersService {
           avatar: true,
           phone: true,
           phoneVerified: true,
-          password: true, // 需要查询密码字段以判断是否已设置密码
+          password: true,
           role: {
             select: {
               id: true,
@@ -426,7 +465,6 @@ export class UsersService {
         throw new NotFoundException('用户不存在');
       }
 
-      // 计算 hasPassword 并移除敏感字段
       const hasPassword = !!user.password;
       const { password: _, ...userWithoutPassword } = user;
 
@@ -469,7 +507,7 @@ export class UsersService {
             },
           },
           status: true,
-          password: true, // 登录时需要密码
+          password: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -483,7 +521,7 @@ export class UsersService {
   /**
    * 更新用户
    */
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<ICreatedUser> {
     try {
       // 检查用户是否存在
       const existingUser = await this.prisma.user.findUnique({
@@ -556,9 +594,8 @@ export class UsersService {
       }
       if (updateUserDto.status) updateData.status = updateUserDto.status;
       if (updateUserDto.password) {
-        updateData.password = await bcrypt.hash(
-          updateUserDto.password,
-          this.saltRounds
+        updateData.password = await this.passwordHasher.hash(
+          updateUserDto.password
         );
       }
 
@@ -693,7 +730,7 @@ export class UsersService {
   /**
    * 恢复用户（清除 deletedAt，冷静期内可恢复）
    */
-  async restore(id: string) {
+  async restore(id: string): Promise<IUserActionResponse> {
     try {
       const existingUser = await this.prisma.user.findUnique({
         where: { id },
@@ -713,6 +750,14 @@ export class UsersService {
       });
 
       this.logger.log(`用户恢复成功：${existingUser.email}`);
+
+      // 发送用户恢复事件
+      this.eventEmitter.emit('user.restored', {
+        userId: id,
+        email: existingUser.email,
+        timestamp: new Date(),
+      } satisfies UserLifecycleEventPayload);
+
       return { message: '用户已恢复' };
     } catch (error) {
       this.logger.error(`用户恢复失败：${error.message}`, error.stack);
@@ -746,17 +791,17 @@ export class UsersService {
   }
 
   /**
-   * 注销用户账户（软删除）
+   * 注销用户账户（IUserService.deactivate）
    * 支持多种验证方式：密码、手机验证码、邮箱验证码、微信扫码
-   * 用户可以选择任意一种他们拥有的验证方式
+   * 使用策略模式委派各验证方式
    */
-  async deactivateAccount(
+  async deactivate(
     userId: string,
     password?: string,
     phoneCode?: string,
     emailCode?: string,
     wechatConfirm?: string
-  ) {
+  ): Promise<IUserActionResponse> {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -770,48 +815,38 @@ export class UsersService {
         throw new BadRequestException('账户已注销');
       }
 
+      // 构建验证参数
+      const params: VerificationParams = { password, phoneCode, emailCode, wechatConfirm };
+
+      // 使用策略模式查找匹配的验证策略
+      const matchingStrategies = this.verificationStrategies.filter((s) =>
+        s.canHandle(params)
+      );
+
+      if (matchingStrategies.length === 0) {
+        throw new BadRequestException('请选择一种验证方式');
+      }
+
       let verified = false;
 
-      // 根据用户提供的验证方式进行验证
-      if (password) {
-        // 密码验证 - 用户必须有密码
-        if (!user.password) {
-          throw new BadRequestException('该账户未设置密码，请选择其他验证方式');
+      for (const strategy of matchingStrategies) {
+        // 检查用户是否满足前提条件
+        if (!strategy.validateUser(user)) {
+          throw new BadRequestException(
+            this.getPrerequisiteError(strategy.type)
+          );
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-          throw new UnauthorizedException('密码不正确');
-        }
-        verified = true;
-      } else if (phoneCode) {
-        // 手机验证码 - 用户必须有已验证的手机
-        if (!user.phone || !user.phoneVerified) {
-          throw new BadRequestException('该账户未绑定手机，请选择其他验证方式');
-        }
-        const result = await this.smsVerificationService.verifyCode(
-          user.phone,
-          phoneCode
-        );
+
+        // 执行验证
+        const result = await strategy.verify(user, params);
         if (!result.valid) {
-          throw new UnauthorizedException(result.message);
+          throw new UnauthorizedException(
+            result.message || this.getVerifyFailedError(strategy.type)
+          );
         }
+
         verified = true;
-      } else if (emailCode) {
-        // 邮箱验证码 - 用户必须有邮箱
-        if (!user.email) {
-          throw new BadRequestException('该账户未绑定邮箱，请选择其他验证方式');
-        }
-        const isEmailValid = await this.verifyEmailCode(user.email, emailCode);
-        if (!isEmailValid) {
-          throw new UnauthorizedException('邮箱验证码不正确或已过期');
-        }
-        verified = true;
-      } else if (wechatConfirm === 'confirmed') {
-        // 微信扫码验证（兼容旧版）- 用户必须有微信绑定
-        if (!user.wechatId) {
-          throw new BadRequestException('该账户未绑定微信，请选择其他验证方式');
-        }
-        verified = true;
+        break;
       }
 
       if (!verified) {
@@ -837,6 +872,15 @@ export class UsersService {
       });
 
       this.logger.log(`用户账户已注销：${user.email || user.phone}`);
+
+      // 发送用户注销事件
+      this.eventEmitter.emit('user.deactivated', {
+        userId,
+        email: user.email,
+        username: user.username,
+        timestamp: new Date(),
+      } satisfies UserLifecycleEventPayload);
+
       return { message: '账户注销成功' };
     } catch (error) {
       this.logger.error(`账户注销失败：${error.message}`, error.stack);
@@ -882,7 +926,7 @@ export class UsersService {
         if (!user.password) {
           throw new BadRequestException('该账户未设置密码');
         }
-        const isPasswordValid = await bcrypt.compare(code, user.password);
+        const isPasswordValid = await this.passwordHasher.compare(code, user.password);
         if (!isPasswordValid) {
           throw new UnauthorizedException('密码不正确');
         }
@@ -983,7 +1027,7 @@ export class UsersService {
     plainPassword: string,
     hashedPassword: string
   ): Promise<boolean> {
-    return bcrypt.compare(plainPassword, hashedPassword);
+    return this.passwordHasher.compare(plainPassword, hashedPassword);
   }
 
   /**
@@ -1018,7 +1062,7 @@ export class UsersService {
         if (!oldPassword) {
           throw new BadRequestException('请输入当前密码');
         }
-        const isPasswordValid = await bcrypt.compare(
+        const isPasswordValid = await this.passwordHasher.compare(
           oldPassword,
           user.password
         );
@@ -1028,7 +1072,7 @@ export class UsersService {
       }
       // 无密码用户：可以直接设置新密码（不需要验证旧密码）
 
-      const hashedPassword = await bcrypt.hash(newPassword, this.saltRounds);
+      const hashedPassword = await this.passwordHasher.hash(newPassword);
 
       await this.prisma.user.update({
         where: { id: userId },
@@ -1181,5 +1225,31 @@ export class UsersService {
       this.logger.error(`获取仪表盘统计失败：${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 获取验证前提条件错误的提示信息
+   */
+  private getPrerequisiteError(type: string): string {
+    const messages: Record<string, string> = {
+      password: '该账户未设置密码，请选择其他验证方式',
+      phoneCode: '该账户未绑定手机，请选择其他验证方式',
+      emailCode: '该账户未绑定邮箱，请选择其他验证方式',
+      wechatConfirm: '该账户未绑定微信，请选择其他验证方式',
+    };
+    return messages[type] || '验证条件不满足';
+  }
+
+  /**
+   * 获取验证失败的提示信息
+   */
+  private getVerifyFailedError(type: string): string {
+    const messages: Record<string, string> = {
+      password: '密码不正确',
+      phoneCode: '验证码不正确',
+      emailCode: '邮箱验证码不正确或已过期',
+      wechatConfirm: '微信验证失败',
+    };
+    return messages[type] || '验证失败';
   }
 }

@@ -196,8 +196,7 @@ export class FileDownloadExportService {
       const isCadFile = ['.dwg', '.dxf'].includes(ext);
 
       if (!isCadFile) {
-        const fullPath = this.getStoragePath(node);
-        const stream = await this.getFileStream(fullPath);
+        const stream = await this.getFileStream(node.path);
         const mimeType = this.getMimeType(originalFilename);
 
         this.logger.log(
@@ -407,17 +406,17 @@ export class FileDownloadExportService {
       const ext = path.extname(filename).toLowerCase();
       const isCadFile = ['.dwg', '.dxf'].includes(ext);
 
-      let fullPath: string;
+      let filePath: string;
       if (isCadFile) {
-        const nodeDir = path.dirname(this.storageManager.getFullPath(node.path));
-        fullPath = path.join(nodeDir, `${filename}.mxweb`);
+        const nodeDir = path.dirname(node.path);
+        filePath = `${nodeDir}/${filename}.mxweb`;
       } else {
-        fullPath = this.getStoragePath(node);
+        filePath = node.path;
       }
       let stream: NodeJS.ReadableStream | null = null;
 
       try {
-        stream = await this.getFileStream(fullPath);
+        stream = await this.getFileStream(filePath);
         const sanitizedFileName = this.sanitizeFileName(filename);
         archive.append(stream as any, { name: sanitizedFileName });
 

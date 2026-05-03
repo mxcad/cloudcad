@@ -320,6 +320,31 @@ export class VersionControlService implements OnModuleInit {
   }
 
   /**
+   * 递归收集目录下的所有文件路径
+   */
+  private collectFilePaths(dirPath: string): string[] {
+    if (!fs.existsSync(dirPath)) {
+      return [];
+    }
+
+    let results: string[] = [];
+    const list = fs.readdirSync(dirPath);
+
+    for (const file of list) {
+      const filePath = path.join(dirPath, file);
+      const stat = fs.statSync(filePath);
+
+      if (stat && stat.isDirectory()) {
+        results = results.concat(this.collectFilePaths(filePath));
+      } else {
+        results.push(filePath);
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * 提交节点目录到 SVN
    * 使用 svn:global-ignores 过滤文件，直接递归添加目录
    * @param nodeDirectory 节点目录路径
@@ -338,6 +363,17 @@ export class VersionControlService implements OnModuleInit {
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
+    }
+
+    // 备份：在 SVN 提交之前，收集待提交的文件路径列表
+    let backedUpFilePaths: string[] = [];
+    try {
+      backedUpFilePaths = this.collectFilePaths(nodeDirectory);
+      this.logger.log(
+        `已备份 ${backedUpFilePaths.length} 个待提交文件路径`
+      );
+    } catch (backupError) {
+      this.logger.warn(`备份文件路径失败: ${backupError.message}`);
     }
 
     try {
@@ -435,9 +471,22 @@ export class VersionControlService implements OnModuleInit {
       this.logger.error(
         `目录提交失败: ${nodeDirectory}, 错误: ${error.message}`
       );
+
+      // SVN 提交失败后，清理已添加但未提交的文件
+      // 注意：由于 svn-version-tool 可能未提供 revert 功能，
+      // 这里返回备份的文件路径信息，供调用方进行后续清理
+      this.logger.warn(
+        `SVN 提交失败，已备份 ${backedUpFilePaths.length} 个文件路径，调用方可能需要清理相关资源`
+      );
+
       return {
         success: false,
         message: `提交失败: ${error.message}`,
+        data: JSON.stringify({
+          error: error.message,
+          backedUpFilePaths,
+          nodeDirectory,
+        }),
       };
     }
   }

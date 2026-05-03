@@ -67,7 +67,7 @@ function parseEnvFileSimple(filePath) {
 }
 
 // 从 .env 文件读取端口配置
-const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
 function getPorts() {
   const defaults = {
     backend: 3001,
@@ -405,7 +405,7 @@ function runPnpm(args, options = {}) {
   
   const nodeModulesBinDirs = [
     path.join(PROJECT_ROOT, 'node_modules', '.bin'),
-    path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
+    path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules', '.bin'),
   ];
   
   const existingPath = process.env.PATH || '';
@@ -744,7 +744,7 @@ function getRuntimeLibPaths() {
  * 构建数据库命令的环境变量
  */
 function getDbEnv() {
-  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  const envPath = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
   const envConfig = parseEnvFile(envPath);
 
   return {
@@ -1384,7 +1384,7 @@ async function runDatabaseMigration() {
   log('blue', '[2/3] 执行数据库迁移...');
 
   // 检查 .env 文件是否存在
-  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  const envPath = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
   if (!fs.existsSync(envPath)) {
     log('red', '[错误] apps/backend/.env 文件不存在');
     log('cyan', '请先配置数据库连接信息');
@@ -1673,7 +1673,7 @@ async function deployMode(skipBuild = false) {
   }
 
   // 3. 检测是否已有构建产物
-  const backendDist = path.join(PROJECT_ROOT, 'packages', 'backend', 'dist');
+  const backendDist = path.join(PROJECT_ROOT, 'apps', 'backend', 'dist');
   const frontendDist = path.join(PROJECT_ROOT, 'packages', 'frontend', 'dist');
 
   const hasBackendDist =
@@ -1785,7 +1785,7 @@ async function startAppServices(mode) {
     const backendConfig = {
       name: 'backend',
       script: backendDist,
-      cwd: path.join(PROJECT_ROOT, 'packages', 'backend'),
+      cwd: path.join(PROJECT_ROOT, 'apps', 'backend'),
       autorestart: true,
       watch: false,
       max_restarts: 10,
@@ -1831,7 +1831,7 @@ async function startAppServices(mode) {
     };
         
     const backendProcess = spawn(NODE_EXE, [backendDist], {
-      cwd: path.join(PROJECT_ROOT, 'packages', 'backend'),
+      cwd: path.join(PROJECT_ROOT, 'apps', 'backend'),
       stdio: 'inherit',
       shell: IS_WINDOWS,
       detached: false,
@@ -1921,7 +1921,7 @@ async function startOnly() {
 const childProcesses = new Set();
 
 async function testConnection() {
-  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  const envPath = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
   if (!fs.existsSync(envPath)) {
     return false;
   }
