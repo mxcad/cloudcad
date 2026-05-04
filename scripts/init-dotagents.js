@@ -1,41 +1,45 @@
 #!/usr/bin/env node
 /**
  * dotagents 初始化脚本
- * 克隆项目后首次运行 pnpm install 时自动执行。
+ * 克隆项目后首次运行 pnpm install / pnpm run bootstrap 时自动执行。
  *
- * 检测 .claude/skills 软链接是否存在，不存在则创建。
- * 使用 mklink（Windows）或 ln -s（macOS/Linux）。
+ * 检测 .claude/ → .agents/ 软链接是否存在，不存在则创建。
  */
-import { execSync } from 'child_process';
-import { existsSync, symlinkSync } from 'fs';
-import { join } from 'path';
+const { execSync } = require('child_process');
+const { existsSync, symlinkSync } = require('fs');
+const path = require('path');
 
-const agentsDir = join(import.meta.dirname, '..', '.agents');
-const claudeDir = join(import.meta.dirname, '..', '.claude');
+const rootDir = path.resolve(__dirname, '..');
+const agentsDir = path.join(rootDir, '.agents');
+const claudeDir = path.join(rootDir, '.claude');
 
 const links = [
-  { src: 'skills', dst: 'skills' },
-  { src: 'commands', dst: 'commands' },
-  { src: 'hooks', dst: 'hooks' },
+  { name: 'skills' },
+  { name: 'commands' },
+  { name: 'hooks' },
 ];
 
 let created = 0;
-for (const { src, dst } of links) {
-  const target = join(agentsDir, src);
-  const link = join(claudeDir, dst);
-  if (!existsSync(link)) {
-    try {
-      symlinkSync(target, link, 'junction');
-      console.log(`[dotagents] Created symlink: .claude/${dst} → .agents/${src}`);
-      created++;
-    } catch {
-      // fallback: Windows needs mklink
-      try {
-        execSync(`cmd /c mklink /D "${link}" "${target}"`, { stdio: 'ignore' });
-        console.log(`[dotagents] Created symlink (mklink): .claude/${dst} → .agents/${src}`);
-        created++;
-      } catch { /* already exists or no permission */ }
-    }
-  }
+for (const { name } of links) {
+  const target = path.join(agentsDir, name);
+  const link = path.join(claudeDir, name);
+  if (existsSync(link)) continue;
+
+  // Try POSIX symlink first (macOS/Linux/Git Bash with Developer Mode)
+  try {
+    const opts = process.platform === 'win32' ? 'junction' : undefined;
+    symlinkSync(target, link, opts);
+    console.log(`[dotagents] Created symlink: .claude/${name} → .agents/${name}`);
+    created++;
+    continue;
+  } catch { /* fall through to mklink */ }
+
+  // Windows fallback: mklink /D
+  try {
+    execSync(`cmd /c mklink /D "${link}" "${target}"`, { stdio: 'ignore' });
+    console.log(`[dotagents] Created symlink (mklink): .claude/${name} → .agents/${name}`);
+    created++;
+  } catch { /* no permission or already exists */ }
 }
+
 if (created === 0) console.log('[dotagents] All symlinks already exist');
