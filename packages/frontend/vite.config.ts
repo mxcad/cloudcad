@@ -18,38 +18,29 @@ import { defineConfig, loadEnv } from 'vite';
 import { mxcadAssetsPlugin } from 'mxcad-app/vite';
 import tailwindcss from '@tailwindcss/vite';
 
-// 监听 swagger_json.json 变化，自动重新生成 API 类型
+// 监听 swagger_json.json 变化，自动运行 pnpm generate:api-types
 function autoGenerateApiTypes() {
   const swaggerFile = path.resolve(__dirname, 'swagger_json.json');
   const lastHash = { value: '' };
+  const scriptFile = path.resolve(__dirname, 'scripts/generate-api-types.js');
 
-  function generate() {
+  function run() {
     try {
-      const binExt = process.platform === 'win32' ? '.CMD' : '';
-      const openapiBin = path.resolve(__dirname, `node_modules/.bin/openapi${binExt}`);
-      const outputFile = path.resolve(__dirname, 'src/types/api-client.ts');
-
       if (!fs.existsSync(swaggerFile)) return;
 
       const content = fs.readFileSync(swaggerFile, 'utf8');
       const currentHash = require('crypto').createHash('md5').update(content).digest('hex');
-
       if (currentHash === lastHash.value) return;
       lastHash.value = currentHash;
 
-      const output = execSync(`"${openapiBin}" typegen "${swaggerFile}"`, {
-        encoding: 'utf8',
-        maxBuffer: 50 * 1024 * 1024,
-      });
-
-      fs.writeFileSync(outputFile, output, 'utf8');
-      console.log(`[api-types] Auto-generated from swagger_json.json (${(content.length / 1024).toFixed(0)}KB)`);
+      execSync(`node "${scriptFile}"`, { encoding: 'utf8', stdio: 'inherit' });
+      console.log(`[api-types] Auto-generated (${(content.length / 1024).toFixed(0)}KB swagger)`);
     } catch (e) {
-      console.error('[api-types] Generation failed:', (e as Error).message);
+      console.error('[api-types] Failed:', (e as Error).message);
     }
   }
 
-  generate(); // init
+  run(); // init
 
   return {
     name: 'auto-generate-api-types',
@@ -57,7 +48,7 @@ function autoGenerateApiTypes() {
       server.watcher.add(swaggerFile);
       server.watcher.on('change', (file: string) => {
         if (file === swaggerFile) {
-          generate();
+          run();
           server.ws.send({ type: 'full-reload' });
         }
       });
