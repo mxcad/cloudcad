@@ -100,8 +100,10 @@ config-service-login.jpg
 # Test files
 test-sidebar.html
 
-# AI tool generated
-.agents/
+# AI tool generated -> symlinked from .agents/
+.claude/skills/
+.claude/hooks/
+.claude/commands/
 .qwen/
 runtime/cache/
 
