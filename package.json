@@ -51,7 +51,7 @@
     "deploy:reset": "docker-compose -f docker/docker-compose.yml down -v",
     "deploy:logs": "docker-compose -f docker/docker-compose.yml logs -f",
     "deploy:rebuild": "docker-compose -f docker/docker-compose.yml build --no-cache",
-    "init-dotagents": "node scripts/init-dotagents.js"
+    "init-dotagents": "npx @iannuttall/dotagents"
   },
   "engines": {
     "node": ">=20.19.5",
