@@ -1,7 +1,8 @@
 ---
 name: prisma-database
-description: '涉及数据库结构变更时必须触发此技能——修改 schema.prisma、添加/删除模型或字段、编写迁移脚本、处理 Prisma Client 错误等。确保数据库变更安全且可回滚。'
+description: AUTO-TRIGGER on: schema.prisma, prisma migrate, P2002, P2025, Prisma Client, 数据库迁移, 添加字段, 删除模型. 数据库变更安全且可回滚.
 ---
+> 详见 AGENTS.md 数据库迁移规范章节
 
 # Prisma 数据库技能
 

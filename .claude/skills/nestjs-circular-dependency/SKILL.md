@@ -5,6 +5,7 @@ description: |
 ---
 
 # NestJS 循环依赖完整解决方案
+> 交叉参考: api-contracts（Swagger DTO 循环引用与 @ApiProperty 装饰器）
 
 ## 问题类型识别
 

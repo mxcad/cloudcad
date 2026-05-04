@@ -4,7 +4,9 @@ description: |
   CloudCAD 双层权限系统规范。涉及权限检查、角色管理、权限装饰器、权限缓存时必须触发此技能——添加新权限、修改角色定义、实现权限控制、使用 Guard/装饰器、前端权限判断、权限缓存清理等。确保权限实现符合项目的双层权限架构（系统权限 + 项目权限）。
 ---
 
-# Permission System - CloudCAD 双层权限系统规范
+# CloudCAD 双层权限系统
+> 交叉参考: api-contracts（权限类型生成）、config-management（运行时配置）
+> 前端权限常量: `packages/frontend/src/constants/permissions.ts`（从 Prisma schema 自动生成）
 
 ## 概述
 

@@ -1,73 +1,34 @@
 ---
 name: config-management
-description: '涉及后端配置添加或修改时必须触发此技能——添加新环境变量、修改配置项、在代码中读取配置等。确保配置遵循项目的三层配置体系（环境变量配置、运行时配置、部署配置中心）。'
+description: AUTO-TRIGGER on: process.env, .env, 环境变量, configuration, ConfigService, RuntimeConfig, runtime-config, apiConfig, serverConfig, getConfig, tourGuides, 添加配置, 修改配置项. 三层配置体系（后端环境变量+运行时配置+前端配置）.
 ---
 
-# 后端配置管理技能
+# 配置管理
 
-> **触发条件**：当涉及后端 NestJS 配置的添加或修改时，必须触发此技能
+> 后端三层 + 前端约定
 
-## 触发场景清单
-
-| 场景 | 示例 |
-|------|------|
-| 添加新的环境变量 | 需要新的配置项 |
-| 修改现有配置项 | 调整配置类型或默认值 |
-| 在代码中读取配置 | 需要访问配置值 |
-| 添加配置验证逻辑 | 配置校验需求 |
-
----
-
-## 一、配置体系概览
-
-项目采用**三层配置体系**：
+## 配置体系
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    部署配置中心 (Layer 0)                     │
-│  packages/config-service/server.js                          │
-│  - Web 界面管理 .env 文件                                    │
-│  - 服务启动/停止控制                                         │
-│  - 连接测试                                                  │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ 写入 .env
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 环境变量配置 (Layer 1)                        │
-│  packages/backend/src/config/                               │
-│  - app.config.ts    → 接口定义                              │
-│  - configuration.ts → 环境变量解析                          │
-│  - 启动时加载，运行时不可变                                  │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ 注入
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  运行时配置 (Layer 2)                         │
-│  packages/backend/src/runtime-config/                       │
-│  - 存储在数据库 RuntimeConfig 表                            │
-│  - 通过管理界面动态调整                                      │
-│  - 无需重启服务即可生效                                      │
-└─────────────────────────────────────────────────────────────┘
+部署配置中心 (Layer 0)  →  packages/config-service/server.js
+    ↓ 写入 .env
+环境变量配置 (Layer 1)  →  packages/backend/src/config/
+    ↓ NestJS ConfigModule
+运行时配置 (Layer 2)    →  packages/backend/src/runtime-config/
+    ↓ API
+前端配置               →  packages/frontend/src/config/ + contexts/RuntimeConfigContext
 ```
 
-### 选择正确的配置层级
+## 决策：选哪层
 
-| 特性 | 环境变量配置 | 运行时配置 |
-|------|-------------|-----------|
-| 加载时机 | 启动时 | 运行时 |
-| 修改后生效 | 需重启服务 | 即时生效 |
-| 存储位置 | .env 文件 | 数据库 |
-| 管理方式 | 部署配置中心 | 管理界面 API |
-| 适用场景 | 基础设施、连接信息 | 业务开关、限制参数 |
+| 类型 | 存放位置 | 示例 |
+|------|---------|------|
+| 基础设施（数据库、端口、密钥） | 环境变量 (Layer 1) | `DB_HOST`, `JWT_SECRET` |
+| 业务可调参数（限制、开关） | 运行时配置 (Layer 2) | `maxFileSize`, `featureFlag` |
+| 前端静态配置（API地址、超时） | `src/config/*.ts` | `API_BASE_URL`, `API_TIMEOUT` |
+| 前端动态配置（品牌、公共设置） | `RuntimeConfigContext` | `appName`, `logo` |
 
-**决策原则**：
-- 基础设施配置（数据库、Redis、端口）→ 环境变量配置
-- 业务可调参数（文件大小限制、功能开关）→ 运行时配置
-- 敏感信息（密码、密钥）→ 环境变量配置
-
----
-
-## 二、环境变量配置
+## 后端：环境变量配置
 
 ### 2.1 添加新配置项的完整流程
 
@@ -283,7 +244,31 @@ const CONFIG_GROUPS = [
 
 ---
 
-## 五、检查清单
+## 前端：配置约定
+
+### 静态配置
+| 文件 | 用途 |
+|------|------|
+| `src/config/apiConfig.ts` | API 基地址、超时、上传分片配置 |
+| `src/config/serverConfig.ts` | CAD 引擎配置（wasm、AI、字体），从 `mxServerConfig.json` 加载 |
+| `src/config/getConfig.ts` | 通用配置获取，内置内存缓存 |
+| `src/config/tourGuides.ts` | 引导流程注册表 |
+| `src/config/tours/*.ts` | 各引导流程定义 |
+| `src/constants/appConfig.ts` | 品牌信息、分页默认值 |
+
+### 动态配置（来自后端运行时配置）
+```typescript
+// 通过 RuntimeConfigContext 获取，无需手动 fetch
+const { config } = useRuntimeConfig();
+// config 自动从后端 RuntimeConfigController_getPublicConfigs 同步
+```
+
+### 前端配置原则
+- 静态配置放 `src/config/`，不写死魔法数字
+- 动态配置通过 `RuntimeConfigContext`，不直接 fetch
+- 禁止在组件中 `import.meta.env` 或 `process.env`
+
+## 检查清单
 
 ### 添加环境变量配置
 
