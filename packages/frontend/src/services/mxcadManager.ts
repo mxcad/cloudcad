@@ -14,7 +14,8 @@ import { MxCADView } from 'mxcad-app';
 
 import { mxcadApi } from './mxcadApi';
 import { filesApi } from './filesApi';
-import { projectsApi } from './projectsApi';
+import { projectApi } from './projectApi';
+import { projectPermissionApi } from './projectPermissionApi';
 import { publicFileApi, API_BASE_URL } from './publicFileApi';
 import { MxFun } from 'mxdraw';
 import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
@@ -24,7 +25,8 @@ import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../contexts/NotificationContext';
 import { isAuthenticated } from '../utils/authCheck';
-  import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../utils/loadingUtils';
+import { handleError } from '@/utils/errorHandler';
+import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../utils/loadingUtils';
 
 // ==================== 辅助函数 ====================
 
@@ -382,7 +384,7 @@ export async function checkAndConfirmUnsavedChanges(): Promise<boolean> {
         return false;
       }
     } catch (error) {
-      console.error('保存失败:', error);
+      handleError(error, 'mxcadManager: checkAndConfirmUnsavedChanges');
       return false;
     }
   }
@@ -986,7 +988,7 @@ const showSaveConfirmDialog = (): Promise<string | null> => {
  */
 async function getUploadTargetNodeId(): Promise<string> {
   // 1. 获取私人空间
-  const personalSpaceResponse = await projectsApi.getPersonalSpace();
+  const personalSpaceResponse = await projectApi.getPersonalSpace();
   const personalSpace = personalSpaceResponse.data;
 
   if (!personalSpace?.id) {
@@ -1033,7 +1035,7 @@ async function getProjectId(
         projectId = rootResponse.data.id;
       }
     } catch (error) {
-      console.error('获取根节点失败', 'mxcadManager', error);
+      handleError(error, 'mxcadManager: getProjectId');
     }
   }
 
@@ -1238,7 +1240,7 @@ export async function openLibraryDrawing(
     hideGlobalLoading();
   } catch (error) {
     hideGlobalLoading();
-    console.error('打开图纸库文件失败:', error);
+    handleError(error, 'mxcadManager: openDrawingLibraryFile');
     throw error;
   }
 }
@@ -1253,19 +1255,6 @@ export async function openLibraryBlock(
   updatedAt?: string
 ): Promise<void> {
   try {
-    console.log(`
-========================================
-[前端日志] 打开图块库文件
-- nodeId: ${nodeId}
-- fileName: ${fileName}
-- nodePath: ${nodePath}
-- updatedAt: ${updatedAt}
-- 调用时间: ${new Date().toISOString()}
-- 调用堆栈:
-${new Error().stack}
-========================================
-    `);
-
     // 1. 检查当前文档是否有未保存的修改
     const canProceed = await checkAndConfirmUnsavedChanges();
     if (!canProceed) {
@@ -1336,7 +1325,7 @@ ${new Error().stack}
     hideGlobalLoading();
   } catch (error) {
     hideGlobalLoading();
-    console.error('打开图块库文件失败:', error);
+    handleError(error, 'mxcadManager: openBlockLibraryFile');
     throw error;
   }
 }
@@ -1630,7 +1619,7 @@ async function handleFileSelection(
           });
         },
         onError: (error) => {
-          console.error('外部参照检查失败:', error);
+          handleError(error, 'mxcadManager: onExternalReferenceError');
         },
         onSkip: () => {
           // 跳过外部参照上传
@@ -1642,7 +1631,7 @@ async function handleFileSelection(
       // forceOpen = false，上传后如果没有外部参照不弹框
       await externalReferenceUpload.checkMissingReferences(uploadResult.nodeId, true, false);
     } catch (error) {
-      console.error('外部参照检查初始化失败:', error);
+      handleError(error, 'mxcadManager: externalReferenceCheckInit');
     }
     
     hideGlobalLoading();
@@ -1698,7 +1687,7 @@ const openFile = async (noCache?: boolean) => {
           const uploadTargetNodeId = await getUploadTargetNodeId();
           await handleFileSelection(selectedFile, uploadTargetNodeId);
         } catch (error) {
-          console.error('获取上传目标失败', 'mxcadManager', error);
+          handleError(error, 'mxcadManager: handleFilePickerChange');
           globalShowToast(
             error instanceof Error ? error.message : '获取上传目标失败',
             'error'
@@ -1710,7 +1699,7 @@ const openFile = async (noCache?: boolean) => {
 
     picker.click();
   } catch (error) {
-    console.error('openFile 命令初始化失败', 'mxcadManager', error);
+    handleError(error, 'mxcadManager: openFile');
     globalShowToast(
       error instanceof Error ? error.message : '命令执行失败',
       'error'
@@ -1895,13 +1884,6 @@ MxFun.addCommand('Mx_Save', async () => {
     // 判断是否是公共资源库文件（通过 currentFileInfo.libraryKey 判断）
     const isLibraryFile = !!currentFileInfo?.libraryKey;
 
-    console.log(
-      '[Mx_Save] currentFileInfo:',
-      currentFileInfo,
-      'isLibraryFile:',
-      isLibraryFile
-    );
-
     // 如果是我的图纸，直接保存
     if (isMyDrawing) {
       await saveToCurrentFile(personalSpaceId);
@@ -1926,18 +1908,13 @@ MxFun.addCommand('Mx_Save', async () => {
             permissionStrings.includes('LIBRARY_BLOCK_MANAGE');
 
           if (hasLibraryPermission) {
-            // 有权限，直接保存
-            console.log('[Mx_Save] 保存到图纸库');
             await saveLibraryFile();
           } else {
-            // 无权限，弹出另存为对话框
-            console.log('[Mx_Save] 用户无库管理权限，弹出另存为');
             const fileName = currentFileInfo?.name || 'untitled';
             await showSaveAsDialog(personalSpaceId, fileName);
           }
         } catch (error) {
-          console.error('[Mx_Save] 检查权限失败:', error);
-          // 出错时保守处理，弹出另存为
+          handleError(error, 'mxcadManager: Mx_Save library permission check');
           const fileName = currentFileInfo?.name || 'untitled';
           await showSaveAsDialog(personalSpaceId, fileName);
         }
@@ -1952,7 +1929,7 @@ MxFun.addCommand('Mx_Save', async () => {
     // 如果是项目图纸，需要检查用户是否有保存权限
     if (currentFileInfo.projectId) {
       try {
-        const response = await projectsApi.checkPermission(
+        const response = await projectPermissionApi.checkPermission(
           currentFileInfo.projectId,
           'CAD_SAVE'
         );
@@ -1963,7 +1940,7 @@ MxFun.addCommand('Mx_Save', async () => {
         }
         // 没有权限，继续执行弹出另存为窗口
       } catch (error) {
-        console.error('权限检查失败', error);
+        handleError(error, 'mxcadManager: Mx_Save project permission check');
         // 权限检查失败，继续执行弹出另存为窗口
       }
     }
@@ -1972,7 +1949,7 @@ MxFun.addCommand('Mx_Save', async () => {
     const fileName = currentFileInfo?.name || 'untitled';
     await showSaveAsDialog(personalSpaceId, fileName);
   } catch (error) {
-    console.error('保存文件失败', error);
+    handleError(error, 'mxcadManager: Mx_Save');
     hideGlobalLoading();
     const errorMessage =
       error instanceof Error ? error.message : '保存失败，请稍后重试';
@@ -1987,13 +1964,13 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   const projectId = currentFileInfo?.projectId;
   if (projectId) {
     try {
-      const response = await projectsApi.checkPermission(projectId, 'CAD_SAVE');
+      const response = await projectPermissionApi.checkPermission(projectId, 'CAD_SAVE');
       if (!response.data.hasPermission) {
         globalShowToast('您没有保存图纸的权限', 'error');
         return;
       }
     } catch (error) {
-      console.error('权限检查失败', error);
+      handleError(error, 'mxcadManager: saveToCurrentFile permission check');
       globalShowToast('权限检查失败，请稍后重试', 'error');
       return;
     }
@@ -2095,11 +2072,9 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve();
       });
-
-      console.log(`[saveToCurrentFile] IndexedDB 缓存更新成功: ${newCachePath}`);
     }
   } catch (cacheError) {
-    console.warn('更新本地缓存失败', cacheError);
+    handleError(cacheError, 'mxcadManager: updateLocalCache');
   }
 
   // 处理待上传图片
@@ -2123,7 +2098,6 @@ async function saveLibraryFile() {
 
   // 如果缺少 nodePath，从 API 获取
   if (!nodePath) {
-    console.log('[saveLibraryFile] 缺少 nodePath，从 API 获取...');
     try {
       const { libraryApi } = await import('../services/libraryApi');
       const nodeResponse =
@@ -2132,20 +2106,16 @@ async function saveLibraryFile() {
           : await libraryApi.getBlockNode(fileId);
       const node = nodeResponse.data as any;
       nodePath = node.path;
-      
-      // 更新 currentFileInfo 中的 path
+
       if (nodePath && currentFileInfo) {
         currentFileInfo = { ...currentFileInfo, path: nodePath };
       }
-      
-      console.log('[saveLibraryFile] 获取到的 nodePath:', nodePath);
     } catch (error) {
-      console.error('[saveLibraryFile] 获取节点信息失败:', error);
+      handleError(error, 'mxcadManager: saveLibraryFile getNodePath');
     }
   }
 
   if (!nodePath) {
-    console.warn('[saveLibraryFile] 无法获取 nodePath');
     globalShowToast('保存失败：缺少文件路径信息', 'error');
     return;
   }
@@ -2213,13 +2183,6 @@ async function saveLibraryFile() {
     const timestamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();
     const newCachePath = `${basePath}?t=${timestamp}`;
 
-    console.log(`[saveLibraryFile] 更新 IndexedDB 缓存`);
-    console.log(`  - fileId: ${fileId}`);
-    console.log(`  - nodePath: ${nodePath}`);
-    console.log(`  - basePath: ${basePath}`);
-    console.log(`  - newCachePath: ${newCachePath}`);
-    console.log(`  - 原始数据类型: ${savedFile.data.constructor.name}`);
-
     // 1. 清理旧的缓存（包括不带 ?t= 和带旧时间戳的）
     await clearFileCacheFromIndexedDB(basePath);
 
@@ -2239,15 +2202,11 @@ async function saveLibraryFile() {
         ? savedFile.data.buffer
         : savedFile.data;
 
-    console.log(`  - 转换后数据类型: ${arrayBufferData.constructor.name}`);
-
     await new Promise<void>((resolve, reject) => {
       const request = objectStore.put(arrayBufferData, newCachePath);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve();
     });
-
-    console.log(`[saveLibraryFile] IndexedDB 缓存更新成功`);
 
     // 处理待上传图片
     await processPendingImages();
@@ -2256,7 +2215,7 @@ async function saveLibraryFile() {
     hideGlobalLoading();
     globalShowToast('文件保存成功', 'success');
   } catch (error) {
-    console.error('保存公共资源库文件失败:', error);
+    handleError(error, 'mxcadManager: saveLibraryFile');
     hideGlobalLoading();
     globalShowToast(
       error instanceof Error ? error.message : '保存失败，请稍后重试',
@@ -2297,7 +2256,7 @@ async function getNodeUpdatedAt(
     const node = response.data as any;
     return node?.updatedAt || null;
   } catch (error) {
-    console.warn('[getNodeUpdatedAt] 获取失败:', error);
+    handleError(error, 'mxcadManager: getNodeUpdatedAt');
     return null;
   }
 }
@@ -2569,7 +2528,7 @@ class MxCADInstanceManager {
       await mxcadApi.uploadThumbnail(nodeId, formData);
       return true;
     } catch (error) {
-      console.error('缩略图上传失败', error);
+      handleError(error, 'mxcadManager: uploadThumbnail');
       return false;
     }
   }
@@ -2630,15 +2589,12 @@ class MxCADInstanceManager {
           const isLoggedIn = !!(token && user);
 
           if (!isLoggedIn) {
-            console.log('[缩略图] 用户未登录，跳过缩略图生成和上传');
             return;
           }
 
           const fileId = currentFileInfo.fileId;
 
-          // 跳过无效的 fileId，避免 404 错误
           if (!fileId) {
-            console.log('[缩略图] fileId 为空，跳过缩略图处理');
             return;
           }
 
@@ -2651,7 +2607,7 @@ class MxCADInstanceManager {
             }
           }
         } catch (error) {
-          console.error('缩略图处理失败', error);
+          handleError(error, 'mxcadManager: setupFileOpenListener thumbnail');
         }
 
         // 清理旧版本缓存（如果有缓存时间戳）
@@ -2670,7 +2626,7 @@ class MxCADInstanceManager {
               await clearOldMxwebCache(filePath, currentCacheTimestamp);
             }
           } catch (error) {
-            console.warn('清理旧缓存失败', error);
+            handleError(error, 'mxcadManager: clearOldCache');
           }
         }
       }
@@ -3068,28 +3024,23 @@ MxFun.addCommand('Mx_InsertImageWithUpload', () => {
   // 调用内置 _InsertImage 命令，并在回调中记录图片信息
   MxFun.sendStringToExecute('_InsertImage', async (data: any) => {
     if (!data) {
-      console.error('[Mx_InsertImageWithUpload] 插入图片失败，未收到数据');
+      handleError(new Error('插入图片失败：未收到数据'), 'mxcadManager: Mx_InsertImageWithUpload');
       return;
     }
 
     const { url, fileName, entity } = data;
-    console.log('[Mx_InsertImageWithUpload] 图片插入成功:', { url, fileName });
 
-    // 检查是否重复
     const isDuplicate = pendingImages.some(img => img.fileName === fileName);
     if (isDuplicate) {
-      console.log('[Mx_InsertImageWithUpload] 图片已存在，跳过重复记录:', fileName);
       return;
     }
 
-    // 记录到待上传列表
     pendingImages.push({
       url,
       fileName,
       entity
     });
 
-    console.log('[Mx_InsertImageWithUpload] 图片已添加到待上传列表:', fileName);
     globalShowToast('图片已插入，将在保存时自动上传', 'success');
   });
 });
@@ -3105,18 +3056,14 @@ export async function processPendingImages(): Promise<void> {
     return;
   }
 
-  console.log('[processPendingImages] 开始处理待上传图片，数量:', pendingImages.length);
-
   // 过滤掉已删除的图片
   const validImages = pendingImages.filter(img => {
     try {
       return !img.entity.isErased();
     } catch {
-      return true; // 出错时默认保留
+      return true;
     }
   });
-
-  console.log('[processPendingImages] 过滤后有效图片数量:', validImages.length);
 
   if (validImages.length === 0) {
     // 清空待上传列表
@@ -3142,16 +3089,13 @@ export async function processPendingImages(): Promise<void> {
         img.fileName,
         true  // 更新 preloading.json
       );
-
-      console.log('[processPendingImages] 图片上传成功:', img.fileName);
     } catch (error) {
-      console.error('[processPendingImages] 上传失败:', img.fileName, error);
+      handleError(error, 'mxcadManager: processPendingImages');
     }
   }
 
   // 清空待上传列表
   pendingImages = [];
-  console.log('[processPendingImages] 待上传图片处理完成');
 }
 
 // ==================== 辅助函数 ====================
@@ -3164,12 +3108,12 @@ async function getPersonalSpaceId(): Promise<string | null> {
   try {
     // 安全修复：不再使用 localStorage 缓存，避免跨用户数据泄露
     // 直接从 API 获取当前用户的私人空间 ID
-    const response = await projectsApi.getPersonalSpace();
+    const response = await projectApi.getPersonalSpace();
     const personalSpaceId = response.data?.id || null;
 
     return personalSpaceId;
   } catch (error) {
-    console.error('获取私人空间 ID 失败', error);
+    handleError(error, 'mxcadManager: getPersonalSpaceId');
     return null;
   }
 }
@@ -3196,11 +3140,10 @@ async function clearOldMxwebCache(
         parseInt(url.searchParams.get('t') || '0') < currentTimestamp
       ) {
         await cache.delete(request);
-        console.log('已清理旧版本缓存:', filePath);
       }
     }
   } catch (error) {
-    console.warn('清理旧缓存失败:', error);
+    handleError(error, 'mxcadManager: clearOldMxwebCache');
   }
 }
 
@@ -3247,9 +3190,9 @@ async function clearFileCacheFromIndexedDB(basePath: string): Promise<void> {
     }
 
     if (deletedCount > 0) {
-      console.log(`[clearFileCacheFromIndexedDB] 已清理 ${deletedCount} 个旧缓存: ${basePath}`);
+      // Cache cleared successfully
     }
   } catch (error) {
-    console.warn('[clearFileCacheFromIndexedDB] 清理缓存失败:', error);
+    handleError(error, 'mxcadManager: clearFileCacheFromIndexedDB');
   }
 }

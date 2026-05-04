@@ -66,9 +66,9 @@ import {
 } from "../mxcad/infra/thumbnail-utils";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { ProjectPermissionService } from "../roles/project-permission.service";
-import type { CopyNodeDto } from "./dto/copy-node.dto";
-import type { CreateFolderDto } from "./dto/create-folder.dto";
-import type { CreateProjectDto } from "./dto/create-project.dto";
+import { CopyNodeDto } from "./dto/copy-node.dto";
+import { CreateFolderDto } from "./dto/create-folder.dto";
+import { CreateProjectDto } from "./dto/create-project.dto";
 import {
 	CadDownloadFormat,
 	type DownloadNodeQueryDto,
@@ -87,13 +87,13 @@ import {
 	ProjectUserPermissionsDto,
 	TrashListResponseDto,
 } from "./dto/file-system-response.dto";
-import type { MoveNodeDto } from "./dto/move-node.dto";
-import type { QueryChildrenDto } from "./dto/query-children.dto";
-import type { QueryProjectsDto } from "./dto/query-projects.dto";
-import type { SearchDto } from "./dto/search.dto";
-import type { UpdateNodeDto } from "./dto/update-node.dto";
-import type { UpdateProjectMemberDto } from "./dto/update-project-member.dto";
-import type { UpdateStorageQuotaDto } from "./dto/update-storage-quota.dto";
+import { MoveNodeDto } from "./dto/move-node.dto";
+import { QueryChildrenDto } from "./dto/query-children.dto";
+import { QueryProjectsDto } from "./dto/query-projects.dto";
+import { SearchDto } from "./dto/search.dto";
+import { UpdateNodeDto } from "./dto/update-node.dto";
+import { UpdateProjectMemberDto } from "./dto/update-project-member.dto";
+import { UpdateStorageQuotaDto } from "./dto/update-storage-quota.dto";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { FileDownloadHandlerService } from "./file-download/file-download-handler.service";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports

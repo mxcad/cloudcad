@@ -16,7 +16,8 @@ import { useNotification } from '../contexts/NotificationContext';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
 import { filesApi } from '../services/filesApi';
-import { projectsApi } from '../services/projectsApi';
+import { projectPermissionApi } from '@/services/projectPermissionApi';
+import { projectApi } from '@/services/projectApi';
 import { libraryApi } from '../services/libraryApi';
 import { publicFileApi } from '../services/publicFileApi';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
@@ -209,7 +210,7 @@ export const CADEditorDirect: React.FC = () => {
   // 获取私人空间 ID
   useEffect(() => {
     if (!isAuthenticated) return;
-    projectsApi
+    projectApi
       .getPersonalSpace()
       .then((res) => {
         if (res.data?.id) {
@@ -242,14 +243,14 @@ export const CADEditorDirect: React.FC = () => {
 
     const checkPermissions = async () => {
       try {
-        const { projectsApi } = await import('../services/projectsApi');
+        const { projectPermissionApi: ppi } = await import('@/services/projectPermissionApi');
         const [saveRes, exportRes, externalRefRes] = await Promise.all([
-          projectsApi.checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
-          projectsApi.checkPermission(
+          ppi.checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
+          ppi.checkPermission(
             urlProjectId,
             ProjectPermission.FILE_DOWNLOAD
           ),
-          projectsApi.checkPermission(
+          ppi.checkPermission(
             urlProjectId,
             ProjectPermission.CAD_EXTERNAL_REFERENCE
           ),

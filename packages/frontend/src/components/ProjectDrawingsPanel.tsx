@@ -28,22 +28,23 @@ import { ChevronRight } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { MxFun } from 'mxdraw';
-import { projectsApi } from '../services/projectsApi';
-import { filesApi } from '../services/filesApi';
-import { libraryApi } from '../services/libraryApi';
-import { versionControlApi } from '../services/versionControlApi';
+import { projectApi } from '@/services/projectApi';
+import { nodeApi } from '@/services/nodeApi';
+import { filesApi } from '@/services/filesApi';
+import { libraryApi } from '@/services/libraryApi';
+import { versionControlApi } from '@/services/versionControlApi';
 import { ResourceList, ResourceItem, ViewMode } from './common';
-import { FileSystemNode, toFileSystemNode } from '../types/filesystem';
+import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
 import { FileItem } from './FileItem';
-import { useProjectPermissions } from '../hooks/useProjectPermissions';
-import { getFileItemPermissionProps } from '../hooks/useFileItemProps';
-import { useAuth } from '../contexts/AuthContext';
-import { ProjectPermission, SystemPermission } from '../constants/permissions';
-import { usePermission } from '../hooks/usePermission';
-import { useFileSystemUI } from '../hooks/file-system/useFileSystemUI';
-import { useFileSystemCRUD } from '../hooks/file-system/useFileSystemCRUD';
-import { useFileSystemNavigation } from '../hooks/file-system/useFileSystemNavigation';
-import { useLibraryOperations } from '../hooks/library/useLibraryOperations';
+import { useProjectPermissions } from '@/hooks/useProjectPermissions';
+import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
+import { useAuth } from '@/contexts/AuthContext';
+import { ProjectPermission, SystemPermission } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
+import { useFileSystemUI } from '@/hooks/file-system/useFileSystemUI';
+import { useFileSystemCRUD } from '@/hooks/file-system/useFileSystemCRUD';
+import { useFileSystemNavigation } from '@/hooks/file-system/useFileSystemNavigation';
+import { useLibraryOperations } from '@/hooks/library/useLibraryOperations';
 import { ToastContainer } from './ui/Toast';
 import { Tooltip } from './ui/Tooltip';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -52,10 +53,11 @@ import { RenameModal } from './modals/RenameModal';
 import { MembersModal } from './modals/MembersModal';
 import { ProjectRolesModal } from './modals/ProjectRolesModal';
 import { ProjectModal } from './modals/ProjectModal';
-import { useProjectManagement } from '../hooks/useProjectManagement';
-import { sanitizeFileName } from '../utils/fileUtils';
+import { useProjectManagement } from '@/hooks/useProjectManagement';
+import { sanitizeFileName } from '@/utils/fileUtils';
+import { handleError } from '@/utils/errorHandler';
 import styles from './sidebar/sidebar.module.css';
-import type { ProjectFilterType } from '../services/projectsApi';
+import type { ProjectFilterType } from '@/services/projectApi';
 import { CategoryTabs, CategoryLevel, CategoryItem } from './CategoryTabs';
 
 /** 库类型 */
@@ -176,8 +178,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       if (saved) {
         return JSON.parse(saved);
       }
-    } catch (error) {
-      console.warn('读取保存的分类路径失败:', error);
+    } catch {
     }
     return ['all'];
   };
@@ -262,7 +263,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
     const loadProjects = async () => {
       try {
-        const response = await projectsApi.list(projectFilter);
+        const response = await projectApi.list(projectFilter);
         const projectList = response.data?.nodes || [];
         setProjects(
           projectList.map(
@@ -279,8 +280,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             })
           )
         );
-      } catch (error) {
-        console.error('加载项目列表失败:', error);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 加载项目列表失败');
       }
     };
 
@@ -376,7 +377,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             response.data?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
         } else {
           // 项目/私人空间模式：使用 projectsApi
-          const response = await projectsApi.getChildren(nodeId, {
+          const response = await nodeApi.getChildren(nodeId, {
             page,
             limit: PAGE_SIZE,
             search: search || undefined,
@@ -389,7 +390,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
         // 检查请求是否已过期（如果期间有新的请求发出，则忽略此响应）
         if (currentRequestId !== activeRequestId.current) {
-          console.log(`[loadNodes] 请求已过期，忽略响应: ${currentRequestId} vs ${activeRequestId.current}`);
           return;
         }
 
@@ -432,8 +432,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         setTotal(total);
         setTotalPages(totalPages);
         setHasMore(page < totalPages);
-      } catch (error) {
-        console.error('加载节点失败:', error);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 加载节点失败');
         // 只有在请求未过期时才清空数据
         if (currentRequestId === activeRequestId.current && !append) {
           setNodes([]);
@@ -461,7 +461,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
       while (currentId && depth < MAX_DEPTH) {
         try {
-          const response = await projectsApi.getNode(currentId);
+          const response = await nodeApi.getNode(currentId);
           const node = response.data;
           if (node) {
             path.unshift({ id: node.id, name: node.name });
@@ -470,8 +470,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           } else {
             break;
           }
-        } catch (err) {
-          console.error(`获取节点 ${currentId} 失败:`, err);
+        } catch (error: unknown) {
+          handleError(error, `ProjectDrawingsPanel: 获取节点 ${currentId} 失败`);
           break;
         }
       }
@@ -481,8 +481,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       }
 
       return path;
-    } catch (error) {
-      console.error('构建面包屑路径失败:', error);
+    } catch (error: unknown) {
+      handleError(error, 'ProjectDrawingsPanel: 构建面包屑路径失败');
       return [{ id: nodeId, name: '根目录' }];
     }
   }, []);
@@ -640,8 +640,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         await handleRename();
         // handleRename 已经调用了 refreshNodes 和清理状态
       }
-    } catch (error) {
-      console.error('重命名失败:', error);
+    } catch (error: unknown) {
+      handleError(error, 'ProjectDrawingsPanel: 重命名失败');
       showToast('重命名失败', 'error');
     } finally {
       setIsRenameLoading(false);
@@ -714,7 +714,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     (e: React.FormEvent) => {
       e.preventDefault();
       handleUpdateProjectSubmit(async (id, data) => {
-        await projectsApi.update(id, {
+        await projectApi.update(id, {
           name: data.name ?? undefined,
           description: data.description,
         });
@@ -734,13 +734,13 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     // 加载项目根节点信息用于面包屑
     const initProject = async () => {
       try {
-        const response = await projectsApi.getNode(selectedProjectId);
+        const response = await nodeApi.getNode(selectedProjectId);
         const projectNode = response.data;
         if (projectNode) {
           setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
         }
-      } catch (error) {
-        console.error('加载项目信息失败:', error);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 加载项目信息失败');
       }
     };
 
@@ -809,8 +809,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         }
 
         return currentLevel;
-      } catch (error) {
-        console.error(`加载第 ${level} 级分类失败:`, error);
+      } catch (error: unknown) {
+        handleError(error, `ProjectDrawingsPanel: 加载第 ${level} 级分类失败`);
         return null;
       }
     };
@@ -907,16 +907,13 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             
             // 分类全部加载完成后设置标记
             setCategoriesLoaded(true);
-          } catch (error) {
-            console.error('加载分类失败:', error);
+          } catch (error: unknown) {
+            handleError(error, 'ProjectDrawingsPanel: 加载分类失败');
             setCategoriesLoaded(true);
           }
         }
-      } catch (error) {
-        console.error(
-          `获取${libraryType === 'drawing' ? '图纸' : '图块'}库根节点失败:`,
-          error
-        );
+      } catch (error: unknown) {
+        handleError(error, `ProjectDrawingsPanel: 获取${libraryType === 'drawing' ? '图纸' : '图块'}库根节点失败`);
         setCategoriesLoaded(true);
       }
     };
@@ -953,13 +950,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
     // 如果分类路径无效，切换到"全部"
     if (!validateCategoryPath()) {
-      console.warn('保存的分类路径无效，切换到"全部"');
       const defaultPath = ['all'];
       setSelectedCategoryPath(defaultPath);
       try {
         localStorage.setItem(`library_category_path_${libraryType}`, JSON.stringify(defaultPath));
-      } catch (error) {
-        console.warn('保存分类路径失败:', error);
+      } catch {
       }
       return;
     }
@@ -998,8 +993,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             await loadNodes(currentCategoryId, 1, '', false);
           }
         }
-      } catch (error) {
-        console.error('加载列表数据失败:', error);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 加载列表数据失败');
         setNodes([]);
         setTotal(0);
       } finally {
@@ -1082,8 +1077,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             });
           });
         }
-      } catch (error) {
-        console.error(`加载第 ${level} 级分类失败:`, error);
+      } catch (error: unknown) {
+        handleError(error, `ProjectDrawingsPanel: 加载第 ${level} 级分类失败`);
       }
     },
     [libraryType]
@@ -1121,8 +1116,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       // 保存到 localStorage
       try {
         localStorage.setItem(`library_category_path_${libraryType}`, JSON.stringify(newPath));
-      } catch (error) {
-        console.warn('保存分类路径失败:', error);
+      } catch {
       }
       
       setSelectedCategoryPath(newPath);
@@ -1154,8 +1148,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             setTotalPages(totalPages);
             setHasMore(1 < totalPages);
             setCurrentPage(1);
-          } catch (error) {
-            console.error('获取所有文件失败:', error);
+          } catch (error: unknown) {
+            handleError(error, 'ProjectDrawingsPanel: 获取所有文件失败');
             setNodes([]);
             setTotal(0);
           } finally {
@@ -1188,8 +1182,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
               hasChildren: true,
             })),
           ];
-        } catch (error) {
-          console.error(`加载子分类失败:`, error);
+        } catch (error: unknown) {
+          handleError(error, 'ProjectDrawingsPanel: 加载子分类失败');
         }
 
         // 一次性更新分类状态（直接替换对应层级，不清除更高级）
@@ -1250,11 +1244,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             setNodes([]);
             return;
           }
-        } catch (error) {
-          console.error(
-            '[ProjectDrawingsPanel] 检查 parentId 归属失败:',
-            error
-          );
+        } catch (error: unknown) {
+          handleError(error, 'ProjectDrawingsPanel: 检查 parentId 归属失败');
         }
       }
 
@@ -1271,8 +1262,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           // 加载目标目录的节点
           await loadNodesRef.current(initialParentId);
         }
-      } catch (error) {
-        console.error('[ProjectDrawingsPanel] 导航到 parentId 失败:', error);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 导航到 parentId 失败');
       }
     };
 
@@ -1588,8 +1579,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
                     node.name,
                     node.path || '',
                     node.updatedAt
-                  ).catch((err) => {
-                    console.error('打开图纸库文件失败:', err);
+                  ).catch((error: unknown) => {
+                    handleError(error, 'ProjectDrawingsPanel: 打开图纸库文件失败');
                   });
                 }
               );
@@ -1756,7 +1747,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     (e: React.FormEvent) => {
       e.preventDefault();
       handleUpdateProjectSubmit(async (id, data) => {
-        await projectsApi.update(id, {
+        await projectApi.update(id, {
           name: data.name ?? undefined,
           description: data.description,
         });
@@ -1786,10 +1777,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         } else {
           setVersionHistoryError(response.data?.message || '加载版本历史失败');
         }
-      } catch (err) {
-        console.error('版本历史加载失败:', err);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 版本历史加载失败');
         setVersionHistoryError(
-          err instanceof Error ? err.message : '加载版本历史失败'
+          error instanceof Error ? error.message : '加载版本历史失败'
         );
       } finally {
         setVersionHistoryLoading(false);
@@ -1855,8 +1846,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             if (node?.updatedAt) {
               latestUpdatedAt = node.updatedAt;
             }
-          } catch (error) {
-            console.warn('[handleBlockInsert] 获取最新 updatedAt 失败，使用本地数据:', error);
+          } catch {
           }
 
           // 使用统一的 filesData/*path 格式（与 node.path 保持一致）
@@ -1879,8 +1869,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           MxFun.sendStringToExecute('Mx_Insert', cmdParam);
 
           showToast(`正在插入图块：${blockNode.name}`, 'success');
-        } catch (error) {
-          console.error('插入图块失败:', error);
+        } catch (error: unknown) {
+          handleError(error, 'ProjectDrawingsPanel: 插入图块失败');
           showToast('插入图块失败，请确保已在 CAD 编辑器中打开图纸', 'error');
         }
       };
@@ -1909,8 +1899,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
                   n.name,
                   n.path || '',
                   n.updatedAt
-                ).catch((err) => {
-                  console.error('打开图纸库文件失败:', err);
+                ).catch((error: unknown) => {
+                  handleError(error, 'ProjectDrawingsPanel: 打开图纸库文件失败');
                 });
               }
             );
