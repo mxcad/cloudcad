@@ -12,6 +12,7 @@ import { INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as fs from 'fs';
 import { join } from 'path';
 import { AdminModule } from './admin/admin.module';
 
@@ -166,5 +167,10 @@ export class AppModule {
     };
 
     SwaggerModule.setup('api/docs', app, document);
+
+    // 自动同步 Swagger JSON 到前端目录，供 generate:api-types 使用
+    const swaggerJsonPath = join(__dirname, '..', '..', '..', 'frontend', 'swagger_json.json');
+    fs.writeFileSync(swaggerJsonPath, JSON.stringify(document, null, 2), 'utf8');
+    console.log(`Swagger JSON synced to ${swaggerJsonPath}`);
   }
 }

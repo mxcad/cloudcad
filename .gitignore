@@ -77,7 +77,7 @@ pnpm-debug.log*
 .deploy-lock-hash
 
 # Generated files
-swagger_json.json
+**/swagger_json.json
 
 # Data directory (all user data)
 data/
