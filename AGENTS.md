@@ -11,6 +11,10 @@
 | 技能 | 触发条件 | 核心规则 |
 |------|----------|----------|
 | **api-contracts** | 类型缺失、DTO 找不到、`has no exported member`、`is not a function` | 先查后端 DTO 的 `@ApiProperty`，禁止前端本地定义类型 |
+| **permission-system** | 权限检查、角色管理、权限装饰器、`@RequirePermissions` | 双层权限架构（系统+项目），严格调用链 Controller→Guard→Service→Cache→DB |
+| **nestjs-circular-dependency** | `Circular dependency`、`forwardRef`、模块相互导入 | 模块依赖单向 DAG，数据库关系可双向 |
+| **prisma-database** | 修改 `schema.prisma`、添加/删除字段、迁移脚本 | 迁移脚本必提交、部署前备份、破坏性变更分版本 |
+| **config-management** | 添加环境变量、修改配置项、`process.env` | 三层配置体系：环境变量 → 运行时配置 → 部署配置中心 |
 | **decompose** | 大型重构、5+文件改动、需要并发 agent | grill → plan → 拆独立任务文档 → 并发派发 → 汇总汇报 |
 | **verify** | 提交前、PR 前 | lint → format → type-check → test |
 | **issue** | 创建/管理 GitHub Issues | `/issue` |
