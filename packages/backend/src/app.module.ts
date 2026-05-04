@@ -127,17 +127,11 @@ export class AppModule {
       .build();
 
     const document = SwaggerModule.createDocument(app, config, {
-      operationIdFactory: (controllerKey, methodKey) => `${controllerKey}_${methodKey}`,
+      operationIdFactory: (controllerKey, methodKey) => {
+        const cleanMethod = methodKey.replace(/_v\d+$/, '');
+        return `${controllerKey}_${cleanMethod}`;
+      },
     });
-
-    // 去掉 URI 版本化导致的 _v1 后缀
-    for (const [path, methods] of Object.entries(document.paths ?? {})) {
-      for (const method of Object.values(methods) as any[]) {
-        if (method.operationId?.endsWith('_v1')) {
-          method.operationId = method.operationId.slice(0, -3);
-        }
-      }
-    }
 
     // 添加权限枚举到 OpenAPI 规范中
     if (!document.components) {
