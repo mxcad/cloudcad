@@ -12,7 +12,7 @@
 
 ### 1.1 文件结构
 ```
-apps/backend/src/file-system/search/
+packages/backend/src/file-system/search/
 ├── search.module.ts      # 搜索模块定义
 ├── search.service.ts     # 搜索服务核心逻辑
 └── search.service.spec.ts # 搜索服务测试
@@ -227,7 +227,7 @@ async search(@Request() req, @Query() dto: SearchDto) {
 ```
 
 ### 5.2 前端 API 调用
-**位置**: `apps/frontend/src/services/searchApi.ts`
+**位置**: `packages/frontend/src/services/searchApi.ts`
 ```typescript
 search: (
   keyword: string,
@@ -407,9 +407,9 @@ search(userId, dto)
 **严重程度**: 🔴 极高
 
 **问题根因分析**:
-- [searchLibrary](file:///d:/project/cloudcad/apps/backend/src/file-system/search/search.service.ts#L395-L498) 方法完全没有权限检查逻辑
-- 对比 [getThumbnail](file:///d:/project/cloudcad/apps/backend/src/file-system/file-system.controller.ts#L469-L483) 方法，资源库访问需要检查 `LIBRARY_DRAWING_MANAGE` 或 `LIBRARY_BLOCK_MANAGE` 权限
-- [FileSystemPermissionService.isLibraryNode()](file:///d:/project/cloudcad/apps/backend/src/file-system/file-permission/file-system-permission.service.ts#L159-L162) 将所有 library 节点视为"公共资源库允许任何人访问"，但这是错误的假设
+- [searchLibrary](file:///d:/project/cloudcad/packages/backend/src/file-system/search/search.service.ts#L395-L498) 方法完全没有权限检查逻辑
+- 对比 [getThumbnail](file:///d:/project/cloudcad/packages/backend/src/file-system/file-system.controller.ts#L469-L483) 方法，资源库访问需要检查 `LIBRARY_DRAWING_MANAGE` 或 `LIBRARY_BLOCK_MANAGE` 权限
+- [FileSystemPermissionService.isLibraryNode()](file:///d:/project/cloudcad/packages/backend/src/file-system/file-permission/file-system-permission.service.ts#L159-L162) 将所有 library 节点视为"公共资源库允许任何人访问"，但这是错误的假设
 
 **修复优先级**: **P0 - 必须立即修复**
 
@@ -468,7 +468,7 @@ private async searchLibrary(userId: string, params: { ... }): Promise<NodeListRe
 **严重程度**: 🟠 高
 
 **问题根因分析**:
-- [getAllProjectNodeIds](file:///d:/project/cloudcad/apps/backend/src/file-system/search/search.service.ts#L500-L514) 使用递归方式遍历文件树
+- [getAllProjectNodeIds](file:///d:/project/cloudcad/packages/backend/src/file-system/search/search.service.ts#L500-L514) 使用递归方式遍历文件树
 - 每个节点都会触发一次 `findMany` 查询
 - 假设一个项目有 1000 个文件，深度为 10 层，将执行约 1000+ 次数据库查询
 
@@ -510,7 +510,7 @@ private async getAllProjectNodeIds(projectId: string): Promise<string[]> {
 
 ### 12.1 当前索引分析
 
-从 [schema.prisma](file:///d:/project/cloudcad/apps/backend/prisma/schema.prisma#L109-L117) 可见，`file_system_nodes` 表有以下索引：
+从 [schema.prisma](file:///d:/project/cloudcad/packages/backend/prisma/schema.prisma#L109-L117) 可见，`file_system_nodes` 表有以下索引：
 
 ```
 @@index([parentId])
@@ -608,7 +608,7 @@ Index Scan using idx_project_search on file_system_nodes  (cost=0.00..5000.00 ro
 
 #### 缺口 2: all_projects 搜索粒度不足
 
-**位置**: [searchAllProjects](file:///d:/project/cloudcad/apps/backend/src/file-system/search/search.service.ts#L302-L393)
+**位置**: [searchAllProjects](file:///d:/project/cloudcad/packages/backend/src/file-system/search/search.service.ts#L302-L393)
 
 **问题**:
 - 只检查用户是否是项目 owner 或 member
@@ -634,7 +634,7 @@ const userProjects = await this.prisma.fileSystemNode.findMany({
 
 #### 缺口 3: searchProjects 可能泄露项目信息
 
-**位置**: [searchProjects](file:///d:/project/cloudcad/apps/backend/src/file-system/search/search.service.ts#L91-L187)
+**位置**: [searchProjects](file:///d:/project/cloudcad/packages/backend/src/file-system/search/search.service.ts#L91-L187)
 
 **观察**:
 - 搜索结果返回了 `childrenCount`（子节点数量）和 `projectMembers` 数量
@@ -807,14 +807,14 @@ HTTP Request (GET /v1/file-system/search?keyword=xxx&scope=xxx)
 
 | 文件路径 | 说明 |
 |---------|------|
-| `apps/backend/src/file-system/search/search.service.ts` | 搜索服务核心实现 |
-| `apps/backend/src/file-system/search/search.module.ts` | 搜索模块定义 |
-| `apps/backend/src/file-system/file-system.controller.ts` | 文件系统控制器（含 search 接口）|
-| `apps/backend/src/file-system/dto/search.dto.ts` | 搜索 DTO 定义 |
-| `apps/backend/src/file-system/file-permission/file-system-permission.service.ts` | 文件权限服务 |
-| `apps/backend/src/common/services/permission.service.ts` | 系统权限服务 |
-| `apps/backend/prisma/schema.prisma` | 数据库 Schema |
-| `apps/frontend/src/services/searchApi.ts` | 前端搜索 API 调用 |
+| `packages/backend/src/file-system/search/search.service.ts` | 搜索服务核心实现 |
+| `packages/backend/src/file-system/search/search.module.ts` | 搜索模块定义 |
+| `packages/backend/src/file-system/file-system.controller.ts` | 文件系统控制器（含 search 接口）|
+| `packages/backend/src/file-system/dto/search.dto.ts` | 搜索 DTO 定义 |
+| `packages/backend/src/file-system/file-permission/file-system-permission.service.ts` | 文件权限服务 |
+| `packages/backend/src/common/services/permission.service.ts` | 系统权限服务 |
+| `packages/backend/prisma/schema.prisma` | 数据库 Schema |
+| `packages/frontend/src/services/searchApi.ts` | 前端搜索 API 调用 |
 
 ### B. 相关权限枚举
 

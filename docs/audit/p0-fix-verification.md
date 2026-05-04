@@ -9,11 +9,11 @@
 ## 修复 1：搜索模块 - searchLibrary 权限检查
 
 ### 验证文件
-- `apps/backend/src/file-system/search/search.service.ts`
+- `packages/backend/src/file-system/search/search.service.ts`
 
 ### 验证结果：✅ 通过
 
-**代码位置**：[search.service.ts#L397-453](file:///d:/project/cloudcad/apps/backend/src/file-system/search/search.service.ts#L397-L453)
+**代码位置**：[search.service.ts#L397-453](file:///d:/project/cloudcad/packages/backend/src/file-system/search/search.service.ts#L397-L453)
 
 **实现分析**：
 `searchLibrary` 方法已添加完整的权限检查逻辑，处理三种场景：
@@ -69,7 +69,7 @@ if (libraryKey === 'drawing') {
 ## 修复 2：回收站端点 - FILE_TRASH_MANAGE 权限装饰器
 
 ### 验证文件
-- `apps/backend/src/file-system/file-system.controller.ts`
+- `packages/backend/src/file-system/file-system.controller.ts`
 
 ### 验证结果：✅ 通过
 
@@ -103,7 +103,7 @@ async clearTrash(@Request() req) { ... }
 ```
 
 **`FILE_TRASH_MANAGE` 权限定义验证**：
-- 权限枚举位置：`apps/backend/src/common/enums/permissions.enum.ts#L181, L199`
+- 权限枚举位置：`packages/backend/src/common/enums/permissions.enum.ts#L181, L199`
 - `PrismaProjectPermission.FILE_TRASH_MANAGE` 已正确定义
 
 ---

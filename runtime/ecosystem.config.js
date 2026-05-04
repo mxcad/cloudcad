@@ -282,7 +282,7 @@ const configServiceScript = path.join(
 if (fs.existsSync(configServiceScript)) {
   // 读取端口配置
   let configServicePort = 3002;
-  const backendEnvPath = path.join(PROJECT_ROOT, 'apps', 'backend', '.env');
+  const backendEnvPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
   if (fs.existsSync(backendEnvPath)) {
     const envContent = fs.readFileSync(backendEnvPath, 'utf8');
     const match = envContent.match(/CONFIG_SERVICE_PORT\s*=\s*(\d+)/);

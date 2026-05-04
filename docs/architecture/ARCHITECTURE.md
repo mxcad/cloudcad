@@ -13,7 +13,7 @@ CloudCAD 是一个基于 NestJS 的 CAD 协同设计平台后端，使用 pnpm m
 
 ```
 cloudcad/
-├── apps/
+├── packages/
 │   ├── backend/          ← NestJS 后端（本分支工作重点）
 │   └── frontend/         ← Vue 3 前端
 ├── packages/             ← 共享包（如 svn-version-tool）
@@ -300,7 +300,7 @@ mxcad/
 | 数据库表结构 | `database-entity-report.md` |
 | API 端点列表 | `api-inventory.md` |
 | monorepo 配置 | `pnpm-workspace.yaml` + `monorepo-migration.md` |
-| Jest 配置 | `apps/backend/jest.config.ts` |
+| Jest 配置 | `packages/backend/jest.config.ts` |
 
 ---
 

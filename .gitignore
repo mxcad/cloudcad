@@ -9,24 +9,36 @@ runtime/linux/
 data
 release
 # Generated entry scripts (use offline node only in project directory)
+# Windows .cmd + PowerShell .ps1 + Git Bash shell scripts
+node
 node.cmd
 node.ps1
+npm
 npm.cmd
 npm.ps1
+npx
 npx.cmd
 npx.ps1
+pnpm
 pnpm.cmd
 pnpm.ps1
+pm2
 pm2.cmd
 pm2.ps1
+project-env.sh
+packages/*/node
 packages/*/node.cmd
 packages/*/node.ps1
+packages/*/npm
 packages/*/npm.cmd
 packages/*/npm.ps1
+packages/*/npx
 packages/*/npx.cmd
 packages/*/npx.ps1
+packages/*/pnpm
 packages/*/pnpm.cmd
 packages/*/pnpm.ps1
+packages/*/pm2
 packages/*/pm2.cmd
 packages/*/pm2.ps1
 

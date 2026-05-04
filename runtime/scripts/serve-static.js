@@ -5,7 +5,7 @@
  *
  * 选项:
  *   --port <number>     服务端口 (默认: 3000)
- *   --dir <path>        静态文件目录 (默认: ../../apps/frontend/dist)
+ *   --dir <path>        静态文件目录 (默认: ../../packages/frontend/dist)
  *   --api-target <url>  API 代理目标 (默认: http://localhost:3001)
  *   --spa               SPA 模式，所有路由返回 index.html
  */

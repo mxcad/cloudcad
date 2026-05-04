@@ -671,7 +671,7 @@ data/
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | WECHAT_APP_ID | - | 微信开放平台AppID |
-| WECHAT_APP_SECRET | - | 微信开放平台AppSecret |
+| WECHAT_APP_SECRET | - | 微信开放平台packagesecret |
 | WECHAT_CALLBACK_URL | - | 授权回调地址 |
 
 #### 邮件配置

@@ -6,7 +6,7 @@
 
 ### 1.1 扫描结果
 
-扫描 `apps/backend/src/auth/` 目录下的所有 .ts 文件，**未发现 IAuthProvider 接口定义**。
+扫描 `packages/backend/src/auth/` 目录下的所有 .ts 文件，**未发现 IAuthProvider 接口定义**。
 
 当前 auth 模块中存在的接口：
 
@@ -22,7 +22,7 @@
 
 ### 1.2 SmsProvider 接口参考（唯一 Provider 抽象）
 
-[apps/backend/src/auth/services/sms/interfaces/sms-provider.interface.ts](file:///d:/project/cloudcad/apps/backend/src/auth/services/sms/interfaces/sms-provider.interface.ts)
+[packages/backend/src/auth/services/sms/interfaces/sms-provider.interface.ts](file:///d:/project/cloudcad/packages/backend/src/auth/services/sms/interfaces/sms-provider.interface.ts)
 
 ```typescript
 export interface SmsProvider {
@@ -40,7 +40,7 @@ export interface SmsProvider {
 
 ### 1.3 IAuthProvider 接口建议定义
 
-基于 [AuthFacadeService](file:///d:/project/cloudcad/apps/backend/src/auth/auth-facade.service.ts) 的公开方法，建议 IAuthProvider 接口应包含：
+基于 [AuthFacadeService](file:///d:/project/cloudcad/packages/backend/src/auth/auth-facade.service.ts) 的公开方法，建议 IAuthProvider 接口应包含：
 
 ```typescript
 export interface IAuthProvider {
@@ -117,7 +117,7 @@ export interface IAuthProvider {
 
 ### 2.1 AuthFacadeService 依赖分析
 
-查看 [auth-facade.service.ts](file:///d:/project/cloudcad/apps/backend/src/auth/auth-facade.service.ts) 的构造函数：
+查看 [auth-facade.service.ts](file:///d:/project/cloudcad/packages/backend/src/auth/auth-facade.service.ts) 的构造函数：
 
 ```typescript
 constructor(
@@ -157,7 +157,7 @@ constructor(
 认证模块获取用户权限的方式：
 
 1. **登录时从数据库查询**：`loginByPhone()` 等方法直接从 Prisma 查询用户角色和权限
-2. **JWT Strategy 中查询**：[jwt.strategy.ts](file:///d:/project/cloudcad/apps/backend/src/auth/strategies/jwt.strategy.ts) 从数据库加载用户完整信息（包括权限）
+2. **JWT Strategy 中查询**：[jwt.strategy.ts](file:///d:/project/cloudcad/packages/backend/src/auth/strategies/jwt.strategy.ts) 从数据库加载用户完整信息（包括权限）
 
 ```typescript
 // jwt.strategy.ts 中的 validate 方法
@@ -195,7 +195,7 @@ return {
 
 ### 3.1 扫描结果
 
-扫描 `apps/backend/src/` 目录，**未发现 IPermissionStore 接口定义**。
+扫描 `packages/backend/src/` 目录，**未发现 IPermissionStore 接口定义**。
 
 搜索结果：
 - `IPermissionStore` - 无匹配
@@ -208,7 +208,7 @@ return {
 
 #### 3.2.1 系统权限数据来源
 
-[permission.service.ts](file:///d:/project/cloudcad/apps/backend/src/common/services/permission.service.ts)
+[permission.service.ts](file:///d:/project/cloudcad/packages/backend/src/common/services/permission.service.ts)
 
 ```typescript
 constructor(
@@ -229,7 +229,7 @@ private async checkUserSystemPermission(userId: string, permission: SystemPermis
 
 #### 3.2.2 项目权限数据来源
 
-[project-permission.service.ts](file:///d:/project/cloudcad/apps/backend/src/roles/project-permission.service.ts)
+[project-permission.service.ts](file:///d:/project/cloudcad/packages/backend/src/roles/project-permission.service.ts)
 
 ```typescript
 constructor(
@@ -250,7 +250,7 @@ async getUserPermissions(userId: string, projectId: string): Promise<ProjectPerm
 
 #### 3.2.3 权限缓存实现
 
-[permission-cache.service.ts](file:///d:/project/cloudcad/apps/backend/src/common/services/permission-cache.service.ts)
+[permission-cache.service.ts](file:///d:/project/cloudcad/packages/backend/src/common/services/permission-cache.service.ts)
 
 权限缓存基于 Redis 实现，但**仅作为缓存层**，底层仍是直连数据库：
 

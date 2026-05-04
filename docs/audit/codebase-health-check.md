@@ -10,9 +10,9 @@
 
 | 文件路径 | 行号 | 内容 |
 |---------|------|------|
-| `apps/frontend/src/hooks/useDirectoryImport.ts` | 276 | `// @ts-ignore - webkitRelativePath 是标准属性` |
-| `apps/frontend/src/hooks/useDirectoryImport.ts` | 381 | `// @ts-ignore - webkitRelativePath 是标准属性` |
-| `apps/frontend/src/hooks/useDirectoryImport.ts` | 413 | `// @ts-ignore - webkitRelativePath 是标准属性` |
+| `packages/frontend/src/hooks/useDirectoryImport.ts` | 276 | `// @ts-ignore - webkitRelativePath 是标准属性` |
+| `packages/frontend/src/hooks/useDirectoryImport.ts` | 381 | `// @ts-ignore - webkitRelativePath 是标准属性` |
+| `packages/frontend/src/hooks/useDirectoryImport.ts` | 413 | `// @ts-ignore - webkitRelativePath 是标准属性` |
 
 **总结**：共发现 3 处 `@ts-ignore`，均用于处理非标准 Web API 属性，属于合理使用。
 
@@ -23,37 +23,37 @@
 共发现 **27** 个文件使用了 `any` 类型：
 
 ### 后端文件（18个）
-- `apps/backend/src/library/library.controller.ts`
-- `apps/backend/src/file-system/file-download/file-download-export.service.ts`
-- `apps/backend/src/auth/auth-facade.service.spec.ts`
-- `apps/backend/src/version-control/version-control.service.spec.ts`
-- `apps/backend/src/mxcad/node/filesystem-node.service.spec.ts`
-- `apps/backend/src/mxcad/core/mxcad.service.spec.ts`
-- `apps/backend/src/mxcad/conversion/file-conversion.service.spec.ts`
-- `apps/backend/src/file-operations/file-operations.service.spec.ts`
-- `apps/backend/src/file-system/search/search.service.spec.ts`
-- `apps/backend/src/file-system/search/search.service.ts`
-- `apps/backend/src/mxcad/upload/file-merge.service.ts`
-- `apps/backend/src/file-system/file-tree/file-tree.service.ts`
-- `apps/backend/src/file-operations/project-crud.service.ts`
-- `apps/backend/src/file-operations/file-operations.service.ts`
-- `apps/backend/src/common/interceptors/storage-quota.interceptor.ts`
-- `apps/backend/src/auth/services/auth-token.service.ts`
-- `apps/backend/src/auth/auth-facade.service.ts`
-- `apps/backend/src/common/types/request.types.ts`
+- `packages/backend/src/library/library.controller.ts`
+- `packages/backend/src/file-system/file-download/file-download-export.service.ts`
+- `packages/backend/src/auth/auth-facade.service.spec.ts`
+- `packages/backend/src/version-control/version-control.service.spec.ts`
+- `packages/backend/src/mxcad/node/filesystem-node.service.spec.ts`
+- `packages/backend/src/mxcad/core/mxcad.service.spec.ts`
+- `packages/backend/src/mxcad/conversion/file-conversion.service.spec.ts`
+- `packages/backend/src/file-operations/file-operations.service.spec.ts`
+- `packages/backend/src/file-system/search/search.service.spec.ts`
+- `packages/backend/src/file-system/search/search.service.ts`
+- `packages/backend/src/mxcad/upload/file-merge.service.ts`
+- `packages/backend/src/file-system/file-tree/file-tree.service.ts`
+- `packages/backend/src/file-operations/project-crud.service.ts`
+- `packages/backend/src/file-operations/file-operations.service.ts`
+- `packages/backend/src/common/interceptors/storage-quota.interceptor.ts`
+- `packages/backend/src/auth/services/auth-token.service.ts`
+- `packages/backend/src/auth/auth-facade.service.ts`
+- `packages/backend/src/common/types/request.types.ts`
 
 ### 前端文件（5个）
-- `apps/frontend/vite-env.d.ts`
-- `apps/frontend/src/types/api-client.ts`
-- `apps/frontend/src/services/searchApi.ts`
-- `apps/frontend/src/services/mxcadManager.ts`
-- `apps/frontend/src/pages/Profile/hooks/useVerificationCode.ts`
+- `packages/frontend/vite-env.d.ts`
+- `packages/frontend/src/types/api-client.ts`
+- `packages/frontend/src/services/searchApi.ts`
+- `packages/frontend/src/services/mxcadManager.ts`
+- `packages/frontend/src/pages/Profile/hooks/useVerificationCode.ts`
 
 ### 测试文件（4个）
-- `apps/backend/src/test/test-utils.ts`
-- `apps/backend/src/test/permission-test-runner.ts`
-- `apps/backend/src/test/setup.ts`
-- `apps/backend/src/mxcad/chunk/chunk-upload.service.ts`
+- `packages/backend/src/test/test-utils.ts`
+- `packages/backend/src/test/permission-test-runner.ts`
+- `packages/backend/src/test/setup.ts`
+- `packages/backend/src/mxcad/chunk/chunk-upload.service.ts`
 
 **建议**：逐步将 `any` 类型替换为更具体的类型定义，提高代码可维护性和类型安全性。
 
@@ -65,7 +65,7 @@
 
 | 文件路径 | 行号 | 代码片段 |
 |---------|------|----------|
-| `apps/backend/src/test/jwt-config-test.ts` | 51 | `} catch (error) {}` |
+| `packages/backend/src/test/jwt-config-test.ts` | 51 | `} catch (error) {}` |
 
 **问题描述**：此处 catch 块为空，异常被静默忽略。
 
@@ -81,8 +81,8 @@
 
 | 文件路径 | 行号 | 内容 |
 |---------|------|------|
-| `apps/backend/src/app.module.ts` | 122-144 | Swagger 组件 schemas 配置 |
-| `apps/backend/src/common/services/file-extensions.service.ts` | 93 | `config.document.includes(ext)` - 配置属性 |
+| `packages/backend/src/app.module.ts` | 122-144 | Swagger 组件 schemas 配置 |
+| `packages/backend/src/common/services/file-extensions.service.ts` | 93 | `config.document.includes(ext)` - 配置属性 |
 
 **结论**：后端代码中没有直接操作浏览器 DOM 的代码，符合规范。
 
@@ -94,24 +94,24 @@
 
 | 文件路径 | 行号 | 硬编码内容 | 风险等级 |
 |---------|------|-----------|---------|
-| `apps/backend/src/config/configuration.ts` | 81 | `'your-secret-key'` - JWT 默认密钥 | **高** |
-| `apps/backend/src/config/configuration.ts` | 148 | `'mxcad-session-secret-key-change-in-production'` | **高** |
-| `apps/backend/src/config/configuration.ts` | 78 | `'http://localhost:3000'` - 前端 URL 默认值 | 中 |
-| `apps/backend/src/config/configuration.ts` | 87 | `'localhost'` - 数据库主机 | 中 |
-| `apps/backend/src/config/configuration.ts` | 101 | `'localhost'` - Redis 主机 | 中 |
-| `apps/backend/src/config/configuration.ts` | 416 | `'http://localhost:3091'` - 协作服务 URL | 中 |
-| `apps/backend/src/auth/auth.controller.ts` | 678, 702 | `'http://localhost:3000'` - 默认 origin | 中 |
-| `apps/backend/src/main.ts` | 166 | `'0.0.0.0'` - 监听地址 | 低 |
-| `apps/frontend/vite.config.ts` | 28 | `'http://localhost:3001'` - 后端 URL | 中 |
-| `apps/frontend/src/config/apiConfig.ts` | 40 | `'http://localhost:3001/api'` - API 地址 | 中 |
+| `packages/backend/src/config/configuration.ts` | 81 | `'your-secret-key'` - JWT 默认密钥 | **高** |
+| `packages/backend/src/config/configuration.ts` | 148 | `'mxcad-session-secret-key-change-in-production'` | **高** |
+| `packages/backend/src/config/configuration.ts` | 78 | `'http://localhost:3000'` - 前端 URL 默认值 | 中 |
+| `packages/backend/src/config/configuration.ts` | 87 | `'localhost'` - 数据库主机 | 中 |
+| `packages/backend/src/config/configuration.ts` | 101 | `'localhost'` - Redis 主机 | 中 |
+| `packages/backend/src/config/configuration.ts` | 416 | `'http://localhost:3091'` - 协作服务 URL | 中 |
+| `packages/backend/src/auth/auth.controller.ts` | 678, 702 | `'http://localhost:3000'` - 默认 origin | 中 |
+| `packages/backend/src/main.ts` | 166 | `'0.0.0.0'` - 监听地址 | 低 |
+| `packages/frontend/vite.config.ts` | 28 | `'http://localhost:3001'` - 后端 URL | 中 |
+| `packages/frontend/src/config/apiConfig.ts` | 40 | `'http://localhost:3001/api'` - API 地址 | 中 |
 
 ### 测试配置（正常）
 
 以下硬编码属于测试配置，在测试环境中是可接受的：
 
-- `apps/backend/src/test/test-utils.ts` - 测试数据库连接和 JWT secret
-- `apps/backend/src/test/setup.ts` - 测试环境变量设置
-- `apps/backend/prisma/seed.ts` - 数据库种子数据配置
+- `packages/backend/src/test/test-utils.ts` - 测试数据库连接和 JWT secret
+- `packages/backend/src/test/setup.ts` - 测试环境变量设置
+- `packages/backend/prisma/seed.ts` - 数据库种子数据配置
 
 ---
 

@@ -12,7 +12,7 @@
 永久删除文件时通过 `fileHash` 查询引用情况的逻辑。
 
 ### 代码位置
-- `apps/backend/src/file-operations/file-operations.service.ts`
+- `packages/backend/src/file-operations/file-operations.service.ts`
 
 ### 关键实现分析
 
@@ -76,23 +76,23 @@ if (fileHash) {
 
 ### 2.1 @tus/server 接入验证
 
-**依赖声明（`apps/backend/package.json` 第 58-59 行）：**
+**依赖声明（`packages/backend/package.json` 第 58-59 行）：**
 ```json
 "@tus/file-store": "^2.1.0",
 "@tus/server": "^2.4.0",
 ```
 
-**TusService 实现（`apps/backend/src/mxcad/tus/tus.service.ts`）：**
+**TusService 实现（`packages/backend/src/mxcad/tus/tus.service.ts`）：**
 - 使用 `createServer` 从 `@tus/server` 创建 tus 服务器
 - 使用 `FileStore` 从 `@tus/file-store` 作为存储后端
 - 路径：`/api/v1/files`
 - 事件处理：`onUploadFinish` 回调记录日志
 
-**TusModule 注册（`apps/backend/src/mxcad/tus/tus.module.ts`）：**
+**TusModule 注册（`packages/backend/src/mxcad/tus/tus.module.ts`）：**
 - 提供者：`TusService`, `TusEventHandler`
 - 导出：`TusService`
 
-**根模块接入（`apps/backend/src/mxcad/mxcad.module.ts` 第 59 行）：**
+**根模块接入（`packages/backend/src/mxcad/mxcad.module.ts` 第 59 行）：**
 ```typescript
 TusModule,
 ```

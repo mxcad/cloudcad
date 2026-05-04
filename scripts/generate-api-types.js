@@ -24,6 +24,7 @@ async function generateTypes() {
   let swaggerSource;
 
   // 尝试从后端服务获取 Swagger JSON
+  // 注意：operationId 中的 _v1 后缀需要在 swagger_json.json 中预先去除
   try {
     console.log(`📡 尝试从后端获取 Swagger: ${SWAGGER_URL}`);
     const response = await fetch(SWAGGER_URL);

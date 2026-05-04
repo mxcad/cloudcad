@@ -8,7 +8,7 @@
 
 ### 1.1 登录接口返回值
 
-**文件**: [apps/backend/src/auth/auth.controller.ts](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L101-L116)
+**文件**: [packages/backend/src/auth/auth.controller.ts](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L101-L116)
 
 ```typescript
 @Post('login')
@@ -30,7 +30,7 @@ async login(
 
 ### 1.2 Token 生成逻辑
 
-**文件**: [apps/backend/src/auth/services/auth-token.service.ts](file:///d:/project/cloudcad/apps/backend/src/auth/services/auth-token.service.ts#L38-L91)
+**文件**: [packages/backend/src/auth/services/auth-token.service.ts](file:///d:/project/cloudcad/packages/backend/src/auth/services/auth-token.service.ts#L38-L91)
 
 ```typescript
 async generateTokens(user: UserForToken): Promise<{
@@ -62,11 +62,11 @@ async generateTokens(user: UserForToken): Promise<{
 
 ### 1.3 后端是否使用 res.cookie() 设置 JWT Token
 
-**搜索结果**: 在 `apps/backend/src/auth/` 目录下，**没有找到任何 `res.cookie()` 设置 JWT Token 的代码**。
+**搜索结果**: 在 `packages/backend/src/auth/` 目录下，**没有找到任何 `res.cookie()` 设置 JWT Token 的代码**。
 
 唯一的 Cookie 操作是在登出时清除 Session Cookie：
 
-**文件**: [apps/backend/src/auth/auth.controller.ts](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L134-L153)
+**文件**: [packages/backend/src/auth/auth.controller.ts](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L134-L153)
 
 ```typescript
 @Post('logout')
@@ -92,7 +92,7 @@ async logout(
 
 ### 2.1 JWT Strategy
 
-**文件**: [apps/backend/src/auth/strategies/jwt.strategy.ts](file:///d:/project/cloudcad/apps/backend/src/auth/strategies/jwt.strategy.ts#L39-L43)
+**文件**: [packages/backend/src/auth/strategies/jwt.strategy.ts](file:///d:/project/cloudcad/packages/backend/src/auth/strategies/jwt.strategy.ts#L39-L43)
 
 ```typescript
 super({
@@ -106,7 +106,7 @@ super({
 
 ### 2.2 Refresh Token Strategy
 
-**文件**: [apps/backend/src/auth/strategies/refresh-token.strategy.ts](file:///d:/project/cloudcad/apps/backend/src/auth/strategies/refresh-token.strategy.ts#L39-L43)
+**文件**: [packages/backend/src/auth/strategies/refresh-token.strategy.ts](file:///d:/project/cloudcad/packages/backend/src/auth/strategies/refresh-token.strategy.ts#L39-L43)
 
 ```typescript
 super({
@@ -122,7 +122,7 @@ super({
 
 ### 3.1 AuthContext 存储逻辑
 
-**文件**: [apps/frontend/src/contexts/AuthContext.tsx](file:///d:/project/cloudcad/apps/frontend/src/contexts/AuthContext.tsx#L130-L174)
+**文件**: [packages/frontend/src/contexts/AuthContext.tsx](file:///d:/project/cloudcad/packages/frontend/src/contexts/AuthContext.tsx#L130-L174)
 
 ```typescript
 const login = useCallback(async (account: string, password: string) => {
@@ -150,7 +150,7 @@ const login = useCallback(async (account: string, password: string) => {
 
 ### 3.2 请求拦截器 Token 注入
 
-**文件**: [apps/frontend/src/services/apiClient.ts](file:///d:/project/cloudcad/apps/frontend/src/services/apiClient.ts#L106-L120)
+**文件**: [packages/frontend/src/services/apiClient.ts](file:///d:/project/cloudcad/packages/frontend/src/services/apiClient.ts#L106-L120)
 
 ```typescript
 function setupInterceptors(instance: AxiosInstance) {
@@ -173,7 +173,7 @@ function setupInterceptors(instance: AxiosInstance) {
 
 ### 3.3 Token 自动刷新
 
-**文件**: [apps/frontend/src/services/apiClient.ts](file:///d:/project/cloudcad/apps/frontend/src/services/apiClient.ts#L166-L199)
+**文件**: [packages/frontend/src/services/apiClient.ts](file:///d:/project/cloudcad/packages/frontend/src/services/apiClient.ts#L166-L199)
 
 ```typescript
 if (
@@ -206,7 +206,7 @@ if (
 
 ### 3.4 登出时清除 Token
 
-**文件**: [apps/frontend/src/contexts/AuthContext.tsx](file:///d:/project/cloudcad/apps/frontend/src/contexts/AuthContext.tsx#L300-L343)
+**文件**: [packages/frontend/src/contexts/AuthContext.tsx](file:///d:/project/cloudcad/packages/frontend/src/contexts/AuthContext.tsx#L300-L343)
 
 ```typescript
 const logout = useCallback(async () => {

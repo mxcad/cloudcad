@@ -2,7 +2,7 @@
 
 **汇报人：** Trae
 **审计日期：** 2026-05-02
-**审计范围：** `apps/backend/src/version-control/` 及所有与 SVN 操作相关的代码
+**审计范围：** `packages/backend/src/version-control/` 及所有与 SVN 操作相关的代码
 **文档整合说明：** 本文档由 `version-control-audit.md` 和 `version-control-deep-audit.md` 合并而成，保留了 deep 版本的完整内容。
 
 ---

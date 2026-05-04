@@ -6,19 +6,19 @@
 
 export {
   ConversionModule,
-} from './conversion.module';
+} from './conversion.module.js';
 export {
   ProcessRunnerService,
   ProcessError,
   ProcessResult,
   ProcessRunOptions,
-} from './process-runner.service';
+} from './process-runner.service.js';
 export {
   OutputPathResolverService,
-} from './output-path-resolver.service';
+} from './output-path-resolver.service.js';
 export {
   FormatConverterService,
-} from './format-converter.service';
+} from './format-converter.service.js';
 export {
   IConversionService,
   ConversionTask,
@@ -28,4 +28,4 @@ export {
   ConversionEngineConfig,
   CONVERSION_ENGINE_CONFIG,
   I_CONVERSION_SERVICE,
-} from './interfaces/conversion-service.interface';
+} from './interfaces/conversion-service.interface.js';

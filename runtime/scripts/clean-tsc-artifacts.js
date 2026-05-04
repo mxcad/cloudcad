@@ -65,8 +65,8 @@ function cleanDir(dir) {
 
 // 要清理的目录
 const dirsToClean = [
-  path.resolve(__dirname, '../apps/backend/src'),
-  path.resolve(__dirname, '../apps/frontend/src'),
+  path.resolve(__dirname, '../packages/backend/src'),
+  path.resolve(__dirname, '../packages/frontend/src'),
 ];
 
 console.log('开始清理 tsc 编译产物...\n');

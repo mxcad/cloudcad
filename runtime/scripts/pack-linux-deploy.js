@@ -422,7 +422,7 @@ async function main() {
     log('使用说明:');
     log('  1. 复制部署包到目标服务器');
     log('  2. 解压: tar -xzf cloudcad-deploy-*.tar.gz');
-    log('  3. 配置: 编辑 apps/backend/.env');
+    log('  3. 配置: 编辑 packages/backend/.env');
     log('  4. 启动: ./start.sh');
     log('');
     log('验证部署包:');

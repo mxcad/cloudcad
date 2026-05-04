@@ -21,7 +21,7 @@ const __dirname = dirname(__filename);
 function extractEnumsFromSchema() {
   const schemaPath = join(
     __dirname,
-    '../apps/backend/prisma/schema.prisma'
+    '../packages/backend/prisma/schema.prisma'
   );
   const schemaContent = readFileSync(schemaPath, 'utf-8');
 
@@ -96,9 +96,9 @@ async function generateFrontendPermissions() {
  * 权限常量 - 自动生成，请勿手动修改
  *
  * 生成时间: ${new Date().toISOString()}
- * 来源: Prisma Schema (apps/backend/prisma/schema.prisma)
+ * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
- * 如需修改权限，请编辑 apps/backend/prisma/schema.prisma 文件，
+ * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
  * 然后运行 pnpm generate:frontend-permissions 重新生成
  *
  * 注意：权限格式为大写下划线（如 'PROJECT_CREATE'），与后端枚举和数据库保持一致
@@ -251,7 +251,7 @@ export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): str
     // 写入文件
     const outputPath = join(
       __dirname,
-      '../apps/frontend/src/constants/permissions.ts'
+      '../packages/frontend/src/constants/permissions.ts'
     );
     writeFileSync(outputPath, fileContent, 'utf-8');
 

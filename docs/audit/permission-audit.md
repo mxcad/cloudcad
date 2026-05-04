@@ -2,7 +2,7 @@
 
 **日期**: 2026-05-02  
 **分支**: refactor/circular-deps  
-**分析范围**: `apps/backend/src/` 下全部 17 个 Controller + 81 个 Service  
+**分析范围**: `packages/backend/src/` 下全部 17 个 Controller + 81 个 Service  
 **审计方法**: 静态代码扫描，枚举每个方法上的装饰器和内联权限调用
 
 ---

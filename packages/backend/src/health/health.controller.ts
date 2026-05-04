@@ -80,8 +80,55 @@ export class HealthController {
   }
 
   @Get()
+  @Public()
+  @ApiOperation({ summary: '服务健康检查（公开）' })
+  @ApiResponse({ status: 200, description: '服务正常运行' })
+  async publicHealth() {
+    let databaseStatus: 'up' | 'down' = 'up';
+    let databaseMessage: string | undefined;
+    let storageStatus: 'up' | 'down' = 'up';
+    let storageMessage: string | undefined;
+
+    try {
+      const dbResult = await this.databaseService.healthCheck();
+      databaseStatus = dbResult.status === 'healthy' ? 'up' : 'down';
+      databaseMessage = dbResult.message;
+    } catch {
+      databaseStatus = 'down';
+      databaseMessage = '数据库连接异常';
+    }
+
+    try {
+      const storageResult = await this.storageService.healthCheck();
+      storageStatus = storageResult.status === 'healthy' ? 'up' : 'down';
+      storageMessage = storageResult.message;
+    } catch {
+      storageStatus = 'down';
+      storageMessage = '存储服务异常';
+    }
+
+    const overallStatus = databaseStatus === 'up' && storageStatus === 'up' ? 'ok' : 'error';
+
+    return {
+      status: overallStatus,
+      info: {
+        database: {
+          status: databaseStatus,
+          message: databaseMessage,
+        },
+        storage: {
+          status: storageStatus,
+          message: storageMessage,
+        },
+      },
+      error: {},
+      details: {},
+    };
+  }
+
+  @Get('full')
   @HealthCheck()
-  @ApiOperation({ summary: '系统健康检查' })
+  @ApiOperation({ summary: '系统健康检查（详细）' })
   @ApiResponse({ status: 200, description: '系统正常运行' })
   @ApiResponse({ status: 503, description: '服务不可用' })
   @RequirePermissions([SystemPermission.SYSTEM_MONITOR])

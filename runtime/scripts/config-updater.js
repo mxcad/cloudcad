@@ -511,7 +511,7 @@ function updateFrontendConfigsWrapper(projectRoot) {
  */
 function updateBackendEnv(projectRoot) {
   const envConfigs = [
-    { dir: path.join(projectRoot, 'apps', 'backend'), target: '.env' },
+    { dir: path.join(projectRoot, 'packages', 'backend'), target: '.env' },
   ];
   return updateEnvConfigs(envConfigs);
 }

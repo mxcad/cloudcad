@@ -10,12 +10,12 @@
 
 本次审计覆盖以下 6 个后端辅助模块：
 
-1. `apps/backend/src/audit/` — 审计日志模块
-2. `apps/backend/src/runtime-config/` — 运行时配置模块
-3. `apps/backend/src/fonts/` — 字体库模块
-4. `apps/backend/src/policy-engine/` — 策略引擎模块
-5. `apps/backend/src/cache-architecture/` — 缓存架构模块
-6. `apps/backend/src/health/` — 健康检查模块
+1. `packages/backend/src/audit/` — 审计日志模块
+2. `packages/backend/src/runtime-config/` — 运行时配置模块
+3. `packages/backend/src/fonts/` — 字体库模块
+4. `packages/backend/src/policy-engine/` — 策略引擎模块
+5. `packages/backend/src/cache-architecture/` — 缓存架构模块
+6. `packages/backend/src/health/` — 健康检查模块
 
 ---
 

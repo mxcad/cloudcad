@@ -7,7 +7,7 @@
 
 ## 1. 前端 `<img>` 标签使用情况
 
-### 1.1 Thumbnail 组件 (`apps/frontend/src/components/file-item/Thumbnail.tsx`)
+### 1.1 Thumbnail 组件 (`packages/frontend/src/components/file-item/Thumbnail.tsx`)
 
 **用途**: 显示文件的缩略图或图标
 
@@ -50,7 +50,7 @@
   );
   ```
 
-### 1.2 ImagePreviewModal 组件 (`apps/frontend/src/components/modals/ImagePreviewModal.tsx`)
+### 1.2 ImagePreviewModal 组件 (`packages/frontend/src/components/modals/ImagePreviewModal.tsx`)
 
 **用途**: 全屏预览图片
 
@@ -78,7 +78,7 @@
 
 ---
 
-## 2. 前端 URL 生成工具 (`apps/frontend/src/utils/fileUtils.ts`)
+## 2. 前端 URL 生成工具 (`packages/frontend/src/utils/fileUtils.ts`)
 
 ### 2.1 getThumbnailUrl - 获取图片文件缩略图
 
@@ -144,7 +144,7 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
 
 ## 3. 后端缩略图端点
 
-### 3.1 FileSystemController 中的端点 (`apps/backend/src/file-system/file-system.controller.ts`)
+### 3.1 FileSystemController 中的端点 (`packages/backend/src/file-system/file-system.controller.ts`)
 
 **端点路径**: `GET /v1/file-system/nodes/:nodeId/thumbnail`
 

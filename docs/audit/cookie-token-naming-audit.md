@@ -1,7 +1,7 @@
 # Cookie / Token 命名审计报告
 
 **审计日期：** 2026-05-02
-**审计范围：** `apps/` 目录（前端 + 后端）
+**审计范围：** `packages/` 目录（前端 + 后端）
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Cookie 名称 | 类型 | 用途 | 配置位置 |
 |-------------|------|------|----------|
-| `mxcad.sid` | Session Cookie | 存储 Session ID（express-session） | [apps/backend/src/config/configuration.ts#L152](file:///d:/project/cloudcad/apps/backend/src/config/configuration.ts#L152) |
-| `auth_token` | JWT Cookie | 存储 JWT Access Token（httpOnly Cookie，供 `<img>` 标签等无法携带 Authorization 头的场景使用） | [apps/backend/src/auth/auth.controller.ts#L843](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L843) |
+| `mxcad.sid` | Session Cookie | 存储 Session ID（express-session） | [packages/backend/src/config/configuration.ts#L152](file:///d:/project/cloudcad/packages/backend/src/config/configuration.ts#L152) |
+| `auth_token` | JWT Cookie | 存储 JWT Access Token（httpOnly Cookie，供 `<img>` 标签等无法携带 Authorization 头的场景使用） | [packages/backend/src/auth/auth.controller.ts#L843](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L843) |
 
 ### 1.1 `mxcad.sid` 详情
 
@@ -20,7 +20,7 @@
 - **配置代码：**
 
 ```typescript
-// apps/backend/src/config/configuration.ts#L144-161
+// packages/backend/src/config/configuration.ts#L144-161
 session: {
   secret: process.env.SESSION_SECRET || ...,
   name: process.env.SESSION_NAME || 'mxcad.sid',  // ← Cookie 名称
@@ -32,7 +32,7 @@ session: {
 ```
 
 ```typescript
-// apps/backend/src/main.ts#L91-94
+// packages/backend/src/main.ts#L91-94
 const redisStore = new RedisStore({
   client: redisClient,
   prefix: 'mxcad:sess:',  // ← Redis key 前缀
@@ -42,7 +42,7 @@ const redisStore = new RedisStore({
 - **清除代码：**
 
 ```typescript
-// apps/backend/src/auth/auth.controller.ts#L158-159
+// packages/backend/src/auth/auth.controller.ts#L158-159
 const sessionName = this.configService.get('session.name');
 response.clearCookie(sessionName);  // 清除 mxcad.sid
 ```
@@ -53,7 +53,7 @@ response.clearCookie(sessionName);  // 清除 mxcad.sid
 - **设置代码：**
 
 ```typescript
-// apps/backend/src/auth/auth.controller.ts#L839-850
+// packages/backend/src/auth/auth.controller.ts#L839-850
 private setAuthCookie(response: ExpressResponse, accessToken: string): void {
   const cookieSecure = this.configService.get<boolean>('session.cookieSecure');
   const maxAge = 60 * 60 * 1000; // 1 小时
@@ -71,7 +71,7 @@ private setAuthCookie(response: ExpressResponse, accessToken: string): void {
 - **读取代码（JWT 策略）：**
 
 ```typescript
-// apps/backend/src/auth/strategies/jwt.strategy.ts#L40-54
+// packages/backend/src/auth/strategies/jwt.strategy.ts#L40-54
 jwtFromRequest: ExtractJwt.fromExtractors([
   ExtractJwt.fromAuthHeaderAsBearerToken(),
   (request) => {
@@ -93,7 +93,7 @@ jwtFromRequest: ExtractJwt.fromExtractors([
 - **清除代码：**
 
 ```typescript
-// apps/backend/src/auth/auth.controller.ts#L160
+// packages/backend/src/auth/auth.controller.ts#L160
 response.clearCookie('auth_token', { path: '/' });
 ```
 
@@ -126,7 +126,7 @@ response.clearCookie('auth_token', { path: '/' });
 **前端 API Client（apiClient.ts）：**
 
 ```typescript
-// apps/frontend/src/services/apiClient.ts#L108-113
+// packages/frontend/src/services/apiClient.ts#L108-113
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
   if (token) {
@@ -135,7 +135,7 @@ instance.interceptors.request.use((config) => {
   // ...
 });
 
-// apps/frontend/src/services/apiClient.ts#L174-190
+// packages/frontend/src/services/apiClient.ts#L174-190
 // Token 刷新时
 const refreshToken = localStorage.getItem('refreshToken');
 // ...
@@ -146,12 +146,12 @@ if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
 **前端 AuthContext（AuthContext.tsx）：**
 
 ```typescript
-// apps/frontend/src/contexts/AuthContext.tsx#L155-157
+// packages/frontend/src/contexts/AuthContext.tsx#L155-157
 localStorage.setItem('accessToken', accessToken);
 localStorage.setItem('refreshToken', refreshToken);
 localStorage.setItem('user', JSON.stringify(userData));
 
-// apps/frontend/src/contexts/AuthContext.tsx#L312-315
+// packages/frontend/src/contexts/AuthContext.tsx#L312-315
 localStorage.removeItem('accessToken');
 localStorage.removeItem('refreshToken');
 localStorage.removeItem('user');
@@ -165,25 +165,25 @@ localStorage.removeItem('user');
 
 | 操作 | 文件位置 | 行号 |
 |------|----------|------|
-| 设置 `auth_token` Cookie | [auth.controller.ts](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L839-L850) | 839-850 |
-| 清除 `auth_token` Cookie | [auth.controller.ts](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L160) | 160 |
-| 清除 Session Cookie (`mxcad.sid`) | [auth.controller.ts](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L158-L159) | 158-159 |
-| Session 中间件配置（cookie name） | [main.ts](file:///d:/project/cloudcad/apps/backend/src/main.ts#L97-L112) | 97-112 |
-| Redis Session store prefix | [main.ts](file:///d:/project/cloudcad/apps/backend/src/main.ts#L91-L94) | 91-94 |
-| Session name 配置 | [configuration.ts](file:///d:/project/cloudcad/apps/backend/src/config/configuration.ts#L152) | 152 |
-| JWT 策略读取 `auth_token` | [jwt.strategy.ts](file:///d:/project/cloudcad/apps/backend/src/auth/strategies/jwt.strategy.ts#L44-L52) | 44-52 |
-| 混合认证 Guard（Session 认证） | [mixed-auth.guard.ts](file:///d:/project/cloudcad/apps/backend/src/common/guards/mixed-auth.guard.ts) | 全文 |
+| 设置 `auth_token` Cookie | [auth.controller.ts](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L839-L850) | 839-850 |
+| 清除 `auth_token` Cookie | [auth.controller.ts](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L160) | 160 |
+| 清除 Session Cookie (`mxcad.sid`) | [auth.controller.ts](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L158-L159) | 158-159 |
+| Session 中间件配置（cookie name） | [main.ts](file:///d:/project/cloudcad/packages/backend/src/main.ts#L97-L112) | 97-112 |
+| Redis Session store prefix | [main.ts](file:///d:/project/cloudcad/packages/backend/src/main.ts#L91-L94) | 91-94 |
+| Session name 配置 | [configuration.ts](file:///d:/project/cloudcad/packages/backend/src/config/configuration.ts#L152) | 152 |
+| JWT 策略读取 `auth_token` | [jwt.strategy.ts](file:///d:/project/cloudcad/packages/backend/src/auth/strategies/jwt.strategy.ts#L44-L52) | 44-52 |
+| 混合认证 Guard（Session 认证） | [mixed-auth.guard.ts](file:///d:/project/cloudcad/packages/backend/src/common/guards/mixed-auth.guard.ts) | 全文 |
 
 ### 3.2 前端 localStorage 操作（Token 相关）
 
 | 操作 | 文件位置 | 行号 |
 |------|----------|------|
-| 读取/写入 `accessToken`, `refreshToken`, `user` | [apiClient.ts](file:///d:/project/cloudcad/apps/frontend/src/services/apiClient.ts#L110,L174,L188-L190,L205-L207,L239-L241) | 多处 |
-| 读取/写入/清除认证信息 | [AuthContext.tsx](file:///d:/project/cloudcad/apps/frontend/src/contexts/AuthContext.tsx#L64-L113,L155-L157,L193-L195,L245-L247,L269-L271,L289-L291,L312-L315,L371-L373) | 多处 |
-| 清除认证信息 | [authCheck.ts](file:///d:/project/cloudcad/apps/frontend/src/utils/authCheck.ts#L106-L108) | 106-108 |
-| 微信登录结果存储 | [Login.tsx](file:///d:/project/cloudcad/apps/frontend/src/pages/Login.tsx#L84-L97) | 84-97 |
-| 邮箱验证 Token 存储 | [EmailVerification.tsx](file:///d:/project/cloudcad/apps/frontend/src/pages/EmailVerification.tsx#L135-L153) | 135-153 |
-| 手机验证 Token 存储 | [PhoneVerification.tsx](file:///d:/project/cloudcad/apps/frontend/src/pages/PhoneVerification.tsx#L115-L117) | 115-117 |
+| 读取/写入 `accessToken`, `refreshToken`, `user` | [apiClient.ts](file:///d:/project/cloudcad/packages/frontend/src/services/apiClient.ts#L110,L174,L188-L190,L205-L207,L239-L241) | 多处 |
+| 读取/写入/清除认证信息 | [AuthContext.tsx](file:///d:/project/cloudcad/packages/frontend/src/contexts/AuthContext.tsx#L64-L113,L155-L157,L193-L195,L245-L247,L269-L271,L289-L291,L312-L315,L371-L373) | 多处 |
+| 清除认证信息 | [authCheck.ts](file:///d:/project/cloudcad/packages/frontend/src/utils/authCheck.ts#L106-L108) | 106-108 |
+| 微信登录结果存储 | [Login.tsx](file:///d:/project/cloudcad/packages/frontend/src/pages/Login.tsx#L84-L97) | 84-97 |
+| 邮箱验证 Token 存储 | [EmailVerification.tsx](file:///d:/project/cloudcad/packages/frontend/src/pages/EmailVerification.tsx#L135-L153) | 135-153 |
+| 手机验证 Token 存储 | [PhoneVerification.tsx](file:///d:/project/cloudcad/packages/frontend/src/pages/PhoneVerification.tsx#L115-L117) | 115-117 |
 
 ---
 
@@ -197,9 +197,9 @@ localStorage.removeItem('user');
 
 | 位置 | 当前用途 | 说明 |
 |------|----------|------|
-| [auth.controller.ts#L843](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L843) | JWT Cookie 名称 | 后端登录成功后设置此 Cookie |
-| [jwt.strategy.ts#L45](file:///d:/project/cloudcad/apps/backend/src/auth/strategies/jwt.strategy.ts#L45) | JWT 提取来源 | 从 Cookie 中提取 `auth_token` 进行 JWT 验证 |
-| [auth.controller.ts#L160](file:///d:/project/cloudcad/apps/backend/src/auth/auth.controller.ts#L160) | Cookie 清除 | 退出登录时清除此 Cookie |
+| [auth.controller.ts#L843](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L843) | JWT Cookie 名称 | 后端登录成功后设置此 Cookie |
+| [jwt.strategy.ts#L45](file:///d:/project/cloudcad/packages/backend/src/auth/strategies/jwt.strategy.ts#L45) | JWT 提取来源 | 从 Cookie 中提取 `auth_token` 进行 JWT 验证 |
+| [auth.controller.ts#L160](file:///d:/project/cloudcad/packages/backend/src/auth/auth.controller.ts#L160) | Cookie 清除 | 退出登录时清除此 Cookie |
 
 ### 4.2 影响范围
 

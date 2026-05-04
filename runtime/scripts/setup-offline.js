@@ -54,7 +54,9 @@ function getWindowsRelativePath(scriptDir, targetPath) {
   const backPath = backLevels > 0 ? Array(backLevels).join('..\\') : '';
 
   // 计算目标路径相对于项目根目录的路径
-  const relativeToRoot = path.relative(PROJECT_ROOT, targetPath).replace(/\\/g, '\\');
+  const relativeToRoot = path
+    .relative(PROJECT_ROOT, targetPath)
+    .replace(/\\/g, '\\');
 
   return `%~dp0${backPath}${relativeToRoot}`;
 }
@@ -97,9 +99,10 @@ function createWindowsNodeWrapper(command, nodePath, scriptPath, scriptDir) {
   const relativeScriptPath = getWindowsRelativePath(scriptDir, scriptPath);
 
   // pnpm 需要禁用 Corepack，避免从网络下载
-  const extraEnv = command === 'pnpm'
-    ? `set "COREPACK_ENABLE=0"\nset "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"\n`
-    : '';
+  const extraEnv =
+    command === 'pnpm'
+      ? `set "COREPACK_ENABLE=0"\nset "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"\n`
+      : '';
 
   return `@echo off
 REM Auto-generated wrapper for ${command}
@@ -176,9 +179,10 @@ function createLinuxNodeWrapper(command, nodePath, scriptPath, scriptDir) {
   const backPath = backLevels > 0 ? Array(backLevels + 1).join('../') : '';
 
   // pnpm 需要禁用 Corepack，避免从网络下载
-  const extraEnv = command === 'pnpm'
-    ? `export COREPACK_ENABLE=0\nexport COREPACK_ENABLE_DOWNLOAD_PROMPT=0\n`
-    : '';
+  const extraEnv =
+    command === 'pnpm'
+      ? `export COREPACK_ENABLE=0\nexport COREPACK_ENABLE_DOWNLOAD_PROMPT=0\n`
+      : '';
 
   return `#!/bin/bash
 # Auto-generated wrapper for ${command}
@@ -202,9 +206,14 @@ ${extraEnv}exec "$PROJECT_ROOT/${relativeNodePath}" "$PROJECT_ROOT/${relativeScr
 function createWindowsPs1Wrapper(command, targetPath, scriptDir) {
   const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
   // 生成正确的回退路径，如 "..\..\"
-  const backPath = backLevels > 0 ? Array(backLevels).fill('..').join('\\') : '';
-  const relativeTarget = path.relative(PROJECT_ROOT, targetPath).replace(/\\/g, '\\');
-  const relativeNodeDir = path.relative(PROJECT_ROOT, OFFLINE_NODE_DIR).replace(/\\/g, '\\');
+  const backPath =
+    backLevels > 0 ? Array(backLevels).fill('..').join('\\') : '';
+  const relativeTarget = path
+    .relative(PROJECT_ROOT, targetPath)
+    .replace(/\\/g, '\\');
+  const relativeNodeDir = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_DIR)
+    .replace(/\\/g, '\\');
 
   return `# Auto-generated wrapper for ${command}
 # This script uses offline Node.js from CloudCAD runtime
@@ -231,14 +240,20 @@ $env:PATH = "$NodeDir;$env:PATH"
 function createWindowsPs1NodeWrapper(command, nodePath, scriptPath, scriptDir) {
   const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
   // 生成正确的回退路径，如 "..\..\"
-  const backPath = backLevels > 0 ? Array(backLevels).fill('..').join('\\') : '';
-  const relativeNodeExe = path.relative(PROJECT_ROOT, nodePath).replace(/\\/g, '\\');
-  const relativeScriptPath = path.relative(PROJECT_ROOT, scriptPath).replace(/\\/g, '\\');
+  const backPath =
+    backLevels > 0 ? Array(backLevels).fill('..').join('\\') : '';
+  const relativeNodeExe = path
+    .relative(PROJECT_ROOT, nodePath)
+    .replace(/\\/g, '\\');
+  const relativeScriptPath = path
+    .relative(PROJECT_ROOT, scriptPath)
+    .replace(/\\/g, '\\');
 
   // pnpm 需要禁用 Corepack，避免从网络下载
-  const extraEnv = command === 'pnpm'
-    ? `$env:COREPACK_ENABLE = "0"\n$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"\n`
-    : '';
+  const extraEnv =
+    command === 'pnpm'
+      ? `$env:COREPACK_ENABLE = "0"\n$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"\n`
+      : '';
 
   return `# Auto-generated wrapper for ${command}
 # This script uses offline Node.js from CloudCAD runtime
@@ -272,6 +287,208 @@ $Pm2Path = Join-Path $ScriptDir "runtime\\windows\\node\\node_modules\\pm2\\bin\
 
 & $NodePath $Pm2Path @Args
 `;
+}
+
+/**
+ * 创建 Git Bash 兼容的 shell 包装脚本
+ * 在 Windows 上，除了 .cmd 和 .ps1，额外生成无扩展名的 shell 脚本供 Git Bash 使用
+ * @param {string} dir 脚本所在目录（绝对路径）
+ * @returns {number} 创建的脚本数量
+ */
+function createBashWrappers(dir) {
+  if (!IS_WINDOWS) return 0;
+  let count = 0;
+
+  // 计算从 dir 回到 PROJECT_ROOT 的 Unix 风格回退路径
+  const relDir = path.relative(PROJECT_ROOT, dir);
+  const backLevels = relDir.split(path.sep).filter(Boolean).length;
+  const bashBackPath =
+    backLevels > 0 ? Array(backLevels).fill('..').join('/') : '';
+  const bashBackPrefix = bashBackPath ? bashBackPath + '/' : '';
+
+  // 计算各路径（Unix 风格，Git Bash 使用）
+  const nodeDir = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_DIR)
+    .replace(/\\/g, '/');
+  const nodeExe = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_EXE)
+    .replace(/\\/g, '/');
+
+  // 1. node
+  const nodeBash = path.join(dir, 'node');
+  if (fs.existsSync(path.join(dir, 'node.cmd')) && !fs.existsSync(nodeBash)) {
+    const content = `#!/usr/bin/env bash
+# CloudCAD offline Node.js entry
+# Compatible with Git Bash on Windows
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$SCRIPT_DIR/${bashBackPrefix}${nodeExe}" "$@"
+`;
+    fs.writeFileSync(nodeBash, content, { encoding: 'utf8' });
+    fs.chmodSync(nodeBash, 0o755);
+    log(`创建 Bash 包装脚本: ${nodeBash}`);
+    count++;
+  }
+
+  // 2. npm（通过 node 执行 npm-cli.js）
+  const npmBash = path.join(dir, 'npm');
+  if (fs.existsSync(path.join(dir, 'npm.cmd')) && !fs.existsSync(npmBash)) {
+    const npmJsPath = path.join(
+      OFFLINE_NODE_DIR,
+      'node_modules',
+      'npm',
+      'bin',
+      'npm-cli.js'
+    );
+    if (fs.existsSync(npmJsPath)) {
+      const npmJs = path.relative(PROJECT_ROOT, npmJsPath).replace(/\\/g, '/');
+      const pmRootLine = bashBackPath
+        ? `PROJECT_ROOT="$(cd "$SCRIPT_DIR/${bashBackPath}" && pwd)"`
+        : 'PROJECT_ROOT="$SCRIPT_DIR"';
+      const content = `#!/usr/bin/env bash
+# CloudCAD offline npm entry
+# Compatible with Git Bash on Windows
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+${pmRootLine}
+export PATH="$PROJECT_ROOT/${nodeDir}:$PATH"
+exec "$PROJECT_ROOT/${nodeExe}" "$PROJECT_ROOT/${npmJs}" "$@"
+`;
+      fs.writeFileSync(npmBash, content, { encoding: 'utf8' });
+      fs.chmodSync(npmBash, 0o755);
+      log(`创建 Bash 包装脚本: ${npmBash}`);
+      count++;
+    }
+  }
+
+  // 3. npx（通过 node 执行 npx-cli.js）
+  const npxBash = path.join(dir, 'npx');
+  if (fs.existsSync(path.join(dir, 'npx.cmd')) && !fs.existsSync(npxBash)) {
+    const npxJsPath = path.join(
+      OFFLINE_NODE_DIR,
+      'node_modules',
+      'npm',
+      'bin',
+      'npx-cli.js'
+    );
+    if (fs.existsSync(npxJsPath)) {
+      const npxJs = path.relative(PROJECT_ROOT, npxJsPath).replace(/\\/g, '/');
+      const pmRootLine = bashBackPath
+        ? `PROJECT_ROOT="$(cd "$SCRIPT_DIR/${bashBackPath}" && pwd)"`
+        : 'PROJECT_ROOT="$SCRIPT_DIR"';
+      const content = `#!/usr/bin/env bash
+# CloudCAD offline npx entry
+# Compatible with Git Bash on Windows
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+${pmRootLine}
+export PATH="$PROJECT_ROOT/${nodeDir}:$PATH"
+exec "$PROJECT_ROOT/${nodeExe}" "$PROJECT_ROOT/${npxJs}" "$@"
+`;
+      fs.writeFileSync(npxBash, content, { encoding: 'utf8' });
+      fs.chmodSync(npxBash, 0o755);
+      log(`创建 Bash 包装脚本: ${npxBash}`);
+      count++;
+    }
+  }
+
+  // 4. pnpm（通过 node 执行 pnpm.cjs）
+  const pnpmBash = path.join(dir, 'pnpm');
+  if (fs.existsSync(path.join(dir, 'pnpm.cmd')) && !fs.existsSync(pnpmBash)) {
+    const pnpmJs = findPnpmJs();
+    if (pnpmJs) {
+      const pnpmRel = path.relative(PROJECT_ROOT, pnpmJs).replace(/\\/g, '/');
+      const pmRootLine = bashBackPath
+        ? `PROJECT_ROOT="$(cd "$SCRIPT_DIR/${bashBackPath}" && pwd)"`
+        : 'PROJECT_ROOT="$SCRIPT_DIR"';
+      const content = `#!/usr/bin/env bash
+# CloudCAD offline pnpm entry
+# Compatible with Git Bash on Windows
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+${pmRootLine}
+export COREPACK_ENABLE=0
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+exec "$PROJECT_ROOT/${nodeExe}" "$PROJECT_ROOT/${pnpmRel}" "$@"
+`;
+      fs.writeFileSync(pnpmBash, content, { encoding: 'utf8' });
+      fs.chmodSync(pnpmBash, 0o755);
+      log(`创建 Bash 包装脚本: ${pnpmBash}`);
+      count++;
+    }
+  }
+
+  // 5. pm2（通过 node 执行 pm2）
+  const pm2Bash = path.join(dir, 'pm2');
+  if (fs.existsSync(path.join(dir, 'pm2.cmd')) && !fs.existsSync(pm2Bash)) {
+    const pm2Js = findPm2Js();
+    if (pm2Js) {
+      const pm2Rel = path.relative(PROJECT_ROOT, pm2Js).replace(/\\/g, '/');
+      const pmRootLine = bashBackPath
+        ? `PROJECT_ROOT="$(cd "$SCRIPT_DIR/${bashBackPath}" && pwd)"`
+        : 'PROJECT_ROOT="$SCRIPT_DIR"';
+      const content = `#!/usr/bin/env bash
+# CloudCAD offline pm2 entry
+# Compatible with Git Bash on Windows
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+${pmRootLine}
+export PM2_HOME="$PROJECT_ROOT/data/pm2"
+export PATH="$PROJECT_ROOT/${nodeDir}:$PATH"
+exec "$PROJECT_ROOT/${nodeExe}" "$PROJECT_ROOT/${pm2Rel}" "$@"
+`;
+      fs.writeFileSync(pm2Bash, content, { encoding: 'utf8' });
+      fs.chmodSync(pm2Bash, 0o755);
+      log(`创建 Bash 包装脚本: ${pm2Bash}`);
+      count++;
+    }
+  }
+
+  return count;
+}
+
+/**
+ * 生成 project-env.sh — 包含 shell function 的 Git Bash 环境文件
+ * 用户 source 后，在项目子目录中直接输入 pnpm/node/npm/npx 就会自动使用项目的离线运行时
+ * 在项目目录外则 fallback 到全局命令
+ * @returns {boolean}
+ */
+function createProjectEnvFile() {
+  const envPath = path.join(PROJECT_ROOT, 'project-env.sh');
+  const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
+
+  const content = `#!/usr/bin/env bash
+# CloudCAD project environment
+# Git Bash shell functions for offline runtime auto-detection
+#
+# Usage: Add the following line to ~/.bashrc or ~/.zshrc:
+#   source "${projectRootUnix}/project-env.sh"
+#
+# Then in any project subdirectory, type pnpm/node/npm/npx directly.
+# Outside the project, the global command is used automatically.
+
+_PROJECT_SENTINEL="${projectRootUnix}"
+
+for _cmd in node npm npx pnpm; do
+  eval "\${_cmd}() {
+    local dir=\"\\\$PWD\"
+    while [[ \"\\\$dir\" != \"/\" ]]; do
+      local wrapper=\"\\\$dir/\${_cmd}\"
+      if [[ -x \"\\\$wrapper\" ]] && [[ -f \"\\\$dir/\${_cmd}.cmd\" ]]; then
+        \"\\\$wrapper\" \"\\\$@\"
+        return \\\$?
+      fi
+      dir=\"\\\$(dirname \"\\\$dir\")\"
+    done
+    command \${_cmd} \"\\\$@\"
+  }"
+done
+unset _cmd _PROJECT_SENTINEL
+`;
+
+  fs.writeFileSync(envPath, content, { encoding: 'utf8' });
+  log(`创建 project 环境文件: ${envPath}`);
+  return true;
 }
 
 // ==================== 主要逻辑 ====================
@@ -375,18 +592,33 @@ function createNodeWrapper(dir, command, scriptPath) {
   if (IS_WINDOWS) {
     // 生成 .cmd 文件
     const cmdPath = path.join(dir, `${command}.cmd`);
-    const cmdContent = createWindowsNodeWrapper(command, OFFLINE_NODE_EXE, scriptPath, scriptDir);
+    const cmdContent = createWindowsNodeWrapper(
+      command,
+      OFFLINE_NODE_EXE,
+      scriptPath,
+      scriptDir
+    );
     fs.writeFileSync(cmdPath, cmdContent, { encoding: 'utf8' });
     log(`创建 node 包装脚本: ${cmdPath}`);
 
     // 生成 .ps1 文件（PowerShell 兼容）
     const ps1Path = path.join(dir, `${command}.ps1`);
-    const ps1Content = createWindowsPs1NodeWrapper(command, OFFLINE_NODE_EXE, scriptPath, scriptDir);
+    const ps1Content = createWindowsPs1NodeWrapper(
+      command,
+      OFFLINE_NODE_EXE,
+      scriptPath,
+      scriptDir
+    );
     fs.writeFileSync(ps1Path, ps1Content, { encoding: 'utf8' });
     log(`创建 node 包装脚本: ${ps1Path}`);
   } else {
     const wrapperPath = path.join(dir, command);
-    const content = createLinuxNodeWrapper(command, OFFLINE_NODE_EXE, scriptPath, scriptDir);
+    const content = createLinuxNodeWrapper(
+      command,
+      OFFLINE_NODE_EXE,
+      scriptPath,
+      scriptDir
+    );
     fs.writeFileSync(wrapperPath, content, { encoding: 'utf8' });
     fs.chmodSync(wrapperPath, 0o755);
     log(`创建 node 包装脚本: ${wrapperPath}`);
@@ -404,41 +636,105 @@ function findPnpmJs() {
   const candidates = IS_WINDOWS
     ? [
         path.join(OFFLINE_NODE_DIR, 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
-        path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'node_modules',
+          'pnpm',
+          'bin',
+          'pnpm.cjs'
+        ),
       ]
     : [
         // 新结构：runtime/linux/node/node_modules/pnpm/bin/pnpm.cjs
-        path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'node_modules',
+          'pnpm',
+          'bin',
+          'pnpm.cjs'
+        ),
         // 旧结构：runtime/linux/node/lib/node_modules/pnpm/bin/pnpm.cjs
-        path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'lib',
+          'node_modules',
+          'pnpm',
+          'bin',
+          'pnpm.cjs'
+        ),
         // bin 同级的 node_modules
-        path.join(OFFLINE_NODE_DIR, '..', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+        path.join(
+          OFFLINE_NODE_DIR,
+          '..',
+          'node_modules',
+          'pnpm',
+          'bin',
+          'pnpm.cjs'
+        ),
       ];
-  
+
   for (const p of candidates) {
     if (fs.existsSync(p)) {
       return p;
     }
   }
-  
+
   // 回退到 corepack（不推荐，需要网络下载）
   const corepackCandidates = IS_WINDOWS
     ? [
-        path.join(OFFLINE_NODE_DIR, 'node_modules', 'corepack', 'dist', 'pnpm.js'),
-        path.join(PLATFORM_DIR, 'node', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+        path.join(
+          OFFLINE_NODE_DIR,
+          'node_modules',
+          'corepack',
+          'dist',
+          'pnpm.js'
+        ),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'node_modules',
+          'corepack',
+          'dist',
+          'pnpm.js'
+        ),
       ]
     : [
-        path.join(PLATFORM_DIR, 'node', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
-        path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
-        path.join(OFFLINE_NODE_DIR, '..', 'node_modules', 'corepack', 'dist', 'pnpm.js'),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'node_modules',
+          'corepack',
+          'dist',
+          'pnpm.js'
+        ),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'lib',
+          'node_modules',
+          'corepack',
+          'dist',
+          'pnpm.js'
+        ),
+        path.join(
+          OFFLINE_NODE_DIR,
+          '..',
+          'node_modules',
+          'corepack',
+          'dist',
+          'pnpm.js'
+        ),
       ];
-  
+
   for (const p of corepackCandidates) {
     if (fs.existsSync(p)) {
       return p;
     }
   }
-  
+
   return null;
 }
 
@@ -458,17 +754,25 @@ function findPm2Js() {
         // 新结构：runtime/linux/node/node_modules/pm2/bin/pm2
         path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2'),
         // 旧结构：runtime/linux/node/lib/node_modules/pm2/bin/pm2
-        path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'pm2', 'bin', 'pm2'),
+        path.join(
+          PLATFORM_DIR,
+          'node',
+          'lib',
+          'node_modules',
+          'pm2',
+          'bin',
+          'pm2'
+        ),
         // bin 同级的 node_modules
         path.join(OFFLINE_NODE_DIR, '..', 'node_modules', 'pm2', 'bin', 'pm2'),
       ];
-  
+
   for (const p of candidates) {
     if (fs.existsSync(p)) {
       return p;
     }
   }
-  
+
   return null;
 }
 
@@ -494,9 +798,17 @@ function setupNodeModulesBin() {
       : [
           path.join(OFFLINE_NODE_DIR, cmd),
           path.join(PLATFORM_DIR, 'node', 'bin', cmd),
-          path.join(PLATFORM_DIR, 'node', 'lib', 'node_modules', 'npm', 'bin', `${cmd}-cli.js`),
+          path.join(
+            PLATFORM_DIR,
+            'node',
+            'lib',
+            'node_modules',
+            'npm',
+            'bin',
+            `${cmd}-cli.js`
+          ),
         ];
-    
+
     for (const cmdPath of cmdPathCandidates) {
       if (fs.existsSync(cmdPath)) {
         createWrapper(NODE_MODULES_BIN, cmd, cmdPath);
@@ -517,68 +829,140 @@ function setupNodeModulesBin() {
   // pnpm install 时会创建包含绝对路径的脚本，需要修复为正确的 node 路径
   count += fixBinScripts();
 
+  // Windows 上清理 fixBinScripts 之前生成的残留 shell 脚本（含 #!/bin/sh）
+  // 这些脚本对 cmd.exe 不可用，会触发 WSL 错误
+  // .CMD 文件足以处理 Windows 上的脚本执行
+  if (IS_WINDOWS) {
+    const binDirs = [
+      NODE_MODULES_BIN,
+      path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
+      path.join(PROJECT_ROOT, 'packages', 'frontend', 'node_modules', '.bin'),
+      path.join(
+        PROJECT_ROOT,
+        'packages',
+        'config-service',
+        'node_modules',
+        '.bin'
+      ),
+    ];
+    for (const binDir of binDirs) {
+      if (!fs.existsSync(binDir)) continue;
+      const binFiles = fs
+        .readdirSync(binDir)
+        .filter(
+          (f) =>
+            !f.endsWith('.cmd') &&
+            !f.endsWith('.CMD') &&
+            !f.endsWith('.ps1') &&
+            !f.startsWith('.')
+        );
+      for (const binFile of binFiles) {
+        const binPath = path.join(binDir, binFile);
+        try {
+          const content = fs.readFileSync(binPath, 'utf8');
+          if (
+            content.includes('CloudCAD fixed wrapper') ||
+            content.includes('#!/bin/sh')
+          ) {
+            fs.unlinkSync(binPath);
+            log(`清理残留 shell 脚本: ${path.relative(PROJECT_ROOT, binPath)}`);
+            count++;
+          }
+        } catch {
+          /* ignore binary files */
+        }
+      }
+    }
+  }
+
+  // 5. Bash 包装脚本（Git Bash 兼容，确保 npm scripts 内部也能找到 pnpm）
+  count += createBashWrappers(NODE_MODULES_BIN);
+
   return count;
 }
 
 /**
  * 修复所有 node_modules/.bin 目录中脚本的硬编码路径
  * pnpm 在安装时会创建包含绝对路径的脚本，部署到不同目录后会失效
- * 
+ *
  * 解决方案：重写整个脚本，使用动态计算的 PROJECT_ROOT 变量
  * @returns {number} 修复的脚本数量
  */
 function fixBinScripts() {
+  // Windows 上不重写 shell 脚本：
+  // - .cmd 文件本身通过 PATH 中的 node.cmd 找到离线 node，无需修改
+  // - 无扩展名的 shell 脚本是为 Git Bash 准备的，由 createBashWrappers() 生成
+  // - 强行重写为 #!/bin/sh 会导致 cmd.exe 执行时通过 WSL 运行 → 报错
+  if (IS_WINDOWS) return 0;
   let count = 0;
-  
+
   // 需要修复的 .bin 目录列表
   const binDirs = [
     NODE_MODULES_BIN, // 根目录 node_modules/.bin
-    path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules', '.bin'),
+    path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
     path.join(PROJECT_ROOT, 'packages', 'frontend', 'node_modules', '.bin'),
-    path.join(PROJECT_ROOT, 'packages', 'config-service', 'node_modules', '.bin'),
+    path.join(
+      PROJECT_ROOT,
+      'packages',
+      'config-service',
+      'node_modules',
+      '.bin'
+    ),
   ];
-  
+
   for (const binDir of binDirs) {
     if (!fs.existsSync(binDir)) continue;
-    
-    const binFiles = fs.readdirSync(binDir).filter(f => 
-      !f.endsWith('.cmd') && !f.endsWith('.ps1') && !f.startsWith('.')
-    );
-    
+
+    const binFiles = fs
+      .readdirSync(binDir)
+      .filter(
+        (f) => !f.endsWith('.cmd') && !f.endsWith('.ps1') && !f.startsWith('.')
+      );
+
     for (const binFile of binFiles) {
       const binPath = path.join(binDir, binFile);
       try {
         let content = fs.readFileSync(binPath, 'utf8');
-        
+
         // 检查是否需要修复（包含硬编码路径或绝对路径）
-        const needsFix = 
+        const needsFix =
           content.includes('/runtime/') ||
           (content.includes('/node_modules/') && content.includes('node')) ||
           content.match(/^#![^\n]*\/(usr|app|home)\//m);
-        
+
         if (needsFix) {
           // 计算 node 的相对路径
           const nodeRelPath = path.relative(binDir, OFFLINE_NODE_EXE);
-          
+
           // 解析原始脚本中的目标 JS 文件路径
           // pnpm 格式：exec "$basedir/../node_modules/xxx/build/index.js" "$@"
           // 或者：node "$basedir/../xxx.js" "$@"
           let targetJs = null;
-          
+
           // 方法1：解析 pnpm 标准格式
-          const pnpmMatch = content.match(/exec\s+["']?\$basedir\/(.+?)["']?\s+\$@/);
+          const pnpmMatch = content.match(
+            /exec\s+["']?\$basedir\/(.+?)["']?\s+\$@/
+          );
           if (pnpmMatch) {
-            targetJs = path.resolve(binDir, pnpmMatch[1].replace(/^\.\.\//g, '../'));
+            targetJs = path.resolve(
+              binDir,
+              pnpmMatch[1].replace(/^\.\.\//g, '../')
+            );
           }
-          
+
           // 方法2：解析 node + 路径格式
           if (!targetJs) {
-            const nodeMatch = content.match(/node\s+["']?\$basedir\/(.+?)["']?\s+/);
+            const nodeMatch = content.match(
+              /node\s+["']?\$basedir\/(.+?)["']?\s+/
+            );
             if (nodeMatch) {
-              targetJs = path.resolve(binDir, nodeMatch[1].replace(/^\.\.\//g, '../'));
+              targetJs = path.resolve(
+                binDir,
+                nodeMatch[1].replace(/^\.\.\//g, '../')
+              );
             }
           }
-          
+
           // 方法3：直接查找 node_modules 中的入口文件
           if (!targetJs || !fs.existsSync(targetJs)) {
             // 尝试查找对应的包
@@ -586,7 +970,7 @@ function fixBinScripts() {
             const buildIndex = path.join(pkgDir, 'build', 'index.js');
             const distIndex = path.join(pkgDir, 'dist', 'index.js');
             const cliIndex = path.join(pkgDir, 'cli.js');
-            
+
             for (const candidate of [buildIndex, distIndex, cliIndex]) {
               if (fs.existsSync(candidate)) {
                 targetJs = candidate;
@@ -594,10 +978,10 @@ function fixBinScripts() {
               }
             }
           }
-          
+
           if (targetJs && fs.existsSync(targetJs)) {
             const targetRelPath = path.relative(binDir, targetJs);
-            
+
             // 生成新的脚本内容
             const newScript = `#!/bin/sh
 # CloudCAD fixed wrapper - dynamically resolves paths
@@ -614,7 +998,9 @@ exec "\$basedir/${nodeRelPath}" "\$basedir/${targetRelPath}" "\$@"
             count++;
           } else {
             // 无法找到目标文件，跳过
-            log(`跳过脚本（找不到入口）: ${path.relative(PROJECT_ROOT, binPath)}`);
+            log(
+              `跳过脚本（找不到入口）: ${path.relative(PROJECT_ROOT, binPath)}`
+            );
           }
         }
       } catch (e) {
@@ -622,7 +1008,7 @@ exec "\$basedir/${nodeRelPath}" "\$basedir/${targetRelPath}" "\$@"
       }
     }
   }
-  
+
   return count;
 }
 
@@ -640,6 +1026,9 @@ function setupOfflineNodeDir() {
     count++;
   }
 
+  // Bash 包装脚本（Git Bash 兼容）
+  count += createBashWrappers(OFFLINE_NODE_DIR);
+
   return count;
 }
 
@@ -651,10 +1040,18 @@ function setupProjectRoot() {
   let count = 0;
 
   // 计算相对路径
-  const relativeNodeDir = path.relative(PROJECT_ROOT, OFFLINE_NODE_DIR).replace(/\\/g, '\\');
-  const relativeNodeExe = path.relative(PROJECT_ROOT, OFFLINE_NODE_EXE).replace(/\\/g, '\\');
-  const relativePnpmJs = findPnpmJs() ? path.relative(PROJECT_ROOT, findPnpmJs()).replace(/\\/g, '\\') : null;
-  const relativePm2Js = findPm2Js() ? path.relative(PROJECT_ROOT, findPm2Js()).replace(/\\/g, '\\') : null;
+  const relativeNodeDir = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_DIR)
+    .replace(/\\/g, '\\');
+  const relativeNodeExe = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_EXE)
+    .replace(/\\/g, '\\');
+  const relativePnpmJs = findPnpmJs()
+    ? path.relative(PROJECT_ROOT, findPnpmJs()).replace(/\\/g, '\\')
+    : null;
+  const relativePm2Js = findPm2Js()
+    ? path.relative(PROJECT_ROOT, findPm2Js()).replace(/\\/g, '\\')
+    : null;
 
   // ========== 1. node 入口脚本 ==========
   if (IS_WINDOWS) {
@@ -707,7 +1104,9 @@ exec "$SCRIPT_DIR/${path.relative(PROJECT_ROOT, OFFLINE_NODE_EXE)}" "$@"
 
   if (fs.existsSync(npmPath)) {
     if (IS_WINDOWS) {
-      const relativeNpmPath = path.relative(PROJECT_ROOT, npmPath).replace(/\\/g, '\\');
+      const relativeNpmPath = path
+        .relative(PROJECT_ROOT, npmPath)
+        .replace(/\\/g, '\\');
 
       // .cmd 文件
       const npmCmdPath = path.join(PROJECT_ROOT, 'npm.cmd');
@@ -762,7 +1161,9 @@ exec "$SCRIPT_DIR/${path.relative(PROJECT_ROOT, npmPath)}" "$@"
 
   if (fs.existsSync(npxPath)) {
     if (IS_WINDOWS) {
-      const relativeNpxPath = path.relative(PROJECT_ROOT, npxPath).replace(/\\/g, '\\');
+      const relativeNpxPath = path
+        .relative(PROJECT_ROOT, npxPath)
+        .replace(/\\/g, '\\');
 
       // .cmd 文件
       const npxCmdPath = path.join(PROJECT_ROOT, 'npx.cmd');
@@ -889,6 +1290,11 @@ exec "$SCRIPT_DIR/${path.relative(PROJECT_ROOT, OFFLINE_NODE_EXE)}" "$SCRIPT_DIR
     }
   }
 
+  // ========== 6. Bash 包装脚本（Git Bash 兼容）==========
+  if (IS_WINDOWS) {
+    count += createBashWrappers(PROJECT_ROOT);
+  }
+
   return count;
 }
 
@@ -903,9 +1309,10 @@ function setupPackageDirs() {
     return count;
   }
 
-  const subDirs = fs.readdirSync(packagesDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name);
+  const subDirs = fs
+    .readdirSync(packagesDir, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
 
   for (const subDir of subDirs) {
     const targetDir = path.join(packagesDir, subDir);
@@ -931,8 +1338,12 @@ function createEntryScriptsInDir(targetDir) {
     : Array(backLevels).fill('..').join('/');
 
   // 计算各路径相对于项目根目录的路径（用于脚本内容）
-  const rootRelativeNodeExe = path.relative(PROJECT_ROOT, OFFLINE_NODE_EXE).replace(/\\/g, '\\');
-  const rootRelativeNodeDir = path.relative(PROJECT_ROOT, OFFLINE_NODE_DIR).replace(/\\/g, '\\');
+  const rootRelativeNodeExe = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_EXE)
+    .replace(/\\/g, '\\');
+  const rootRelativeNodeDir = path
+    .relative(PROJECT_ROOT, OFFLINE_NODE_DIR)
+    .replace(/\\/g, '\\');
 
   // ========== 1. node 入口脚本 ==========
   if (IS_WINDOWS) {
@@ -986,7 +1397,9 @@ exec "$PROJECT_ROOT/${rootRelativeNodeExe}" "$@"
     : path.join(OFFLINE_NODE_DIR, 'npm');
 
   if (fs.existsSync(npmPath)) {
-    const rootRelativeNpmPath = path.relative(PROJECT_ROOT, npmPath).replace(/\\/g, '\\');
+    const rootRelativeNpmPath = path
+      .relative(PROJECT_ROOT, npmPath)
+      .replace(/\\/g, '\\');
 
     if (IS_WINDOWS) {
       // .cmd 文件
@@ -1043,7 +1456,9 @@ exec "$PROJECT_ROOT/${rootRelativeNpmPath}" "$@"
     : path.join(OFFLINE_NODE_DIR, 'npx');
 
   if (fs.existsSync(npxPath)) {
-    const rootRelativeNpxPath = path.relative(PROJECT_ROOT, npxPath).replace(/\\/g, '\\');
+    const rootRelativeNpxPath = path
+      .relative(PROJECT_ROOT, npxPath)
+      .replace(/\\/g, '\\');
 
     if (IS_WINDOWS) {
       // .cmd 文件
@@ -1094,15 +1509,17 @@ exec "$PROJECT_ROOT/${rootRelativeNpxPath}" "$@"
     }
   }
 
-    // ========== 4. pnpm 入口脚本 ==========
-    const pnpmJs = findPnpmJs();
-    if (pnpmJs) {
-      const rootRelativePnpmJs = path.relative(PROJECT_ROOT, pnpmJs).replace(/\\/g, '\\');
-  
-      if (IS_WINDOWS) {
-              // .cmd 文件
-              const pnpmCmdPath = path.join(targetDir, 'pnpm.cmd');
-              const pnpmCmdContent = `@echo off
+  // ========== 4. pnpm 入口脚本 ==========
+  const pnpmJs = findPnpmJs();
+  if (pnpmJs) {
+    const rootRelativePnpmJs = path
+      .relative(PROJECT_ROOT, pnpmJs)
+      .replace(/\\/g, '\\');
+
+    if (IS_WINDOWS) {
+      // .cmd 文件
+      const pnpmCmdPath = path.join(targetDir, 'pnpm.cmd');
+      const pnpmCmdContent = `@echo off
         REM CloudCAD offline pnpm entry
         REM Only effective in project directory, does not affect system pnpm
         REM Disable Corepack to use local pnpm and avoid network download
@@ -1110,13 +1527,14 @@ exec "$PROJECT_ROOT/${rootRelativeNpxPath}" "$@"
         set "COREPACK_ENABLE=0"
         set "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
         "%~dp0${backPath}\\${rootRelativeNodeExe}" "%~dp0${backPath}\\${rootRelativePnpmJs}" %*
-        `;        fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
-        log(`创建子目录入口脚本: ${pnpmCmdPath}`);
-        count++;
-  
-              // .ps1 文件
-              const pnpmPs1Path = path.join(targetDir, 'pnpm.ps1');
-              const pnpmPs1Content = `# CloudCAD offline pnpm entry
+        `;
+      fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
+      log(`创建子目录入口脚本: ${pnpmCmdPath}`);
+      count++;
+
+      // .ps1 文件
+      const pnpmPs1Path = path.join(targetDir, 'pnpm.ps1');
+      const pnpmPs1Content = `# CloudCAD offline pnpm entry
         # Only effective in project directory, does not affect system pnpm
         # Disable Corepack to use local pnpm and avoid network download
         
@@ -1130,9 +1548,11 @@ exec "$PROJECT_ROOT/${rootRelativeNpxPath}" "$@"
         $env:COREPACK_ENABLE = "0"
         $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
         & $NodePath $PnpmPath @Args
-        `;        fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
-        log(`创建子目录入口脚本: ${pnpmPs1Path}`);
-        count++;    } else {
+        `;
+      fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
+      log(`创建子目录入口脚本: ${pnpmPs1Path}`);
+      count++;
+    } else {
       const pnpmCmdPath = path.join(targetDir, 'pnpm');
       const pnpmContent = `#!/bin/bash
 # CloudCAD offline pnpm entry
@@ -1152,7 +1572,9 @@ exec "$PROJECT_ROOT/${rootRelativeNodeExe}" "$PROJECT_ROOT/${rootRelativePnpmJs}
   // ========== 5. pm2 入口脚本 ==========
   const pm2Js = findPm2Js();
   if (pm2Js) {
-    const rootRelativePm2Js = path.relative(PROJECT_ROOT, pm2Js).replace(/\\/g, '\\');
+    const rootRelativePm2Js = path
+      .relative(PROJECT_ROOT, pm2Js)
+      .replace(/\\/g, '\\');
 
     if (IS_WINDOWS) {
       // .cmd 文件
@@ -1206,6 +1628,11 @@ exec "$PROJECT_ROOT/${rootRelativeNodeExe}" "$PROJECT_ROOT/${rootRelativePm2Js}"
     }
   }
 
+  // ========== 6. Bash 包装脚本（Git Bash 兼容）==========
+  if (IS_WINDOWS) {
+    count += createBashWrappers(targetDir);
+  }
+
   return count;
 }
 
@@ -1217,7 +1644,8 @@ function calcLockHash() {
   const crypto = require('crypto');
   const lockFile = path.join(PROJECT_ROOT, 'pnpm-lock.yaml');
   if (!fs.existsSync(lockFile)) return null;
-  return crypto.createHash('sha256')
+  return crypto
+    .createHash('sha256')
     .update(fs.readFileSync(lockFile))
     .digest('hex');
 }
@@ -1337,11 +1765,17 @@ function runPnpmInstallOffline(options = {}) {
     ? ['--filter', 'backend', 'install', '--offline', '--prod']
     : ['install', '--offline'];
 
-  log(deployBackendOnly ? '安装后端依赖...' : '运行 pnpm install --offline 重建依赖...');
+  log(
+    deployBackendOnly
+      ? '安装后端依赖...'
+      : '运行 pnpm install --offline 重建依赖...'
+  );
   log(`  → 执行: pnpm ${installArgs.join(' ')}`);
 
   try {
-    const nodeDir = IS_LINUX ? path.join(PLATFORM_DIR, 'node', 'bin') : OFFLINE_NODE_DIR;
+    const nodeDir = IS_LINUX
+      ? path.join(PLATFORM_DIR, 'node', 'bin')
+      : OFFLINE_NODE_DIR;
     const env = {
       ...process.env,
       PATH: `${nodeDir}${path.delimiter}${process.env.PATH}`,
@@ -1355,7 +1789,11 @@ function runPnpmInstallOffline(options = {}) {
       env,
     });
 
-    log(deployBackendOnly ? '  ✓ 后端依赖安装完成' : '  ✓ pnpm install --offline 完成');
+    log(
+      deployBackendOnly
+        ? '  ✓ 后端依赖安装完成'
+        : '  ✓ pnpm install --offline 完成'
+    );
 
     // 【新增】安装完成后记录哈希
     markInstalledVersion();
@@ -1379,8 +1817,11 @@ function copyEnvExampleToEnv() {
   // 需要处理的配置列表
   // target: 目标文件名，默认 .env（前端使用 .env.local）
   const envConfigs = [
-    { dir: path.join(PROJECT_ROOT, 'apps', 'backend'), target: '.env' },
-    { dir: path.join(PROJECT_ROOT, 'packages', 'frontend'), target: '.env.local' },
+    { dir: path.join(PROJECT_ROOT, 'packages', 'backend'), target: '.env' },
+    {
+      dir: path.join(PROJECT_ROOT, 'packages', 'frontend'),
+      target: '.env.local',
+    },
     { dir: path.join(PROJECT_ROOT, 'docker'), target: '.env' },
   ];
 
@@ -1408,7 +1849,9 @@ function copyEnvExampleToEnv() {
       log(`  ✓ 创建: ${path.relative(PROJECT_ROOT, envFile)}`);
       copied++;
     } catch (err) {
-      error(`  ✗ 创建失败: ${path.relative(PROJECT_ROOT, envFile)} - ${err.message}`);
+      error(
+        `  ✗ 创建失败: ${path.relative(PROJECT_ROOT, envFile)} - ${err.message}`
+      );
     }
   }
 
@@ -1430,6 +1873,7 @@ function setupWrappers() {
   const offlineCount = setupOfflineNodeDir();
   const rootCount = setupProjectRoot();
   const pkgCount = setupPackageDirs();
+  createProjectEnvFile();
   return binCount + offlineCount + rootCount + pkgCount;
 }
 
@@ -1439,19 +1883,28 @@ function setupWrappers() {
  * @returns {boolean} true 表示已存在，无需生成
  */
 function checkPrismaClientExists() {
-  const prismaClientDir = path.join(PROJECT_ROOT, 'apps', 'backend', 'node_modules', '.prisma', 'client');
+  const prismaClientDir = path.join(
+    PROJECT_ROOT,
+    'packages',
+    'backend',
+    'node_modules',
+    '.prisma',
+    'client'
+  );
   const indexPath = path.join(prismaClientDir, 'index.js');
-  
+
   // 检查 Prisma Client 是否存在
   if (!fs.existsSync(indexPath)) {
     return false;
   }
-  
+
   // 检查引擎二进制是否存在（至少有一个平台的引擎）
   // 引擎文件名格式：libquery_engine-{platform}.{ext}
-  const files = fs.existsSync(prismaClientDir) ? fs.readdirSync(prismaClientDir) : [];
-  const hasEngine = files.some(f => f.includes('query_engine'));
-  
+  const files = fs.existsSync(prismaClientDir)
+    ? fs.readdirSync(prismaClientDir)
+    : [];
+  const hasEngine = files.some((f) => f.includes('query_engine'));
+
   return hasEngine;
 }
 
@@ -1468,7 +1921,7 @@ function setup(options = {}) {
   if (typeof options === 'boolean') {
     options = { silent: options };
   }
-  
+
   const { silent = false, deployBackendOnly = false } = options;
 
   if (!checkOfflineNode()) {
@@ -1522,10 +1975,15 @@ function setup(options = {}) {
     log('4. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
     log('5. 这些命令会使用离线 Node.js，不影响系统环境');
     log('6. npm scripts 也会自动使用离线 Node.js');
+    log(
+      '7. Git Bash 用户: 将以下命令加入 ~/.bashrc，在项目子目录也能直接使用:'
+    );
+    const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
+    log('   source ' + projectRootUnix + '/project-env.sh');
     if (prismaReady) {
-      log('7. Prisma Client 已就绪（来自部署包）');
+      log('8. Prisma Client 已就绪（来自部署包）');
     } else {
-      log('7. Prisma Client 需要在启动时生成');
+      log('8. Prisma Client 需要在启动时生成');
     }
     console.log('');
   }
@@ -1556,6 +2014,9 @@ function main() {
   log('3. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
   log('4. 这些命令会使用离线 Node.js，不影响系统环境');
   log('5. npm scripts 也会自动使用离线 Node.js');
+  log('6. Git Bash: 执行以下命令即可在项目子目录直接使用 pnpm:');
+  const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
+  log('   source ' + projectRootUnix + '/project-env.sh');
   console.log('');
 }
 

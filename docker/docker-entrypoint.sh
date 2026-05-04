@@ -141,7 +141,7 @@ wait_for_redis() {
 
 run_migrations() {
     log_info "运行数据库迁移..."
-    cd /app/apps/backend
+    cd /app/packages/backend
 
     # 确保 prisma.config.ts 可以读取环境变量
     export DATABASE_URL="${DATABASE_URL}"
@@ -257,7 +257,7 @@ main() {
     
     # 7. 启动后端服务
     log_info "启动后端服务..."
-    cd /app/apps/backend
+    cd /app/packages/backend
     exec node dist/src/main.js
 }
 

@@ -87,7 +87,7 @@
 ## 2. Seed 脚本分析
 
 ### 2.1 脚本位置
-`apps/backend/prisma/seed.ts`
+`packages/backend/prisma/seed.ts`
 
 ### 2.2 功能概述
 
@@ -125,7 +125,7 @@
 
 ### 3.1 全局测试设置
 
-**文件位置：** `apps/backend/src/test/global-setup.ts`
+**文件位置：** `packages/backend/src/test/global-setup.ts`
 
 **执行流程：**
 1. 连接测试数据库
@@ -141,7 +141,7 @@
 
 ### 3.2 Jest 配置
 
-**文件位置：** `apps/backend/jest.config.ts`
+**文件位置：** `packages/backend/jest.config.ts`
 
 **关键配置：**
 - `setupFiles: ['dotenv/config']` - 加载环境变量

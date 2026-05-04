@@ -3128,7 +3128,7 @@
         ]
       }
     },
-    "/api/audit/logs": {
+    "/api/v1/audit/logs": {
       "get": {
         "operationId": "AuditLogController_findAll",
         "parameters": [
@@ -3232,7 +3232,7 @@
         ]
       }
     },
-    "/api/audit/logs/{id}": {
+    "/api/v1/audit/logs/{id}": {
       "get": {
         "operationId": "AuditLogController_findOne",
         "parameters": [
@@ -3261,7 +3261,7 @@
         ]
       }
     },
-    "/api/audit/statistics": {
+    "/api/v1/audit/statistics": {
       "get": {
         "operationId": "AuditLogController_getStatistics",
         "parameters": [
@@ -3309,7 +3309,7 @@
         ]
       }
     },
-    "/api/audit/cleanup": {
+    "/api/v1/audit/cleanup": {
       "post": {
         "operationId": "AuditLogController_cleanupOldLogs",
         "parameters": [],
@@ -5388,6 +5388,138 @@
         ]
       }
     },
+    "/api/v1/mxcad/thumbnail/{nodeId}": {
+      "get": {
+        "operationId": "MxCadController_checkThumbnail",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckThumbnailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "404": {
+            "description": "文件不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      },
+      "post": {
+        "operationId": "MxCadController_uploadThumbnail",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadThumbnailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadThumbnailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "500": {
+            "description": "上传失败"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
+    "/api/v1/mxcad/files/{storageKey}": {
+      "get": {
+        "operationId": "MxCadController_getNonCadFile",
+        "parameters": [
+          {
+            "name": "storageKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取文件",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "文件不存在"
+          },
+          "500": {
+            "description": "服务器内部错误"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
     "/api/v1/admin/stats": {
       "get": {
         "operationId": "AdminController_getAdminStats",
@@ -5465,7 +5597,7 @@
         ]
       }
     },
-    "/api/health/live": {
+    "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_liveness",
         "parameters": [],
@@ -5480,7 +5612,22 @@
         ]
       }
     },
-    "/api/health": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_publicHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "服务正常运行"
+          }
+        },
+        "summary": "服务健康检查（公开）",
+        "tags": [
+          "健康检查"
+        ]
+      }
+    },
+    "/api/v1/health/full": {
       "get": {
         "operationId": "HealthController_check",
         "parameters": [],
@@ -5643,13 +5790,13 @@
             }
           }
         },
-        "summary": "系统健康检查",
+        "summary": "系统健康检查（详细）",
         "tags": [
           "健康检查"
         ]
       }
     },
-    "/api/health/db": {
+    "/api/v1/health/db": {
       "get": {
         "operationId": "HealthController_checkDatabase",
         "parameters": [],
@@ -5667,7 +5814,7 @@
         ]
       }
     },
-    "/api/health/storage": {
+    "/api/v1/health/storage": {
       "get": {
         "operationId": "HealthController_checkStorage",
         "parameters": [],
@@ -5685,7 +5832,7 @@
         ]
       }
     },
-    "/api/public-file/chunk/check": {
+    "/api/v1/public-file/chunk/check": {
       "post": {
         "operationId": "PublicFileController_checkChunk",
         "parameters": [],
@@ -5717,7 +5864,7 @@
         ]
       }
     },
-    "/api/public-file/file/check": {
+    "/api/v1/public-file/file/check": {
       "post": {
         "operationId": "PublicFileController_checkFile",
         "parameters": [],
@@ -5749,7 +5896,7 @@
         ]
       }
     },
-    "/api/public-file/chunk/upload": {
+    "/api/v1/public-file/chunk/upload": {
       "post": {
         "operationId": "PublicFileController_uploadChunk",
         "parameters": [],
@@ -5781,7 +5928,7 @@
         ]
       }
     },
-    "/api/public-file/chunk/merge": {
+    "/api/v1/public-file/chunk/merge": {
       "post": {
         "operationId": "PublicFileController_mergeChunks",
         "parameters": [],
@@ -5813,7 +5960,7 @@
         ]
       }
     },
-    "/api/public-file/access/{hash}/{filename}": {
+    "/api/v1/public-file/access/{hash}/{filename}": {
       "get": {
         "operationId": "PublicFileController_accessFile",
         "parameters": [
@@ -5851,7 +5998,7 @@
         ]
       }
     },
-    "/api/public-file/ext-reference/upload": {
+    "/api/v1/public-file/ext-reference/upload": {
       "post": {
         "operationId": "PublicFileController_uploadExtReference",
         "parameters": [],
@@ -5898,7 +6045,7 @@
         ]
       }
     },
-    "/api/public-file/ext-reference/check": {
+    "/api/v1/public-file/ext-reference/check": {
       "get": {
         "operationId": "PublicFileController_checkExtReference",
         "parameters": [
@@ -5944,7 +6091,7 @@
         ]
       }
     },
-    "/api/public-file/preloading/{hash}": {
+    "/api/v1/public-file/preloading/{hash}": {
       "get": {
         "operationId": "PublicFileController_getPreloadingData",
         "parameters": [
@@ -10133,6 +10280,83 @@
         "required": [
           "file",
           "ext_ref_file"
+        ]
+      },
+      "CheckThumbnailResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "number",
+            "description": "响应状态码",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "ok"
+          },
+          "exists": {
+            "type": "boolean",
+            "description": "缩略图是否存在"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "exists"
+        ]
+      },
+      "UploadThumbnailDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "缩略图文件",
+            "format": "binary"
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "UploadThumbnailDataDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          }
+        },
+        "required": [
+          "fileName"
+        ]
+      },
+      "UploadThumbnailResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "number",
+            "description": "响应状态码",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "缩略图上传成功"
+          },
+          "data": {
+            "description": "响应数据",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UploadThumbnailDataDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data"
         ]
       },
       "AdminStatsResponseDto": {

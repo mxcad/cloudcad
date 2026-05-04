@@ -2,7 +2,7 @@
 
 ## 检查范围
 
-扫描路径：`apps/backend/src/**/*.ts`
+扫描路径：`packages/backend/src/**/*.ts`
 
 检查时间：2026-05-02
 
@@ -28,7 +28,7 @@ Controller 层直接注入并调用数据库（Prisma），违反了分层架构
 
 ### 问题位置
 
-**文件**: `apps/backend/src/mxcad/core/mxcad.controller.ts`
+**文件**: `packages/backend/src/mxcad/core/mxcad.controller.ts`
 
 | 行号 | 代码位置 | 问题描述 |
 |------|----------|----------|
@@ -58,11 +58,11 @@ Service 层直接使用原生 `setTimeout`/`setInterval`，应使用 `@nestjs/sc
 
 | 文件路径 | 行号 | 使用方式 | 用途 |
 |----------|------|----------|------|
-| `apps/backend/src/mxcad/external-ref/external-reference-update.service.ts` | 48 | `setTimeout(resolve, 100)` | 等待文件系统写入完成 |
-| `apps/backend/src/database/database.service.ts` | 80 | `setTimeout(reject, timeout)` | 数据库连接超时 |
-| `apps/backend/src/common/services/file-lock.service.ts` | 264 | `setTimeout(resolve, ms)` | sleep 辅助函数 |
-| `apps/backend/src/cache-architecture/services/cache-monitor.service.ts` | 53 | `setInterval(() => ..., interval)` | 定期清理性能数据 |
-| `apps/backend/src/mxcad/chunk/chunk-upload.service.ts` | 399 | `setTimeout(resolve, ms)` | sleep 辅助函数 |
+| `packages/backend/src/mxcad/external-ref/external-reference-update.service.ts` | 48 | `setTimeout(resolve, 100)` | 等待文件系统写入完成 |
+| `packages/backend/src/database/database.service.ts` | 80 | `setTimeout(reject, timeout)` | 数据库连接超时 |
+| `packages/backend/src/common/services/file-lock.service.ts` | 264 | `setTimeout(resolve, ms)` | sleep 辅助函数 |
+| `packages/backend/src/cache-architecture/services/cache-monitor.service.ts` | 53 | `setInterval(() => ..., interval)` | 定期清理性能数据 |
+| `packages/backend/src/mxcad/chunk/chunk-upload.service.ts` | 399 | `setTimeout(resolve, ms)` | sleep 辅助函数 |
 
 ### 修复建议
 
@@ -82,17 +82,17 @@ Service 层直接使用原生 `setTimeout`/`setInterval`，应使用 `@nestjs/sc
 
 | 文件路径 | 行号 | 错误消息 | 建议替换 |
 |----------|------|----------|----------|
-| `apps/backend/src/file-system/file-system.service.ts` | 256 | `uploadFile 方法尚未实现到子服务中` | `NotImplementedException` |
-| `apps/backend/src/file-system/file-system.service.ts` | 266 | `getTrashItems 方法尚未实现到子服务中` | `NotImplementedException` |
-| `apps/backend/src/file-system/file-system.service.ts` | 484 | `节点不存在` | `NotFoundException` |
-| `apps/backend/src/file-system/file-system.service.ts` | 495 | `节点不存在` | `NotFoundException` |
-| `apps/backend/src/storage/local-storage.provider.ts` | 160 | `文件不存在: ${key}` | `NotFoundException` |
-| `apps/backend/src/storage/local-storage.provider.ts` | 198 | `文件不存在: ${key}` | `NotFoundException` |
-| `apps/backend/src/storage/local-storage.provider.ts` | 204 | `路径是目录而非文件: ${key}` | `BadRequestException` |
-| `apps/backend/src/cache-architecture/services/cache-warmup.service.ts` | 339 | `预热用户 ${userId} 失败: ...` | `InternalServerErrorException` |
-| `apps/backend/src/cache-architecture/services/cache-warmup.service.ts` | 399 | `预热项目 ${projectId} 失败: ...` | `InternalServerErrorException` |
-| `apps/backend/src/auth/services/wechat.service.ts` | 72 | `微信 AppID 未配置...` | `BadRequestException` |
-| `apps/backend/src/auth/services/wechat.service.ts` | 75 | `微信回调地址未配置...` | `BadRequestException` |
+| `packages/backend/src/file-system/file-system.service.ts` | 256 | `uploadFile 方法尚未实现到子服务中` | `NotImplementedException` |
+| `packages/backend/src/file-system/file-system.service.ts` | 266 | `getTrashItems 方法尚未实现到子服务中` | `NotImplementedException` |
+| `packages/backend/src/file-system/file-system.service.ts` | 484 | `节点不存在` | `NotFoundException` |
+| `packages/backend/src/file-system/file-system.service.ts` | 495 | `节点不存在` | `NotFoundException` |
+| `packages/backend/src/storage/local-storage.provider.ts` | 160 | `文件不存在: ${key}` | `NotFoundException` |
+| `packages/backend/src/storage/local-storage.provider.ts` | 198 | `文件不存在: ${key}` | `NotFoundException` |
+| `packages/backend/src/storage/local-storage.provider.ts` | 204 | `路径是目录而非文件: ${key}` | `BadRequestException` |
+| `packages/backend/src/cache-architecture/services/cache-warmup.service.ts` | 339 | `预热用户 ${userId} 失败: ...` | `InternalServerErrorException` |
+| `packages/backend/src/cache-architecture/services/cache-warmup.service.ts` | 399 | `预热项目 ${projectId} 失败: ...` | `InternalServerErrorException` |
+| `packages/backend/src/auth/services/wechat.service.ts` | 72 | `微信 AppID 未配置...` | `BadRequestException` |
+| `packages/backend/src/auth/services/wechat.service.ts` | 75 | `微信回调地址未配置...` | `BadRequestException` |
 
 ### 修复建议
 
@@ -124,7 +124,7 @@ Service 层直接使用原生 `setTimeout`/`setInterval`，应使用 `@nestjs/sc
 
 ### 问题位置
 
-**文件**: `apps/backend/src/file-system/file-system.module.ts`
+**文件**: `packages/backend/src/file-system/file-system.module.ts`
 
 ```typescript
 exports: [

@@ -1,7 +1,7 @@
 # 回收站模块审计报告
 
 **审计日期**: 2026-05-02
-**审计范围**: `apps/backend/src/file-system/` 及相关软删除、恢复操作代码
+**审计范围**: `packages/backend/src/file-system/` 及相关软删除、恢复操作代码
 
 ---
 
@@ -21,9 +21,9 @@
 
 ### 1.2 相关代码位置
 
-- **Prisma Schema**: [schema.prisma#L73-L119](file:///d:/project/cloudcad/apps/backend/prisma/schema.prisma#L73-L119)
-- **软删除设置**: [file-operations.service.ts#L286-L299](file:///d:/project/cloudcad/apps/backend/src/file-operations/file-operations.service.ts#L286-L299)
-- **级联软删除**: [file-operations.service.ts#L955-L979](file:///d:/project/cloudcad/apps/backend/src/file-operations/file-operations.service.ts#L955-L979)
+- **Prisma Schema**: [schema.prisma#L73-L119](file:///d:/project/cloudcad/packages/backend/prisma/schema.prisma#L73-L119)
+- **软删除设置**: [file-operations.service.ts#L286-L299](file:///d:/project/cloudcad/packages/backend/src/file-operations/file-operations.service.ts#L286-L299)
+- **级联软删除**: [file-operations.service.ts#L955-L979](file:///d:/project/cloudcad/packages/backend/src/file-operations/file-operations.service.ts#L955-L979)
 
 ### 1.3 软删除流程
 
@@ -78,11 +78,11 @@ async deleteNode(
 ### 2.3 权限验证缺陷
 
 1. **回收站相关操作缺少 `FILE_TRASH_MANAGE` 权限验证**
-   - 虽然存在 `FILE_TRASH_MANAGE` 权限枚举 ([permission.dto.ts#L96](file:///d:/project/cloudcad/apps/backend/src/common/dto/permission.dto.ts#L96))，但实际未使用
+   - 虽然存在 `FILE_TRASH_MANAGE` 权限枚举 ([permission.dto.ts#L96](file:///d:/project/cloudcad/packages/backend/src/common/dto/permission.dto.ts#L96))，但实际未使用
    - `restoreTrashItems`、`permanentlyDeleteTrashItems`、`clearTrash` 均无权限检查
 
 2. **恢复操作未验证父节点访问权限**
-   - [file-operations.service.ts#L361-L374](file:///d:/project/cloudcad/apps/backend/src/file-operations/file-operations.service.ts#L361-L374) 仅检查父节点是否存在且未删除，未验证调用者对父节点的访问权限
+   - [file-operations.service.ts#L361-L374](file:///d:/project/cloudcad/packages/backend/src/file-operations/file-operations.service.ts#L361-L374) 仅检查父节点是否存在且未删除，未验证调用者对父节点的访问权限
 
 ---
 
@@ -124,15 +124,15 @@ async restoreNode(nodeId: string) {
 
 **结论：当前代码未实现引用计数机制**
 
-- `fileHash` 字段存在于 `FileSystemNode` 模型中 ([schema.prisma#L85](file:///d:/project/cloudcad/apps/backend/prisma/schema.prisma#L85))
-- `copyNode` 方法复制文件时共享 `fileHash` ([file-operations.service.ts#L863](file:///d:/project/cloudcad/apps/backend/src/file-operations/file-operations.service.ts#L863))
+- `fileHash` 字段存在于 `FileSystemNode` 模型中 ([schema.prisma#L85](file:///d:/project/cloudcad/packages/backend/prisma/schema.prisma#L85))
+- `copyNode` 方法复制文件时共享 `fileHash` ([file-operations.service.ts#L863](file:///d:/project/cloudcad/packages/backend/src/file-operations/file-operations.service.ts#L863))
 
 ### 4.2 文件共享时的删除处理
 
 **当前实现问题：**
 
 1. **物理删除不检查引用计数**
-   - [file-operations.service.ts#L1012-L1073](file:///d:/project/cloudcad/apps/backend/src/file-operations/file-operations.service.ts#L1012-L1073) 的 `deleteFileIfNotReferenced` 方法名暗示会检查引用，但实际代码中：
+   - [file-operations.service.ts#L1012-L1073](file:///d:/project/cloudcad/packages/backend/src/file-operations/file-operations.service.ts#L1012-L1073) 的 `deleteFileIfNotReferenced` 方法名暗示会检查引用，但实际代码中：
    ```typescript
    // 该方法在永久删除时直接删除文件，未检查是否有其他节点引用同一 fileHash
    await fsPromises.rm(nodeDirectoryPath, { recursive: true, force: true });
@@ -142,7 +142,7 @@ async restoreNode(nodeId: string) {
    - 永久删除节点时，直接调用 `deleteFileFromStorage`，不检查其他节点的 `fileHash` 是否相同
 
 3. **复制文件时创建独立副本**
-   - [file-operations.service.ts#L880-L903](file:///d:/project/cloudcad/apps/backend/src/file-operations/file-operations.service.ts#L880-L903) 中复制文件时会复制物理文件，而非共享存储
+   - [file-operations.service.ts#L880-L903](file:///d:/project/cloudcad/packages/backend/src/file-operations/file-operations.service.ts#L880-L903) 中复制文件时会复制物理文件，而非共享存储
 
 ### 4.3 潜在风险
 
@@ -166,7 +166,7 @@ async restoreNode(nodeId: string) {
 
 ### 5.2 定时清理调度器
 
-**文件**: [storage-cleanup.scheduler.ts](file:///d:/project/cloudcad/apps/backend/src/common/schedulers/storage-cleanup.scheduler.ts)
+**文件**: [storage-cleanup.scheduler.ts](file:///d:/project/cloudcad/packages/backend/src/common/schedulers/storage-cleanup.scheduler.ts)
 
 ```typescript
 // 每天凌晨 4 点执行回收站清理
@@ -178,7 +178,7 @@ async handleTrashCleanup() {
 
 ### 5.3 清理逻辑
 
-**文件**: [storage-cleanup.service.ts#L203-L298](file:///d:/project/cloudcad/apps/backend/src/common/services/storage-cleanup.service.ts)
+**文件**: [storage-cleanup.service.ts#L203-L298](file:///d:/project/cloudcad/packages/backend/src/common/services/storage-cleanup.service.ts)
 
 ```typescript
 async cleanupExpiredTrash() {
@@ -291,12 +291,12 @@ for (const file of filesToDelete) {
 
 | 文件 | 说明 |
 |------|------|
-| `apps/backend/src/file-system/file-system.service.ts` | Facade 服务，委托给子服务 |
-| `apps/backend/src/file-system/file-system.controller.ts` | API 控制器，回收站端点定义 |
-| `apps/backend/src/file-operations/file-operations.service.ts` | 核心删除/恢复逻辑 |
-| `apps/backend/src/file-operations/project-crud.service.ts` | 项目 CRUD 操作 |
-| `apps/backend/src/common/services/storage-cleanup.service.ts` | 定时清理服务 |
-| `apps/backend/src/common/schedulers/storage-cleanup.scheduler.ts` | 清理调度器 |
-| `apps/backend/prisma/schema.prisma` | 数据库模型定义 |
-| `apps/backend/src/common/enums/permissions.enum.ts` | 权限枚举 |
-| `apps/backend/src/common/dto/permission.dto.ts` | 权限 DTO |
+| `packages/backend/src/file-system/file-system.service.ts` | Facade 服务，委托给子服务 |
+| `packages/backend/src/file-system/file-system.controller.ts` | API 控制器，回收站端点定义 |
+| `packages/backend/src/file-operations/file-operations.service.ts` | 核心删除/恢复逻辑 |
+| `packages/backend/src/file-operations/project-crud.service.ts` | 项目 CRUD 操作 |
+| `packages/backend/src/common/services/storage-cleanup.service.ts` | 定时清理服务 |
+| `packages/backend/src/common/schedulers/storage-cleanup.scheduler.ts` | 清理调度器 |
+| `packages/backend/prisma/schema.prisma` | 数据库模型定义 |
+| `packages/backend/src/common/enums/permissions.enum.ts` | 权限枚举 |
+| `packages/backend/src/common/dto/permission.dto.ts` | 权限 DTO |

@@ -12,12 +12,12 @@
 
 | 文件路径 | 引用方式 | 说明 |
 |---------|---------|------|
-| `apps/frontend/package.json` | `"mxcad-app": "^1.0.45"` | 生产依赖，版本锁定 |
+| `packages/frontend/package.json` | `"mxcad-app": "^1.0.45"` | 生产依赖，版本锁定 |
 | `pnpm-lock.yaml` | `mxcad-app@1.0.60` | 实际安装版本 |
 
 ### 2.2 Vite 配置集成
 
-**文件**: `apps/frontend/vite.config.ts`
+**文件**: `packages/frontend/vite.config.ts`
 
 ```typescript
 // 插件集成
@@ -322,4 +322,4 @@ React ThemeContext          mxcad-app (Vue + Vuetify)
 ---
 
 **审计完成时间**: 2026-05-02
-**审计范围**: CloudCAD 前端项目 (`apps/frontend/`)
+**审计范围**: CloudCAD 前端项目 (`packages/frontend/`)

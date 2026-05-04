@@ -2,7 +2,7 @@
 
 **汇报人：** Trae
 **审计日期：** 2026-05-02
-**审计范围：** `apps/backend/src/library/` 及公开资源库相关代码
+**审计范围：** `packages/backend/src/library/` 及公开资源库相关代码
 **文档整合说明：** 本文档由 `library-permission-audit.md` 和 `library-module-audit.md` 合并而成，保留了 module 版本的完整内容，并整合了 permission 版本的权限安全审计内容。
 
 ---
@@ -12,13 +12,13 @@
 ### 1.1 目录结构
 
 ```
-apps/backend/src/library/
+packages/backend/src/library/
 ├── library.controller.ts  # 公共资源库控制器
 ├── library.module.ts      # 公共资源库模块
 └── library.service.ts     # 公共资源库服务
 
 相关公开文件模块:
-apps/backend/src/public-file/
+packages/backend/src/public-file/
 ├── public-file.controller.ts  # 公开文件控制器
 ├── public-file.module.ts     # 公开文件模块
 ├── public-file.service.ts    # 公开文件服务
@@ -28,7 +28,7 @@ apps/backend/src/public-file/
 
 ### 1.2 核心设计思想
 
-根据 [library.controller.ts:L48-L56](file:///d:/project/cloudcad/apps/backend/src/library/library.controller.ts#L48-L56) 的注释：
+根据 [library.controller.ts:L48-L56](file:///d:/project/cloudcad/packages/backend/src/library/library.controller.ts#L48-L56) 的注释：
 
 ```
 公共资源库控制器（仅保留只读接口）
@@ -54,7 +54,7 @@ apps/backend/src/public-file/
 | `'block'` | 公共图块库根节点 | `LibraryType.BLOCK` |
 | `null` | 普通项目/私人空间 | - |
 
-数据库结构 ([schema.prisma:L73-L119](file:///d:/project/cloudcad/apps/backend/prisma/schema.prisma#L73-L119))：
+数据库结构 ([schema.prisma:L73-L119](file:///d:/project/cloudcad/packages/backend/prisma/schema.prisma#L73-L119))：
 
 ```prisma
 model FileSystemNode {
@@ -83,7 +83,7 @@ model FileSystemNode {
 
 ### 2.3 初始化机制
 
-资源库在系统初始化时自动创建 ([initialization.service.ts:L545-L632](file:///d:/project/cloudcad/apps/backend/src/common/services/initialization.service.ts#L545-L632))：
+资源库在系统初始化时自动创建 ([initialization.service.ts:L545-L632](file:///d:/project/cloudcad/packages/backend/src/common/services/initialization.service.ts#L545-L632))：
 
 ```typescript
 private async ensurePublicLibraries(): Promise<void> {
@@ -101,7 +101,7 @@ private async ensurePublicLibraries(): Promise<void> {
 
 ### 3.1 搜索接口
 
-**实现**: [search.service.ts:L395-L498](file:///d:/project/cloudcad/apps/backend/src/file-system/search/search.service.ts#L395-L498)
+**实现**: [search.service.ts:L395-L498](file:///d:/project/cloudcad/packages/backend/src/file-system/search/search.service.ts#L395-L498)
 
 ```typescript
 private async searchLibrary(userId: string, params: {
@@ -135,7 +135,7 @@ private async searchLibrary(userId: string, params: {
 | `GET /v1/library/drawing/filesData/*path` | `getDrawingFile()` | 图纸库文件访问 |
 | `GET /v1/library/block/filesData/*path` | `getBlockFile()` | 图块库文件访问 |
 
-**实现**: [mxcad-file-handler.service.ts:L28-L81](file:///d:/project/cloudcad/apps/backend/src/mxcad/core/mxcad-file-handler.service.ts#L28-L81)
+**实现**: [mxcad-file-handler.service.ts:L28-L81](file:///d:/project/cloudcad/packages/backend/src/mxcad/core/mxcad-file-handler.service.ts#L28-L81)
 
 ```typescript
 async serveFile(filename: string, res: Response): Promise<void> {
@@ -165,7 +165,7 @@ async serveFile(filename: string, res: Response): Promise<void> {
 | `GET /v1/library/drawing/nodes/:nodeId/download` | `LIBRARY_DRAWING_MANAGE` |
 | `GET /v1/library/block/nodes/:nodeId/download` | `LIBRARY_BLOCK_MANAGE` |
 
-**实现**: [library.controller.ts:L176-L194](file:///d:/project/cloudcad/apps/backend/src/library/library.controller.ts#L176-L194)
+**实现**: [library.controller.ts:L176-L194](file:///d:/project/cloudcad/packages/backend/src/library/library.controller.ts#L176-L194)
 
 ```typescript
 @Get('drawing/nodes/:nodeId/download')
@@ -184,7 +184,7 @@ async downloadDrawingNode(@Param('nodeId') nodeId: string, @Request() req, @Res(
 
 ### 4.1 权限设计
 
-**系统权限** (定义于 [schema.prisma:L327-L347](file:///d:/project/cloudcad/apps/backend/prisma/schema.prisma#L327-L347)):
+**系统权限** (定义于 [schema.prisma:L327-L347](file:///d:/project/cloudcad/packages/backend/prisma/schema.prisma#L327-L347)):
 
 ```prisma
 enum Permission {
@@ -196,7 +196,7 @@ enum Permission {
 
 ### 4.2 权限分配
 
-根据 [permissions.enum.ts:L95-L146](file:///d:/project/cloudcad/apps/backend/src/common/enums/permissions.enum.ts#L95-L146):
+根据 [permissions.enum.ts:L95-L146](file:///d:/project/cloudcad/packages/backend/src/common/enums/permissions.enum.ts#L95-L146):
 
 | 角色 | LIBRARY_DRAWING_MANAGE | LIBRARY_BLOCK_MANAGE |
 |------|------------------------|----------------------|
@@ -207,7 +207,7 @@ enum Permission {
 
 ### 4.3 公开访问的权限漏洞
 
-**FileSystemPermissionService.getNodeAccessRole()** 中存在特殊处理 ([file-system-permission.service.ts:L110-L115](file:///d:/project/cloudcad/apps/backend/src/file-system/file-permission/file-system-permission.service.ts#L110-L115)):
+**FileSystemPermissionService.getNodeAccessRole()** 中存在特殊处理 ([file-system-permission.service.ts:L110-L115](file:///d:/project/cloudcad/packages/backend/src/file-system/file-permission/file-system-permission.service.ts#L110-L115)):
 
 ```typescript
 // 2. 检查是否是公共资源库（新增）
@@ -240,7 +240,7 @@ if (isLibrary) {
 
 **重要发现**: LibraryController（`/v1/library`）**仅保留只读接口**，没有任何保存端点。
 
-根据 [library.controller.ts:L48-L56](file:///d:/project/cloudcad/apps/backend/src/library/library.controller.ts#L48-L56) 的注释：
+根据 [library.controller.ts:L48-L56](file:///d:/project/cloudcad/packages/backend/src/library/library.controller.ts#L48-L56) 的注释：
 
 ```
 公共资源库控制器（仅保留只读接口）
@@ -256,7 +256,7 @@ if (isLibrary) {
 
 **保存操作的实际端点**: `POST /api/mxcad/savemxweb/:nodeId`
 
-**实现位置**: [mxcad.controller.ts:L485-L531](file:///d:/project/cloudcad/apps/backend/src/mxcad/core/mxcad.controller.ts#L485-L531)
+**实现位置**: [mxcad.controller.ts:L485-L531](file:///d:/project/cloudcad/packages/backend/src/mxcad/core/mxcad.controller.ts#L485-L531)
 
 ```typescript
 @Post('savemxweb/:nodeId')
@@ -278,7 +278,7 @@ async saveMxwebToNode(
 
 **关键机制**: `RequireProjectPermissionGuard` 实现了**智能节点类型判断**，自动区分项目文件与公开资源库节点。
 
-**实现位置**: [require-project-permission.guard.ts:L93-L111](file:///d:/project/cloudcad/apps/backend/src/common/guards/require-project-permission.guard.ts#L93-L111)
+**实现位置**: [require-project-permission.guard.ts:L93-L111](file:///d:/project/cloudcad/packages/backend/src/common/guards/require-project-permission.guard.ts#L93-L111)
 
 ```typescript
 // 智能节点类型判断：检查是否为公开资源库节点
@@ -304,7 +304,7 @@ if (nodeId) {
 }
 ```
 
-**权限映射逻辑**: [require-project-permission.guard.ts:L168-L181](file:///d:/project/cloudcad/apps/backend/src/common/guards/require-project-permission.guard.ts#L168-L181)
+**权限映射逻辑**: [require-project-permission.guard.ts:L168-L181](file:///d:/project/cloudcad/packages/backend/src/common/guards/require-project-permission.guard.ts#L168-L181)
 
 ```typescript
 private async checkLibraryPermission(
@@ -359,12 +359,12 @@ private async checkLibraryPermission(
 | 项目文件 | `CAD_SAVE` (项目级) | ✅ | 视项目角色 | ❌ |
 
 **权限依据**:
-- 根据 [permissions.enum.ts](file:///d:/project/cloudcad/apps/backend/src/common/enums/permissions.enum.ts)，只有 `ADMIN` 角色拥有 `LIBRARY_DRAWING_MANAGE` 和 `LIBRARY_BLOCK_MANAGE` 权限
+- 根据 [permissions.enum.ts](file:///d:/project/cloudcad/packages/backend/src/common/enums/permissions.enum.ts)，只有 `ADMIN` 角色拥有 `LIBRARY_DRAWING_MANAGE` 和 `LIBRARY_BLOCK_MANAGE` 权限
 - `RequireProjectPermissionGuard` 在检测到 `nodeId` 属于公开资源库时，自动将检查从项目级 `CAD_SAVE` 切换为系统级 `LIBRARY_*_MANAGE`
 
 ### 5.6 前端 SaveAsModal 的额外验证
 
-**额外的前端控制**: [SaveAsModal.tsx:L237-L239](file:///d:/project/cloudcad/apps/frontend/src/components/modals/SaveAsModal.tsx#L237-L239)
+**额外的前端控制**: [SaveAsModal.tsx:L237-L239](file:///d:/project/cloudcad/packages/frontend/src/components/modals/SaveAsModal.tsx#L237-L239)
 
 ```typescript
 const hasLibraryPermission =
@@ -447,7 +447,7 @@ const hasLibraryPermission =
 
 #### 漏洞入口 1：`GET /v1/library/drawing/filesData/*path`（图纸库文件访问）
 
-**位置**: [library.controller.ts#L142-L156](file:///d:/project/cloudcad/apps/backend/src/library/library.controller.ts#L142-L156)
+**位置**: [library.controller.ts#L142-L156](file:///d:/project/cloudcad/packages/backend/src/library/library.controller.ts#L142-L156)
 
 ```typescript
 @Get('drawing/filesData/*path')
@@ -470,7 +470,7 @@ async getDrawingFile(
 
 #### 漏洞入口 2：`GET /v1/library/block/filesData/*path`（图块库文件访问）
 
-**位置**: [library.controller.ts#L280-L309](file:///d:/project/cloudcad/apps/backend/src/library/library.controller.ts#L280-L309)
+**位置**: [library.controller.ts#L280-L309](file:///d:/project/cloudcad/packages/backend/src/library/library.controller.ts#L280-L309)
 
 ```typescript
 @Get('block/filesData/*path')
@@ -489,7 +489,7 @@ async getBlockFile(
 
 #### 核心漏洞实现：`MxcadFileHandlerService.serveFile()`
 
-**位置**: [mxcad-file-handler.service.ts#L28-L81](file:///d:/project/cloudcad/apps/backend/src/mxcad/core/mxcad-file-handler.service.ts#L28-L81)
+**位置**: [mxcad-file-handler.service.ts#L28-L81](file:///d:/project/cloudcad/packages/backend/src/mxcad/core/mxcad-file-handler.service.ts#L28-L81)
 
 ```typescript
 async serveFile(filename: string, res: Response): Promise<void> {
@@ -649,36 +649,36 @@ curl "http://localhost:3001/api/v1/library/drawing/filesData/202605/abc123/xyz45
 ### 9.1 相关文件列表
 
 ```
-apps/backend/src/library/
+packages/backend/src/library/
 ├── library.controller.ts
 ├── library.module.ts
 └── library.service.ts
 
-apps/backend/src/public-file/
+packages/backend/src/public-file/
 ├── public-file.controller.ts
 ├── public-file.module.ts
 ├── public-file.service.ts
 └── services/
     └── public-file-upload.service.ts
 
-apps/backend/src/file-system/
+packages/backend/src/file-system/
 ├── file-tree/file-tree.service.ts         # getLibraryKey()
 ├── file-permission/file-system-permission.service.ts  # getNodeAccessRole()
 ├── search/search.service.ts               # searchLibrary()
 ├── file-download/file-download-export.service.ts    # isLibraryNode()
 └── file-download/file-download-handler.service.ts
 
-apps/backend/src/mxcad/core/
+packages/backend/src/mxcad/core/
 └── mxcad-file-handler.service.ts          # serveFile()
 
-apps/backend/src/common/services/
+packages/backend/src/common/services/
 └── initialization.service.ts              # ensurePublicLibraries()
 ```
 
 ### 9.2 权限枚举来源
 
-- 系统权限定义: [schema.prisma#L327-L347](file:///d:/project/cloudcad/apps/backend/prisma/schema.prisma#L327-L347)
-- 权限枚举导出: [permissions.enum.ts#L30](file:///d:/project/cloudcad/apps/backend/src/common/enums/permissions.enum.ts#L30)
+- 系统权限定义: [schema.prisma#L327-L347](file:///d:/project/cloudcad/packages/backend/prisma/schema.prisma#L327-L347)
+- 权限枚举导出: [permissions.enum.ts#L30](file:///d:/project/cloudcad/packages/backend/src/common/enums/permissions.enum.ts#L30)
 
 ---
 

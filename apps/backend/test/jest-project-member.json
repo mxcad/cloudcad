@@ -1,9 +1,0 @@
-{
-  "preset": "ts-jest",
-  "testEnvironment": "node",
-  "rootDir": ".",
-  "testMatch": ["**/test/integration/project-member.integration.spec.ts"],
-  "transform": {
-    "^.+\\.ts$": ["ts-jest", { "tsconfig": "tsconfig.json" }]
-  }
-}

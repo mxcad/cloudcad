@@ -23,14 +23,14 @@ updates:
           - 'patch'
 
   - package-ecosystem: 'npm'
-    directory: '/apps/backend'
+    directory: '/packages/backend'
     schedule:
       interval: 'weekly'
       day: 'monday'
     open-pull-requests-limit: 5
 
   - package-ecosystem: 'npm'
-    directory: '/apps/frontend'
+    directory: '/packages/frontend'
     schedule:
       interval: 'weekly'
       day: 'monday'

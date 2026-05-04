@@ -2,7 +2,7 @@
 
 **审计分支**: `refactor/circular-deps`
 **审计日期**: 2025-05-02
-**审计范围**: `apps/backend/src/users/`
+**审计范围**: `packages/backend/src/users/`
 
 ---
 
@@ -16,7 +16,7 @@
 
 ### 当前状态
 
-`IUserService` 接口定义在 `apps/backend/src/common/interfaces/user-service.interface.ts`，但**极其不完整**：
+`IUserService` 接口定义在 `packages/backend/src/common/interfaces/user-service.interface.ts`，但**极其不完整**：
 
 ```typescript
 // 当前接口（第 37-39 行）
@@ -253,7 +253,7 @@ const defaultRole = await this.prisma.role.findFirst({
 ## 附录：文件清单
 
 ```
-apps/backend/src/users/
+packages/backend/src/users/
 ├── users.module.ts          # 模块定义（含 forwardRef 循环依赖处理）
 ├── users.controller.ts      # 控制器（12 个端点）
 ├── users.service.ts         # 服务（15 个公共方法）

@@ -10,11 +10,11 @@
 
 | 模块路径 | 功能描述 |
 |---------|---------|
-| `apps/backend/src/mxcad/` | MxCAD 文件处理核心模块 |
-| `apps/backend/src/file-system/` | 文件系统管理模块 |
-| `apps/backend/src/storage/` | 存储服务模块 |
-| `apps/backend/src/common/services/` | 通用服务（存储管理器等） |
-| `apps/backend/src/version-control/` | 版本控制服务 |
+| `packages/backend/src/mxcad/` | MxCAD 文件处理核心模块 |
+| `packages/backend/src/file-system/` | 文件系统管理模块 |
+| `packages/backend/src/storage/` | 存储服务模块 |
+| `packages/backend/src/common/services/` | 通用服务（存储管理器等） |
+| `packages/backend/src/version-control/` | 版本控制服务 |
 
 ## 三、文件存储路径结构
 
@@ -267,4 +267,4 @@ storage.nodeLimit = 10000;               // 每个年月目录最大节点数
 ---
 
 **审计时间**：2026-05-02  
-**扫描范围**：`apps/backend/src/` 下所有文件存储相关模块
+**扫描范围**：`packages/backend/src/` 下所有文件存储相关模块

@@ -1,7 +1,0 @@
-{
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "puppeteer"
-  ],
-  "disabledMcpjsonServers": []
-}

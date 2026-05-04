@@ -88,8 +88,8 @@ WORKDIR /app
 
 # 复制 package 文件（用于缓存依赖层）
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/backend/package.json ./apps/backend/
-COPY apps/frontend/package.json ./apps/frontend/
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
 COPY packages/config-service/package.json ./packages/config-service/
 
@@ -97,8 +97,8 @@ COPY packages/config-service/package.json ./packages/config-service/
 RUN pnpm install --frozen-lockfile
 
 # 复制源代码
-COPY apps/backend ./apps/backend
-COPY apps/frontend ./apps/frontend
+COPY packages/backend ./packages/backend
+COPY packages/frontend ./packages/frontend
 COPY packages/svnVersionTool ./packages/svnVersionTool
 COPY packages/config-service ./packages/config-service
 COPY scripts ./scripts
