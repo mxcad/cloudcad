@@ -1,3 +1,33 @@
+# AGENTS.md — 项目规范和技能索引
+
+所有 agent 在处理本项目时必须遵守以下规范。
+
+---
+
+## 项目技能
+
+以下技能位于 `.claude/skills/`，自动加载。**遇到对应场景时必须触发。**
+
+| 技能 | 触发条件 | 核心规则 |
+|------|----------|----------|
+| **api-contracts** | 类型缺失、DTO 找不到、`has no exported member`、`is not a function` | 先查后端 DTO 的 `@ApiProperty`，禁止前端本地定义类型 |
+| **decompose** | 大型重构、5+文件改动、需要并发 agent | grill → plan → 拆独立任务文档 → 并发派发 → 汇总汇报 |
+| **verify** | 提交前、PR 前 | lint → format → type-check → test |
+| **issue** | 创建/管理 GitHub Issues | `/issue` |
+
+## 规范速查
+
+| 规范 | 位置 |
+|------|------|
+| API 契约 | `.claude/skills/api-contracts/SKILL.md` |
+| 任务分解 | `.claude/skills/decompose/SKILL.md` |
+| Prisma 迁移 | 见下方 |
+| 前端编码 | `packages/frontend/CLAUDE.md` |
+| 后端编码 | `packages/backend/CLAUDE.md` |
+| 全局规范 | `CLAUDE.md` |
+
+---
+
 ### 数据库迁移规范 (Prisma)
 
 **核心原则：生产环境必须使用 Migration 脚本，禁止使用 `db push` 进行部署。**
