@@ -21,7 +21,8 @@
     "check": "pnpm lint && pnpm format:check",
     "check:fix": "pnpm lint:fix && pnpm format",
     "type-check": "tsc --noEmit",
-    "generate:api-types": "node scripts/generate-api-types.js"
+    "generate:api-types": "node scripts/generate-api-types.js",
+    "generate:sdk": "npx @hey-api/openapi-ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
