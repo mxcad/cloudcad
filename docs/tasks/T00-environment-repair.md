@@ -6,20 +6,37 @@
 
 ---
 
-## What to do
+## Step 0: Fix backend `_v1` operationId issue (ROOT CAUSE)
 
-### 1. Regenerate API types
+The 55 type errors are caused by NestJS URI versioning appending `_v1` to Swagger operationIds.
+
+File: `packages/backend/src/app.module.ts`, line 130
+
+```typescript
+// CURRENT (line 130):
+operationIdFactory: (controllerKey, methodKey) => `${controllerKey}_${methodKey}`,
+
+// FIX:
+operationIdFactory: (controllerKey, methodKey) => {
+  const cleanMethod = methodKey.replace(/_v\d+$/, '');
+  return `${controllerKey}_${cleanMethod}`;
+},
+```
+
+Then **delete lines 133-140** (the post-processing strip loop — no longer needed).
+
+## Step 1: Regenerate API types
 
 ```bash
-cd D:\project\cloudcad
+cd D:\project\cloudcad\packages\frontend
 pnpm generate:api-types
 ```
 
-This regenerates `packages/frontend/src/types/api-client.ts` from backend Swagger. Should clear most of the 55 `tsc --noEmit` errors.
+This runs `node scripts/generate-api-types.js`, regenerating `src/types/api-client.ts`. After the backend fix above, generated types should have NO `_v1` suffixes. Most type errors should disappear.
 
-After regeneration, run `pnpm type-check` from `packages/frontend`. If errors remain, fix them — these are likely real type mismatches that need code changes (not config changes).
+After regeneration, run `pnpm type-check`. If any errors remain, fix them.
 
-### 2. Fix vitest `@` alias
+## Step 2: Fix vitest `@` alias
 
 File: `packages/frontend/vitest.config.ts`, line 20:
 
@@ -31,11 +48,9 @@ File: `packages/frontend/vitest.config.ts`, line 20:
 '@': path.resolve(__dirname, './src'),
 ```
 
-This makes vitest match tsconfig.json and vite.config.ts (both map `@/*` → `./src/*`).
+## Step 3: Clean stale build artifacts
 
-### 3. Clean stale build artifacts
-
-Delete these files from `src/test/` — they are compiled JS output that shouldn't be in source:
+Delete these compiled artifacts from `src/test/` (keep `setup.ts`):
 
 ```
 packages/frontend/src/test/setup.js
@@ -44,35 +59,27 @@ packages/frontend/src/test/setup.d.ts
 packages/frontend/src/test/setup.d.ts.map
 ```
 
-Keep `setup.ts` — it's the real source file.
+## Step 4: Remove unused root `types.ts`
 
-### 4. Remove unused root `types.ts`
+File `packages/frontend/types.ts` has zero consumers. Delete it.
 
-File `packages/frontend/types.ts` has zero consumers (search confirmed). Delete it.
-
-Its types (`FileNode`, `Library`, `Asset`, `Role`, `FileType`) are either already defined in `src/types/filesystem.ts` or unused. The `User` re-export from `api-client` is unused.
-
-### 5. Get existing tests passing
+## Step 5: Get existing tests passing
 
 ```bash
 cd D:\project\cloudcad\packages\frontend
 pnpm test -- --run
 ```
 
-Four spec files exist:
-- `src/hooks/useExternalReferenceUpload.integration.spec.ts`
-- `src/hooks/useExternalReferenceUpload.spec.ts`
-- `src/hooks/usePermission.spec.ts`
-- `src/utils/fileUtils.spec.ts`
-
-Fix any failures. Common issues: ESM import mocking, missing test setup mocks, path alias resolution.
+Fix any test failures.
 
 ---
 
 ## Verification
 
-- [ ] `pnpm type-check` passes with 0 errors
-- [ ] `pnpm test -- --run` passes all 4 test files
+- [ ] Backend `operationIdFactory` fixed
+- [ ] `pnpm generate:api-types` succeeds with no `_v1` suffixes
+- [ ] `pnpm type-check` passes with **0 errors**
+- [ ] `pnpm test -- --run` all tests pass
 - [ ] `@/components/ui/Button` resolves correctly in test files
 - [ ] Root `types.ts` deleted
 - [ ] No `.js`/`.js.map`/`.d.ts.map` artifacts in `src/test/`

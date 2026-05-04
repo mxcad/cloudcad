@@ -20,7 +20,8 @@
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm format:check",
     "check:fix": "pnpm lint:fix && pnpm format",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "generate:api-types": "node scripts/generate-api-types.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
