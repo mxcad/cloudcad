@@ -1,33 +1,19 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { setupServer } from 'msw/node';
-import { http, HttpResponse } from 'msw';
+import { handlers } from './msw/handlers';
 
-// ── MSW 自动 mock ─────────────────────────────────────
-// 所有 /api/v1/* 请求默认返回 200 + { data: null }
-// 测试可覆盖特定 handler：
+// ── MSW（与 Playwright E2E 共享 handler） ──
+// 测试中覆盖特定接口：
 //   import { http, HttpResponse } from 'msw';
-//   import { server } from '@/test/msw/server';
+//   server.use(http.post('/api/v1/auth/login', () => HttpResponse.json({ ... })));
 //
-//   server.use(
-//     http.post('/api/v1/auth/login', () =>
-//       HttpResponse.json({ data: { token: 'xxx' } })),
-//   );
+// 未在 handlers.ts 中定义的接口会抛错（onUnhandledRequest: 'error'），
+// 遇到时在 handlers.ts 中显式添加即可。
 
-export const server = setupServer(
-  http.all(/\/api\/v1\/.+/, ({ request }) => {
-    const method = request.method.toUpperCase();
-    const body = method === 'GET' ? null : {};
-    return HttpResponse.json({
-      code: 200,
-      message: 'success',
-      data: body,
-      timestamp: new Date().toISOString(),
-    });
-  }),
-);
+export const server = setupServer(...handlers);
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

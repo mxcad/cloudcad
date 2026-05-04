@@ -1,0 +1,19 @@
+@font-face {
+  font-family: "cloudcad-icon"; /* Project id 5140237 */
+  src: url('//at.alicdn.com/t/c/font_5140237_btwh80o8neo.woff2?t=1773648217057') format('woff2'),
+       url('//at.alicdn.com/t/c/font_5140237_btwh80o8neo.woff?t=1773648217057') format('woff'),
+       url('//at.alicdn.com/t/c/font_5140237_btwh80o8neo.ttf?t=1773648217057') format('truetype');
+}
+
+.cloudcad-icon {
+  font-family: "cloudcad-icon" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.cloudcad-xietongzu:before {
+  content: "\e645";
+}
+

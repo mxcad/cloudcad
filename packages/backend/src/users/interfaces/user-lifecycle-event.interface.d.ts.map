@@ -1,0 +1,1 @@
+{"version":3,"file":"user-lifecycle-event.interface.d.ts","sourceRoot":"","sources":["user-lifecycle-event.interface.ts"],"names":[],"mappings":"AAKA;;GAEG;AACH,MAAM,WAAW,yBAAyB;IACxC,MAAM,EAAE,MAAM,CAAC;IACf,KAAK,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;IACtB,QAAQ,CAAC,EAAE,MAAM,CAAC;IAClB,SAAS,EAAE,IAAI,CAAC;CACjB"}

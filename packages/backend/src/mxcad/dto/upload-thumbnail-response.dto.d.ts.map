@@ -1,0 +1,1 @@
+{"version":3,"file":"upload-thumbnail-response.dto.d.ts","sourceRoot":"","sources":["upload-thumbnail-response.dto.ts"],"names":[],"mappings":"AAcA;;GAEG;AACH,qBAAa,sBAAsB;IAKlC,QAAQ,EAAE,MAAM,CAAC;CACjB;AAED;;GAEG;AACH,qBAAa,0BAA0B;IAMtC,IAAI,EAAE,MAAM,CAAC;IAOb,OAAO,EAAE,MAAM,CAAC;IAMhB,IAAI,EAAE,sBAAsB,CAAC;CAC7B"}

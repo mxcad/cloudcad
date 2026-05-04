@@ -1,0 +1,96 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { ProjectStatus } from '@prisma/client';
+
+/**
+ * 项目过滤类型
+ * - all: 全部项目（我创建的 + 我加入的）
+ * - owned: 我创建的项目
+ * - joined: 我加入的项目（非创建者）
+ */
+export enum ProjectFilterType {
+  ALL = 'all',
+  OWNED = 'owned',
+  JOINED = 'joined',
+}
+
+export class QueryProjectsDto {
+  @ApiProperty({ description: '搜索关键词（匹配名称或描述）', required: false })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiProperty({
+    description: '项目状态',
+    enum: Object.values(ProjectStatus),
+    enumName: 'ProjectStatus',
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(ProjectStatus)
+  projectStatus?: ProjectStatus;
+
+  @ApiProperty({ description: '页码', required: false, minimum: 1, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({
+    description: '每页数量',
+    required: false,
+    minimum: 10,
+    maximum: 100,
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(10)
+  @Max(100)
+  limit?: number = 20;
+
+  @ApiProperty({
+    description: '排序字段',
+    required: false,
+    default: 'updatedAt',
+  })
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'updatedAt';
+
+  @ApiProperty({
+    description: '排序方向',
+    required: false,
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @ApiProperty({
+    description: '项目过滤类型：all-全部，owned-我创建的，joined-我加入的',
+    required: false,
+    enum: Object.values(ProjectFilterType),
+    enumName: 'ProjectFilterType',
+    default: ProjectFilterType.ALL,
+  })
+  @IsOptional()
+  @IsEnum(ProjectFilterType)
+  filter?: ProjectFilterType = ProjectFilterType.ALL;
+}

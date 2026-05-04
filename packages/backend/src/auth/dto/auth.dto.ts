@@ -1,0 +1,248 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { ApiResponseDto } from '../../common/dto/api-response.dto';
+
+export class RegisterDto {
+  @ApiPropertyOptional({
+    description: '用户邮箱（邮件服务启用时可选）',
+    example: 'user@example.com',
+    format: 'email',
+  })
+  @IsOptional()
+  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  email?: string;
+
+  @ApiProperty({
+    type: String,
+    description: '用户名',
+    example: 'username',
+    minLength: 3,
+    maxLength: 20,
+    pattern: '^[a-zA-Z0-9_]+$',
+  })
+  @IsString({ message: '用户名必须是字符串' })
+  @IsNotEmpty({ message: '用户名不能为空' })
+  @MinLength(3, { message: '用户名至少3个字符' })
+  @MaxLength(20, { message: '用户名最多20个字符' })
+  @Matches(/^[a-zA-Z0-9_]+$/, {
+    message: '用户名只能包含字母、数字和下划线',
+  })
+  username: string;
+
+  @ApiProperty({
+    type: String,
+    description: '密码',
+    example: 'password123',
+    minLength: 8,
+    maxLength: 50,
+  })
+  @IsString({ message: '密码必须是字符串' })
+  @IsNotEmpty({ message: '密码不能为空' })
+  @MinLength(8, { message: '密码至少8个字符' })
+  @MaxLength(50, { message: '密码最多50个字符' })
+  password: string;
+
+  @ApiProperty({
+    description: '昵称',
+    example: '用户昵称',
+    required: false,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @IsString({ message: '昵称必须是字符串' })
+  @MaxLength(50, { message: '昵称最多50个字符' })
+  nickname?: string;
+
+  @ApiPropertyOptional({
+    description: '微信临时 Token（微信登录跳转注册时携带）',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @IsOptional()
+  @IsString({ message: '微信临时 Token 必须是字符串' })
+  wechatTempToken?: string;
+}
+
+export class LoginDto {
+  @ApiProperty({
+    description: '邮箱、用户名或手机号',
+    example: 'user@example.com',
+  })
+  @IsString({ message: '登录账号必须是字符串' })
+  @IsNotEmpty({ message: '登录账号不能为空' })
+  account: string;
+
+  @ApiProperty({
+    description: '密码',
+    example: 'Password123!',
+  })
+  @IsString({ message: '密码必须是字符串' })
+  @IsNotEmpty({ message: '密码不能为空' })
+  password: string;
+}
+
+export class RefreshTokenDto {
+  @ApiProperty({
+    description: '刷新Token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @IsString({ message: '刷新Token必须是字符串' })
+  @IsNotEmpty({ message: '刷新Token不能为空' })
+  refreshToken: string;
+}
+
+export class UserDto {
+  @ApiProperty({
+    description: '用户ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  id: string;
+
+  @ApiPropertyOptional({
+    description: '用户邮箱（可能未绑定）',
+    example: 'user@example.com',
+    nullable: true,
+  })
+  email?: string | null;
+
+  @ApiProperty({
+    description: '用户名',
+    example: 'username',
+  })
+  username: string;
+
+  @ApiProperty({
+    description: '昵称',
+    example: '用户昵称',
+    required: false,
+  })
+  nickname?: string;
+
+  @ApiProperty({
+    description: '头像URL',
+    example: 'https://example.com/avatar.jpg',
+    required: false,
+  })
+  avatar?: string;
+
+  @ApiProperty({
+    description: '用户角色',
+    type: 'object',
+    properties: {
+      id: { type: 'string', example: 'clxxxxxxx' },
+      name: {
+        type: 'string',
+        enum: ['ADMIN', 'USER_MANAGER', 'FONT_MANAGER', 'USER'],
+        example: 'USER',
+      },
+      description: {
+        type: 'string',
+        example: '普通用户，基础权限',
+        nullable: true,
+      },
+      isSystem: { type: 'boolean', example: true },
+      permissions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { permission: { type: 'string' } },
+        },
+      },
+    },
+  })
+  role: {
+    id: string;
+    name: string;
+    description: string | null;
+    isSystem: boolean;
+    permissions: Array<{ permission: string }>;
+  };
+
+  @ApiProperty({
+    description: '用户状态',
+    enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+    example: 'ACTIVE',
+  })
+  status: string;
+
+  @ApiPropertyOptional({
+    description: '用户手机号（可能未绑定）',
+    example: '13800138000',
+    nullable: true,
+  })
+  phone?: string | null;
+
+  @ApiPropertyOptional({
+    description: '手机号是否已验证',
+    example: false,
+  })
+  phoneVerified?: boolean;
+
+  @ApiPropertyOptional({
+    description: '微信 OpenID',
+    example: 'oXYZ123...',
+    nullable: true,
+  })
+  wechatId?: string | null;
+
+  @ApiPropertyOptional({
+    description: '登录方式 (LOCAL | WECHAT)',
+    example: 'LOCAL',
+  })
+  provider?: string;
+
+  @ApiPropertyOptional({
+    description: '是否已设置密码',
+    example: true,
+  })
+  hasPassword?: boolean;
+}
+
+export class AuthResponseDto {
+  @ApiProperty({
+    description: '访问Token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  accessToken: string;
+
+  @ApiProperty({
+    description: '刷新Token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  refreshToken: string;
+
+  @ApiProperty({
+    description: '用户信息',
+    type: () => UserDto,
+  })
+  user: UserDto;
+}
+
+export class AuthApiResponseDto extends ApiResponseDto<AuthResponseDto> {
+  @ApiProperty({
+    description: '认证响应数据',
+    type: () => AuthResponseDto,
+  })
+  declare data: AuthResponseDto;
+}

@@ -1,0 +1,40 @@
+
+[1m[46m RUN [49m[22m [36mv4.1.0 [39m[90mD:/project/cloudcad/packages/frontend[39m
+
+ [31m❯[39m src/hooks/useProjectPermission.spec.ts [2m([22m[2m14 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[32m 112[2mms[22m[39m
+[31m       [31m×[31m should return false on API error[39m[32m 12[2mms[22m[39m
+[31m       [31m×[31m should return empty array on API error[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should return null when role is undefined[39m[32m 15[2mms[22m[39m
+[31m       [31m×[31m should return null on API error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should return false when user has none of the permissions[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should return true when user has all permissions[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should cache permission check results[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should clear cache for specific project[39m[32m 6[2mms[22m[39m
+ [31m❯[39m src/components/tour/TourStartModal.spec.tsx [2m([22m[2m34 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[33m 896[2mms[22m[39m
+[31m       [31m×[31m 应该显示主图标 (Sparkles)[39m[32m 33[2mms[22m[39m
+[31m       [31m×[31m 应该显示业务流程教程图标 (BookOpen)[39m[32m 17[2mms[22m[39m
+[31m       [31m×[31m 应该显示交互式引导图标 (Target)[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m 应该显示按需学习图标 (Compass)[39m[32m 29[2mms[22m[39m
+ [31m❯[39m src/pages/FileSystemManager.spec.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 169[2mms[22m[39m
+[31m     [31m×[31m should render without crashing in project mode[39m[32m 123[2mms[22m[39m
+[31m     [31m×[31m should render without crashing in personal-space mode[39m[32m 38[2mms[22m[39m
+ [31m❯[39m src/components/modals/ExternalReferenceModal.spec.tsx [2m([22m[2m19 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[33m 1499[2mms[22m[39m
+[31m     [31m×[31m 应该显示所有文件[39m[33m 380[2mms[22m[39m
+[31m     [31m×[31m 应该在上传中时禁用选择按钮[39m[32m 29[2mms[22m[39m
+[31m     [31m×[31m 应该显示警告图标[39m[32m 27[2mms[22m[39m
+ [31m❯[39m src/hooks/file-system/useFileSystemCRUD.spec.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 30[2mms[22m[39m
+[31m     [31m×[31m should return expected shape with all required functions[39m[32m 24[2mms[22m[39m
+ [31m❯[39m src/hooks/useExternalReferenceUpload.integration.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m src/hooks/useExternalReferenceUpload.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m src/hooks/file-system/useFileSystemData.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m e2e/login.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m src/components/tour/TourOverlay.spec.tsx [2m([22m[2m14 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[33m 11554[2mms[22m[39m
+[31m       [31m×[31m 应该使用 data-tour 属性查找目标元素[39m[32m 18[2mms[22m[39m
+[31m       [31m×[31m 应该在元素找到时正常渲染 children[39m[33m 1029[2mms[22m[39m
+[31m       [31m×[31m 应该传递 targetRect 和 hasTarget 给 children[39m[33m 1019[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (15)[39m
+[2m      Tests [22m [1m[31m21 failed[39m[22m[2m | [22m[1m[32m173 passed[39m[22m[90m (194)[39m
+[2m   Start at [22m 23:20:32
+[2m   Duration [22m 14.25s[2m (transform 3.90s, setup 4.66s, import 9.92s, tests 16.81s, environment 17.83s)[22m
+

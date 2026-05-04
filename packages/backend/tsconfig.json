@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "isolatedModules": false,
+    "skipLibCheck": true,
+    "rootDir": null,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "strictNullChecks": false,
+    "noImplicitReturns": false,
+    "noImplicitAny": false,
+    "composite": false,
+    "incremental": true,
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.e2e-spec.ts",
+    "test/**/*",
+    "jest.config.ts",
+    "prisma.config.ts",
+    "prisma/seed.ts"
+  ]
+}

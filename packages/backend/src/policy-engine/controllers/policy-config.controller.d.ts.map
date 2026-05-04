@@ -1,0 +1,1 @@
+{"version":3,"file":"policy-config.controller.d.ts","sourceRoot":"","sources":["policy-config.controller.ts"],"names":[],"mappings":"AAkCA,OAAO,EACL,mBAAmB,EAEpB,MAAM,mCAAmC,CAAC;AAO3C;;;;GAIG;AACH,qBAIa,sBAAsB;IACrB,OAAO,CAAC,QAAQ,CAAC,mBAAmB;gBAAnB,mBAAmB,EAAE,mBAAmB;CACtE"}

@@ -1,0 +1,10 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * 用户服务接口令牌，用于依赖注入
+ */
+export const USER_SERVICE = 'USER_SERVICE';
+//# sourceMappingURL=user-service.interface.js.map

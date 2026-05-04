@@ -1,0 +1,1 @@
+{"version":3,"file":"svn-log-entry.dto.d.ts","sourceRoot":"","sources":["svn-log-entry.dto.ts"],"names":[],"mappings":"AAaA,OAAO,EAAE,aAAa,EAAE,MAAM,oBAAoB,CAAC;AAEnD;;GAEG;AACH,qBAAa,cAAc;IAKzB,QAAQ,EAAE,MAAM,CAAC;IAMjB,MAAM,EAAE,MAAM,CAAC;IAQf,IAAI,EAAE,IAAI,CAAC;IAMX,OAAO,EAAE,MAAM,CAAC;IAMhB,QAAQ,CAAC,EAAE,MAAM,CAAC;IAMlB,KAAK,CAAC,EAAE,aAAa,EAAE,CAAC;CACzB"}

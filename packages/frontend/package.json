@@ -54,6 +54,9 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
+    "@msw/source": "^0.6.1",
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
@@ -73,13 +76,13 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "happy-dom": "^20.0.11",
     "jsdom": "^27.3.0",
+    "msw-auto-mock": "^0.32.1",
     "openapicmd": "^2.9.2",
     "postcss": "^8.5.6",
     "prettier": "^3.2.0",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vitest": "^4.0.16",
-    "@playwright/test": "^1.52.0"
+    "vitest": "^4.0.16"
   }
 }

@@ -1,0 +1,1 @@
+{"version":3,"file":"storage-info.dto.d.ts","sourceRoot":"","sources":["storage-info.dto.ts"],"names":[],"mappings":"AAcA,oBAAY,gBAAgB;IAC1B,QAAQ,aAAa;IACrB,OAAO,YAAY;IACnB,OAAO,YAAY;CACpB;AAED;;GAEG;AACH,qBAAa,cAAc;IAMzB,IAAI,EAAE,gBAAgB,CAAC;IAGvB,IAAI,EAAE,MAAM,CAAC;IAGb,KAAK,EAAE,MAAM,CAAC;IAGd,SAAS,EAAE,MAAM,CAAC;IAGlB,YAAY,EAAE,MAAM,CAAC;CACtB"}

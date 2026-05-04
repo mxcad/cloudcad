@@ -1,0 +1,1 @@
+{"version":3,"file":"create-role.dto.d.ts","sourceRoot":"","sources":["create-role.dto.ts"],"names":[],"mappings":"AAsBA,OAAO,EAAE,YAAY,EAAE,MAAM,qCAAqC,CAAC;AAEnE,qBAAa,aAAa;IAKxB,IAAI,EAAE,MAAM,CAAC;IAUb,WAAW,CAAC,EAAE,MAAM,CAAC;IAWrB,QAAQ,CAAC,EAAE,YAAY,CAAC;IASxB,KAAK,CAAC,EAAE,MAAM,CAAC;IAUf,WAAW,EAAE,MAAM,EAAE,CAAC;CACvB"}

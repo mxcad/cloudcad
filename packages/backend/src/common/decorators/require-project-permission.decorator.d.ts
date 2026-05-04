@@ -1,0 +1,44 @@
+import { ProjectPermission } from '../enums/permissions.enum';
+/**
+ * 项目权限检查模式
+ */
+export declare enum ProjectPermissionCheckMode {
+    /** 所有权限都必须满足（AND 逻辑） */
+    ALL = "ALL",
+    /** 满足任意一个权限即可（OR 逻辑） */
+    ANY = "ANY"
+}
+/**
+ * 项目权限检查元数据键
+ */
+export declare const REQUIRE_PROJECT_PERMISSION_KEY = "require_project_permissions";
+/**
+ * 项目权限检查模式元数据键
+ */
+export declare const REQUIRE_PROJECT_PERMISSION_MODE_KEY = "require_project_permissions_mode";
+/**
+ * 要求特定项目权限的装饰器
+ *
+ * 使用 NestJS 官方的 SetMetadata + applyDecorators 组合，
+ * 确保元数据能被 Reflector.getAllAndOverride 正确读取。
+ *
+ * @example
+ * // 要求单个权限
+ * @RequireProjectPermission(ProjectPermission.FILE_READ)
+ *
+ * @example
+ * // 要求所有权限（AND 逻辑，默认）
+ * @RequireProjectPermission([ProjectPermission.FILE_READ, ProjectPermission.FILE_WRITE])
+ *
+ * @example
+ * // 要求任意一个权限（OR 逻辑）
+ * @RequireProjectPermission(
+ *   [ProjectPermission.FILE_READ, ProjectPermission.FILE_WRITE],
+ *   ProjectPermissionCheckMode.ANY
+ * )
+ *
+ * @param permissions 项目权限列表
+ * @param mode 权限检查模式，默认为 ALL
+ */
+export declare const RequireProjectPermission: (permissions: ProjectPermission | ProjectPermission[], mode?: ProjectPermissionCheckMode) => <TFunction extends Function, Y>(target: TFunction | object, propertyKey?: string | symbol, descriptor?: TypedPropertyDescriptor<Y>) => void;
+//# sourceMappingURL=require-project-permission.decorator.d.ts.map

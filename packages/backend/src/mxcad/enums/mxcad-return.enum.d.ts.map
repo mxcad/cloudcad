@@ -1,0 +1,1 @@
+{"version":3,"file":"mxcad-return.enum.d.ts","sourceRoot":"","sources":["mxcad-return.enum.ts"],"names":[],"mappings":"AAYA,oBAAY,cAAc;IACxB,GAAG,OAAO,CAAE,KAAK;IACjB,WAAW,eAAe,CAAE,OAAO;IACnC,kBAAkB,sBAAsB,CAAE,QAAQ;IAClD,aAAa,iBAAiB,CAAE,QAAQ;IACxC,iBAAiB,qBAAqB,CAAE,QAAQ;IAChD,YAAY,gBAAgB,CAAE,QAAQ;IACtC,iBAAiB,qBAAqB,CAAE,SAAS;IACjD,cAAc,kBAAkB;CACjC"}

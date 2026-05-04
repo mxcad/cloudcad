@@ -1,0 +1,441 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "rhel-openssl-3.0.x", "linux-musl"]
+  engineType    = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   String           @id @default(cuid())
+  email                String?          @unique
+  username             String           @unique
+  password             String?
+  nickname             String?
+  avatar               String?
+  roleId               String
+  status               UserStatus       @default(INACTIVE)
+  emailVerified        Boolean          @default(false)
+  emailVerifiedAt      DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  phone                String?          @unique
+  phoneVerified        Boolean          @default(false)
+  phoneVerifiedAt      DateTime?
+  wechatId             String?          @unique
+  provider             String           @default("LOCAL")
+  deletedAt            DateTime?
+  lastUsernameChangeAt DateTime?
+  usernameChangeCount  Int              @default(0)
+  auditLogs            AuditLog[]
+  ownedNodes           FileSystemNode[] @relation("NodeOwner")
+  projectMembers       ProjectMember[]
+  role                 Role             @relation(fields: [roleId], references: [id])
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  category    RoleCategory     @default(SYSTEM)
+  level       Int              @default(0)
+  isSystem    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  parent      Role?            @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Role[]           @relation("RoleHierarchy")
+  users       User[]
+
+  @@index([parentId])
+  @@index([category])
+  @@index([level])
+  @@map("roles")
+}
+
+model RolePermission {
+  id         String     @id @default(cuid())
+  roleId     String
+  permission Permission
+  createdAt  DateTime   @default(now())
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
+}
+
+model FileSystemNode {
+  id                             String           @id @default(cuid())
+  name                           String
+  isFolder                       Boolean          @default(false)
+  isRoot                         Boolean          @default(false)
+  parentId                       String?
+  originalName                   String?
+  path                           String?
+  size                           Int?
+  mimeType                       String?
+  extension                      String?
+  fileStatus                     FileStatus?
+  fileHash                       String?
+  description                    String?
+  projectStatus                  ProjectStatus?
+  personalSpaceKey               String?          @unique(map: "unique_personal_space")
+  libraryKey                     String?
+  hasMissingExternalReferences   Boolean          @default(false)
+  missingExternalReferencesCount Int              @default(0)
+  externalReferencesJson         String?
+  ownerId                        String
+  createdAt                      DateTime         @default(now())
+  updatedAt                      DateTime         @updatedAt
+  deletedAt                      DateTime?
+  deletedByCascade               Boolean          @default(false)
+  deletedFromStorage             DateTime?
+  projectId                      String?
+  storageQuota                   Int?             @default(0)
+  owner                          User             @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  parent                         FileSystemNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children                       FileSystemNode[] @relation("NodeHierarchy")
+  project                        FileSystemNode?  @relation("NodeProject", fields: [projectId], references: [id], onDelete: Cascade)
+  files                          FileSystemNode[] @relation("NodeProject")
+  projectMembers                 ProjectMember[]
+  projectRoles                   ProjectRole[]
+
+  @@index([parentId])
+  @@index([ownerId])
+  @@index([isRoot])
+  @@index([isFolder])
+  @@index([deletedAt])
+  @@index([personalSpaceKey])
+  @@index([libraryKey])
+  @@index([projectId])
+  @@index([storageQuota])
+  @@index([projectId, deletedAt, isFolder, updatedAt], name: "idx_project_search")
+  @@index([libraryKey, deletedAt, isFolder, updatedAt], name: "idx_library_search")
+  @@map("file_system_nodes")
+}
+
+model ProjectRole {
+  id          String                  @id @default(cuid())
+  projectId   String?
+  name        String
+  description String?
+  isSystem    Boolean                 @default(false)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  members     ProjectMember[]
+  permissions ProjectRolePermission[]
+  project     FileSystemNode?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("project_roles")
+}
+
+model ProjectRolePermission {
+  id            String            @id @default(cuid())
+  projectRoleId String
+  permission    ProjectPermission
+  createdAt     DateTime          @default(now())
+  projectRole   ProjectRole       @relation(fields: [projectRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([projectRoleId, permission])
+  @@map("project_role_permissions")
+}
+
+model ProjectMember {
+  id            String         @id @default(cuid())
+  projectId     String
+  userId        String
+  projectRoleId String
+  createdAt     DateTime       @default(now())
+  project       FileSystemNode @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectRole   ProjectRole    @relation(fields: [projectRoleId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectRoleId])
+  @@index([projectId])
+  @@map("project_members")
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  path        String
+  thumbnail   String?
+  size        Int
+  mimeType    String
+  status      AssetStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("assets")
+}
+
+model Font {
+  id        String     @id @default(cuid())
+  name      String
+  family    String
+  path      String
+  size      Int
+  status    FontStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("fonts")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id           String       @id @default(cuid())
+  action       AuditAction
+  resourceType ResourceType
+  resourceId   String?
+  userId       String
+  details      String?
+  ipAddress    String?
+  userAgent    String?
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model UploadSession {
+  id            String   @id @default(cuid())
+  uploadId      String   @unique
+  storageKey    String
+  fileName      String
+  fileSize      Int
+  fileId        String?
+  projectId     String?
+  parentId      String?
+  ownerId       String
+  status        String   @default("INITIATED")
+  totalParts    Int?
+  uploadedParts Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("upload_sessions")
+}
+
+model CacheEntry {
+  id             String    @id @default(cuid())
+  key            String    @unique
+  value          String
+  expiresAt      DateTime?
+  lastAccessedAt DateTime  @default(now())
+  accessCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([expiresAt])
+  @@index([lastAccessedAt])
+  @@index([accessCount])
+  @@map("cache_entries")
+}
+
+model PermissionPolicy {
+  id          String             @id @default(cuid())
+  type        PolicyType
+  name        String
+  description String?
+  config      Json
+  enabled     Boolean            @default(true)
+  priority    Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  permissions PolicyPermission[]
+
+  @@index([type])
+  @@index([enabled])
+  @@index([priority])
+  @@map("permission_policies")
+}
+
+model PolicyPermission {
+  id         String           @id @default(cuid())
+  policyId   String
+  permission Permission
+  createdAt  DateTime         @default(now())
+  policy     PermissionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, permission])
+  @@index([permission])
+  @@map("policy_permissions")
+}
+
+model RuntimeConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String
+  category    String
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("runtime_configs")
+}
+
+model RuntimeConfigLog {
+  id         String   @id @default(cuid())
+  key        String
+  oldValue   String?
+  newValue   String
+  operatorId String?
+  operatorIp String?
+  createdAt  DateTime @default(now())
+
+  @@index([key])
+  @@index([createdAt])
+  @@map("runtime_config_logs")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Permission {
+  SYSTEM_USER_READ
+  SYSTEM_USER_CREATE
+  SYSTEM_USER_UPDATE
+  SYSTEM_USER_DELETE
+  SYSTEM_ROLE_READ
+  SYSTEM_ROLE_CREATE
+  SYSTEM_ROLE_UPDATE
+  SYSTEM_ROLE_DELETE
+  SYSTEM_ROLE_PERMISSION_MANAGE
+  SYSTEM_FONT_READ
+  SYSTEM_FONT_UPLOAD
+  SYSTEM_FONT_DELETE
+  SYSTEM_FONT_DOWNLOAD
+  SYSTEM_ADMIN
+  SYSTEM_MONITOR
+  SYSTEM_CONFIG_READ
+  SYSTEM_CONFIG_WRITE
+  LIBRARY_DRAWING_MANAGE
+  LIBRARY_BLOCK_MANAGE
+  STORAGE_QUOTA
+  PROJECT_CREATE
+}
+
+enum ProjectPermission {
+  PROJECT_UPDATE
+  PROJECT_DELETE
+  PROJECT_MEMBER_MANAGE
+  PROJECT_MEMBER_ASSIGN
+  PROJECT_TRANSFER
+  PROJECT_ROLE_MANAGE
+  PROJECT_ROLE_PERMISSION_MANAGE
+  FILE_CREATE
+  FILE_UPLOAD
+  FILE_OPEN
+  FILE_EDIT
+  FILE_DELETE
+  FILE_TRASH_MANAGE
+  FILE_DOWNLOAD
+  FILE_MOVE
+  FILE_COPY
+  CAD_SAVE
+  CAD_EXTERNAL_REFERENCE
+  VERSION_READ
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum FileStatus {
+  UPLOADING
+  PROCESSING
+  COMPLETED
+  FAILED
+  DELETED
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum FontStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum AuditAction {
+  PERMISSION_GRANT
+  PERMISSION_REVOKE
+  ROLE_CREATE
+  ROLE_UPDATE
+  ROLE_DELETE
+  USER_LOGIN
+  USER_LOGOUT
+  PROJECT_CREATE
+  PROJECT_DELETE
+  FILE_UPLOAD
+  FILE_DOWNLOAD
+  FILE_DELETE
+  FILE_SHARE
+  ADD_MEMBER
+  UPDATE_MEMBER
+  REMOVE_MEMBER
+  TRANSFER_OWNERSHIP
+}
+
+enum ResourceType {
+  SYSTEM
+  USER
+  ROLE
+  PERMISSION
+  PROJECT
+  FILE
+  FOLDER
+}
+
+enum RoleCategory {
+  SYSTEM
+  PROJECT
+  CUSTOM
+}
+
+enum PolicyType {
+  TIME
+  IP
+  DEVICE
+}

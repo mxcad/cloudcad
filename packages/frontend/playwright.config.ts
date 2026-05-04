@@ -25,9 +25,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm --filter frontend dev',
+    command: 'cross-env VITE_MSW=true pnpm --filter frontend dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: { VITE_MSW: 'true' },
   },
 });

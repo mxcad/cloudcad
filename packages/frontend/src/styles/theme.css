@@ -1,0 +1,857 @@
+/**
+ * CloudCAD 完美主题系统 - CSS 变量定义
+ * 版本：2.0.0 - 完美版
+ * 设计哲学：专业工程美学与现代视觉体验的平衡
+ * 
+ * 主题：
+ * - 亮色主题：Daylight Clarity（日光清晰）
+ * - 深色主题：Midnight Engineering（午夜工程）
+ */
+
+/* ============================================
+   1. 基础变量（亮色主题 - Daylight Clarity）
+   ============================================ */
+:root {
+  /* ----------------------------------------
+     1.1 背景层次 - 从浅到深
+     ---------------------------------------- */
+  --bg-canvas: #ffffff;           /* 纯白 - 画布 */
+  --bg-primary: #f8fafc;          /* 主背景 - 页面 */
+  --bg-secondary: #ffffff;        /* 次级背景 - 卡片 */
+  --bg-tertiary: #f1f5f9;         /* 三级背景 - 悬停 */
+  --bg-elevated: #ffffff;         /* 提升层 - 弹窗 */
+  --bg-overlay: rgba(15, 23, 42, 0.5); /* 遮罩层 */
+
+  /* ----------------------------------------
+     1.2 文字层次 - 从高对比到低对比
+     ---------------------------------------- */
+  --text-primary: #0f172a;        /* 主要文字 - 标题 */
+  --text-secondary: #334155;      /* 次要文字 - 正文 */
+  --text-tertiary: #64748b;       /* 辅助文字 - 描述 */
+  --text-muted: #94a3b8;          /* 弱化文字 - 禁用 */
+  --text-inverse: #ffffff;        /* 反色文字 */
+
+  /* ----------------------------------------
+     1.3 边框层次
+     ---------------------------------------- */
+  --border-subtle: #f1f5f9;       /* 微妙边框 */
+  --border-default: #e2e8f0;      /* 默认边框 */
+  --border-strong: #cbd5e1;       /* 强调边框 */
+  --border-focus: #6366f1;        /* 聚焦边框 */
+
+  /* ----------------------------------------
+     1.4 主品牌色 - 工程蓝
+     ---------------------------------------- */
+  --primary-50: #eef2ff;
+  --primary-100: #e0e7ff;
+  --primary-200: #c7d2fe;
+  --primary-300: #a5b4fc;
+  --primary-400: #818cf8;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;   /* 主按钮 */
+  --primary-700: #4338ca;   /* 悬停 */
+  --primary-800: #3730a3;
+  --primary-900: #312e81;
+
+  /* ----------------------------------------
+     1.5 CAD 强调色 - 青蓝
+     ---------------------------------------- */
+  --accent-50: #ecfeff;
+  --accent-100: #cffafe;
+  --accent-200: #a5f3fc;
+  --accent-300: #67e8f9;
+  --accent-400: #22d3ee;
+  --accent-500: #06b6d4;
+  --accent-600: #0891b2;
+  --accent-700: #0e7490;
+  --accent-800: #155e75;
+  --accent-900: #164e63;
+
+  /* ----------------------------------------
+     1.6 功能色
+     ---------------------------------------- */
+  --success: #16a34a;
+  --success-dim: #dcfce7;
+  --success-light: #f0fdf4;
+
+  --warning: #d97706;
+  --warning-dim: #fef3c7;
+  --warning-light: #fffbeb;
+
+  --error: #dc2626;
+  --error-dim: #fee2e2;
+  --error-light: #fef2f2;
+
+  --info: #2563eb;
+  --info-dim: #dbeafe;
+  --info-light: #eff6ff;
+
+  /* ----------------------------------------
+     1.7 Tooltip 提示框
+     ---------------------------------------- */
+  --bg-tooltip: rgba(15, 23, 42, 0.95);
+  --text-tooltip: #ffffff;
+
+  /* ----------------------------------------
+     1.8 阴影系统
+     ---------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* 品牌色发光效果 */
+  --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+  --glow-accent: 0 0 20px rgba(6, 182, 212, 0.3);
+
+  /* ----------------------------------------
+     1.8 间距系统
+     ---------------------------------------- */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+
+  /* ----------------------------------------
+     1.9 圆角系统
+     ---------------------------------------- */
+  --radius-none: 0;
+  --radius-sm: 0.25rem;    /* 4px */
+  --radius-md: 0.375rem;   /* 6px */
+  --radius-lg: 0.5rem;     /* 8px */
+  --radius-xl: 0.75rem;    /* 12px */
+  --radius-2xl: 1rem;      /* 16px */
+  --radius-3xl: 1.5rem;    /* 24px */
+  --radius-full: 9999px;
+
+  /* ----------------------------------------
+     1.10 过渡动画
+     ---------------------------------------- */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 200ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
+
+  /* ----------------------------------------
+     1.11 字体系统
+     ---------------------------------------- */
+  /* 
+   * 字体选择原则：
+   * 1. 优先使用系统预装字体，确保内网环境可用
+   * 2. 所有字体均为免费可商用字体
+   * 3. 按操作系统提供最佳字体回退方案
+   * 
+   * 字体列表：
+   * - Windows: Segoe UI, Microsoft YaHei
+   * - macOS: SF Pro, PingFang SC, Hiragino Sans GB
+   * - Linux: Noto Sans CJK SC, WenQuanYi Micro Hei
+   * - 通用回退: Arial, sans-serif
+   */
+  --font-family-base:
+    /* Windows */
+    'Segoe UI', 'Microsoft YaHei', '微软雅黑',
+    /* macOS */
+    -apple-system, BlinkMacSystemFont, 'SF Pro', 'PingFang SC', 'Hiragino Sans GB',
+    /* Linux */
+    'Noto Sans CJK SC', 'WenQuanYi Micro Hei', '文泉驿微米黑',
+    /* 通用回退 */
+    'Helvetica Neue', Arial, sans-serif;
+  
+  /* 
+   * 等宽字体 - 用于代码显示
+   * 全部为系统预装免费字体
+   */
+  --font-family-mono: 
+    /* Windows */
+    'Consolas', 'Courier New',
+    /* macOS */
+    'SF Mono', 'Menlo', 'Monaco',
+    /* Linux */
+    'DejaVu Sans Mono', 'Noto Sans Mono CJK SC',
+    /* 通用回退 */
+    monospace;
+}
+
+/* ============================================
+   2. 深色主题覆盖 - Midnight Engineering
+   ============================================ */
+[data-theme="dark"] {
+  /* ----------------------------------------
+     2.1 背景层次 - 从深到浅
+     ---------------------------------------- */
+  --bg-canvas: #0d0f12;           /* 最深 - CAD 画布背景 */
+  --bg-primary: #141619;          /* 主背景 - 页面、面板 */
+  --bg-secondary: #1a1d21;        /* 次级背景 - 卡片、输入框 */
+  --bg-tertiary: #22262b;         /* 三级背景 - 悬停、选中 */
+  --bg-elevated: #2a2f35;         /* 提升层 - 弹窗、下拉菜单 */
+  --bg-overlay: rgba(0, 0, 0, 0.7); /* 遮罩层 */
+  
+  /* CAD编辑器侧边栏专用颜色 - 与CAD画布完美融合 */
+  --sidebar-bg: #3A4352;          /* 侧边栏背景 - 与CAD画布一致 */
+  --sidebar-border: #212832;      /* 侧边栏边框 - 微妙的分割线 */
+
+  /* ----------------------------------------
+     2.2 文字层次
+     ---------------------------------------- */
+  --text-primary: #f0f4f8;        /* 主要文字 */
+  --text-secondary: #b8c5d1;      /* 次要文字 */
+  --text-tertiary: #7a8a99;       /* 辅助文字 */
+  --text-muted: #5a6a7a;          /* 弱化文字 */
+  --text-inverse: #141619;        /* 反色文字 */
+
+  /* ----------------------------------------
+     2.3 边框层次
+     ---------------------------------------- */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-focus: rgba(34, 211, 238, 0.5);
+
+  /* ----------------------------------------
+     2.4 主品牌色 - 工程蓝（保持）
+     ---------------------------------------- */
+  --primary-50: #1e1b4b;
+  --primary-100: #312e81;
+  --primary-200: #4338ca;
+  --primary-300: #4f46e5;
+  --primary-400: #6366f1;
+  --primary-500: #818cf8;
+  --primary-600: #a5b4fc;
+  --primary-700: #c7d2fe;
+  --primary-800: #e0e7ff;
+  --primary-900: #eef2ff;
+
+  /* ----------------------------------------
+     2.5 CAD 强调色 - 青蓝（增强）
+     ---------------------------------------- */
+  --accent-50: #083344;
+  --accent-100: #0e4a5c;
+  --accent-200: #155e75;
+  --accent-300: #0e7490;
+  --accent-400: #0891b2;
+  --accent-500: #06b6d4;
+  --accent-600: #22d3ee;   /* 高亮 */
+  --accent-700: #67e8f9;   /* 最亮 */
+  --accent-800: #a5f3fc;
+  --accent-900: #cffafe;
+
+  /* ----------------------------------------
+     2.6 功能色
+     ---------------------------------------- */
+  --success: #22c55e;
+  --success-dim: rgba(34, 197, 94, 0.15);
+  --success-light: rgba(34, 197, 94, 0.1);
+
+  --warning: #f59e0b;
+  --warning-dim: rgba(245, 158, 11, 0.15);
+  --warning-light: rgba(245, 158, 11, 0.1);
+
+  --error: #ef4444;
+  --error-dim: rgba(239, 68, 68, 0.15);
+  --error-light: rgba(239, 68, 68, 0.1);
+
+  --info: #3b82f6;
+  --info-dim: rgba(59, 130, 246, 0.15);
+  --info-light: rgba(59, 130, 246, 0.1);
+
+  /* ----------------------------------------
+     2.7 Tooltip 提示框
+     ---------------------------------------- */
+  --bg-tooltip: rgba(30, 41, 59, 0.98);
+  --text-tooltip: #f0f4f8;
+
+  /* ----------------------------------------
+     2.8 阴影系统
+     ---------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+
+  /* 深色主题发光效果 */
+  --glow-primary: 0 0 20px rgba(99, 102, 241, 0.4);
+  --glow-accent: 0 0 20px rgba(34, 211, 238, 0.4);
+}
+
+/* ============================================
+   3. 主题过渡动画（启用平滑过渡）
+   ============================================ */
+
+/*
+ * 主题切换过渡效果
+ * - 已禁用所有过渡动画，避免主题切换时闪烁
+ * - 确保主题切换瞬间完成，无视觉延迟
+ */
+
+/* 已禁用过渡动画 - 防止主题切换闪烁 */
+/* 
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme],
+  [data-theme] *,
+  [data-theme] *::before,
+  [data-theme] *::after {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  // 排除不需要过渡的元素 
+  [data-theme] img,
+  [data-theme] video,
+  [data-theme] canvas,
+  [data-theme] svg,
+  [data-theme] svg * {
+    transition: none;
+  }
+}
+*/
+
+/* ============================================
+   4. 组件样式规范
+   ============================================ */
+
+/* 4.1 按钮基础样式 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+  color: white;
+  border: none;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md), var(--glow-primary);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* 4.2 次级按钮 */
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  transition: all var(--transition-base);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+}
+
+/* 4.3 幽灵按钮 */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-tertiary);
+  border: none;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  transition: all var(--transition-base);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* 4.4 危险按钮 */
+.btn-danger {
+  background: var(--error);
+  color: white;
+  border: none;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  transition: all var(--transition-base);
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+/* 4.5 输入框 */
+.input-theme {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all var(--transition-base);
+}
+
+.input-theme::placeholder {
+  color: var(--text-muted);
+}
+
+.input-theme:hover {
+  border-color: var(--border-strong);
+}
+
+.input-theme:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+/* 深色主题聚焦效果 */
+[data-theme="dark"] .input-theme:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* 4.6 卡片 */
+.card-theme {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: all var(--transition-slow);
+}
+
+.card-theme:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* 4.7 模态框 */
+.modal-overlay-theme {
+  background: var(--bg-overlay);
+  backdrop-filter: blur(4px);
+}
+
+.modal-theme {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+}
+
+/* 4.8 侧边栏导航项 */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  text-decoration: none;
+}
+
+.sidebar-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.sidebar-nav-item.active {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+/* 4.9 表格 */
+.table-container-theme {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.table-theme {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-theme th {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.table-theme td {
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table-theme tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.table-theme tr:last-child td {
+  border-bottom: none;
+}
+
+/* 4.10 下拉菜单 */
+.dropdown-menu-theme {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  min-width: 12rem;
+  padding: var(--space-2);
+}
+
+.dropdown-item-theme {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.dropdown-item-theme:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.dropdown-item-theme.active {
+  background: var(--primary-50);
+  color: var(--primary-600);
+}
+
+[data-theme="dark"] .dropdown-item-theme.active {
+  background: var(--primary-100);
+  color: var(--primary-500);
+}
+
+/* 4.11 标签页 */
+.tabs-theme {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+}
+
+.tab-theme {
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.tab-theme:hover {
+  color: var(--text-secondary);
+}
+
+.tab-theme.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 4.12 开关 */
+.toggle-theme {
+  width: 2.75rem;
+  height: 1.5rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  appearance: none;
+  border: none;
+}
+
+.toggle-theme::after {
+  content: '';
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: 50%;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-theme:checked {
+  background: var(--primary-500);
+}
+
+.toggle-theme:checked::after {
+  transform: translateX(1.25rem);
+}
+
+/* 深色主题发光效果 */
+[data-theme="dark"] .toggle-theme:checked {
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+/* ============================================
+   5. 动画关键帧
+   ============================================ */
+
+/* 5.1 淡入 */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 5.2 缩放进入 */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 5.3 滑入 */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 5.4 脉冲 */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+/* 5.5 骨架屏闪光 */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* 5.6 旋转 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 5.7 弹跳 */
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* 5.8 浮动光晕 */
+@keyframes float-orb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(20px, 30px) scale(1.02); }
+}
+
+/* ============================================
+   6. 工具类
+   ============================================ */
+
+/* 6.1 动画工具类 */
+.animate-fade-in {
+  animation: fade-in var(--transition-slow) ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in var(--transition-base) ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up var(--transition-base) ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right var(--transition-base) ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s ease-out infinite;
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* 6.2 骨架屏 */
+.skeleton-theme {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 6.3 玻璃态效果 */
+.glass-theme {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .glass-theme {
+  background: rgba(26, 29, 33, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 6.4 渐变背景 */
+.gradient-primary-theme {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+}
+
+.gradient-accent-theme {
+  background: linear-gradient(135deg, var(--accent-600), var(--accent-500));
+}
+
+/* 6.5 文本渐变 */
+.text-gradient-primary {
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   7. 滚动条样式
+   ============================================ */
+[data-theme] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme] ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+}
+
+[data-theme] ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-base);
+}
+
+[data-theme] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================
+   8. 布局组件样式
+   ============================================ */
+
+/* 8.1 侧边栏 */
+.sidebar-theme {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-default);
+}
+
+/* 8.2 导航栏 */
+.navbar-theme {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  backdrop-filter: blur(10px);
+}
+
+/* 8.3 页面内容区 */
+.page-content-theme {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+/* 8.4 分隔线 */
+.divider-theme {
+  height: 1px;
+  background: var(--border-default);
+}
+
+/* 8.5 徽章 */
+.badge-theme {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-primary {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.badge-success {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+
+.badge-error {
+  background: var(--error-dim);
+  color: var(--error);
+}
+
+[data-theme="dark"] .badge-primary {
+  background: var(--primary-100);
+  color: var(--primary-500);
+}

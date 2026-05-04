@@ -1,0 +1,1 @@
+{"version":3,"file":"check-file.dto.d.ts","sourceRoot":"","sources":["check-file.dto.ts"],"names":[],"mappings":"AAeA;;GAEG;AACH,qBAAa,YAAY;IACvB,UAAU;IAIV,QAAQ,EAAE,MAAM,CAAC;IAEjB,gBAAgB;IAIhB,QAAQ,EAAE,MAAM,CAAC;CAClB;AAED;;GAEG;AACH,qBAAa,oBAAoB;IAC/B,cAAc;IAEd,KAAK,EAAE,OAAO,CAAC;IAEf,kBAAkB;IAElB,IAAI,CAAC,EAAE,MAAM,CAAC;IAEd,YAAY;IAEZ,QAAQ,CAAC,EAAE,MAAM,CAAC;CACnB"}

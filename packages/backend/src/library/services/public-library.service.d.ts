@@ -1,0 +1,78 @@
+import { DatabaseService } from '../../database/database.service';
+import { FileSystemService } from '../../file-system/file-system.service';
+import { LibraryType } from '../library.service';
+import { CreateFolderDto } from '../../file-system/dto/create-folder.dto';
+import { IPublicLibraryProvider, PUBLIC_LIBRARY_PROVIDER_DRAWING, PUBLIC_LIBRARY_PROVIDER_BLOCK } from '../interfaces/public-library-provider.interface';
+export declare class PublicLibraryService implements IPublicLibraryProvider {
+    private readonly prisma;
+    private readonly fileSystemService;
+    private readonly libraryType;
+    private readonly logger;
+    constructor(prisma: DatabaseService, fileSystemService: FileSystemService, libraryType: LibraryType);
+    getLibraryId(): Promise<string>;
+    getRootNode(): Promise<({
+        children: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            description: string | null;
+            parentId: string | null;
+            isFolder: boolean;
+            isRoot: boolean;
+            originalName: string | null;
+            path: string | null;
+            size: number | null;
+            mimeType: string | null;
+            extension: string | null;
+            fileStatus: import("@prisma/client").$Enums.FileStatus | null;
+            fileHash: string | null;
+            projectStatus: import("@prisma/client").$Enums.ProjectStatus | null;
+            personalSpaceKey: string | null;
+            libraryKey: string | null;
+            hasMissingExternalReferences: boolean;
+            missingExternalReferencesCount: number;
+            externalReferencesJson: string | null;
+            ownerId: string;
+            deletedByCascade: boolean;
+            deletedFromStorage: Date | null;
+            projectId: string | null;
+            storageQuota: number | null;
+        }[];
+    } & {
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        description: string | null;
+        parentId: string | null;
+        isFolder: boolean;
+        isRoot: boolean;
+        originalName: string | null;
+        path: string | null;
+        size: number | null;
+        mimeType: string | null;
+        extension: string | null;
+        fileStatus: import("@prisma/client").$Enums.FileStatus | null;
+        fileHash: string | null;
+        projectStatus: import("@prisma/client").$Enums.ProjectStatus | null;
+        personalSpaceKey: string | null;
+        libraryKey: string | null;
+        hasMissingExternalReferences: boolean;
+        missingExternalReferencesCount: number;
+        externalReferencesJson: string | null;
+        ownerId: string;
+        deletedByCascade: boolean;
+        deletedFromStorage: Date | null;
+        projectId: string | null;
+        storageQuota: number | null;
+    }) | null>;
+    createFolder(dto: CreateFolderDto): Promise<any>;
+    deleteNode(nodeId: string): Promise<any>;
+}
+export declare function createDrawingLibraryProvider(prisma: DatabaseService, fileSystemService: FileSystemService): IPublicLibraryProvider;
+export declare function createBlockLibraryProvider(prisma: DatabaseService, fileSystemService: FileSystemService): IPublicLibraryProvider;
+export { PUBLIC_LIBRARY_PROVIDER_DRAWING, PUBLIC_LIBRARY_PROVIDER_BLOCK, };
+//# sourceMappingURL=public-library.service.d.ts.map

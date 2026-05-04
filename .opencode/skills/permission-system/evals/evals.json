@@ -1,0 +1,29 @@
+{
+  "skill_name": "permission-system",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我需要添加一个新的系统权限 SYSTEM_TEMPLATE_READ，用于控制模板库的读取权限。请帮我完成这个功能的实现，包括后端和前端。",
+      "expected_output": "正确添加权限枚举定义，分配给相应角色，并在前端常量中同步添加",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我需要为 FileController 的删除接口添加权限控制，只有拥有 FILE_DELETE 权限的用户才能删除文件。请帮我实现。",
+      "expected_output": "正确使用 RequireProjectPermission 装饰器，项目 ID 能正确提取",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "前端有个删除按钮，需要根据用户的项目权限来控制显示隐藏。项目 ID 是 projectId，需要检查 FILE_DELETE 权限。",
+      "expected_output": "正确使用 useProjectPermission Hook 进行权限检查",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "我修改了用户的角色，从 USER 改成了 ADMIN，但是权限检查还是用的旧的权限，这是什么问题？",
+      "expected_output": "解释缓存问题，指出需要清理用户权限缓存",
+      "files": []
+    }
+  ]
+}

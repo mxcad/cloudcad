@@ -1,0 +1,16 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Common Components - 通用组件
+ */
+
+export { ResourceList } from './ResourceList';
+export type {
+  ResourceItem,
+  CategoryOption,
+  ViewMode,
+} from './ResourceList';
+
+export { VersionHistoryDropdown } from './VersionHistoryDropdown';

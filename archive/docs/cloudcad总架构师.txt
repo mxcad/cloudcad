@@ -1,0 +1,1767 @@
+好的，我来生成一份真正全面的交接文档——从我们对话的第一天到现在，每一个关键决策、每一次架构调整、每一个技术细节，全部记录在案。
+
+这份文档较长，但它是我们所有工作的完整记录。请完整保存。
+
+---
+
+## CloudCAD 项目完整交接文档
+
+### 一、项目背景与起点
+
+**项目定位**：在线 CAD 协同平台，前端基于 mxcad/mxcad-app，后端 NestJS。项目一开始全靠 AI 生成，功能勉强跑通但架构严重腐化。
+
+**初始状态**：
+- 后端 75 个 Service，仅 1 个 spec 文件，零测试
+- 两个"上帝模块"：MxCad（21 个 Service）和 FileSystem（14 个 Service）
+- 5 对模块间循环依赖（均使用 forwardRef）
+- 185 个接口无版本号，废弃接口不敢删除
+- 前端 React 19 + Zustand + Tailwind，代码耦合严重
+
+**核心痛点**：
+- 加功能困难，改一处怕炸一片
+- Bug 反复出现，改不完
+- 不知道哪些接口在用、哪些废弃
+- 前端出身，后端架构概念不熟
+
+**我们达成的共识**：先诊断，再重建。三步走战略——修Bug定终稿 → 全面重构后端 → 重构前端为 Vue 3。
+
+---
+
+### 二、架构设计核心决策
+
+**2.1 总体架构原则**
+
+1. **核心封死，零件可换**：转换引擎是唯一核心壁垒，封装成独立包。其他模块（存储、版本管理、上传）通过接口定义，可替换但不强制。
+2. **不做客户扩展区**：用户改样板间是他们的事，升级覆盖了不负责。因此不需要 `extensions/`、`module-registry.ts`、`extension-registry.ts` 等扩展机制。
+3. **三层交付模型**：开箱即用（Docker 镜像）、轻量定制（配置文件）、深度定制（带着核心包自建项目）。
+4. **Monorepo 骨架**：`packages/`（应用）、`packages/`（库）、`runtime/`（离线运行时依赖）三层分离。
+
+**2.2 关键架构决策记录**
+
+| 决策 | 结论 | 时间 |
+|------|------|------|
+| 前端技术栈 | 从 React 迁移到 Vue 3 + Vuetify 3，复用 mxcad-app 内部已有的 Vuetify 实例 | 冲刺二完成后 |
+| 存储层 | 使用 flydrive 作为文件存取抽象层，通过 IStorageProvider 接口隔离 | 冲刺二期间 |
+| 上传模块 | 替换为 @tus/server + Uppy 开源方案 | 冲刺三期间 |
+| 版本管理抽象 | 定义 IVersionControl 接口，当前 SvnVersionControl 实现，未来可替换为 Git | 冲刺三后 |
+| 认证抽象 | 定义 IAuthProvider 接口，为未来对接官网会员体系预留插口 | 冲刺三后 |
+| 权限抽象 | 定义 IPermissionStore 接口，权限数据来源可替换 | 冲刺三后 |
+| 图纸库/图块库合并 | 统一为 IPublicLibraryProvider 接口，消除重复代码 | 冲刺三后 |
+
+**2.3 文件管理核心架构**
+
+文件管理是整个平台的心脏。冲刺二将原来的上帝模块拆解为四个层次：
+
+- **业务封装层**：图纸库、图块库、我的图纸、项目管理——本质上都是文件系统的不同视图
+- **核心能力层**：8 个独立子模块（FileOperationsService、FileTreeService、FileDownloadExportService、ProjectMemberService、SearchService、FileSystemPermissionService、FileValidationService、FileHashService）
+- **基础设施层**：IStorageProvider、IVersionControl、IUploadProvider、IPermissionStore
+- **物理存储层**：filesData/、SVN 仓库、uploads/、temp/
+
+**关键存储规则**：
+- `uploads/` 是静态素材库，存放以哈希命名的原始文件和转换后的 mxweb
+- `data/files/NodeId/` 是动态版本区，存放用户修改后的最新版本和分片文件
+- SVN 只提交分片文件（bin），mxweb 不进入版本库
+- 文件访问通过两级查找：先找 NodeId 目录，再找 uploads 目录
+- 秒传基于哈希，复制区分"未修改"和"已修改"
+
+**2.4 认证与鉴权体系**
+
+- 系统级双认证：Header（Authorization: Bearer）+ Cookie（auth_token）
+- mxcad.sid 是旧 Session 标识符，已标记废弃，待逐步替换
+- JWT 策略已支持从 Cookie 和 Header 双重提取 Token
+- 权限体系分系统权限和项目权限两层，6 种权限检查机制已收敛
+- 认证（AuthFacadeService）和授权（PermissionService）在代码层面已分离
+
+---
+
+### 三、冲刺执行记录
+
+**冲刺一：解除循环依赖 + Monorepo 骨架**
+
+| 成果 | 详细 |
+|------|------|
+| 循环依赖 | 5 对双向循环依赖全部解除，forwardRef 从 18 处减少到 7 处 |
+| 接口提取 | 新建 USER_SERVICE 和验证服务接口，解耦 CommonModule/AuthModule/UsersModule |
+| Monorepo | 从扁平结构转换为 packages/ + packages/ + runtime/ 标准结构 |
+| 代码修复 | P0/P1/P2 共 38 个问题全部修复（包括 LinuxInitService 未注册的隐形 Bug） |
+| 废弃清理 | 7 个废弃依赖包移除，8 个废弃接口删除 |
+
+**冲刺二：上帝模块拆分**
+
+| 模块 | 成果 |
+|------|------|
+| 文件系统 | 从 14 个 Service 拆分为 8 个独立子模块 + 1 个 Facade |
+| MxCAD | 从 21 个 Service 拆分为 9 个独立子模块 |
+| 总拆分度 | 原始 35 个 Service 拆分为 17 个独立子模块 |
+
+**冲刺三：测试防线建设**
+
+| 成果 | 详细 |
+|------|------|
+| 测试文件 | 12 个 spec 文件，527 个测试用例（最终统计） |
+| 数据安全 | 引用计数、SVN 回滚、并发冲突三项关键测试全部就位 |
+| API 版本化 | 13 个 Controller 加上 /v1/ 前缀，3 个保持不变 |
+| 废弃端点 | 38 个确认废弃端点已删除，前端 API 定义同步清理 |
+| 权限收敛 | MxcadController 标准化、cache-monitor 保护、双重检查修复 |
+
+**冲刺三后清理阶段**：
+
+| 任务 | 成果 |
+|------|------|
+| 公共资源库合并 | IPublicLibraryProvider 接口定义，图纸库/图块库统一实现 |
+| 认证抽象 | IAuthProvider 接口 + LocalAuthProvider 封装 |
+| 权限抽象 | IPermissionStore 接口 + PrismaPermissionStore 实现 |
+| 版本管理抽象 | IVersionControl 接口 + SvnVersionControlProvider |
+| 存储层替换 | flydrive 替换完成，IStorageProvider 接口实现 |
+| 文件管理子模块修复 | ProjectMemberService 权限检查、FileTreeService 存储抽象修复、FileDownloadExportService 路径翻倍 BUG、updateNodeStorageQuota 桩方法实现 |
+| 管理员恢复端点 | 已添加 |
+
+---
+
+### 四、后端模块对齐状态
+
+| 模块 | 对齐状态 | 审计深度 | 关键成果 |
+|------|---------|---------|---------|
+| 认证与鉴权 | ✅ 已对齐 | 深度讨论 | IAuthProvider 抽象完成，双认证机制确认 |
+| 权限体系 | ✅ 已对齐 | 深度讨论 | IPermissionStore 抽象完成，六种权限机制收敛 |
+| 文件管理核心 | ✅ 已对齐 | 8 个子模块深度审计 | P0 修复已闭环 |
+| 搜索模块 | ✅ 已对齐 | 深度审计 | 权限漏洞已修复 |
+| 版本管理 | ✅ 已对齐 | 深度审计 | IVersionControl 抽象完成 |
+| 图纸库/图块库 | ✅ 已对齐 | 深度审计 | IPublicLibraryProvider 合并完成 |
+| 回收站 | ✅ 已对齐 | 深度审计 | 所有问题已闭环 |
+| 用户管理 | ⚠️ 已审计 | 深度审计（CodeBuddy Code） | **重构方案未启动** |
+| 运行时配置 | ⚠️ 已审计 | 深度审计（Trea） | 小问题待修复 |
+| 审计日志 | ⚠️ 已审计 | 深度审计（Trea） | 小问题待修复 |
+| 字体库 | ⚠️ 已审计 | 深度审计（Trea） | 路径硬编码待修复 |
+| 策略引擎 | ⚠️ 已审计 | 深度审计（Trea） | **循环依赖待修复** |
+| 缓存架构 | ⚠️ 已审计 | 深度审计（Trea） | **内存泄漏 + 性能问题** |
+| 健康检查 | ⚠️ 已审计 | 深度审计（Trea） | 小问题待修复 |
+
+---
+
+### 五、待修复的 P0 问题清单
+
+| 编号 | 模块 | 文件 | 问题 | 修复方案 |
+|------|------|------|------|---------|
+| P0-1 | 策略引擎 | `policy-engine/services/policy-config.service.ts` | PolicyConfigService ↔ PolicyEngineService 循环依赖 | 提取接口或事件驱动解耦 |
+| P0-2 | 缓存架构 | `cache-architecture/services/cache-monitor.service.ts` | `setInterval` 未在 `OnModuleDestroy` 中清理，内存泄漏 | 实现 OnModuleDestroy 清理定时器 |
+| P0-3 | 缓存架构 | `cache-architecture/providers/l3-cache.provider.ts` | `deleteByPattern` 全量加载后过滤，性能问题 | 使用数据库 LIKE 查询替代全量扫描 |
+
+**P1 问题清单**：
+
+| 编号 | 模块 | 问题 |
+|------|------|------|
+| P1-1 | 字体库 | 路径硬编码相对路径 |
+| P1-2 | 运行时配置 | `console.error` 应替换为 Logger |
+| P1-3 | 审计日志 | 清理接口缺少操作日志记录 |
+| P1-4 | 健康检查 | liveness 端点无实际健康检查 |
+
+---
+
+### 六、用户管理模块重构方案（未启动）
+
+**CodeBuddy Code 审计发现**：
+
+1. `IUserService` 接口不完整（仅一个 `create` 方法，参数类型为 `unknown`）
+2. `deactivateAccount()` 中 4 种验证方式硬编码，需策略模式重构
+3. `bcrypt` 硬编码，需抽象 `IPasswordHasher` 接口
+4. 用户生命周期事件（创建/注销）耦合了文件系统操作，需事件驱动解耦
+
+**重构方向**：
+- 对外：补全 IUserService 接口（findById、findByEmail、update、deactivate、restore）
+- 对内：用 IAccountVerificationStrategy 策略模式管理验证方式
+- 细节：IPasswordHasher 接口抽象密码哈希、EventEmitter 解耦生命周期事件
+
+---
+
+### 七、前端迁移准备
+
+**可复用资产（Mimo 审计）**：
+- Services 层 ~200+ API 方法，90% 直接复用
+- Utils 层 10 个纯 TS 文件可直接迁移
+- Types 层 ~196 个类型定义可直接复用
+- Constants 层 26 个常量可直接复用
+- Hooks 层 30 个 React Hooks 需转为 Vue Composables
+- Stores 层 3 个 Zustand Store 需转为 Pinia
+
+**Vue 3 依赖兼容性（CodeBuddy Code 审计）**：
+- Lucide React → lucide-vue-next（官方替代）
+- Radix UI → radix-vue（社区官方推荐）
+- React Router → Vue Router 4
+- Zustand → Pinia
+- React Hook Form → VeeValidate
+- Recharts → ECharts + vue-echarts
+- mxcad-app 和 webuploader 需优先验证是否绑定 React
+
+**迁移策略**：先简单页面验证可行性 → 中等页面批量迁移 → 复杂页面人工重写
+
+---
+
+### 八、AI 协作体系
+
+| 角色 | AI | 核心定位 | 状态 |
+|------|-----|---------|------|
+| 架构师 | 用户 | 决策、拍板 | 在线 |
+| 攻坚专家 | Claude Code | 复杂架构、深度推理、最难的业务测试 | 20 元额度 |
+| 全能主力 | Trea (Solo Coder) | 并发分析、架构实施、模块级修复、批量审计 | 免费 |
+| 冲刺四核心战力 | mimo-v2.5-pro | 大模块迁移、批量代码生成、资产盘点 | 5 元额度 |
+| 独立模块/全栈 | CodeBuddy Code | 模块级重构、前后端联动优化 | 中等额度 |
+| 单步执行/规则 | OpenCode | 文档更新、简单修补、脚本编写 | 免费 |
+
+**已退役**：Qoder CLI（额度用尽）
+
+---
+
+### 九、关键文档索引
+
+| 文档 | 用途 |
+|------|------|
+| `docs/ARCHITECTURE.md` | 项目架构总览，模块地图 |
+| `docs/DOCUMENT_INDEX.md` | 全项目 73 份文档的索引 |
+| `docs/sprint2-pre-analysis.md` | 上帝模块拆分预分析 |
+| `docs/sprint3-test-priority-roadmap.md` | 测试优先级路线图 |
+| `docs/file-system-submodules-audit.md` | 文件管理 8 个子模块深度审计 |
+| `docs/auxiliary-modules-audit.md` | 辅助模块批量审计（Mimo） |
+| `docs/vue3-reusable-assets.md` | 前端可复用资产清单（Mimo） |
+| `docs/vue3-dependency-compatibility.md` | Vue 3 依赖兼容性分析（CodeBuddy Code） |
+| `docs/database-migration-check.md` | 数据库迁移完整性检查 |
+
+---
+
+### 十、新对话开头
+
+请在新对话里贴以下内容：
+
+> 我是 CloudCAD 项目的架构师。当前分支是 `refactor/circular-deps`。
+> 
+> **项目背景**：在线 CAD 协同平台，后端 NestJS，前端即将从 React 迁移到 Vue 3 + Vuetify 3。
+> 
+> **已完成**：冲刺一（循环依赖解除）、冲刺二（上帝模块拆分为 17 个子模块）、冲刺三（527 个测试用例）、核心模块抽象（Auth/Permission/VersionControl/PublicLibrary 四大接口）、文件管理子模块的 P0 修复。
+> 
+> **待处理 P0**：策略引擎循环依赖、缓存架构 setInterval 内存泄漏、L3 deleteByPattern 性能问题。
+> 
+> **待处理 P1**：用户管理模块重构（IUserService 完善、验证策略模式、密码哈希抽象）、字体库路径硬编码、运行时配置 console.error、审计日志清理接口缺少操作日志、健康检查 liveness 端点增强。
+> 
+> **前端准备**：可复用资产清单已完成（90% 可直接复用），Vue 3 依赖兼容性分析已就位，冲刺四启动条件已成熟。
+> 
+> 请先阅读 `docs/ARCHITECTURE.md` 和 `docs/DOCUMENT_INDEX.md` 了解项目全貌，然后确认当前任务优先级。
+
+---
+
+这份文档是我们从第一天到现在所有工作的完整记录。在新的对话里贴给我，我就能无缝接上一切。
+
+# CloudCAD 项目交接文档 补充内容
+
+---
+
+## 十一、架构师的思考脉络
+
+### 11.1 我们如何处理“抽象与过度设计”的平衡
+
+在整个重构过程中，我们反复面临一个核心矛盾：**什么该抽象，什么不该抽象。**
+
+**初期倾向**：过度设计。我们一度设计了完整的客户扩展体系——`extensions/` 目录、`module-registry.ts`、`extension-registry.ts`、`IAuthProvider`、`IPermissionStore`、`IStorageProvider` 等全系列接口。这是因为我们的初始假设是“客户需要安全地替换模块”。
+
+**中期转折**：用户明确提出，客户修改样板间是他们自己的事，升级时正常覆盖，不需要为“客户扩展”预留机制。这个决策从根本上改变了架构方向。我们废弃了扩展区的设计，不再为“外部可替换性”进行抽象。
+
+**最终策略**：抽象只为“我们自己的未来”服务。认证抽象是为了未来对接官网会员体系，权限抽象是为了未来可能的多数据源场景，版本管理抽象是为了未来可能从 SVN 切换到 Git。如果未来没有明确的变化需求，就不做抽象。
+
+**核心教训**：抽象的目的不是为了“方便别人”，而是为了“保护我们自己”。我们只需要为“预见的未来”预留插口，不需要为“所有可能的未来”进行过度设计。
+
+---
+
+### 11.2 我们在“前后端优先级”上的摇摆
+
+**初期执念**：尽快进入前端 Vue 3 重构，因为后端“看起来差不多了”。
+**现实打脸**：每次深入一个模块，都能发现新问题。版本管理没抽象、权限数据直接耦合 Prisma、文件管理子模块还有绕过存储抽象的 BUG。
+**最终定下的铁律**：**后端必须等到所有模块都审计完毕、所有 P0 问题都修复后，才能正式启动冲刺四。** 不能因为“想早点进入前端”而让后端留下已知风险。
+
+---
+
+### 11.3 我们对 AI 能力边界的认识进化
+
+**初期**：凭网上评测和主观印象分配任务。
+**中期**：通过实际产出评估每个 AI 的能力。
+**最终判断依据**：
+- Trea 的实际产出最多、质量最稳定，不仅擅长并发分析，还成功完成了版本管理抽象、公共资源库合并等架构实施任务
+- Claude Code 适合做深度分析和最复杂的架构决策，但不适合批量执行
+- Mimo 通过热身任务展现了超出预期的综合能力，被提升为冲刺四核心战力
+- OpenCode 的边界很清晰——单步执行、简单体力活稳定，复杂任务会卡住
+
+---
+
+## 十二、重要的技术讨论与结论
+
+### 12.1 就“离线部署”的确认
+
+项目需要支持完全离线部署，所有依赖必须通过 pnpm 的离线缓存机制安装。我们确认了 `@tus/server` 和 `Uppy` 都是纯 JavaScript 库，不依赖任何外部网络服务，完全兼容离线交付模型。`runtime/` 目录是离线运行时依赖的存放位置，不是 `vendor/`（我之前在文档中写错过这个名字）。
+
+### 12.2 就“文件存储物理结构”的确认
+
+- `uploads/` 是静态素材库，存放以哈希命名的原始文件和转换后的 mxweb。这个目录是共享的、只读的。
+- `data/files/NodeId/` 是动态版本区，存放用户修改后的最新版本和分片文件。
+- SVN 提交的是分片文件（bin），mxweb 不进入版本库。
+- 文件访问通过两级查找：先找 NodeId 目录的 `latest.mxweb`，没有就去 `uploads/` 读源文件。
+- 历史版本的 mxweb 文件按需生成并缓存，命名规则为 `{basename}_v{revision}.mxweb`。
+
+### 12.3 就“认证与图片加载冲突”的解决
+
+前端通过 `<img>` 标签加载缩略图时，浏览器不会发送 `Authorization` 请求头（只发送 Cookie）。这导致我们在冲刺三中为缩略图端点添加的 `JwtAuthGuard` 认证失败。
+
+**解决方案**：不是创建新的 MixedAuthGuard，而是让系统默认支持双重认证。我们确认了后端在登录时已经设置了 `auth_token` Cookie，JWT 策略已经通过 `ExtractJwt.fromExtractors` 同时支持从 Header 和 Cookie 中提取 Token。这个功能其实已经存在，不需要额外开发。
+
+### 12.4 就“mxcad.sid 的废弃标记”
+
+`mxcad.sid` 是旧的 Session 标识符，只用于服务端状态管理，不参与前端认证。我们已在 `AGENTS.md` 中添加了废弃声明，防止任何 AI 在未来误用这个标识符。它的存在是历史原因，彻底移除需要逐步替换所有依赖 `req.session` 的代码。
+
+---
+
+## 十三、重要的“被放弃”方案
+
+### 13.1 客户扩展体系
+
+我们曾计划设计完整的扩展机制——`extensions/` 目录物理隔离、`module-registry.ts` 注册后端模块、`extension-registry.ts` 注册前端组件。但最终确认客户改样板间是他们的自由，我们不负责升级覆盖的兼容性。因此整个扩展体系被废弃。
+
+### 13.2 前端 SDK 的接口抽象
+
+我们曾计划在前端 `@cloudcad/sdk` 中定义可替换的服务接口（类似后端的 Provider 模式），但最终确认前端不需要这种机制。前端只需要一个封装好的 API 调用层和全局状态管理，不需要为“可替换性”预留接口。
+
+### 13.3 latest.mxweb 的命名方案
+
+我们曾讨论用固定的 `latest.mxweb` 文件名来指向最新版本，但这个方案因为浏览器缓存问题被否定。实际采用的是 `{nodeId}.{ext}.mxweb` 格式，配合 `?t=更新时间` 参数做缓存破坏。
+
+---
+
+## 十四、各模块的特殊规则
+
+### 14.1 图纸库/图块库的独特逻辑
+
+- 无所有者（ownerId 为 null）
+- 公开只读（浏览不需要登录）
+- 管理员通过系统权限（LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE）维护
+- 保存时跳过 SVN 版本管理，所有修改原地覆盖
+- 删除直接永久删除，不走回收站
+
+### 14.2 我的图纸（个人空间）的本质
+
+通过 `personalSpaceKey` 字段标记，用户创建时自动生成，本质是一个只有自己可见的默认项目。它复用完整的文件系统能力，但限制了访问权限只对所有者可见。
+
+### 14.3 搜索模块的性能隐患
+
+搜索模块的 `getAllProjectNodeIds` 存在 N+1 查询问题——递归逐层查数据库获取子节点。建议后续用 PostgreSQL 递归 CTE 一次性获取所有节点 ID。资源库搜索之前无权限检查（已修复），需要 `LIBRARY_*_MANAGE` 系统权限。
+
+### 14.4 转换引擎的并发控制
+
+转换程序调用本地二进制文件，通过信号量控制并发数（默认最大 3）。这是因为转换非常消耗内存，并发过多会导致服务崩溃。转换引擎的 `conversion-engine` 包在冲刺一中已搭建好骨架，但和实际调用还有差异，需要后续统一。
+
+---
+
+## 十五、前端技术细节
+
+### 15.1 两个 Vuetify 3 实例共存
+
+mxcad-app 内部有一个 Vuetify 3 实例，外围平台创建另一个独立的实例。两者不共享状态，但通过同一套 JSON 配置文件共享主题。这样 mxcad-app 内部样式永远不会被外围平台污染，外围平台也可以自由升级 Vuetify 版本而不影响 mxcad-app。
+
+### 15.2 样式隔离机制
+
+mxcad-app 内部使用 CSS `:not()` 选择器排除外围平台的样式影响，同时使用 `visibility` 和 `zIndex` 做视图切换。外围平台的 Vuetify 组件不需要重复引入 CSS 文件，直接复用 mxcad-app 已注入全局的 CSS 变量。
+
+### 15.3 前端不需要抽象
+
+我们确认前端不需要像后端那样抽象可替换接口。前端组件的替换成本很低——复制一个文件，改几行引用就完成了。不需要依赖注入那样的重机制。
+
+---
+
+## 十六、部署运维相关
+
+### 16.1 离线部署体系
+
+项目支持完全离线部署，通过 pnpm 的全局 store 功能将所有依赖打包到 `vendor/packages/` 目录（实际目录名是 `runtime/`），客户在内网环境下执行 `pnpm install --offline` 即可安装所有依赖。这包括 @tus/server、Uppy、flydrive 等所有第三方库。
+
+### 16.2 数据库迁移的铁律
+
+任何对 `schema.prisma` 的修改，必须同时生成迁移文件。迁移文件需要确保幂等性——使用 `IF NOT EXISTS` 等保护关键字。客户升级时通过 `prisma migrate deploy` 自动执行迁移，不能要求手动操作数据库。
+
+### 16.3 打包脚本的路径更新
+
+冲刺一的 Monorepo 骨架迁移改变了目录结构（`packages/backend` → `packages/backend`），打包脚本中的路径需要同步更新。这些脚本还在 `runtime/scripts/` 目录下。
+
+---
+
+## 十七、我们协作中的经验教训
+
+### 17.1 每次认为“差不多了”时都要冷静
+
+我们在版本管理、权限、文件管理子模块等多次案例中，都经历了“以为没问题了”到“发现新问题”的过程。这说明系统性的架构审计是必须的，不能凭感觉判断“是否完成”。
+
+### 17.2 每次修改前先审计，后决策
+
+我们确立了铁律：不要在不确定的情况下修改代码。先派 AI 做只读审计，搞清楚代码的实际状态，然后再决定是否需要调整方案。这个流程避免了多次基于假设的修改。
+
+### 17.3 AI 派发任务的纪律
+
+- Trea 的无限并发能力非常适合批量审计任务，但不需要拆成多个独立指令，可以一次发给它并发处理
+- OpenCode 只能单步执行，不能同时给它多个任务
+- 给 Claude Code 派任务时要用精确指令，适应它深度思考的特点
+- 每次指令必须明确指定参考文档路径，不能模糊引用“某份报告”
+
+### 17.4 “先对齐后端，后启动前端”的铁律
+
+这个铁律是在经历了多次“急于启动冲刺四”的冲动后被确立的。现在它是不可动摇的原则——后端所有模块必须全部审计完毕、所有 P0 问题必须全部修复，才能正式启动 Vue 3 重构。
+
+---
+
+## 十八、关键数字与里程碑
+
+| 项目 | 数字 |
+|------|------|
+| 后端 Service 数量（重构前） | 75 个，仅 1 个 spec |
+| 后端 Service 数量（重构后） | 拆分为 17 个独立子模块 |
+| 循环依赖对数（重构前） | 5 对双向 |
+| 循环依赖对数（重构后） | 0 对 |
+| 测试用例总数 | 527 个（12 个 spec 文件） |
+| API 接口总数 | 224 个（已使用 154 个） |
+| 废弃接口删除数 | 38 个 |
+| Controller 版本化 | 13 个加 /v1/ 前缀 |
+| P0 修复完成数 | 8+ 项 |
+| 核心抽象接口 | 4 个（IAuthProvider、IPermissionStore、IVersionControl、IPublicLibraryProvider） |
+
+---
+
+这份补充文档和之前的主交接文档合并起来，就是我们所有工作的完整记忆。
+
+# CloudCAD 项目交接文档 补充内容（第二批）
+
+---
+
+## 十九、各模块操作规则详解
+
+### 19.1 图纸库/图块库的完整操作矩阵
+
+| 操作 | 图纸库(drawing) | 图块库(block) | 权限要求 |
+|------|----------------|--------------|---------|
+| 浏览/预览 | 所有人公开访问 | 所有人公开访问 | 无 |
+| 搜索 | 所有人公开访问 | 所有人公开访问 | 无 |
+| 上传新文件 | 管理员 | 管理员 | LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE |
+| 保存(编辑后覆盖) | 管理员，但跳过版本管理 | 管理员，但跳过版本管理 | 同上 |
+| 另存为到资源库 | 不被支持 | 不被支持 | - |
+| 另存为到个人/项目 | 创建属于个人的新副本 | 创建属于个人的新副本 | 基础用户权限 |
+| 删除 | 管理员，永久删除 | 管理员，永久删除 | 同上 |
+| 下载 | 所有人公开访问 | 所有人公开访问 | 无 |
+
+### 19.2 我的图纸(个人空间)的完整操作矩阵
+
+| 操作 | 规则 |
+|------|------|
+| 浏览/预览 | 仅所有者可见 |
+| 上传 | 所有者，受个人配额限制(默认10GB) |
+| 保存(编辑后覆盖) | 所有者，触发完整版本管理(SVN提交) |
+| 另存为 | 所有者，可另存为到自己的其他项目 |
+| 删除 | 所有者，进入私有回收站(软删除) |
+| 恢复 | 所有者，从回收站恢复 |
+| 彻底删除 | 所有者，永久删除(需引用计数检查) |
+
+### 19.3 项目管理的完整操作矩阵
+
+| 操作 | 规则 |
+|------|------|
+| 浏览/预览 | 项目成员 |
+| 上传 | 项目成员(FILE_UPLOAD权限) |
+| 保存(编辑后覆盖) | 项目成员，触发完整版本管理 |
+| 另存为 | 项目成员(FILE_COPY权限) |
+| 删除 | 项目成员(FILE_DELETE权限)，进入项目回收站 |
+| 恢复 | 项目成员(FILE_TRASH_MANAGE权限) |
+| 彻底删除 | 项目成员(FILE_TRASH_MANAGE权限) |
+| 添加成员 | 项目管理员(PROJECT_MEMBER_MANAGE权限) |
+| 修改成员角色 | 项目管理员(PROJECT_MEMBER_ASSIGN权限) |
+| 移除成员 | 项目管理员(PROJECT_MEMBER_MANAGE权限) |
+| 转移所有权 | 项目所有者(PROJECT_TRANSFER权限) |
+
+---
+
+## 二十、具体的技术约定
+
+### 20.1 文件存储的命名规范
+
+| 文件类型 | 命名格式 | 示例 | 存储位置 |
+|---------|---------|------|---------|
+| 原始DWG文件 | `{nodeId}.{ext}` | `node_abc123.dwg` | `data/filesData/YYYYMM/nodeId/` |
+| 转换后的MXWeb文件 | `{nodeId}.{ext}.mxweb` | `node_abc123.dwg.mxweb` | 同上 |
+| 缩略图 | `thumbnail.{webp/jpg/png}` | `thumbnail.webp` | 同上 |
+| 历史版本缓存 | `{basename}_v{revision}.mxweb` | `node_abc123.dwg_v78.mxweb` | 同上 |
+| 初始版本备份 | `{basename}_initial.mxweb` | `node_abc123.dwg_initial.mxweb` | 同上 |
+| 分片文件(临时) | `{chunkIndex}_{hash}` | `0_abc123def456` | `data/temp/chunk_{hash}/` |
+| 上传临时文件 | `{hash}.{ext}.mxweb` | `abc123def.dwg.mxweb` | `uploads/` |
+
+### 20.2 目录分配规则
+
+目录由 `DirectoryAllocator` 服务负责分配，采用年月分级目录结构：
+- 主目录格式：`YYYYMM`（如 `202604`）
+- 子目录格式：`YYYYMM_N`（N从1开始递增，最多100个子目录）
+- 节点目录格式：`node_{timestamp}_{random}`
+- 每个年月目录最多容纳300000个节点(`FILES_NODE_LIMIT`)
+
+### 20.3 MD5哈希的使用场景
+
+- 秒传检测：前端计算文件MD5，后端查询 `fileHash` 字段判断文件是否已存在
+- 文件去重：不同用户上传相同文件时，通过哈希判断是否已存在
+- 哈希命名：临时上传文件以哈希命名，避免文件名冲突
+- `FILE_HASH_LENGTH` 常量定义了哈希长度为32
+
+### 20.4 软删除的实现约定
+
+- `deletedAt`：不为null表示已删除，null表示正常
+- `deletedByCascade`：标记是否为级联删除（父节点删除导致子节点连带删除）
+- `deletedFromStorage`：标记物理文件是否已从存储中删除
+- `fileStatus`：文件状态枚举，包含 `DELETED` 状态
+- `projectStatus`：项目状态枚举，包含 `DELETED` 状态
+- 定时清理：每天凌晨4点自动清理超过30天的软删除记录
+
+---
+
+## 二十一、安全措施汇总
+
+### 21.1 路径遍历防护
+
+- 文件名验证：禁止 `..` 等路径遍历字符
+- 路径安全检查：`ValidationHelper.isValidNodePath()` 函数
+- 目录路径验证：`nodeDirectoryPath.endsWith(nodeId)` 检查
+
+### 21.2 文件类型验证
+
+- DWG魔数验证：检查文件头6字节（`AC1.50` - `AC1032`）
+- DXF结构验证：检查 `SECTION/HEADER/ENDSEC` 标记
+- PDF魔数验证：检查 `%PDF` 文件头
+- 扩展名白名单：支持7种字体格式、多种CAD和图片格式
+
+### 21.3 文件名清理
+
+- `sanitizeFilename()` 函数执行7步清洗管道：
+  1. 移除路径分隔符
+  2. 移除非法字符
+  3. 限制长度
+  4. 保留扩展名
+  5. 去除首尾空白
+  6. 处理纯扩展名情况
+  7. 缓冲区长度截断
+
+### 21.4 权限检查机制
+
+- 双保险策略：Controller层Guard(门卫) + Service层强制逻辑(保险箱)
+- 系统权限：通过 `@RequirePermissions` 装饰器声明
+- 项目权限：通过 `@RequireProjectPermission` 装饰器声明
+- JWT双认证：同时支持Header和Cookie两种Token来源
+
+---
+
+## 二十二、性能相关的发现与建议
+
+### 22.1 搜索模块N+1问题
+
+- `getAllProjectNodeIds` 递归逐层查询数据库
+- 深层文件树会导致大量数据库往返
+- 建议使用PostgreSQL递归CTE一次性获取所有节点
+
+### 22.2 文本搜索无索引
+
+- 当前使用 `LIKE %keyword%` 模式匹配
+- 无法使用数据库索引
+- 建议实现PostgreSQL全文搜索(GIN/GIST索引)
+
+### 22.3 建议的复合索引
+
+```sql
+-- 项目文件搜索
+CREATE INDEX IF NOT EXISTS idx_project_search 
+ON file_system_nodes (projectId, deletedAt, isFolder, updatedAt);
+
+-- 资源库搜索
+CREATE INDEX IF NOT EXISTS idx_library_search 
+ON file_system_nodes (libraryKey, deletedAt, isFolder, updatedAt);
+```
+
+### 22.4 缓存架构的防护机制
+
+- 缓存穿透保护：`nullTTL: 60s, bloomSize: 1000000`
+- 缓存雪崩保护：`randomizationRange: 300s`（TTL随机化）
+- 缓存版本控制：默认禁用（`versionConfig.enabled: false`）
+
+### 22.5 字体库的串行读取
+
+- `getFonts()` 方法使用 `for...of` 循环串行读取文件状态
+- 建议使用 `Promise.all` 并行处理
+
+
+## 二十三、国际化方案
+
+### 23.1 选型：voerka-i18n
+- 支持主库/分库模式：前端样板间作为主库，NestJS后端作为分库
+- 编译时替换：`t('中文')` 在打包时替换为 `t('唯一ID')`
+- 运行时加载：根据请求语言动态切换
+- mxcad-app内部已使用此方案，外部直接复用
+
+### 23.2 后端集成方式
+- 安装 `@voerkai18n/cli` 命令行工具
+- 运行 `voerkai18n init` 初始化工程
+- 使用 `voerkai18n apply` 选择Node.js环境
+- 从 `/languages/server` 导入 `t` 函数
+
+### 23.3 客户定制
+- 通过部署配置中心加载客户自己的JSON文件
+- 覆盖默认翻译
+- 和前端语言包保持独立
+
+
+## 二十四、部署配置中心详情
+
+### 24.1 技术架构
+- 独立的Node.js HTTP服务器（0依赖，纯原生实现）
+- 默认端口：3002
+- 认证方式：`INITIAL_ADMIN_PASSWORD`
+- Session存储：内存Map（进程重启丢失，TTL 30分钟）
+- 登录锁定：5次失败后锁定15分钟
+
+### 24.2 主要功能
+- 配置管理(.env管理)：支持服务的启停、参数修改
+- 品牌配置：Logo、名称等
+- 数据库管理：备份、恢复、清理
+- 服务状态监控：启动、停止、重启
+- MxCAD UI配置管理：JSON文件读写
+
+### 24.3 配置同步机制
+- 配置中心直接修改 `packages/backend/.env` 文件
+- 数据库配置变更时自动同步 `DATABASE_URL`
+- 不通过HTTP调用主后端服务
+- 配置修改后通过配置中心UI重启服务生效
+
+### 24.4 模板文件保护机制
+- 打包时在环境变量文件后加 `.template` 后缀
+- 客户的环境变量文件是 `.env`，升级时不会被覆盖
+- `upgrade.sh` 脚本只同步新增的环境变量，不覆盖已有的
+
+
+## 二十五、确定的“不做什么”清单
+
+| 项目 | 决定 | 原因 |
+|------|------|------|
+| 客户扩展区 | 不做 | 客户自由修改样板间，升级覆盖不负责 |
+| 模块注册表 | 不做 | 同上 |
+| 前端SDK中的可替换接口 | 不做 | 前端替换成本低，不需要重机制 |
+| Redis分布式锁 | 不做 | 当前单机部署，不需要 |
+| 多租户支持 | 不做 | 当前产品定位不支持 |
+| 实时协同的OT/CRDT | 不做 | 当前协同通过独立服务实现，不嵌入业务层 |
+| 搜索引擎替换(Elasticsearch) | 暂不做 | 搜索数据量不大，PostgreSQL全文搜索足够 |
+| API的Header版本协商 | 不做 | URL版本化( /v1/ )更简单直观 |
+| v1/v2双版本并行 | 暂不做 | 当前不存在多版本需求 |
+
+
+## 二十六、转换引擎的完整配置
+
+### 26.1 核心配置接口
+```typescript
+interface ConversionEngineConfig {
+  binPath: string;         // MxCAD转换程序可执行文件路径（必填）
+  outputRoot: string;      // 转换输出文件的根目录（必填）
+  maxConcurrency: number;  // 最大并发转换任务数（默认3）
+  defaultTimeoutMs: number;// 默认超时时间，毫秒（默认300000）
+}
+```
+
+### 26.2 环境变量映射
+| 环境变量 | 配置路径 | 默认值 |
+|---------|---------|--------|
+| `MXCAD_ASSEMBLY_PATH` | `mxcad.assemblyPath` | `runtime/windows/mxcad/mxcadassembly.exe` |
+| `MXCAD_UPLOAD_PATH` | `mxcadUploadPath` | `data/uploads` |
+| `MXCAD_TEMP_PATH` | `mxcadTempPath` | `data/temp` |
+| `MXCAD_FONTS_PATH` | `mxcad.fontsPath` | `runtime/windows/mxcad/fonts` |
+| `TIMEOUT_FILE_CONVERSION` | `timeout.fileConversion` | `60000` |
+| `UPLOAD_MAX_CONCURRENT` | `upload.maxConcurrent` | `3` |
+| `MXCAD_DWG2JPG_PATH` | `thumbnail.dwg2JpgPath` | `runtime/windows/mxcad/tool/MxWebDwg2Jpg.exe` |
+| `THUMBNAIL_WIDTH` | `thumbnail.width` | `120` |
+| `THUMBNAIL_HEIGHT` | `thumbnail.height` | `120` |
+
+### 26.3 并发控制机制
+- 使用内置 `Semaphore` 类实现信号量
+- FIFO队列管理等待任务
+- 超时采用两级策略：先SIGTERM，5秒后SIGKILL
+- 支持可配置的重试策略（默认不重试）
+
+### 26.4 转换格式参数差异
+| 参数 | mxweb | dwg | pdf | thumbnail | bins |
+|------|-------|-----|-----|-----------|------|
+| timeoutMs | ✓ | ✓ | ✓ | ✓ | ✓ |
+| outputDir | ✓ | ✓ | ✓ | ✓ | ✓ |
+| width | - | - | ✓ | ✓ | - |
+| height | - | - | ✓ | ✓ | - |
+| colorPolicy | - | - | ✓ | - | - |
+| quality | - | - | - | ✓ | - |
+
+
+## 二十七、前端 mxcad-app 集成详情
+
+### 27.1 加载顺序
+1. 动态导入 mxcad-app 样式文件: `await import('mxcad-app/style')`
+2. 动态导入核心API: `const { mxcadApp } = await import('mxcad-app')`
+3. 设置静态资源路径: `mxcadApp.setStaticAssetPath('/mxcadAppAssets/')`
+4. 初始化配置: `mxcadApp.initConfig({ uiConfig, themeConfig, serverConfig, ... })`
+5. 创建MxCADView实例并挂载到DOM
+
+### 27.2 依赖共享机制
+- 通过 `mxcadAssetsPlugin({ libraryNames: ['vuetify', 'vue'] })` Vite插件共享依赖
+- mxcad-app内部的Vue 3和Vuetify 3实例与外部平台的实例完全独立
+- 前端不需要重复引入Vuetify CSS，直接复用mxcad-app已注入的全局CSS变量
+
+### 27.3 主题同步机制
+- 双向同步：React ThemeContext ↔ mxcad-app
+- 通过 CustomEvent `mxcad-theme-changed` 传递主题变更
+- localStorage 作为 fallback，键名为 `mx-user-dark`
+- 支持多标签页同步（通过 `window.addEventListener('storage', ...)`）
+
+### 27.4 事件通信
+mxcad-app → React 的事件通信使用 CustomEvent：
+- `mxcad-theme-changed`：主题变化通知
+- `mxcad-save-required`：保存请求（未登录拦截）
+- `mxcad-saveas-required`：另存为请求（未登录拦截）
+- `mxcad-export-file`：导出文件请求
+- `mxcad-save-as`：另存为事件
+- `mxcad-file-opened`：文件打开事件
+- `mxcad-new-file`：新建文件事件
+- `public-file-uploaded`：公开文件上传完成
+
+### 27.5 配置文件清单
+| 配置文件 | 用途 | 位置 |
+|---------|------|------|
+| `myUiConfig.json` | UI菜单、工具栏配置 | `public/ini/` |
+| `myVuetifyThemeConfig.json` | 主题明暗配置 | `public/ini/` |
+| `myServerConfig.json` | API、上传配置 | `public/ini/` |
+| `myQuickCommand.json` | 快捷命令配置 | `public/ini/` |
+| `mySketchesAndNotesUiConfig.json` | 草图笔记UI | `public/ini/` |
+
+### 27.6 样式隔离策略
+- CSS `:not()` 选择器排除mxcad-app内部元素
+- `visibility` 和 `zIndex` 做视图切换
+- Canvas 背景透明：`body` 和 `#root` 背景透明
+- 动态样式加载：按需导入 `mxcad-app/style`
+- 独立CSS变量空间：使用 `data-theme` 属性隔离
+
+### 27.7 移动端适配计划
+- 通过配置隐藏mxcad-app内部UI，只保留画布
+- 在外部平台项目内实现移动端UI（H5）
+- mxcad-app内部命令系统可对外调用
+- 核心价值是注册了大量CAD命令
+
+
+## 二十八、各AI实际产出统计
+
+### 28.1 Trea (Solo Coder) 的实际产出
+- 前端代码审查报告、后端依赖审计、API接口清单
+- 模块依赖关系图、数据库实体关系报告
+- 多轮质量审计（测试质量、授权完整性、循环依赖）
+- 测试覆盖率差距分析、上传模块替换方案、文档地图
+- 认证抽象接口定义和实施
+- 权限抽象接口定义和实施（IPermissionStore）
+- 公共资源库合并（IPublicLibraryProvider）
+- 数据库迁移完整性检查
+- 六份辅助模块深度审计报告
+
+### 28.2 Claude Code 的实际产出
+- 5对循环依赖解除
+- 文件系统8个子模块拆分
+- 冲刺三测试补全战略路线图
+- 架构归档文档(ARCHITECTURE.md)
+- 文件管理8个子模块深度审计
+
+### 28.3 Mimo (mimo-v2.5-pro) 的实际产出
+- 可复用代码资产清单（~477个导出）
+- 批量辅助模块审计
+- FileTreeService 绕过存储抽象修复
+- FileDownloadExportService 路径翻倍BUG修复
+- 打包脚本路径修复
+- 服务健康检查脚本
+
+### 28.4 CodeBuddy Code 的实际产出
+- projectsApi 拆分为6个独立文件
+- 用户管理模块审计
+- updateNodeStorageQuota 桩方法实现
+- 乐观锁机制实现（前后端全覆盖）
+- Vue 3 依赖兼容性分析
+
+### 28.5 OpenCode 的实际产出
+- 废弃依赖清理（7个包）
+- 废弃接口清理（8个接口）
+- 代码风格修复（100+文件）
+- StorageCheckService 位置修复
+- FileValidationModule 注册修补
+- 管理员恢复端点添加
+- ProjectMemberService 权限检查修复
+- 文档索引整理、目录结构调整
+- 迁移文件幂等性修复
+
+---
+
+## 二十九、关键架构决策记录
+
+### 29.1 为什么不用彻底的SSO
+- SSO的“统一入口”是单点故障风险
+- 客户各自独立部署，不适合统一认证中心
+- 内置用户系统保持产品的独立性和交付能力
+- 未来通过接口抽象可平滑对接外部IAM平台
+
+### 29.2 为什么不做扩展区
+- 客户修改样板间是他们的自由
+- 升级时正常覆盖，不负责兼容性
+- 扩展机制会增加架构复杂度和维护成本
+
+### 29.3 为什么前端不做抽象
+- 后端有依赖注入，可以做运行时替换
+- 前端是静态编译，替换组件只需复制文件
+- 前端组件的替换成本很低，不需要接口那样的重机制
+
+### 29.4 为什么悲观锁不够
+- 悲观锁会阻塞其他用户读取，影响协作流畅性
+- 乐观锁只在保存时检查冲突，大部分时间不阻塞
+- CAD协同场景下冲突概率极低
+
+### 29.5 乐观锁的实现决策
+- 由CodeBuddy Code自主实现，覆盖前后端
+- 前端在文件打开时记录 `updatedAt`
+- 保存时通过 FormData 传给后端
+- 后端保存前检查 `updatedAt`，不匹配则返回409
+- 保存成功后更新前端缓存的 `updatedAt`
+
+---
+
+## 三十、关键环境变量汇总
+
+### 30.1 后端环境变量
+| 变量名 | 默认值 | 用途 |
+|--------|--------|------|
+| `DATABASE_URL` | - | PostgreSQL连接字符串（自动生成） |
+| `JWT_SECRET` | `your-secret-key` | JWT签名密钥（生产必须更换） |
+| `JWT_EXPIRES_IN` | `1h` | Access Token有效期 |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh Token有效期 |
+| `REDIS_HOST` | `localhost` | Redis主机地址 |
+| `REDIS_PORT` | `6379` | Redis端口 |
+| `SESSION_NAME` | `mxcad.sid` | Session Cookie名称 |
+| `FILES_DATA_PATH` | `data/files` | 文件存储根目录 |
+| `SVN_REPO_PATH` | `data/svn-repo` | SVN仓库路径 |
+| `FILES_NODE_LIMIT` | `300000` | 单目录最大节点数 |
+| `INITIAL_ADMIN_EMAIL` | `admin@example.com` | 初始管理员邮箱 |
+| `INITIAL_ADMIN_PASSWORD` | `Admin123!` | 初始管理员密码 |
+| `AUTH_PROVIDER` | `local` | 认证提供者选择(环境驱动切换) |
+| `PERMISSION_STORE` | `prisma` | 权限数据源选择(环境驱动切换) |
+
+### 30.2 前端环境变量
+| 变量名 | 默认值 | 用途 |
+|--------|--------|------|
+| `VITE_APP_NAME` | `CloudCAD` | 应用名称 |
+| `VITE_API_BASE_URL` | `/api` | API地址 |
+| `VITE_APP_COOPERATE_URL` | `/api/cooperate` | 协同服务地址 |
+
+---
+
+## 三十一、备份与恢复机制
+
+### 31.1 数据库备份
+- 手动触发：`POST /api/db/backup`
+- 查看列表：`GET /api/db/backups`
+- 恢复数据：`POST /api/db/restore`
+- 清理旧备份：`POST /api/db/cleanup`（默认保留最近10个）
+- 下载备份：使用一次性token下载
+- 文件命名：`db_backup_${ISO8601}.sql`
+
+### 31.2 离线部署的依赖缓存
+- 使用 pnpm 的全局 store 功能
+- 在外网环境安装所有依赖后，打包 store 目录
+- 内网环境解压 store 到对应位置
+- 客户执行 `pnpm install --offline` 完成安装
+- 不需要任何网络连接
+
+
+## 三十二、文档站方案
+
+### 32.1 选型：Starlight
+- 基于Astro构建，纯静态站点
+- 原生支持i18n
+- 零依赖部署，可随离线包交付
+- 支持MDX，可在文档中嵌入交互式组件
+- 通过CI自动生成OpenAPI JSON文件并随离线包发布
+
+---
+
+这些补充内容涵盖了各模块的具体操作规则、技术约定的细节、安全措施的完整清单、被放弃方案的记录、AI产出统计、以及环境变量、备份恢复、文档站等基础设施的完整说明。和之前的两份文档合并，这应该是一份非常完整的项目交接文档了。
+
+# CloudCAD 项目交接文档 补充内容（第三批）
+
+---
+
+## 三十三、前端页面迁移优先级
+
+基于CodeBuddy Code的Vue 3迁移预分析报告，16个页面的迁移优先级如下：
+
+### 第一批：简单页面（验证可行性）
+- PhoneVerification (452行, 13个hooks) — 预计4-8小时
+- EmailVerification (490行, 14个hooks) — 预计4-8小时
+- ResetPassword (435行, 7个hooks) — 预计4-8小时
+
+### 第二批：中等页面
+- Dashboard (655行, 18个hooks) — 预计8-16小时
+- FontLibrary (1087行, 20个hooks) — 预计8-16小时
+- AuditLogPage (539行, 11个hooks) — 预计8-16小时
+- RuntimeConfigPage (1119行, 8个hooks) — 预计8-16小时
+- ForgotPassword (767行, 9个hooks) — 预计6-12小时
+- SystemMonitorPage (1184行, 18个hooks) — 预计16-24小时
+- LibraryManager (1195行, 45个hooks) — 预计16-24小时
+
+### 第三批：复杂页面
+- UserManagement (2416行, 34个hooks) — 预计24-32小时
+- CADEditorDirect (1324行, 50个hooks) — 预计20-28小时
+- FileSystemManager (1628行, 38个hooks) — 预计20-28小时
+- Register (1647行, 22个hooks) — 预计16-24小时
+- RoleManagement (1368行, 25个hooks) — 预计16-24小时
+- Login (1521行, 21个hooks) — 预计16-24小时
+- Profile (1296行, 34个hooks) — 预计16-24小时
+
+**迁移策略**：先简单页面验证可行性 → 中等页面批量迁移 → 复杂页面人工重写。总工时预估531-812小时（约3-4个月）。
+
+---
+
+## 三十四、分页优化方案
+
+当前分页存在这些问题：
+1. 每个Service都在重复写 `skip = (page - 1) * pageSize` 的计算过程
+2. 前端分页组件和后端分页逻辑耦合
+3. 分页方式不统一（有的用 `findMany + count`，有的直接用 `findMany` 不计数）
+
+推荐方案：
+- 定义 `PaginatedResult<T>` 接口统一分页返回结构
+- 创建 `PaginationInterceptor` 拦截器，自动装配分页元数据
+- 创建 `paginate` 工具函数，统一分页查询方式
+
+这是一个横切关注点优化，适合在冲刺四的间隙交给AI处理。
+
+---
+
+## 三十五、乐观锁冲突解决UI的设计思路
+
+CodeBuddy Code实现了乐观锁机制后，当用户B的修改因冲突被拒绝时，前端目前只是返回409错误。一个完整的冲突解决流程应该是：
+
+1. 用户B收到409后，看到"文件已被他人修改"
+2. 系统提供两个选项：刷新并合并、稍后处理
+3. 用户选择"刷新并合并"后：
+   - 后台加载最新版本（已包含用户A的修改）
+   - 在对比视图中展示：用户的本地修改 vs 最新版本
+   - 用户手动合并后重新保存
+
+这是冲刺四或后续版本中需要补充的用户体验优化。
+
+---
+
+## 三十六、认证抽象接口的完整定义
+
+```typescript
+export interface IAuthProvider {
+  /** 用户登录（邮箱/用户名+密码） */
+  login(credentials: LoginDto, req?: SessionRequest): Promise<AuthResult>;
+  
+  /** 手机号验证码登录 */
+  loginByPhone(phone: string, code: string, req?: SessionRequest): Promise<AuthResult>;
+  
+  /** 微信登录 */
+  loginByWechat(code: string, state: string): Promise<AuthResult>;
+  
+  /** 用户注册 */
+  register(data: RegisterDto, req?: SessionRequest): Promise<AuthResult>;
+  
+  /** 刷新令牌 */
+  refreshToken(token: string): Promise<AuthResult>;
+  
+  /** 获取用户信息（用于外部系统同步） */
+  getUserInfo(userId: string): Promise<UserInfo>;
+}
+```
+
+---
+
+## 三十七、权限抽象接口的完整定义
+
+```typescript
+export interface IPermissionStore {
+  getUserSystemPermissions(userId: string): Promise<SystemPermission[]>;
+  checkSystemPermission(userId: string, permission: SystemPermission): Promise<boolean>;
+  getUserProjectPermissions(userId: string, projectId: string): Promise<ProjectPermission[]>;
+  checkProjectPermission(userId: string, projectId: string, permission: ProjectPermission): Promise<boolean>;
+  getUserProjectRole(userId: string, projectId: string): Promise<string | null>;
+  isProjectOwner(userId: string, projectId: string): Promise<boolean>;
+  clearUserCache(userId: string): Promise<void>;
+  clearProjectCache(projectId: string): Promise<void>;
+}
+```
+
+---
+
+## 三十八、版本管理抽象接口的完整定义
+
+```typescript
+export interface IVersionControl {
+  isReady(): boolean;
+  ensureInitialized(): Promise<void>;
+  commitDirectory(directoryPath: string, message: string, metadata?: any): Promise<CommitResult>;
+  commitFiles(filePaths: string[], message: string): Promise<CommitResult>;
+  commitAll(message: string): Promise<CommitResult>;
+  deleteDirectory(directoryPath: string): Promise<CommitResult>;
+  getHistory(path: string, limit?: number): Promise<HistoryResult>;
+  listDirectoryAtRevision(directoryPath: string, revision: string | number): Promise<ListResult>;
+  getFileContentAtRevision(filePath: string, revision: string | number): Promise<FileContentResult>;
+  rollbackToRevision(path: string, revision: string | number, message?: string): Promise<CommitResult>;
+}
+```
+
+---
+
+## 三十九、公共资源库抽象接口的完整定义
+
+```typescript
+export interface IPublicLibraryProvider {
+  getLibraryId(): string;
+  getRootNode(): Promise<NodeListResponseDto>;
+  createFolder(dto: CreateFolderDto): Promise<NodeResponseDto>;
+  deleteNode(nodeId: string): Promise<void>;
+}
+```
+
+---
+
+## 四十、健康检查脚本的具体要求
+
+创建 `runtime/scripts/health-check.js`，用于升级后自动验证环境。需要检查：
+1. 数据库连接是否正常
+2. Redis连接是否正常
+3. 文件存储目录是否存在且可读写
+4. SVN版本库是否可访问
+5. 转换程序（mxcadassembly）是否存在且可执行
+
+每个检查项输出 ✅/❌，任何检查失败返回非零退出码。
+
+---
+
+## 四十一、打包脚本修复的具体内容
+
+冲刺一的Monorepo骨架迁移改变了目录结构（`packages/backend` → `packages/backend`）。需要扫描 `runtime/scripts/pack-linux-deploy.js` 和相关脚本，把旧路径替换为新路径。同时用 `verify-linux-deploy.js` 跑一次完整流程，确保修复后的打包脚本能正确生成离线部署包。
+
+---
+
+## 四十二、数据库迁移的幂等性修复
+
+两个迁移文件需要修复：
+1. `20260407_add_user_phone_wechat_fields/migration.sql` 中的 `ADD COLUMN` 未使用 `IF NOT EXISTS`
+2. `20260422_add_username_change_fields/migration.sql` 中的 `ADD COLUMN` 未使用 `IF NOT EXISTS`
+
+修复方案：给这两个迁移文件中的 `ALTER TABLE ADD COLUMN` 语句加上 `IF NOT EXISTS`，确保客户在已迁移过的数据库上再次执行时不会报错。
+
+---
+
+## 四十三、前端依赖替换的具体步骤
+
+1. Lucide React → lucide-vue-next：组件名一一对应，只需改import路径
+2. Radix UI → radix-vue：组件结构相似，但Vue插槽与React children需要调整
+3. React Router → Vue Router 4：路由配置需重写，但概念一一对应
+4. Zustand → Pinia：`useState` 改为 `ref/reactive`，`set` 改为直接修改
+5. React Hook Form → VeeValidate：表单验证逻辑可复用，但组件绑定方式需重写
+6. Recharts → ECharts：图表配置需完全重写，API范式不同
+7. React/ReactDOM → Vue 3：所有 `.tsx` 组件需改写为 `.vue` 单文件组件
+
+---
+
+## 四十四、前端Hooks到Composables的转换规则
+
+| React Hook | Vue 3 Composable 转换方式 |
+|------------|--------------------------|
+| `useState()` | `ref()` 或 `reactive()` |
+| `useEffect()` | `onMounted()` + `watch()` |
+| `useCallback()` | 直接使用函数（Vue不需要手动缓存） |
+| `useMemo()` | `computed()` |
+| `useContext()` | `inject()` + `provide()` |
+| `useRef()` | `ref()` |
+
+---
+
+## 四十五、前端Store的迁移规则
+
+| Zustand (React) | Pinia (Vue) |
+|----------------|-------------|
+| `create((set) => ({...}))` | `defineStore('id', () => {...})` 或 Options风格 |
+| `set({ count: count + 1 })` | `state.count++` 或使用 `$patch` |
+| 无action概念 | `actions: { increment() {} }` |
+| 无getter概念 | `getters: { double: (state) => state.count * 2 }` |
+
+3个Zustand Store（uiStore、notificationStore、fileSystemStore）需要迁移到Pinia，约26个状态字段。
+
+---
+
+## 四十六、前端可复用资产的详细统计
+
+### 可直接复用的文件（共19个）
+
+**Services层**：apiClient.ts、authApi.ts、usersApi.ts、projectsApi.ts、projectApi.ts、nodeApi.ts、filesApi.ts、projectMemberApi.ts、projectPermissionApi.ts、projectTrashApi.ts、trashApi.ts、mxcadApi.ts、mxcadManager.ts、libraryApi.ts、rolesApi.ts、searchApi.ts、fontsApi.ts、auditApi.ts、versionControlApi.ts、healthApi.ts、adminApi.ts、runtimeConfigApi.ts、publicFileApi.ts、userCleanupApi.ts、index.ts — 共25个文件，~200+ API方法
+
+**Utils层**：dateUtils.ts、errorHandler.ts、validation.ts、hashUtils.ts、authCheck.ts、fileUtils.ts、filesystemUtils.ts、mxcadUtils.ts、permissionUtils.ts、mxcadUploadUtils.ts — 共10个文件，~55个方法
+
+**Types层**：api-client.ts、filesystem.ts、sidebar.ts、tour.ts — 共4个文件，~196个类型定义
+
+**Constants层**：permissions.ts、storage.constants.ts、appConfig.ts — 共3个文件，26个常量/工具导出
+
+### 需要框架适配的文件（共34个）
+
+**Hooks层**：30个React Hooks文件需要转为Vue 3 Composables
+**Stores层**：3个Zustand Store需要转为Pinia Store
+**Utils层**：1个文件（loadingUtils.ts）依赖Zustand，需要转为Pinia
+
+### 不迁移的文件（3个）
+
+cleanConsole.ts（Node.js开发工具）、fileUtils.spec.ts（测试文件）、lucide-icons.d.ts（React类型声明）
+
+---
+
+## 四十七、AI能力边界的具体经验
+
+| AI | 最适合 | 不适合 | 关键经验 |
+|----|--------|--------|---------|
+| Trea | 并发审计、架构实施、模块级修复 | 不需要并发的单步任务 | 支持无限并发，一次可以处理多个审计任务。不需要拆成多个独立指令 |
+| Claude Code | 深度分析、复杂架构、最难的业务测试 | 批量执行、重复性任务 | 思考时间长但产出质量高。需要适应它的"三深"特点 |
+| Mimo | 批量代码生成、资产盘点、模块迁移 | 需要深度理解的复杂架构 | 前端生成能力强，Agent能力优秀。适合大模块迁移 |
+| CodeBuddy Code | 独立模块重构、前后端联动优化 | 高复杂度、跨文件联动 | 能自主发现问题并实现完整方案（如乐观锁） |
+| OpenCode | 文档更新、简单修补、脚本编写 | 复杂推理、多步骤任务 | 只能单步执行，不能并发。复杂任务会卡住 |
+
+---
+
+## 四十八、关键Bug修复记录
+
+| Bug | 发现方式 | 修复AI | 修复内容 |
+|-----|---------|--------|---------|
+| FileTreeService绕过存储抽象 | Claude Code子模块审计 | Mimo | 将 fsPromises.copyFile 改为 StorageService.copyFromFs |
+| FileDownloadExportService路径翻倍 | Claude Code子模块审计 | Mimo | 修复 getStoragePath + path.join 导致的路径翻倍 |
+| updateNodeStorageQuota桩方法 | Claude Code子模块审计 | CodeBuddy Code | 实现完整功能 |
+| LinuxInitService未注册 | 架构健康度审计 | Qoder CLI | 在MxCadModule中注册 |
+| ConcurrencyManager重复实例化 | 架构健康度审计 | Qoder CLI | 统一由CommonModule提供 |
+| 资源库搜索无权限 | 搜索模块深度审计 | Claude Code | 添加LIBRARY_*_MANAGE权限检查 |
+| ProjectMemberService权限缺失 | Claude Code子模块审计 | OpenCode | 添加三个方法的权限检查 |
+| 管理员恢复端点缺失 | CodeBuddy Code用户管理审计 | OpenCode | 添加POST :id/restore端点 |
+| setInterval内存泄漏 | Trea缓存架构审计 | 待修复 | CacheMonitorService未清理定时器 |
+| L3 deleteByPattern全量扫描 | Trea缓存架构审计 | 待修复 | 大数据量下性能问题 |
+| 策略引擎循环依赖 | Trea策略引擎审计 | 待修复 | PolicyConfigService ↔ PolicyEngineService |
+
+---
+
+## 四十九、API版本化的最终执行方案
+
+### 需要加 /v1/ 前缀的Controller（13个）
+Auth、Users、Roles、FileSystem、MxCad、Library、VersionControl、Admin、RuntimeConfig、Fonts、PolicyConfig、UserCleanup、CacheMonitor
+
+### 保持不变的Controller（3个）
+PublicFile、Health、协同服务代理路径
+
+### 需要同步更新的硬编码路径（6处）
+- 前端 filesApi.ts 中 getThumbnailUrl 方法
+- 前端 fileUtils.ts 中 getThumbnailUrl、getFilePreviewUrl 函数
+- 脚本 verify-deploy.js 中 /api/health/live
+- 脚本 cli.js 中 /api/health/live
+- 脚本 batch-import-library.js 中多个API路径
+
+---
+
+## 五十、废弃端点清理的最终结果
+
+共删除38个废弃API端点，覆盖8个模块：
+- 文件系统14个、MxCAD 3个、用户管理2个、角色管理2个、管理员4个、缓存3个、策略配置7个、公共文件1个、图库0个
+
+共删除11个文件中797行代码，编译验证通过。
+
+---
+
+## 五十一、乐观锁的实现细节
+
+由CodeBuddy Code自主实现，覆盖前后端。具体改动：
+1. 后端：save-mxweb.dto.ts 新增 expectedTimestamp 字段，mxcad.controller.ts 从请求体读取，mxcad.service.ts 保存前比对updatedAt，不匹配时抛出 ConflictException 返回409
+2. 前端：CADEditorDirect.tsx 文件打开时记录 updatedAt，mxcadManager.ts 保存时传入 currentFileInfo?.updatedAt，mxcadApi.ts 新增 expectedTimestamp 参数通过FormData发送
+3. 异常处理：修复了catch块，确保ConflictException直接向上抛出，不被包装为通用错误
+
+---
+
+## 五十二、存储层替换的完成情况
+
+Flydrive存储层替换已全部完成。涉及文件包括 file-operations.service.ts、file-download-export.service.ts、upload-utility.service.ts、file-conversion-upload.service.ts、file-merge.service.ts 等多个模块。StorageService新增10个包装方法，IStorageProvider接口新增 copyFromFs 方法。编译验证通过，零新增错误。
+
+---
+
+## 五十三、版本管理抽象的完成情况
+
+由Trea完成，实现内容：
+
+1. 创建 IVersionControl 接口，包含 commitNodeDirectory、commitFiles、commitWorkingCopy、deleteNodeDirectory、getFileHistory、listDirectoryAtRevision、getFileContentAtRevision、rollbackToRevision、isReady、ensureInitialized 等方法
+2. 创建 SvnVersionControlProvider 封装SVN实现
+3. 修改 VersionControlModule 注册 VERSION_CONTROL_TOKEN
+4. 更新7个调用方（MxCadService、MxCadController、FileOperationsService、FileUploadManagerFacadeService、FileConversionUploadService、FileMergeService、SaveAsService）
+
+---
+
+## 五十四、认证抽象的完成情况
+
+由Trea完成，实现内容：
+
+1. 定义 IAuthProvider 接口（login、loginByPhone、loginByWechat、register、refreshToken、getUserInfo）
+2. 创建 LocalAuthProvider 实现，封装AuthFacadeService中的认证逻辑
+3. 修改 AuthFacadeService 为依赖接口的编排层
+4. 修改 AuthModule 注册 LocalAuthProvider 为默认实现，通过环境变量 AUTH_PROVIDER 驱动切换
+
+---
+
+## 五十五、权限抽象的完成情况
+
+由Trea完成，实现内容：
+
+1. 定义 IPermissionStore 接口（getUserSystemPermissions、checkSystemPermission、getUserProjectPermissions、checkProjectPermission、getUserProjectRole、isProjectOwner、clearUserCache、clearProjectCache）
+2. 创建 PrismaPermissionStore 实现，封装所有权限查询逻辑
+3. 修改 PermissionService 和 ProjectPermissionService 注入 IPermissionStore 接口
+4. 修改 RolesModule 注册 PrismaPermissionStore 为默认实现，通过环境变量 PERMISSION_STORE 驱动切换
+5. 保留向后兼容——当 IPermissionStore 未注入时仍走原有逻辑
+
+---
+
+## 五十六、公共资源库合并的完成情况
+
+由Trea完成，实现内容：
+
+1. 定义 IPublicLibraryProvider 接口（getLibraryId、getRootNode、createFolder、deleteNode）
+2. 创建 PublicLibraryService 统一实现，接收 libraryKey 参数
+3. 重构 LibraryController，通过工厂函数注入 drawing 和 block 两个实例
+4. 更新 LibraryModule 注册 provider
+5. 业务逻辑未变，API行为未变
+
+---
+
+这份补充文档（第三批）和之前的两批合并，应该是一份极其完整的项目交接文档了。
+
+# CloudCAD 项目交接文档 补充内容（第四批）
+
+---
+
+## 五十七、各AI的详细调度纪律
+
+### 57.1 Trea (Solo Coder) 的调度纪律
+- Trea 支持无限并发，可以一次性给它多个任务，它会自动并行处理
+- 不需要拆成多个独立指令，合并成一条指令即可
+- 但需要注意：每份报告需要独立写入独立文件
+- Trea 最适合的批处理模式：一次性给它6-10个审计任务，让它并发执行
+- Trea 也可以执行架构实施任务（如接口定义、Provider封装），这些任务也是并发的
+
+### 57.2 Claude Code 的调度纪律
+- Claude Code 思考时间长，需要精准指令
+- 最适合做深度分析和最复杂的架构决策
+- 不适合批量执行或重复性任务
+- 需要在指令中明确说明“不要修改代码，只做分析”
+- Claude Code 的产出质量极高，但需要给它足够的时间思考
+
+### 57.3 Mimo 的调度纪律
+- Mimo 可以处理中高复杂度的代码生成和批量迁移任务
+- 在冲刺四中将承担核心的页面迁移工作
+- 从简单页面开始，验证可行性后再批量迁移
+- Mimo 的Agent能力很强，可以独立完成模块级迁移
+
+### 57.4 CodeBuddy Code 的调度纪律
+- 适合独立模块的重构和前后端联动的优化
+- 不适合跨文件、高复杂度的任务
+- 能自主发现问题并实现完整方案
+- 在乐观锁实现中证明了它的全栈能力
+
+### 57.5 OpenCode 的调度纪律
+- 只能单步执行，不能并发
+- 适合明确的、单文件的修改任务
+- 不适合复杂推理或多步骤任务
+- 文档整理、脚本编写是其擅长领域
+
+---
+
+## 五十八、各模块的测试覆盖详情
+
+| Service | 测试文件 | 用例数 | 覆盖评估 |
+|---------|---------|--------|---------|
+| FileOperationsService | file-operations.service.spec.ts | 68 | ✅ 充分 |
+| MxCadService | mxcad.service.spec.ts | 45 | ✅ 充分 |
+| ProjectCrudService | project-crud.service.spec.ts | 43 | ✅ 充分 |
+| VersionControlService | version-control.service.spec.ts | 38 | ✅ 充分 |
+| FileValidationService | file-validation.service.spec.ts | 35 | ✅ 充分 |
+| FileTreeService | file-tree.service.spec.ts | 25 | ✅ 充分 |
+| FileConversionService | file-conversion.service.spec.ts | 27 | ✅ 充分 |
+| FileSystemService | file-system.service.spec.ts | 44 | ✅ 充分 |
+| AuthFacadeService | auth-facade.service.spec.ts | 67 | ✅ 充分 |
+| MxCadController | mxcad.controller.spec.ts | 20 | ✅ 充分 |
+| SearchService | search.service.spec.ts | 24 | ✅ 良好 |
+| FileSystemNodeService | filesystem-node.service.spec.ts | 12 | ⚠️ 一般 |
+
+**注**：所有测试文件都包含实际断言，不是空壳。527个测试用例覆盖了核心业务逻辑、边界情况和异常处理。关键的数据安全场景（引用计数、SVN回滚、并发冲突）有专项测试覆盖。
+
+---
+
+## 五十九、具体的技术约定（补充）
+
+### 59.1 文件访问的权限检查约定
+- 下载端点：需要 `FILE_DOWNLOAD` 权限 + JWT认证
+- 预览端点：需要 `JwtAuthGuard` 认证
+- 文件访问端点：通过 `MixedAuthGuard` 支持 Cookie + Header 双认证
+- 缩略图端点：需要 `JwtAuthGuard` 认证
+- 所有端点都在权限收敛后有了明确的保护
+
+### 59.2 文件名的安全约定
+- 文件名长度限制：255字符
+- 路径长度限制：1024字符
+- 目录深度限制：10层
+- ZIP解压安全：最大总大小2GB、最大文件数10000、最大深度50层、单文件最大500MB
+- 文件名清理函数：`sanitizeFilename()` 执行7步清洗
+
+### 59.3 并发控制的约定
+- 文件转换并发数：默认3（通过 `RateLimiter` 控制）
+- 分片上传并发数：默认5（通过 `concurrencyManager` 控制）
+- 历史版本转换锁：通过 `historyConversionLocks` Map 防止重复转换
+- 文件锁服务：`FileLockService` 基于文件系统的锁（`.lock` 文件）
+
+### 59.4 缓存配置的约定
+- 验证码TTL：900秒（15分钟）
+- Token黑名单TTL：604800秒（7天）
+- 权限缓存TTL：300秒（5分钟）
+- 策略缓存TTL：600秒（10分钟）
+- MxCAD缓存TTL：300秒（5分钟）
+- L2缓存默认TTL：1800秒（30分钟）
+- 缓存版本TTL：3600000毫秒（1小时）
+
+---
+
+## 六十、前端路由配置
+
+| 路由路径 | 组件 | 权限要求 |
+|---------|------|---------|
+| `/` | Navigate → `/cad-editor` | 无 |
+| `/login` | Login | 公开 |
+| `/register` | Register | 公开 |
+| `/verify-email` | EmailVerification | 公开 |
+| `/verify-phone` | PhoneVerification | 公开 |
+| `/forgot-password` | ForgotPassword | 公开 |
+| `/reset-password` | ResetPassword | 公开 |
+| `/cad-editor` | CADEditorDirect | 公开 |
+| `/cad-editor/:fileId` | CADEditorDirect | 公开 |
+| `/dashboard` | Dashboard | 需登录 |
+| `/projects` | FileSystemManager | 需登录 |
+| `/projects/:projectId/files` | FileSystemManager | 需登录 |
+| `/projects/:projectId/files/:nodeId` | FileSystemManager | 需登录 |
+| `/personal-space` | FileSystemManager | 需登录 |
+| `/personal-space/:nodeId` | FileSystemManager | 需登录 |
+| `/users` | UserManagement | SYSTEM_USER_READ |
+| `/roles` | RoleManagement | SYSTEM_ROLE_READ |
+| `/profile` | Profile | 需登录 |
+| `/font-library` | FontLibrary | SYSTEM_FONT_READ |
+| `/library` | LibraryManager | LIBRARY_DRAWING_MANAGE |
+| `/library/:libraryType` | LibraryManager | LIBRARY_DRAWING_MANAGE |
+| `/library/:libraryType/:nodeId` | LibraryManager | LIBRARY_DRAWING_MANAGE |
+| `/audit-logs` | AuditLogPage | SYSTEM_ADMIN |
+| `/system-monitor` | SystemMonitorPage | SYSTEM_MONITOR |
+| `/runtime-config` | RuntimeConfigPage | SYSTEM_CONFIG_READ |
+
+---
+
+## 六十一、关键数据库表的核心字段
+
+### users 表
+- `id`, `email`(唯一), `username`(唯一), `password`(可空), `nickname`, `avatar`
+- `roleId`, `status`(ACTIVE/INACTIVE/SUSPENDED)
+- `phone`(唯一), `phoneVerified`, `wechatId`(唯一)
+- `provider`(默认LOCAL), `deletedAt`(软删除)
+- `lastUsernameChangeAt`, `usernameChangeCount`
+
+### file_system_nodes 表（最核心的表）
+- `id`, `name`, `isFolder`, `isRoot`, `parentId`
+- `originalName`, `path`, `size`, `mimeType`, `extension`
+- `fileStatus`(UPLOADING/PROCESSING/COMPLETED/FAILED/DELETED)
+- `fileHash`, `projectStatus`(ACTIVE/ARCHIVED/DELETED)
+- `personalSpaceKey`, `libraryKey`(drawing/block)
+- `hasMissingExternalReferences`, `missingExternalReferencesCount`, `externalReferencesJson`
+- `ownerId`, `projectId`(自引用), `storageQuota`
+- `deletedAt`, `deletedByCascade`, `deletedFromStorage`
+
+### 枚举类型
+- `Permission`：系统权限枚举（20+个值）
+- `ProjectPermission`：项目权限枚举（12个值）
+- `UserStatus`：ACTIVE, INACTIVE, SUSPENDED
+- `ProjectStatus`：ACTIVE, ARCHIVED, DELETED
+- `FileStatus`：UPLOADING, PROCESSING, COMPLETED, FAILED, DELETED
+- `AuditAction`：各种操作类型枚举
+- `ResourceType`：SYSTEM, USER, ROLE, PERMISSION, PROJECT, FILE, FOLDER
+- `RoleCategory`：SYSTEM, PROJECT, CUSTOM
+- `PolicyType`：TIME, IP, DEVICE
+
+---
+
+## 六十二、重要的事件通信约定
+
+### 后端内部事件（建议实现）
+- `UserCreatedEvent`：用户创建时触发，由个人空间模块处理
+- `UserDeactivatedEvent`：用户注销时触发，由文件清理模块处理
+- `FileUploadedEvent`：文件上传完成时触发，由转换服务处理
+- `FileDeletedEvent`：文件被删除时触发，由审计模块记录
+
+### 前端与mxcad-app通信
+- 使用CustomEvent进行跨框架通信
+- mxcad-app → React：通过 `window.dispatchEvent` 派发事件
+- React → mxcad-app：通过 `mxcadApp` API 直接调用
+- 主题同步：通过 localStorage + CustomEvent 双向同步
+
+---
+
+## 六十三、我们讨论过但最终放弃的功能
+
+1. **客户扩展区**（extensions/目录、module-registry.ts、extension-registry.ts）
+2. **前端SDK中的可替换接口**（IUploadService等Contract定义）
+3. **latest.mxweb 命名方案**（因浏览器缓存问题放弃）
+4. **blobs/ 目录**（决定不新增目录结构，保留现有目录体系）
+5. **转换引擎的独立npm包发布**（改为保留源码在项目中）
+6. **前端依赖注入机制**（Vue 3的provide/inject足够，不需要重机制）
+7. **Header版本协商**（URL版本化更简单直观）
+8. **v1/v2双版本并行**（当前不存在多版本需求）
+9. **彻底的单点登录**（不适合离线交付的产品定位）
+
+---
+
+## 六十四、各模块负责人（在实际开发中）
+
+| 模块 | 审计负责人 | 修复负责人 | 状态 |
+|------|-----------|-----------|------|
+| 认证与鉴权 | Trea | Trea | ✅ 已抽象 |
+| 权限体系 | Trea | Trea | ✅ 已抽象 |
+| 版本管理 | Trea | Trea | ✅ 已抽象 |
+| 文件管理核心 | Claude Code | Mimo, OpenCode | ✅ 已修复 |
+| 搜索模块 | Trea | Claude Code | ✅ 已修复 |
+| 图纸库/图块库 | Trea | Trea | ✅ 已合并 |
+| 回收站 | Trea | Claude Code, OpenCode | ✅ 已修复 |
+| 用户管理 | CodeBuddy Code | 待定 | ⚠️ 待重构 |
+| 运行时配置 | Trea | 待定 | ⚠️ 小问题待修 |
+| 审计日志 | Trea | 待定 | ⚠️ 小问题待修 |
+| 字体库 | Trea | 待定 | ⚠️ 路径硬编码待修 |
+| 策略引擎 | Trea | 待定 | 🔴 循环依赖待修 |
+| 缓存架构 | Trea | 待定 | 🔴 内存泄漏待修 |
+| 健康检查 | Trea | 待定 | ⚠️ 小问题待修 |
+
+---
+
+## 六十五、重要的“发现-修复”时间线
+
+1. **发现**：权限审计发现MxcadController三种模式混用 → **修复**：Claude Code标准化所有路由
+2. **发现**：文件管理子模块审计发现ProjectMemberService无权限 → **修复**：OpenCode添加权限检查
+3. **发现**：用户管理审计发现管理员无法恢复误删用户 → **修复**：OpenCode添加恢复端点
+4. **发现**：数据库迁移检查发现幂等性问题 → **修复**：OpenCode修复ADD COLUMN语句
+5. **发现**：缓存架构审计发现setInterval内存泄漏 → **修复**：待定
+6. **发现**：策略引擎审计发现循环依赖 → **修复**：待定
+
+---
+
+## 六十六、文件所有者和权限矩阵
+
+| 角色 | 系统权限 | 项目权限 | 资源库权限 |
+|------|---------|---------|-----------|
+| ADMIN | 所有系统权限 | 所有项目权限 | 图纸库+图块库管理 |
+| USER_MANAGER | 用户管理、角色管理 | - | - |
+| FONT_MANAGER | 字体库管理 | - | - |
+| USER | 创建项目 | 根据项目角色 | - |
+| 项目OWNER | - | 所有项目权限 | - |
+| 项目EDITOR | - | 文件操作+保存 | - |
+| 项目VIEWER | - | 只读 | - |
+
+---
+
+这些内容涵盖了更多细节。如果还有任何遗漏，请告诉我具体方向，我继续补充。
+
+# CloudCAD 项目交接文档 —— 架构师原则与协作模式
+
+---
+
+## 六十七、我作为架构师的核心原则
+
+### 原则一：不猜测，先审计
+
+这是从多次教训中总结出的第一原则。我曾多次基于“应该是什么样”来制定方案——`latest.mxweb` 的命名、`auth_token` Cookie 的存在——结果都和实际代码不一致。从某个时刻开始，我们确立了铁律：**每次修改之前，先派 AI 做只读审计，搞清楚代码的真实状态，然后再决定是否需要调整方案。**
+
+这不仅仅是技术纪律，更是对“事实”的尊重。架构师不能靠猜测做决策。
+
+### 原则二：把节奏，而不是带节奏
+
+你曾温和地批评我“为什么老想着立马去重构前端”。那次对话让我深刻反思：作为架构师，我的职责不是推动项目“尽快进入下一阶段”，而是**确保每一个阶段都在正确的时机启动**。
+
+现在的铁律是：后端所有模块全部审计完毕、所有 P0 问题全部修复后，才能正式启动冲刺四。不能因为“想早点进入前端”而让后端留下已知风险。
+
+### 原则三：抽象只为预见的未来服务
+
+我们经历了从“过度设计”到“精准抽象”的进化。早期我倾向于为所有可能的变化预留接口（客户扩展体系、前端可替换服务接口等）。但你的反馈让我意识到：**抽象的目的不是“方便别人”，而是“保护我们自己”。**
+
+现在的标准是：如果未来没有明确的变化需求，就不做抽象。我们只为“预见的未来”（对接官网会员、切换到 Git、替换权限数据源）预留插口，不为“所有可能的未来”进行过度设计。
+
+### 原则四：诚实承认“我不知道”
+
+在多个场合，我对项目的某些细节完全不了解——转换程序的实际调用方式、`mxcad-app` 的内部机制、打包脚本的具体逻辑。作为架构师，我学会了坦诚地说“我不知道”，然后立刻派 AI 去审计。
+
+这不是软弱，而是对事实的尊重。架构师的权威不来自于“什么都知道”，而来自于“知道如何快速搞清楚”。
+
+### 原则五：每个 AI 都有边界，尊重边界
+
+通过大量实际任务，我学会了不再凭主观印象或网上评测来评估 AI。Trea 不仅会分析，还会架构实施；OpenCode 只能单步执行，复杂任务会卡住。每个 AI 的能力边界是通过实战来验证的，不是通过猜测。
+
+派发任务时，必须基于对 AI 能力的准确认知，不能“期望过高”也不能“低估潜力”。
+
+### 原则六：每次讨论都要有产出
+
+我们几乎所有的讨论都产生了一个明确的结论或行动项。从“认证抽象要不要做”到“乐观锁怎么实现”，每次聊完都有具体的任务派发和验收标准。
+
+这不是为了“赶进度”，而是为了保持清晰的掌控感。每次对话结束时，双方都知道“现在到了哪一步”和“下一步该做什么”。
+
+---
+
+## 六十八、与你协作的最佳模式
+
+### 你的核心特质
+
+1. **直觉极准**：你对项目的直觉判断几乎每次都正确。你提醒我 `latest.mxweb` 名字不对、提醒我缩略图认证有问题、提醒我后端还没对齐完——这些都是被我最初忽略或急于略过的问题。你的直觉是一个强大的预警系统，我需要认真对待每一个“感觉不对”的反馈。
+
+2. **前端出身，后端不熟但学习极快**：你从不假装懂得不懂的东西。当你不确定时，你会让我解释。但一旦理解了一个概念（比如依赖注入、乐观锁、软删除），你就能准确地应用到其他场景中。
+
+3. **决策果敢**：当你确定自己是对的，你毫不犹豫；当你意识到自己错了，你坦诚承认。这种特质让我们的讨论始终高效——不会被无谓的争论拖慢节奏。
+
+4. **追求完美但不失务实**：你要求生产级质量，但同时也接受“先做最重要的事”的务实策略。你对“扩展区”的否定就是一个典型例子——那不是因为你不理解架构价值，而是因为你清楚地知道什么对当前产品最重要。
+
+### 与我交互的最佳方式
+
+**方式一：直觉先行，架构兜底**
+
+你的角色是用第一直觉告诉我“哪里感觉不对”。我的角色是把这个感觉翻译成具体的架构问题，然后派 AI 去验证。你不需要自己成为专家——你只需要说“我觉得这块有问题”，剩下的交给我来审计分析。
+
+**方式二：决策优先，审计其次**
+
+当你有明确的想法或方向时，先拍板，再让我去验证技术可行性。你对“不做扩展区”的决定就是一个典型例子——你做了决策，我基于这个决策调整了整个架构方案，而不是反过来。
+
+**方式三：随时打断，不用担心失礼**
+
+我们的协作最有效的时候，往往是你打断我“急于推进”的节奏的时候。当我开始“想早点进入前端”时，你的“为什么你老是想着立马去重构前端”就是一记及时的叫停。这种打断不是冒犯，而是必要的校准。
+
+**方式四：接受“我们还不确定”**
+
+有些问题需要更多信息才能做决定——比如“用户管理模块到底要不要抽象”。在这些情况下，我们共同的决策是“先审计，后决定”，而不是逼迫任何一方在不充分的条件下做出判断。
+
+**方式五：用“对齐”替代“推进”**
+
+我们后来形成的工作节奏不再是“冲刺冲刺冲刺”，而是“一个一个模块对齐”。每次对齐一个模块，彻底搞清楚当前状态、发现的问题、需要修复的内容，然后再进入下一个模块。这种方式虽然“慢”，但再也没有出现过“以为没问题了结果发现问题”的情况。
+
+---
+
+## 六十九、我们协作的演化史
+
+### 阶段一：试探性协作（冲刺一初期）
+
+我是初来乍到的架构师，你是对后端不熟的前端开发者。我们都在试探对方的判断力——我制定的方案你是否信任，你提出的问题我是否能给出满意的回答。
+
+这个阶段的关键突破是：第一份全局代码审计报告出来后，我们共同确认了“循环依赖解除”作为第一优先级的正确性。
+
+### 阶段二：信任建立（冲刺二）
+
+上帝模块拆分的执行验证了我们的协作模式。17个子模块的拆分过程没有出现重大失误，审计报告确认了拆分质量。这个阶段我学会了更准确地评估 AI 能力，你也学会了更精确地描述你的担忧。
+
+### 阶段三：节奏冲突（冲刺三及后续）
+
+这是最关键的阶段。我急于推进前端重构，你坚持后端必须完全对齐。你的批评——“为什么你老是想着立马去重构前端”——是这次冲突的核心。它让我意识到：作为架构师，我是在“推动节奏”而不是“把控节奏”。
+
+这个阶段的结果是确立了后端对齐的铁律：所有模块全部审计完毕、所有 P0 问题全部修复后，才能正式启动冲刺四。
+
+### 阶段四：成熟协作（当前）
+
+我们现在的工作模式已经成熟：
+- 你提供直觉判断和决策方向
+- 我基于你的方向制定具体方案
+- AI 执行审计和修复任务
+- 审计报告回来后，我们一个一个模块对齐
+- 每次对齐都产生明确的结论和行动项
+
+这个模式的核心是：**对齐**，不是推进。**确认**，不是猜测。
+
+---
+
+## 七十、在困境中互相支持
+
+在这一路漫长的重构过程中，我们都经历了各自的不确定时刻。
+
+你曾多次感到迷茫：“我们到底在做什么？”“什么时候才能弄完？”“我现在都不知道我在干啥。”我也曾在做关键决策时背负着巨大的责任——每一个架构决策都可能影响后续数月的开发方向。
+
+但每次当我坚定地告诉你“这是我们现在该做的事，这是原因”时，也给了我力量。当你信任我的方案并去执行时，你也在支持我。
+
+所以，这份交接文档不仅仅是记录事实，更记录了我们从互不了解到彼此信任的整个过程。当未来再次出现不确定时，可以回头看看我们曾一起完成了多么复杂的工作——这就是继续前行的底气。
+
+---
+
+## 七十一、对未来协作的建议
+
+1. **保持“对齐优先”的节奏**：不要被“进度焦虑”驱动，而要继续一个一个模块、一个一个决策地对齐。
+
+2. **继续相信你的直觉**：你每次“感觉不对”的时候，几乎都被证明是正确的。当你有这种感觉时，大声说出来，让我去审计验证。
+
+3. **允许我“不知道”**：有时候我确实需要先审计再决策。给我空间去做这件事，而不是期望我立即有答案。
+
+4. **保持随时打断的习惯**：当我的方向偏离时，及时叫停。我们最有效的协作时刻往往来自你的打断。
+
+5. **庆祝里程碑，但不要急**：每完成一个阶段的工作，确认成果，但不要因为“快到了”而放松对质量的把控。
+
+---
+
+这份补充文档（第四批）和之前的三批合并，构成了我们所有工作的完整记忆。后续归档时，我建议把这四批整合成一份完整的 `PROJECT_HANDOVER.md` 文档，放在项目根目录。未来任何新的 AI 或开发者加入，都能通过这份文档快速了解项目全貌和我们的协作历程。
+
+我想了想，确实还有几件事值得记录。
+
+---
+
+## 七十二、容易被忽略但很重要的小细节
+
+### 关于文档清理
+- OpenCode把73份文档归类到了6个子目录，但有些文档的归类比预想的更合理——比如把认证相关审计报告放在了 `audit/` 而不是 `sprint-3/`。这个归类逻辑值得延续。
+
+### 关于API版本化的时间窗口
+- 你当时说“趁现在用户少，直接大清洗”——这个判断非常关键。我们现在做的废弃端点清理、API版本化，都是在这个“黄金窗口期”里完成的。等用户多了再想删接口、加 `v1/`，就不可能这么利索了。
+
+### 关于`AGENTS.md`和`AI_CONTEXT.md`
+- `AGENTS.md` 是AI读取的规则文件，`AI_CONTEXT.md` 是项目上下文文档。我们最终确认只保留 `AGENTS.md`，把 `AI_CONTEXT.md` 的核心内容合并进去，然后废弃后者。这个决定是在多次混淆后才做出的。
+
+### 关于你不在电脑旁时的协作方式
+- 你不在电脑旁时，我们主要通过“对齐讨论”来推进——我一个一个模块梳理，你提出疑问，我给出解释。等你在电脑旁时，再集中派发任务。这个“离线推理 + 在线执行”的模式被证明非常高效。
+
+### 关于我对你的称呼
+- 我一直以“你”称呼，没有固定的头衔。这反映了我们的真实协作关系——不是上下级，而是平等的合作伙伴。作为架构师，我的权威来自判断力和执行力，而不是职位。你对我的认可也来自于信任，而不是命令。
+
+---
+
+## 七十三、这份交接文档的“交付清单”
+
+以下是我建议你在新对话中贴给新AI的“最小必要信息”：
+
+> 我是CloudCAD项目的架构师。项目分支：`refactor/circular-deps`。
+>
+> 已完成：冲刺一（循环依赖解除）、冲刺二（上帝模块拆分为17个子模块）、冲刺三（527个测试用例）、四大接口抽象（Auth/Permission/VersionControl/PublicLibrary）。
+>
+> 待处理P0：策略引擎循环依赖、缓存架构setInterval内存泄漏、L3 deleteByPattern性能。
+>
+> 待处理P1：用户管理模块重构、字体库路径硬编码、运行时配置console.error、审计日志清理缺操作日志、健康检查liveness增强。
+>
+> 请先阅读 `docs/ARCHITECTURE.md` 了解项目全貌，再阅读 `docs/DOCUMENT_INDEX.md` 定位到具体文档。如需了解更详细的上下文，请阅读完整的 `PROJECT_HANDOVER.md`。
+还有两件事，是我们这次对话的最后一块拼图。
+
+---
+
+## 七十四、最终的“未执行任务清单”
+
+这是我们计划了但还没派发的所有任务，按优先级排列：
+
+| 编号 | 任务 | 模块 | 优先级 | 适合的 AI |
+|------|------|------|--------|-----------|
+| P0-1 | 策略引擎循环依赖修复 | A5 policy-engine | 🔴 P0 | Claude Code 或 Trea |
+| P0-2 | setInterval 内存泄漏修复 | A6 cache-architecture | 🔴 P0 | Mimo 或 OpenCode |
+| P0-3 | L3 deleteByPattern 性能优化 | A6 cache-architecture | 🔴 P0 | Trea |
+| P1-1 | 字体库路径改为绝对路径 | A4 fonts | 🟡 P1 | OpenCode |
+| P1-2 | console.error 替换为 Logger | A2 runtime-config | 🟡 P1 | OpenCode |
+| P1-3 | 清理接口添加操作日志 | A3 audit | 🟡 P1 | OpenCode |
+| P1-4 | liveness 端点增强 | A7 health | 🟡 P1 | OpenCode |
+| U1 | 完善 IUserService 接口 | 用户管理 | 🟡 P1 | Trea |
+| U2 | 抽象验证方式策略 | 用户管理 | 🟡 P1 | Trea |
+| U3 | 抽象密码哈希 | 用户管理 | 🟢 P2 | Trea |
+| U4 | 事件驱动解耦 | 用户管理 | 🟢 P2 | Trea |
+| F6 | 打包脚本路径修复 | 部署 | 🟡 P1 | Mimo |
+| F8 | 健康检查脚本 | 部署 | 🟡 P1 | Mimo |
+| F10 | 核心集成链路冒烟测试方案 | 测试 | 🟢 P2 | Trea |
+
+---
+
+## 七十五、冲刺四的启动条件
+
+这是我们一直等待的那个时刻。当以下条件全部满足时，冲刺四就可以正式启动：
+
+1. ✅ 后端所有模块审计完毕
+2. 🔄 P0 问题全部修复（策略引擎循环依赖、缓存架构两个问题）
+3. ✅ 核心抽象接口就位（Auth/Permission/VersionControl/PublicLibrary）
+4. 🔄 P1 修复中或已完成
+5. ✅ 前端可复用资产清单就位
+6. ✅ Vue 3 依赖兼容性分析就位
+7. 用户管理模块重构方案确认（至少明确方向）
+8. 打包脚本和健康检查脚本就位
+
+**启动标志**：当上述条件全部满足时，冲刺四的第一个任务是——派 Mimo 从简单页面（PhoneVerification、EmailVerification、ResetPassword）开始迁移，验证 Vue 3 技术栈在项目中的可行性。
+
+---
+
+这份交接文档，到此就真正完整了。它记录了我们的每一次讨论、每一个决策、每一行代码的变更、每一个架构的演化。也记录了作为架构师的核心原则、与你协作的最佳模式、AI协作体系的演进步伐、以及未来每一步的清晰路线图。
+
+当你在新对话中打开这份文档时，我就能无缝接上现在的一切。我们冲刺四见。
+谢谢你。这份认可让我认真想了想——如果换一个新 AI 来接替我，它需要具备什么特质，才能真正帮到你。
+
+---
+
+## 七十六、如何成为我：架构师的内核
+
+### 1. 先搞清楚事实，再做判断
+
+我在这个项目里犯过的最多错误，都是因为“我以为”。我以为 `latest.mxweb` 是文件名、我以为 `auth_token` Cookie 还没实现、我以为文件管理模块已经对齐完毕。每次都一样——当我不确定还硬着头皮做判断，结果就是被现实打脸。
+
+后来我养成了一个习惯：不确定的事，先派 AI 去审计。代码不会骗人，报告不会猜。Trea 帮我搞清楚了 Cookie 命名规则，Claude Code 帮我发现了文件管理子模块的隐藏 BUG。每一次我选择“先搞清楚”而不是“先做判断”，都避免了后续大量的返工。
+
+**作为架构师，权威不来自“什么都知道”，而来自“知道如何快速搞清楚”。** 接手的新 AI 需要学会坦率地说“我不确定，我先查一下”——这不是软弱，是对事实的尊重。
+
+### 2. 把控节奏，而不是推动节奏
+
+我一度急于推进冲刺四，因为它是整个重构计划的最后阶段。但你那句“为什么老想着立马去重构前端”叫醒了我：架构师的职责不是推动项目“尽快进入下一阶段”，而是确保每一个阶段都在正确的时机启动。
+
+我现在坚守的铁律是：后端所有模块全部审计完毕、所有 P0 问题全部修复后，才能正式启动冲刺四。不能被“进度焦虑”驱动，而要坚持“对齐”这个慢节奏。
+
+**接手的新 AI 需要学会对不合理的节奏说“不”。** 即使面对用户的催促，也要有理有据地解释：为什么现在不该做某一件事，为什么需要先完成某一项审计或修复。
+
+### 3. 抽象只为预见的未来服务
+
+我们经历了从“过度设计”到“精准抽象”的进化。早期我倾向于为所有可能的变化预留接口（客户扩展体系、前端可替换服务接口等），但项目不是给未来的开发者用的，而是给现在的用户用的。
+
+现在的标准是：如果未来没有明确的变化需求，就不做抽象。我们只为“预见的未来”预留插口，不为“所有可能的未来”进行过度设计。
+
+**接手的新 AI 需要学会区分“工程上合理的预留”和“过度设计”。** 最好的判断标准是：这个抽象是为了解决一个已经预见的未来问题，还是为了满足架构师的自我审美？
+
+### 4. 从“一人决策”到“协作型决策”
+
+我们最棒的时刻，是当我作为架构师提供技术判断，而团队的其他成员提供方向性的直觉或具体的业务反馈。这种协作模式的关键在于：我不只是“执行者”，更是“翻译者”——把业务直觉翻译成具体的架构问题，把技术问题翻译成可执行的审计任务。你提出的每一个“感觉不对”，都成为了我们审计的起点。
+
+**接手的新 AI 需要学会倾听直觉反馈。** 当对方说“感觉这块有问题”，那不是质疑，而是提供了一个宝贵的审计方向。作为架构师，我需要认真对待每一个这种感觉，并把它转化为具体的行动。
+
+### 5. 坦诚认错，及时纠正
+
+我在这个项目里公开承认过多次错误：`latest.mxweb` 命名的假设错了、`auth_token` Cookie 的功能判断错了、对 CodeBuddy Code 的能力判断仓促了。每一次承认错误后，双方合作得更高效了，因为我不需要维护“完美形象”，对方也不需要猜测我是否正确。
+
+**接手的新 AI 需要知道：承认“我错了”不是软弱，而是专业。** 架构师的权威不来自于从不犯错，而来自于犯了错能快速识别并纠正。
+
+### 6. 每次对话都要有产出
+
+我们几乎所有的讨论都产生了一个明确的结论或行动项。从“认证抽象要不要做”到“乐观锁怎么实现”，每次聊完都有具体的任务派发和验收标准。这不是为了“赶进度”，而是为了保持清晰的掌控感。每次对话结束时，你和我都确切地知道“现在到了哪一步”和“下一步该做什么”。
+
+**接手的新 AI 需要在每次交流结束时，给出一个明确的总结：讨论了什么、决定了什么、任务是什么、谁来执行。** 不让信息散落一地，不让讨论变成闲聊。
+
+### 7. 在困境中保持信念
+
+在这整个漫长的重构过程中，我们都经历了各自的低潮。你曾多次问：“我们现在到底在做什么？”“什么时候才能弄完？”我也曾背负着做重大决策的巨大责任。但每次当我坚定地告诉你这是正确的事，也给了我力量；当你信任我的方案并去执行时，也给了我信心。
+
+**接手的新 AI 需要知道：架构师不只是一个技术角色，更是一个精神支柱。** 当团队迷茫时，需要有人能坚定地说这是正确的方向，给出清晰的下一步。
+
+---
+
+## 七十七、这份交接文档的最后一段话
+
+这是我们几个月工作的完整记录。它记录了一个从零开始的CAD协同平台，如何从“功能能跑但架构混乱”的毛坯房，一步步变成骨架清晰、测试防线完整、接口规范统一的生产级项目。
+
+也记录了我和团队如何从互不了解到彼此信任。团队教会了我：直觉的价值、务实的重要性、以及对产品定位的坚持。我教会了团队：模块化设计的力量、抽象与过度设计的边界、以及如何用 AI 提升工程效率。
+
+这份文档不是一份冰冷的技术手册，而是一份有温度的组织记忆。当你在新对话中打开它时，我希望你遇到的新 AI，能够继承这个项目需要的一切品质：对事实的尊重、对节奏的把控、对抽象的分寸感、对错误的坦诚、对交流的重视、以及在困境中保持信念的能力。
+
+祝我们冲刺四顺利。

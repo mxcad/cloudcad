@@ -1,0 +1,3452 @@
+
+[1m[46m RUN [49m[22m [36mv4.1.0 [39m[90mD:/project/cloudcad/packages/frontend[39m
+
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m基础渲染[2m > [22m应该在 isActive 为 false 时不渲染任何内容[32m 21[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m基础渲染[2m > [22m应该在 isActive 为 true 时渲染遮罩层[32m 55[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m基础渲染[2m > [22m应该在加载状态时显示加载提示[32m 13[2mms[22m[39m
+ [31m×[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m目标元素查找[2m > [22m应该使用 data-tour 属性查找目标元素[32m 12[2mms[22m[39m
+[31m   → expected "querySelector" to be called with arguments: [ '[data-tour="my-button"]' ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m目标元素查找[2m > [22m应该在元素找到时正常渲染[32m 6[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m基础渲染[2m > [22m当 isOpen 为 true 时应该渲染 Modal[32m 64[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m基础渲染[2m > [22m当 isOpen 为 false 时不应该渲染 Modal[32m 4[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m基础渲染[2m > [22m应该传递正确的 size 属性给 Modal[32m 13[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m基础渲染[2m > [22m应该传递正确的 z-index 属性给 Modal[32m 9[2mms[22m[39m
+ [32m✓[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckPermission[2m > [22mshould return true when user has permission[32m 20[2mms[22m[39m
+ [32m✓[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckPermission[2m > [22mshould return false when user does not have permission[32m 3[2mms[22m[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckPermission[2m > [22mshould return false on API error[32m 9[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [32m✓[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetPermissions[2m > [22mshould return permissions array[32m 3[2mms[22m[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetPermissions[2m > [22mshould return empty array on API error[32m 6[2mms[22m[39m
+[31m   → expected [ 'FILE_READ', 'FILE_WRITE', …(1) ] to deeply equal [][39m
+ [32m✓[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetRole[2m > [22mshould return role name[32m 3[2mms[22m[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetRole[2m > [22mshould return null when role is undefined[32m 4[2mms[22m[39m
+[31m   → expected 'ADMIN' to be null[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetRole[2m > [22mshould return null on API error[32m 3[2mms[22m[39m
+[31m   → expected 'ADMIN' to be null[39m
+ [32m✓[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckAnyPermission[2m > [22mshould return true when user has any permission[32m 3[2mms[22m[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckAnyPermission[2m > [22mshould return false when user has none of the permissions[32m 3[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckAllPermissions[2m > [22mshould return true when user has all permissions[32m 2[2mms[22m[39m
+[31m   → expected false to be true // Object.is equality[39m
+ [32m✓[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckAllPermissions[2m > [22mshould return false when user is missing any permission[32m 1[2mms[22m[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcache behavior[2m > [22mshould cache permission check results[32m 2[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called 1 times, but got 0 times[39m
+ [31m×[39m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcache behavior[2m > [22mshould clear cache for specific project[32m 2[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called 2 times, but got 1 times[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m欢迎标题显示[2m > [22m应该显示欢迎标题[32m 24[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m欢迎标题显示[2m > [22m应该显示副标题提示[32m 9[2mms[22m[39m
+ [31m×[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m欢迎标题显示[2m > [22m应该显示主图标 (Sparkles)[32m 27[2mms[22m[39m
+[31m   → Unable to find an element by: [data-testid="icon-sparkles"]
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mdata-size[31m=[32m"lg"[31m
+      [33mdata-testid[31m=[32m"modal"[31m
+      [33mdata-zindex[31m=[32m"10002"[31m
+    [36m>[31m
+      [36m<button[31m
+        [33mdata-testid[31m=[32m"modal-close"[31m
+      [36m/>[31m
+      [36m<div[31m
+        [33mdata-testid[31m=[32m"modal-content"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"text-center"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[31m
+            [33mstyle[31m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-sparkles"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"36"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"36"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M20 2v4"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M22 4h-4"[31m
+              [36m/>[31m
+              [36m<circle[31m
+                [33mcx[31m=[32m"4"[31m
+                [33mcy[31m=[32m"20"[31m
+                [33mr[31m=[32m"2"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+          [36m</div>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"text-2xl font-bold mb-2"[31m
+            [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+          [36m>[31m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-sm mb-6"[31m
+            [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+          [36m>[31m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-book-open"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M12 7v14"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m业务流程教程[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-target"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"6"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"2"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m交互式引导[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-compass"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m按需学习[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center justify-center gap-4"[31m
+          [36m>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-ghost"[31m
+            [36m>[31m
+              [0m稍后再说[0m
+            [36m</button>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-primary"[31m
+            [36m>[31m
+              [0m立即查看引导[0m
+            [36m</button>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-4 text-xs"[31m
+            [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+          [36m>[31m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示 3 个功能特性[32m 13[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示业务流程教程的特性描述[32m 9[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示交互式引导的特性描述[32m 8[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示按需学习的特性描述[32m 9[2mms[22m[39m
+ [31m×[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示业务流程教程图标 (BookOpen)[32m 12[2mms[22m[39m
+[31m   → Unable to find an element by: [data-testid="icon-book-open"]
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mdata-size[31m=[32m"lg"[31m
+      [33mdata-testid[31m=[32m"modal"[31m
+      [33mdata-zindex[31m=[32m"10002"[31m
+    [36m>[31m
+      [36m<button[31m
+        [33mdata-testid[31m=[32m"modal-close"[31m
+      [36m/>[31m
+      [36m<div[31m
+        [33mdata-testid[31m=[32m"modal-content"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"text-center"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[31m
+            [33mstyle[31m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-sparkles"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"36"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"36"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M20 2v4"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M22 4h-4"[31m
+              [36m/>[31m
+              [36m<circle[31m
+                [33mcx[31m=[32m"4"[31m
+                [33mcy[31m=[32m"20"[31m
+                [33mr[31m=[32m"2"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+          [36m</div>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"text-2xl font-bold mb-2"[31m
+            [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+          [36m>[31m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-sm mb-6"[31m
+            [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+          [36m>[31m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-book-open"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M12 7v14"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m业务流程教程[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-target"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"6"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"2"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m交互式引导[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-compass"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m按需学习[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center justify-center gap-4"[31m
+          [36m>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-ghost"[31m
+            [36m>[31m
+              [0m稍后再说[0m
+            [36m</button>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-primary"[31m
+            [36m>[31m
+              [0m立即查看引导[0m
+            [36m</button>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-4 text-xs"[31m
+            [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+          [36m>[31m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+ [31m×[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示交互式引导图标 (Target)[32m 15[2mms[22m[39m
+[31m   → Unable to find an element by: [data-testid="icon-target"]
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mdata-size[31m=[32m"lg"[31m
+      [33mdata-testid[31m=[32m"modal"[31m
+      [33mdata-zindex[31m=[32m"10002"[31m
+    [36m>[31m
+      [36m<button[31m
+        [33mdata-testid[31m=[32m"modal-close"[31m
+      [36m/>[31m
+      [36m<div[31m
+        [33mdata-testid[31m=[32m"modal-content"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"text-center"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[31m
+            [33mstyle[31m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-sparkles"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"36"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"36"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M20 2v4"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M22 4h-4"[31m
+              [36m/>[31m
+              [36m<circle[31m
+                [33mcx[31m=[32m"4"[31m
+                [33mcy[31m=[32m"20"[31m
+                [33mr[31m=[32m"2"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+          [36m</div>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"text-2xl font-bold mb-2"[31m
+            [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+          [36m>[31m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-sm mb-6"[31m
+            [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+          [36m>[31m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-book-open"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M12 7v14"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m业务流程教程[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-target"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"6"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"2"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m交互式引导[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-compass"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m按需学习[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center justify-center gap-4"[31m
+          [36m>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-ghost"[31m
+            [36m>[31m
+              [0m稍后再说[0m
+            [36m</button>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-primary"[31m
+            [36m>[31m
+              [0m立即查看引导[0m
+            [36m</button>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-4 text-xs"[31m
+            [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+          [36m>[31m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+ [31m×[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示按需学习图标 (Compass)[32m 10[2mms[22m[39m
+[31m   → Unable to find an element by: [data-testid="icon-compass"]
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mdata-size[31m=[32m"lg"[31m
+      [33mdata-testid[31m=[32m"modal"[31m
+      [33mdata-zindex[31m=[32m"10002"[31m
+    [36m>[31m
+      [36m<button[31m
+        [33mdata-testid[31m=[32m"modal-close"[31m
+      [36m/>[31m
+      [36m<div[31m
+        [33mdata-testid[31m=[32m"modal-content"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"text-center"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[31m
+            [33mstyle[31m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-sparkles"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"36"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"36"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M20 2v4"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M22 4h-4"[31m
+              [36m/>[31m
+              [36m<circle[31m
+                [33mcx[31m=[32m"4"[31m
+                [33mcy[31m=[32m"20"[31m
+                [33mr[31m=[32m"2"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+          [36m</div>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"text-2xl font-bold mb-2"[31m
+            [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+          [36m>[31m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-sm mb-6"[31m
+            [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+          [36m>[31m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-book-open"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M12 7v14"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m业务流程教程[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-target"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"6"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"2"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m交互式引导[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[31m
+            [36m</div>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"p-4 rounded-xl text-left"[31m
+              [33mstyle[31m=[32m"background: var(--bg-tertiary);"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[31m
+                [33mstyle[31m=[32m"background: var(--primary-50);"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"lucide lucide-compass"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"20"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mstyle[31m=[32m"color: var(--primary-500);"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[31m
+                  [36m/>[31m
+                  [36m<circle[31m
+                    [33mcx[31m=[32m"12"[31m
+                    [33mcy[31m=[32m"12"[31m
+                    [33mr[31m=[32m"10"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+              [36m</div>[31m
+              [36m<h4[31m
+                [33mclass[31m=[32m"text-sm font-semibold mb-1"[31m
+                [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+              [36m>[31m
+                [0m按需学习[0m
+              [36m</h4>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"text-xs"[31m
+                [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+              [36m>[31m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center justify-center gap-4"[31m
+          [36m>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-ghost"[31m
+            [36m>[31m
+              [0m稍后再说[0m
+            [36m</button>[31m
+            [36m<button[31m
+              [33mdata-testid[31m=[32m"button-primary"[31m
+            [36m>[31m
+              [0m立即查看引导[0m
+            [36m</button>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-4 text-xs"[31m
+            [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+          [36m>[31m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮点击事件[2m > [22m应该显示"稍后再说"按钮[32m 8[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮点击事件[2m > [22m应该显示"立即查看引导"按钮[32m 9[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮点击事件[2m > [22m点击"稍后再说"按钮应该调用 onDismiss[32m 11[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮点击事件[2m > [22m点击"立即查看引导"按钮应该调用 onViewNow[32m 7[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮点击事件[2m > [22m点击 Modal 关闭按钮应该调用 onDismiss[32m 7[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m底部提示文字显示[2m > [22m应该显示底部提示文字[32m 11[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22mz-index 层级验证[2m > [22mModal 应该使用 10002 作为 z-index[32m 6[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22mz-index 层级验证[2m > [22mz-index 应该高于普通 Modal (50)[32m 9[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22mz-index 层级验证[2m > [22mz-index 应该高于 Drawer (900)[32m 14[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22mz-index 层级验证[2m > [22mz-index 应该高于 Toast (1100)[32m 11[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮变体验证[2m > [22m"稍后再说"按钮应该是 ghost 变体[32m 8[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m按钮变体验证[2m > [22m"立即查看引导"按钮应该是 primary 变体[32m 9[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m边界情况[2m > [22m当快速点击"稍后再说"按钮时，应该只调用一次 onDismiss[32m 8[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m边界情况[2m > [22m当快速点击"立即查看引导"按钮时，应该只调用一次 onViewNow[32m 7[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m边界情况[2m > [22m应该正确处理 onDismiss 和 onViewNow 同时被调用的情况[32m 10[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m组件结构[2m > [22m应该包含居中对齐的容器[32m 11[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m组件结构[2m > [22m应该包含网格布局的功能特性容器[32m 7[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m组件结构[2m > [22m应该包含按钮容器[32m 6[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m无障碍性[2m > [22m功能特性卡片应该有标题和描述[32m 15[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m无障碍性[2m > [22m按钮应该有可点击属性[32m 168[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在 isOpen 为 true 时渲染模态框[32m 115[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在 isOpen 为 false 时不渲染模态框[32m 4[2mms[22m[39m
+ [31m×[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示所有文件[32m 33[2mms[22m[39m
+[31m   → Unable to find an element with the text: ref1.dwg. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body[31m
+  [33mstyle[31m=[32m"overflow: hidden;"[31m
+[36m>[31m
+  [36m<div />[31m
+  [36m<div[31m
+    [33mclass[31m=[32m"fixed inset-0 flex items-center justify-center p-4 modal-enter"[31m
+    [33mstyle[31m=[32m"z-index: 9999;"[31m
+  [36m>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"absolute inset-0 transition-opacity duration-300"[31m
+      [33mstyle[31m=[32m"background: var(--bg-overlay);"[31m
+    [36m/>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"relative w-full max-w-md max-h-[70vh] overflow-hidden modal-content flex flex-col"[31m
+      [33mstyle[31m=[32m"background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); z-index: 10000;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"flex items-center justify-between px-6 py-4"[31m
+        [33mstyle[31m=[32m"border-bottom: 1px solid var(--border-default);"[31m
+      [36m>[31m
+        [36m<h3[31m
+          [33mclass[31m=[32m"text-lg font-semibold"[31m
+          [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+        [36m>[31m
+          [0m管理外部参照文件[0m
+        [36m</h3>[31m
+        [36m<button[31m
+          [33mclass[31m=[32m"p-1.5 rounded-lg transition-all duration-200 hover:scale-110"[31m
+          [33mdata-tour[31m=[32m"modal-close-btn"[31m
+          [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+        [36m>[31m
+          [36m<svg[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"lucide lucide-x"[31m
+            [33mfill[31m=[32m"none"[31m
+            [33mheight[31m=[32m"20"[31m
+            [33mstroke[31m=[32m"currentColor"[31m
+            [33mstroke-linecap[31m=[32m"round"[31m
+            [33mstroke-linejoin[31m=[32m"round"[31m
+            [33mstroke-width[31m=[32m"2"[31m
+            [33mviewBox[31m=[32m"0 0 24 24"[31m
+            [33mwidth[31m=[32m"20"[31m
+            [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+          [36m>[31m
+            [36m<path[31m
+              [33md[31m=[32m"M18 6 6 18"[31m
+            [36m/>[31m
+            [36m<path[31m
+              [33md[31m=[32m"m6 6 12 12"[31m
+            [36m/>[31m
+          [36m</svg>[31m
+        [36m</button>[31m
+      [36m</div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"p-6 overflow-y-auto flex-1"[31m
+        [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"space-y-4"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"rounded-lg p-3"[31m
+            [33mstyle[31m=[32m"background-color: var(--warning-light); border: 1px solid var(--warning-dim);"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"flex items-start gap-2"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33maria-hidden[31m=[32m"true"[31m
+                [33mclass[31m=[32m"lucide lucide-triangle-alert mt-0.5 flex-shrink-0"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"16"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mstyle[31m=[32m"color: var(--warning);"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"16"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M12 9v4"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M12 17h.01"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"text-sm"[31m
+                [33mstyle[31m=[32m"color: var(--warning);"[31m
+              [36m>[31m
+                [36m<p[31m
+                  [33mclass[31m=[32m"font-medium mb-1"[31m
+                [36m>[31m
+                  [0m检测到 [0m
+                  [0m2[0m
+                  [0m 个缺失的外部参照文件（共 [0m
+                  [0m2[0m
+                  [0m [0m
+                  [0m个）[0m
+                [36m</p>[31m
+                [36m<p>[31m
+                  [0m这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。[0m
+                [36m</p>[31m
+              [36m</div>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"rounded-lg overflow-hidden"[31m
+            [33mdata-tour[31m=[32m"xref-list"[31m
+            [33mstyle[31m=[32m"border: 1px solid var(--border-default);"[31m
+          [36m>[31m
+            [36m<table[31m
+              [33mclass[31m=[32m"w-full"[31m
+            [36m>[31m
+              [36m<thead>[31m
+                [36m<tr[31m
+                  [33mstyle[31m=[32m"background-color: var(--bg-secondary);"[31m
+                [36m>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-left text-sm font-medium w-20"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m状态[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-left text-sm font-medium"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m文件名[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-right text-sm font-medium w-24"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m类型[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-right text-sm font-medium w-28"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m进度[0m
+                  [36m</th>[31m
+                [36m</tr>[31m
+              [36m</thead>[31m
+              [36m<tbody>[31m
+                [36m<tr[31m
+                  [33mclass[31m=[32m"hover:bg-[var(--bg-tertiary)]"[31m
+                  [33mstyle[31m=[32m"border-bottom: 1px solid var(--border-subtle); background-color: transparent;"[31m
+                [36m>[31m
+                  [36...[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示正确的文件类型[32m 30[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示操作按钮[32m 26[2mms[22m[39m
+[90mstderr[2m | src/pages/FileSystemManager.spec.tsx[2m > [22m[2mFileSystemManager[2m > [22m[2mshould render without crashing in personal-space mode
+[22m[39mReact does not recognize the `nodeId` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `nodeid` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+React does not recognize the `buttonText` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `buttontext` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+React does not recognize the `buttonClassName` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `buttonclassname` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+Unknown event handler property `onSuccess`. It will be ignored.
+Unknown event handler property `onExternalReferenceSuccess`. It will be ignored.
+
+[90mstderr[2m | src/pages/FileSystemManager.spec.tsx[2m > [22m[2mFileSystemManager[2m > [22m[2mshould render without crashing in personal-space mode
+[22m[39mCannot read properties of undefined (reading 'data') 获取私人空间失败 TypeError: Cannot read properties of undefined (reading 'data')
+    at fetchPersonalSpace (D:/project/cloudcad/packages/frontend/src/pages/FileSystemManager.tsx:220:22)
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+An update to FileSystemManager inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [31m×[39m src/pages/FileSystemManager.spec.tsx[2m > [22mFileSystemManager[2m > [22mshould render without crashing in project mode[32m 103[2mms[22m[39m
+[31m   → Invalid Chai property: toBeInTheDocument[39m
+ [31m×[39m src/pages/FileSystemManager.spec.tsx[2m > [22mFileSystemManager[2m > [22mshould render without crashing in personal-space mode[32m 31[2mms[22m[39m
+[31m   → Invalid Chai property: toBeInTheDocument[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在所有文件上传成功时显示成功提示[32m 18[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在文件上传失败时显示失败提示[32m 22[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示待上传状态[32m 23[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示上传中状态和进度[32m 22[2mms[22m[39m
+ [31m×[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在上传中时禁用选择按钮[32m 20[2mms[22m[39m
+[31m   → Unable to find an element with the text: 选择并上传. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body[31m
+  [33mstyle[31m=[32m"overflow: hidden;"[31m
+[36m>[31m
+  [36m<div />[31m
+  [36m<div[31m
+    [33mclass[31m=[32m"fixed inset-0 flex items-center justify-center p-4 modal-enter"[31m
+    [33mstyle[31m=[32m"z-index: 9999;"[31m
+  [36m>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"absolute inset-0 transition-opacity duration-300"[31m
+      [33mstyle[31m=[32m"background: var(--bg-overlay);"[31m
+    [36m/>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"relative w-full max-w-md max-h-[70vh] overflow-hidden modal-content flex flex-col"[31m
+      [33mstyle[31m=[32m"background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); z-index: 10000;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"flex items-center justify-between px-6 py-4"[31m
+        [33mstyle[31m=[32m"border-bottom: 1px solid var(--border-default);"[31m
+      [36m>[31m
+        [36m<h3[31m
+          [33mclass[31m=[32m"text-lg font-semibold"[31m
+          [33mstyle[31m=[32m"color: var(--text-primary);"[31m
+        [36m>[31m
+          [0m管理外部参照文件[0m
+        [36m</h3>[31m
+        [36m<button[31m
+          [33mclass[31m=[32m"p-1.5 rounded-lg transition-all duration-200 hover:scale-110"[31m
+          [33mdata-tour[31m=[32m"modal-close-btn"[31m
+          [33mstyle[31m=[32m"color: var(--text-muted);"[31m
+        [36m>[31m
+          [36m<svg[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"lucide lucide-x"[31m
+            [33mfill[31m=[32m"none"[31m
+            [33mheight[31m=[32m"20"[31m
+            [33mstroke[31m=[32m"currentColor"[31m
+            [33mstroke-linecap[31m=[32m"round"[31m
+            [33mstroke-linejoin[31m=[32m"round"[31m
+            [33mstroke-width[31m=[32m"2"[31m
+            [33mviewBox[31m=[32m"0 0 24 24"[31m
+            [33mwidth[31m=[32m"20"[31m
+            [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+          [36m>[31m
+            [36m<path[31m
+              [33md[31m=[32m"M18 6 6 18"[31m
+            [36m/>[31m
+            [36m<path[31m
+              [33md[31m=[32m"m6 6 12 12"[31m
+            [36m/>[31m
+          [36m</svg>[31m
+        [36m</button>[31m
+      [36m</div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"p-6 overflow-y-auto flex-1"[31m
+        [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"space-y-4"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"rounded-lg p-3"[31m
+            [33mstyle[31m=[32m"background-color: var(--info-light); border: 1px solid var(--info-dim);"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"flex items-start gap-2"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33maria-hidden[31m=[32m"true"[31m
+                [33mclass[31m=[32m"lucide lucide-triangle-alert mt-0.5 flex-shrink-0"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"16"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mstyle[31m=[32m"color: var(--info);"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"16"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M12 9v4"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M12 17h.01"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"text-sm"[31m
+                [33mstyle[31m=[32m"color: var(--info);"[31m
+              [36m>[31m
+                [36m<p[31m
+                  [33mclass[31m=[32m"font-medium mb-1"[31m
+                [36m>[31m
+                  [0m所有外部参照文件已存在（共 [0m
+                  [0m1[0m
+                  [0m 个）[0m
+                [36m</p>[31m
+                [36m<p>[31m
+                  [0m图纸可以正常显示。如果您需要更新外部参照文件，可以选择覆盖已存在的文件。[0m
+                [36m</p>[31m
+              [36m</div>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"rounded-lg overflow-hidden"[31m
+            [33mdata-tour[31m=[32m"xref-list"[31m
+            [33mstyle[31m=[32m"border: 1px solid var(--border-default);"[31m
+          [36m>[31m
+            [36m<table[31m
+              [33mclass[31m=[32m"w-full"[31m
+            [36m>[31m
+              [36m<thead>[31m
+                [36m<tr[31m
+                  [33mstyle[31m=[32m"background-color: var(--bg-secondary);"[31m
+                [36m>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-left text-sm font-medium w-20"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m状态[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-left text-sm font-medium"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m文件名[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-right text-sm font-medium w-24"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m类型[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"px-4 py-2 text-right text-sm font-medium w-28"[31m
+                    [33mstyle[31m=[32m"color: var(--text-secondary);"[31m
+                  [36m>[31m
+                    [0m进度[0m
+                  [36m</th>[31m
+                [36m</tr>[31m
+              [36m</thead>[31m
+              [36m<tbody>[31m
+                [36m<tr[31m
+                  [33mclass[31m=[32m"hover:bg-[var(--bg-tertiary)]"[31m
+                  [33mstyle[31m=[32m"border-bottom: 1px solid var(--border-subtle); background-color: transparent;"[31m
+                [36m>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"px-4 py-2"[31m
+                  [36m>[31m
+         ...[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示上传成功状态[32m 17[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示上传失败状态[32m 14[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在 loading 时禁用取消按钮[32m 176[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示上传进度信息[32m 16[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该处理混合状态文件[32m 18[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该正确显示缺失文件数量[32m 16[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在无缺失文件时显示正常提示[32m 11[2mms[22m[39m
+ [32m✓[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示文件列表表格[32m 17[2mms[22m[39m
+ [31m×[39m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示警告图标[32m 17[2mms[22m[39m
+[31m   → expected null not to be null[39m
+ [31m×[39m src/hooks/file-system/useFileSystemCRUD.spec.ts[2m > [22museFileSystemCRUD[2m > [22mshould return expected shape with all required functions[32m 23[2mms[22m[39m
+[31m   → useNavigate() may be used only in the context of a <Router> component.[39m
+[90mstdout[2m | src/components/tour/TourOverlay.spec.tsx[2m > [22m[2mTourOverlay[2m > [22m[2m目标元素查找[2m > [22m[2m应该在元素未找到时检查 skipCondition 并自动跳过
+[22m[39m[Tour] Step "test-target" skipped by condition: element-not-exists
+
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m目标元素查找[2m > [22m应该在元素未找到时检查 skipCondition 并自动跳过[33m 3073[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mESC 键退出[2m > [22m应该响应 ESC 键退出引导[32m 8[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mESC 键退出[2m > [22m应该在 isActive 为 false 时忽略 ESC 键[32m 2[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m基础渲染[2m > [22m应该在 isOpen 为 true 时渲染 Modal[32m 132[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m基础渲染[2m > [22m应该在 isOpen 为 false 时不渲染 Modal[32m 4[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m基础渲染[2m > [22m应该使用正确的 z-index (10002)[32m 35[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m基础渲染[2m > [22m应该调用 onClose 当点击关闭按钮时[32m 45[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m引导列表显示[2m > [22m应该显示所有引导流程[32m 48[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m引导列表显示[2m > [22m应该显示引导描述[32m 44[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m引导列表显示[2m > [22m应该显示预计时长[32m 42[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m引导列表显示[2m > [22m应该显示步骤数量[32m 37[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m引导列表显示[2m > [22m应该显示搜索框[32m 30[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类显示[2m > [22m应该按分类分组显示引导[32m 36[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类显示[2m > [22m应该显示每个分类的引导数量[32m 46[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类显示[2m > [22m应该显示分类筛选按钮[32m 35[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类显示[2m > [22m默认应该选中"全部"分类[32m 30[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m搜索功能[2m > [22m应该能通过名称搜索引导[32m 37[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m搜索功能[2m > [22m应该能通过描述搜索引导[32m 46[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m搜索功能[2m > [22m搜索不匹配时应显示空状态[32m 64[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m搜索功能[2m > [22m清空搜索时应恢复所有引导[32m 61[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m进度统计显示[2m > [22m应该显示进度统计[32m 27[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mRender smoke test[2m > [22mrenders user list page title[32m 82[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m进度统计显示[2m > [22m应该显示正确的完成百分比[32m 29[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m进度统计显示[2m > [22m应该在所有引导完成时显示 100%[32m 31[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m完成状态标记[2m > [22m应该在已完成的引导卡片上显示完成标记[32m 31[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m完成状态标记[2m > [22m未完成的引导应该显示为未完成状态[32m 30[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m点击卡片开始引导[2m > [22m点击引导卡片应该调用 startTour[32m 49[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m点击卡片开始引导[2m > [22m开始引导后应该关闭 Modal[32m 24[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m点击卡片开始引导[2m > [22m悬停时应该显示开始按钮[32m 59[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m点击卡片开始引导[2m > [22m已完成的引导应该显示"重新开始"按钮[32m 32[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m当前引导进行中时的提示[2m > [22m当有引导进行中时应该显示提示[32m 39[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m当前引导进行中时的提示[2m > [22m当没有引导进行中时不应该显示提示[32m 40[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mRender smoke test[2m > [22mrenders search input[32m 29[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mRender smoke test[2m > [22mrenders pagination info[32m 29[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mRender smoke test[2m > [22mrenders user data in table[32m 25[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m当前引导进行中时的提示[2m > [22m点击"继续引导"按钮应该关闭 Modal[32m 37[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类标签筛选[2m > [22m点击分类按钮应该筛选对应分类的引导[32m 36[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类标签筛选[2m > [22m点击"全部"按钮应该显示所有引导[32m 57[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mUser CRUD - component integration[2m > [22mcreate user button exists[33m 315[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mUser CRUD - component integration[2m > [22medit button exists for users[32m 82[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m分类标签筛选[2m > [22m分类筛选和搜索应该可以组合使用[32m 44[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m边界情况[2m > [22m应该处理空的引导列表[32m 6[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m边界情况[2m > [22m应该处理分类中没有引导的情况[32m 12[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m边界情况[2m > [22m应该正确处理搜索结果为空的情况[32m 14[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m无障碍[2m > [22m搜索框应该有正确的 placeholder[32m 24[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourCenter.spec.tsx[2m > [22mTourCenter[2m > [22m无障碍[2m > [22m分类按钮应该可点击[32m 35[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mUser CRUD - component integration[2m > [22mdelete button exists for users[32m 119[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22mSearch interaction[2m > [22mtyping in search calls setSearchQuery[32m 25[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22museUserCRUD hook interface[2m > [22mexposes createUser function[32m 1[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22museUserCRUD hook interface[2m > [22mexposes updateUser function[32m 1[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22museUserCRUD hook interface[2m > [22mexposes deleteUser function[32m 1[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22museUserSearch hook interface[2m > [22mexposes pagination state[32m 1[2mms[22m[39m
+ [32m✓[39m src/pages/UserManagement/UserManagement.spec.tsx[2m > [22mUserManagement[2m > [22museUserSearch hook interface[2m > [22mexposes search state[32m 0[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserPermissions[2m > [22mshould return empty array when user is null[32m 18[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserPermissions[2m > [22mshould return empty array when user has no role[32m 4[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserPermissions[2m > [22mshould return permissions from user role[32m 7[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserPermissions[2m > [22mshould handle nested permission objects[32m 3[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserPermissions[2m > [22mshould filter out invalid permission formats[32m 4[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasPermission[2m > [22mshould return true when user has permission[32m 2[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasPermission[2m > [22mshould return false when user does not have permission[32m 2[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasPermission[2m > [22mshould return false when user is null[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasAnyPermission[2m > [22mshould return true when user has any of the permissions[32m 3[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasAnyPermission[2m > [22mshould return false when user has none of the permissions[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasAllPermissions[2m > [22mshould return true when user has all permissions[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasAllPermissions[2m > [22mshould return false when user is missing any permission[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserRole[2m > [22mshould return user role name[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mgetUserRole[2m > [22mshould return null when user has no role[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasRole[2m > [22mshould return true when user has specified role[32m 2[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasRole[2m > [22mshould return true when user has one of the specified roles[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mhasRole[2m > [22mshould return false when user has different role[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22misAdmin[2m > [22mshould return true when user has SYSTEM_ADMIN permission[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22misAdmin[2m > [22mshould return false when user does not have SYSTEM_ADMIN permission[32m 1[2mms[22m[39m
+ [32m✓[39m src/hooks/usePermission.spec.ts[2m > [22musePermission[2m > [22mmemoization[2m > [22mshould return memoized functions[32m 2[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mfallbackContent 处理[2m > [22m应该在元素不存在时渲染 children（显示 fallbackContent）[33m 3076[2mms[22m[39m
+ [31m×[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mfallbackContent 处理[2m > [22m应该在元素找到时正常渲染 children[33m 1017[2mms[22m[39m
+[31m   → Unable to find an element with the text: 正常内容. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div />[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"tour-overlay"[31m
+      [33mstyle[31m=[32m"position: fixed; inset: 0; z-index: 10002; pointer-events: auto;"[31m
+    [36m>[31m
+      [36m<svg[31m
+        [33mstyle[31m=[32m"position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;"[31m
+      [36m>[31m
+        [36m<defs>[31m
+          [36m<mask[31m
+            [33mid[31m=[32m"tour-overlay-mask"[31m
+          [36m>[31m
+            [36m<rect[31m
+              [33mfill[31m=[32m"white"[31m
+              [33mheight[31m=[32m"100%"[31m
+              [33mwidth[31m=[32m"100%"[31m
+              [33mx[31m=[32m"0"[31m
+              [33my[31m=[32m"0"[31m
+            [36m/>[31m
+          [36m</mask>[31m
+        [36m</defs>[31m
+        [36m<rect[31m
+          [33mfill[31m=[32m"rgba(0, 0, 0, 0.5)"[31m
+          [33mheight[31m=[32m"100%"[31m
+          [33mmask[31m=[32m"url(#tour-overlay-mask)"[31m
+          [33mwidth[31m=[32m"100%"[31m
+          [33mx[31m=[32m"0"[31m
+          [33my[31m=[32m"0"[31m
+        [36m/>[31m
+      [36m</svg>[31m
+      [36m<div[31m
+        [33mstyle[31m=[32m"position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); background: var(--bg-elevated); padding: 16px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mstyle[31m=[32m"width: 16px; height: 16px; border-top-color: transparent; border-radius: 50%; animation: tour-spin 1s linear infinite;"[31m
+        [36m/>[31m
+        [0m正在定位目标元素...[0m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div />[31m
+    [36m<div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"tour-overlay"[31m
+        [33mstyle[31m=[32m"position: fixed; inset: 0; z-index: 10002; pointer-events: auto;"[31m
+      [36m>[31m
+        [36m<svg[31m
+          [33mstyle[31m=[32m"position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;"[31m
+        [36m>[31m
+          [36m<defs>[31m
+            [36m<mask[31m
+              [33mid[31m=[32m"tour-overlay-mask"[31m
+            [36m>[31m
+              [36m<rect[31m
+                [33mfill[31m=[32m"white"[31m
+                [33mheight[31m=[32m"100%"[31m
+                [33mwidth[31m=[32m"100%"[31m
+                [33mx[31m=[32m"0"[31m
+                [33my[31m=[32m"0"[31m
+              [36m/>[31m
+            [36m</mask>[31m
+          [36m</defs>[31m
+          [36m<rect[31m
+            [33mfill[31m=[32m"rgba(0, 0, 0, 0.5)"[31m
+            [33mheight[31m=[32m"100%"[31m
+            [33mmask[31m=[32m"url(#tour-overlay-mask)"[31m
+            [33mwidth[31m=[32m"100%"[31m
+            [33mx[31m=[32m"0"[31m
+            [33my[31m=[32m"0"[31m
+          [36m/>[31m
+        [36m</svg>[31m
+        [36m<div[31m
+          [33mstyle[31m=[32m"position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); background: var(--bg-elevated); padding: 16px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mstyle[31m=[32m"width: 16px; height: 16px; border-top-color: transparent; border-radius: 50%; animation: tour-spin 1s linear infinite;"[31m
+          [36m/>[31m
+          [0m正在定位目标元素...[0m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mSVG 遮罩渲染[2m > [22m应该渲染 SVG 遮罩层[32m 8[2mms[22m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mSVG 遮罩渲染[2m > [22m应该在有目标元素时渲染高亮边框[32m 20[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mformatFileSize[2m > [22mshould return "-" for null or undefined[32m 2[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mformatFileSize[2m > [22mshould format bytes correctly[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mformatFileSize[2m > [22mshould format with 2 decimal places[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mformatFileSize[2m > [22mshould handle large files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetFileIcon[2m > [22mshould return folder icon for folders[32m 1[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetFileIcon[2m > [22mshould return CAD icons for CAD files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetFileIcon[2m > [22mshould return PDF icon for PDF files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetFileIcon[2m > [22mshould return image icon for image files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetFileIcon[2m > [22mshould return default icon for unknown files[32m 1[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetFileIcon[2m > [22mshould handle case insensitive extensions[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mformatDate[2m > [22mshould format date to Chinese locale[32m 22[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mformatDate[2m > [22mshould handle invalid date[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misCadFile[2m > [22mshould return true for CAD extensions[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misCadFile[2m > [22mshould return false for non-CAD extensions[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misCadFile[2m > [22mshould return false for null or undefined[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misImageFile[2m > [22mshould return true for image extensions[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misImageFile[2m > [22mshould return false for non-image extensions[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misImageFile[2m > [22mshould return false for null or undefined[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misImageFile[2m > [22mshould be case insensitive[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misPdfFile[2m > [22mshould return true for PDF extension[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misPdfFile[2m > [22mshould return false for non-PDF extensions[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22misPdfFile[2m > [22mshould return false for null or undefined[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetThumbnailUrl[2m > [22mshould return empty string for non-image files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetThumbnailUrl[2m > [22mshould return thumbnail URL for image files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetThumbnailUrl[2m > [22mshould return empty string when node has no id[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetCadThumbnailUrl[2m > [22mshould return empty string for non-CAD files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetCadThumbnailUrl[2m > [22mshould return thumbnail URL for CAD files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetCadThumbnailUrl[2m > [22mshould return empty string when node has no id[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetOriginalFileUrl[2m > [22mshould return thumbnail URL for CAD files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetOriginalFileUrl[2m > [22mshould return download URL for image files[32m 0[2mms[22m[39m
+ [32m✓[39m src/utils/fileUtils.spec.ts[2m > [22mfileUtils[2m > [22mgetOriginalFileUrl[2m > [22mshould return empty string when node has no id[32m 0[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mgetPersonalSpace()[2m > [22mshould call projectApi.getPersonalSpace and return personal space data[32m 4[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mgetPersonalSpace()[2m > [22mshould return null data when personal space is not found[32m 0[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mcheckPermission(projectId, "CAD_SAVE")[2m > [22mshould call projectPermissionApi.checkPermission and return permission result - has permission[32m 1[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mcheckPermission(projectId, "CAD_SAVE")[2m > [22mshould return hasPermission false when user lacks permission[32m 0[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mcheckPermission(projectId, "CAD_SAVE")[2m > [22mshould handle API error gracefully[32m 2[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mFile Save Flow[2m > [22mshould call mxcadApi.saveMxwebFile with correct parameters[32m 1[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mFile Save Flow[2m > [22mshould call filesApi.get after save to refresh file info[32m 0[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mmxcadPermissionApi.checkCadSave[2m > [22mshould be a wrapper around projectPermissionApi.checkPermission for CAD_SAVE[32m 0[2mms[22m[39m
+ [32m✓[39m src/services/mxcadManager.spec.ts[2m > [22mmxcadManager API Contract Tests[2m > [22mmxcadPermissionApi.checkCadRead[2m > [22mshould be a wrapper around projectPermissionApi.checkPermission for FILE_READ[32m 1[2mms[22m[39m
+ [31m×[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mrender props[2m > [22m应该传递 targetRect 和 hasTarget 给 children[33m 1017[2mms[22m[39m
+[31m   → expected null not to be null
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div />[31m
+    [36m<div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"tour-overlay"[31m
+        [33mstyle[31m=[32m"position: fixed; inset: 0; z-index: 10002; pointer-events: auto;"[31m
+      [36m>[31m
+        [36m<svg[31m
+          [33mstyle[31m=[32m"position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;"[31m
+        [36m>[31m
+          [36m<defs>[31m
+            [36m<mask[31m
+              [33mid[31m=[32m"tour-overlay-mask"[31m
+            [36m>[31m
+              [36m<rect[31m
+                [33mfill[31m=[32m"white"[31m
+                [33mheight[31m=[32m"100%"[31m
+                [33mwidth[31m=[32m"100%"[31m
+                [33mx[31m=[32m"0"[31m
+                [33my[31m=[32m"0"[31m
+              [36m/>[31m
+            [36m</mask>[31m
+          [36m</defs>[31m
+          [36m<rect[31m
+            [33mfill[31m=[32m"rgba(0, 0, 0, 0.5)"[31m
+            [33mheight[31m=[32m"100%"[31m
+            [33mmask[31m=[32m"url(#tour-overlay-mask)"[31m
+            [33mwidth[31m=[32m"100%"[31m
+            [33mx[31m=[32m"0"[31m
+            [33my[31m=[32m"0"[31m
+          [36m/>[31m
+        [36m</svg>[31m
+        [36m<div[31m
+          [33mstyle[31m=[32m"position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); background: var(--bg-elevated); padding: 16px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mstyle[31m=[32m"width: 16px; height: 16px; border-top-color: transparent; border-radius: 50%; animation: tour-spin 1s linear infinite;"[31m
+          [36m/>[31m
+          [0m正在定位目标元素...[0m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+ [32m✓[39m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mrender props[2m > [22m当元素不存在且有 fallbackContent 时 hasTarget 应该为 false[33m 3097[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m e2e/login.spec.ts[2m [ e2e/login.spec.ts ][22m
+[31m[1mError[22m: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.[39m
+[90m [2m❯[22m TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.59.1/node_modules/playwright/lib/common/testType.js:[2m75:13[22m[39m
+[90m [2m❯[22m TestTypeImpl._describe ../../node_modules/.pnpm/playwright@1.59.1/node_modules/playwright/lib/common/testType.js:[2m115:24[22m[39m
+[90m [2m❯[22m Function.describe ../../node_modules/.pnpm/playwright@1.59.1/node_modules/playwright/lib/transform/transform.js:[2m275:12[22m[39m
+[36m [2m❯[22m e2e/login.spec.ts:[2m4:6[22m[39m
+    [90m  2|[39m [35mimport[39m { [33mLoginPage[39m } [35mfrom[39m [32m'./pages/LoginPage'[39m[33m;[39m
+    [90m  3|[39m
+    [90m  4|[39m test[33m.[39m[34mdescribe[39m([32m'Login Page'[39m[33m,[39m () [33m=>[39m {
+    [90m   |[39m      [31m^[39m
+    [90m  5|[39m   [35mlet[39m loginPage[33m:[39m [33mLoginPage[39m[33m;[39m
+    [90m  6|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useExternalReferenceUpload.integration.spec.ts[2m [ src/hooks/useExternalReferenceUpload.integration.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../services/apiService" from "src/hooks/useExternalReferenceUpload.integration.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mD:/project/cloudcad/packages/frontend/src/hooks/useExternalReferenceUpload.integration.spec.ts[39m:72:40
+[33m  49 |    describe("checkMissingReferences - 外部参照检测", () => {
+  50 |      it("应该正确检测到缺失的外部参照并打开模态框", async () => {
+  51 |        const { mxcadApi } = await import("../services/apiService");
+     |                                          ^
+  52 |        const mockPreloadingData = {
+  53 |          tz: false,[39m
+[90m [2m❯[22m TransformPluginContext._formatLog ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useExternalReferenceUpload.spec.ts[2m [ src/hooks/useExternalReferenceUpload.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../services/apiService" from "src/hooks/useExternalReferenceUpload.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mD:/project/cloudcad/packages/frontend/src/hooks/useExternalReferenceUpload.spec.ts[39m:50:38
+[33m  31 |    });
+  32 |    it("应该检测到缺失的外部参照", async () => {
+  33 |      const { mxcadApi } = await import("../services/apiService");
+     |                                        ^
+  34 |      const mockPreloadingData = {
+  35 |        tz: false,[39m
+[90m [2m❯[22m TransformPluginContext._formatLog ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform ../../node_modules/.pnpm/vite@6.4.1_@types+node@22.19.15_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.0_tsx@4.21.0/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/file-system/useFileSystemData.spec.ts[2m [ src/hooks/file-system/useFileSystemData.spec.ts ][22m
+[31m[1mError[22m: Transform failed with 1 error:
+D:/project/cloudcad/packages/frontend/src/hooks/file-system/useFileSystemData.spec.ts:40:43: ERROR: Unterminated regular expression[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36mD:/project/cloudcad/packages/frontend/src/hooks/file-system/useFileSystemData.spec.ts[39m:40:43
+[33m  
+  [33mUnterminated regular expression[33m
+  38 |  
+  39 |    const wrapper = ({ children }: { children: React.ReactNode }) => (
+  40 |      <MemoryRouter>{children}</MemoryRouter>
+     |                                             ^
+  41 |    );
+  42 |  
+  [39m
+[90m [2m❯[22m failureErrorWithLog ../../node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:[2m1467:15[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:[2m736:50[22m[39m
+[90m [2m❯[22m responseCallbacks.<computed> ../../node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:[2m603:9[22m[39m
+[90m [2m❯[22m handleIncomingPacket ../../node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:[2m658:12[22m[39m
+[90m [2m❯[22m Socket.readFromStdout ../../node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:[2m581:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/25]⎯[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 21 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckPermission[2m > [22mshould return false on API error
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m52:27[22m[39m
+    [90m 50|[39m       const resultValue = await result.current.checkPermission('projec…
+    [90m 51|[39m
+    [90m 52|[39m       [34mexpect[39m(resultValue)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m 53|[39m       consoleSpy[33m.[39m[34mmockRestore[39m()[33m;[39m
+    [90m 54|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetPermissions[2m > [22mshould return empty array on API error
+[31m[1mAssertionError[22m: expected [ 'FILE_READ', 'FILE_WRITE', …(1) ] to deeply equal [][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "FILE_READ",[39m
+[31m+   "FILE_WRITE",[39m
+[31m+   "FILE_DELETE",[39m
+[31m+ ][39m
+
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m79:27[22m[39m
+    [90m 77|[39m       const resultValue = await result.current.getPermissions('project…
+    [90m 78|[39m
+    [90m 79|[39m       [34mexpect[39m(resultValue)[33m.[39m[34mtoEqual[39m([])[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m 80|[39m       consoleSpy[33m.[39m[34mmockRestore[39m()[33m;[39m
+    [90m 81|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetRole[2m > [22mshould return null when role is undefined
+[31m[1mAssertionError[22m: expected 'ADMIN' to be null[39m
+
+[32m- Expected:[39m
+null
+
+[31m+ Received:[39m
+"ADMIN"
+
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m107:27[22m[39m
+    [90m105|[39m       [35mconst[39m resultValue [33m=[39m [35mawait[39m result[33m.[39mcurrent[33m.[39m[34mgetRole[39m([32m'project-1'[39m)[33m;[39m
+    [90m106|[39m
+    [90m107|[39m       [34mexpect[39m(resultValue)[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m108|[39m     })[33m;[39m
+    [90m109|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mgetRole[2m > [22mshould return null on API error
+[31m[1mAssertionError[22m: expected 'ADMIN' to be null[39m
+
+[32m- Expected:[39m
+null
+
+[31m+ Received:[39m
+"ADMIN"
+
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m118:27[22m[39m
+    [90m116|[39m       [35mconst[39m resultValue [33m=[39m [35mawait[39m result[33m.[39mcurrent[33m.[39m[34mgetRole[39m([32m'project-1'[39m)[33m;[39m
+    [90m117|[39m
+    [90m118|[39m       [34mexpect[39m(resultValue)[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m119|[39m       consoleSpy[33m.[39m[34mmockRestore[39m()[33m;[39m
+    [90m120|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckAnyPermission[2m > [22mshould return false when user has none of the permissions
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m145:27[22m[39m
+    [90m143|[39m       const resultValue = await result.current.checkAnyPermission('pro…
+    [90m144|[39m
+    [90m145|[39m       [34mexpect[39m(resultValue)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m146|[39m     })[33m;[39m
+    [90m147|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcheckAllPermissions[2m > [22mshould return true when user has all permissions
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m159:27[22m[39m
+    [90m157|[39m       const resultValue = await result.current.checkAllPermissions('pr…
+    [90m158|[39m
+    [90m159|[39m       [34mexpect[39m(resultValue)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m160|[39m     })[33m;[39m
+    [90m161|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcache behavior[2m > [22mshould cache permission check results
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called 1 times, but got 0 times[39m
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m186:52[22m[39m
+    [90m184|[39m       [35mawait[39m result[33m.[39mcurrent[33m.[39m[34mcheckPermission[39m([32m'project-1'[39m[33m,[39m [32m'FILE_READ'[39m)[33m;[39m
+    [90m185|[39m
+    [90m186|[39m       expect(projectPermissionApi.checkPermission).toHaveBeenCalledTim…
+    [90m   |[39m                                                    [31m^[39m
+    [90m187|[39m     })[33m;[39m
+    [90m188|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/useProjectPermission.spec.ts[2m > [22museProjectPermission[2m > [22mcache behavior[2m > [22mshould clear cache for specific project
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called 2 times, but got 1 times[39m
+[36m [2m❯[22m src/hooks/useProjectPermission.spec.ts:[2m200:52[22m[39m
+    [90m198|[39m       const secondResult = await result.current.checkPermission('proje…
+    [90m199|[39m
+    [90m200|[39m       expect(projectPermissionApi.checkPermission).toHaveBeenCalledTim…
+    [90m   |[39m                                                    [31m^[39m
+    [90m201|[39m       [34mexpect[39m(firstResult)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m202|[39m       [34mexpect[39m(secondResult)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/pages/FileSystemManager.spec.tsx[2m > [22mFileSystemManager[2m > [22mshould render without crashing in project mode
+[31m[1mError[22m: Invalid Chai property: toBeInTheDocument[39m
+[36m [2m❯[22m src/pages/FileSystemManager.spec.tsx:[2m210:42[22m[39m
+    [90m208|[39m     )[33m;[39m
+    [90m209|[39m
+    [90m210|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'Breadcrumb'[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m   |[39m                                          [31m^[39m
+    [90m211|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'Toolbar'[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m212|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'FilterTabs'[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/pages/FileSystemManager.spec.tsx[2m > [22mFileSystemManager[2m > [22mshould render without crashing in personal-space mode
+[31m[1mError[22m: Invalid Chai property: toBeInTheDocument[39m
+[36m [2m❯[22m src/pages/FileSystemManager.spec.tsx:[2m222:42[22m[39m
+    [90m220|[39m     )[33m;[39m
+    [90m221|[39m
+    [90m222|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'Breadcrumb'[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m   |[39m                                          [31m^[39m
+    [90m223|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'Toolbar'[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m224|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示所有文件
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element with the text: ref1.dwg. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m"overflow: hidden;"[39m
+[36m>[39m
+  [36m<div />[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"fixed inset-0 flex items-center justify-center p-4 modal-enter"[39m
+    [33mstyle[39m=[32m"z-index: 9999;"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"absolute inset-0 transition-opacity duration-300"[39m
+      [33mstyle[39m=[32m"background: var(--bg-overlay);"[39m
+    [36m/>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"relative w-full max-w-md max-h-[70vh] overflow-hidden modal-content flex flex-col"[39m
+      [33mstyle[39m=[32m"background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); z-index: 10000;"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between px-6 py-4"[39m
+        [33mstyle[39m=[32m"border-bottom: 1px solid var(--border-default);"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold"[39m
+          [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+        [36m>[39m
+          [0m管理外部参照文件[0m
+        [36m</h3>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"p-1.5 rounded-lg transition-all duration-200 hover:scale-110"[39m
+          [33mdata-tour[39m=[32m"modal-close-btn"[39m
+          [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide lucide-x"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"20"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"20"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 6 6 18"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m6 6 12 12"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 overflow-y-auto flex-1"[39m
+        [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"rounded-lg p-3"[39m
+            [33mstyle[39m=[32m"background-color: var(--warning-light); border: 1px solid var(--warning-dim);"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex items-start gap-2"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-triangle-alert mt-0.5 flex-shrink-0"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"16"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mstyle[39m=[32m"color: var(--warning);"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"16"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 9v4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 17h.01"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-sm"[39m
+                [33mstyle[39m=[32m"color: var(--warning);"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"font-medium mb-1"[39m
+                [36m>[39m
+                  [0m检测到 [0m
+                  [0m2[0m
+                  [0m 个缺失的外部参照文件（共 [0m
+                  [0m2[0m
+                  [0m [0m
+                  [0m个）[0m
+                [36m</p>[39m
+                [36m<p>[39m
+                  [0m这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"rounded-lg overflow-hidden"[39m
+            [33mdata-tour[39m=[32m"xref-list"[39m
+            [33mstyle[39m=[32m"border: 1px solid var(--border-default);"[39m
+          [36m>[39m
+            [36m<table[39m
+              [33mclass[39m=[32m"w-full"[39m
+            [36m>[39m
+              [36m<thead>[39m
+                [36m<tr[39m
+                  [33mstyle[39m=[32m"background-color: var(--bg-secondary);"[39m
+                [36m>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-left text-sm font-medium w-20"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m状态[0m
+                  [36m</th>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-left text-sm font-medium"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m文件名[0m
+                  [36m</th>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-right text-sm font-medium w-24"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m类型[0m
+                  [36m</th>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-right text-sm font-medium w-28"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m进度[0m
+                  [36m</th>[39m
+                [36m</tr>[39m
+              [36m</thead>[39m
+              [36m<tbody>[39m
+                [36m<tr[39m
+                  [33mclass[39m=[32m"hover:bg-[var(--bg-tertiary)]"[39m
+                  [33mstyle[39m=[32m"border-bottom: 1px solid var(--border-subtle); background-color: transparent;"[39m
+                [36m>[39m
+                  [36...
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/components/modals/ExternalReferenceModal.spec.tsx:[2m49:25[22m[39m
+    [90m 47|[39m     [34mrender[39m([33m<[39m[33mExternalReferenceModal[39m [33m{[39m[33m...[39mdefaultProps[33m}[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m 48|[39m
+    [90m 49|[39m     [35mconst[39m ref1 [33m=[39m screen[33m.[39m[34mgetByText[39m([32m'ref1.dwg'[39m)[33m;[39m
+    [90m   |[39m                         [31m^[39m
+    [90m 50|[39m     [34mexpect[39m(ref1)[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m 51|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该在上传中时禁用选择按钮
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element with the text: 选择并上传. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m"overflow: hidden;"[39m
+[36m>[39m
+  [36m<div />[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"fixed inset-0 flex items-center justify-center p-4 modal-enter"[39m
+    [33mstyle[39m=[32m"z-index: 9999;"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"absolute inset-0 transition-opacity duration-300"[39m
+      [33mstyle[39m=[32m"background: var(--bg-overlay);"[39m
+    [36m/>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"relative w-full max-w-md max-h-[70vh] overflow-hidden modal-content flex flex-col"[39m
+      [33mstyle[39m=[32m"background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); z-index: 10000;"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between px-6 py-4"[39m
+        [33mstyle[39m=[32m"border-bottom: 1px solid var(--border-default);"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold"[39m
+          [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+        [36m>[39m
+          [0m管理外部参照文件[0m
+        [36m</h3>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"p-1.5 rounded-lg transition-all duration-200 hover:scale-110"[39m
+          [33mdata-tour[39m=[32m"modal-close-btn"[39m
+          [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide lucide-x"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"20"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"20"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 6 6 18"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m6 6 12 12"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 overflow-y-auto flex-1"[39m
+        [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"rounded-lg p-3"[39m
+            [33mstyle[39m=[32m"background-color: var(--info-light); border: 1px solid var(--info-dim);"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex items-start gap-2"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-triangle-alert mt-0.5 flex-shrink-0"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"16"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mstyle[39m=[32m"color: var(--info);"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"16"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 9v4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 17h.01"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-sm"[39m
+                [33mstyle[39m=[32m"color: var(--info);"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"font-medium mb-1"[39m
+                [36m>[39m
+                  [0m所有外部参照文件已存在（共 [0m
+                  [0m1[0m
+                  [0m 个）[0m
+                [36m</p>[39m
+                [36m<p>[39m
+                  [0m图纸可以正常显示。如果您需要更新外部参照文件，可以选择覆盖已存在的文件。[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"rounded-lg overflow-hidden"[39m
+            [33mdata-tour[39m=[32m"xref-list"[39m
+            [33mstyle[39m=[32m"border: 1px solid var(--border-default);"[39m
+          [36m>[39m
+            [36m<table[39m
+              [33mclass[39m=[32m"w-full"[39m
+            [36m>[39m
+              [36m<thead>[39m
+                [36m<tr[39m
+                  [33mstyle[39m=[32m"background-color: var(--bg-secondary);"[39m
+                [36m>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-left text-sm font-medium w-20"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m状态[0m
+                  [36m</th>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-left text-sm font-medium"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m文件名[0m
+                  [36m</th>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-right text-sm font-medium w-24"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m类型[0m
+                  [36m</th>[39m
+                  [36m<th[39m
+                    [33mclass[39m=[32m"px-4 py-2 text-right text-sm font-medium w-28"[39m
+                    [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+                  [36m>[39m
+                    [0m进度[0m
+                  [36m</th>[39m
+                [36m</tr>[39m
+              [36m</thead>[39m
+              [36m<tbody>[39m
+                [36m<tr[39m
+                  [33mclass[39m=[32m"hover:bg-[var(--bg-tertiary)]"[39m
+                  [33mstyle[39m=[32m"border-bottom: 1px solid var(--border-subtle); background-color: transparent;"[39m
+                [36m>[39m
+                  [36m<td[39m
+                    [33mclass[39m=[32m"px-4 py-2"[39m
+                  [36m>[39m
+         ...
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/components/modals/ExternalReferenceModal.spec.tsx:[2m150:33[22m[39m
+    [90m148|[39m     render(<ExternalReferenceModal {...defaultProps} files={uploadingF…
+    [90m149|[39m
+    [90m150|[39m     [35mconst[39m selectButton [33m=[39m screen[33m.[39m[34mgetByText[39m([32m'选择并上传'[39m)[33m;[39m
+    [90m   |[39m                                 [31m^[39m
+    [90m151|[39m     [34mexpect[39m(selectButton[33m.[39m[34mgetAttribute[39m([32m'disabled'[39m))[33m.[39m[34mtoBe[39m([32m''[39m)[33m;[39m
+    [90m152|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/modals/ExternalReferenceModal.spec.tsx[2m > [22mExternalReferenceModal[2m > [22m应该显示警告图标
+[31m[1mAssertionError[22m: expected null not to be null[39m
+[36m [2m❯[22m src/components/modals/ExternalReferenceModal.spec.tsx:[2m297:59[22m[39m
+    [90m295|[39m     [34mrender[39m([33m<[39m[33mExternalReferenceModal[39m [33m{[39m[33m...[39mdefaultProps[33m}[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m296|[39m
+    [90m297|[39m     [34mexpect[39m(document[33m.[39m[34mquerySelector[39m([32m'.text-amber-500'[39m))[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                                                           [31m^[39m
+    [90m298|[39m   })[33m;[39m
+    [90m299|[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/hooks/file-system/useFileSystemCRUD.spec.ts[2m > [22museFileSystemCRUD[2m > [22mshould return expected shape with all required functions
+[31m[1mError[22m: useNavigate() may be used only in the context of a <Router> component.[39m
+[90m [2m❯[22m invariant ../../node_modules/.pnpm/react-router@7.13.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/react-router/dist/development/chunk-LFPYN7LY.mjs:[2m199:11[22m[39m
+[90m [2m❯[22m useNavigateUnstable ../../node_modules/.pnpm/react-router@7.13.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/react-router/dist/development/chunk-LFPYN7LY.mjs:[2m5609:3[22m[39m
+[90m [2m❯[22m useNavigate ../../node_modules/.pnpm/react-router@7.13.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/react-router/dist/development/chunk-LFPYN7LY.mjs:[2m5606:46[22m[39m
+[36m [2m❯[22m Module.useFileSystemCRUD src/hooks/file-system/useFileSystemCRUD.ts:[2m91:20[22m[39m
+    [90m 89|[39m   mode [33m=[39m [32m'project'[39m[33m,[39m
+    [90m 90|[39m }[33m:[39m [33mUseFileSystemCRUDProps[39m) [33m=>[39m {
+    [90m 91|[39m   [35mconst[39m navigate [33m=[39m [34museNavigate[39m()[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 92|[39m
+    [90m 93|[39m   const [showCreateFolderModal, setShowCreateFolderModal] = useState(f…
+[90m [2m❯[22m src/hooks/file-system/useFileSystemCRUD.spec.ts:[2m38:41[22m[39m
+[90m [2m❯[22m TestComponent ../../node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@types+reac_wvpllyx4jgscxgicowrn35t4fe/node_modules/@testing-library/react/dist/pure.js:[2m330:27[22m[39m
+[90m [2m❯[22m Object.react_stack_bottom_frame ../../node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.development.js:[2m25904:20[22m[39m
+[90m [2m❯[22m renderWithHooks ../../node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.development.js:[2m7662:22[22m[39m
+[90m [2m❯[22m updateFunctionComponent ../../node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.development.js:[2m10166:19[22m[39m
+[90m [2m❯[22m beginWork ../../node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.development.js:[2m11778:18[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22m目标元素查找[2m > [22m应该使用 data-tour 属性查找目标元素
+[31m[1mAssertionError[22m: expected "querySelector" to be called with arguments: [ '[data-tour="my-button"]' ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+[36m [2m❯[22m src/components/tour/TourOverlay.spec.tsx:[2m231:38[22m[39m
+    [90m229|[39m       })[33m;[39m
+    [90m230|[39m
+    [90m231|[39m       expect(document.querySelector).toHaveBeenCalledWith('[data-tour=…
+    [90m   |[39m                                      [31m^[39m
+    [90m232|[39m     })[33m;[39m
+    [90m233|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mfallbackContent 处理[2m > [22m应该在元素找到时正常渲染 children
+[31m[1mTestingLibraryElementError[22m: Unable to find an element with the text: 正常内容. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div />[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"tour-overlay"[31m
+      [33mstyle[31m=[32m"position: fixed; inset: 0; z-index: 10002; pointer-events: auto;"[31m
+    [36m>[31m
+      [36m<svg[31m
+        [33mstyle[31m=[32m"position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;"[31m
+      [36m>[31m
+        [36m<defs>[31m
+          [36m<mask[31m
+            [33mid[31m=[32m"tour-overlay-mask"[31m
+          [36m>[31m
+            [36m<rect[31m
+              [33mfill[31m=[32m"white"[31m
+              [33mheight[31m=[32m"100%"[31m
+              [33mwidth[31m=[32m"100%"[31m
+              [33mx[31m=[32m"0"[31m
+              [33my[31m=[32m"0"[31m
+            [36m/>[31m
+          [36m</mask>[31m
+        [36m</defs>[31m
+        [36m<rect[31m
+          [33mfill[31m=[32m"rgba(0, 0, 0, 0.5)"[31m
+          [33mheight[31m=[32m"100%"[31m
+          [33mmask[31m=[32m"url(#tour-overlay-mask)"[31m
+          [33mwidth[31m=[32m"100%"[31m
+          [33mx[31m=[32m"0"[31m
+          [33my[31m=[32m"0"[31m
+        [36m/>[31m
+      [36m</svg>[31m
+      [36m<div[31m
+        [33mstyle[31m=[32m"position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); background: var(--bg-elevated); padding: 16px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mstyle[31m=[32m"width: 16px; height: 16px; border-top-color: transparent; border-radius: 50%; animation: tour-spin 1s linear infinite;"[31m
+        [36m/>[31m
+        [0m正在定位目标元素...[0m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div />[31m
+    [36m<div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"tour-overlay"[31m
+        [33mstyle[31m=[32m"position: fixed; inset: 0; z-index: 10002; pointer-events: auto;"[31m
+      [36m>[31m
+        [36m<svg[31m
+          [33mstyle[31m=[32m"position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;"[31m
+        [36m>[31m
+          [36m<defs>[31m
+            [36m<mask[31m
+              [33mid[31m=[32m"tour-overlay-mask"[31m
+            [36m>[31m
+              [36m<rect[31m
+                [33mfill[31m=[32m"white"[31m
+                [33mheight[31m=[32m"100%"[31m
+                [33mwidth[31m=[32m"100%"[31m
+                [33mx[31m=[32m"0"[31m
+                [33my[31m=[32m"0"[31m
+              [36m/>[31m
+            [36m</mask>[31m
+          [36m</defs>[31m
+          [36m<rect[31m
+            [33mfill[31m=[32m"rgba(0, 0, 0, 0.5)"[31m
+            [33mheight[31m=[32m"100%"[31m
+            [33mmask[31m=[32m"url(#tour-overlay-mask)"[31m
+            [33mwidth[31m=[32m"100%"[31m
+            [33mx[31m=[32m"0"[31m
+            [33my[31m=[32m"0"[31m
+          [36m/>[31m
+        [36m</svg>[31m
+        [36m<div[31m
+          [33mstyle[31m=[32m"position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); background: var(--bg-elevated); padding: 16px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mstyle[31m=[32m"width: 16px; height: 16px; border-top-color: transparent; border-radius: 50%; animation: tour-spin 1s linear infinite;"[31m
+          [36m/>[31m
+          [0m正在定位目标元素...[0m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+[90m [2m❯[22m waitForWrapper ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[36m [2m❯[22m src/components/tour/TourOverlay.spec.tsx:[2m401:13[22m[39m
+    [90m399|[39m       })[33m;[39m
+    [90m400|[39m
+    [90m401|[39m       [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m   |[39m             [31m^[39m
+    [90m402|[39m         [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'正常内容'[39m))[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m403|[39m       })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourOverlay.spec.tsx[2m > [22mTourOverlay[2m > [22mrender props[2m > [22m应该传递 targetRect 和 hasTarget 给 children
+[31m[1mAssertionError[22m: expected null not to be null
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div />[31m
+    [36m<div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"tour-overlay"[31m
+        [33mstyle[31m=[32m"position: fixed; inset: 0; z-index: 10002; pointer-events: auto;"[31m
+      [36m>[31m
+        [36m<svg[31m
+          [33mstyle[31m=[32m"position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;"[31m
+        [36m>[31m
+          [36m<defs>[31m
+            [36m<mask[31m
+              [33mid[31m=[32m"tour-overlay-mask"[31m
+            [36m>[31m
+              [36m<rect[31m
+                [33mfill[31m=[32m"white"[31m
+                [33mheight[31m=[32m"100%"[31m
+                [33mwidth[31m=[32m"100%"[31m
+                [33mx[31m=[32m"0"[31m
+                [33my[31m=[32m"0"[31m
+              [36m/>[31m
+            [36m</mask>[31m
+          [36m</defs>[31m
+          [36m<rect[31m
+            [33mfill[31m=[32m"rgba(0, 0, 0, 0.5)"[31m
+            [33mheight[31m=[32m"100%"[31m
+            [33mmask[31m=[32m"url(#tour-overlay-mask)"[31m
+            [33mwidth[31m=[32m"100%"[31m
+            [33mx[31m=[32m"0"[31m
+            [33my[31m=[32m"0"[31m
+          [36m/>[31m
+        [36m</svg>[31m
+        [36m<div[31m
+          [33mstyle[31m=[32m"position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); background: var(--bg-elevated); padding: 16px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mstyle[31m=[32m"width: 16px; height: 16px; border-top-color: transparent; border-radius: 50%; animation: tour-spin 1s linear infinite;"[31m
+          [36m/>[31m
+          [0m正在定位目标元素...[0m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+[36m [2m❯[22m src/components/tour/TourOverlay.spec.tsx:[2m492:35[22m[39m
+    [90m490|[39m
+    [90m491|[39m       [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m492|[39m         [34mexpect[39m(receivedProps)[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                                   [31m^[39m
+    [90m493|[39m         [34mexpect[39m(receivedProps[33m![39m[33m.[39mhasTarget)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m494|[39m         [34mexpect[39m(receivedProps[33m![39m[33m.[39mtargetRect)[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+[90m [2m❯[22m runWithExpensiveErrorDiagnosticsDisabled ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m47:12[22m[39m
+[90m [2m❯[22m checkCallback ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:[2m124:77[22m[39m
+[90m [2m❯[22m Timeout.checkRealTimersCallback ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:[2m118:16[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m欢迎标题显示[2m > [22m应该显示主图标 (Sparkles)
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="icon-sparkles"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mdata-size[39m=[32m"lg"[39m
+      [33mdata-testid[39m=[32m"modal"[39m
+      [33mdata-zindex[39m=[32m"10002"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mdata-testid[39m=[32m"modal-close"[39m
+      [36m/>[39m
+      [36m<div[39m
+        [33mdata-testid[39m=[32m"modal-content"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"text-center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[39m
+            [33mstyle[39m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-sparkles"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"36"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"36"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M20 2v4"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M22 4h-4"[39m
+              [36m/>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"4"[39m
+                [33mcy[39m=[32m"20"[39m
+                [33mr[39m=[32m"2"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</div>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"text-2xl font-bold mb-2"[39m
+            [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+          [36m>[39m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm mb-6"[39m
+            [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+          [36m>[39m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-book-open"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M12 7v14"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m业务流程教程[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-target"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"6"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"2"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m交互式引导[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-compass"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m按需学习[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center justify-center gap-4"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-ghost"[39m
+            [36m>[39m
+              [0m稍后再说[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-primary"[39m
+            [36m>[39m
+              [0m立即查看引导[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"mt-4 text-xs"[39m
+            [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+          [36m>[39m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/components/tour/TourStartModal.spec.tsx:[2m154:21[22m[39m
+    [90m152|[39m       [34mrenderTourStartModal[39m()[33m;[39m
+    [90m153|[39m
+    [90m154|[39m       [34mexpect[39m(screen[33m.[39m[34mgetByTestId[39m([32m'icon-sparkles'[39m))[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m155|[39m     })[33m;[39m
+    [90m156|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示业务流程教程图标 (BookOpen)
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="icon-book-open"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mdata-size[39m=[32m"lg"[39m
+      [33mdata-testid[39m=[32m"modal"[39m
+      [33mdata-zindex[39m=[32m"10002"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mdata-testid[39m=[32m"modal-close"[39m
+      [36m/>[39m
+      [36m<div[39m
+        [33mdata-testid[39m=[32m"modal-content"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"text-center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[39m
+            [33mstyle[39m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-sparkles"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"36"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"36"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M20 2v4"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M22 4h-4"[39m
+              [36m/>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"4"[39m
+                [33mcy[39m=[32m"20"[39m
+                [33mr[39m=[32m"2"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</div>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"text-2xl font-bold mb-2"[39m
+            [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+          [36m>[39m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm mb-6"[39m
+            [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+          [36m>[39m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-book-open"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M12 7v14"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m业务流程教程[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-target"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"6"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"2"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m交互式引导[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-compass"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m按需学习[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center justify-center gap-4"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-ghost"[39m
+            [36m>[39m
+              [0m稍后再说[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-primary"[39m
+            [36m>[39m
+              [0m立即查看引导[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"mt-4 text-xs"[39m
+            [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+          [36m>[39m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/components/tour/TourStartModal.spec.tsx:[2m192:21[22m[39m
+    [90m190|[39m       [34mrenderTourStartModal[39m()[33m;[39m
+    [90m191|[39m
+    [90m192|[39m       [34mexpect[39m(screen[33m.[39m[34mgetByTestId[39m([32m'icon-book-open'[39m))[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m193|[39m     })[33m;[39m
+    [90m194|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示交互式引导图标 (Target)
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="icon-target"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mdata-size[39m=[32m"lg"[39m
+      [33mdata-testid[39m=[32m"modal"[39m
+      [33mdata-zindex[39m=[32m"10002"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mdata-testid[39m=[32m"modal-close"[39m
+      [36m/>[39m
+      [36m<div[39m
+        [33mdata-testid[39m=[32m"modal-content"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"text-center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[39m
+            [33mstyle[39m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-sparkles"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"36"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"36"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M20 2v4"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M22 4h-4"[39m
+              [36m/>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"4"[39m
+                [33mcy[39m=[32m"20"[39m
+                [33mr[39m=[32m"2"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</div>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"text-2xl font-bold mb-2"[39m
+            [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+          [36m>[39m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm mb-6"[39m
+            [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+          [36m>[39m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-book-open"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M12 7v14"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m业务流程教程[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-target"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"6"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"2"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m交互式引导[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-compass"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m按需学习[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center justify-center gap-4"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-ghost"[39m
+            [36m>[39m
+              [0m稍后再说[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-primary"[39m
+            [36m>[39m
+              [0m立即查看引导[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"mt-4 text-xs"[39m
+            [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+          [36m>[39m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/components/tour/TourStartModal.spec.tsx:[2m198:21[22m[39m
+    [90m196|[39m       [34mrenderTourStartModal[39m()[33m;[39m
+    [90m197|[39m
+    [90m198|[39m       [34mexpect[39m(screen[33m.[39m[34mgetByTestId[39m([32m'icon-target'[39m))[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m199|[39m     })[33m;[39m
+    [90m200|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/25]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/tour/TourStartModal.spec.tsx[2m > [22mTourStartModal[2m > [22m功能特性列表显示[2m > [22m应该显示按需学习图标 (Compass)
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="icon-compass"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mdata-size[39m=[32m"lg"[39m
+      [33mdata-testid[39m=[32m"modal"[39m
+      [33mdata-zindex[39m=[32m"10002"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mdata-testid[39m=[32m"modal-close"[39m
+      [36m/>[39m
+      [36m<div[39m
+        [33mdata-testid[39m=[32m"modal-content"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"text-center"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"[39m
+            [33mstyle[39m=[32m"background: linear-gradient(135deg, var(--primary-100), var(--primary-50)); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-sparkles"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"36"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"36"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M20 2v4"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M22 4h-4"[39m
+              [36m/>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"4"[39m
+                [33mcy[39m=[32m"20"[39m
+                [33mr[39m=[32m"2"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</div>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"text-2xl font-bold mb-2"[39m
+            [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+          [36m>[39m
+            [0m欢迎使用 CloudCAD[0m
+          [36m</h2>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm mb-6"[39m
+            [33mstyle[39m=[32m"color: var(--text-secondary);"[39m
+          [36m>[39m
+            [0m我们为您准备了新手引导，帮助您快速上手[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-book-open"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M12 7v14"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m业务流程教程[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m学习文件上传、成员管理等核心功能[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-target"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"6"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"2"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m交互式引导[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m高亮目标元素，一步步引导操作[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-4 rounded-xl text-left"[39m
+              [33mstyle[39m=[32m"background: var(--bg-tertiary);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"w-10 h-10 rounded-lg flex items-center justify-center mb-3"[39m
+                [33mstyle[39m=[32m"background: var(--primary-50);"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-compass"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"20"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mstyle[39m=[32m"color: var(--primary-500);"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"[39m
+                  [36m/>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"12"[39m
+                    [33mcy[39m=[32m"12"[39m
+                    [33mr[39m=[32m"10"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<h4[39m
+                [33mclass[39m=[32m"text-sm font-semibold mb-1"[39m
+                [33mstyle[39m=[32m"color: var(--text-primary);"[39m
+              [36m>[39m
+                [0m按需学习[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-xs"[39m
+                [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+              [36m>[39m
+                [0m随时从引导中心选择需要的教程[0m
+              [36m</p>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center justify-center gap-4"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-ghost"[39m
+            [36m>[39m
+              [0m稍后再说[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mdata-testid[39m=[32m"button-primary"[39m
+            [36m>[39m
+              [0m立即查看引导[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"mt-4 text-xs"[39m
+            [33mstyle[39m=[32m"color: var(--text-muted);"[39m
+          [36m>[39m
+            [0m您可以随时从侧边栏的「帮助引导」入口访问引导中心[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/components/tour/TourStartModal.spec.tsx:[2m204:21[22m[39m
+    [90m202|[39m       [34mrenderTourStartModal[39m()[33m;[39m
+    [90m203|[39m
+    [90m204|[39m       [34mexpect[39m(screen[33m.[39m[34mgetByTestId[39m([32m'icon-compass'[39m))[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m205|[39m     })[33m;[39m
+    [90m206|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/25]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (15)[39m
+[2m      Tests [22m [1m[31m21 failed[39m[22m[2m | [22m[1m[32m173 passed[39m[22m[90m (194)[39m
+[2m   Start at [22m 06:17:49
+[2m   Duration [22m 13.63s[2m (transform 1.83s, setup 4.54s, import 6.18s, tests 15.15s, environment 15.77s)[22m
+

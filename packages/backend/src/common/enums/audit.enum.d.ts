@@ -1,0 +1,40 @@
+/**
+ * 审计相关枚举定义
+ * 从 schema.prisma 手动同步，保持与 Prisma 枚举值一致
+ * 目的：切断 @prisma/client 循环依赖链
+ */
+/**
+ * 审计操作类型
+ */
+export declare enum AuditAction {
+    PERMISSION_GRANT = "PERMISSION_GRANT",
+    PERMISSION_REVOKE = "PERMISSION_REVOKE",
+    ROLE_CREATE = "ROLE_CREATE",
+    ROLE_UPDATE = "ROLE_UPDATE",
+    ROLE_DELETE = "ROLE_DELETE",
+    USER_LOGIN = "USER_LOGIN",
+    USER_LOGOUT = "USER_LOGOUT",
+    PROJECT_CREATE = "PROJECT_CREATE",
+    PROJECT_DELETE = "PROJECT_DELETE",
+    FILE_UPLOAD = "FILE_UPLOAD",
+    FILE_DOWNLOAD = "FILE_DOWNLOAD",
+    FILE_DELETE = "FILE_DELETE",
+    FILE_SHARE = "FILE_SHARE",
+    ADD_MEMBER = "ADD_MEMBER",
+    UPDATE_MEMBER = "UPDATE_MEMBER",
+    REMOVE_MEMBER = "REMOVE_MEMBER",
+    TRANSFER_OWNERSHIP = "TRANSFER_OWNERSHIP"
+}
+/**
+ * 资源类型
+ */
+export declare enum ResourceType {
+    SYSTEM = "SYSTEM",
+    USER = "USER",
+    ROLE = "ROLE",
+    PERMISSION = "PERMISSION",
+    PROJECT = "PROJECT",
+    FILE = "FILE",
+    FOLDER = "FOLDER"
+}
+//# sourceMappingURL=audit.enum.d.ts.map

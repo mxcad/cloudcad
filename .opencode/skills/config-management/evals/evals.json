@@ -1,0 +1,26 @@
+{
+  "skill_name": "config-management",
+  "evals": [
+    {
+      "id": 1,
+      "name": "add-env-config",
+      "prompt": "我需要添加一个新的配置项 FILE_PREVIEW_ENABLED，用于控制文件预览功能的开关，默认为 true。请按照项目规范添加这个配置。",
+      "expected_output": "在 app.config.ts 添加接口定义，在 configuration.ts 添加环境变量解析，使用 parseBoolean 辅助函数",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "add-runtime-config",
+      "prompt": "我需要添加一个运行时配置 maxConcurrentUploads，用于控制最大并发上传数，类型为 number，默认值为 5，分类为 file。请按照项目规范添加。",
+      "expected_output": "在 runtime-config.constants.ts 的 RUNTIME_CONFIG_DEFINITIONS 数组中添加新配置项",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "fix-process-env-usage",
+      "prompt": "我在代码中看到有人直接使用 process.env.MY_CUSTOM_CONFIG，这不符合项目规范。请告诉我正确的做法是什么。",
+      "expected_output": "说明应该通过 ConfigService 或 configuration() 获取配置，而不是直接使用 process.env",
+      "files": []
+    }
+  ]
+}
