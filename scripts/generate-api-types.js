@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 从 OpenAPI 定义生成 TypeScript 类型和验证规则
- * 使用 openapicmd typegen
+ * 使用 openapicmd typegen（openapicmd 已安装为前端 devDependency）
  */
 
 import { execSync } from 'child_process';
@@ -14,8 +14,8 @@ const __dirname = path.dirname(__filename);
 
 const SWAGGER_URL = 'http://localhost:3001/api/docs-json';
 const LOCAL_SWAGGER_FILE = path.join(__dirname, '../swagger_json.json');
-const OUTPUT_FILE = path.join(__dirname, '../apps/frontend/src/types/api-client.ts');
-const VALIDATION_FILE = path.join(__dirname, '../apps/frontend/src/utils/validation.ts');
+const OUTPUT_FILE = path.join(__dirname, '../packages/frontend/src/types/api-client.ts');
+const VALIDATION_FILE = path.join(__dirname, '../packages/frontend/src/utils/validation.ts');
 
 console.log('🚀 开始生成 OpenAPI 客户端类型...');
 
@@ -65,11 +65,15 @@ async function generateTypes() {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // 运行 openapicmd typegen
+  // 运行 openapicmd typegen（使用本地安装的 openapicmd，bin 名为 openapi）
   try {
     const inputSource =
       swaggerSource === 'backend' ? SWAGGER_URL : LOCAL_SWAGGER_FILE;
-    const output = execSync(`npx openapicmd typegen "${inputSource}"`, {
+    const binExt = process.platform === 'win32' ? '.CMD' : '';
+    const openapiBin = path.join(
+      __dirname, `../packages/frontend/node_modules/.bin/openapi${binExt}`,
+    );
+    const output = execSync(`"${openapiBin}" typegen "${inputSource}"`, {
       encoding: 'utf8',
       maxBuffer: 50 * 1024 * 1024,
     });

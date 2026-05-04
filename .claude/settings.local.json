@@ -8,9 +8,9 @@
       "Bash(node -e \"const ts = require\\('typescript'\\); console.log\\(ts.version\\)\")",
       "Bash(pnpm install *)",
       "Bash(node *)",
-      "Bash(mkdir -p /d/project/cloudcad/apps/backend/src/file-system/file-validation)",
-      "Bash(mv /d/project/cloudcad/apps/backend/src/file-system/file-validation.service.ts /d/project/cloudcad/apps/backend/src/file-system/file-validation/)",
-      "Bash(mv /d/project/cloudcad/apps/backend/src/file-system/file-validation.service.spec.ts /d/project/cloudcad/apps/backend/src/file-system/file-validation/)",
+      "Bash(mkdir -p /d/project/cloudcad/packages/backend/src/file-system/file-validation)",
+      "Bash(mv /d/project/cloudcad/packages/backend/src/file-system/file-validation.service.ts /d/project/cloudcad/packages/backend/src/file-system/file-validation/)",
+      "Bash(mv /d/project/cloudcad/packages/backend/src/file-system/file-validation.service.spec.ts /d/project/cloudcad/packages/backend/src/file-system/file-validation/)",
       "Bash(npx jest *)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx jest --testPathPatterns=\"file-operations.service.spec\" --no-coverage)",
       "Bash(npx ts-node *)",
@@ -42,14 +42,17 @@
       "Bash(mcp --help)",
       "Bash(taskkill /F /PID 583)",
       "Bash(npm uninstall *)",
-      "Bash(grep -n \"forwardRef.*CommonModule\" apps/backend/src/cache-architecture/cache-architecture.module.ts)",
-      "Bash(grep -n \"forwardRef\" apps/backend/src/auth/auth.module.ts)",
+      "Bash(grep -n \"forwardRef.*CommonModule\" packages/backend/src/cache-architecture/cache-architecture.module.ts)",
+      "Bash(grep -n \"forwardRef\" packages/backend/src/auth/auth.module.ts)",
       "Bash(cat jest.config.ts)",
       "Bash(cat jest.config.js)",
       "Bash(pnpm test *)"
     ]
   },
-  "env": {"ECC_GATEGUARD": "off"},
+  "env": {
+    "ECC_GATEGUARD": "off",
+    "PATH": "/d/Program Files/nodejs:${env:PATH};C:\\tools\\gh\\bin"
+  },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "puppeteer"

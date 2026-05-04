@@ -1,101 +1,75 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# CLAUDE.md
 
-This project is indexed by GitNexus as **cloudcad** (8741 symbols, 18642 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+## GitNexus — Code Intelligence
 
-## Always Do
+This project is indexed by GitNexus as **cloudcad**. Use `gitnexus_impact()` before editing any symbol and `gitnexus_detect_changes()` before committing. See `.claude/skills/gitnexus/` for full skill references.
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+## Project Overview
 
-## When Debugging
+CloudCAD — web-based CAD collaboration platform (online DWG/DXF editing, SVN version control, RBAC team collaboration).
 
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/cloudcad/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
+**Stack:** NestJS (Express) + Prisma + PostgreSQL + Redis | React 19 + Vite + Tailwind CSS v4 + Zustand + Radix UI | pnpm monorepo
 
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/cloudcad/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/cloudcad/clusters` | All functional areas |
-| `gitnexus://repo/cloudcad/processes` | All execution flows |
-| `gitnexus://repo/cloudcad/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
+```
+packages/
+├── backend/          # NestJS API (port 3001) — auth, users, file-system, mxcad, version-control, cache, storage
+├── frontend/         # React 19 SPA (port 5173) — pages, components, services, hooks, stores
+├── conversion-engine/# MxCAD conversion binary wrapper
+├── config-service/   # Deployment config center (port 3002)
+├── server-tasks/     # Sharp image resizing utility
+└── svnVersionTool/   # SVN subprocess wrapper
 ```
 
-If the index previously included embeddings, preserve them by adding `--embeddings`:
+## Critical Gotchas
+
+- **NestJS DI:** Never `import type` for classes used in constructor injection — the decorator metadata gets stripped. The `organizeImports` LSP action (Biome) can break DI; manually verify after running it.
+- **CAD engine is a black box:** `mxcad-app` npm package creates its own Vue 3 + Vuetify app internally. React communicates via `mxcadManager.ts` (singleton, `document.body`-level container). `CADEditorDirect.tsx` renders as a global overlay outside `<Routes>` to preserve WebGL context.
+- **Custom ESLint rule:** `custom-rules/no-prisma-enum-in-api-property` — forbids Prisma enums in API property decorators.
+- **Dual formatters:** Root uses **Prettier**; backend uses **Biome** (formatter + linter + `organizeImports` — but that breaks NestJS DI, see above).
+- **API types are auto-generated:** `packages/frontend/src/types/api-client.ts` generated via `pnpm generate:api-types` (uses `openapicmd` from `swagger_json.json`). `swagger_json.json` is fetched from running backend or falls back to local file. Run `pnpm generate:api-types` after API changes to keep frontend types in sync.
+
+## Common Commands
 
 ```bash
-npx gitnexus analyze --embeddings
+pnpm install                     # Install + postinstall → prisma generate
+pnpm dev                         # Start both frontend + backend
+
+pnpm lint                        # ESLint all .{js,jsx,ts,tsx}
+pnpm format:check                # Prettier check (root) + Biome check (backend)
+pnpm type-check                  # tsc --noEmit across all packages
+pnpm check                       # lint + format:check + type-check
+pnpm build                       # Build all packages in parallel
+pnpm generate:api-types          # Regenerate frontend types from backend Swagger (needs backend running or local swagger_json.json)
+
+# Backend (packages/backend)
+pnpm exec jest                   # All tests
+pnpm exec jest -- --testPathPattern="auth"  # Specific suite
+pnpm prisma generate             # Regenerate Prisma client
+pnpm prisma migrate dev          # New migration
+
+# Frontend (packages/frontend)
+pnpm test                        # vitest run
+pnpm type-check                  # tsc --noEmit
+pnpm build                       # Vite build
 ```
 
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
+**CI requires** PostgreSQL 15 + Redis 7 as service containers.
 
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
+## Key Backend Conventions
 
-## CLI
+- API routes at `/api/xxx` (no version prefix in path). NestJS URI versioning is enabled for future v2 support — use `@Version('2')` on new endpoints when needed
+- Permissions: `SystemPermission.*` (system-level), `ProjectPermission.*` (project-level). `FILE_CREATE` is a project permission.
+- DTOs in `src/*/dto/`, response DTOs in `file-system-response.dto.ts`
+- `@RequirePermissions` for system permissions, `@RequireProjectPermission` for project permissions
 
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+## Key Frontend Conventions
 
-<!-- gitnexus:end -->
+- `mxcadManager.ts` is the singleton CAD engine manager — never instantiate MxCADView outside it
+- CAD editor (`CADEditorDirect.tsx`) renders as a global overlay via `visibility` + `z-index` to preserve WebGL context across routes
+- ESLint config at repo root references `packages/frontend/**` and `packages/backend/**` — do not change these paths
+
+## Workshop Setup
+
+Root `tsconfig.json` uses `composite: true` + `incremental: true`. Each package overrides to `composite: false`.
