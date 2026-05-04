@@ -14,7 +14,6 @@ import OpenAPIClientAxios from 'openapi-client-axios';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL, API_TIMEOUT } from '../config/apiConfig';
 import type { Client } from '../types/api-client';
-// 直接导入本地 swagger json，避免 HTTP 请求
 import swaggerDefinition from '../../../swagger_json.json';
 
 // 全局单例
