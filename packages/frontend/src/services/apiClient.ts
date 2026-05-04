@@ -14,7 +14,7 @@ import OpenAPIClientAxios from 'openapi-client-axios';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL, API_TIMEOUT } from '../config/apiConfig';
 import type { Client } from '../types/api-client';
-import swaggerDefinition from '../../../swagger_json.json';
+import swaggerDefinition from '../../swagger_json.json';
 
 // 全局单例
 let api: OpenAPIClientAxios | null = null;
