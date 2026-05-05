@@ -52,6 +52,7 @@ export function useLoadNodes(
 ): UseLoadNodesReturn {
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -197,6 +198,9 @@ export function useLoadNodes(
     nodes,
     setNodes,
     loading,
+    setLoading,
+    currentPage,
+    setCurrentPage,
     total,
     setTotal,
     totalPages,
