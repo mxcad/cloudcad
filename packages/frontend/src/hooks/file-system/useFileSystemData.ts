@@ -29,7 +29,7 @@ import {
   projectToNode,
   toFileSystemNode,
 } from '@/types/filesystem';
-import type { ProjectDto, SearchScope } from '@/types/api-client';
+import type { ProjectDto } from '@/types/api-client';
 import { PaginationMeta } from '@/components/ui/Pagination';
 import { handleError, isAbortError } from '@/utils/errorHandler';
 import type { ProjectFilterType } from '@/services/projectApi';
@@ -131,7 +131,7 @@ export const useFileSystemData = ({
             try {
               const parentResponse = await fileSystemControllerGetNode({
                 path: { nodeId: traversalNode.parentId },
-              });
+              }) as any;
               traversalNode = toFileSystemNode(parentResponse);
             } catch (error: unknown) {
               handleError(error, '获取父节点失败，停止构建面包屑');
@@ -190,7 +190,7 @@ export const useFileSystemData = ({
 
       // 如果有搜索关键词，使用统一搜索接口
       if (searchQuery) {
-        let searchScope: SearchScope = 'project_files';
+        let searchScope: string = 'project_files';
         let searchProjectId: string | undefined;
         let searchFilter: 'all' | 'owned' | 'joined' = 'all';
 
@@ -214,7 +214,7 @@ export const useFileSystemData = ({
             page: paginationRef.current.page,
             limit: paginationRef.current.limit,
           } as any,
-        });
+        }) as any;
 
         const searchData = searchResponse;
         if (searchData?.nodes) {
@@ -242,7 +242,7 @@ export const useFileSystemData = ({
 
         if (isTrashView) {
           // TODO: getTrash has query?: never and does not support projectId filtering — revisit
-          const trashResponse = await fileSystemControllerGetTrash();
+          const trashResponse = await fileSystemControllerGetTrash() as any;
 
           const trashData = trashResponse;
           const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
@@ -273,7 +273,7 @@ export const useFileSystemData = ({
           try {
             const nodeResponse = await fileSystemControllerGetNode({
               path: { nodeId: currentNodeId },
-            });
+            }) as any;
             setCurrentNode(toFileSystemNode(nodeResponse));
           } catch {
           }
@@ -285,7 +285,7 @@ export const useFileSystemData = ({
         const [nodeResponse, childrenResponse] = await Promise.all([
           fileSystemControllerGetNode({
             path: { nodeId: currentNodeId },
-          }),
+          }) as any,
           fileSystemControllerGetChildren({
             path: { nodeId: currentNodeId },
             query: {
@@ -293,7 +293,7 @@ export const useFileSystemData = ({
               limit: paginationRef.current.limit,
               search: searchQuery || undefined,
             } as any,
-          }),
+          }) as any,
         ]);
 
         const nodeData = toFileSystemNode(nodeResponse);
@@ -345,7 +345,7 @@ export const useFileSystemData = ({
               page: paginationRef.current.page,
               limit: paginationRef.current.limit,
             } as any,
-          });
+          }) as any;
         }
 
         // 处理分页响应
@@ -391,7 +391,7 @@ export const useFileSystemData = ({
           }
 
           // TODO: getTrash has query?: never and does not support projectId filtering — revisit
-          const trashResponse = await fileSystemControllerGetTrash();
+          const trashResponse = await fileSystemControllerGetTrash() as any;
 
           // ProjectTrashResponseDto 包含 nodes, total, page, limit, totalPages
           const trashData = trashResponse;
@@ -417,7 +417,7 @@ export const useFileSystemData = ({
 
           const projectResponse = await fileSystemControllerGetNode({
             path: { nodeId: urlProjectId },
-          });
+          }) as any;
           setCurrentNode(toFileSystemNode(projectResponse));
 
           const projectData = projectResponse;
@@ -439,7 +439,7 @@ export const useFileSystemData = ({
           const [nodeResponse, childrenResponse] = await Promise.all([
             fileSystemControllerGetNode({
               path: { nodeId: currentNodeId },
-            }),
+            }) as any,
             fileSystemControllerGetChildren({
               path: { nodeId: currentNodeId },
               query: {
@@ -447,7 +447,7 @@ export const useFileSystemData = ({
                 limit: paginationRef.current.limit,
                 search: searchQuery || undefined,
               } as any,
-            }),
+            }) as any,
           ]);
 
           const nodeData = toFileSystemNode(nodeResponse);
@@ -460,7 +460,7 @@ export const useFileSystemData = ({
 
           if (!isPersonalSpaceMode && personalSpaceId && currentNodeId) {
             try {
-              const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: currentNodeId } });
+              const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: currentNodeId } }) as any;
               if (rootNode?.personalSpaceKey) {
                 if (urlNodeId) {
                   navigate(`/personal-space/${urlNodeId}`);

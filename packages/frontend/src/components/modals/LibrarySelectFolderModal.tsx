@@ -83,7 +83,7 @@ export const LibrarySelectFolderModal: React.FC<
     setError(null);
 
     try {
-      const library = await getLibraryApi() as { id: string; name: string };
+      const library = await getLibraryApi() as any as { id: string; name: string };
       setLibraryName(library.name);
 
       const rootFolders = await loadChildren(library.id, currentNodeId);

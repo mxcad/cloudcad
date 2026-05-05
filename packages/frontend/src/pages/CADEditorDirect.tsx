@@ -15,9 +15,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat } from '@/api-sdk';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { projectPermissionApi } from '@/services/projectPermissionApi';
-import { fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 // TODO: Replace libraryApi.getDrawingNode/getBlockNode and publicFileApi with SDK when backend adds endpoints or upload logic is migrated
 import { libraryApi } from '../services/libraryApi';
 import { publicFileApi } from '../services/publicFileApi';

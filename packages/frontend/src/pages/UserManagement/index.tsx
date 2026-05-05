@@ -22,7 +22,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTheme } from '@/contexts/ThemeContext';
-import { UserResponseDto, UpdateUserDto } from '@/types/api-client';
+import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 import { useUserCRUD } from './hooks/useUserCRUD';
 import { useUserSearch } from './hooks/useUserSearch';
 import { UserTable } from './UserTable';

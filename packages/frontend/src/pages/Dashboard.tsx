@@ -15,7 +15,7 @@ import type {
   ProjectDto,
   FileSystemNodeDto,
   UserDashboardStatsDto,
-} from '../types/api-client';
+} from '@/api-sdk';
 import { formatFileSize, formatRelativeTime } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';

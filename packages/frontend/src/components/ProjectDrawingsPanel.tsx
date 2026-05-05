@@ -271,7 +271,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
     const loadProjects = async () => {
       try {
-        const response = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any });
+        const response = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any }) as any;
         const projectList = response?.nodes || [];
         setProjects(
           projectList.map(
@@ -388,7 +388,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           const response = await fileSystemControllerGetChildren({
             path: { nodeId },
             query: { page, limit: PAGE_SIZE, search: search || undefined } as any,
-          });
+          }) as any;
           nodeList = (response?.nodes || []).map(toFileSystemNode);
           total = response?.total || 0;
           totalPages =
@@ -468,7 +468,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
       while (currentId && depth < MAX_DEPTH) {
         try {
-          const response = await fileSystemControllerGetNode({ path: { nodeId: currentId } });
+          const response = await fileSystemControllerGetNode({ path: { nodeId: currentId } }) as any;
           const node = response;
           if (node) {
             path.unshift({ id: node.id, name: node.name });
@@ -739,7 +739,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     // 加载项目根节点信息用于面包屑
     const initProject = async () => {
       try {
-        const response = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
+        const response = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } }) as any;
         const projectNode = response;
         if (projectNode) {
           setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
@@ -899,7 +899,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           libraryType === 'drawing'
             ? await libraryControllerGetDrawingLibrary()
             : await libraryControllerGetBlockLibrary();
-        const libraryNode = response as { id?: string; name?: string };
+        const libraryNode = response as any as { id?: string; name?: string };
         if (libraryNode?.id) {
           setLibraryRootId(libraryNode.id);
 
@@ -1772,7 +1772,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       try {
         const response = await versionControlControllerGetFileHistory({
           query: { projectId: selectedProjectId, filePath: node.path, limit: 50 },
-        });
+        }) as any;
         if (response?.success) {
           setVersionHistoryEntries(response.entries || []);
         } else {

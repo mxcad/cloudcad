@@ -8,7 +8,7 @@ import {
   usersControllerRestore,
 } from '@/api-sdk';
 import { userCleanupApi } from '@/services/userCleanupApi';
-import { UserResponseDto, UpdateUserDto } from '@/types/api-client';
+import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 
 type RoleDto = {
   id: string;

@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import { initApiClient } from './services/apiClient';
+import '@/api-sdk';
 import { fetchBrandConfig } from './constants/appConfig';
 
 // MSW 浏览器 worker：仅在测试环境（VITE_MSW=true）下启动
@@ -34,11 +34,11 @@ const AppInitializer: React.FC = () => {
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[CloudCAD] 开始初始化 API Client 和 Brand Config');
-    // 等待初始化完成后再渲染
-    Promise.all([initApiClient(), fetchBrandConfig()])
-      .then(([apiClient, brandConfig]) => {
-        console.log('[CloudCAD] 初始化成功:', { apiClient: !!apiClient, brandConfig });
+    console.log('[CloudCAD] 开始初始化 Brand Config');
+    // API 客户端已通过 @/api-sdk 的 side-effect import 自动配置
+    fetchBrandConfig()
+      .then((brandConfig) => {
+        console.log('[CloudCAD] 初始化成功:', { brandConfig });
         setIsReady(true);
       })
       .catch((err) => {

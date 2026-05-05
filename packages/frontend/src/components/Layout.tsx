@@ -183,7 +183,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (user && !loading) {
       setStorageLoading(true);
-      fileSystemControllerGetStorageQuota({ query: { nodeId: '' } } as any)
+      (fileSystemControllerGetStorageQuota({ query: { nodeId: '' } } as any) as any)
         .then((data) => {
           if (data) {
             setStorageInfo(data as StorageInfoDto);

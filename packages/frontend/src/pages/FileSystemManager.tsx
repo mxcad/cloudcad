@@ -1576,3 +1576,5 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     </>
   );
 };
+
+export default FileSystemManager;

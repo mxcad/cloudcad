@@ -68,7 +68,7 @@ export const RuntimeConfigProvider: React.FC<RuntimeConfigProviderProps> = ({
   const refreshConfig = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await runtimeConfigControllerGetPublicConfigs() as Record<string, string | number | boolean>;
+      const data = await runtimeConfigControllerGetPublicConfigs() as any as Record<string, string | number | boolean>;
       setConfig({
         mailEnabled: Boolean(data.mailEnabled),
         requireEmailVerification: Boolean(data.requireEmailVerification),

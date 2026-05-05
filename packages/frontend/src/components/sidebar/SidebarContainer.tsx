@@ -157,7 +157,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       return;
     }
 
-    fileSystemControllerGetPersonalSpace()
+    (fileSystemControllerGetPersonalSpace() as any)
       .then((res) => {
         if (res?.id) {
           setPersonalSpaceId(res.id);
@@ -328,7 +328,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       }
 
       // 项目文件：使用原有逻辑
-      const file = await fileSystemControllerGetNode({ path: { nodeId: node.id } }) as {
+      const file = await fileSystemControllerGetNode({ path: { nodeId: node.id } }) as any as {
         fileHash?: string;
         path?: string;
         parentId?: string | null;
@@ -347,7 +347,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       if (!file.isRoot && file.parentId) {
         try {
           if (!file.id) throw new Error('节点ID缺失');
-          const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
+          const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } }) as any;
           if (rootNode?.id) {
             targetProjectId = rootNode.id;
           }

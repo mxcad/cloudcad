@@ -69,7 +69,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     setLoading(true);
     setErrorMessage('');
     try {
-      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } });
+      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } }) as any;
       setRoles((response as ProjectRoleDto[]) || []);
     } catch (error) {
       console.error('加载项目角色失败:', error);

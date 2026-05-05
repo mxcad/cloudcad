@@ -65,7 +65,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadMembers = useCallback(async () => {
     setErrorMessage('');
     try {
-      const data = await fileSystemControllerGetProjectMembers({ path: { projectId } });
+      const data = await fileSystemControllerGetProjectMembers({ path: { projectId } }) as any;
       // 映射 id 为 userId 以保持兼容性
       const membersWithUserId = (
         (data || []) as ProjectMemberDto[]
@@ -78,7 +78,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
   const loadProjectRoles = useCallback(async () => {
     try {
-      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } });
+      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } }) as any;
       const allRoles = (response as { id: string; name: string }[]) || [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
@@ -115,7 +115,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
       setSearching(true);
       try {
-        const response = await usersControllerSearchUsers({ query: { search: query, limit: 10 } });
+        const response = await usersControllerSearchUsers({ query: { search: query, limit: 10 } }) as any;
         // response.data 是 UserListResponseDto，包含 users 数组
         const users = (response?.users || []) as UserSearchResult[];
 
@@ -199,7 +199,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const memberData = await fileSystemControllerAddProjectMember({ path: { projectId }, body: {
         userId: selectedUser.id,
         projectRoleId: newRoleId,
-      } } as any);
+      } } as any) as any;
 
       const newMember: Member = {
         id: memberData.id,

@@ -182,7 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const responseData = await authControllerLoginByPhone({
         body: { phone, code },
-      }) as unknown as AuthResponseData;
+      } as any) as unknown as AuthResponseData;
       console.log('[AuthContext] 手机登录响应:', responseData);
 
       const {
@@ -221,8 +221,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       wechatTempToken?: string;
     }): Promise<{ message: string; email?: string }> => {
       const responseData = await authControllerRegister({
-        body: data as Record<string, unknown>,
-      }) as unknown as Record<string, unknown>;
+        body: data,
+      } as any) as unknown as Record<string, unknown>;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
       if (responseData.message && !responseData.accessToken) {
@@ -278,7 +278,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     async (phone: string, code: string) => {
       const responseData = await authControllerVerifyPhone({
         body: { phone, code },
-      }) as unknown as AuthResponseData;
+      } as any) as unknown as AuthResponseData;
       const {
         accessToken,
         refreshToken,

@@ -57,7 +57,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const loadChildren = useCallback(
     async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
       try {
-        const childrenResponse = await fileSystemControllerGetChildren({ path: { nodeId } });
+        const childrenResponse = await fileSystemControllerGetChildren({ path: { nodeId } }) as any;
 
         let children: FileSystemNode[] = [];
 
