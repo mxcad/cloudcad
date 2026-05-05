@@ -209,7 +209,7 @@ export const useProjectPermission = () => {
           path: { projectId },
           query: { permission: permission as any },
         });
-        const hasPermission = response.hasPermission || false;
+        const hasPermission = response.data?.hasPermission || false;
 
         // 缓存结果
         globalCache.setPermission(cacheKey, hasPermission);
@@ -243,7 +243,7 @@ export const useProjectPermission = () => {
         const response = await fileSystemControllerGetUserProjectPermissions({
           path: { projectId },
         });
-        const permissions = response.permissions || [];
+        const permissions = response.data?.permissions || [];
 
         globalCache.setPermissions(projectId, permissions);
 
@@ -273,7 +273,7 @@ export const useProjectPermission = () => {
         const response = await fileSystemControllerGetUserProjectRole({
           path: { projectId },
         });
-        const roleData = response as { role?: string } | undefined;
+        const roleData = response.data as { role?: string } | undefined;
         const role = roleData?.role || null;
 
         if (role) {
@@ -358,7 +358,7 @@ export const useProjectPermission = () => {
           path: { projectId },
           query: { permission: permission as any },
         });
-        const hasPermission = response.hasPermission || false;
+        const hasPermission = response.data?.hasPermission || false;
 
         globalCache.setPermission(cacheKey, hasPermission);
 

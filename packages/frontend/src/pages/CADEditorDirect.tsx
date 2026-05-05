@@ -210,14 +210,14 @@ export const CADEditorDirect: React.FC = () => {
   // 获取私人空间 ID
   useEffect(() => {
     if (!isAuthenticated) return;
-    fileSystemControllerGetPersonalSpace()
-      .then((res) => {
-        if (res?.id) {
-          setPersonalSpaceId(res.id);
+    (fileSystemControllerGetPersonalSpace() as any)
+      .then((res: any) => {
+        if (res?.data?.id) {
+          setPersonalSpaceId(res.data.id);
           // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
           import('../services/mxcadManager').then(
             ({ setPersonalSpaceId: setCachedPersonalSpaceId }) => {
-              setCachedPersonalSpaceId(res?.id || null);
+              setCachedPersonalSpaceId(res?.data?.id || null);
             }
           );
         }
@@ -526,7 +526,7 @@ export const CADEditorDirect: React.FC = () => {
         } else {
           // 项目文件：需要登录
           try {
-            const fileNode = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
+            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as any;
             file = fileNode as typeof file;
           } catch (error) {
             console.error('获取文件信息失败:', error);
@@ -582,7 +582,7 @@ export const CADEditorDirect: React.FC = () => {
           if (!file.isRoot && file.parentId) {
             try {
               if (!file.id) throw new Error('节点ID缺失');
-              const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
+              const { data: rootNode } = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
               if (rootNode?.id) {
                 projectId = rootNode.id;
               }
@@ -1111,9 +1111,7 @@ export const CADEditorDirect: React.FC = () => {
     // 文件编辑模式：已有打开的文件
     try {
       // 获取目标文件信息（要打开的文件）
-      const targetFile = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as {
-        deletedAt?: string | null;
-      };
+      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as unknown as { data: { deletedAt?: string | null } };
 
       // 检查目标文件是否在回收站中
       if (targetFile.deletedAt) {
@@ -1124,11 +1122,7 @@ export const CADEditorDirect: React.FC = () => {
       const currentFileId = currentFileIdRef.current;
       if (!currentFileId) return;
 
-      const currentFile = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as {
-        parentId?: string | null;
-        id?: string;
-        isRoot?: boolean;
-      };
+      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as unknown as { data: { parentId?: string | null; id?: string; isRoot?: boolean } };
 
       // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
       let uploadTargetNodeId = currentFile.parentId || '';
@@ -1167,11 +1161,11 @@ export const CADEditorDirect: React.FC = () => {
   ) => {
     try {
       setDownloading(true);
-      const blobData = await fileSystemControllerDownloadNodeWithFormat({
+      const { data: blobData } = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
         query: { format, ...(pdfOptions as any) },
-        responseType: 'blob',
-      }) as Blob;
+        responseStyle: 'blob',
+      } as any);
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);

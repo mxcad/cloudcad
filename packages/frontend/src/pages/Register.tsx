@@ -239,8 +239,8 @@ export const Register: React.FC = () => {
       }
 
       // 手机号可用，发送验证码（SDK 已解包）
-      const response = await authControllerSendSmsCode();
-      if (response?.success) {
+      const { data: response } = await authControllerSendSmsCode();
+      if ((response as any)?.success) {
         setCountdown(60); // 60秒倒计时
       } else {
         setFieldErrors((prev) => ({

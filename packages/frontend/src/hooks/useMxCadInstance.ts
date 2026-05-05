@@ -41,8 +41,8 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
       ) {
         try {
           const fileInfo = await getFileInfo(initialFileUrl);
-          if (fileInfo?.path) {
-            resolvedFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
+          if (fileInfo?.data?.path) {
+            resolvedFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.data.path);
             console.log('首次初始化，准备打开文件', { url: resolvedFileUrl });
           }
         } catch (error) {
@@ -97,35 +97,36 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
     try {
       // 获取文件信息
       const fileInfo = await getFileInfo(urlFileId);
-      if (!fileInfo) {
+      if (!fileInfo?.data) {
         console.error('无法获取文件信息');
         return;
       }
+      const fileData = fileInfo.data;
 
       // 检查文件状态
-      if (!FileStatusHelper.canOpen(fileInfo.fileStatus)) {
+      if (!FileStatusHelper.canOpen(fileData.fileStatus)) {
         const statusText = FileStatusHelper.getStatusText(
-          fileInfo.fileStatus || ''
+          fileData.fileStatus || ''
         );
-        console.error('文件尚未转换完成', { status: fileInfo.fileStatus });
+        console.error('文件尚未转换完成', { status: fileData.fileStatus });
         globalShowToast(`文件状态: ${statusText}`, 'warning');
         return;
       }
 
-      if (!ValidationHelper.isValidFileHash(fileInfo.fileHash)) {
+      if (!ValidationHelper.isValidFileHash(fileData.fileHash)) {
         console.error('文件哈希值不存在');
         globalShowToast('文件哈希值不存在，无法打开文件', 'error');
         return;
       }
 
-      if (!fileInfo.path) {
+      if (!fileData.path) {
         console.error('文件路径不存在');
         globalShowToast('文件路径不存在，无法打开文件', 'error');
         return;
       }
 
-      const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
-      const targetFileName = fileInfo.name;
+      const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileData.path);
+      const targetFileName = fileData.name;
 
       // 检查是否已有打开的文件
       const currentFileName = mxcadManager.getCurrentFileName();

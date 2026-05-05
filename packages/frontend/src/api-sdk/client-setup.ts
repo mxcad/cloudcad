@@ -10,8 +10,7 @@ import { getApiBaseUrl } from '@/config/apiConfig';
 const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
 client.setConfig({
   baseUrl,
-  /** 返回纯 data，不包裹 { data, request, response } */
-  responseStyle: 'data',
+  /** 保留默认 fields 模式：返回 { data, error, request, response }，类型安全 */
   /** 自动解包后端响应信封 { code, message, data } → data */
   responseTransformer: async (data: unknown) => {
     if (

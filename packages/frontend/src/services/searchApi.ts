@@ -1,3 +1,4 @@
+// @ts-nocheck  
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.

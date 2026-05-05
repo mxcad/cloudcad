@@ -271,11 +271,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
     const loadProjects = async () => {
       try {
-        const response = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any }) as any;
-        const projectList = response?.nodes || [];
+        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any });
+        const projectList = (response as any)?.nodes || [];
         setProjects(
           projectList.map(
-            (p): FileSystemNode => ({
+            (p: any): FileSystemNode => ({
               id: p.id,
               name: p.name,
               isFolder: true,
@@ -385,10 +385,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             (response as any)?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
         } else {
           // 项目/私人空间模式：使用 SDK
-          const response = await fileSystemControllerGetChildren({
+          const { data: response } = await fileSystemControllerGetChildren({
             path: { nodeId },
             query: { page, limit: PAGE_SIZE, search: search || undefined } as any,
-          }) as any;
+          });
           nodeList = (response?.nodes || []).map(toFileSystemNode);
           total = response?.total || 0;
           totalPages =
@@ -468,8 +468,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
       while (currentId && depth < MAX_DEPTH) {
         try {
-          const response = await fileSystemControllerGetNode({ path: { nodeId: currentId } }) as any;
-          const node = response;
+          const { data: node } = await fileSystemControllerGetNode({ path: { nodeId: currentId } }) as unknown as { data: { id: string; name: string; parentId?: string | null } | undefined };
           if (node) {
             path.unshift({ id: node.id, name: node.name });
             currentId = node.parentId || null;
@@ -739,8 +738,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     // 加载项目根节点信息用于面包屑
     const initProject = async () => {
       try {
-        const response = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } }) as any;
-        const projectNode = response;
+        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
         if (projectNode) {
           setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
         }
@@ -801,7 +799,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         // 如果不是最后一级，递归加载下一级分类（最多三级）
         if (level < 2 && folders.length > 0) {
           // 并行加载所有子分类
-          const childPromises = folders.map(folder => 
+          const childPromises = folders.map((folder: any) => 
             loadAllCategories(folder.id, level + 1)
           );
           const childLevels = (await Promise.all(childPromises)).filter(Boolean) as CategoryLevel[];
@@ -1770,9 +1768,9 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       setVersionHistoryError(null);
 
       try {
-        const response = await versionControlControllerGetFileHistory({
+        const { data: response } = await versionControlControllerGetFileHistory({
           query: { projectId: selectedProjectId, filePath: node.path, limit: 50 },
-        }) as any;
+        });
         if (response?.success) {
           setVersionHistoryEntries(response.entries || []);
         } else {

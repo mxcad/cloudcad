@@ -98,8 +98,9 @@ export default function FontLibrary(props: FontLibraryProps) {
     if (!canReadFonts) return;
     setLoading(true);
     try {
-      let fontsData: any = await fontsControllerGetFonts({ query: { location: activeTab } });
-      if (fontsData && typeof fontsData === 'object' && 'data' in fontsData) {
+      const { data: fontsApiResult } = await fontsControllerGetFonts({ query: { location: activeTab } });
+      let fontsData: any = fontsApiResult;
+      if (fontsData && typeof fontsData === 'object' && !Array.isArray(fontsData) && 'data' in fontsData) {
         fontsData = (fontsData as any).data || [];
       }
 
@@ -288,12 +289,12 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 下载字体
   const handleDownload = async (fontName: string) => {
     try {
-      const blobData = await fontsControllerDownloadFont({
+      const { data: blobData } = await fontsControllerDownloadFont({
         path: { fileName: fontName },
         query: { location: activeTab },
-        responseType: 'blob',
-      }) as Blob;
-      const url = window.URL.createObjectURL(blobData);
+        responseStyle: 'blob' as any,
+      });
+      const url = window.URL.createObjectURL(blobData as Blob | MediaSource);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fontName);

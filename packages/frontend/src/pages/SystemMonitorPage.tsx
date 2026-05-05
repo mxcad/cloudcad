@@ -73,8 +73,7 @@ export const SystemMonitorPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await healthControllerCheck();
-      const healthData = response;
+      const { data: healthData } = await healthControllerCheck();
       if (healthData && healthData.info) {
         const timestamp = new Date().toISOString();
         const databaseInfo = healthData.info.database;
@@ -82,13 +81,13 @@ export const SystemMonitorPage: React.FC = () => {
         setSystemHealth({
           database: {
             status: databaseInfo?.status === 'up' ? 'up' : 'down',
-            message: databaseInfo?.message || 
+            message: (databaseInfo as any)?.message || 
               (databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
             timestamp,
           },
           storage: {
             status: storageInfo?.status === 'up' ? 'up' : 'down',
-            message: storageInfo?.message || 
+            message: (storageInfo as any)?.message || 
               (storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
             timestamp,
           },

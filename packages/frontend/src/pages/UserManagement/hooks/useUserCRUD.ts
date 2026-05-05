@@ -46,8 +46,8 @@ export function useUserCRUD(): UseUserCRUDReturn {
     setLoading(true);
     setError(null);
     try {
-      const response = await usersControllerFindAll({ query: {} });
-      setUsers(response?.users || []);
+      const { data: response } = await usersControllerFindAll({ query: {} });
+      setUsers((response as any)?.users || []);
     } catch (err) {
       setError('加载用户列表失败');
     } finally {

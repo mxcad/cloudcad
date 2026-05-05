@@ -157,10 +157,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       return;
     }
 
-    (fileSystemControllerGetPersonalSpace() as any)
+    fileSystemControllerGetPersonalSpace()
       .then((res) => {
-        if (res?.id) {
-          setPersonalSpaceId(res.id);
+        if (res?.data?.id) {
+          setPersonalSpaceId(res.data.id);
         }
       })
       .catch(console.error);
@@ -328,14 +328,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       }
 
       // 项目文件：使用原有逻辑
-      const file = await fileSystemControllerGetNode({ path: { nodeId: node.id } }) as any as {
-        fileHash?: string;
-        path?: string;
-        parentId?: string | null;
-        id?: string;
-        isRoot?: boolean;
-        name?: string;
-      };
+      const { data: file } = await fileSystemControllerGetNode({ path: { nodeId: node.id } }) as unknown as { data: { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string } };
 
       if (!file.fileHash) {
         console.error('文件尚未转换完成');
@@ -347,7 +340,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       if (!file.isRoot && file.parentId) {
         try {
           if (!file.id) throw new Error('节点ID缺失');
-          const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } }) as any;
+          const { data: rootNode } = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
           if (rootNode?.id) {
             targetProjectId = rootNode.id;
           }

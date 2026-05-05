@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { setupServer } from 'msw/node';

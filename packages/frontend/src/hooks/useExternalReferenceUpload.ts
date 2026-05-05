@@ -108,10 +108,12 @@ export const useExternalReferenceUpload = (
         let data = null;
         if (isLoggedIn) {
           // 已登录用户使用 SDK
-          data = await mxCadControllerGetPreloadingData({ path: { nodeId: id } }) as PreloadingData | null;
+          const result = await mxCadControllerGetPreloadingData({ path: { nodeId: id } });
+          data = result?.data as PreloadingData | null;
         } else {
           // 未登录用户使用 SDK
-          data = await publicFileControllerGetPreloadingData({ path: { hash: id } }) as PreloadingData | null;
+          const publicResult = await publicFileControllerGetPreloadingData({ path: { hash: id } });
+          data = publicResult?.data as PreloadingData | null;
         }
 
         // 如果成功获取数据，更新缓存

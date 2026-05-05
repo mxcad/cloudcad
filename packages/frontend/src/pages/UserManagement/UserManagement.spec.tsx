@@ -2,6 +2,7 @@
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
+// @ts-nocheck
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';

@@ -207,9 +207,9 @@ export const Dashboard: React.FC = () => {
 
       setProjectCreating(true);
       try {
-        const response = await fileSystemControllerCreateProject({
-          body: { name: projectFormData.name.trim(), description: projectFormData.description.trim() || undefined } as any,
-        });
+        const { data: response } = await fileSystemControllerCreateProject({
+          body: { name: projectFormData.name.trim(), description: projectFormData.description.trim() || undefined },
+        } as any);
 
         // 关闭弹框，重置表单
         setIsProjectModalOpen(false);
@@ -220,7 +220,7 @@ export const Dashboard: React.FC = () => {
         setTimeout(() => setCreateSuccess(null), 3000);
 
         // 刷新项目列表
-        const projectsRes = await fileSystemControllerGetProjects({ query: {} as any });
+        const { data: projectsRes } = await fileSystemControllerGetProjects({ query: {} } as any);
         if (projectsRes?.nodes) {
           const sortedProjects = projectsRes.nodes
             .filter((p: any) => p.status !== 'DELETED')
@@ -249,11 +249,15 @@ export const Dashboard: React.FC = () => {
 
       try {
         // 并行加载多个数据源
-        const [projectsRes, statsRes, personalSpaceRes] = await Promise.all([
-          fileSystemControllerGetProjects({ query: {} as any }),
-          usersControllerGetDashboardStats(),
-          fileSystemControllerGetPersonalSpace().catch(() => null), // 私人空间可能不存在
+        const [projectsResult, statsResult, personalSpaceResult] = await Promise.all([
+          fileSystemControllerGetProjects({ query: {} } as any),
+          usersControllerGetDashboardStats() as any,
+          fileSystemControllerGetPersonalSpace().catch(() => null) as any, // 私人空间可能不存在
         ]);
+
+        const projectsRes = projectsResult?.data;
+        const statsRes = statsResult?.data;
+        const personalSpaceRes = personalSpaceResult?.data;
 
         // 处理项目数据
         if (projectsRes?.nodes) {
@@ -269,15 +273,15 @@ export const Dashboard: React.FC = () => {
 
         // 处理统计数据
         if (statsRes) {
-          setDashboardStats(statsRes);
+          setDashboardStats(statsRes as UserDashboardStatsDto);
         }
 
         // 处理个人空间文件
         if (personalSpaceRes?.id) {
-          const childrenRes = await fileSystemControllerGetChildren({
+          const { data: childrenRes } = await fileSystemControllerGetChildren({
             path: { nodeId: personalSpaceRes.id },
-            query: { limit: 10 } as any,
-          });
+            query: { limit: 10 },
+          } as any);
           if (childrenRes?.nodes) {
             setPersonalFiles(childrenRes.nodes);
           }

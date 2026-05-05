@@ -26,13 +26,13 @@ export const useEmailTab = () => {
   const verification = useVerificationCode({
     onSend: async (email: string, isForNewEmail = false) => {
       if (isForNewEmail) {
-        await authControllerSendBindEmailCode({ body: { email, isRebind: true } });
+        await authControllerSendBindEmailCode({ body: { email, isRebind: true } } as any);
       } else {
-        await authControllerSendBindEmailCode({ body: { email } });
+        await authControllerSendBindEmailCode({ body: { email } } as any);
       }
     },
     onVerify: async (email: string, code: string) => {
-      return await authControllerVerifyBindEmail({ body: { email, code } });
+      return await authControllerVerifyBindEmail({ body: { email, code } } as any);
     },
   });
 
@@ -51,7 +51,7 @@ export const useEmailTab = () => {
       return;
     }
     try {
-      await authControllerSendBindEmailCode({ body: { email: form.email } });
+      await authControllerSendBindEmailCode({ body: { email: form.email } } as any);
       setStep('verify');
       setSuccess('验证码已发送到您的邮箱');
     } catch (err) {
@@ -70,7 +70,7 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     try {
-      await authControllerVerifyBindEmail({ body: { email: form.email, code: form.code } });
+      await authControllerVerifyBindEmail({ body: { email: form.email, code: form.code } } as any);
       setSuccess('邮箱绑定成功');
       setStep('input');
       setForm({ email: '', code: '' });
@@ -120,7 +120,7 @@ export const useEmailTab = () => {
     try {
       const response = await authControllerVerifyUnbindEmailCode({
         body: { code: form.code },
-      }) as unknown as { success?: boolean; message?: string; token?: string };
+      } as any) as unknown as { success?: boolean; message?: string; token?: string };
       if (response?.success) {
         setSuccess('原邮箱验证通过');
         setVerifyToken(response.token || '');
@@ -148,7 +148,7 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     try {
-      await authControllerSendBindEmailCode({ body: { email: form.email, isRebind: true } });
+      await authControllerSendBindEmailCode({ body: { email: form.email, isRebind: true } } as any);
       setSuccess('验证码已发送');
       verification.resetCountdown();
       setStep('verifyNew');
@@ -185,7 +185,7 @@ export const useEmailTab = () => {
     try {
       const response = await authControllerRebindEmail({
         body: { email: form.email, code: form.code, token: verifyToken },
-      }) as unknown as { success?: boolean; message?: string };
+      } as any) as unknown as { success?: boolean; message?: string };
       if (response?.success) {
         setSuccess('邮箱换绑成功');
         setStep('input');

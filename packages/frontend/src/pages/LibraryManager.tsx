@@ -336,13 +336,13 @@ export const LibraryManager: React.FC = () => {
 
     try {
       // 获取默认配额（GB）
-      const configs = await runtimeConfigControllerGetPublicConfigs() as Record<string, number> | undefined;
+      const { data: configs } = await runtimeConfigControllerGetPublicConfigs() as unknown as { data: Record<string, number> | undefined };
       const defaultVal = configs?.libraryStorageQuota || 100;
       setDefaultLibraryQuota(defaultVal);
 
       // 获取公共资源库的存储信息
       if (libraryId) {
-        const storageInfo = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
+        const { data: storageInfo } = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
 
         if (storageInfo) {
           setLibraryStorageInfo(storageInfo);
@@ -380,7 +380,7 @@ export const LibraryManager: React.FC = () => {
       setQuotaModalOpen(false);
 
       // 刷新库配额信息
-      const storageInfo = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
+      const { data: storageInfo } = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
       if (storageInfo) {
         setLibraryStorageInfo(storageInfo);
       }

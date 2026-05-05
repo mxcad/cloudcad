@@ -250,8 +250,8 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      const response = await authControllerSendSmsCode();
-      if (response?.success) {
+      const { data: response } = await authControllerSendSmsCode();
+      if ((response as any)?.success) {
         setSuccess('验证码已发送');
         setCountdown(60); // 60秒倒计时
       } else {
