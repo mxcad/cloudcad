@@ -125,13 +125,29 @@ const NoPermissionPage: React.FC = React.memo(() => (
 // 应用内容组件
 // ============================================================================
 
+// CAD 编辑器路由守卫 — 仅在 / 或 /cad-editor 路由下才挂载，
+// 避免其他页面（如 /projects）触发 CAD 引擎及其重依赖的懒加载。
+function CADEditorRouteGuard() {
+  const location = useLocation();
+  const isCADRoute =
+    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
+
+  if (!isCADRoute) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <CADEditorDirect />
+    </Suspense>
+  );
+}
+
 function AppContent() {
   return (
     <div className="layout-container">
       {/* 全局加载遮罩 - 覆盖所有内容 */}
       <LoadingOverlay />
-      {/* 全局 CAD 编辑器覆盖层 - 监听路由变化自动显示/隐藏 */}
-      <CADEditorDirect />
+      {/* 全局 CAD 编辑器覆盖层 — 仅 CAD 路由挂载，保护 WebGL 上下文 */}
+      <CADEditorRouteGuard />
 
       <Routes>
         {/* 公开路由 - 不需要 Layout */}

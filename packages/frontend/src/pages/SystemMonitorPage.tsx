@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { healthControllerCheck, adminControllerGetCleanupStats, adminControllerCleanupStorage } from '@/api-sdk';
+import { healthApi } from '../services/healthApi';
+import { adminApi } from '../services/adminApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -72,7 +73,7 @@ export const SystemMonitorPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: healthData } = await healthControllerCheck();
+      const healthData = await healthApi.getHealth();
       if (healthData && healthData.info) {
         const timestamp = new Date().toISOString();
         const databaseInfo = healthData.info.database;
@@ -80,13 +81,13 @@ export const SystemMonitorPage: React.FC = () => {
         setSystemHealth({
           database: {
             status: databaseInfo?.status === 'up' ? 'up' : 'down',
-            message: (databaseInfo as any)?.message || 
+            message: databaseInfo?.message || 
               (databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
             timestamp,
           },
           storage: {
             status: storageInfo?.status === 'up' ? 'up' : 'down',
-            message: (storageInfo as any)?.message || 
+            message: storageInfo?.message || 
               (storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
             timestamp,
           },
@@ -107,9 +108,9 @@ export const SystemMonitorPage: React.FC = () => {
   // 获取存储清理统计信息
   const fetchCleanupStats = useCallback(async () => {
     try {
-      const response = await adminControllerGetCleanupStats();
+      const response = await adminApi.getCleanupStats();
       if (response.data) {
-        setCleanupStats(response.data as any);
+        setCleanupStats(response.data);
       }
     } catch (err) {
       console.error('获取存储清理统计失败:', err);
@@ -123,10 +124,10 @@ export const SystemMonitorPage: React.FC = () => {
     setCleanupSuccess(null);
     setCleanupResult(null);
     try {
-      const response = await adminControllerCleanupStorage({ query: { delayDays: 0 } });
+      const response = await adminApi.cleanupStorage(0); // 0表示立即清理
       if (response.data) {
         setCleanupSuccess('存储清理完成');
-        setCleanupResult(response.data as any);
+        setCleanupResult(response.data);
         // 重新获取统计信息
         await fetchCleanupStats();
       }

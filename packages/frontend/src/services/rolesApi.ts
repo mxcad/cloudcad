@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // @deprecated Use @/api-sdk instead.
 
-import type { CreateRoleDto, UpdateRoleDto } from '../types/api-client';
+import type { CreateRoleDto, UpdateRoleDto } from '@/api-sdk';
 import {
   rolesControllerFindAll,
   rolesControllerFindOne,

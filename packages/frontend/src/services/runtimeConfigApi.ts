@@ -15,7 +15,7 @@ import type {
   RuntimeConfigResponseDto,
   RuntimeConfigDefinitionDto,
   UpdateRuntimeConfigDto,
-} from '../types/api-client';
+} from '@/api-sdk';
 import {
   runtimeConfigControllerGetPublicConfigs,
   runtimeConfigControllerGetAllConfigs,

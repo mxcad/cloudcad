@@ -207,7 +207,6 @@ export function useFileLoader(options: UseFileLoaderOptions) {
               ? file.libraryKey
               : undefined) as 'drawing' | 'block' | undefined,
         fromPlatform,
-        updatedAt: file.updatedAt,
       });
       setNavigateFunction(navigate);
 

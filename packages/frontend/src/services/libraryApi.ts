@@ -1,5 +1,6 @@
-import { getApiClient } from './apiClient';
+// @deprecated Use @/api-sdk directly instead.
 import type { SaveMxwebDto } from '../types/api-client';
+import { client } from '@/api-sdk/client.gen';
 import {
   libraryControllerGetDrawingLibrary,
   libraryControllerGetDrawingChildren,
@@ -16,11 +17,21 @@ import {
   mxCadControllerUploadFile,
 } from '@/api-sdk';
 
-function asFormData<T>(formData: FormData): T {
-  return formData as unknown as T;
+type Client = typeof client;
+
+// Helper: raw client proxy typed via SDK Client for endpoint calls not covered by generated functions
+interface RawClient extends Client {
+  post: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
+  delete: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
+  patch: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
+  put: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
 }
+const rawClient = client as unknown as RawClient;
+
+const LIBRARY_API = '/api/v1/library';
 
 export const libraryApi = {
+  // ── Drawing (read) ──────────────────────────────────────────────
   getDrawingLibrary: () => libraryControllerGetDrawingLibrary(),
 
   getDrawingChildren: (
@@ -77,13 +88,14 @@ export const libraryApi = {
     ),
 
   getDrawingThumbnailUrl: (nodeId: string) =>
-    `${window.location.origin}/api/v1/library/drawing/nodes/${nodeId}/thumbnail`,
+    `${window.location.origin}${LIBRARY_API}/drawing/nodes/${nodeId}/thumbnail`,
 
+  // ── Drawing (write) ─────────────────────────────────────────────
   createDrawingFolder: (data: {
     name: string;
     parentId?: string;
     skipIfExists?: boolean;
-  }) => getApiClient().LibraryController_createDrawingFolder(null, data),
+  }) => rawClient.post(`${LIBRARY_API}/drawing/folders`, { body: data }),
 
   uploadDrawingChunk: (formData: FormData) =>
     mxCadControllerUploadFile({ body: formData as never }),
@@ -105,26 +117,26 @@ export const libraryApi = {
   }) => mxCadControllerCheckChunkExist({ body: data }),
 
   deleteDrawingNode: (nodeId: string, permanently: boolean = true) =>
-    getApiClient().LibraryController_deleteDrawingNode({
-      nodeId,
-      permanently,
+    rawClient.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+      body: { permanently },
     }),
 
   renameDrawingNode: (nodeId: string, name: string) =>
-    getApiClient().LibraryController_renameDrawingNode({ nodeId }, { name }),
+    rawClient.patch(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+      body: { name },
+    }),
 
   moveDrawingNode: (nodeId: string, targetParentId: string) =>
-    getApiClient().LibraryController_moveDrawingNode(
-      { nodeId },
-      { targetParentId }
-    ),
+    rawClient.post(`${LIBRARY_API}/drawing/nodes/${nodeId}/move`, {
+      body: { targetParentId },
+    }),
 
   copyDrawingNode: (nodeId: string, targetParentId: string) =>
-    getApiClient().LibraryController_copyDrawingNode(
-      { nodeId },
-      { targetParentId }
-    ),
+    rawClient.post(`${LIBRARY_API}/drawing/nodes/${nodeId}/copy`, {
+      body: { targetParentId },
+    }),
 
+  // ── Block (read) ────────────────────────────────────────────────
   getBlockLibrary: () => libraryControllerGetBlockLibrary(),
 
   getBlockChildren: (
@@ -175,13 +187,14 @@ export const libraryApi = {
     }),
 
   getBlockThumbnailUrl: (nodeId: string) =>
-    `${window.location.origin}/api/v1/library/block/nodes/${nodeId}/thumbnail`,
+    `${window.location.origin}${LIBRARY_API}/block/nodes/${nodeId}/thumbnail`,
 
+  // ── Block (write) ───────────────────────────────────────────────
   createBlockFolder: (data: {
     name: string;
     parentId?: string;
     skipIfExists?: boolean;
-  }) => getApiClient().LibraryController_createBlockFolder(null, data),
+  }) => rawClient.post(`${LIBRARY_API}/block/folders`, { body: data }),
 
   uploadBlockChunk: (formData: FormData) =>
     mxCadControllerUploadFile({ body: formData as never }),
@@ -203,26 +216,26 @@ export const libraryApi = {
   }) => mxCadControllerCheckChunkExist({ body: data }),
 
   deleteBlockNode: (nodeId: string, permanently: boolean = true) =>
-    getApiClient().LibraryController_deleteBlockNode({
-      nodeId,
-      permanently,
+    rawClient.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+      body: { permanently },
     }),
 
   renameBlockNode: (nodeId: string, name: string) =>
-    getApiClient().LibraryController_renameBlockNode({ nodeId }, { name }),
+    rawClient.patch(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+      body: { name },
+    }),
 
   moveBlockNode: (nodeId: string, targetParentId: string) =>
-    getApiClient().LibraryController_moveBlockNode(
-      { nodeId },
-      { targetParentId }
-    ),
+    rawClient.post(`${LIBRARY_API}/block/nodes/${nodeId}/move`, {
+      body: { targetParentId },
+    }),
 
   copyBlockNode: (nodeId: string, targetParentId: string) =>
-    getApiClient().LibraryController_copyBlockNode(
-      { nodeId },
-      { targetParentId }
-    ),
+    rawClient.post(`${LIBRARY_API}/block/nodes/${nodeId}/copy`, {
+      body: { targetParentId },
+    }),
 
+  // ── Save ────────────────────────────────────────────────────────
   saveDrawing: (
     nodeId: string,
     file: Blob,
@@ -235,19 +248,14 @@ export const libraryApi = {
         type: 'application/octet-stream',
       })
     );
-    return getApiClient().LibraryController_saveDrawing(
-      { nodeId },
-      asFormData<SaveMxwebDto>(formData),
-      {
-        onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-          if (onProgress && progressEvent.total) {
-            const percentage =
-              (progressEvent.loaded / progressEvent.total) * 100;
-            onProgress(percentage);
-          }
-        },
-      }
-    );
+    return rawClient.post(`${LIBRARY_API}/drawing/savemxweb/${nodeId}`, {
+      body: formData as unknown as SaveMxwebDto,
+      onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
+        if (onProgress && progressEvent.total) {
+          onProgress((progressEvent.loaded / progressEvent.total) * 100);
+        }
+      },
+    });
   },
 
   saveDrawingAs: (
@@ -265,12 +273,11 @@ export const libraryApi = {
     );
     formData.append('targetParentId', targetParentId);
     formData.append('fileName', fileName);
-    // @ts-expect-error FormData type compatibility issue with generated API client
-    return getApiClient().LibraryController_saveDrawingAs(null, formData, {
+    return rawClient.post(`${LIBRARY_API}/drawing/save-as`, {
+      body: formData,
       onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
         if (onProgress && progressEvent.total) {
-          const percentage = (progressEvent.loaded / progressEvent.total) * 100;
-          onProgress(percentage);
+          onProgress((progressEvent.loaded / progressEvent.total) * 100);
         }
       },
     });
@@ -288,19 +295,14 @@ export const libraryApi = {
         type: 'application/octet-stream',
       })
     );
-    return getApiClient().LibraryController_saveBlock(
-      { nodeId },
-      asFormData<SaveMxwebDto>(formData),
-      {
-        onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-          if (onProgress && progressEvent.total) {
-            const percentage =
-              (progressEvent.loaded / progressEvent.total) * 100;
-            onProgress(percentage);
-          }
-        },
-      }
-    );
+    return rawClient.post(`${LIBRARY_API}/block/savemxweb/${nodeId}`, {
+      body: formData as unknown as SaveMxwebDto,
+      onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
+        if (onProgress && progressEvent.total) {
+          onProgress((progressEvent.loaded / progressEvent.total) * 100);
+        }
+      },
+    });
   },
 
   saveBlockAs: (
@@ -318,25 +320,25 @@ export const libraryApi = {
     );
     formData.append('targetParentId', targetParentId);
     formData.append('fileName', fileName);
-    // @ts-expect-error FormData type compatibility issue with generated API client
-    return getApiClient().LibraryController_saveBlockAs(formData, {
+    return rawClient.post(`${LIBRARY_API}/block/save-as`, {
+      body: formData,
       onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
         if (onProgress && progressEvent.total) {
-          const percentage = (progressEvent.loaded / progressEvent.total) * 100;
-          onProgress(percentage);
+          onProgress((progressEvent.loaded / progressEvent.total) * 100);
         }
       },
     });
   },
 
+  // ── Generic helpers (type-dispatched) ───────────────────────────
   createFolder: (
     libraryType: 'drawing' | 'block',
     data: { name: string; parentId?: string; skipIfExists?: boolean }
   ) => {
     if (libraryType === 'drawing') {
-      return getApiClient().LibraryController_createDrawingFolder(null, data);
+      return rawClient.post(`${LIBRARY_API}/drawing/folders`, { body: data });
     } else {
-      return getApiClient().LibraryController_createBlockFolder(null, data);
+      return rawClient.post(`${LIBRARY_API}/block/folders`, { body: data });
     }
   },
 
@@ -346,14 +348,12 @@ export const libraryApi = {
     permanently: boolean = true
   ) => {
     if (libraryType === 'drawing') {
-      return getApiClient().LibraryController_deleteDrawingNode({
-        nodeId,
-        permanently,
+      return rawClient.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+        body: { permanently },
       });
     } else {
-      return getApiClient().LibraryController_deleteBlockNode({
-        nodeId,
-        permanently,
+      return rawClient.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+        body: { permanently },
       });
     }
   },

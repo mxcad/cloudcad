@@ -58,28 +58,30 @@ export const filesApi = {
     pdfOptions?: PdfOptions
   ) => {
     const params: {
-      path: { nodeId: string; format: string };
-      query?: { width?: number; height?: number; colorPolicy?: string };
+      path: { nodeId: string };
+      query?: { format?: string; width?: unknown; height?: unknown; colorPolicy?: unknown };
     } = {
       path: {
         nodeId: id,
+      },
+      query: {
         format,
       },
     };
     if (pdfOptions?.width) {
-      params.query = { width: pdfOptions.width };
+      params.query = { width: Number(pdfOptions.width) };
     }
     if (pdfOptions?.height) {
-      params.query = { ...params.query, height: pdfOptions.height };
+      params.query = { ...params.query, height: Number(pdfOptions.height) };
     }
     if (pdfOptions?.colorPolicy) {
       params.query = { ...params.query, colorPolicy: pdfOptions.colorPolicy };
     }
-    return fileSystemControllerDownloadNodeWithFormat(params as any);
+    return fileSystemControllerDownloadNodeWithFormat(params);
   },
 
   update: (id: string, data: UpdateNodeDto) =>
-    fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data }),
+    fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data as any }),
 
   delete: (id: string, permanent?: boolean) =>
     fileSystemControllerDeleteNode({
@@ -90,7 +92,7 @@ export const filesApi = {
   createFolder: (parentId: string, data: CreateFolderDto) =>
     fileSystemControllerCreateFolder({
       path: { parentId },
-      body: data,
+      body: data as any,
     }),
 
   moveNode: (id: string, data: MoveNodeDto) =>

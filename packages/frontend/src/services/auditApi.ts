@@ -20,12 +20,17 @@ import {
 
 export const auditApi = {
   getLogs: (params?: { page?: number; limit?: number; userId?: string; action?: string; startDate?: string; endDate?: string }) =>
-    auditLogControllerFindAll(params ? { query: params } : undefined),
+    auditLogControllerFindAll(
+      params
+        ? { query: { ...params, page: params.page != null ? String(params.page) : undefined, limit: params.limit != null ? String(params.limit) : undefined } }
+        : undefined,
+    ),
 
   getLogById: (id: string) => auditLogControllerFindOne({ path: { id } }),
 
   getStatistics: () => auditLogControllerGetStatistics(),
 
-  cleanup: (daysToKeep: number) =>
-    auditLogControllerCleanupOldLogs({ query: { daysToKeep } }),
+  // daysToKeep parameter no longer supported by the API — removed
+  cleanup: (_daysToKeep?: number) =>
+    auditLogControllerCleanupOldLogs(),
 };

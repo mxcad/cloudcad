@@ -9,7 +9,7 @@
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
-// @deprecated Use @/api-sdk instead.
+// @deprecated Use @/api-sdk directly instead.
 
 import type {
   CreateUserDto,
@@ -17,7 +17,7 @@ import type {
   ChangePasswordDto,
   DeactivateAccountDto,
 } from '../types/api-client';
-import { getApiClient } from './apiClient';
+import { client } from '@/api-sdk/client.gen';
 import {
   usersControllerFindAll,
   usersControllerSearchUsers,
@@ -83,7 +83,7 @@ export const usersApi = {
     usersControllerDeactivateAccount({ body: data }).then((r) => r.data),
 
   getWechatDeactivateQr: () =>
-    getApiClient().get<{ token: string; qrUrl: string }>(
+    client.get<{ token: string; qrUrl: string }>(
       '/users/me/deactivate/wechat-qr',
       {
         headers: { 'Content-Type': 'application/json' },

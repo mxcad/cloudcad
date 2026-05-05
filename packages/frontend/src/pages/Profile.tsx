@@ -1137,6 +1137,8 @@ export const Profile: React.FC = () => {
 
       <style>{`
         .profile-page { min-height: 100vh; position: relative; overflow: hidden; font-family: var(--font-family-base); background: transparent; padding: 2rem; }
+      `}</style>
+      </div>
   );
 };
 

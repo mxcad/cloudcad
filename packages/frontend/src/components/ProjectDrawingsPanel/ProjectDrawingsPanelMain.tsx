@@ -337,7 +337,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (breadcrumb.length > 1) {
       const newBreadcrumb = breadcrumb.slice(0, -1);
       setBreadcrumb(newBreadcrumb);
-      if (newBreadcrumb[newBreadcrumb.length - 1]) loadNodes(newBreadcrumb[newBreadcrumb.length - 1].id);
+      const lastItem = newBreadcrumb[newBreadcrumb.length - 1];
+      if (lastItem) loadNodes(lastItem.id);
     } else if (breadcrumb.length === 1 && !isPersonalSpace) {
       setSelectedProjectId(null); setBreadcrumb([]); setNodes([]);
     }

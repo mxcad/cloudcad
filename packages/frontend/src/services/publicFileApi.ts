@@ -32,8 +32,8 @@ export interface MergeChunksResponse {
 
 export const publicFileApi = {
   checkFile: async (params: CheckFilePublicParams): Promise<CheckFilePublicResponse> => {
-    const response = await publicFileControllerCheckFile({ body: params });
-    return response as CheckFilePublicResponse;
+    const response = await publicFileControllerCheckFile({ body: params as any });
+    return response as any as CheckFilePublicResponse;
   },
 
   checkChunk: async (params: {
@@ -41,13 +41,13 @@ export const publicFileApi = {
     chunk: number;
     chunks: number;
   }): Promise<{ exist: boolean }> => {
-    const response = await publicFileControllerCheckChunk({ body: params });
-    return response as { exist: boolean };
+    const response = await publicFileControllerCheckChunk({ body: params as any });
+    return response as any as { exist: boolean };
   },
 
   uploadChunk: async (formData: FormData): Promise<UploadChunkResponse> => {
-    const response = await publicFileControllerUploadChunk({ body: formData as never });
-    return response as UploadChunkResponse;
+    const response = await publicFileControllerUploadChunk({ body: formData as any });
+    return response as any as UploadChunkResponse;
   },
 
   mergeChunks: async (params: {
@@ -56,8 +56,8 @@ export const publicFileApi = {
     size: number;
     chunks: number;
   }): Promise<MergeChunksResponse> => {
-    const response = await publicFileControllerMergeChunks({ body: params });
-    return response as MergeChunksResponse;
+    const response = await publicFileControllerMergeChunks({ body: params as any });
+    return response as any as MergeChunksResponse;
   },
 
   getFileAccessUrl: (hash: string, filename?: string): string => {
@@ -143,8 +143,8 @@ export const publicFileApi = {
     }
     formData.append('file', file);
 
-    const response = await publicFileControllerUploadExtReference({ body: formData as never });
-    return response as { ret: string; hash?: string; message?: string };
+    const response = await publicFileControllerUploadExtReference({ body: formData as any });
+    return response as any as { ret: string; hash?: string; message?: string };
   },
 
   checkExtReference: async (
@@ -152,9 +152,9 @@ export const publicFileApi = {
     extRefFileName: string
   ): Promise<{ exists: boolean }> => {
     const response = await publicFileControllerCheckExtReference({
-      query: { srcHash: srcFileHash, fileName: extRefFileName },
+      query: { srcHash: srcFileHash, fileName: extRefFileName } as any,
     });
-    return response as { exists: boolean };
+    return response as any as { exists: boolean };
   },
 
   getPreloadingData: async (hash: string) => {

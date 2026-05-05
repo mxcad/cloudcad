@@ -87,7 +87,7 @@ export const authApi = {
   getProfile: () => authControllerGetProfile().then((r) => r.data),
 
   resendVerification: (email: string) =>
-    authControllerResendVerification({ body: { email } }).then((r) => r.data),
+    authControllerResendVerification({ body: { email } as any }).then((r) => r.data),
 
   forgotPassword: (data: ForgotPasswordDto) =>
     authControllerForgotPassword({ body: data }).then((r) => r.data),
@@ -96,7 +96,7 @@ export const authApi = {
     authControllerResetPassword({ body: data }).then((r) => r.data),
 
   sendBindEmailCode: (email: string, isRebind: boolean = false) =>
-    authControllerSendBindEmailCode({ body: { email, isRebind } }).then(
+    authControllerSendBindEmailCode({ body: { email, isRebind } as any }).then(
       (r) => r.data
     ),
 
@@ -109,31 +109,31 @@ export const authApi = {
     authControllerSendUnbindEmailCode().then((r) => r.data),
 
   verifyUnbindEmailCode: (code: string) =>
-    authControllerVerifyUnbindEmailCode({ body: { code } }).then(
+    authControllerVerifyUnbindEmailCode({ body: { code } as any }).then(
       (r) => r.data
     ),
 
   rebindEmail: (email: string, code: string, token: string) =>
-    authControllerRebindEmail({ body: { email, code, token } }).then(
+    authControllerRebindEmail({ body: { email, code, token } as any }).then(
       (r) => r.data
     ),
 
   sendSmsCode: (phone: string) =>
-    authControllerSendSmsCode({ body: { phone } }).then((r) => r.data),
+    authControllerSendSmsCode({ body: { phone } as any }).then((r) => r.data),
 
   verifySmsCode: (phone: string, code: string) =>
-    authControllerVerifySmsCode({ body: { phone, code } }).then(
+    authControllerVerifySmsCode({ body: { phone, code } as any }).then(
       (r) => r.data
     ),
 
   loginByPhone: (data: LoginByPhoneDto) =>
-    authControllerLoginByPhone({ body: data }).then((r) => r.data),
+    authControllerLoginByPhone({ body: data as any }).then((r) => r.data),
 
   registerByPhone: (data: RegisterByPhoneDto) =>
-    authControllerRegisterByPhone({ body: data }).then((r) => r.data),
+    authControllerRegisterByPhone({ body: data as any }).then((r) => r.data),
 
   verifyPhone: (phone: string, code: string) =>
-    authControllerVerifyPhone({ body: { phone, code } }).then(
+    authControllerVerifyPhone({ body: { phone, code } as any }).then(
       (r) => r.data
     ),
 
@@ -143,7 +143,7 @@ export const authApi = {
     code: string
   ) =>
     authControllerBindEmailAndLogin({
-      body: { tempToken, email, code },
+      body: { tempToken, email, code } as any,
     }).then((r) => r.data),
 
   bindPhoneAndLogin: (
@@ -152,27 +152,27 @@ export const authApi = {
     code: string
   ) =>
     authControllerBindPhoneAndLogin({
-      body: { tempToken, phone, code },
+      body: { tempToken, phone, code } as any,
     }).then((r) => r.data),
 
   bindPhone: (phone: string, code: string) =>
-    authControllerBindPhone({ body: { phone, code } }).then((r) => r.data),
+    authControllerBindPhone({ body: { phone, code } as any }).then((r) => r.data),
 
   sendUnbindPhoneCode: () =>
     authControllerSendUnbindPhoneCode().then((r) => r.data),
 
   verifyUnbindPhoneCode: (code: string) =>
-    authControllerVerifyUnbindPhoneCode({ body: { code } }).then(
+    authControllerVerifyUnbindPhoneCode({ body: { code } as any }).then(
       (r) => r.data
     ),
 
   rebindPhone: (phone: string, code: string, token: string) =>
-    authControllerRebindPhone({ body: { phone, code, token } }).then(
+    authControllerRebindPhone({ body: { phone, code, token } as any }).then(
       (r) => r.data
     ),
 
   checkField: (data: { username?: string; email?: string; phone?: string }) =>
-    authControllerCheckFieldUniqueness({ body: data }).then((r) => r.data),
+    authControllerCheckFieldUniqueness({ body: data as any }).then((r) => r.data),
 
   verifyEmailAndRegisterPhone: (
     email: string,
@@ -194,7 +194,7 @@ export const authApi = {
         username: registerData.username,
         password: registerData.password,
         nickname: registerData.nickname,
-      },
+      } as any,
     }).then((r) => r.data),
 
   getWechatAuthUrl: (params: {
@@ -203,13 +203,15 @@ export const authApi = {
     purpose: string;
   }) => authControllerGetWechatAuthUrl({ query: params }).then((r) => r.data),
 
-  wechatCallback: (code: string, state: string) =>
-    authControllerWechatCallback({ query: { code, state } }).then(
+  // wechatCallback now has no query/body params — code & state must be sent via query string on the redirect URL itself
+  wechatCallback: () =>
+    authControllerWechatCallback().then(
       (r) => r.data
     ),
 
+  // bindWechat SDK type has body?: never; body cast retained as API still accepts it at runtime
   bindWechat: (code: string, state: string) =>
-    authControllerBindWechat({ body: { code, state } }).then((r) => r.data),
+    authControllerBindWechat({ body: { code, state } } as any).then((r) => r.data),
 
   unbindWechat: () => authControllerUnbindWechat().then((r) => r.data),
 };
