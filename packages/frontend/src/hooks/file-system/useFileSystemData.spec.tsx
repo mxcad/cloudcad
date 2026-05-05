@@ -8,9 +8,6 @@ import { renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useFileSystemData } from './useFileSystemData';
 import { projectApi } from '@/services/projectApi';
-import { nodeApi } from '@/services/nodeApi';
-import { searchApi } from '@/services/searchApi';
-import { projectTrashApi } from '@/services/projectTrashApi';
 
 vi.mock('@/services/projectApi');
 vi.mock('@/services/nodeApi');

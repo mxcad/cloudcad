@@ -11,51 +11,76 @@
 ///////////////////////////////////////////////////////////////////////////////
 // @deprecated Use @/api-sdk instead.
 
-import { getApiClient } from './apiClient';
 import type {
   CreateUserDto,
   UpdateUserDto,
   ChangePasswordDto,
   DeactivateAccountDto,
-  OperationMethods,
 } from '../types/api-client';
+import { getApiClient } from './apiClient';
+import {
+  usersControllerFindAll,
+  usersControllerSearchUsers,
+  usersControllerSearchByEmail,
+  usersControllerCreate,
+  usersControllerUpdate,
+  usersControllerRemove,
+  usersControllerDeleteImmediately,
+  usersControllerRestore,
+  usersControllerRestoreAccount,
+  usersControllerGetProfile,
+  usersControllerUpdateProfile,
+  usersControllerChangePassword,
+  usersControllerGetDashboardStats,
+  usersControllerDeactivateAccount,
+} from '@/api-sdk';
 
 export const usersApi = {
-  list: (params?: Parameters<OperationMethods['UsersController_findAll']>[0]) =>
-    getApiClient().UsersController_findAll(params || undefined),
+  list: (params?: Record<string, unknown>) =>
+    usersControllerFindAll(params ? { query: params } : undefined).then(
+      (r) => r.data
+    ),
 
-  search: (
-    params?: Parameters<OperationMethods['UsersController_searchUsers']>[0]
-  ) => getApiClient().UsersController_searchUsers(params || undefined),
+  search: (params?: Record<string, unknown>) =>
+    usersControllerSearchUsers(params ? { query: params } : undefined).then(
+      (r) => r.data
+    ),
 
   searchByEmail: (email: string) =>
-    getApiClient().UsersController_searchByEmail({ email }),
+    usersControllerSearchByEmail({ query: { email } }).then((r) => r.data),
 
   create: (data: CreateUserDto) =>
-    getApiClient().UsersController_create(null, data),
+    usersControllerCreate({ body: data }).then((r) => r.data),
 
   update: (id: string, data: UpdateUserDto) =>
-    getApiClient().UsersController_update({ id }, data),
+    usersControllerUpdate({ path: { id }, body: data }).then((r) => r.data),
 
-  delete: (id: string) => getApiClient().UsersController_remove({ id }),
+  delete: (id: string) =>
+    usersControllerRemove({ path: { id } }).then((r) => r.data),
 
-  deleteImmediately: (id: string) => getApiClient().UsersController_deleteImmediately({ id }),
+  deleteImmediately: (id: string) =>
+    usersControllerDeleteImmediately({ path: { id } }).then((r) => r.data),
 
-  restore: (id: string) => getApiClient().UsersController_restore({ id }),
-  restoreAccount: (data: { token: string }) => getApiClient().UsersController_restoreAccount(null, data as any),
+  restore: (id: string) =>
+    usersControllerRestore({ path: { id } }).then((r) => r.data),
 
-  getProfile: () => getApiClient().UsersController_getProfile(),
+  restoreAccount: (data: { token: string }) =>
+    usersControllerRestoreAccount({ body: data }).then((r) => r.data),
+
+  getProfile: () =>
+    usersControllerGetProfile().then((r) => r.data),
 
   updateProfile: (data: UpdateUserDto) =>
-    getApiClient().UsersController_updateProfile(null, data),
+    usersControllerUpdateProfile({ body: data }).then((r) => r.data),
 
   changePassword: (data: ChangePasswordDto) =>
-    getApiClient().UsersController_changePassword(null, data),
+    usersControllerChangePassword({ body: data }).then((r) => r.data),
 
-  getDashboardStats: () => getApiClient().UsersController_getDashboardStats(),
+  getDashboardStats: () =>
+    usersControllerGetDashboardStats().then((r) => r.data),
 
   deactivateAccount: (data: DeactivateAccountDto) =>
-    getApiClient().UsersController_deactivateAccount(null, data),
+    usersControllerDeactivateAccount({ body: data }).then((r) => r.data),
 
   getWechatDeactivateQr: () =>
     getApiClient().get<{ token: string; qrUrl: string }>(

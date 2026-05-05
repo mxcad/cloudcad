@@ -12,7 +12,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
-import { nodeApi } from '../../services/nodeApi';
+import { fileSystemControllerCopyNode, fileSystemControllerMoveNode } from '@/api-sdk';
 import { useNotification } from '../../contexts/NotificationContext';
 
 export const useFileSystemDragDrop = () => {
@@ -69,9 +69,9 @@ export const useFileSystemDragDrop = () => {
 
       try {
         if (isCopy) {
-          await nodeApi.copyNode(draggedNodeId, targetNode.id);
+          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } as any });
         } else {
-          await nodeApi.moveNode(draggedNodeId, targetNode.id);
+          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } as any });
         }
         onRefresh();
       } catch (error) {

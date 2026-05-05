@@ -15,8 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
-import { projectPermissionApi } from '@/services/projectPermissionApi';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetPersonalSpace, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
 // TODO: Replace libraryApi.getDrawingNode/getBlockNode and publicFileApi with SDK when backend adds endpoints or upload logic is migrated
 import { libraryApi } from '../services/libraryApi';
 import { publicFileApi } from '../services/publicFileApi';
@@ -242,17 +241,10 @@ export const CADEditorDirect: React.FC = () => {
 
     const checkPermissions = async () => {
       try {
-        const { projectPermissionApi: ppi } = await import('@/services/projectPermissionApi');
         const [saveRes, exportRes, externalRefRes] = await Promise.all([
-          ppi.checkPermission(urlProjectId, ProjectPermission.CAD_SAVE),
-          ppi.checkPermission(
-            urlProjectId,
-            ProjectPermission.FILE_DOWNLOAD
-          ),
-          ppi.checkPermission(
-            urlProjectId,
-            ProjectPermission.CAD_EXTERNAL_REFERENCE
-          ),
+          fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.CAD_SAVE } }),
+          fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.FILE_DOWNLOAD } }),
+          fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.CAD_EXTERNAL_REFERENCE } }),
         ]);
         setCanSave(saveRes.data?.hasPermission || false);
         setCanExport(exportRes.data?.hasPermission || false);

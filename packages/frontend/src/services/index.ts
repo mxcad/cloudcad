@@ -15,22 +15,12 @@
 export { authApi } from './authApi';
 export { usersApi } from './usersApi';
 export type { ProjectFilterType } from './projectApi';
-export { trashApi } from './trashApi';
 export { filesApi } from './filesApi';
 export { fontsApi } from './fontsApi';
 export { rolesApi } from './rolesApi';
-export { mxcadApi } from './mxcadApi';
 export { versionControlApi } from './versionControlApi';
 export { auditApi } from './auditApi';
-export { cacheApi } from './cacheApi';
 export { publicFileApi } from './publicFileApi';
 
 // 新的模块化项目 API（重构后推荐使用）
 export { projectApi } from './projectApi';
-export { nodeApi } from './nodeApi';
-export { projectMemberApi } from './projectMemberApi';
-export { projectPermissionApi } from './projectPermissionApi';
-export { projectTrashApi } from './projectTrashApi';
-export { searchApi } from './searchApi';
-export { mxcadPermissionApi } from './mxcadPermissionApi';
-export { mxcadSaveApi } from './mxcadSaveApi';

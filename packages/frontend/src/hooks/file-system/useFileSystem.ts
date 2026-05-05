@@ -35,7 +35,6 @@ import { useFileSystemNavigation } from './useFileSystemNavigation';
 import { useFileSystemSearch } from './useFileSystemSearch';
 import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
-import { trashApi } from '@/services/trashApi';
 import type { ProjectFilterType } from '@/services/projectApi';
 
 interface UseFileSystemOptions {
@@ -461,6 +460,5 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     isProjectTrashView,
     setIsProjectTrashView,
     handleToggleProjectTrashView,
-    trashApi,
   };
 };

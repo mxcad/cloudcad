@@ -7,7 +7,6 @@ import {
   usersControllerDeleteImmediately,
   usersControllerRestore,
 } from '@/api-sdk';
-import { userCleanupApi } from '@/services/userCleanupApi';
 import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 
 type RoleDto = {

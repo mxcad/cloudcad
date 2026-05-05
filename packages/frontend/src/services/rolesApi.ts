@@ -11,47 +11,75 @@
 ///////////////////////////////////////////////////////////////////////////////
 // @deprecated Use @/api-sdk instead.
 
-import { getApiClient } from './apiClient';
 import type { CreateRoleDto, UpdateRoleDto } from '../types/api-client';
+import {
+  rolesControllerFindAll,
+  rolesControllerFindOne,
+  rolesControllerCreate,
+  rolesControllerUpdate,
+  rolesControllerRemove,
+  rolesControllerGetRolePermissions,
+  rolesControllerAddPermissions,
+  rolesControllerRemovePermissions,
+  rolesControllerGetAllProjectRoles,
+  rolesControllerGetSystemProjectRoles,
+  rolesControllerGetProjectRolesByProject,
+  rolesControllerCreateProjectRole,
+  rolesControllerUpdateProjectRole,
+  rolesControllerDeleteProjectRole,
+  rolesControllerGetProjectRolePermissions,
+  rolesControllerAddProjectRolePermissions,
+  rolesControllerRemoveProjectRolePermissions,
+} from '@/api-sdk';
 
-// 系统角色 API
 export const rolesApi = {
-  list: () => getApiClient().RolesController_findAll(),
+  list: () => rolesControllerFindAll().then((r) => r.data),
 
-  get: (id: string) => getApiClient().RolesController_findOne({ id }),
+  get: (id: string) =>
+    rolesControllerFindOne({ path: { id } }).then((r) => r.data),
 
   create: (data: CreateRoleDto) =>
-    getApiClient().RolesController_create(null, data),
+    rolesControllerCreate({ body: data }).then((r) => r.data),
 
   update: (id: string, data: UpdateRoleDto) =>
-    getApiClient().RolesController_update({ id }, data),
+    rolesControllerUpdate({ path: { id }, body: data }).then((r) => r.data),
 
-  delete: (id: string) => getApiClient().RolesController_remove({ id }),
+  delete: (id: string) =>
+    rolesControllerRemove({ path: { id } }).then((r) => r.data),
 
   getPermissions: (id: string) =>
-    getApiClient().RolesController_getRolePermissions({ id }),
+    rolesControllerGetRolePermissions({ path: { id } }).then((r) => r.data),
 
   addPermissions: (id: string, permissions: string[]) =>
-    getApiClient().RolesController_addPermissions({ id }, { permissions }),
+    rolesControllerAddPermissions({ path: { id }, body: { permissions } }).then(
+      (r) => r.data
+    ),
 
   removePermissions: (id: string, permissions: string[]) =>
-    getApiClient().RolesController_removePermissions({ id }, { permissions }),
+    rolesControllerRemovePermissions({
+      path: { id },
+      body: { permissions },
+    }).then((r) => r.data),
 };
 
 export const projectRolesApi = {
-  list: () => getApiClient().RolesController_getAllProjectRoles(),
+  list: () => rolesControllerGetAllProjectRoles().then((r) => r.data),
 
-  getSystemRoles: () => getApiClient().RolesController_getSystemProjectRoles(),
+  getSystemRoles: () =>
+    rolesControllerGetSystemProjectRoles().then((r) => r.data),
 
   getByProject: (projectId: string) =>
-    getApiClient().RolesController_getProjectRolesByProject({ projectId }),
+    rolesControllerGetProjectRolesByProject({ path: { projectId } }).then(
+      (r) => r.data
+    ),
 
   create: (data: {
     projectId?: string;
     name: string;
     description?: string;
     permissions: string[];
-  }) => getApiClient().RolesController_createProjectRole(null, data),
+  }) =>
+    rolesControllerCreateProjectRole({ body: data }).then((r) => r.data),
 
   update: (
     id: string,
@@ -60,23 +88,28 @@ export const projectRolesApi = {
       description?: string;
       permissions?: string[];
     }
-  ) => getApiClient().RolesController_updateProjectRole({ id }, data),
+  ) =>
+    rolesControllerUpdateProjectRole({ path: { id }, body: data }).then(
+      (r) => r.data
+    ),
 
   delete: (id: string) =>
-    getApiClient().RolesController_deleteProjectRole({ id }),
+    rolesControllerDeleteProjectRole({ path: { id } }).then((r) => r.data),
 
   getPermissions: (id: string) =>
-    getApiClient().RolesController_getProjectRolePermissions({ id }),
+    rolesControllerGetProjectRolePermissions({ path: { id } }).then(
+      (r) => r.data
+    ),
 
   addPermissions: (id: string, permissions: string[]) =>
-    getApiClient().RolesController_addProjectRolePermissions(
-      { id },
-      { permissions }
-    ),
+    rolesControllerAddProjectRolePermissions({
+      path: { id },
+      body: { permissions },
+    }).then((r) => r.data),
 
   removePermissions: (id: string, permissions: string[]) =>
-    getApiClient().RolesController_removeProjectRolePermissions(
-      { id },
-      { permissions }
-    ),
+    rolesControllerRemoveProjectRolePermissions({
+      path: { id },
+      body: { permissions },
+    }).then((r) => r.data),
 };

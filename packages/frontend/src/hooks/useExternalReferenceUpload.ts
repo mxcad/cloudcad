@@ -10,10 +10,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference } from '@/api-sdk';
+import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference, mxCadControllerUploadExtReferenceImage, mxCadControllerUploadExtReferenceDwg } from '@/api-sdk';
 import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference } from '@/api-sdk';
-// TODO: Replace with SDK when upload functions accept direct FormData — keep old imports for upload methods
-import { mxcadApi } from '../services/mxcadApi';
 import { publicFileApi } from '../services/publicFileApi';
 import type {
   PreloadingData,
@@ -153,10 +151,12 @@ export const useExternalReferenceUpload = (
         let result = null;
         if (isLoggedIn) {
           // 已登录用户使用 SDK
-          result = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } as any }) as { exists?: boolean } | null;
+          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } as any });
+          result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
           // 未登录用户使用 SDK
-          result = await publicFileControllerCheckExtReference({ query: { srcHash: id, fileName } }) as { exists?: boolean } | null;
+          const sdkResult = await publicFileControllerCheckExtReference({ query: { srcHash: id, fileName } });
+          result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         }
         console.debug(
           `[checkReferenceExists] 响应: ${fileName}`,
@@ -406,80 +406,34 @@ export const useExternalReferenceUpload = (
         if (fileInfo.type === 'img') {
           if (isLoggedIn) {
             // 图片外部参照：使用图片上传接口（已登录用户）
-            await mxcadApi.uploadExtReferenceImage(
-              fileInfo.source,
-              config.nodeId || '',
-              fileInfo.name,
-              undefined,
-              (progressEvent) => {
-                if (progressEvent.total) {
-                  const progress =
-                    (progressEvent.loaded / progressEvent.total) * 100;
-                  setFiles((prevFiles) =>
-                    prevFiles.map((f) =>
-                      f.name === fileInfo.name ? { ...f, progress } : f
-                    )
-                  );
-                }
-              }
-            );
+            const formData = new FormData();
+            formData.append('file', fileInfo.source);
+            formData.append('ext_ref_file', fileInfo.name);
+            if (config.nodeId) formData.append('nodeId', config.nodeId);
+            await mxCadControllerUploadExtReferenceImage({ body: formData as any });
           } else {
             // 图片外部参照：使用公开上传接口（未登录用户）
             await publicFileApi.uploadExtReference(
               fileInfo.source,
               id,
               fileInfo.name,
-              undefined,
-              (progressEvent) => {
-                if (progressEvent.total) {
-                  const progress =
-                    (progressEvent.loaded / progressEvent.total) * 100;
-                  setFiles((prevFiles) =>
-                    prevFiles.map((f) =>
-                      f.name === fileInfo.name ? { ...f, progress } : f
-                    )
-                  );
-                }
-              }
+              undefined
             );
           }
         } else {
           if (isLoggedIn) {
             // DWG 外部参照：使用 DWG 外部参照上传接口（已登录用户）
-            await mxcadApi.uploadExtReferenceDwg(
-              fileInfo.source,
-              config.nodeId || '',
-              fileInfo.name,
-              (progressEvent) => {
-                if (progressEvent.total) {
-                  const progress =
-                    (progressEvent.loaded / progressEvent.total) * 100;
-                  setFiles((prevFiles) =>
-                    prevFiles.map((f) =>
-                      f.name === fileInfo.name ? { ...f, progress } : f
-                    )
-                  );
-                }
-              }
-            );
+            const formData = new FormData();
+            formData.append('file', fileInfo.source);
+            formData.append('ext_ref_file', fileInfo.name);
+            await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as any });
           } else {
             // DWG 外部参照：使用公开上传接口（未登录用户）
             await publicFileApi.uploadExtReference(
               fileInfo.source,
               id,
               fileInfo.name,
-              undefined,
-              (progressEvent) => {
-                if (progressEvent.total) {
-                  const progress =
-                    (progressEvent.loaded / progressEvent.total) * 100;
-                  setFiles((prevFiles) =>
-                    prevFiles.map((f) =>
-                      f.name === fileInfo.name ? { ...f, progress } : f
-                    )
-                  );
-                }
-              }
+              undefined
             );
           }
         }

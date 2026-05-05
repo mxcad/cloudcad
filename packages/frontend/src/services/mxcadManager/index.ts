@@ -10,9 +10,51 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { MxCADView } from 'mxcad-app';
+/**
+ * MxCAD Manager — 组装层
+ *
+ * 此模块作为 mxcadManager 的统一入口，从各子模块重新导出所有公共 API，
+ * 并包含未被子模块覆盖的核心逻辑：MxCADManager 类、命令处理、文件上传等。
+ */
 
-import { mxCadControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckThumbnail, mxCadControllerUploadThumbnail, mxCadControllerCheckDuplicateFile, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
+// ==================== 从子模块重新导出 ====================
+
+export {
+  type CurrentFileInfo,
+  type PendingImage,
+  type UploadTargetInfo,
+  type FileReadyInfo,
+  CSS_CLASSES,
+  DEFAULT_MESSAGES,
+  FILE_UPLOAD_CONFIG,
+  FILE_OPEN_RETRY_CONFIG,
+  THUMBNAIL_CONFIG,
+} from './mxcadTypes';
+
+export { saveMxwebToNode, createSaveFormData, showSaveConfirmDialog } from './mxcadSave';
+export type { SaveMxwebParams } from './mxcadSave';
+
+export { checkThumbnail, uploadThumbnail, dataURLtoBlob, generateThumbnail } from './mxcadThumbnail';
+
+export { uploadExtReferenceImage, checkExtReferenceImages, resolveExtReferenceUrl } from './mxcadExtRef';
+export type { ExtRefUploadParams, ExtRefUploadResult } from './mxcadExtRef';
+
+export { checkDuplicateFile, showDuplicateFileDialog } from './mxcadCheck';
+export type { DuplicateCheckResult } from './mxcadCheck';
+
+// ==================== 从子模块导入（内部使用） ====================
+
+import { CSS_CLASSES, DEFAULT_MESSAGES, FILE_UPLOAD_CONFIG, FILE_OPEN_RETRY_CONFIG, THUMBNAIL_CONFIG } from './mxcadTypes';
+import type { CurrentFileInfo, PendingImage } from './mxcadTypes';
+import { showSaveConfirmDialog as _showSaveConfirmDialog } from './mxcadSave';
+import { showDuplicateFileDialog as _showDuplicateFileDialog } from './mxcadCheck';
+import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
+
+
+// ==================== 外部依赖 ====================
+
+import { MxCADView } from 'mxcad-app';
+import { mxCadControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckDuplicateFile, mxCadControllerCheckThumbnail, mxCadControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
 import { filesApi } from '../filesApi';
 import { projectApi } from '../projectApi';
 import { publicFileApi } from '../publicFileApi';
@@ -26,6 +68,7 @@ import { globalShowToast } from '../../contexts/NotificationContext';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../../utils/loadingUtils';
+
 
 // ==================== 辅助函数 ====================
 
@@ -47,52 +90,6 @@ function formatEditorFileName(fileName: string): string {
   return `${loginPrefix} - ${fileName}`;
 }
 
-// ==================== 配置常量 ====================
-
-/**
- * CSS 类名配置
- */
-const CSS_CLASSES = {
-  GLOBAL_CONTAINER: 'mxcad-global-container',
-  LOADING_OVERLAY: 'mxcad-loading-overlay',
-  LOADING_SPINNER: 'mxcad-loading-spinner',
-  LOADING_MESSAGE: 'mxcad-loading-message',
-};
-
-/**
- * 默认消息文本
- */
-const DEFAULT_MESSAGES = {
-  LOADING: '正在加载...',
-  CALCULATING_HASH: '正在计算文件哈希...',
-  UPLOADING: '正在上传',
-  OPENING_FILE: '正在打开文件...',
-};
-
-/**
- * 文件上传配置
- */
-const FILE_UPLOAD_CONFIG = {
-  FILE_PICKER_ID: 'mxcad-file-picker',
-  ALLOWED_EXTENSIONS: '.dwg,.dxf,.dwt,.mxweb,.mxwbe',
-};
-
-/**
- * 文件重试配置
- */
-const FILE_OPEN_RETRY_CONFIG = {
-  MAX_RETRIES: 3,
-  RETRY_DELAY_MS: 1000,
-};
-
-/**
- * 缩略图配置
- */
-const THUMBNAIL_CONFIG = {
-  MIN_DRAWING_SIZE: 100,
-  TARGET_SIZE: 200,
-};
-
 // ==================== 全局状态 ====================
 
 // 当前打开的文件信息（用于返回逻辑）
@@ -113,14 +110,6 @@ let cachedPersonalSpaceId: string | null = null;
 
 // 文档修改状态跟踪
 let documentModified = false;
-
-// 待上传的图片列表
-interface PendingImage {
-  url: string;
-  fileName: string;
-  entity: any; // MxCAD 实体对象
-  file?: File; // 下载的文件对象
-}
 
 let pendingImages: PendingImage[] = [];
 
@@ -395,7 +384,6 @@ export async function checkAndConfirmUnsavedChanges(): Promise<boolean> {
 
   return true;
 }
-
 /**
  * 设置私人空间 ID 缓存（由 CADEditorDirect 组件调用）
  */
@@ -458,7 +446,6 @@ export function refreshFileName() {
     console.error('[refreshFileName] 刷新文件名失败:', error);
   }
 }
-
 // ==================== 导航相关常量 ====================
 
 /** 导航路径常量 */
@@ -586,396 +573,6 @@ const getFilePicker = (): HTMLInputElement => {
   return picker;
 };
 
-// ==================== 重复文件确认弹框 ====================
-
-/**
- * 显示重复文件确认弹框
- * @param filename 文件名
- * @returns Promise<'open' | 'upload' | null> 用户选择：打开已有文件、继续上传、或取消
- */
-const showDuplicateFileDialog = (
-  filename: string
-): Promise<'open' | 'upload' | null> => {
-  return new Promise((resolve) => {
-    const dialogId = 'mxcad-duplicate-file-dialog';
-    let dialog = document.getElementById(dialogId) as HTMLElement;
-
-    if (dialog) {
-      document.body.removeChild(dialog);
-    }
-
-    dialog = document.createElement('div');
-    dialog.id = dialogId;
-    dialog.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100000;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-
-    dialog.innerHTML = `
-      <div style="
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        width: 90%;
-        max-width: 450px;
-        overflow: hidden;
-      ">
-        <div style="
-          padding: 16px 20px;
-          border-bottom: 1px solid #e5e7eb;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        ">
-          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">发现相同文件</h3>
-          <button id="mxcad-duplicate-dialog-close" style="
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            color: #9ca3af;
-          ">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div style="padding: 20px;">
-          <div style="
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 16px;
-          ">
-            <div style="
-              width: 40px;
-              height: 40px;
-              border-radius: 50%;
-              background: #fef3c7;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              flex-shrink: 0;
-            ">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
-                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-              </svg>
-            </div>
-            <div>
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #374151;">
-                当前目录中已存在相同的文件：
-              </p>
-              <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937; word-break: break-all;">
-                ${filename}
-              </p>
-            </div>
-          </div>
-          <p style="margin: 0; font-size: 13px; color: #6b7280;">
-            您可以选择直接打开已存在的文件，或上传新文件。
-          </p>
-        </div>
-        <div style="
-          padding: 16px 20px;
-          background: #f9fafb;
-          border-top: 1px solid #e5e7eb;
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-        ">
-          <button id="mxcad-duplicate-dialog-cancel" style="
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: transparent;
-            color: #6b7280;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-          ">
-            取消
-          </button>
-          <button id="mxcad-duplicate-dialog-upload" style="
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: #6b7280;
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-          ">
-            上传新文件
-          </button>
-          <button id="mxcad-duplicate-dialog-open" style="
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: #4f46e5;
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-          ">
-            打开已有文件
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialog);
-
-    const closeBtn = dialog.querySelector('#mxcad-duplicate-dialog-close');
-    const cancelBtn = dialog.querySelector('#mxcad-duplicate-dialog-cancel');
-    const uploadBtn = dialog.querySelector('#mxcad-duplicate-dialog-upload');
-    const openBtn = dialog.querySelector('#mxcad-duplicate-dialog-open');
-
-    const cleanup = () => {
-      document.body.removeChild(dialog);
-    };
-
-    closeBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve(null);
-    });
-
-    cancelBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve(null);
-    });
-
-    uploadBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve('upload');
-    });
-
-    openBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve('open');
-    });
-
-    // 点击背景关闭
-    dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) {
-        cleanup();
-        resolve(null);
-      }
-    });
-  });
-};
-
-// ==================== 保存确认弹框 ====================
-
-/**
- * 显示保存确认弹框，获取用户输入的提交信息
- * @returns Promise<string | null> 用户输入的提交信息，取消返回 null
- */
-const showSaveConfirmDialog = (): Promise<string | null> => {
-  return new Promise((resolve) => {
-    // 创建弹框容器
-    const dialogId = 'mxcad-save-confirm-dialog';
-    let dialog = document.getElementById(dialogId) as HTMLElement;
-
-    if (dialog) {
-      document.body.removeChild(dialog);
-    }
-
-    // 获取当前主题
-    const currentTheme =
-      document.documentElement.getAttribute('data-theme') || 'light';
-    const isDark = currentTheme === 'dark';
-
-    dialog = document.createElement('div');
-    dialog.id = dialogId;
-    dialog.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--bg-overlay, ${isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.5)'});
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100000;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-
-    dialog.innerHTML = `
-      <div style="
-        background: var(--bg-elevated, ${isDark ? '#2a2f35' : '#ffffff'});
-        border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-        border-radius: 12px;
-        box-shadow: var(--shadow-lg, 0 10px 15px ${isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)'});
-        width: 90%;
-        max-width: 450px;
-        overflow: hidden;
-      ">
-        <div style="
-          padding: 16px 20px;
-          border-bottom: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        ">
-          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});">保存文件</h3>
-          <button id="mxcad-save-dialog-close" style="
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            color: var(--text-muted, ${isDark ? '#5a6a7a' : '#94a3b8'});
-            transition: color 0.2s ease;
-          " onmouseover="this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.color='var(--text-muted, ${isDark ? '#5a6a7a' : '#94a3b8'})'">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div style="padding: 20px;">
-          <label style="
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'});
-            margin-bottom: 8px;
-          ">
-            修改说明（可选）
-          </label>
-          <textarea id="mxcad-save-dialog-input" placeholder="请输入本次修改的内容说明..." style="
-            width: 100%;
-            height: 100px;
-            padding: 12px;
-            background: var(--bg-secondary, ${isDark ? '#1a1d21' : '#ffffff'});
-            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-            border-radius: 8px;
-            font-size: 14px;
-            color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});
-            resize: vertical;
-            box-sizing: border-box;
-            font-family: inherit;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-          " onfocus="this.style.borderColor='var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'})'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.2)'" onblur="this.style.borderColor='var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'})'; this.style.boxShadow='none'"></textarea>
-          <p style="
-            margin: 8px 0 0 0;
-            font-size: 12px;
-            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
-          ">
-            此说明将记录在版本历史中，方便后续查看修改内容。
-          </p>
-        </div>
-        <div style="
-          padding: 16px 20px;
-          background: var(--bg-secondary, ${isDark ? '#1a1d21' : '#f8fafc'});
-          border-top: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-        ">
-          <button id="mxcad-save-dialog-cancel" style="
-            padding: 10px 20px;
-            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-            border-radius: 8px;
-            background: transparent;
-            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'; this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'})'">
-            取消
-          </button>
-          <button id="mxcad-save-dialog-confirm" style="
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#a5b4fc' : '#4f46e5'}), var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'}));
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
-          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})${isDark ? ', 0 0 20px rgba(99, 102, 241, 0.3)' : ''}'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
-            保存
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialog);
-
-    const inputEl = dialog.querySelector(
-      '#mxcad-save-dialog-input'
-    ) as HTMLTextAreaElement;
-    const closeBtn = dialog.querySelector(
-      '#mxcad-save-dialog-close'
-    ) as HTMLElement;
-    const cancelBtn = dialog.querySelector(
-      '#mxcad-save-dialog-cancel'
-    ) as HTMLElement;
-    const confirmBtn = dialog.querySelector(
-      '#mxcad-save-dialog-confirm'
-    ) as HTMLElement;
-
-    const cleanup = () => {
-      if (dialog && dialog.parentNode) {
-        dialog.parentNode.removeChild(dialog);
-      }
-    };
-
-    const handleConfirm = () => {
-      const message = inputEl.value.trim();
-      cleanup();
-      resolve(message || '');
-    };
-
-    const handleCancel = () => {
-      cleanup();
-      resolve(null);
-    };
-
-    closeBtn.addEventListener('click', handleCancel);
-    cancelBtn.addEventListener('click', handleCancel);
-    confirmBtn.addEventListener('click', handleConfirm);
-
-    // 点击背景关闭
-    dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) {
-        handleCancel();
-      }
-    });
-
-    // ESC 键关闭
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        document.removeEventListener('keydown', handleKeyDown);
-        handleCancel();
-      }
-      if (e.key === 'Enter' && e.ctrlKey) {
-        document.removeEventListener('keydown', handleKeyDown);
-        handleConfirm();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-
-    // 自动聚焦输入框
-    setTimeout(() => inputEl.focus(), 100);
-  });
-};
-
-// ==================== openFile 命令辅助函数 ====================
 
 /**
  * 获取上传目标节点 ID
@@ -1568,7 +1165,7 @@ async function handleFileSelection(
       hideGlobalLoading();
 
       // 显示确认对话框
-      const userChoice = await showDuplicateFileDialog(file.name);
+      const userChoice = await _showDuplicateFileDialog(file.name);
 
       if (userChoice === 'open') {
         // 用户选择打开已有文件
@@ -1711,7 +1308,6 @@ const openFile = async (noCache?: boolean) => {
 MxFun.addCommand('openFile', ()=> openFile());
 MxFun.addCommand('openFile_noCache', ()=> openFile(true));
 
-// ==================== Mx_NewFile 命令 ====================
 
 /**
  * Mx_NewFile 命令处理函数：新建文件
@@ -1774,7 +1370,6 @@ const handleNewFileCommand = async () => {
   }
 };
 
-// ==================== exportFile 命令 ====================
 
 async function triggerSaveAs() {
   if (!isAuthenticated()) {
@@ -1798,7 +1393,6 @@ MxFun.addCommand('exportFile', async () => {
   await triggerSaveAs();
 });
 
-// ==================== Mx_ShowSidebar 命令 ====================
 
 /**
  * Mx_ShowSidebar 命令：显示图库侧边栏
@@ -1824,7 +1418,6 @@ MxFun.addCommand('Mx_ShowCollaborate', () => {
   );
 });
 
-// ==================== Mx_Save 命令 ====================
 document.addEventListener(
   'keydown',
   (e) => {
@@ -1977,7 +1570,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   }
 
   const { fileId, name } = currentFileInfo!;
-  const commitMessage = await showSaveConfirmDialog();
+  const commitMessage = await _showSaveConfirmDialog();
   if (commitMessage === null) {
     return;
   }
@@ -2999,7 +2592,6 @@ export class MxCADManager {
 // 导出单例实例
 export const mxcadManager = MxCADManager.getInstance();
 
-// ==================== Mx_InsertImageWithUpload 命令 ====================
 
 /**
  * Mx_InsertImageWithUpload 命令：插入图片并记录待上传信息
@@ -3096,7 +2688,6 @@ export async function processPendingImages(): Promise<void> {
   pendingImages = [];
 }
 
-// ==================== 辅助函数 ====================
 
 /**
  * 获取私人空间 ID

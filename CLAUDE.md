@@ -73,3 +73,13 @@ pnpm build                       # Vite build
 ## Workshop Setup
 
 Root `tsconfig.json` uses `composite: true` + `incremental: true`. Each package overrides to `composite: false`.
+
+## ⚡ 三阶段工作流 (MANDATORY)
+
+**每次对话开始，AI 必须先调用 `Skill` tool 加载 `cloudcad-workflow` skill。**
+
+入口命令:
+- `/workflow status` — 看当前状态
+- `/workflow dispatch TXX` — 生成 agent 派发提示词
+- `/workflow review` — Phase 完成时生成审查提示词
+- `/workflow archive` — 归档已完成 Phase

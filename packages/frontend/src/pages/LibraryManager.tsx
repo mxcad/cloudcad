@@ -30,7 +30,7 @@ import {
   fileSystemControllerUpdateStorageQuota,
 } from '@/api-sdk';
 import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
-import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
+import MxCadUppyUploader, { MxCadUppyUploaderRef } from '../components/MxCadUppyUploader';
 import {
   EmptyFolderIcon,
   RefreshIcon,
@@ -49,7 +49,7 @@ import { HardDrive, Save, Loader2 } from 'lucide-react';
  *
  * 设计思想：
  * - 公共资源库是一个特殊的全局项目，不是某个人的资源库
- * - 使用与项目管理相同的 UI 和上传逻辑（MxCadUploader）
+ * - 使用与项目管理相同的 UI 和上传逻辑（MxCadUppyUploader）
  * - 浏览/下载免登录，上传/删除需要管理员权限
  * - 无版本管理、无回收站（删除即永久删除）
  *
@@ -216,8 +216,8 @@ export const LibraryManager: React.FC = () => {
     showConfirm,
   });
 
-  // 上传组件 ref - 完全复用项目管理的 MxCadUploader
-  const uploaderRef = useRef<MxCadUploaderRef>(null);
+  // 上传组件 ref - 完全复用项目管理的 MxCadUppyUploader
+  const uploaderRef = useRef<MxCadUppyUploaderRef>(null);
 
   // 批量导入对话框状态
   const [showDirectoryImport, setShowDirectoryImport] = useState(false);
@@ -572,8 +572,8 @@ export const LibraryManager: React.FC = () => {
                   <FolderPlus size={18} />
                   批量导入
                 </Button>
-                {/* 使用 MxCadUploader 组件，完全复用项目管理的上传逻辑 */}
-                <MxCadUploader
+                {/* 使用 MxCadUppyUploader 组件，完全复用项目管理的上传逻辑 */}
+                <MxCadUppyUploader
                   ref={uploaderRef}
                   nodeId={currentNode?.id || libraryId || undefined}
                   onSuccess={handleUploadSuccess}

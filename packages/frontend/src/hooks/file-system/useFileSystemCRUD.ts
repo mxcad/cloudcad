@@ -21,7 +21,7 @@ import {
   fileSystemControllerRestoreTrashItems,
   fileSystemControllerClearTrash,
 } from '@/api-sdk';
-import { trashApi } from '@/services/trashApi';
+
 import { FileSystemNode } from '@/types/filesystem';
 import { handleError } from '@/utils/errorHandler';
 
@@ -321,7 +321,7 @@ export const useFileSystemCRUD = ({
       `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
       async () => {
         try {
-          await trashApi.restoreItems(Array.from(selectedNodes));
+          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) } as any });
           showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
           clearSelection();
           loadData();
@@ -487,7 +487,7 @@ export const useFileSystemCRUD = ({
       '确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。',
       async () => {
         try {
-          await trashApi.clear();
+          await fileSystemControllerClearTrash();
           showToast('回收站已清空', 'success');
           loadData();
         } catch (error) {

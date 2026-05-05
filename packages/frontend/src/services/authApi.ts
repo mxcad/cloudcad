@@ -11,7 +11,6 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { getApiClient } from './apiClient';
 import type {
   LoginDto,
   RegisterDto,
@@ -19,6 +18,38 @@ import type {
   ResetPasswordDto,
   ForgotPasswordDto,
 } from '../types/api-client';
+import {
+  authControllerLogin,
+  authControllerRegister,
+  authControllerRefreshToken,
+  authControllerLogout,
+  authControllerGetProfile,
+  authControllerResendVerification,
+  authControllerForgotPassword,
+  authControllerResetPassword,
+  authControllerSendBindEmailCode,
+  authControllerVerifyBindEmail,
+  authControllerSendUnbindEmailCode,
+  authControllerVerifyUnbindEmailCode,
+  authControllerRebindEmail,
+  authControllerSendSmsCode,
+  authControllerVerifySmsCode,
+  authControllerLoginByPhone,
+  authControllerRegisterByPhone,
+  authControllerVerifyPhone,
+  authControllerBindEmailAndLogin,
+  authControllerBindPhoneAndLogin,
+  authControllerBindPhone,
+  authControllerSendUnbindPhoneCode,
+  authControllerVerifyUnbindPhoneCode,
+  authControllerRebindPhone,
+  authControllerCheckFieldUniqueness,
+  authControllerVerifyEmailAndRegisterPhone,
+  authControllerGetWechatAuthUrl,
+  authControllerWechatCallback,
+  authControllerBindWechat,
+  authControllerUnbindWechat,
+} from '@/api-sdk';
 
 /**
  * 短信验证码登录请求
@@ -40,173 +71,145 @@ export interface RegisterByPhoneDto {
 }
 
 export const authApi = {
-  login: (data: LoginDto) => getApiClient().AuthController_login(null, data),
+  login: (data: LoginDto) =>
+    authControllerLogin({ body: data }).then((r) => r.data),
 
   register: (data: RegisterDto) =>
-    getApiClient().AuthController_register(null, data),
+    authControllerRegister({ body: data }).then((r) => r.data),
 
   refreshToken: (refreshToken: string) =>
-    getApiClient().AuthController_refreshToken(null, {
-      refreshToken,
-    } as RefreshTokenDto),
+    authControllerRefreshToken({
+      body: { refreshToken } as RefreshTokenDto,
+    }).then((r) => r.data),
 
-  logout: () => getApiClient().AuthController_logout(),
+  logout: () => authControllerLogout().then((r) => r.data),
 
-  getProfile: () => getApiClient().AuthController_getProfile(),
+  getProfile: () => authControllerGetProfile().then((r) => r.data),
 
   resendVerification: (email: string) =>
-    getApiClient().AuthController_resendVerification(null, { email }),
+    authControllerResendVerification({ body: { email } }).then((r) => r.data),
 
   forgotPassword: (data: ForgotPasswordDto) =>
-    getApiClient().AuthController_forgotPassword(null, data),
+    authControllerForgotPassword({ body: data }).then((r) => r.data),
 
   resetPassword: (data: ResetPasswordDto) =>
-    getApiClient().AuthController_resetPassword(null, data),
+    authControllerResetPassword({ body: data }).then((r) => r.data),
 
-  // 绑定邮箱
   sendBindEmailCode: (email: string, isRebind: boolean = false) =>
-    getApiClient().AuthController_sendBindEmailCode(null, { email, isRebind }),
+    authControllerSendBindEmailCode({ body: { email, isRebind } }).then(
+      (r) => r.data
+    ),
 
   verifyBindEmail: (email: string, code: string) =>
-    getApiClient().AuthController_verifyBindEmail(null, { email, code }),
+    authControllerVerifyBindEmail({ body: { email, code } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 发送换绑验证码（验证原邮箱）
-   */
   sendUnbindEmailCode: () =>
-    getApiClient().AuthController_sendUnbindEmailCode(),
+    authControllerSendUnbindEmailCode().then((r) => r.data),
 
-  /**
-   * 验证换绑验证码
-   */
   verifyUnbindEmailCode: (code: string) =>
-    getApiClient().AuthController_verifyUnbindEmailCode(null, { code }),
+    authControllerVerifyUnbindEmailCode({ body: { code } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 换绑新邮箱
-   */
   rebindEmail: (email: string, code: string, token: string) =>
-    getApiClient().AuthController_rebindEmail(null, { email, code, token }),
+    authControllerRebindEmail({ body: { email, code, token } }).then(
+      (r) => r.data
+    ),
 
-  // ==================== 短信验证码相关 ====================
-
-  /**
-   * 发送短信验证码
-   */
   sendSmsCode: (phone: string) =>
-    getApiClient().AuthController_sendSmsCode(null, { phone }),
+    authControllerSendSmsCode({ body: { phone } }).then((r) => r.data),
 
-  /**
-   * 验证短信验证码
-   */
   verifySmsCode: (phone: string, code: string) =>
-    getApiClient().AuthController_verifySmsCode(null, { phone, code }),
+    authControllerVerifySmsCode({ body: { phone, code } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 手机号验证码登录
-   */
   loginByPhone: (data: LoginByPhoneDto) =>
-    getApiClient().AuthController_loginByPhone(null, data),
+    authControllerLoginByPhone({ body: data }).then((r) => r.data),
 
-  /**
-   * 手机号注册
-   */
   registerByPhone: (data: RegisterByPhoneDto) =>
-    getApiClient().AuthController_registerByPhone(null, data),
+    authControllerRegisterByPhone({ body: data }).then((r) => r.data),
 
-  /**
-   * 验证手机号（用于已注册但手机号未验证的用户）
-   */
   verifyPhone: (phone: string, code: string) =>
-    getApiClient().AuthController_verifyPhone(null, { phone, code }),
+    authControllerVerifyPhone({ body: { phone, code } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 绑定邮箱并登录（用于已注册但没有邮箱的用户）
-   */
-  bindEmailAndLogin: (tempToken: string, email: string, code: string) =>
-    getApiClient().AuthController_bindEmailAndLogin(null, { tempToken, email, code }),
+  bindEmailAndLogin: (
+    tempToken: string,
+    email: string,
+    code: string
+  ) =>
+    authControllerBindEmailAndLogin({
+      body: { tempToken, email, code },
+    }).then((r) => r.data),
 
-  /**
-   * 绑定手机号并登录（用于已注册但没有手机号的用户）
-   */
-  bindPhoneAndLogin: (tempToken: string, phone: string, code: string) =>
-    getApiClient().AuthController_bindPhoneAndLogin(null, { tempToken, phone, code }),
+  bindPhoneAndLogin: (
+    tempToken: string,
+    phone: string,
+    code: string
+  ) =>
+    authControllerBindPhoneAndLogin({
+      body: { tempToken, phone, code },
+    }).then((r) => r.data),
 
-  /**
-   * 绑定手机号
-   */
   bindPhone: (phone: string, code: string) =>
-    getApiClient().AuthController_bindPhone(null, { phone, code }),
+    authControllerBindPhone({ body: { phone, code } }).then((r) => r.data),
 
-  /**
-   * 发送换绑验证码（验证原手机号）
-   */
   sendUnbindPhoneCode: () =>
-    getApiClient().AuthController_sendUnbindPhoneCode(),
+    authControllerSendUnbindPhoneCode().then((r) => r.data),
 
-  /**
-   * 验证换绑验证码
-   */
   verifyUnbindPhoneCode: (code: string) =>
-    getApiClient().AuthController_verifyUnbindPhoneCode(null, { code }),
+    authControllerVerifyUnbindPhoneCode({ body: { code } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 换绑新手机号
-   */
   rebindPhone: (phone: string, code: string, token: string) =>
-    getApiClient().AuthController_rebindPhone(null, { phone, code, token }),
+    authControllerRebindPhone({ body: { phone, code, token } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 检查字段唯一性（用户名、邮箱、手机号）
-   */
   checkField: (data: { username?: string; email?: string; phone?: string }) =>
-    getApiClient().AuthController_checkFieldUniqueness(null, data),
+    authControllerCheckFieldUniqueness({ body: data }).then((r) => r.data),
 
-  /**
-   * 验证邮箱并完成手机号注册
-   */
-  verifyEmailAndRegisterPhone: (email: string, code: string, registerData: {
-    phone: string;
-    code: string;
-    username: string;
-    password: string;
-    nickname?: string;
-  }) =>
-    getApiClient().AuthController_verifyEmailAndRegisterPhone(null, {
-      email,
-      code,
-      phone: registerData.phone,
-      phoneCode: registerData.code,
-      username: registerData.username,
-      password: registerData.password,
-      nickname: registerData.nickname,
-    }),
+  verifyEmailAndRegisterPhone: (
+    email: string,
+    code: string,
+    registerData: {
+      phone: string;
+      code: string;
+      username: string;
+      password: string;
+      nickname?: string;
+    }
+  ) =>
+    authControllerVerifyEmailAndRegisterPhone({
+      body: {
+        email,
+        code,
+        phone: registerData.phone,
+        phoneCode: registerData.code,
+        username: registerData.username,
+        password: registerData.password,
+        nickname: registerData.nickname,
+      },
+    }).then((r) => r.data),
 
-  // ==================== 微信登录相关 ====================
-
-  /**
-   * 获取微信授权 URL
-   */
   getWechatAuthUrl: (params: {
     origin: string;
     isPopup: string;
     purpose: string;
-  }) => getApiClient().AuthController_getWechatAuthUrl(params),
+  }) => authControllerGetWechatAuthUrl({ query: params }).then((r) => r.data),
 
-  /**
-   * 微信登录回调
-   */
   wechatCallback: (code: string, state: string) =>
-    getApiClient().AuthController_wechatCallback({ code, state }),
+    authControllerWechatCallback({ query: { code, state } }).then(
+      (r) => r.data
+    ),
 
-  /**
-   * 绑定微信
-   */
   bindWechat: (code: string, state: string) =>
-    getApiClient().AuthController_bindWechat(null, { code, state }),
+    authControllerBindWechat({ body: { code, state } }).then((r) => r.data),
 
-  /**
-   * 解绑微信
-   */
-  unbindWechat: () => getApiClient().AuthController_unbindWechat(),
+  unbindWechat: () => authControllerUnbindWechat().then((r) => r.data),
 };

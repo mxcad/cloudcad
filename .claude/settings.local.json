@@ -1,4 +1,8 @@
 {
+  "env": {
+    "ECC_GATEGUARD": "off",
+    "PATH": "/d/Program Files/nodejs:${env:PATH};C:\\tools\\gh\\bin"
+  },
   "permissions": {
     "allow": [
       "Bash(npx tsc *)",
@@ -46,12 +50,9 @@
       "Bash(grep -n \"forwardRef\" packages/backend/src/auth/auth.module.ts)",
       "Bash(cat jest.config.ts)",
       "Bash(cat jest.config.js)",
-      "Bash(pnpm test *)"
+      "Bash(pnpm test *)",
+      "Bash(dir \"D:\\\\project\\\\cloudcad\\\\packages\\\\backend\")"
     ]
-  },
-  "env": {
-    "ECC_GATEGUARD": "off",
-    "PATH": "/d/Program Files/nodejs:${env:PATH};C:\\tools\\gh\\bin"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [

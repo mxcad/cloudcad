@@ -18,7 +18,6 @@ import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Pagination } from '@/components/ui/Pagination';
-import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import MxCadUppyUploader, { MxCadUppyUploaderRef } from '@/components/MxCadUppyUploader';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileItem } from '@/components/FileItem';
@@ -92,7 +91,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   } = useFileSystemStore();
 
   // 上传组件 ref
-  const uploaderRef = useRef<MxCadUploaderRef>(null);
+  const uploaderRef = useRef<MxCadUppyUploaderRef>(null);
 
   // 面包屑滚动容器 ref
   const breadcrumbRef = useRef<HTMLDivElement>(null);
@@ -972,7 +971,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
           {/* 上传组件 - 仅在项目/文件夹模式下显示 */}
           {!isAtRoot && (
-            <MxCadUploader
+            <MxCadUppyUploader
               ref={uploaderRef}
               nodeId={() => getCurrentParentId()}
               buttonText=""
@@ -980,7 +979,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               onSuccess={handleRefresh}
               onExternalReferenceSuccess={handleRefresh}
               onError={(err: string) => {
-                // 错误已通过 MxCadUploader 组件处理
               }}
             />
           )}

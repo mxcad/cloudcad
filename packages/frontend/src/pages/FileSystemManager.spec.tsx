@@ -8,7 +8,6 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, useParams, useSearchParams } from 'react-router-dom';
 import { FileSystemManager } from './FileSystemManager';
 import { projectApi } from '@/services/projectApi';
-import { nodeApi } from '@/services/nodeApi';
 import { versionControlApi } from '@/services/versionControlApi';
 import { useFileSystem } from '@/hooks/file-system';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
@@ -48,9 +47,7 @@ vi.mock('@/components/ui/ConfirmDialog', () => ({
   ConfirmDialog: ({ children, isOpen, ...props }: any) =>
     isOpen ? <div {...props}>{children}</div> : null,
 }));
-vi.mock('@/components/MxCadUploader', () => ({
-  default: ({ ...props }: any) => <div {...props} />,
-}));
+
 vi.mock('@/components/BreadcrumbNavigation', () => ({
   BreadcrumbNavigation: () => <div>Breadcrumb</div>,
 }));

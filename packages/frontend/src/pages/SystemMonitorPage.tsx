@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { healthControllerCheck } from '@/api-sdk';
-import { adminApi } from '../services/adminApi';
+import { healthControllerCheck, adminControllerGetCleanupStats, adminControllerCleanupStorage } from '@/api-sdk';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -108,7 +107,7 @@ export const SystemMonitorPage: React.FC = () => {
   // 获取存储清理统计信息
   const fetchCleanupStats = useCallback(async () => {
     try {
-      const response = await adminApi.getCleanupStats();
+      const response = await adminControllerGetCleanupStats();
       if (response.data) {
         setCleanupStats(response.data as any);
       }
@@ -124,7 +123,7 @@ export const SystemMonitorPage: React.FC = () => {
     setCleanupSuccess(null);
     setCleanupResult(null);
     try {
-      const response = await adminApi.cleanupStorage(0); // 0表示立即清理
+      const response = await adminControllerCleanupStorage({ query: { delayDays: 0 } });
       if (response.data) {
         setCleanupSuccess('存储清理完成');
         setCleanupResult(response.data as any);

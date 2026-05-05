@@ -13,12 +13,11 @@
 import { useState, useCallback, useRef } from 'react';
 // TODO: Replace with SDK when backend adds write/create endpoints for library. Upload methods use mxcadUploadUtils which needs its own migration.
 import { libraryApi } from '../services/libraryApi';
-import { mxcadApi } from '../services/mxcadApi';
 import {
-  uploadMxCadFile,
-  MxCadUploadOptions,
-  MxCadUploadResult,
-} from '../utils/mxcadUploadUtils';
+  uploadFileWithUppy,
+  UppyUploadOptions,
+  UppyUploadResult,
+} from '../utils/uppyUploadUtils';
 import type {
   NodeListResponseDto,
   FileSystemNodeDto,
@@ -901,17 +900,17 @@ async function uploadFileWithRetry(
   nodeId: string,
   conflictStrategy?: 'skip' | 'overwrite' | 'rename',
   maxRetries: number = 3
-): Promise<MxCadUploadResult | null> {
+): Promise<UppyUploadResult | null> {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const options: MxCadUploadOptions = {
+      const options: UppyUploadOptions = {
         file,
         hash,
         nodeId,
         conflictStrategy,
       };
 
-      return await uploadMxCadFile(options);
+      return await uploadFileWithUppy(options);
     } catch (error) {
       console.error(`上传失败 (尝试 ${i + 1}/${maxRetries}):`, error);
       if (i === maxRetries - 1) {

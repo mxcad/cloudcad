@@ -6,20 +6,30 @@ Full-range refactoring in 3 phases: stability → maintainability → coverage.
 
 ## Decisions Summary
 
+> 更新于 2026-05-05 `/grill-with-docs` 对齐会议。新增决策 #13-#20 见下方。
+
 | # | Topic | Decision |
 |---|-------|----------|
 | 1 | Overall goal | D — Full range, phased |
-| 2 | mxcadManager (3255 lines) | B — Light split, extract API calls only |
-| 3 | Dual-track API layer | A — Delete old `projectsApi.ts`, keep new modular API |
+| 2 | mxcadManager (3255 lines) | B — Light split, extract API calls only；最终目标 → CAD 引擎生命周期与文件操作业务流程完全分离 |
+| 3 | API layer | **全部迁移到自动生成 SDK**（`api-sdk/`），删除所有 `services/*Api.ts`。`services/` 仅保留 `mxcadManager/` + `apiClient.ts`。参见 ADR-0001 |
 | 4 | Giant page split strategy | C — Hybrid (sub-components + hooks, page becomes assembly layer) |
-| 5 | Test strategy | A — TDD: write tests first, then refactor |
+| 5 | Test strategy | A — TDD: write tests first, then refactor。优先级：hooks 单元测试 → 共享组件渲染测试 → E2E 关键路径 |
 | 6 | Pilot file | `UserManagement.tsx` (2416 lines) |
 | 7 | Import paths | A — Switch to `@/` alias during refactoring |
-| 8 | Error handling | A — Force uniform `handleError()` in refactored files |
+| 8 | Error handling | A — Force uniform `handleError()` in refactored files。时机：Phase 2 拆分完成后、Phase 3 hooks 封装前 |
 | 9 | `console.*` cleanup | B — Delete `log`/`warn`, replace `error` with `handleError` |
-| 10 | Execution order | A — Sequential: env → API → mxcadManager → UserManagement |
+| 10 | Execution order | A — Sequential: SDK 全覆盖 → 错误处理统一 → hooks 封装+测试 → 组件复用提取 |
 | 11 | Phase 2 approach | C — Split all 1000+ line files to ≤800, Phase 3 focuses on coverage |
 | 12 | Misc items | A — All included in plan |
+| 13 | Data flow direction | SDK → hooks（唯一数据源）→ store（纯缓存）→ 页面（纯消费）。单向数据流 |
+| 14 | Zustand Store 职责 | 3 个 store 保留，但只做纯缓存——不发起 API 请求。数据由 hooks 推入 |
+| 15 | Context vs Store 边界 | Context 管注入型配置（用户、主题、权限），Zustand Store 管运行时业务数据。`NotificationContext` 合并到 `notificationStore`。参见 ADR-0002 |
+| 16 | 组件复用策略 | B 级——抽取共享业务组件 + zod schema。用已有工具：react-hook-form + zod + shadcn/ui |
+| 17 | 表单复用 | 共享 `<UserForm />`、`<RoleForm />` 等业务组件，zod schema 定义一次，所有页面消费 |
+| 18 | 表格复用 | 抽取 `<DataTable />` 泛型组件（基于 TanStack Table 或 shadcn DataTable） |
+| 19 | 测试执行方式 | TDD 先行，子代理并发写测试。每个 hook/组件的 spec 文件独立，可并行 |
+| 20 | 错误处理时机 | 统一 `catch (error: unknown)` + `handleError(error, context)` 在 hooks 层建立前完成，hooks 层直接继承标准 |
 
 ---
 

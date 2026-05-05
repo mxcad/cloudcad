@@ -11,17 +11,21 @@
 ///////////////////////////////////////////////////////////////////////////////
 // @deprecated Use @/api-sdk instead.
 
-import { getApiClient } from './apiClient';
-import { OperationMethods } from '../types/api-client';
+import {
+  auditLogControllerFindAll,
+  auditLogControllerFindOne,
+  auditLogControllerGetStatistics,
+  auditLogControllerCleanupOldLogs,
+} from '@/api-sdk';
+
 export const auditApi = {
-  getLogs: (
-    params?: Parameters<OperationMethods['AuditLogController_findAll']>[0]
-  ) => getApiClient().AuditLogController_findAll(params),
+  getLogs: (params?: { page?: number; limit?: number; userId?: string; action?: string; startDate?: string; endDate?: string }) =>
+    auditLogControllerFindAll(params ? { query: params } : undefined),
 
-  getLogById: (id: string) => getApiClient().AuditLogController_findOne({ id }),
+  getLogById: (id: string) => auditLogControllerFindOne({ path: { id } }),
 
-  getStatistics: () => getApiClient().AuditLogController_getStatistics(),
+  getStatistics: () => auditLogControllerGetStatistics(),
 
   cleanup: (daysToKeep: number) =>
-    getApiClient().AuditLogController_cleanupOldLogs(null, { daysToKeep }),
+    auditLogControllerCleanupOldLogs({ query: { daysToKeep } }),
 };

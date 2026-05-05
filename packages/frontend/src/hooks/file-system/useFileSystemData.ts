@@ -22,7 +22,6 @@ import {
 } from '@/api-sdk';
 // @deprecated — legacy import kept for getDeleted (no SDK mapping)
 import { projectApi } from '@/services/projectApi';
-import { trashApi } from '@/services/trashApi';
 import {
   FileSystemNode,
   BreadcrumbItem,

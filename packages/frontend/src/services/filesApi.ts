@@ -11,12 +11,20 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // @deprecated Use @/api-sdk instead.
-import { getApiClient } from './apiClient';
-import { API_BASE_URL } from '../config/apiConfig';
-import type { OperationMethods } from '../types/api-client';
+import {
+  fileSystemControllerGetProjects,
+  fileSystemControllerGetNode,
+  fileSystemControllerDownloadNode,
+  fileSystemControllerDownloadNodeWithFormat,
+  fileSystemControllerUpdateNode,
+  fileSystemControllerDeleteNode,
+  fileSystemControllerCreateFolder,
+  fileSystemControllerMoveNode,
+  fileSystemControllerCopyNode,
+  fileSystemControllerGetRootNode,
+} from '@/api-sdk';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
-// 本地定义缺失的 DTO 类型
 interface UpdateNodeDto {
   name?: string;
   description?: string;
@@ -36,63 +44,61 @@ interface CreateFolderDto {
 }
 
 export const filesApi = {
-  list: () => getApiClient().FileSystemController_getProjects(),
+  list: () => fileSystemControllerGetProjects(),
 
   get: (id: string) =>
-    getApiClient().FileSystemController_getNode({ nodeId: id }),
+    fileSystemControllerGetNode({ path: { nodeId: id } }),
 
   download: (id: string) =>
-    getApiClient().FileSystemController_downloadNode({ nodeId: id }, null, {
-      responseType: 'blob',
-    }),
+    fileSystemControllerDownloadNode({ path: { nodeId: id } }),
 
   downloadWithFormat: (
     id: string,
     format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
     pdfOptions?: PdfOptions
   ) => {
-    type DownloadParams = Parameters<
-      OperationMethods['FileSystemController_downloadNodeWithFormat']
-    >[0];
-    const params: DownloadParams = {
-      nodeId: id,
-      format,
-      ...(pdfOptions?.width && { width: pdfOptions.width }),
-      ...(pdfOptions?.height && { height: pdfOptions.height }),
-      ...(pdfOptions?.colorPolicy && { colorPolicy: pdfOptions.colorPolicy }),
+    const params: {
+      path: { nodeId: string; format: string };
+      query?: { width?: number; height?: number; colorPolicy?: string };
+    } = {
+      path: {
+        nodeId: id,
+        format,
+      },
     };
-    return getApiClient().FileSystemController_downloadNodeWithFormat(
-      params,
-      null,
-      { responseType: 'blob' }
-    );
+    if (pdfOptions?.width) {
+      params.query = { width: pdfOptions.width };
+    }
+    if (pdfOptions?.height) {
+      params.query = { ...params.query, height: pdfOptions.height };
+    }
+    if (pdfOptions?.colorPolicy) {
+      params.query = { ...params.query, colorPolicy: pdfOptions.colorPolicy };
+    }
+    return fileSystemControllerDownloadNodeWithFormat(params as any);
   },
 
   update: (id: string, data: UpdateNodeDto) =>
-    getApiClient().FileSystemController_updateNode({ nodeId: id }, data),
+    fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data }),
 
   delete: (id: string, permanent?: boolean) =>
-    getApiClient().FileSystemController_deleteNode(
-      permanent !== undefined
-        ? { nodeId: id, permanently: permanent }
-        : { nodeId: id, permanently: false }
-    ),
+    fileSystemControllerDeleteNode({
+      path: { nodeId: id },
+      query: { permanently: permanent ?? false },
+    }),
 
   createFolder: (parentId: string, data: CreateFolderDto) =>
-    getApiClient().FileSystemController_createFolder({ parentId }, data),
+    fileSystemControllerCreateFolder({
+      path: { parentId },
+      body: data,
+    }),
 
   moveNode: (id: string, data: MoveNodeDto) =>
-    getApiClient().FileSystemController_moveNode({ nodeId: id }, data),
+    fileSystemControllerMoveNode({ path: { nodeId: id }, body: data }),
 
   copyNode: (id: string, data: CopyNodeDto) =>
-    getApiClient().FileSystemController_copyNode({ nodeId: id }, data),
+    fileSystemControllerCopyNode({ path: { nodeId: id }, body: data }),
 
-  /** 获取根节点 */
   getRoot: (nodeId: string) =>
-    getApiClient().FileSystemController_getRootNode({ nodeId }),
-
-  /** 获取文件缩略图 URL */
-  getThumbnailUrl: (nodeId: string): string => {
-    return `${API_BASE_URL}/v1/file-system/nodes/${nodeId}/thumbnail`;
-  },
+    fileSystemControllerGetRootNode({ path: { nodeId } }),
 };

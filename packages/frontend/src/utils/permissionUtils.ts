@@ -16,6 +16,7 @@
  */
 
 import { handleError } from '@/utils/errorHandler';
+import { fileSystemControllerGetProjectMembers, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
 
 export type Role = string | undefined | null;
 
@@ -85,10 +86,8 @@ export const hasNodePermission = async (
   }
 
   try {
-    const { projectMemberApi } = await import('@/services/projectMemberApi');
-    const response = await projectMemberApi.getMembers(nodeId);
-
-    const members = response.data;
+    const response = await fileSystemControllerGetProjectMembers({ path: { projectId: nodeId } });
+    const members = response.data ?? [];
 
     // 查找当前用户的角色
     const currentMember = members.find((m) => m.id === user.id);
@@ -125,11 +124,10 @@ export const canEditNode = async (
   }
 
   try {
-    const { projectPermissionApi } = await import('@/services/projectPermissionApi');
-    const response = await projectPermissionApi.checkPermission(
-      nodeId,
-      'PROJECT_UPDATE'
-    );
+    const response = await fileSystemControllerCheckProjectPermission({
+      path: { projectId: nodeId },
+      query: { permission: 'PROJECT_UPDATE' },
+    });
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
@@ -153,11 +151,10 @@ export const canDeleteNode = async (
   }
 
   try {
-    const { projectPermissionApi } = await import('@/services/projectPermissionApi');
-    const response = await projectPermissionApi.checkPermission(
-      nodeId,
-      'PROJECT_DELETE'
-    );
+    const response = await fileSystemControllerCheckProjectPermission({
+      path: { projectId: nodeId },
+      query: { permission: 'PROJECT_DELETE' },
+    });
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
@@ -181,11 +178,10 @@ export const canManageNodeMembers = async (
   }
 
   try {
-    const { projectPermissionApi } = await import('@/services/projectPermissionApi');
-    const response = await projectPermissionApi.checkPermission(
-      nodeId,
-      'PROJECT_MEMBER_MANAGE'
-    );
+    const response = await fileSystemControllerCheckProjectPermission({
+      path: { projectId: nodeId },
+      query: { permission: 'PROJECT_MEMBER_MANAGE' },
+    });
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
@@ -228,11 +224,10 @@ export const canManageNodeRoles = async (
   }
 
   try {
-    const { projectPermissionApi } = await import('@/services/projectPermissionApi');
-    const response = await projectPermissionApi.checkPermission(
-      nodeId,
-      'PROJECT_ROLE_MANAGE'
-    );
+    const response = await fileSystemControllerCheckProjectPermission({
+      path: { projectId: nodeId },
+      query: { permission: 'PROJECT_ROLE_MANAGE' },
+    });
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {

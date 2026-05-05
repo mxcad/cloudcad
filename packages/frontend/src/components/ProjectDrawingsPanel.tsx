@@ -1840,9 +1840,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           let latestUpdatedAt = blockNode.updatedAt;
           try {
             const response = await libraryControllerGetBlockNode({ path: { nodeId: blockNode.id } });
-            const node = response as any;
-            if (node?.updatedAt) {
-              latestUpdatedAt = node.updatedAt;
+            if (response.data?.updatedAt) {
+              latestUpdatedAt = response.data.updatedAt;
             }
           } catch {
           }

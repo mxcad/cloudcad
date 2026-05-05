@@ -11,15 +11,18 @@
 ///////////////////////////////////////////////////////////////////////////////
 // @deprecated Use @/api-sdk instead.
 
-import { getApiClient } from './apiClient';
+import {
+  healthControllerCheck,
+  healthControllerCheckDatabase,
+  healthControllerCheckStorage,
+} from '@/api-sdk';
 
 export const healthApi = {
-  /** 获取系统健康状态 */
-  getHealth: () => getApiClient().HealthController_check(),
+  getHealth: () => healthControllerCheck().then((r) => r.data),
 
-  /** 检查数据库健康状态 */
-  checkDatabase: () => getApiClient().HealthController_checkDatabase(),
+  checkDatabase: () =>
+    healthControllerCheckDatabase().then((r) => r.data),
 
-  /** 检查存储服务健康状态 */
-  checkStorage: () => getApiClient().HealthController_checkStorage(),
+  checkStorage: () =>
+    healthControllerCheckStorage().then((r) => r.data),
 };

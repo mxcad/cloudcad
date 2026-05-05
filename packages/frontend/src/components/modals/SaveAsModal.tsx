@@ -3,9 +3,8 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Folder } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
-import { fileSystemControllerGetProjects } from '@/api-sdk';
-// TODO: Replace mxcadApi.saveMxwebAs and libraryApi.saveDrawingAs/saveBlockAs with SDK when backend adds endpoints
-import { mxcadApi } from '../../services/mxcadApi';
+import { fileSystemControllerGetProjects, mxCadControllerSaveMxwebAs } from '@/api-sdk';
+// TODO: Replace libraryApi.saveDrawingAs/saveBlockAs with SDK when backend adds endpoints
 import { libraryApi } from '../../services/libraryApi';
 import { globalShowToast } from '../../contexts/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -193,18 +192,17 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       }
 
       // 我的图纸/项目另存为
-      const result = await mxcadApi.saveMxwebAs(
-        mxwebBlob,
-        targetType,
-        selectedParentId,
-        targetType === 'project' ? selectedProjectId : undefined,
-        format,
-        () => {},
-        `Save as: ${fileName}.${format}`,
-        fileName.trim()
-      );
-
-      const saveResult = result as {
+      const formData = new FormData();
+      formData.append('file', mxwebBlob);
+      formData.append('targetType', targetType);
+      formData.append('targetParentId', selectedParentId);
+      if (targetType === 'project' && selectedProjectId) formData.append('projectId', selectedProjectId);
+      formData.append('format', format);
+      formData.append('commitMessage', `Save as: ${fileName}.${format}`);
+      formData.append('fileName', fileName.trim());
+      
+      const result = await mxCadControllerSaveMxwebAs({ body: formData as any });
+      const saveResult = result.data as {
         success: boolean;
         message?: string;
         nodeId?: string;
