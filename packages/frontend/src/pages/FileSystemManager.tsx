@@ -29,8 +29,15 @@ import { useProjectPermissions } from '@/hooks/useProjectPermissions';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
-import { projectApi } from '@/services/projectApi';
-import { nodeApi } from '@/services/nodeApi';
+import {
+  fileSystemControllerUpdateNode,
+  fileSystemControllerCreateProject,
+  fileSystemControllerGetPersonalSpace,
+  fileSystemControllerGetStorageQuota,
+  fileSystemControllerUpdateStorageQuota,
+  fileSystemControllerMoveNode,
+  fileSystemControllerCopyNode,
+} from '@/api-sdk';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import {
   FileSystemToolbar,
@@ -216,9 +223,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     const fetchPersonalSpace = async () => {
       setPersonalSpaceIdLoading(true);
       try {
-        const response = await projectApi.getPersonalSpace();
-        if (response.data?.id) {
-          setPersonalSpaceId(response.data.id);
+        const response = await fileSystemControllerGetPersonalSpace();
+        if (response?.id) {
+          setPersonalSpaceId(response.id);
           setPersonalSpaceErrorCount(0); // 成功则重置错误计数
         }
       } catch (error) {
@@ -492,14 +499,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       e.preventDefault();
       if (editingProject) {
         handleUpdateProjectSubmit(async (id, data) => {
-          await projectApi.update(id, {
-            name: data.name ?? undefined,
-            description: data.description,
-          });
+          // TODO: Replace with SDK when backend adds updateProject endpoint
+          await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as any });
         });
       } else {
         handleCreateProjectSubmit(async (name, description) => {
-          await projectApi.create({ name, description });
+          await fileSystemControllerCreateProject({ body: { name, description } as any });
         });
       }
     },
@@ -610,17 +615,17 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           for (const nodeId of nodeIds) {
             // 判断是移动还是复制
             if (moveSourceNode) {
-              await nodeApi.moveNode(nodeId, targetParentId);
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } as any });
             } else {
-              await nodeApi.copyNode(nodeId, targetParentId);
+              await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } as any });
             }
           }
         }
         // 单个节点模式
         else if (moveSourceNode) {
-          await nodeApi.moveNode(moveSourceNode.id, targetParentId);
+          await fileSystemControllerMoveNode({ path: { nodeId: moveSourceNode.id }, body: { targetParentId } as any });
         } else if (copySourceNode) {
-          await nodeApi.copyNode(copySourceNode.id, targetParentId);
+          await fileSystemControllerCopyNode({ path: { nodeId: copySourceNode.id }, body: { targetParentId } as any });
         }
         handleRefresh();
         setShowSelectFolderModal(false);
@@ -699,9 +704,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
       try {
         if (isCopy) {
-          await nodeApi.copyNode(draggedNodeId, targetNode.id);
+          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } as any });
         } else {
-          await nodeApi.moveNode(draggedNodeId, targetNode.id);
+          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } as any });
         }
         handleRefresh();
       } catch (error) {

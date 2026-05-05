@@ -5,7 +5,9 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+// TODO: Replace write methods (createFolder, deleteNode, renameNode, moveNode, copyNode) with SDK when backend adds endpoints
 import { libraryApi } from '../services/libraryApi';
+import { libraryControllerGetDrawingLibrary, libraryControllerGetDrawingChildren, libraryControllerGetDrawingAllFiles, libraryControllerGetDrawingNode, libraryControllerDownloadDrawingNode, libraryControllerGetBlockLibrary, libraryControllerGetBlockChildren, libraryControllerGetBlockAllFiles, libraryControllerGetBlockNode, libraryControllerDownloadBlockNode } from '@/api-sdk';
 import { getApiClient } from '../services/apiClient';
 import type { FileSystemNode } from '../types/filesystem';
 import { handleError } from '../utils/errorHandler';

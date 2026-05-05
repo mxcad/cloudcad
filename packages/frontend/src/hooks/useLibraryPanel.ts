@@ -4,7 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+// TODO: Replace write methods (deleteNode, renameNode) and migrate GET calls with SDK when backend adds endpoints
 import { libraryApi } from '../services/libraryApi';
+import { libraryControllerGetDrawingLibrary, libraryControllerGetDrawingChildren, libraryControllerGetDrawingNode, libraryControllerGetBlockLibrary, libraryControllerGetBlockChildren, libraryControllerGetBlockNode } from '@/api-sdk';
 import type { FileSystemNode } from '../types/filesystem';
 import { handleError } from '../utils/errorHandler';
 import { isAbortError } from '../utils/errorHandler';

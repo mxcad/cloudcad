@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+// TODO: Replace with SDK when upload/chunk methods have clear SDK equivalents
 import { mxcadApi } from '../services/mxcadApi';
 
 /**

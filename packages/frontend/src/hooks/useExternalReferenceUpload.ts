@@ -10,6 +10,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference } from '@/api-sdk';
+import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference } from '@/api-sdk';
+// TODO: Replace with SDK when upload functions accept direct FormData — keep old imports for upload methods
 import { mxcadApi } from '../services/mxcadApi';
 import { publicFileApi } from '../services/publicFileApi';
 import type {
@@ -104,11 +107,11 @@ export const useExternalReferenceUpload = (
       try {
         let data = null;
         if (isLoggedIn) {
-          // 已登录用户使用 mxcadApi
-          data = await mxcadApi.getPreloadingData(id);
+          // 已登录用户使用 SDK
+          data = await mxCadControllerGetPreloadingData({ path: { nodeId: id } }) as PreloadingData | null;
         } else {
-          // 未登录用户使用 publicFileApi
-          data = await publicFileApi.getPreloadingData(id);
+          // 未登录用户使用 SDK
+          data = await publicFileControllerGetPreloadingData({ path: { hash: id } }) as PreloadingData | null;
         }
 
         // 如果成功获取数据，更新缓存
@@ -147,11 +150,11 @@ export const useExternalReferenceUpload = (
       try {
         let result = null;
         if (isLoggedIn) {
-          // 已登录用户使用 mxcadApi
-          result = await mxcadApi.checkExternalReferenceExists(id, fileName);
+          // 已登录用户使用 SDK
+          result = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } as any }) as { exists?: boolean } | null;
         } else {
-          // 未登录用户使用 publicFileApi
-          result = await publicFileApi.checkExtReference(id, fileName);
+          // 未登录用户使用 SDK
+          result = await publicFileControllerCheckExtReference({ query: { srcHash: id, fileName } }) as { exists?: boolean } | null;
         }
         console.debug(
           `[checkReferenceExists] 响应: ${fileName}`,

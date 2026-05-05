@@ -28,10 +28,15 @@ import { ChevronRight } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { MxFun } from 'mxdraw';
-import { projectApi } from '@/services/projectApi';
-import { nodeApi } from '@/services/nodeApi';
-import { filesApi } from '@/services/filesApi';
-import { libraryApi } from '@/services/libraryApi';
+import {
+  fileSystemControllerGetProjects,
+  fileSystemControllerGetChildren,
+  fileSystemControllerGetNode,
+  fileSystemControllerUpdateNode,
+} from '@/api-sdk';
+// @deprecated — legacy import for non-migrated write methods (createFolder, delete, rename, move, copy)
+import { libraryApi } from '@/services/libraryApi'; // TODO: Replace with SDK when backend adds write endpoints
+import { libraryControllerGetDrawingLibrary, libraryControllerGetDrawingChildren, libraryControllerGetDrawingAllFiles, libraryControllerGetBlockLibrary, libraryControllerGetBlockChildren, libraryControllerGetBlockAllFiles, libraryControllerGetBlockNode } from '@/api-sdk';
 import { versionControlControllerGetFileHistory } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from './common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
@@ -59,6 +64,9 @@ import { handleError } from '@/utils/errorHandler';
 import styles from './sidebar/sidebar.module.css';
 import type { ProjectFilterType } from '@/services/projectApi';
 import { CategoryTabs, CategoryLevel, CategoryItem } from './CategoryTabs';
+
+/** API base URL for constructing thumbnail URLs (replaces filesApi.getThumbnailUrl) */
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /** 库类型 */
 export type LibraryType = 'drawing' | 'block';
@@ -263,8 +271,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
     const loadProjects = async () => {
       try {
-        const response = await projectApi.list(projectFilter);
-        const projectList = response.data?.nodes || [];
+        const response = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any });
+        const projectList = response?.nodes || [];
         setProjects(
           projectList.map(
             (p): FileSystemNode => ({
@@ -358,34 +366,33 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         let totalPages = 1;
 
         if (isLibraryMode) {
-          // 图书馆模式：使用 libraryApi，递归获取所有层级的文件
+          // 图书馆模式：使用 SDK，递归获取所有层级的文件
           const response =
             libraryType === 'drawing'
-              ? await libraryApi.getDrawingAllFiles(nodeId, {
+              ? await libraryControllerGetDrawingAllFiles({ path: { nodeId }, query: {
                   page,
                   limit: PAGE_SIZE,
                   search: search || undefined,
-                })
-              : await libraryApi.getBlockAllFiles(nodeId, {
+                } })
+              : await libraryControllerGetBlockAllFiles({ path: { nodeId }, query: {
                   page,
                   limit: PAGE_SIZE,
                   search: search || undefined,
-                });
-          nodeList = response.data?.nodes || [];
-          total = response.data?.total || 0;
+                } });
+          nodeList = (response as any)?.nodes || [];
+          total = (response as any)?.total || 0;
           totalPages =
-            response.data?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
+            (response as any)?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
         } else {
-          // 项目/私人空间模式：使用 projectsApi
-          const response = await nodeApi.getChildren(nodeId, {
-            page,
-            limit: PAGE_SIZE,
-            search: search || undefined,
+          // 项目/私人空间模式：使用 SDK
+          const response = await fileSystemControllerGetChildren({
+            path: { nodeId },
+            query: { page, limit: PAGE_SIZE, search: search || undefined } as any,
           });
-          nodeList = (response.data?.nodes || []).map(toFileSystemNode);
-          total = response.data?.total || 0;
+          nodeList = (response?.nodes || []).map(toFileSystemNode);
+          total = response?.total || 0;
           totalPages =
-            response.data?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
+            response?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
         }
 
         // 检查请求是否已过期（如果期间有新的请求发出，则忽略此响应）
@@ -461,8 +468,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
       while (currentId && depth < MAX_DEPTH) {
         try {
-          const response = await nodeApi.getNode(currentId);
-          const node = response.data;
+          const response = await fileSystemControllerGetNode({ path: { nodeId: currentId } });
+          const node = response;
           if (node) {
             path.unshift({ id: node.id, name: node.name });
             currentId = node.parentId || null;
@@ -714,10 +721,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     (e: React.FormEvent) => {
       e.preventDefault();
       handleUpdateProjectSubmit(async (id, data) => {
-        await projectApi.update(id, {
-          name: data.name ?? undefined,
-          description: data.description,
-        });
+        // TODO: Replace with SDK when backend adds updateProject endpoint
+        await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as any });
       });
     },
     [handleUpdateProjectSubmit]
@@ -734,8 +739,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     // 加载项目根节点信息用于面包屑
     const initProject = async () => {
       try {
-        const response = await nodeApi.getNode(selectedProjectId);
-        const projectNode = response.data;
+        const response = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
+        const projectNode = response;
         if (projectNode) {
           setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
         }
@@ -770,16 +775,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryApi.getDrawingChildren(parentId, {
+            ? await libraryControllerGetDrawingChildren({ path: { nodeId: parentId }, query: {
                 nodeType: 'folder',
                 limit: 100,
-              })
-            : await libraryApi.getBlockChildren(parentId, {
+              } })
+            : await libraryControllerGetBlockChildren({ path: { nodeId: parentId }, query: {
                 nodeType: 'folder',
                 limit: 100,
-              });
+              } });
 
-        const folders = response.data?.nodes || [];
+        const folders = (response as any)?.nodes || [];
 
         // 构建当前层级的分类项（添加"全部"选项）
         const items: CategoryItem[] = [
@@ -892,9 +897,9 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryApi.getDrawingLibrary()
-            : await libraryApi.getBlockLibrary();
-        const libraryNode = response.data;
+            ? await libraryControllerGetDrawingLibrary()
+            : await libraryControllerGetBlockLibrary();
+        const libraryNode = response as { id?: string; name?: string };
         if (libraryNode?.id) {
           setLibraryRootId(libraryNode.id);
 
@@ -968,19 +973,19 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           // 选择"全部"时，使用递归接口获取所有文件
           const response =
             libraryType === 'drawing'
-              ? await libraryApi.getDrawingAllFiles(libraryRootId, {
+              ? await libraryControllerGetDrawingAllFiles({ path: { nodeId: libraryRootId }, query: {
                   page: 1,
                   limit: PAGE_SIZE,
-                })
-              : await libraryApi.getBlockAllFiles(libraryRootId, {
+                } })
+              : await libraryControllerGetBlockAllFiles({ path: { nodeId: libraryRootId }, query: {
                   page: 1,
                   limit: PAGE_SIZE,
-                });
+                } });
 
-          const files = response.data?.nodes || [];
-          const total = response.data?.total || 0;
+          const files = (response as any)?.nodes || [];
+          const total = (response as any)?.total || 0;
           const totalPages =
-            response.data?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
+            (response as any)?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
 
           setNodes(files);
           setTotal(total);
@@ -1027,16 +1032,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryApi.getDrawingChildren(parentId, {
+            ? await libraryControllerGetDrawingChildren({ path: { nodeId: parentId }, query: {
                 nodeType: 'folder',
                 limit: 100,
-              })
-            : await libraryApi.getBlockChildren(parentId, {
+              } })
+            : await libraryControllerGetBlockChildren({ path: { nodeId: parentId }, query: {
                 nodeType: 'folder',
                 limit: 100,
-              });
+              } });
 
-        const folders = response.data?.nodes || [];
+        const folders = (response as any)?.nodes || [];
 
         // 构建分类项（添加"全部"选项）
         const items: CategoryItem[] = [
@@ -1129,19 +1134,19 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           try {
             const response =
               libraryType === 'drawing'
-                ? await libraryApi.getDrawingAllFiles(libraryRootId, {
+                ? await libraryControllerGetDrawingAllFiles({ path: { nodeId: libraryRootId }, query: {
                     page: 1,
                     limit: PAGE_SIZE,
-                  })
-                : await libraryApi.getBlockAllFiles(libraryRootId, {
+                  } })
+                : await libraryControllerGetBlockAllFiles({ path: { nodeId: libraryRootId }, query: {
                     page: 1,
                     limit: PAGE_SIZE,
-                  });
+                  } });
 
-            const files = response.data?.nodes || [];
-            const total = response.data?.total || 0;
+            const files = (response as any)?.nodes || [];
+            const total = (response as any)?.total || 0;
             const totalPages =
-              response.data?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
+              (response as any)?.totalPages || Math.ceil(total / PAGE_SIZE) || 1;
 
             setNodes(files);
             setTotal(total);
@@ -1164,16 +1169,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         try {
           const response =
             libraryType === 'drawing'
-              ? await libraryApi.getDrawingChildren(categoryId, {
+              ? await libraryControllerGetDrawingChildren({ path: { nodeId: categoryId }, query: {
                   nodeType: 'folder',
                   limit: 100,
-                })
-              : await libraryApi.getBlockChildren(categoryId, {
+                } })
+              : await libraryControllerGetBlockChildren({ path: { nodeId: categoryId }, query: {
                   nodeType: 'folder',
                   limit: 100,
-                });
+                } });
 
-          const folders = response.data?.nodes || [];
+          const folders = (response as any)?.nodes || [];
           childCategories = [
             { id: 'all', name: '全部', hasChildren: level < 1 },
             ...folders.map((folder: FileSystemNode) => ({
@@ -1497,7 +1502,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           ? libraryApi.getDrawingThumbnailUrl(nodeId)
           : libraryApi.getBlockThumbnailUrl(nodeId);
       }
-      return filesApi.getThumbnailUrl(nodeId);
+      return `${API_BASE}/v1/file-system/nodes/${nodeId}/thumbnail`;
     };
 
     const fileItems: ResourceItem[] = files.map((node) => ({
@@ -1747,10 +1752,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     (e: React.FormEvent) => {
       e.preventDefault();
       handleUpdateProjectSubmit(async (id, data) => {
-        await projectApi.update(id, {
-          name: data.name ?? undefined,
-          description: data.description,
-        });
+        // TODO: Replace with SDK when backend adds updateProject endpoint
+        await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as any });
       });
     },
     [handleUpdateProjectSubmit]
@@ -1838,9 +1841,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           // 获取最新的 updatedAt（确保使用最新时间戳，避免缓存问题）
           let latestUpdatedAt = blockNode.updatedAt;
           try {
-            const { libraryApi } = await import('../services/libraryApi');
-            const response = await libraryApi.getBlockNode(blockNode.id);
-            const node = response.data as any;
+            const response = await libraryControllerGetBlockNode({ path: { nodeId: blockNode.id } });
+            const node = response as any;
             if (node?.updatedAt) {
               latestUpdatedAt = node.updatedAt;
             }

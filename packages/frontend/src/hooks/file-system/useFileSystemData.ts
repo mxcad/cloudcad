@@ -437,23 +437,20 @@ export const useFileSystemData = ({
           ]);
         } else {
           const [nodeResponse, childrenResponse] = await Promise.all([
-            nodeApi.getNode(currentNodeId, {
-              signal: abortController.signal,
+            fileSystemControllerGetNode({
+              path: { nodeId: currentNodeId },
             }),
-            nodeApi.getChildren(
-              currentNodeId,
-              {
+            fileSystemControllerGetChildren({
+              path: { nodeId: currentNodeId },
+              query: {
                 page: paginationRef.current.page,
                 limit: paginationRef.current.limit,
                 search: searchQuery || undefined,
-              },
-              {
-                signal: abortController.signal,
-              }
-            ),
+              } as any,
+            }),
           ]);
 
-          const nodeData = toFileSystemNode(nodeResponse.data);
+          const nodeData = toFileSystemNode(nodeResponse);
 
           if (!isPersonalSpaceMode && nodeData.personalSpaceKey) {
             navigate('/personal-space');
@@ -478,9 +475,9 @@ export const useFileSystemData = ({
           }
 
           // NodeListResponseDto 包含 nodes, total, page, limit, totalPages
-          const childrenData = childrenResponse.data?.nodes || [];
+          const childrenData = childrenResponse?.nodes || [];
           setNodes(childrenData);
-          const childrenMeta = childrenResponse.data;
+          const childrenMeta = childrenResponse;
           if (childrenMeta?.total !== undefined) {
             setPaginationMeta({
               total: childrenMeta.total,

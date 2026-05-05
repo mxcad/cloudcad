@@ -18,6 +18,7 @@ import { usePermission } from '../hooks/usePermission';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat } from '@/api-sdk';
 import { projectPermissionApi } from '@/services/projectPermissionApi';
 import { fileSystemControllerGetPersonalSpace } from '@/api-sdk';
+// TODO: Replace libraryApi.getDrawingNode/getBlockNode and publicFileApi with SDK when backend adds endpoints or upload logic is migrated
 import { libraryApi } from '../services/libraryApi';
 import { publicFileApi } from '../services/publicFileApi';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';

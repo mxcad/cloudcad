@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef } from 'react';
+// TODO: Replace with SDK when backend adds write/create endpoints for library. Upload methods use mxcadUploadUtils which needs its own migration.
 import { libraryApi } from '../services/libraryApi';
 import { mxcadApi } from '../services/mxcadApi';
 import {

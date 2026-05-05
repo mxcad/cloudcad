@@ -4,8 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
-import { projectApi } from '../services/projectApi';
-import { nodeApi } from '../services/nodeApi';
+import {
+  fileSystemControllerGetProjects,
+  fileSystemControllerCreateProject,
+  fileSystemControllerGetPersonalSpace,
+  fileSystemControllerGetChildren,
+} from '@/api-sdk';
 import { usersControllerGetDashboardStats } from '@/api-sdk';
 import type {
   ProjectDto,
@@ -203,9 +207,8 @@ export const Dashboard: React.FC = () => {
 
       setProjectCreating(true);
       try {
-        const response = await projectApi.create({
-          name: projectFormData.name.trim(),
-          description: projectFormData.description.trim() || undefined,
+        const response = await fileSystemControllerCreateProject({
+          body: { name: projectFormData.name.trim(), description: projectFormData.description.trim() || undefined } as any,
         });
 
         // 关闭弹框，重置表单
@@ -213,13 +216,13 @@ export const Dashboard: React.FC = () => {
         setProjectFormData({ name: '', description: '' });
 
         // 显示成功提示
-        setCreateSuccess(response.data?.name || projectFormData.name);
+        setCreateSuccess(response?.name || projectFormData.name);
         setTimeout(() => setCreateSuccess(null), 3000);
 
         // 刷新项目列表
-        const projectsRes = await projectApi.list();
-        if (projectsRes && projectsRes.data?.nodes) {
-          const sortedProjects = projectsRes.data.nodes
+        const projectsRes = await fileSystemControllerGetProjects({ query: {} as any });
+        if (projectsRes?.nodes) {
+          const sortedProjects = projectsRes.nodes
             .filter((p: any) => p.status !== 'DELETED')
             .sort(
               (a: any, b: any) =>
@@ -247,14 +250,14 @@ export const Dashboard: React.FC = () => {
       try {
         // 并行加载多个数据源
         const [projectsRes, statsRes, personalSpaceRes] = await Promise.all([
-          projectApi.list(),
+          fileSystemControllerGetProjects({ query: {} as any }),
           usersControllerGetDashboardStats(),
-          projectApi.getPersonalSpace().catch(() => null), // 私人空间可能不存在
+          fileSystemControllerGetPersonalSpace().catch(() => null), // 私人空间可能不存在
         ]);
 
         // 处理项目数据
-        if (projectsRes && projectsRes.data?.nodes) {
-          const sortedProjects = projectsRes.data.nodes
+        if (projectsRes?.nodes) {
+          const sortedProjects = projectsRes.nodes
             .filter((p: any) => p.status !== 'DELETED')
             .sort(
               (a: any, b: any) =>
@@ -270,13 +273,13 @@ export const Dashboard: React.FC = () => {
         }
 
         // 处理个人空间文件
-        if (personalSpaceRes?.data?.id) {
-          const childrenRes = await nodeApi.getChildren(
-            personalSpaceRes.data.id,
-            { limit: 10 }
-          );
-          if (childrenRes.data?.nodes) {
-            setPersonalFiles(childrenRes.data.nodes);
+        if (personalSpaceRes?.id) {
+          const childrenRes = await fileSystemControllerGetChildren({
+            path: { nodeId: personalSpaceRes.id },
+            query: { limit: 10 } as any,
+          });
+          if (childrenRes?.nodes) {
+            setPersonalFiles(childrenRes.nodes);
           }
         }
       } catch (err) {

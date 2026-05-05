@@ -23,8 +23,12 @@ import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryOperations } from '../hooks/library/useLibraryOperations';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
+// TODO: Replace write methods (deleteDrawingNode, deleteBlockNode) with SDK when backend adds endpoints
 import { libraryApi } from '../services/libraryApi';
-import { projectApi } from '@/services/projectApi';
+import {
+  fileSystemControllerGetStorageQuota,
+  fileSystemControllerUpdateStorageQuota,
+} from '@/api-sdk';
 import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import {
@@ -338,8 +342,7 @@ export const LibraryManager: React.FC = () => {
 
       // 获取公共资源库的存储信息
       if (libraryId) {
-        const response = await projectApi.getQuota(libraryId);
-        const storageInfo = response.data;
+        const storageInfo = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
 
         if (storageInfo) {
           setLibraryStorageInfo(storageInfo);
@@ -371,15 +374,15 @@ export const LibraryManager: React.FC = () => {
     setQuotaLoading(true);
     try {
       // 调用后端 API 更新库节点配额（GB）
-      await projectApi.updateStorageQuota(libraryId, libraryQuota);
+      await fileSystemControllerUpdateStorageQuota({ body: { nodeId: libraryId, quota: libraryQuota } as any });
 
       showToast(`库配额已更新为 ${libraryQuota} GB`, 'success');
       setQuotaModalOpen(false);
 
       // 刷新库配额信息
-      const response = await projectApi.getQuota(libraryId);
-      if (response.data) {
-        setLibraryStorageInfo(response.data);
+      const storageInfo = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
+      if (storageInfo) {
+        setLibraryStorageInfo(storageInfo);
       }
     } catch (error: any) {
       console.error('保存库配额失败:', error);

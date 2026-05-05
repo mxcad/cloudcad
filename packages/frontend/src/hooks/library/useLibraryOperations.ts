@@ -17,7 +17,9 @@
  */
 
 import { useState, useCallback } from 'react';
+// TODO: Replace write methods (deleteDrawingNode, renameDrawingNode, moveDrawingNode, copyDrawingNode, etc.) with SDK when backend adds endpoints. Downloads can use libraryControllerDownloadDrawingNode/libraryControllerDownloadBlockNode.
 import { libraryApi } from '../../services/libraryApi';
+import { libraryControllerDownloadDrawingNode, libraryControllerDownloadBlockNode } from '@/api-sdk';
 import { sanitizeFileName } from '../../utils/fileUtils';
 
 export type LibraryType = 'drawing' | 'block';

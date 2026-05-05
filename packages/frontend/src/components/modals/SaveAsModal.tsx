@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Folder } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
 import { fileSystemControllerGetProjects } from '@/api-sdk';
+// TODO: Replace mxcadApi.saveMxwebAs and libraryApi.saveDrawingAs/saveBlockAs with SDK when backend adds endpoints
 import { mxcadApi } from '../../services/mxcadApi';
 import { libraryApi } from '../../services/libraryApi';
 import { globalShowToast } from '../../contexts/NotificationContext';
