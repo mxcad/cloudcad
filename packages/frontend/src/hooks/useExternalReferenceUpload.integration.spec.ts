@@ -20,14 +20,14 @@ vi.mock('../utils/authCheck', () => ({
   isAuthenticated: () => true,
 }));
 
-// Mock API 服务
-vi.mock('../services/mxcadApi', () => ({
-  mxcadApi: {
-    getPreloadingData: vi.fn(),
-    checkExternalReferenceExists: vi.fn(),
-    uploadExtReferenceDwg: vi.fn(),
-    uploadExtReferenceImage: vi.fn(),
-  },
+// Mock SDK
+vi.mock('@/api-sdk', () => ({
+  mxCadControllerGetPreloadingData: vi.fn(),
+  mxCadControllerCheckExternalReference: vi.fn(),
+  mxCadControllerUploadExtReferenceDwg: vi.fn(),
+  mxCadControllerUploadExtReferenceImage: vi.fn(),
+  publicFileControllerGetPreloadingData: vi.fn(),
+  publicFileControllerCheckExtReference: vi.fn(),
 }));
 
 vi.mock('../services/publicFileApi', () => ({
@@ -82,7 +82,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
   describe('checkMissingReferences - 外部参照检测', () => {
     it('应该正确检测到缺失的外部参照并打开模态框', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -91,11 +91,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg', 'ref2.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
@@ -117,7 +117,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该在没有外部参照时不打开模态框', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -126,7 +126,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: [],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
@@ -147,9 +147,9 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该在获取预加载数据失败时返回false', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
-      vi.mocked(mxcadApi.getPreloadingData).mockRejectedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockRejectedValue(
         new Error('网络错误')
       );
 
@@ -169,7 +169,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该过滤掉已存在的外部参照', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -178,12 +178,12 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg', 'ref2.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
       // 模拟部分文件已存在
-      vi.mocked(mxcadApi.checkExternalReferenceExists)
+      vi.mocked(sdk.mxCadControllerCheckExternalReference)
         .mockResolvedValueOnce({ exists: true } as any) // ref1.dwg 已存在
         .mockResolvedValueOnce({ exists: false } as any) // ref2.dwg 不存在
         .mockResolvedValueOnce({ exists: true } as any) // image1.png 已存在
@@ -209,7 +209,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该过滤掉HTTP/HTTPS开头的URL外部参照', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -222,11 +222,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['local.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
@@ -257,9 +257,9 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
   describe('文件上传', () => {
     it('应该在无文件时正确处理上传', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue({
         tz: false,
         src_file_md5: testFileHash,
         images: [],
@@ -282,7 +282,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该正确处理上传API调用', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
       const consoleSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
       const mockPreloadingData: PreloadingData = {
@@ -292,15 +292,15 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
-      vi.mocked(mxcadApi.uploadExtReferenceDwg).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
         data: { code: 0, message: 'ok' },
       } as any);
 
@@ -328,7 +328,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该处理上传失败的情况', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
       const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
@@ -340,16 +340,16 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
       // 没有选择文件时，上传不会执行（不会调用API）
-      vi.mocked(mxcadApi.uploadExtReferenceDwg).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
         data: { code: 0, message: 'ok' },
       } as any);
 
@@ -369,14 +369,14 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       });
 
       // 没有选择文件时，不会调用上传API
-      expect(mxcadApi.uploadExtReferenceDwg).not.toHaveBeenCalled();
+      expect(sdk.mxCadControllerUploadExtReferenceDwg).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
   });
 
   describe('模态框控制', () => {
     it('应该正确关闭模态框并重置状态', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -385,11 +385,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
@@ -432,7 +432,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该在所有文件上传成功后调用onSuccess', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
       const onSuccess = vi.fn();
 
       const mockPreloadingData: PreloadingData = {
@@ -442,15 +442,15 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
-      vi.mocked(mxcadApi.uploadExtReferenceDwg).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
         data: { code: 0, message: 'ok' },
       } as any);
 
@@ -480,7 +480,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该在部分文件上传失败时触发警告', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const mockPreloadingData: PreloadingData = {
@@ -490,15 +490,15 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
-      vi.mocked(mxcadApi.uploadExtReferenceDwg).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
         data: { code: 0, message: 'ok' },
       } as any);
 
@@ -546,7 +546,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
   describe('完整上传流程集成测试', () => {
     it('应该完成整个外部参照上传流程', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
       const onSuccess = vi.fn();
       const onSkip = vi.fn();
 
@@ -557,19 +557,19 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
-      vi.mocked(mxcadApi.uploadExtReferenceDwg).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
         data: { code: 0, message: 'ok' },
       } as any);
 
-      vi.mocked(mxcadApi.uploadExtReferenceImage).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerUploadExtReferenceImage).mockResolvedValue({
         data: { code: 0, message: 'ok' },
       } as any);
 
@@ -600,7 +600,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该支持跳过上传流程', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
       const onSkip = vi.fn();
 
       const mockPreloadingData: PreloadingData = {
@@ -610,11 +610,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['ref1.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
@@ -670,7 +670,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
 
   describe('边界情况测试', () => {
     it('应该正确处理大量外部参照', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       // 创建10个外部参照
       const images = Array.from({ length: 5 }, (_, i) => `image${i + 1}.png`);
@@ -683,11 +683,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: refs,
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
-      vi.mocked(mxcadApi.checkExternalReferenceExists).mockResolvedValue({
+      vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
         exists: false,
       } as any);
 
@@ -707,7 +707,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
     });
 
     it('应该正确处理已存在的外部参照数量', async () => {
-      const { mxcadApi } = await import('../services/mxcadApi');
+      const sdk = await import('@/api-sdk');
 
       const mockPreloadingData: PreloadingData = {
         tz: false,
@@ -716,12 +716,12 @@ describe('useExternalReferenceUpload Integration Tests', () => {
         externalReference: ['exist.dwg', 'missing.dwg'],
       };
 
-      vi.mocked(mxcadApi.getPreloadingData).mockResolvedValue(
+      vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
         mockPreloadingData as any
       );
 
       // 模拟一半存在一半不存在
-      vi.mocked(mxcadApi.checkExternalReferenceExists)
+      vi.mocked(sdk.mxCadControllerCheckExternalReference)
         .mockResolvedValueOnce({ exists: true } as any) // exist.dwg 已存在
         .mockResolvedValueOnce({ exists: false } as any) // missing.dwg 不存在
         .mockResolvedValueOnce({ exists: true } as any) // exist1.png 已存在

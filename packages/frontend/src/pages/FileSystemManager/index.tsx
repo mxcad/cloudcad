@@ -32,7 +32,7 @@ import { FileSystemNode } from '@/types/filesystem';
 import { CreateFolderModal } from '@/components/modals/CreateFolderModal';
 import { RenameModal } from '@/components/modals/RenameModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
-import { MembersModal } from '@/components/modals/MembersModal';
+import { MembersModal } from '@/components/modals/MembersModal/MembersModal';
 import { ProjectRolesModal } from '@/components/modals/ProjectRolesModal';
 import { SelectFolderModal } from '@/components/modals/SelectFolderModal';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';

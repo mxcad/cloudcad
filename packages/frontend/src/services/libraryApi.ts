@@ -1,5 +1,15 @@
-// @deprecated Use @/api-sdk directly instead.
-import type { SaveMxwebDto } from '../types/api-client';
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
 import { client } from '@/api-sdk/client.gen';
 import {
   libraryControllerGetDrawingLibrary,
@@ -16,17 +26,6 @@ import {
   mxCadControllerCheckChunkExist,
   mxCadControllerUploadFile,
 } from '@/api-sdk';
-
-type Client = typeof client;
-
-// Helper: raw client proxy typed via SDK Client for endpoint calls not covered by generated functions
-interface RawClient extends Client {
-  post: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
-  delete: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
-  patch: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
-  put: <T>(url: string, options?: Record<string, unknown>) => Promise<T>;
-}
-const rawClient = client as unknown as RawClient;
 
 const LIBRARY_API = '/api/v1/library';
 
@@ -95,7 +94,7 @@ export const libraryApi = {
     name: string;
     parentId?: string;
     skipIfExists?: boolean;
-  }) => rawClient.post(`${LIBRARY_API}/drawing/folders`, { body: data }),
+  }) => client.post(`${LIBRARY_API}/drawing/folders`, { body: data }),
 
   uploadDrawingChunk: (formData: FormData) =>
     mxCadControllerUploadFile({ body: formData as never }),
@@ -117,22 +116,22 @@ export const libraryApi = {
   }) => mxCadControllerCheckChunkExist({ body: data }),
 
   deleteDrawingNode: (nodeId: string, permanently: boolean = true) =>
-    rawClient.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
-      body: { permanently },
+    client.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+      query: { permanently },
     }),
 
   renameDrawingNode: (nodeId: string, name: string) =>
-    rawClient.patch(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+    client.patch(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
       body: { name },
     }),
 
   moveDrawingNode: (nodeId: string, targetParentId: string) =>
-    rawClient.post(`${LIBRARY_API}/drawing/nodes/${nodeId}/move`, {
+    client.post(`${LIBRARY_API}/drawing/nodes/${nodeId}/move`, {
       body: { targetParentId },
     }),
 
   copyDrawingNode: (nodeId: string, targetParentId: string) =>
-    rawClient.post(`${LIBRARY_API}/drawing/nodes/${nodeId}/copy`, {
+    client.post(`${LIBRARY_API}/drawing/nodes/${nodeId}/copy`, {
       body: { targetParentId },
     }),
 
@@ -194,7 +193,7 @@ export const libraryApi = {
     name: string;
     parentId?: string;
     skipIfExists?: boolean;
-  }) => rawClient.post(`${LIBRARY_API}/block/folders`, { body: data }),
+  }) => client.post(`${LIBRARY_API}/block/folders`, { body: data }),
 
   uploadBlockChunk: (formData: FormData) =>
     mxCadControllerUploadFile({ body: formData as never }),
@@ -216,22 +215,22 @@ export const libraryApi = {
   }) => mxCadControllerCheckChunkExist({ body: data }),
 
   deleteBlockNode: (nodeId: string, permanently: boolean = true) =>
-    rawClient.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
-      body: { permanently },
+    client.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+      query: { permanently },
     }),
 
   renameBlockNode: (nodeId: string, name: string) =>
-    rawClient.patch(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+    client.patch(`${LIBRARY_API}/block/nodes/${nodeId}`, {
       body: { name },
     }),
 
   moveBlockNode: (nodeId: string, targetParentId: string) =>
-    rawClient.post(`${LIBRARY_API}/block/nodes/${nodeId}/move`, {
+    client.post(`${LIBRARY_API}/block/nodes/${nodeId}/move`, {
       body: { targetParentId },
     }),
 
   copyBlockNode: (nodeId: string, targetParentId: string) =>
-    rawClient.post(`${LIBRARY_API}/block/nodes/${nodeId}/copy`, {
+    client.post(`${LIBRARY_API}/block/nodes/${nodeId}/copy`, {
       body: { targetParentId },
     }),
 
@@ -248,13 +247,8 @@ export const libraryApi = {
         type: 'application/octet-stream',
       })
     );
-    return rawClient.post(`${LIBRARY_API}/drawing/savemxweb/${nodeId}`, {
-      body: formData as unknown as SaveMxwebDto,
-      onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-        if (onProgress && progressEvent.total) {
-          onProgress((progressEvent.loaded / progressEvent.total) * 100);
-        }
-      },
+    return client.post(`${LIBRARY_API}/drawing/save/${nodeId}`, {
+      body: formData,
     });
   },
 
@@ -273,13 +267,8 @@ export const libraryApi = {
     );
     formData.append('targetParentId', targetParentId);
     formData.append('fileName', fileName);
-    return rawClient.post(`${LIBRARY_API}/drawing/save-as`, {
+    return client.post(`${LIBRARY_API}/drawing/save-as`, {
       body: formData,
-      onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-        if (onProgress && progressEvent.total) {
-          onProgress((progressEvent.loaded / progressEvent.total) * 100);
-        }
-      },
     });
   },
 
@@ -295,13 +284,8 @@ export const libraryApi = {
         type: 'application/octet-stream',
       })
     );
-    return rawClient.post(`${LIBRARY_API}/block/savemxweb/${nodeId}`, {
-      body: formData as unknown as SaveMxwebDto,
-      onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-        if (onProgress && progressEvent.total) {
-          onProgress((progressEvent.loaded / progressEvent.total) * 100);
-        }
-      },
+    return client.post(`${LIBRARY_API}/block/save/${nodeId}`, {
+      body: formData,
     });
   },
 
@@ -320,13 +304,8 @@ export const libraryApi = {
     );
     formData.append('targetParentId', targetParentId);
     formData.append('fileName', fileName);
-    return rawClient.post(`${LIBRARY_API}/block/save-as`, {
+    return client.post(`${LIBRARY_API}/block/save-as`, {
       body: formData,
-      onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-        if (onProgress && progressEvent.total) {
-          onProgress((progressEvent.loaded / progressEvent.total) * 100);
-        }
-      },
     });
   },
 
@@ -336,9 +315,9 @@ export const libraryApi = {
     data: { name: string; parentId?: string; skipIfExists?: boolean }
   ) => {
     if (libraryType === 'drawing') {
-      return rawClient.post(`${LIBRARY_API}/drawing/folders`, { body: data });
+      return client.post(`${LIBRARY_API}/drawing/folders`, { body: data });
     } else {
-      return rawClient.post(`${LIBRARY_API}/block/folders`, { body: data });
+      return client.post(`${LIBRARY_API}/block/folders`, { body: data });
     }
   },
 
@@ -348,12 +327,12 @@ export const libraryApi = {
     permanently: boolean = true
   ) => {
     if (libraryType === 'drawing') {
-      return rawClient.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
-        body: { permanently },
+      return client.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+        query: { permanently },
       });
     } else {
-      return rawClient.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
-        body: { permanently },
+      return client.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+        query: { permanently },
       });
     }
   },

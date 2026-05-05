@@ -23,6 +23,7 @@ import {
   fileSystemControllerCopyNode,
   fileSystemControllerGetRootNode,
 } from '@/api-sdk';
+import type { CadDownloadFormat } from '@/api-sdk';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
 interface UpdateNodeDto {
@@ -54,30 +55,23 @@ export const filesApi = {
 
   downloadWithFormat: (
     id: string,
-    format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
+    format: CadDownloadFormat,
     pdfOptions?: PdfOptions
   ) => {
-    const params: {
-      path: { nodeId: string };
-      query?: { format?: string; width?: unknown; height?: unknown; colorPolicy?: unknown };
-    } = {
-      path: {
-        nodeId: id,
-      },
-      query: {
-        format,
-      },
-    };
+    const query: { format?: CadDownloadFormat; width?: unknown; height?: unknown; colorPolicy?: unknown } = { format };
     if (pdfOptions?.width) {
-      params.query = { width: Number(pdfOptions.width) };
+      query.width = Number(pdfOptions.width);
     }
     if (pdfOptions?.height) {
-      params.query = { ...params.query, height: Number(pdfOptions.height) };
+      query.height = Number(pdfOptions.height);
     }
     if (pdfOptions?.colorPolicy) {
-      params.query = { ...params.query, colorPolicy: pdfOptions.colorPolicy };
+      query.colorPolicy = pdfOptions.colorPolicy;
     }
-    return fileSystemControllerDownloadNodeWithFormat(params);
+    return fileSystemControllerDownloadNodeWithFormat({
+      path: { nodeId: id },
+      query,
+    });
   },
 
   update: (id: string, data: UpdateNodeDto) =>
@@ -96,10 +90,10 @@ export const filesApi = {
     }),
 
   moveNode: (id: string, data: MoveNodeDto) =>
-    fileSystemControllerMoveNode({ path: { nodeId: id }, body: data }),
+    fileSystemControllerMoveNode({ path: { nodeId: id }, body: data, query: undefined } as any),
 
   copyNode: (id: string, data: CopyNodeDto) =>
-    fileSystemControllerCopyNode({ path: { nodeId: id }, body: data }),
+    fileSystemControllerCopyNode({ path: { nodeId: id }, body: data, query: undefined } as any),
 
   getRoot: (nodeId: string) =>
     fileSystemControllerGetRootNode({ path: { nodeId } }),
