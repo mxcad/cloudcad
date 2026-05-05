@@ -76,11 +76,22 @@ const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
 // 受保护的路由组件（认证检查）
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
   ({ children }) => {
-    const { isAuthenticated, user, token } = useAuth();
+    const { isAuthenticated, loading } = useAuth();
     const location = useLocation();
 
+    // Wait for token validation before deciding — prevents flash-redirect on reload
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+          <div
+            className="w-10 h-10 rounded-full animate-spin"
+            style={{ border: '3px solid var(--border-default)', borderTopColor: 'var(--primary-500)' }}
+          />
+        </div>
+      );
+    }
+
     if (!isAuthenticated) {
-      // 保存当前路径和查询参数到 location state，以便登录后跳转回原页面
       return (
         <Navigate
           to="/login"

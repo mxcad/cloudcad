@@ -17,8 +17,8 @@ import {
   authControllerVerifyPhone,
   authControllerGetWechatAuthUrl,
 } from '@/api-sdk';
-import type { LoginDto } from '@/api-sdk';
 import type { UserDto as UserDtoType } from '@/api-sdk';
+import { setTokenRefreshCallback } from '@/api-sdk/client-setup';
 
 type User = UserDtoType;
 
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return {
           token: storedToken,
           user: JSON.parse(storedUser),
-          loading: false,
+          loading: true, // will be set to false after token validation
         };
       }
     } catch (error) {
@@ -98,40 +98,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 异步验证 token - 只在 token 存在且用户信息存在时执行
   useEffect(() => {
-    // 避免在初始化时立即验证，给后端服务一点启动时间
     const validateToken = async () => {
       if (token && user) {
         setLoading(true);
         try {
-          // 静默：验证 token 有效性
           const userData = await authControllerGetProfile() as unknown as User;
           setUser(userData);
-          // 同步更新 localStorage 中的用户数据（包含最新权限）
           localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
-          // 只在明确的 401 错误时清除认证信息，但不自动跳转
-          // 由各个路由组件根据自己的保护级别决定是否跳转
           const fetchError = error as { status?: number };
           if (fetchError.status === 401) {
-            // Token 确实无效，清除本地存储（但不跳转）
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
             setToken(null);
             setUser(null);
           }
-          // 其他错误（如网络错误、5xx 等）不清除认证信息，避免误判
-          // 因为 apiClient 拦截器会自动尝试刷新 token
         } finally {
           setLoading(false);
         }
       }
     };
 
-    // 延迟验证，避免组件刚挂载时状态不稳定
-    const timer = setTimeout(validateToken, 300);
-    return () => clearTimeout(timer);
+    validateToken();
   }, [token]); // 依赖 token，当 token 变化时重新验证
+
+  // Register callback so SDK can notify React state after silent token refresh
+  useEffect(() => {
+    setTokenRefreshCallback((newAccessToken: string) => {
+      setToken(newAccessToken);
+    });
+    return () => setTokenRefreshCallback(() => {});
+  }, []);
 
   const login = useCallback(async (account: string, password: string) => {
     console.log('[AuthContext] 开始登录:', account);

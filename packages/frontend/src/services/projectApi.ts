@@ -17,7 +17,6 @@ import {
   fileSystemControllerGetTrash,
   fileSystemControllerCreateProject,
   fileSystemControllerGetProject,
-  fileSystemControllerUpdateProject,
   fileSystemControllerDeleteNode,
   fileSystemControllerRestoreTrashItems,
   fileSystemControllerGetStorageQuota,
@@ -64,9 +63,6 @@ export const projectApi = {
 
   get: (projectId: string) =>
     fileSystemControllerGetProject({ path: { projectId } }),
-
-  update: (projectId: string, data: CreateProjectDto) =>
-    fileSystemControllerUpdateProject({ path: { projectId }, body: data }),
 
   delete: (projectId: string, permanently: boolean = false) =>
     fileSystemControllerDeleteNode({

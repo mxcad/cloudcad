@@ -38,7 +38,14 @@ client.interceptors.request.use((request) => {
   return request;
 });
 
-// ── 3. 401 Refresh (custom fetch wrapper) ────────────────────
+// ── 3. Refresh callback (notify AuthContext after silent refresh) ─
+let onTokenRefreshed: ((accessToken: string) => void) | null = null;
+
+export function setTokenRefreshCallback(cb: (accessToken: string) => void) {
+  onTokenRefreshed = cb;
+}
+
+// ── 4. 401 Refresh (custom fetch wrapper) ────────────────────
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -63,6 +70,8 @@ async function tryRefreshToken(): Promise<boolean> {
       if (inner?.accessToken) {
         localStorage.setItem('accessToken', inner.accessToken);
         if (inner.refreshToken) localStorage.setItem('refreshToken', inner.refreshToken);
+        // Notify AuthContext so React state stays in sync
+        onTokenRefreshed?.(inner.accessToken);
         return true;
       }
       return false;
@@ -116,7 +125,7 @@ client.setConfig({
   },
 });
 
-// ── 4. Error tagging ─────────────────────────────────────────
+// ── 5. Error tagging ─────────────────────────────────────────
 client.interceptors.error.use(async (error, _response, _request, _options) => {
   if (error && typeof error === 'object') {
     const e = error as Record<string, unknown>;

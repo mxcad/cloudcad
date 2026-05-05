@@ -179,7 +179,7 @@ function setupInterceptors(instance: AxiosInstance) {
 
         try {
           const baseURL = API_BASE_URL.replace(/\/api$/, '');
-          const response = await axios.post(`${baseURL}/api/auth/refresh`, {
+          const response = await axios.post(`${baseURL}/api/v1/auth/refresh`, {
             refreshToken,
           });
           const { accessToken, refreshToken: newRefreshToken } =
