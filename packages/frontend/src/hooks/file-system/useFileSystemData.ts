@@ -12,11 +12,16 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  fileSystemControllerGetProjects,
+  fileSystemControllerGetTrash,
+  fileSystemControllerSearch,
+  fileSystemControllerGetRootNode,
+  fileSystemControllerGetNode,
+  fileSystemControllerGetChildren,
+} from '@/api-sdk';
+// @deprecated — legacy import kept for getDeleted (no SDK mapping)
 import { projectApi } from '@/services/projectApi';
-import { nodeApi } from '@/services/nodeApi';
-import { searchApi } from '@/services/searchApi';
-import { projectTrashApi } from '@/services/projectTrashApi';
-import { filesApi } from '@/services/filesApi';
 import { trashApi } from '@/services/trashApi';
 import {
   FileSystemNode,
@@ -124,11 +129,10 @@ export const useFileSystemData = ({
 
           if (traversalNode.parentId) {
             try {
-              const parentResponse = await nodeApi.getNode(
-                traversalNode.parentId,
-                { signal }
-              );
-              traversalNode = toFileSystemNode(parentResponse.data);
+              const parentResponse = await fileSystemControllerGetNode({
+                path: { nodeId: traversalNode.parentId },
+              });
+              traversalNode = toFileSystemNode(parentResponse);
             } catch (error: unknown) {
               handleError(error, '获取父节点失败，停止构建面包屑');
               break;
@@ -200,21 +204,19 @@ export const useFileSystemData = ({
             : urlProjectId;
         }
 
-        const searchResponse = await searchApi.search(
-          searchQuery,
-          {
+        // TODO: `libraryKey` is not in the SDK query type — passed anyway
+        const searchResponse = await fileSystemControllerSearch({
+          query: {
+            keyword: searchQuery,
             scope: searchScope,
             filter: searchFilter,
             projectId: searchProjectId,
             page: paginationRef.current.page,
             limit: paginationRef.current.limit,
-          },
-          {
-            signal: abortController.signal,
-          }
-        );
+          } as any,
+        });
 
-        const searchData = searchResponse.data;
+        const searchData = searchResponse;
         if (searchData?.nodes) {
           const searchNodes = searchData.nodes.map(toFileSystemNode);
           setNodes(searchNodes);
@@ -239,12 +241,10 @@ export const useFileSystemData = ({
         }
 
         if (isTrashView) {
-          const trashResponse = await projectTrashApi.getProjectTrash(currentNodeId, {
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-          });
+          // TODO: getTrash has query?: never and does not support projectId filtering — revisit
+          const trashResponse = await fileSystemControllerGetTrash();
 
-          const trashData = trashResponse.data;
+          const trashData = trashResponse;
           const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
           setNodes(trashNodes);
 
@@ -271,10 +271,10 @@ export const useFileSystemData = ({
           ]);
 
           try {
-            const nodeResponse = await nodeApi.getNode(currentNodeId, {
-              signal: abortController.signal,
+            const nodeResponse = await fileSystemControllerGetNode({
+              path: { nodeId: currentNodeId },
             });
-            setCurrentNode(toFileSystemNode(nodeResponse.data));
+            setCurrentNode(toFileSystemNode(nodeResponse));
           } catch {
           }
 
@@ -283,26 +283,23 @@ export const useFileSystemData = ({
         }
 
         const [nodeResponse, childrenResponse] = await Promise.all([
-          nodeApi.getNode(currentNodeId, {
-            signal: abortController.signal,
+          fileSystemControllerGetNode({
+            path: { nodeId: currentNodeId },
           }),
-          nodeApi.getChildren(
-            currentNodeId,
-            {
+          fileSystemControllerGetChildren({
+            path: { nodeId: currentNodeId },
+            query: {
               page: paginationRef.current.page,
               limit: paginationRef.current.limit,
               search: searchQuery || undefined,
-            },
-            {
-              signal: abortController.signal,
-            }
-          ),
+            } as any,
+          }),
         ]);
 
-        const nodeData = toFileSystemNode(nodeResponse.data);
-        const childrenData = (childrenResponse.data?.nodes || []).map(toFileSystemNode);
+        const nodeData = toFileSystemNode(nodeResponse);
+        const childrenData = (childrenResponse?.nodes || []).map(toFileSystemNode);
         setNodes(childrenData);
-        const childrenMeta = childrenResponse.data;
+        const childrenMeta = childrenResponse;
         if (childrenMeta?.total !== undefined) {
           setPaginationMeta({
             total: childrenMeta.total,
@@ -331,6 +328,7 @@ export const useFileSystemData = ({
         let response;
 
         if (isProjectTrashViewRef.current) {
+          // TODO: Replace with SDK when backend adds getDeletedProjects endpoint
           response = await projectApi.getDeleted(
             {
               page: paginationRef.current.page,
@@ -341,21 +339,18 @@ export const useFileSystemData = ({
             }
           );
         } else {
-          response = await projectApi.list(
-            projectFilter,
-            {
+          response = await fileSystemControllerGetProjects({
+            query: {
+              filter: projectFilter,
               page: paginationRef.current.page,
               limit: paginationRef.current.limit,
-            },
-            {
-              signal: abortController.signal,
-            }
-          );
+            } as any,
+          });
         }
 
         // 处理分页响应
-        // ProjectListResponseDto 包含 nodes, total, page, limit, totalPages
-        const projectData = response.data;
+        // ProjectListResponseDto / SDK unwrapped response contains nodes, total, page, limit, totalPages
+        const projectData = isProjectTrashViewRef.current ? response.data : response;
         if (projectData?.nodes) {
           // NodeDto[] 转换为 FileSystemNode[]
           const projectNodes = projectData.nodes.map(projectToNode);
@@ -368,7 +363,7 @@ export const useFileSystemData = ({
           });
         } else {
           // 兼容旧格式
-          const responseData = response.data as unknown;
+          const responseData = (isProjectTrashViewRef.current ? response.data : response) as unknown;
           const allProjects = (
             Array.isArray(responseData) ? responseData : []
           ) as ProjectDto[];
@@ -395,13 +390,11 @@ export const useFileSystemData = ({
             throw new Error('项目ID不存在，无法加载项目回收站');
           }
 
-          const trashResponse = await projectTrashApi.getProjectTrash(urlProjectId, {
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-          });
+          // TODO: getTrash has query?: never and does not support projectId filtering — revisit
+          const trashResponse = await fileSystemControllerGetTrash();
 
           // ProjectTrashResponseDto 包含 nodes, total, page, limit, totalPages
-          const trashData = trashResponse.data;
+          const trashData = trashResponse;
           const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
           setNodes(trashNodes);
           if (trashData?.total !== undefined) {
@@ -422,12 +415,12 @@ export const useFileSystemData = ({
             });
           }
 
-          const projectResponse = await nodeApi.getNode(urlProjectId, {
-            signal: abortController.signal,
+          const projectResponse = await fileSystemControllerGetNode({
+            path: { nodeId: urlProjectId },
           });
-          setCurrentNode(toFileSystemNode(projectResponse.data));
+          setCurrentNode(toFileSystemNode(projectResponse));
 
-          const projectData = projectResponse.data;
+          const projectData = projectResponse;
           setBreadcrumbs([
             {
               id: projectData.id,
@@ -470,8 +463,8 @@ export const useFileSystemData = ({
 
           if (!isPersonalSpaceMode && personalSpaceId && currentNodeId) {
             try {
-              const rootResponse = await filesApi.getRoot(currentNodeId);
-              if (rootResponse.data?.personalSpaceKey) {
+              const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: currentNodeId } });
+              if (rootNode?.personalSpaceKey) {
                 if (urlNodeId) {
                   navigate(`/personal-space/${urlNodeId}`);
                 } else {

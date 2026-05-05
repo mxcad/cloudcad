@@ -6,7 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { Check } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import { libraryApi } from '../../services/libraryApi';
+import { libraryControllerGetDrawingLibrary, libraryControllerGetDrawingChildren, libraryControllerGetBlockLibrary, libraryControllerGetBlockChildren } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface LibrarySelectFolderModalProps {
@@ -35,28 +35,22 @@ export const LibrarySelectFolderModal: React.FC<
 
   const getChildrenApi =
     libraryType === 'drawing'
-      ? libraryApi.getDrawingChildren
-      : libraryApi.getBlockChildren;
+      ? libraryControllerGetDrawingChildren
+      : libraryControllerGetBlockChildren;
 
   const getLibraryApi =
     libraryType === 'drawing'
-      ? libraryApi.getDrawingLibrary
-      : libraryApi.getBlockLibrary;
-
-  const getNodeApi =
-    libraryType === 'drawing'
-      ? libraryApi.getDrawingNode
-      : libraryApi.getBlockNode;
+      ? libraryControllerGetDrawingLibrary
+      : libraryControllerGetBlockLibrary;
 
   const loadChildren = useCallback(
     async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
       try {
-        const response = await getChildrenApi(nodeId, { page: 1, limit: 100 });
+        const response = await getChildrenApi({ path: { nodeId }, query: { page: 1, limit: 100 } });
         let children: FileSystemNode[] = [];
 
-        if (response.data && (response.data as any).nodes) {
-          children = (response.data as any)
-            .nodes as unknown as FileSystemNode[];
+        if (response && (response as any).nodes) {
+          children = (response as any).nodes as unknown as FileSystemNode[];
         }
 
         const folders: FolderNode[] = children
@@ -89,8 +83,7 @@ export const LibrarySelectFolderModal: React.FC<
     setError(null);
 
     try {
-      const libraryResponse = await getLibraryApi();
-      const library = libraryResponse.data as { id: string; name: string };
+      const library = await getLibraryApi() as { id: string; name: string };
       setLibraryName(library.name);
 
       const rootFolders = await loadChildren(library.id, currentNodeId);

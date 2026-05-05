@@ -1,3 +1,4 @@
+// @deprecated Use @/api-sdk instead.
 import { getApiClient } from './apiClient';
 import { mxcadApi } from './mxcadApi';
 import type { SaveMxwebDto } from '../types/api-client';

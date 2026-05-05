@@ -25,7 +25,7 @@ import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { libraryApi } from '../services/libraryApi';
 import { projectApi } from '@/services/projectApi';
-import { runtimeConfigApi } from '../services/runtimeConfigApi';
+import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import {
   EmptyFolderIcon,
@@ -332,8 +332,7 @@ export const LibraryManager: React.FC = () => {
 
     try {
       // 获取默认配额（GB）
-      const configResponse = await runtimeConfigApi.getPublicConfigs();
-      const configs = configResponse.data as Record<string, number> | undefined;
+      const configs = await runtimeConfigControllerGetPublicConfigs() as Record<string, number> | undefined;
       const defaultVal = configs?.libraryStorageQuota || 100;
       setDefaultLibraryQuota(defaultVal);
 

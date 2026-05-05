@@ -1,8 +1,12 @@
 import { useState, useCallback } from 'react';
-import { usersApi } from '@/services/usersApi';
-import { rolesApi } from '@/services/rolesApi';
-import { runtimeConfigApi } from '@/services/runtimeConfigApi';
-import { projectApi } from '@/services/projectApi';
+import {
+  usersControllerFindAll,
+  usersControllerCreate,
+  usersControllerUpdate,
+  usersControllerRemove,
+  usersControllerDeleteImmediately,
+  usersControllerRestore,
+} from '@/api-sdk';
 import { userCleanupApi } from '@/services/userCleanupApi';
 import { UserResponseDto, UpdateUserDto } from '@/types/api-client';
 
@@ -42,8 +46,8 @@ export function useUserCRUD(): UseUserCRUDReturn {
     setLoading(true);
     setError(null);
     try {
-      const response = await usersApi.list({});
-      setUsers(response.data?.users || []);
+      const response = await usersControllerFindAll({ query: {} });
+      setUsers(response?.users || []);
     } catch (err) {
       setError('加载用户列表失败');
     } finally {
@@ -54,7 +58,7 @@ export function useUserCRUD(): UseUserCRUDReturn {
   const createUser = useCallback(async (data: any) => {
     setLoading(true);
     try {
-      await usersApi.create(data);
+      await usersControllerCreate({ body: data });
     } catch (err) {
       setError('创建用户失败');
       throw err;
@@ -66,7 +70,7 @@ export function useUserCRUD(): UseUserCRUDReturn {
   const updateUser = useCallback(async (id: string, data: UpdateUserDto) => {
     setLoading(true);
     try {
-      await usersApi.update(id, data);
+      await usersControllerUpdate({ path: { id }, body: data });
     } catch (err) {
       setError('更新用户失败');
       throw err;
@@ -79,9 +83,9 @@ export function useUserCRUD(): UseUserCRUDReturn {
     setLoading(true);
     try {
       if (immediately) {
-        await usersApi.deleteImmediately(id);
+        await usersControllerDeleteImmediately({ path: { id } });
       } else {
-        await usersApi.delete(id);
+        await usersControllerRemove({ path: { id } });
       }
     } catch (err) {
       setError('删除用户失败');
@@ -94,7 +98,7 @@ export function useUserCRUD(): UseUserCRUDReturn {
   const restoreUser = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      await usersApi.restore(id);
+      await usersControllerRestore({ path: { id } });
     } catch (err) {
       setError('恢复用户失败');
       throw err;

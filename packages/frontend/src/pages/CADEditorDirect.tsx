@@ -15,9 +15,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { filesApi } from '../services/filesApi';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat } from '@/api-sdk';
 import { projectPermissionApi } from '@/services/projectPermissionApi';
-import { projectApi } from '@/services/projectApi';
+import { fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { libraryApi } from '../services/libraryApi';
 import { publicFileApi } from '../services/publicFileApi';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
@@ -210,15 +210,14 @@ export const CADEditorDirect: React.FC = () => {
   // 获取私人空间 ID
   useEffect(() => {
     if (!isAuthenticated) return;
-    projectApi
-      .getPersonalSpace()
+    fileSystemControllerGetPersonalSpace()
       .then((res) => {
-        if (res.data?.id) {
-          setPersonalSpaceId(res.data.id);
+        if (res?.id) {
+          setPersonalSpaceId(res.id);
           // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
           import('../services/mxcadManager').then(
             ({ setPersonalSpaceId: setCachedPersonalSpaceId }) => {
-              setCachedPersonalSpaceId(res.data?.id || null);
+              setCachedPersonalSpaceId(res?.id || null);
             }
           );
         }
@@ -527,8 +526,8 @@ export const CADEditorDirect: React.FC = () => {
         } else {
           // 项目文件：需要登录
           try {
-            const fileResponse = await filesApi.get(fileId);
-            file = fileResponse.data as typeof file;
+            const fileNode = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
+            file = fileNode as typeof file;
           } catch (error) {
             console.error('获取文件信息失败:', error);
             const axiosError = error as { response?: { status?: number } };
@@ -583,9 +582,9 @@ export const CADEditorDirect: React.FC = () => {
           if (!file.isRoot && file.parentId) {
             try {
               if (!file.id) throw new Error('节点ID缺失');
-              const rootResponse = await filesApi.getRoot(file.id);
-              if (rootResponse.data?.id) {
-                projectId = rootResponse.data.id;
+              const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
+              if (rootNode?.id) {
+                projectId = rootNode.id;
               }
             } catch (error) {
               console.error('获取根节点失败:', error);
@@ -1112,8 +1111,7 @@ export const CADEditorDirect: React.FC = () => {
     // 文件编辑模式：已有打开的文件
     try {
       // 获取目标文件信息（要打开的文件）
-      const targetFileResponse = await filesApi.get(file.nodeId);
-      const targetFile = targetFileResponse.data as {
+      const targetFile = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as {
         deletedAt?: string | null;
       };
 
@@ -1126,8 +1124,7 @@ export const CADEditorDirect: React.FC = () => {
       const currentFileId = currentFileIdRef.current;
       if (!currentFileId) return;
 
-      const fileResponse = await filesApi.get(currentFileId);
-      const currentFile = fileResponse.data as {
+      const currentFile = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as {
         parentId?: string | null;
         id?: string;
         isRoot?: boolean;
@@ -1170,13 +1167,13 @@ export const CADEditorDirect: React.FC = () => {
   ) => {
     try {
       setDownloading(true);
-      const response = await filesApi.downloadWithFormat(
-        downloadingNodeId,
-        format,
-        pdfOptions
-      );
+      const blobData = await fileSystemControllerDownloadNodeWithFormat({
+        path: { nodeId: downloadingNodeId },
+        query: { format, ...(pdfOptions as any) },
+        responseType: 'blob',
+      }) as Blob;
 
-      const blob = new Blob([response.data as BlobPart]);
+      const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

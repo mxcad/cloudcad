@@ -32,7 +32,7 @@ import { projectApi } from '@/services/projectApi';
 import { nodeApi } from '@/services/nodeApi';
 import { filesApi } from '@/services/filesApi';
 import { libraryApi } from '@/services/libraryApi';
-import { versionControlApi } from '@/services/versionControlApi';
+import { versionControlControllerGetFileHistory } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from './common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
 import { FileItem } from './FileItem';
@@ -1767,15 +1767,13 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       setVersionHistoryError(null);
 
       try {
-        const response = await versionControlApi.getFileHistory(
-          selectedProjectId,
-          node.path,
-          50
-        );
-        if (response.data?.success) {
-          setVersionHistoryEntries(response.data.entries || []);
+        const response = await versionControlControllerGetFileHistory({
+          query: { projectId: selectedProjectId, filePath: node.path, limit: 50 },
+        });
+        if (response?.success) {
+          setVersionHistoryEntries(response.entries || []);
         } else {
-          setVersionHistoryError(response.data?.message || '加载版本历史失败');
+          setVersionHistoryError(response?.message || '加载版本历史失败');
         }
       } catch (error: unknown) {
         handleError(error, 'ProjectDrawingsPanel: 版本历史加载失败');

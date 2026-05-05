@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fontsApi } from '../services';
+import { fontsControllerGetFonts, fontsControllerUploadFont, fontsControllerDeleteFont, fontsControllerDownloadFont } from '@/api-sdk';
+import type { FontUploadTarget } from '@/api-sdk';
 import { Trash2 } from 'lucide-react';
 import { Download } from 'lucide-react';
 import { Upload } from 'lucide-react';
@@ -97,12 +98,9 @@ export default function FontLibrary(props: FontLibraryProps) {
     if (!canReadFonts) return;
     setLoading(true);
     try {
-      const response = await fontsApi.getFonts(activeTab);
-      console.log('字体API响应:', response);
-
-      let fontsData = response.data || [];
+      let fontsData: any = await fontsControllerGetFonts({ query: { location: activeTab } });
       if (fontsData && typeof fontsData === 'object' && 'data' in fontsData) {
-        fontsData = fontsData.data || [];
+        fontsData = (fontsData as any).data || [];
       }
 
       console.log('解析后的字体数据:', fontsData, '数量:', Array.isArray(fontsData) ? fontsData.length : 0);
@@ -244,7 +242,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     if (!confirmed) return;
 
     try {
-      await fontsApi.deleteFont(fontName, activeTab);
+      await fontsControllerDeleteFont({ path: { fileName: fontName }, query: { target: activeTab } });
       await fetchFonts();
       setSelectedFonts(prev => {
         const newSet = new Set(prev);
@@ -275,7 +273,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     try {
       await Promise.all(
         Array.from(selectedFonts).map((fontName) =>
-          fontsApi.deleteFont(fontName as string, activeTab)
+          fontsControllerDeleteFont({ path: { fileName: fontName as string }, query: { target: activeTab } })
         )
       );
       setSelectedFonts(new Set());
@@ -290,10 +288,12 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 下载字体
   const handleDownload = async (fontName: string) => {
     try {
-      const response = await fontsApi.downloadFont(fontName, activeTab);
-      const url = window.URL.createObjectURL(
-        new Blob([response.data as BlobPart])
-      );
+      const blobData = await fontsControllerDownloadFont({
+        path: { fileName: fontName },
+        query: { location: activeTab },
+        responseType: 'blob',
+      }) as Blob;
+      const url = window.URL.createObjectURL(blobData);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fontName);
@@ -899,7 +899,10 @@ function UploadFontModal({
 
     setUploading(true);
     try {
-      await fontsApi.uploadFont(file, target);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('target', target);
+      await fontsControllerUploadFont({ body: formData as any });
       showToast('上传成功', 'success');
       onSuccess();
     } catch (error) {

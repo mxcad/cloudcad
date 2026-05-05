@@ -3,11 +3,8 @@ import { Filter } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
-import { auditApi } from '../services/auditApi';
-import type { OperationMethods } from '../types/api-client';
-type AuditLogQueryParams = Parameters<
-  OperationMethods['AuditLogController_findAll']
->[0];
+import { auditLogControllerFindAll, auditLogControllerGetStatistics } from '@/api-sdk';
+type AuditLogQueryParams = NonNullable<Parameters<typeof auditLogControllerFindAll>[0]>['query'];
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -134,7 +131,7 @@ export const AuditLogPage: React.FC = () => {
     if (!hasAdminPermission) return;
     setLoading(true);
     try {
-      const params: AuditLogQueryParams = {
+      const params: Record<string, string> = {
         page: String(page),
         limit: String(limit),
       };
@@ -149,9 +146,9 @@ export const AuditLogPage: React.FC = () => {
       if (filters.success !== '')
         params.success = filters.success === 'true' ? 'true' : 'false';
 
-      const response = await auditApi.getLogs(params);
+      const response = await auditLogControllerFindAll({ query: params as any });
       // Swagger 未定义响应类型，手动处理
-      const responseData = response.data as
+      const responseData = response as
         | { logs?: AuditLog[]; total?: number }
         | undefined;
       setLogs((responseData?.logs || []) as AuditLog[]);
@@ -166,9 +163,9 @@ export const AuditLogPage: React.FC = () => {
   const loadStatistics = useCallback(async () => {
     if (!hasAdminPermission) return;
     try {
-      const response = await auditApi.getStatistics();
+      const response = await auditLogControllerGetStatistics();
       // Swagger 未定义响应类型，手动处理
-      const responseData = response.data as {
+      const responseData = response as {
         total?: number;
         successCount?: number;
         failureCount?: number;

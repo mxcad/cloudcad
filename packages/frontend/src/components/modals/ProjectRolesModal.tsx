@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { DescriptionText } from '../ui/TruncateText';
 import { PermissionConfigModal } from '../permission/PermissionAssignment';
-import { projectRolesApi } from '../../services/rolesApi';
+import { rolesControllerGetProjectRolesByProject, rolesControllerCreateProjectRole, rolesControllerUpdateProjectRole, rolesControllerDeleteProjectRole } from '@/api-sdk';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
 import { useNotification } from '../../contexts/NotificationContext';
 import { ProjectPermission } from '../../constants/permissions';
@@ -69,8 +69,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     setLoading(true);
     setErrorMessage('');
     try {
-      const response = await projectRolesApi.getByProject(projectId);
-      setRoles((response.data as ProjectRoleDto[]) || []);
+      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } });
+      setRoles((response as ProjectRoleDto[]) || []);
     } catch (error) {
       console.error('加载项目角色失败:', error);
       setErrorMessage('加载项目角色失败');
@@ -134,17 +134,22 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     setErrorMessage('');
     try {
       if (editingRole) {
-        await projectRolesApi.update(editingRole.id, {
-          name: roleName,
-          description: roleDesc,
-          permissions: selectedPerms,
+        await rolesControllerUpdateProjectRole({
+          path: { id: editingRole.id },
+          body: {
+            name: roleName,
+            description: roleDesc,
+            permissions: selectedPerms,
+          },
         });
       } else {
-        await projectRolesApi.create({
-          projectId,
-          name: roleName,
-          description: roleDesc,
-          permissions: selectedPerms,
+        await rolesControllerCreateProjectRole({
+          body: {
+            projectId,
+            name: roleName,
+            description: roleDesc,
+            permissions: selectedPerms,
+          },
         });
       }
 
@@ -178,7 +183,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     if (!roleToDelete) return;
 
     try {
-      await projectRolesApi.delete(roleToDelete.id);
+      await rolesControllerDeleteProjectRole({ path: { id: roleToDelete.id } });
       setDeleteConfirmOpen(false);
       setRoleToDelete(null);
       loadRoles();

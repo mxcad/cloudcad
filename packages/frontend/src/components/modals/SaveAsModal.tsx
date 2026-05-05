@@ -3,13 +3,15 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Folder } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
-import { projectApi } from '@/services/projectApi';
+import { fileSystemControllerGetProjects } from '@/api-sdk';
 import { mxcadApi } from '../../services/mxcadApi';
 import { libraryApi } from '../../services/libraryApi';
 import { globalShowToast } from '../../contexts/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
 import { SystemPermission } from '../../constants/permissions';
 import { handleError } from '@/utils/errorHandler';
+
+// TODO: Replace with SDK when backend adds this endpoint — keep old import for getUserPersonalSpace
 
 interface SaveAsModalProps {
   isOpen: boolean;
@@ -63,8 +65,8 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
   const loadProjects = async () => {
     try {
-      const response = await projectApi.list('all');
-      const allProjects = (response.data as any)?.nodes || [];
+      const response = await fileSystemControllerGetProjects({ query: { filter: 'all' } as any });
+      const allProjects = (response as any)?.nodes || [];
 
       const projectList = allProjects.map((project: any) => ({
         id: project.id,

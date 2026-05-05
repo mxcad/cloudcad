@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { authApi } from '../services/authApi';
+import { authControllerGetWechatAuthUrl } from '@/api-sdk';
 
 export type WechatPurpose = 'login' | 'bind' | 'deactivate';
 
@@ -87,14 +87,16 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
     loadingRef.current = true;
     processedRef.current = false;
     try {
-      const response = await authApi.getWechatAuthUrl({
-        origin: window.location.origin,
-        isPopup: 'false',
-        purpose,
+      const response = await authControllerGetWechatAuthUrl({
+        query: {
+          origin: window.location.origin,
+          isPopup: 'false',
+          purpose,
+        },
       });
 
       console.log('[useWechatAuth] 跳转授权页面, purpose:', purpose);
-      const { authUrl } = response.data as { authUrl: string };
+      const { authUrl } = response as unknown as { authUrl: string };
       window.location.href = authUrl;
     } catch (err) {
       console.error('[useWechatAuth] 获取授权链接失败:', err);

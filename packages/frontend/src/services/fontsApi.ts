@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+// @deprecated Use @/api-sdk instead.
 import { getApiClient } from './apiClient';
 import type { UploadFontDto } from '../types/api-client';
 

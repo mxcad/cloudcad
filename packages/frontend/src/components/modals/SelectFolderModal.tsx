@@ -7,7 +7,7 @@ import { ChevronRight } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { Check } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import { nodeApi } from '@/services/nodeApi';
+import { fileSystemControllerGetChildren } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 import { handleError } from '@/utils/errorHandler';
 
@@ -57,15 +57,12 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const loadChildren = useCallback(
     async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
       try {
-        const childrenResponse = await nodeApi.getChildren(nodeId);
+        const childrenResponse = await fileSystemControllerGetChildren({ path: { nodeId } });
 
         let children: FileSystemNode[] = [];
 
-        if (childrenResponse.data) {
-          const responseData = childrenResponse.data;
-          if (Array.isArray(responseData.nodes)) {
-            children = responseData.nodes as unknown as FileSystemNode[];
-          }
+        if (childrenResponse?.nodes) {
+          children = childrenResponse.nodes as unknown as FileSystemNode[];
         }
 
         const folders: FolderNode[] = children

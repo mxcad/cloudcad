@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { runtimeConfigApi, RuntimeConfigItem } from '../services/runtimeConfigApi';
+import { runtimeConfigControllerGetAllConfigs, runtimeConfigControllerUpdateConfig, runtimeConfigControllerResetConfig } from '@/api-sdk';
+import type { RuntimeConfigResponseDto, UpdateRuntimeConfigDto } from '@/api-sdk';
 import { useNotification } from '../contexts/NotificationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
@@ -30,7 +31,7 @@ interface ConfigGroup {
   category: string;
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  items: RuntimeConfigItem[];
+  items: RuntimeConfigResponseDto[];
 }
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = {
@@ -60,7 +61,7 @@ export const RuntimeConfigPage: React.FC = () => {
   const { showToast, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
 
-  const [configs, setConfigs] = useState<RuntimeConfigItem[]>([]);
+  const [configs, setConfigs] = useState<RuntimeConfigResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [editedValues, setEditedValues] = useState<Record<string, string | number | boolean>>({});
@@ -73,8 +74,8 @@ export const RuntimeConfigPage: React.FC = () => {
   const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await runtimeConfigApi.getAllConfigs();
-      setConfigs(response.data);
+      const data = await runtimeConfigControllerGetAllConfigs();
+      setConfigs(data);
     } catch (error) {
       const message = error instanceof Error ? error.message : '获取配置失败';
       showToast(message, 'error');
@@ -89,7 +90,7 @@ export const RuntimeConfigPage: React.FC = () => {
 
   // 按分类分组
   const groupedConfigs: ConfigGroup[] = Object.entries(
-    configs.reduce<Record<string, RuntimeConfigItem[]>>((acc, config) => {
+    configs.reduce<Record<string, RuntimeConfigResponseDto[]>>((acc, config) => {
       const category = config.category;
       if (!acc[category]) {
         acc[category] = [];
@@ -116,7 +117,7 @@ export const RuntimeConfigPage: React.FC = () => {
 
     try {
       setSaving((prev) => new Set(prev).add(key));
-      await runtimeConfigApi.updateConfig(key, value);
+      await runtimeConfigControllerUpdateConfig({ path: { key }, body: { value } as UpdateRuntimeConfigDto });
       showToast('配置已保存', 'success');
       setEditedValues((prev) => {
         const next = { ...prev };
@@ -149,7 +150,7 @@ export const RuntimeConfigPage: React.FC = () => {
 
     try {
       setSaving((prev) => new Set(prev).add(key));
-      await runtimeConfigApi.resetConfig(key);
+      await runtimeConfigControllerResetConfig({ path: { key } });
       showToast('已重置为默认值', 'success');
       setEditedValues((prev) => {
         const next = { ...prev };
@@ -181,7 +182,7 @@ export const RuntimeConfigPage: React.FC = () => {
     });
   };
 
-  const parseValue = (item: RuntimeConfigItem): string | number | boolean => {
+  const parseValue = (item: RuntimeConfigResponseDto): string | number | boolean => {
     const edited = editedValues[item.key];
     if (edited !== undefined) {
       return edited;
@@ -209,7 +210,7 @@ export const RuntimeConfigPage: React.FC = () => {
     return unitMap[key] || null;
   };
 
-  const renderConfigInput = (item: RuntimeConfigItem) => {
+  const renderConfigInput = (item: RuntimeConfigResponseDto) => {
     const value = parseValue(item);
     const isSensitive = isSensitiveKey(item.key);
     const isHidden = hiddenValues.has(item.key);

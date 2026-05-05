@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../services/authApi';
+import { authControllerBindPhoneAndLogin, authControllerSendSmsCode } from '@/api-sdk';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -108,8 +108,8 @@ export const PhoneVerification: React.FC = () => {
     try {
       if (bindMode) {
         // 绑定模式：调用绑定手机号接口，返回 token 后存储并通过刷新更新 AuthContext
-        const response = await authApi.bindPhoneAndLogin(tempToken, phone, verificationCode.trim());
-        const { accessToken, refreshToken, user: userData } = (response.data || response) as unknown as {
+        const response = await authControllerBindPhoneAndLogin();
+        const { accessToken, refreshToken, user: userData } = response as unknown as {
           accessToken: string; refreshToken: string; user: unknown;
         };
         localStorage.setItem('accessToken', accessToken);
@@ -158,7 +158,7 @@ export const PhoneVerification: React.FC = () => {
     setResendSuccess(false);
 
     try {
-      await authApi.sendSmsCode(phone);
+      await authControllerSendSmsCode();
       setResendSuccess(true);
       setCodeSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);

@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+// @deprecated Use @/api-sdk instead.
 import { getApiClient } from './apiClient';
 import { API_BASE_URL } from '../config/apiConfig';
 import type { OperationMethods } from '../types/api-client';

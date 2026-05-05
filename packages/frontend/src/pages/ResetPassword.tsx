@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { authApi } from '../services';
+import { authControllerResetPassword } from '@/api-sdk';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -90,13 +90,15 @@ export const ResetPassword: React.FC = () => {
     }
 
     try {
-      await authApi.resetPassword({
-        email: formData.email || undefined,
-        phone: formData.phone || undefined,
-        code: formData.code,
-        newPassword: formData.newPassword,
-        confirmPassword: formData.confirmPassword,
-        validateContact: '',
+      await authControllerResetPassword({
+        body: {
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
+          code: formData.code,
+          newPassword: formData.newPassword,
+          confirmPassword: formData.confirmPassword,
+          validateContact: '',
+        },
       });
       setSuccess(true);
       setTimeout(() => {

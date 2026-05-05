@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { projectApi } from '@/services/projectApi';
 import { projectPermissionApi } from '@/services/projectPermissionApi';
-import { mxcadApi } from '@/services/mxcadApi';
-import { filesApi } from '@/services/filesApi';
+// @deprecated — legacy imports; only imports updated, call logic unchanged per spec rules
+import { mxcadApi } from '@/services/mxcadApi'; // TODO: Replace with SDK when backend adds missing endpoints
+import { filesApi } from '@/services/filesApi'; // TODO: Replace with SDK when backend adds missing endpoints
 
 vi.mock('mxcad-app', () => ({
   MxCADView: vi.fn(),

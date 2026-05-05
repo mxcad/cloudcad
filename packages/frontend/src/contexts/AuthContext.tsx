@@ -7,19 +7,27 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { getApiClientAsync } from '../services/apiClient';
-import { authApi } from '../services/authApi';
-import type {
-  LoginDto,
-  RegisterDto,
-  UserDto,
-  AuthApiResponseDto,
-} from '../types/api-client';
+import {
+  authControllerLogin,
+  authControllerLoginByPhone,
+  authControllerRegister,
+  authControllerGetProfile,
+  authControllerLogout,
+  authControllerVerifyEmail,
+  authControllerVerifyPhone,
+  authControllerGetWechatAuthUrl,
+} from '@/api-sdk';
+import type { LoginDto } from '@/api-sdk';
+import type { UserDto as UserDtoType } from '@/api-sdk';
 
-type User = UserDto;
+type User = UserDtoType;
 
-// 登录响应数据（axios 拦截器解包后的实际数据）
-type AuthResponseData = AuthApiResponseDto['data'];
+// 登录响应数据（SDK responseTransformer 解包后的实际数据）
+type AuthResponseData = {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -96,17 +104,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setLoading(true);
         try {
           // 静默：验证 token 有效性
-          const client = await getApiClientAsync();
-          const response = await client.AuthController_getProfile();
-          const userData = response.data as unknown as UserDto;
+          const userData = await authControllerGetProfile() as unknown as User;
           setUser(userData);
           // 同步更新 localStorage 中的用户数据（包含最新权限）
           localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
           // 只在明确的 401 错误时清除认证信息，但不自动跳转
           // 由各个路由组件根据自己的保护级别决定是否跳转
-          const axiosError = error as { response?: { status?: number } };
-          if (axiosError.response?.status === 401) {
+          const fetchError = error as { status?: number };
+          if (fetchError.status === 401) {
             // Token 确实无效，清除本地存储（但不跳转）
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
@@ -130,18 +136,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (account: string, password: string) => {
     console.log('[AuthContext] 开始登录:', account);
     try {
-      const client = await getApiClientAsync();
-      const response = await client.AuthController_login(null, {
-        account,
-        password,
-      } as LoginDto);
-      console.log('[AuthContext] 登录响应:', response);
+      const responseData = await authControllerLogin({
+        body: { account, password },
+      }) as unknown as AuthResponseData;
+      console.log('[AuthContext] 登录响应:', responseData);
 
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = response.data as unknown as AuthResponseData;
+      } = responseData;
       console.log(
         '[AuthContext] Access Token:',
         accessToken ? `${accessToken.substring(0, 20)}...` : 'missing'
@@ -176,18 +180,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginByPhone = useCallback(async (phone: string, code: string) => {
     console.log('[AuthContext] 开始手机号登录:', phone);
     try {
-      const client = await getApiClientAsync();
-      const response = await client.AuthController_loginByPhone(null, {
-        phone,
-        code,
-      });
-      console.log('[AuthContext] 手机登录响应:', response);
+      const responseData = await authControllerLoginByPhone({
+        body: { phone, code },
+      }) as unknown as AuthResponseData;
+      console.log('[AuthContext] 手机登录响应:', responseData);
 
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = response.data as unknown as AuthResponseData;
+      } = responseData;
 
       // 存储到本地存储
       localStorage.setItem('accessToken', accessToken);
@@ -218,13 +220,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       nickname?: string;
       wechatTempToken?: string;
     }): Promise<{ message: string; email?: string }> => {
-      const client = await getApiClientAsync();
-      const response = await client.AuthController_register(
-        null,
-        data as RegisterDto
-      );
-
-      const responseData = response.data as unknown as Record<string, unknown>;
+      const responseData = await authControllerRegister({
+        body: data as Record<string, unknown>,
+      }) as unknown as Record<string, unknown>;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
       if (responseData.message && !responseData.accessToken) {
@@ -254,17 +252,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
   const verifyEmailAndLogin = useCallback(
     async (email: string, code: string) => {
-      const client = await getApiClientAsync();
-      const response = await client.AuthController_verifyEmail(null, {
-        email,
-        code,
-      });
+      const responseData = await authControllerVerifyEmail({
+        body: { email, code },
+      }) as unknown as AuthResponseData;
+
       // 验证成功，返回 token，自动登录
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = response.data as unknown as AuthResponseData;
+      } = responseData;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
@@ -272,19 +269,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
-      return response.data;
+      return responseData;
     },
     []
   );
 
   const verifyPhoneAndLogin = useCallback(
     async (phone: string, code: string) => {
-      const response = await authApi.verifyPhone(phone, code);
+      const responseData = await authControllerVerifyPhone({
+        body: { phone, code },
+      }) as unknown as AuthResponseData;
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = response.data as unknown as AuthResponseData;
+      } = responseData;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
@@ -292,7 +291,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
-      return response.data;
+      return responseData;
     },
     []
   );
@@ -301,8 +300,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('[AuthContext] 开始退出登录');
     try {
       // 1. 调用后端 API 注销（清理 JWT + Session + Cookie）
-      const client = await getApiClientAsync();
-      await client.AuthController_logout();
+      await authControllerLogout();
       console.log('[AuthContext] 后端注销成功');
     } catch (error) {
       console.error('[AuthContext] 后端注销失败:', error);
@@ -344,9 +342,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
-      const client = await getApiClientAsync();
-      const response = await client.AuthController_getProfile();
-      const userData = response.data as unknown as UserDto;
+      const userData = await authControllerGetProfile() as unknown as User;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
@@ -392,13 +388,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('[AuthContext] 开始微信登录');
     try {
       // 1. 获取微信授权 URL
-      const { authApi } = await import('../services/authApi');
-      const response = await authApi.getWechatAuthUrl({
-        origin: window.location.origin,
-        isPopup: 'true',
-        purpose: 'login',
-      });
-      const { authUrl } = response.data as { authUrl: string };
+      const response = await authControllerGetWechatAuthUrl({
+        query: {
+          origin: window.location.origin,
+          isPopup: 'true',
+          purpose: 'login',
+        },
+      }) as unknown as { authUrl: string };
+      const { authUrl } = response;
 
       console.log('[AuthContext] 微信授权 URL:', authUrl);
 

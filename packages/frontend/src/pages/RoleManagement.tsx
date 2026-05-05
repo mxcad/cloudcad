@@ -21,8 +21,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
-import { rolesApi, projectRolesApi } from '../services/rolesApi';
-import { authApi } from '../services/authApi';
+import { rolesControllerCreate, rolesControllerFindAll, rolesControllerUpdate, rolesControllerRemove, rolesControllerCreateProjectRole, rolesControllerGetSystemProjectRoles, rolesControllerUpdateProjectRole, rolesControllerDeleteProjectRole } from '@/api-sdk';
+import { authControllerGetProfile } from '@/api-sdk';
 import { usePermission } from '../hooks/usePermission';
 import {
   PERMISSION_GROUPS,
@@ -31,7 +31,7 @@ import {
 } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
-import type { UserResponseDto as UserDto } from '../types/api-client';
+import type { UserResponseDto as UserDto } from '@/api-sdk';
 
 type SystemRole = {
   id: string;
@@ -126,8 +126,8 @@ export const RoleManagement = () => {
 
   const loadCurrentUser = async () => {
     try {
-      const response = await authApi.getProfile();
-      setCurrentUser(response.data as unknown as UserDto);
+      const response = await authControllerGetProfile();
+      setCurrentUser(response as unknown as UserDto);
     } catch (error) {
       console.error('加载用户信息失败:', error);
     }
@@ -135,8 +135,8 @@ export const RoleManagement = () => {
 
   const loadSystemRoles = async () => {
     try {
-      const response = await rolesApi.list();
-      setSystemRoles(response.data);
+      const response = await rolesControllerFindAll();
+      setSystemRoles(response);
     } catch (error) {
       console.error('加载系统角色失败:', error);
     }
@@ -144,8 +144,8 @@ export const RoleManagement = () => {
 
   const loadProjectRoles = async () => {
     try {
-      const response = await projectRolesApi.getSystemRoles();
-      setProjectRoles(response.data as unknown as ProjectRole[]);
+      const response = await rolesControllerGetSystemProjectRoles();
+      setProjectRoles(response as unknown as ProjectRole[]);
     } catch (error) {
       console.error('加载项目角色失败:', error);
     }
@@ -196,19 +196,24 @@ export const RoleManagement = () => {
     setLoading(true);
     try {
       if (editingSystemRole) {
-        await rolesApi.update(editingSystemRole.id, {
-          name: systemRoleName,
-          description: systemRoleDesc,
-          permissions: selectedSystemPerms,
+        await rolesControllerUpdate({
+          path: { id: editingSystemRole.id },
+          body: {
+            name: systemRoleName,
+            description: systemRoleDesc,
+            permissions: selectedSystemPerms,
+          },
         });
         showSuccess('角色更新成功');
       } else {
-        await rolesApi.create({
-          name: systemRoleName,
-          description: systemRoleDesc,
-          permissions: selectedSystemPerms,
-          category: 'CUSTOM',
-          level: 0,
+        await rolesControllerCreate({
+          body: {
+            name: systemRoleName,
+            description: systemRoleDesc,
+            permissions: selectedSystemPerms,
+            category: 'CUSTOM',
+            level: 0,
+          },
         });
         showSuccess('角色创建成功');
       }
@@ -267,17 +272,22 @@ export const RoleManagement = () => {
     setLoading(true);
     try {
       if (editingProjectRole) {
-        await projectRolesApi.update(editingProjectRole.id, {
-          name: projectRoleName,
-          description: projectRoleDesc,
-          permissions: selectedProjectPerms,
+        await rolesControllerUpdateProjectRole({
+          path: { id: editingProjectRole.id },
+          body: {
+            name: projectRoleName,
+            description: projectRoleDesc,
+            permissions: selectedProjectPerms,
+          },
         });
         showSuccess('角色更新成功');
       } else {
-        await projectRolesApi.create({
-          name: projectRoleName,
-          description: projectRoleDesc,
-          permissions: selectedProjectPerms,
+        await rolesControllerCreateProjectRole({
+          body: {
+            name: projectRoleName,
+            description: projectRoleDesc,
+            permissions: selectedProjectPerms,
+          },
         });
         showSuccess('角色创建成功');
       }
@@ -312,10 +322,10 @@ export const RoleManagement = () => {
     setLoading(true);
     try {
       if (deleteType === 'system') {
-        await rolesApi.delete(roleToDelete);
+        await rolesControllerRemove({ path: { id: roleToDelete } });
         loadSystemRoles();
       } else {
-        await projectRolesApi.delete(roleToDelete);
+        await rolesControllerDeleteProjectRole({ path: { id: roleToDelete } });
         loadProjectRoles();
       }
       showSuccess('角色删除成功');

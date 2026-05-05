@@ -10,7 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { filesApi } from '../../services/filesApi';
+import { fileSystemControllerDownloadNode, fileSystemControllerDownloadNodeWithFormat } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 
 import { handleError } from '../../utils/errorHandler';
@@ -158,8 +158,8 @@ export const useFileSystemNavigation = ({
           isFolder: node.isFolder,
         });
 
-        const response = await filesApi.download(node.id);
-        const blob = new Blob([response.data as BlobPart]);
+        const blobData = await fileSystemControllerDownloadNode({ path: { nodeId: node.id }, responseType: 'blob' }) as Blob;
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -217,13 +217,13 @@ export const useFileSystemNavigation = ({
           format,
         });
 
-        const response = await filesApi.downloadWithFormat(
-          downloadingNode.id,
-          format,
-          pdfOptions
-        );
+        const blobData = await fileSystemControllerDownloadNodeWithFormat({
+          path: { nodeId: downloadingNode.id },
+          query: { format, ...(pdfOptions as any) },
+          responseType: 'blob',
+        }) as Blob;
 
-        const blob = new Blob([response.data as BlobPart]);
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

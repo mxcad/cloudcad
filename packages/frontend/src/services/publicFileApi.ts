@@ -9,6 +9,7 @@
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
+// @deprecated Use @/api-sdk instead.
 
 import { AxiosProgressEvent, AxiosInstance } from 'axios';
 import type {

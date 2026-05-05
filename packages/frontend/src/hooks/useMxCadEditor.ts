@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { filesApi } from '../services/filesApi';
+import { fileSystemControllerGetNode } from '@/api-sdk';
 
 /** 项目上下文 */
 interface ProjectContext {
@@ -31,8 +31,7 @@ interface UserInfo {
  */
 export const useFileInfo = () => {
   const getFileInfo = async (nodeId: string) => {
-    const fileData = await filesApi.get(nodeId);
-    return fileData.data;
+    return fileSystemControllerGetNode({ path: { nodeId } });
   };
 
   return { getFileInfo };

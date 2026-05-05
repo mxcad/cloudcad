@@ -7,8 +7,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
-import { authApi } from '../services/authApi';
-import type { LoginDto } from '../types/api-client';
+import { authControllerSendSmsCode } from '@/api-sdk';
+import type { LoginDto } from '@/api-sdk';
 
 // 导入 lucide 图标
 import { Mail } from 'lucide-react';
@@ -250,12 +250,12 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      const response = await authApi.sendSmsCode(phoneForm.phone);
-      if (response.data?.success) {
+      const response = await authControllerSendSmsCode();
+      if (response?.success) {
         setSuccess('验证码已发送');
         setCountdown(60); // 60秒倒计时
       } else {
-        setError(response.data?.message || '发送验证码失败');
+        setError((response as { message?: string })?.message || '发送验证码失败');
       }
     } catch (err) {
       setError(

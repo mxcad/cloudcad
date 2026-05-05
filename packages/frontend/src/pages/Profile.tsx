@@ -11,8 +11,23 @@ import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { useWechatAuth } from '../hooks/useWechatAuth';
 import { usePermission } from '../hooks/usePermission';
 import { useNotification } from '../contexts/NotificationContext';
-import { usersApi } from '../services/usersApi';
-import { authApi } from '../services/authApi';
+import {
+  usersControllerChangePassword,
+  usersControllerDeactivateAccount,
+  authControllerBindWechat,
+  authControllerSendBindEmailCode,
+  authControllerVerifyBindEmail,
+  authControllerSendUnbindEmailCode,
+  authControllerVerifyUnbindEmailCode,
+  authControllerRebindEmail,
+  authControllerSendSmsCode,
+  authControllerSendUnbindPhoneCode,
+  authControllerVerifyUnbindPhoneCode,
+  authControllerBindPhone,
+  authControllerRebindPhone,
+  authControllerUnbindWechat,
+  authControllerResendVerification,
+} from '@/api-sdk';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -163,12 +178,12 @@ export const Profile: React.FC = () => {
     purpose: 'bind',
     onSuccess: async (result) => {
       try {
-        const bindRes = await authApi.bindWechat(result.code!, result.state!);
-        if (bindRes.data?.success) {
+        const bindRes = await authControllerBindWechat({ body: { code: result.code!, state: result.state! } }) as unknown as { success?: boolean; message?: string };
+        if (bindRes?.success) {
           setSuccess('微信绑定成功');
           await refreshUser();
         } else {
-          setError(bindRes.data?.message || '绑定失败');
+          setError(bindRes?.message || '绑定失败');
         }
       } catch (bindErr) {
         setError(
@@ -291,10 +306,12 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      await usersApi.changePassword({
-        oldPassword:
-          user?.hasPassword === false ? undefined : passwordForm.oldPassword,
-        newPassword: passwordForm.newPassword,
+      await usersControllerChangePassword({
+        body: {
+          oldPassword:
+            user?.hasPassword === false ? undefined : passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword,
+        },
       });
       
       // 使用新密码自动登录
@@ -351,7 +368,7 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      await authApi.sendBindEmailCode(emailForm.email);
+      await authControllerSendBindEmailCode({ body: { email: emailForm.email } });
       setEmailStep('verify');
       setSuccess('验证码已发送到您的邮箱');
     } catch (err) {
@@ -371,7 +388,7 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await authApi.verifyBindEmail(emailForm.email, emailForm.code);
+      await authControllerVerifyBindEmail({ body: { email: emailForm.email, code: emailForm.code } });
       setSuccess('邮箱绑定成功');
       setEmailStep('input');
       setEmailForm({ email: '', code: '' });
@@ -393,12 +410,12 @@ export const Profile: React.FC = () => {
     setSendingCode(true);
     setError(null);
     try {
-      const response = await authApi.sendUnbindEmailCode();
-      if (response.data?.success) {
+      const response = await authControllerSendUnbindEmailCode() as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('验证码已发送到原邮箱');
         setCountdown(60);
       } else {
-        setError(response.data?.message || '发送验证码失败');
+        setError(response?.message || '发送验证码失败');
       }
     } catch (err) {
       setError(
@@ -422,10 +439,12 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      const response = await authApi.verifyUnbindEmailCode(emailForm.code);
-      if (response.data?.success) {
+      const response = await authControllerVerifyUnbindEmailCode({
+        body: { code: emailForm.code },
+      }) as unknown as { success?: boolean; message?: string; token?: string };
+      if (response?.success) {
         setSuccess('原邮箱验证通过');
-        setEmailVerifyToken(response.data.token);
+        setEmailVerifyToken(response.token || '');
         setEmailStep('inputNew');
         setEmailForm({ email: '', code: '' });
       } else {
@@ -473,7 +492,7 @@ export const Profile: React.FC = () => {
     setSendingCode(true);
     setError(null);
     try {
-      const response = await authApi.sendBindEmailCode(emailForm.email, true);
+      await authControllerSendBindEmailCode({ body: { email: emailForm.email, isRebind: true } });
       setSuccess('验证码已发送');
       setCountdown(60);
       setEmailStep('verifyNew');
@@ -512,12 +531,10 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      const response = await authApi.rebindEmail(
-        emailForm.email,
-        emailForm.code,
-        emailVerifyToken
-      );
-      if (response.data?.success) {
+      const response = await authControllerRebindEmail({
+        body: { email: emailForm.email, code: emailForm.code, token: emailVerifyToken },
+      }) as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('邮箱换绑成功');
         setEmailStep('input');
         setEmailForm({ email: '', code: '' });
@@ -525,7 +542,7 @@ export const Profile: React.FC = () => {
         setIsEditingEmail(false);
         await refreshUser();
       } else {
-        setError(response.data?.message || '换绑失败');
+        setError(response?.message || '换绑失败');
       }
     } catch (err) {
       setError(
@@ -559,13 +576,13 @@ export const Profile: React.FC = () => {
     setSendingCode(true);
     setError(null);
     try {
-      const response = await authApi.sendSmsCode(phoneForm.phone);
-      if (response.data?.success) {
+      const response = await authControllerSendSmsCode({ body: { phone: phoneForm.phone } }) as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('验证码已发送');
         setCountdown(60);
         setPhoneStep('verifyNew');
       } else {
-        setError(response.data?.message || '发送验证码失败');
+        setError(response?.message || '发送验证码失败');
       }
     } catch (err) {
       setError(
@@ -583,12 +600,12 @@ export const Profile: React.FC = () => {
     setSendingCode(true);
     setError(null);
     try {
-      const response = await authApi.sendUnbindPhoneCode();
-      if (response.data?.success) {
+      const response = await authControllerSendUnbindPhoneCode() as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('验证码已发送到原手机号');
         setCountdown(60);
       } else {
-        setError(response.data?.message || '发送验证码失败');
+        setError(response?.message || '发送验证码失败');
       }
     } catch (err) {
       setError(
@@ -612,10 +629,12 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      const response = await authApi.verifyUnbindPhoneCode(phoneForm.code);
-      if (response.data?.success) {
+      const response = await authControllerVerifyUnbindPhoneCode({
+        body: { code: phoneForm.code },
+      }) as unknown as { success?: boolean; message?: string; token?: string };
+      if (response?.success) {
         setSuccess('原手机号验证通过');
-        setVerifyToken(response.data.token);
+        setVerifyToken(response.token || '');
         setPhoneStep('inputNew');
         setPhoneForm({ phone: '', code: '' });
         setCountdown(0);
@@ -642,13 +661,13 @@ export const Profile: React.FC = () => {
     setSendingCode(true);
     setError(null);
     try {
-      const response = await authApi.sendSmsCode(phoneForm.phone);
-      if (response.data?.success) {
+      const response = await authControllerSendSmsCode({ body: { phone: phoneForm.phone } }) as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('验证码已发送');
         setCountdown(60);
         setPhoneStep('verifyNew');
       } else {
-        setError(response.data?.message || '发送验证码失败');
+        setError(response?.message || '发送验证码失败');
       }
     } catch (err) {
       setError(
@@ -682,12 +701,10 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      const response = await authApi.rebindPhone(
-        phoneForm.phone,
-        phoneForm.code,
-        verifyToken
-      );
-      if (response.data?.success) {
+      const response = await authControllerRebindPhone({
+        body: { phone: phoneForm.phone, code: phoneForm.code, token: verifyToken },
+      }) as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('手机号换绑成功');
         setPhoneStep('verifyOld');
         setPhoneForm({ phone: '', code: '' });
@@ -724,8 +741,8 @@ export const Profile: React.FC = () => {
       return;
     }
     try {
-      const response = await authApi.bindPhone(phoneForm.phone, phoneForm.code);
-      if (response.data?.success) {
+      const response = await authControllerBindPhone({ body: { phone: phoneForm.phone, code: phoneForm.code } }) as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         setSuccess('手机号绑定成功');
         setPhoneStep('verifyOld');
         setPhoneForm({ phone: '', code: '' });
@@ -764,9 +781,8 @@ export const Profile: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const { authApi: localAuthApi } = await import('../services/authApi');
-      const response = await localAuthApi.unbindWechat();
-      if (response.data?.success) {
+      const response = await authControllerUnbindWechat() as unknown as { success?: boolean; message?: string };
+      if (response?.success) {
         showToast('微信解绑成功', 'success');
         setSuccess('微信解绑成功');
         await refreshUser();
@@ -793,11 +809,13 @@ export const Profile: React.FC = () => {
       setError(null);
       
       // 首先执行软删除（必须的步骤）
-      await usersApi.deactivateAccount({
-        password: deactivateForm.password || undefined,
-        phoneCode: deactivateForm.phoneCode || undefined,
-        emailCode: deactivateForm.emailCode || undefined,
-        wechatConfirm: deactivateForm.wechatConfirm || undefined,
+      await usersControllerDeactivateAccount({
+        body: {
+          password: deactivateForm.password || undefined,
+          phoneCode: deactivateForm.phoneCode || undefined,
+          emailCode: deactivateForm.emailCode || undefined,
+          wechatConfirm: deactivateForm.wechatConfirm || undefined,
+        },
       });
       
       setSuccess('账户已注销，30天后自动清理数据');
@@ -823,7 +841,7 @@ export const Profile: React.FC = () => {
         setError('手机号不存在');
         return;
       }
-      await authApi.sendSmsCode((user.phone as any) as string);
+      await authControllerSendSmsCode({ body: { phone: (user.phone as any) as string } });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
         setDeactivateCountdown((c) => {
@@ -850,7 +868,7 @@ export const Profile: React.FC = () => {
         setError('邮箱不存在');
         return;
       }
-      await authApi.resendVerification((user.email as any) as string);
+      await authControllerResendVerification({ body: { email: (user.email as any) as string } });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
         setDeactivateCountdown((c) => {

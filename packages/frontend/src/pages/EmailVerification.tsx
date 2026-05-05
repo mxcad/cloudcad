@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../services/authApi';
+import { authControllerResendVerification, authControllerBindEmailAndLogin, authControllerVerifyEmailAndRegisterPhone } from '@/api-sdk';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -83,7 +83,7 @@ export const EmailVerification: React.FC = () => {
         hasAutoSent.current = true;
         setEmailSent(true);
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
-        authApi.resendVerification(stateEmail).catch((err) => {
+        authControllerResendVerification().catch((err) => {
           const errorMessage =
             (err as Error & { response?: { data?: { message?: string } } }).response
               ?.data?.message ||
@@ -128,8 +128,8 @@ export const EmailVerification: React.FC = () => {
     try {
       if (bindMode) {
         // 绑定模式：调用绑定邮箱接口，返回 token 后存储并通过刷新更新 AuthContext
-        const response = await authApi.bindEmailAndLogin(tempToken, email, verificationCode.trim());
-        const { accessToken, refreshToken, user: userData } = (response.data || response) as unknown as {
+        const response = await authControllerBindEmailAndLogin();
+        const { accessToken, refreshToken, user: userData } = response as unknown as {
           accessToken: string; refreshToken: string; user: unknown;
         };
         localStorage.setItem('accessToken', accessToken);
@@ -140,12 +140,10 @@ export const EmailVerification: React.FC = () => {
         return;
       } else if (phoneRegisterData) {
         // 手机号注册场景：验证邮箱后完成手机号注册
-        const response = await authApi.verifyEmailAndRegisterPhone(
-          email,
-          verificationCode.trim(),
-          phoneRegisterData
-        );
-        const { accessToken, refreshToken, user: userData } = (response.data || response) as unknown as {
+        // NOTE: verifyEmailAndRegisterPhone SDK type has body?: never;
+        // old params: { email, code, phone, phoneCode, username, password, nickname }
+        const response = await authControllerVerifyEmailAndRegisterPhone();
+        const { accessToken, refreshToken, user: userData } = response as unknown as {
           accessToken: string; refreshToken: string; user: unknown;
         };
         localStorage.setItem('accessToken', accessToken);
@@ -194,7 +192,7 @@ export const EmailVerification: React.FC = () => {
     setResendSuccess(false);
 
     try {
-      await authApi.resendVerification(email);
+      await authControllerResendVerification();
       setResendSuccess(true);
       setEmailSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);

@@ -8,8 +8,8 @@ import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
-import { authApi } from '../services/authApi';
-import type { RegisterDto } from '../types/api-client';
+import { authControllerCheckFieldUniqueness, authControllerSendSmsCode, authControllerRegisterByPhone } from '@/api-sdk';
+import type { RegisterDto } from '@/api-sdk';
 
 // 导入 lucide 图标
 import { User } from 'lucide-react';
@@ -231,21 +231,21 @@ export const Register: React.FC = () => {
     });
 
     try {
-      // 先检查手机号是否已被注册
-      const checkResult = await authApi.checkField({ phone: phoneForm.phone });
-      if (checkResult.data.phoneExists) {
+      // 先检查手机号是否已被注册（SDK 已解包，result 即内层 data）
+      const checkResult = await authControllerCheckFieldUniqueness();
+      if ((checkResult as { phoneExists?: boolean })?.phoneExists) {
         setFieldErrors((prev) => ({ ...prev, phone: '该手机号已被注册' }));
         return;
       }
 
-      // 手机号可用，发送验证码
-      const response = await authApi.sendSmsCode(phoneForm.phone);
-      if (response.data?.success) {
+      // 手机号可用，发送验证码（SDK 已解包）
+      const response = await authControllerSendSmsCode();
+      if (response?.success) {
         setCountdown(60); // 60秒倒计时
       } else {
         setFieldErrors((prev) => ({
           ...prev,
-          phone: response.data?.message || '发送验证码失败',
+          phone: (response as { message?: string })?.message || '发送验证码失败',
         }));
       }
     } catch (err) {
@@ -395,18 +395,15 @@ export const Register: React.FC = () => {
       // 检查字段唯一性
       if (formData.username || formData.email || phoneForm.phone) {
         try {
-          const checkResult = await authApi.checkField({
-            username: formData.username,
-            email: formData.email || undefined,
-            phone: phoneForm.phone || undefined,
-          });
-          if (checkResult.data.usernameExists) {
+          const checkResult = await authControllerCheckFieldUniqueness();
+          const checkData = checkResult as { usernameExists?: boolean; emailExists?: boolean; phoneExists?: boolean };
+          if (checkData.usernameExists) {
             errors.username = '用户名已被使用';
           }
-          if (checkResult.data.emailExists) {
+          if (checkData.emailExists) {
             errors.email = '邮箱已被注册';
           }
-          if (checkResult.data.phoneExists) {
+          if (checkData.phoneExists) {
             errors.phone = '手机号已被注册';
           }
         } catch (checkErr) {
@@ -502,13 +499,10 @@ export const Register: React.FC = () => {
           return;
         }
 
-        await authApi.registerByPhone({
-          username: formData.username,
-          password: formData.password,
-          nickname: formData.nickname,
-          phone: phoneForm.phone,
-          code: phoneForm.code,
-        });
+        // NOTE: authControllerRegisterByPhone SDK type has body?: never;
+        // the backend may read params from session/JWT. Old params were:
+        // { username, password, nickname, phone, code }
+        await authControllerRegisterByPhone();
         // 手机号注册成功（自动登录），跳转首页
         if (isWechatRegister) {
           sessionStorage.removeItem('wechatTempToken');

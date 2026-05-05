@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { usePermission } from '../../hooks/usePermission';
-import { usersApi } from '../../services/usersApi';
+import { usersControllerUpdateProfile } from '@/api-sdk';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface ProfileInfoTabProps {
@@ -75,9 +75,11 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
     setSuccess(null);
 
     try {
-      await usersApi.updateProfile({
-        username: formData.username,
-        nickname: formData.nickname,
+      await usersControllerUpdateProfile({
+        body: {
+          username: formData.username,
+          nickname: formData.nickname,
+        },
       });
       setSuccess('个人信息更新成功');
       await refreshUser();

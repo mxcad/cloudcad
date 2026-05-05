@@ -6,7 +6,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { projectApi } from '../services/projectApi';
 import { nodeApi } from '../services/nodeApi';
-import { usersApi } from '../services/usersApi';
+import { usersControllerGetDashboardStats } from '@/api-sdk';
 import type {
   ProjectDto,
   FileSystemNodeDto,
@@ -248,7 +248,7 @@ export const Dashboard: React.FC = () => {
         // 并行加载多个数据源
         const [projectsRes, statsRes, personalSpaceRes] = await Promise.all([
           projectApi.list(),
-          usersApi.getDashboardStats(),
+          usersControllerGetDashboardStats(),
           projectApi.getPersonalSpace().catch(() => null), // 私人空间可能不存在
         ]);
 
@@ -265,8 +265,8 @@ export const Dashboard: React.FC = () => {
         }
 
         // 处理统计数据
-        if (statsRes.data) {
-          setDashboardStats(statsRes.data);
+        if (statsRes) {
+          setDashboardStats(statsRes);
         }
 
         // 处理个人空间文件

@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // API 服务
+// @deprecated Use @/api-sdk instead. This file will be removed.
 export { authApi } from './authApi';
 export { usersApi } from './usersApi';
 export type { ProjectFilterType } from './projectApi';

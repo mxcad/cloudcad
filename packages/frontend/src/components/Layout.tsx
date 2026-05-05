@@ -2,7 +2,7 @@ import type React from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { UserDto, StorageInfoDto } from '../types/api-client';
-import { projectApi } from '@/services/projectApi';
+import { fileSystemControllerGetStorageQuota } from '@/api-sdk';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';
@@ -183,11 +183,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (user && !loading) {
       setStorageLoading(true);
-      projectApi
-        .getQuota()
-        .then((response) => {
-          if (response.data) {
-            setStorageInfo(response.data);
+      fileSystemControllerGetStorageQuota({ query: { nodeId: '' } } as any)
+        .then((data) => {
+          if (data) {
+            setStorageInfo(data as StorageInfoDto);
           }
         })
         .catch(() => {

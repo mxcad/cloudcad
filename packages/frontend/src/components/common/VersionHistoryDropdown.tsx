@@ -18,7 +18,7 @@ import { createPortal } from 'react-dom';
 import { History } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { ExternalLink } from 'lucide-react';
-import { versionControlApi } from '../../services/versionControlApi';
+import { versionControlControllerGetFileHistory } from '@/api-sdk';
 import { Tooltip } from '../ui/Tooltip';
 import type { SvnLogEntryDto } from '../../types/api-client';
 import styles from './VersionHistoryDropdown.module.css';
@@ -122,11 +122,11 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
     setError(null);
 
     try {
-      const response = await versionControlApi.getFileHistory(projectId, filePath, 20);
-      if (response.data?.success) {
-        setEntries(response.data.entries || []);
+      const response = await versionControlControllerGetFileHistory({ query: { projectId, filePath, limit: 20 } });
+      if (response?.success) {
+        setEntries(response.entries || []);
       } else {
-        setError(response.data?.message || '加载版本历史失败');
+        setError(response?.message || '加载版本历史失败');
       }
     } catch (err) {
       setError('加载版本历史失败');

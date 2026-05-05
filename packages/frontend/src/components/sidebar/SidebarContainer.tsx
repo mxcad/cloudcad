@@ -33,8 +33,7 @@ import {
   checkAndConfirmUnsavedChanges,
 } from '../../services/mxcadManager';
 import { isTourModeActive } from '../../contexts/TourContext';
-import { filesApi } from '../../services/filesApi';
-import { projectApi } from '@/services/projectApi';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
 import { ProjectDrawingsPanel, LibraryType } from '../ProjectDrawingsPanel';
@@ -158,11 +157,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       return;
     }
 
-    projectApi
-      .getPersonalSpace()
+    fileSystemControllerGetPersonalSpace()
       .then((res) => {
-        if (res.data?.id) {
-          setPersonalSpaceId(res.data.id);
+        if (res?.id) {
+          setPersonalSpaceId(res.id);
         }
       })
       .catch(console.error);
@@ -330,8 +328,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       }
 
       // 项目文件：使用原有逻辑
-      const fileResponse = await filesApi.get(node.id);
-      const file = fileResponse.data as {
+      const file = await fileSystemControllerGetNode({ path: { nodeId: node.id } }) as {
         fileHash?: string;
         path?: string;
         parentId?: string | null;
@@ -350,9 +347,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       if (!file.isRoot && file.parentId) {
         try {
           if (!file.id) throw new Error('节点ID缺失');
-          const rootResponse = await filesApi.getRoot(file.id);
-          if (rootResponse.data?.id) {
-            targetProjectId = rootResponse.data.id;
+          const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
+          if (rootNode?.id) {
+            targetProjectId = rootNode.id;
           }
         } catch (error) {
           console.error('获取根节点失败:', error);

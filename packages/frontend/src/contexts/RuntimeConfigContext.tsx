@@ -7,7 +7,7 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { runtimeConfigApi } from '../services/runtimeConfigApi';
+import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 
 export type PublicRuntimeConfig = {
   mailEnabled: boolean;
@@ -68,8 +68,7 @@ export const RuntimeConfigProvider: React.FC<RuntimeConfigProviderProps> = ({
   const refreshConfig = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await runtimeConfigApi.getPublicConfigs();
-      const data = response.data as Record<string, string | number | boolean>;
+      const data = await runtimeConfigControllerGetPublicConfigs() as Record<string, string | number | boolean>;
       setConfig({
         mailEnabled: Boolean(data.mailEnabled),
         requireEmailVerification: Boolean(data.requireEmailVerification),

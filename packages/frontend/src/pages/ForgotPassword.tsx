@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../services/authApi';
+import { authControllerForgotPassword } from '@/api-sdk';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
-import type { ForgotPasswordResponseDto } from '../types/api-client';
 
 // Lucide 图标
 import { Mail } from 'lucide-react';
@@ -60,12 +59,14 @@ export const ForgotPassword: React.FC = () => {
     setError(null);
 
     try {
-      const response = await authApi.forgotPassword({
-        email: contactType === 'email' ? email : undefined,
-        phone: contactType === 'phone' ? phone : undefined,
-        validateContact: '',
+      const response = await authControllerForgotPassword({
+        body: {
+          email: contactType === 'email' ? email : undefined,
+          phone: contactType === 'phone' ? phone : undefined,
+          validateContact: '',
+        },
       });
-      const data = response.data as unknown as ForgotPasswordResponseDto;
+      const data = response as unknown as { mailEnabled: boolean; smsEnabled: boolean; supportEmail?: string | null; supportPhone?: string | null };
 
       if (data.mailEnabled === false && data.smsEnabled === false) {
         setSupportInfo({

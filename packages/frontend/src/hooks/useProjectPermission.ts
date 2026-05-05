@@ -11,7 +11,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useCallback, useRef, useEffect } from 'react';
-import { projectPermissionApi } from '@/services/projectPermissionApi';
+import {
+  fileSystemControllerGetUserProjectPermissions,
+  fileSystemControllerCheckProjectPermission,
+  fileSystemControllerGetUserProjectRole,
+} from '@/api-sdk';
 
 /**
  * 缓存项接口
@@ -201,11 +205,11 @@ export const useProjectPermission = () => {
       }
 
       try {
-        const response = await projectPermissionApi.checkPermission(
-          projectId,
-          permission
-        );
-        const hasPermission = response.data.hasPermission || false;
+        const response = await fileSystemControllerCheckProjectPermission({
+          path: { projectId },
+          query: { permission: permission as any },
+        });
+        const hasPermission = response.hasPermission || false;
 
         // 缓存结果
         globalCache.setPermission(cacheKey, hasPermission);
@@ -236,8 +240,10 @@ export const useProjectPermission = () => {
       }
 
       try {
-        const response = await projectPermissionApi.getPermissions(projectId);
-        const permissions = response.data.permissions || [];
+        const response = await fileSystemControllerGetUserProjectPermissions({
+          path: { projectId },
+        });
+        const permissions = response.permissions || [];
 
         globalCache.setPermissions(projectId, permissions);
 
@@ -264,8 +270,10 @@ export const useProjectPermission = () => {
       }
 
       try {
-        const response = await projectPermissionApi.getRole(projectId);
-        const roleData = response.data as { role?: string } | undefined;
+        const response = await fileSystemControllerGetUserProjectRole({
+          path: { projectId },
+        });
+        const roleData = response as { role?: string } | undefined;
         const role = roleData?.role || null;
 
         if (role) {
@@ -346,11 +354,11 @@ export const useProjectPermission = () => {
       globalCache.setPermission(cacheKey, false); // 临时设置为 false，等待重新检查
 
       try {
-        const response = await projectPermissionApi.checkPermission(
-          projectId,
-          permission
-        );
-        const hasPermission = response.data.hasPermission || false;
+        const response = await fileSystemControllerCheckProjectPermission({
+          path: { projectId },
+          query: { permission: permission as any },
+        });
+        const hasPermission = response.hasPermission || false;
 
         globalCache.setPermission(cacheKey, hasPermission);
 
