@@ -121,8 +121,11 @@ jobs:
           cd packages/backend
           pnpm db:push
 
-      - name: 运行代码质量检查
+      - name: 生成 API SDK 并运行代码质量检查
         run: |
+          cd packages/frontend
+          pnpm generate:sdk
+          cd ../..
           pnpm lint
           pnpm format:check
           pnpm type-check
@@ -139,6 +142,7 @@ jobs:
       - name: 运行前端测试
         run: |
           cd packages/frontend
+          pnpm generate:sdk
           pnpm type-check
 
       - name: 上传测试覆盖率报告
