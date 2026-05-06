@@ -20,16 +20,6 @@ import {
 import { ProcessRunnerService } from './process-runner.service';
 import { FormatConverterService } from './format-converter.service';
 import { OutputPathResolverService } from './output-path-resolver.service';
-import * as path from 'path';
-import * as os from 'os';
-
-function resolveBinPath(): string {
-  const isLinux = os.platform() === 'linux';
-  const projectRoot = path.join(process.cwd(), '..', '..');
-  return isLinux
-    ? path.join(projectRoot, 'runtime', 'linux', 'mxcad', 'mxcadassembly')
-    : path.join(projectRoot, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe');
-}
 
 @Module({
   imports: [ConfigModule],
@@ -37,12 +27,10 @@ function resolveBinPath(): string {
     {
       provide: CONVERSION_ENGINE_CONFIG,
       useFactory: (configService: ConfigService): ConversionEngineConfig => ({
-        binPath: configService.get('MXCAD_BIN_PATH') ?? resolveBinPath(),
-        outputRoot:
-          configService.get('MXCAD_OUTPUT_ROOT') ??
-          path.join(process.cwd(), '..', '..', 'data', 'conversion'),
-        maxConcurrency: Number(configService.get('MXCAD_MAX_CONCURRENCY')) || Math.min(os.cpus().length, 4),
-        defaultTimeoutMs: Number(configService.get('MXCAD_DEFAULT_TIMEOUT_MS')) || 120000,
+        binPath: configService.get('conversion.binPath'),
+        outputRoot: configService.get('conversion.outputRoot'),
+        maxConcurrency: configService.get('conversion.maxConcurrency'),
+        defaultTimeoutMs: configService.get('conversion.defaultTimeoutMs'),
       }),
       inject: [ConfigService],
     },
@@ -55,7 +43,6 @@ function resolveBinPath(): string {
     I_CONVERSION_SERVICE,
     ProcessRunnerService,
     OutputPathResolverService,
-  ],
-  global: true,
+  ]
 })
 export class ConversionModule {}

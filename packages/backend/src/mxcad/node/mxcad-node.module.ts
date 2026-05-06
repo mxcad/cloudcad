@@ -15,7 +15,6 @@ import { DatabaseModule } from '../../database/database.module';
 import { CommonModule } from '../../common/common.module';
 import { FileTreeModule } from '../../file-system/file-tree/file-tree.module';
 import { FileSystemNodeService } from './filesystem-node.service';
-import { NodeCreationService } from './node-creation.service';
 
 /**
  * MxCAD 节点模块
@@ -24,7 +23,7 @@ import { NodeCreationService } from './node-creation.service';
  */
 @Module({
   imports: [DatabaseModule, CommonModule, FileTreeModule],
-  providers: [FileSystemNodeService, NodeCreationService],
-  exports: [FileSystemNodeService, NodeCreationService],
+  providers: [FileSystemNodeService],
+  exports: [FileSystemNodeService],
 })
 export class MxcadNodeModule {}

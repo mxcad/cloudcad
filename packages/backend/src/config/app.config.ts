@@ -89,13 +89,6 @@ export interface MailConfig {
   from: string;
 }
 
-export interface MxCadConfig {
-  assemblyPath: string; // mxcadassembly.exe 路径
-  fileExt: string; // 输出文件扩展名
-  compression: boolean; // 是否压缩
-  fontsPath?: string; // 字体目录
-}
-
 /**
  * 字体配置
  */
@@ -314,6 +307,24 @@ export interface CooperateConfig {
   url: string;
 }
 
+/**
+ * 转换引擎配置
+ */
+export interface ConversionConfig {
+  /** mxcadassembly 路径 */
+  binPath: string;
+  /** 转换输出根目录 */
+  outputRoot: string;
+  /** 最大并发转换任务数 */
+  maxConcurrency: number;
+  /** 默认超时时间（毫秒） */
+  defaultTimeoutMs: number;
+  /** MXCAD 文件扩展名 */
+  fileExt: string;
+  /** 是否压缩 */
+  compression: boolean;
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -327,8 +338,8 @@ export interface AppConfig {
   userCleanup: UserCleanupConfig;
   fileLock: FileLockConfig;
   mail: MailConfig;
-  mxcad: MxCadConfig;
   fonts: FontsConfig; // 字体配置
+  conversion: ConversionConfig; // 转换引擎配置
   filesDataPath: string; // 本地存储路径
   svnRepoPath: string; // SVN 仓库存储路径
   mxcadUploadPath: string; // MxCAD 上传路径

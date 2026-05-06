@@ -213,21 +213,24 @@ export default (): AppConfig => {
 		from: process.env.MAIL_FROM || "CloudCAD <noreply@cloudcad.com>",
 	},
 
-	mxcad: {
-		assemblyPath: resolvePath(
+	// 转换引擎配置
+	conversion: {
+		binPath: resolvePath(
 			process.env.MXCAD_ASSEMBLY_PATH ||
 				(isWindows
 					? "runtime/windows/mxcad/mxcadassembly.exe"
 					: "runtime/linux/mxcad/mxcadassembly"),
 		),
+		outputRoot: resolvePath(
+			process.env.MXCAD_OUTPUT_ROOT || "data/conversion",
+		),
+		maxConcurrency:
+			parseInt(process.env.MXCAD_MAX_CONCURRENCY || "0", 10) ||
+			Math.min(os.cpus().length, 4),
+		defaultTimeoutMs:
+			parseInt(process.env.MXCAD_DEFAULT_TIMEOUT_MS || "0", 10) || 120000,
 		fileExt: process.env.MXCAD_FILE_EXT || ".mxweb",
 		compression: parseBoolean(process.env.MXCAD_COMPRESSION, true),
-		fontsPath: resolvePath(
-			process.env.MXCAD_FONTS_PATH ||
-				(isWindows
-					? "runtime/windows/mxcad/fonts"
-					: "runtime/linux/mxcad/fonts"),
-		),
 	},
 
 	// 字体配置
