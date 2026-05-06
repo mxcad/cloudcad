@@ -18,9 +18,6 @@
 
 export {
   TruncateText,
-  FileNameText,
-  PathText,
-  DescriptionText,
 } from './TruncateText';
 export type { TruncateTextProps, TruncateMode } from './TruncateText';
 
