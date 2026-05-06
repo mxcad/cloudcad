@@ -19,6 +19,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { LoginDto, RegisterDto, AuthResponseDto, UserDto } from '../dto/auth.dto';
 import { WechatLoginResponseDto } from '../dto/wechat.dto';
@@ -129,7 +130,7 @@ export class LocalAuthProvider implements IAuthProvider {
 
         const newUser = await this.userService.create({
           username,
-          password: Math.random().toString(36).slice(-12) + '!Aa',
+          password: crypto.randomBytes(9).toString('base64url').slice(0, 12) + '!Aa',
           nickname: `用户${formattedPhone.slice(-4)}`,
           phone: formattedPhone,
           phoneVerified: true,
@@ -339,7 +340,7 @@ export class LocalAuthProvider implements IAuthProvider {
             avatar: wechatUser.headimgurl,
           },
           {
-            secret: this.configService.get<string>('JWT_SECRET'),
+            secret: this.configService.get<string>('jwt.secret'),
             expiresIn: '30m',
           }
         );
@@ -385,7 +386,7 @@ export class LocalAuthProvider implements IAuthProvider {
           wechatId: user.wechatId,
         },
         {
-          secret: this.configService.get<string>('JWT_SECRET'),
+          secret: this.configService.get<string>('jwt.secret'),
           expiresIn: '30m',
         }
       );
