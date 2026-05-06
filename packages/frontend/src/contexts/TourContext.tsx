@@ -674,7 +674,28 @@ export const TourProvider: React.FC<TourProviderProps> = ({
 export function useTour(): TourContextValue {
   const context = useContext(TourContext);
   if (context === undefined) {
-    throw new Error('useTour must be used within a TourProvider');
+    // HMR 热更新时模块重新执行可能导致 context 短暂丢失，
+    // 返回安全默认值避免整个应用崩溃
+    console.warn('[Tour] useTour called outside TourProvider (possibly HMR)');
+    return {
+      isActive: false,
+      currentGuide: null,
+      currentStep: 0,
+      guides: [],
+      completedGuides: [],
+      resolvedCurrentStep: null,
+      isTourMode: false,
+      startTour: async () => {},
+      nextStep: () => {},
+      skipTour: () => {},
+      completeTour: () => {},
+      openTourCenter: () => {},
+      closeTourCenter: () => {},
+      isTourCenterOpen: false,
+      isStartModalOpen: false,
+      dismissStartModal: () => {},
+      resumeTour: () => {},
+    };
   }
   return context;
 }

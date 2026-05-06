@@ -111,5 +111,7 @@ const AppInitializer: React.FC = () => {
   );
 };
 
-const root = ReactDOM.createRoot(rootElement);
+// 避免 HMR 时重复 createRoot
+const root = (window as any).__cloudCAD_root ?? ReactDOM.createRoot(rootElement);
+(window as any).__cloudCAD_root = root;
 root.render(<AppInitializer />);
