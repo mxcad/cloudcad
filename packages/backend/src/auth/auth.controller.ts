@@ -42,6 +42,7 @@ import { Public } from './decorators/public.decorator';
 import {
   AuthApiResponseDto,
   AuthResponseDto,
+  CheckFieldUniquenessDto,
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
@@ -68,6 +69,11 @@ import {
   BindEmailApiResponseDto,
 } from './dto/password-reset.dto';
 import { UserProfileResponseDto } from '../users/dto/user-response.dto';
+import {
+  SendSmsCodeDto,
+  VerifySmsCodeDto,
+  RegisterByPhoneDto,
+} from './dto/sms-verification.dto';
 import { ConfigService } from '@nestjs/config';
 
 @ApiTags('认证')
@@ -506,7 +512,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '手机号格式不正确或发送过于频繁' })
   async sendSmsCode(
-    @Body() dto: { phone: string },
+    @Body() dto: SendSmsCodeDto,
     @Req() req: Request
   ): Promise<{ success: boolean; message: string }> {
     // 提取客户端 IP（支持代理场景）
@@ -536,7 +542,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '手机号格式不正确' })
   async verifySmsCode(
-    @Body() dto: { phone: string; code: string }
+    @Body() dto: VerifySmsCodeDto
   ): Promise<{ valid: boolean; message: string }> {
     return this.smsVerificationService.verifyCode(dto.phone, dto.code);
   }
@@ -553,7 +559,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '验证码错误或参数无效' })
   @ApiResponse({ status: 409, description: '手机号或用户名已存在' })
   async registerByPhone(
-    @Body() registerDto: RegisterDto & { phone: string; code: string },
+    @Body() registerDto: RegisterByPhoneDto,
     @Req() req: SessionRequest,
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
@@ -684,7 +690,7 @@ export class AuthController {
     },
   })
   async checkFieldUniqueness(
-    @Body() dto: { username?: string; email?: string; phone?: string }
+    @Body() dto: CheckFieldUniquenessDto
   ): Promise<{
     usernameExists: boolean;
     emailExists: boolean;

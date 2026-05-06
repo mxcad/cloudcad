@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 import { WechatVerifyModal } from '../../components/WechatVerifyModal';
+import {
+  authControllerSendSmsCode,
+  authControllerResendVerification,
+} from '@/api-sdk';
 
 interface DeactivateForm {
   verificationMethod: 'password' | 'phone' | 'email' | 'wechat' | '';
@@ -297,9 +301,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                         onSetDeactivateForm((f) => ({ ...f }));
                         return;
                       }
-                      const { authApi } =
-                        await import('../../services/authApi');
-                      await authApi.sendSmsCode(user.phone);
+                      await authControllerSendSmsCode({ body: { phone: user.phone } });
                       onSetDeactivateCountdown(60);
                       const timer = setInterval(() => {
                         onSetDeactivateCountdown((c) => {
@@ -365,9 +367,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                         onSetDeactivateForm((f) => ({ ...f }));
                         return;
                       }
-                      const { authApi } =
-                        await import('../../services/authApi');
-                      await authApi.resendVerification(user.email);
+                      await authControllerResendVerification({ body: { email: user.email } } as any);
                       onSetDeactivateCountdown(60);
                       const timer = setInterval(() => {
                         onSetDeactivateCountdown((c) => {

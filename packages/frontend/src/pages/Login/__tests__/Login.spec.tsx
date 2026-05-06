@@ -40,8 +40,21 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const mockUseLoginFormReturn = {
-  formData: { account: '', password: '' },
-  phoneForm: { phone: '', code: '' },
+  accountForm: {
+    watch: vi.fn().mockReturnValue({ account: '', password: '' }),
+    setValue: vi.fn(),
+    register: vi.fn(),
+    trigger: vi.fn(),
+    getValues: vi.fn().mockReturnValue({ account: '', password: '' }),
+  },
+  phoneFormHook: {
+    watch: vi.fn().mockReturnValue({ phone: '', code: '' }),
+    setValue: vi.fn(),
+    register: vi.fn(),
+    trigger: vi.fn(),
+    getValues: vi.fn().mockReturnValue({ phone: '', code: '' }),
+  },
+  smsEnabled: true,
   activeTab: 'account' as const,
   setActiveTab: vi.fn(),
   loading: false,
@@ -61,8 +74,6 @@ const mockUseLoginFormReturn = {
   setAuthError: vi.fn(),
   getAccountLoginLabel: () => '手机号或用户名',
   getAccountLoginPlaceholder: () => '请输入手机号或用户名',
-  handleChange: vi.fn(),
-  handlePhoneChange: vi.fn(),
   handleSendCode: vi.fn(),
   handleAccountSubmit: vi.fn(),
   handlePhoneSubmit: vi.fn(),

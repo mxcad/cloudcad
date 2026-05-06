@@ -11,7 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import {
-  INestApplication,
   Logger,
   ValidationPipe,
   VersioningType,
@@ -31,10 +30,6 @@ import configuration from './config/configuration';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { TusService } from './mxcad/tus/tus.service';
 import { TusAuthMiddleware } from './mxcad/tus/tus-auth.middleware';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import { spawn } from 'child_process';
 
 const logger = new Logger('Bootstrap');
 
@@ -234,8 +229,15 @@ async function bootstrap() {
   // 配置 Swagger 文档
   AppModule.configureSwagger(app);
 
-  // 启动时生成 swagger_json.json 并触发前端 SDK 更新（非阻塞）
-  generateSwaggerJson(app, logger);
+  // 开发环境：启动时生成 swagger_json.json 并触发前端 SDK 更新（非阻塞）
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const { syncSwaggerAndSdk } = require('../scripts/swagger-sync');
+      syncSwaggerAndSdk(app);
+    } catch (err) {
+      logger.warn(`Swagger/SDK 同步失败（不影响启动）: ${err.message}`);
+    }
+  }
 
   // 启动应用
   await app.listen(config.port, '0.0.0.0');
@@ -250,48 +252,6 @@ async function bootstrap() {
     logger.log('  - 系统初始化: 已完成 (并行优化)');
     logger.log('  - SVN 初始化: 异步后台执行中');
     logger.log('  - 缓存预热: 已禁用 (改为懒加载)');
-  }
-}
-
-/**
- * 生成 swagger_json.json 并异步触发前端 SDK 更新
- * - 每次后端启动/重启时自动调用
- * - 非阻塞，出错只打日志不影响启动
- */
-function generateSwaggerJson(app: INestApplication, logger: Logger) {
-  // 仅开发环境执行，生产环境跳过
-  if (process.env.NODE_ENV !== 'development') return;
-
-  try {
-    const config = new DocumentBuilder()
-      .setTitle('CloudCAD API')
-      .setDescription('图纸管理平台API文档')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-
-    const document = SwaggerModule.createDocument(app, config, {
-      operationIdFactory: (controllerKey, methodKey) => {
-        const cleanMethod = methodKey.replace(/_v\d+$/, '');
-        return `${controllerKey}_${cleanMethod}`;
-      },
-    });
-
-    const outputPath = join(__dirname, '..', '..', 'frontend', 'swagger_json.json');
-    writeFileSync(outputPath, JSON.stringify(document, null, 2), 'utf8');
-    logger.log(`Swagger JSON 已更新: ${outputPath}`);
-
-    // 异步触发前端 SDK 重新生成（非阻塞）
-    const sdkBin = join(__dirname, '..', '..', 'frontend', 'node_modules', '@hey-api', 'openapi-ts', 'bin', 'run.js');
-    const frontendDir = join(__dirname, '..', '..', 'frontend');
-    if (existsSync(sdkBin)) {
-      const child = spawn(process.execPath, [sdkBin], { cwd: frontendDir, stdio: 'ignore', detached: true, shell: true });
-      child.unref();
-      child.on('error', (err) => logger.warn(`前端 SDK 生成失败: ${err.message}`));
-      logger.log('前端 SDK 更新已触发（非阻塞）');
-    }
-  } catch (err) {
-    logger.warn(`Swagger JSON 生成失败（不影响启动）: ${err.message}`);
   }
 }
 bootstrap();
