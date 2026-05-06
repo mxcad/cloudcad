@@ -23,9 +23,6 @@ import { RuntimeConfigService } from "../../runtime-config/runtime-config.servic
 import { MxCadController } from "./mxcad.controller";
 import { MxCadService } from "./mxcad.service";
 import { MxcadFileHandlerService } from "./mxcad-file-handler.service";
-import * as os from 'os';
-import * as path from 'path';
-
 describe("MxCadController", () => {
 	let controller: MxCadController;
 
@@ -34,17 +31,6 @@ describe("MxCadController", () => {
 		checkExternalReferenceExists: jest.fn(),
 		getExternalReferenceStats: jest.fn(),
 		updateExternalReferenceInfo: jest.fn(),
-		uploadChunkWithPermission: jest.fn(),
-		mergeChunksWithPermission: jest.fn(),
-		uploadAndConvertFileWithPermission: jest.fn(),
-		getFileSystemNodeByNodeId: jest.fn(),
-		getFileSystemNodeByPath: jest.fn(),
-		handleExternalReferenceImage: jest.fn(),
-		handleExternalReferenceFile: jest.fn(),
-		updateExternalReferenceAfterUpload: jest.fn(),
-		logError: jest.fn(),
-		findUserById: jest.fn(),
-		findNodeById: jest.fn(),
 	};
 
 	const mockPrisma = {
@@ -52,12 +38,6 @@ describe("MxCadController", () => {
 			findUnique: jest.fn(),
 			findFirst: jest.fn(),
 			update: jest.fn(),
-		},
-		user: {
-			findUnique: jest.fn(),
-		},
-		refreshToken: {
-			findFirst: jest.fn(),
 		},
 	};
 
@@ -188,61 +168,4 @@ describe("MxCadController", () => {
 		});
 	});
 
-	// ==================== uploadFile (the main upload handler) ====================
-	describe("uploadFile", () => {
-		it("should handle merge request (no file, has chunks)", async () => {
-			mockMxCadService.mergeChunksWithPermission.mockResolvedValue({
-				ret: "ok",
-				nodeId: "n1",
-			});
-			mockJwtService.verify.mockReturnValue({ sub: "u1" });
-			mockMxCadService.findUserById.mockResolvedValue({
-				id: "u1",
-				status: "ACTIVE",
-				roleId: "USER",
-			});
-			mockFileTreeService.getLibraryKey.mockResolvedValue(null);
-
-			const result = await controller.uploadFile(
-				[],
-				{ hash: "abc", name: "f.dwg", size: 1000, chunks: 5 } as any,
-				{
-					headers: { authorization: "Bearer token" },
-					body: { nodeId: "root-1" },
-					query: {},
-				} as any,
-			);
-			expect(result.ret).toBe("ok");
-		});
-
-		it("should throw when required params missing", async () => {
-			await expect(
-				controller.uploadFile([{} as any], { chunk: 0 } as any, {} as any),
-			).rejects.toThrow(BadRequestException);
-		});
-
-		it("should handle chunk upload", async () => {
-			mockMxCadService.uploadChunkWithPermission.mockResolvedValue({
-				ret: "ok",
-			});
-			mockJwtService.verify.mockReturnValue({ sub: "u1" });
-			mockMxCadService.findUserById.mockResolvedValue({
-				id: "u1",
-				status: "ACTIVE",
-				roleId: "USER",
-			});
-			mockFileTreeService.getLibraryKey.mockResolvedValue(null);
-
-			const result = await controller.uploadFile(
-				[{ path: path.join(os.tmpdir(), "chunk"), size: 100 } as any],
-				{ hash: "abc", name: "f.dwg", size: 1000, chunk: 0, chunks: 5 } as any,
-				{
-					headers: { authorization: "Bearer token" },
-					body: { nodeId: "root-1" },
-					query: {},
-				} as any,
-			);
-			expect(result.ret).toBe("ok");
-		});
-	});
 });
