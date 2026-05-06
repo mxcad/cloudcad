@@ -26,17 +26,14 @@ import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { useSidebarSettings } from '../../hooks/useSidebarSettings';
 import {
   mxcadManager,
-  openUploadedFile,
   isDocumentModified,
-  showUnsavedChangesDialog,
-  resetDocumentModified,
   checkAndConfirmUnsavedChanges,
 } from '../../services/mxcadManager';
 import { isTourModeActive } from '../../contexts/TourContext';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
+import { useFileSystemNavigation } from './hooks/useFileSystemNavigation';
 import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
-import { ProjectDrawingsPanel, LibraryType } from '../ProjectDrawingsPanel';
+import { ProjectDrawingsPanel } from '../ProjectDrawingsPanel';
 import { CollaborateSidebar } from '../CollaborateSidebar';
 import { Tooltip } from '../ui/Tooltip';
 import { FileSystemNode } from '../../types/filesystem';
@@ -63,6 +60,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 }) => {
   // ==================== Hooks ====================
   const { isAuthenticated } = useAuth();
+  const { personalSpaceId, handleDrawingOpen: navigationOpen } = useFileSystemNavigation(isAuthenticated);
 
   const {
     settings,
@@ -91,9 +89,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
   // 宽度调整状态
   const [isResizing, setIsResizing] = useState(false);
-
-  // 私人空间 ID
-  const [personalSpaceId, setPersonalSpaceId] = useState<string | null>(null);
 
   // 当前打开的文件 ID
   const [currentOpenFileId, setCurrentOpenFileId] = useState<string | null>(
@@ -149,22 +144,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       setIsVisible(false);
     }
   }, [setIsVisible]);
-
-  // 获取私人空间 ID
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // 未登录时不获取私人空间
-      return;
-    }
-
-    fileSystemControllerGetPersonalSpace()
-      .then((res) => {
-        if (res?.data?.id) {
-          setPersonalSpaceId(res.data.id);
-        }
-      })
-      .catch(console.error);
-  }, [isAuthenticated]);
 
   // 监听当前打开的文件和修改状态
   useEffect(() => {
@@ -308,55 +287,14 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // ==================== 图纸打开处理 ====================
 
   const handleDrawingOpen = useCallback(async (node: FileSystemNode, libraryType?: 'drawing' | 'block') => {
-    try {
-      // 先检查当前文档是否有未保存的修改
-      const canProceed = await checkAndConfirmUnsavedChanges();
-      if (!canProceed) {
-        return;
-      }
-
-      // 如果是库文件，使用新的打开方式
-      if (libraryType === 'drawing' || libraryType === 'block') {
-        const { openLibraryDrawing, openLibraryBlock } = await import('../../services/mxcadManager');
-
-        if (libraryType === 'drawing') {
-          await openLibraryDrawing(node.id, node.name, node.path, node.updatedAt);
-        } else {
-          await openLibraryBlock(node.id, node.name, node.path, node.updatedAt);
-        }
-        return;
-      }
-
-      // 项目文件：使用原有逻辑
-      const { data: file } = await fileSystemControllerGetNode({ path: { nodeId: node.id } }) as unknown as { data: { fileHash?: string; path?: string; parentId?: string | null; id?: string; isRoot?: boolean; name?: string } };
-
-      if (!file.fileHash) {
-        console.error('文件尚未转换完成');
-        return;
-      }
-
-      // 获取项目根节点 ID
-      let targetProjectId: string | null | undefined = file.parentId || null;
-      if (!file.isRoot && file.parentId) {
-        try {
-          if (!file.id) throw new Error('节点ID缺失');
-          const { data: rootNode } = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
-          if (rootNode?.id) {
-            targetProjectId = rootNode.id;
-          }
-        } catch (error) {
-          console.error('获取根节点失败:', error);
-        }
-      } else if (file.isRoot) {
-        targetProjectId = file.id;
-      }
-
-      // 调用 openUploadedFile 打开文件
-      await openUploadedFile(node.id, file.parentId || targetProjectId || '');
-    } catch (error) {
-      console.error('打开图纸失败:', error);
+    // 先检查当前文档是否有未保存的修改
+    const canProceed = await checkAndConfirmUnsavedChanges();
+    if (!canProceed) {
+      return;
     }
-  }, []);
+
+    await navigationOpen(node, libraryType);
+  }, [navigationOpen]);
 
   // 处理登录提示的登录按钮
   const handleLoginClick = async () => {

@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Folder } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
-import { fileSystemControllerGetProjects, mxCadControllerSaveMxwebAs } from '@/api-sdk';
-// TODO: Replace libraryApi.saveDrawingAs/saveBlockAs with SDK when backend adds endpoints
-import { libraryApi } from '../../services/libraryApi';
+import { useSaveAs } from './hooks/useSaveAs';
 import { globalShowToast } from '../../contexts/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
 import { SystemPermission } from '../../constants/permissions';
-import { handleError } from '@/utils/errorHandler';
 
 // TODO: Replace with SDK when backend adds this endpoint — keep old import for getUserPersonalSpace
 
@@ -28,12 +25,6 @@ interface SaveAsModalProps {
   }) => void;
 }
 
-interface ProjectWithPermission {
-  id: string;
-  name: string;
-  hasUploadPermission: boolean;
-}
-
 export const SaveAsModal: React.FC<SaveAsModalProps> = ({
   isOpen,
   currentFileName,
@@ -43,81 +34,35 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
   onSuccess,
 }) => {
   const { hasPermission } = usePermission();
-  const [targetType, setTargetType] = useState<
-    'personal' | 'project' | 'library'
-  >('personal');
-  const [libraryType, setLibraryType] = useState<'drawing' | 'block'>(
-    'drawing'
-  );
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const [selectedParentId, setSelectedParentId] = useState<string>('');
-  const [format, setFormat] = useState<'dwg' | 'dxf'>('dwg');
-  const [fileName, setFileName] = useState<string>('');
-  const [saving, setSaving] = useState(false);
-  const [projects, setProjects] = useState<ProjectWithPermission[]>([]);
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    targetType,
+    setTargetType,
+    libraryType,
+    setLibraryType,
+    selectedProjectId,
+    setSelectedProjectId,
+    selectedParentId,
+    setSelectedParentId,
+    format,
+    setFormat,
+    fileName,
+    setFileName,
+    error,
+    setError,
+    showFolderPicker,
+    setShowFolderPicker,
+    projects,
+    saving,
+    getFolderPickerProjectId,
+    handleClose: resetError,
+    handleFolderConfirm,
+    saveMutation,
+  } = useSaveAs({ isOpen, personalSpaceId, currentFileName });
 
   // 检查用户是否有公共资源库管理权限
   const hasLibraryPermission =
     hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE) ||
     hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE);
-
-  const loadProjects = async () => {
-    try {
-      const response = await fileSystemControllerGetProjects({ query: { filter: 'all' } as any });
-      const allProjects = (response as any)?.nodes || [];
-
-      const projectList = allProjects.map((project: any) => ({
-        id: project.id,
-        name: project.name,
-        hasUploadPermission: true,
-      }));
-
-      setProjects(projectList);
-
-      if (projectList.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(projectList[0].id);
-        setSelectedParentId(projectList[0].id);
-      }
-    } catch (err) {
-      handleError(err, 'loadProjects');
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      setTargetType('personal');
-      setSelectedProjectId('');
-
-      // 优先使用 props 传入的 personalSpaceId（来自 API）
-      // 如果没有，则尝试从 localStorage 获取（作为后备）
-      const initialParentId = personalSpaceId || '';
-      setSelectedParentId(initialParentId);
-      setFormat('dwg');
-      setError(null);
-      setProjects([]);
-
-      // 从当前文件名提取名称（不含扩展名）
-      const baseName = currentFileName.replace(/\.[^/.]+$/, '');
-      setFileName(baseName || 'untitled');
-    }
-  }, [isOpen, personalSpaceId, currentFileName]);
-
-  // 计算当前应该传递给SelectFolderModal的projectId
-  const getFolderPickerProjectId = () => {
-    if (targetType === 'project') {
-      return selectedProjectId;
-    }
-    // 私人空间模式：只使用 props 传入的 personalSpaceId
-    return personalSpaceId || undefined;
-  };
-
-  useEffect(() => {
-    if (isOpen && targetType === 'project') {
-      loadProjects();
-    }
-  }, [isOpen, targetType]);
 
   const handleConfirm = async () => {
     // 验证文件名
@@ -136,111 +81,54 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     // 如果没有选择保存位置，设置默认值
     if (!selectedParentId) {
       if (targetType === 'personal') {
-        // 我的图纸：保存到根目录
         setSelectedParentId(getFolderPickerProjectId() || '');
       } else if (targetType === 'project') {
-        // 项目模式：保存到项目根目录
         if (!selectedProjectId) {
           setError('请先选择项目');
           return;
         }
         setSelectedParentId(selectedProjectId);
       } else if (targetType === 'library') {
-        // 公开资源库模式：需要选择保存位置
         setError('请选择公开资源库中的保存位置');
         return;
       }
     }
 
-    setSaving(true);
     setError(null);
 
     try {
-      // 公开资源库另存为
-      if (targetType === 'library') {
-        const libResult =
-          libraryType === 'drawing'
-            ? await libraryApi.saveDrawingAs(
-                mxwebBlob,
-                selectedParentId,
-                fileName.trim(),
-                () => {}
-              )
-            : await libraryApi.saveBlockAs(
-                mxwebBlob,
-                selectedParentId,
-                fileName.trim(),
-                () => {}
-              );
+      const result = await saveMutation.mutateAsync({
+        targetType,
+        libraryType,
+        selectedProjectId,
+        selectedParentId,
+        format,
+        fileName,
+        mxwebBlob,
+      });
 
-        const libSaveResult = libResult as unknown as {
-          nodeId: string;
-          fileName: string;
-          path: string;
-          parentId: string;
-        };
-
+      if (result?.success) {
         globalShowToast('保存成功', 'success');
         onSuccess({
-          nodeId: libSaveResult.nodeId,
-          fileName: libSaveResult.fileName,
-          path: libSaveResult.path,
-          parentId: libSaveResult.parentId,
-        });
-        setSaving(false);
-        return;
-      }
-
-      // 我的图纸/项目另存为
-      const formData = new FormData();
-      formData.append('file', mxwebBlob);
-      formData.append('targetType', targetType);
-      formData.append('targetParentId', selectedParentId);
-      if (targetType === 'project' && selectedProjectId) formData.append('projectId', selectedProjectId);
-      formData.append('format', format);
-      formData.append('commitMessage', `Save as: ${fileName}.${format}`);
-      formData.append('fileName', fileName.trim());
-      
-      const result = await mxCadControllerSaveMxwebAs({ body: formData as any });
-      const saveResult = result.data as {
-        success: boolean;
-        message?: string;
-        nodeId?: string;
-        fileName?: string;
-        path?: string;
-        projectId?: string;
-        parentId?: string;
-      };
-
-      if (saveResult.success) {
-        globalShowToast('保存成功', 'success');
-        onSuccess({
-          nodeId: saveResult.nodeId || '',
-          fileName: saveResult.fileName || '',
-          path: saveResult.path || '',
-          projectId: saveResult.projectId,
-          parentId: saveResult.parentId || '',
+          nodeId: result.nodeId || '',
+          fileName: result.fileName || '',
+          path: result.path || '',
+          projectId: result.projectId,
+          parentId: result.parentId || '',
         });
       } else {
-        setError(saveResult.message || '保存失败');
+        setError(result?.message || '保存失败');
       }
     } catch (err: any) {
       setError(err.message || '保存失败，请稍后重试');
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleClose = () => {
     if (!saving) {
-      setError(null);
+      resetError();
       onClose();
     }
-  };
-
-  const handleFolderConfirm = (targetParentId: string) => {
-    setSelectedParentId(targetParentId);
-    setShowFolderPicker(false);
   };
 
   return (

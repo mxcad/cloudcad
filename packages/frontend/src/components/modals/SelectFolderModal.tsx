@@ -7,7 +7,7 @@ import { ChevronRight } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { Check } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import { fileSystemControllerGetChildren } from '@/api-sdk';
+import { useFolderChildren } from './hooks/useFolderChildren';
 import { FileSystemNode } from '../../types/filesystem';
 import { handleError } from '@/utils/errorHandler';
 
@@ -53,41 +53,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string>('');
 
-  // 懒加载子文件夹
-  const loadChildren = useCallback(
-    async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
-      try {
-        const childrenResponse = await fileSystemControllerGetChildren({ path: { nodeId } }) as any;
-
-        let children: FileSystemNode[] = [];
-
-        if (childrenResponse?.nodes) {
-          children = childrenResponse.nodes as unknown as FileSystemNode[];
-        }
-
-        const folders: FolderNode[] = children
-          .filter((child) => {
-            const isFolder = child.isFolder === true;
-            const isExcluded = child.id === excludeNodeId;
-            return isFolder && !isExcluded && child.id;
-          })
-          .map((folder) => ({
-            ...folder,
-            id: folder.id!,
-            expanded: false,
-            children: [],
-            loading: false,
-            hasChildren: true,
-          }));
-
-        return folders;
-      } catch (err) {
-        handleError(err, 'loadChildren');
-        return [];
-      }
-    },
-    []
-  );
+  const { loadChildren } = useFolderChildren();
 
   // 加载根文件夹
   const loadFolderTree = useCallback(async () => {

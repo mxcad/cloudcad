@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Filter } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { DescriptionText } from '../components/ui/TruncateText';
-import { auditLogControllerFindAll, auditLogControllerGetStatistics } from '@/api-sdk';
-type AuditLogQueryParams = NonNullable<Parameters<typeof auditLogControllerFindAll>[0]>['query'];
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useAuditLogList, useAuditLogStats } from './AuditLogPage/hooks/useAuditLog';
 
 // 审计操作类型
 const AuditAction = {
@@ -43,27 +42,6 @@ const ResourceType = {
 
 type ResourceTypeType = (typeof ResourceType)[keyof typeof ResourceType];
 
-// 审计日志接口
-interface AuditLog {
-  id: string;
-  action: AuditActionType;
-  resourceType: ResourceTypeType;
-  resourceId: string;
-  userId: string;
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    nickname: string | null;
-  };
-  details: string | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  success: boolean;
-  errorMessage: string | null;
-  createdAt: string;
-}
-
 // 操作类型中文映射
 const ACTION_NAME_MAP: Record<string, string> = {
   PERMISSION_GRANT: '授予权限',
@@ -98,11 +76,7 @@ export const AuditLogPage: React.FC = () => {
   useDocumentTitle('审计日志');
   const { hasPermission } = usePermission();
 
-  // 所有 Hooks 必须在条件返回之前调用
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [limit] = useState(20);
 
   // 筛选条件
@@ -116,76 +90,38 @@ export const AuditLogPage: React.FC = () => {
     success: '',
   });
 
-  // 统计信息
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    successCount: 0,
-    failureCount: 0,
-    successRate: 0,
-  });
+  // 构建查询参数（仅传递有值的筛选项）
+  const queryParams = {
+    page: String(page),
+    limit: String(limit),
+    ...(filters.userId && { userId: filters.userId }),
+    ...(filters.action && { action: filters.action }),
+    ...(filters.resourceType && { resourceType: filters.resourceType }),
+    ...(filters.resourceId && { resourceId: filters.resourceId }),
+    ...(filters.startDate && { startDate: filters.startDate }),
+    ...(filters.endDate && { endDate: filters.endDate }),
+    ...(filters.success !== '' && {
+      success: filters.success === 'true' ? 'true' : 'false',
+    }),
+  };
 
   // 检查是否有系统管理员权限
   const hasAdminPermission = hasPermission(SystemPermission.SYSTEM_ADMIN);
 
-  const loadLogs = useCallback(async () => {
-    if (!hasAdminPermission) return;
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {
-        page: String(page),
-        limit: String(limit),
-      };
+  const {
+    logs,
+    total,
+    loading,
+    error: logsError,
+    refetch: refetchLogs,
+  } = useAuditLogList(queryParams);
 
-      // 添加筛选条件
-      if (filters.userId) params.userId = filters.userId;
-      if (filters.action) params.action = filters.action;
-      if (filters.resourceType) params.resourceType = filters.resourceType;
-      if (filters.resourceId) params.resourceId = filters.resourceId;
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate) params.endDate = filters.endDate;
-      if (filters.success !== '')
-        params.success = filters.success === 'true' ? 'true' : 'false';
-
-      const response = await auditLogControllerFindAll({ query: params as any });
-      // Swagger 未定义响应类型，手动处理
-      const responseData = response as
-        | { logs?: AuditLog[]; total?: number }
-        | undefined;
-      setLogs((responseData?.logs || []) as AuditLog[]);
-      setTotal(responseData?.total || 0);
-    } catch (error) {
-      console.error('加载审计日志失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, limit, filters, hasAdminPermission]);
-
-  const loadStatistics = useCallback(async () => {
-    if (!hasAdminPermission) return;
-    try {
-      const response = await auditLogControllerGetStatistics();
-      // Swagger 未定义响应类型，手动处理
-      const responseData = response as {
-        total?: number;
-        successCount?: number;
-        failureCount?: number;
-        successRate?: number;
-      };
-      setStatistics({
-        total: responseData?.total || 0,
-        successCount: responseData?.successCount || 0,
-        failureCount: responseData?.failureCount || 0,
-        successRate: responseData?.successRate ?? 0,
-      });
-    } catch (error) {
-      console.error('加载统计信息失败:', error);
-    }
-  }, [hasAdminPermission]);
-
-  useEffect(() => {
-    loadLogs();
-    loadStatistics();
-  }, [loadLogs, loadStatistics]);
+  const {
+    statistics,
+    loading: statsLoading,
+    error: statsError,
+    refetch: refetchStats,
+  } = useAuditLogStats();
 
   // 如果没有权限，在所有 Hooks 调用之后再返回
   if (!hasAdminPermission) {
@@ -214,6 +150,11 @@ export const AuditLogPage: React.FC = () => {
       success: '',
     });
     setPage(1);
+  };
+
+  const handleRefresh = () => {
+    refetchLogs();
+    refetchStats();
   };
 
   const formatDate = (dateString: string) => {
@@ -382,7 +323,7 @@ export const AuditLogPage: React.FC = () => {
             重置筛选
           </Button>
           <Button
-            onClick={loadLogs}
+            onClick={handleRefresh}
             variant="outline"
             size="sm"
             disabled={loading}

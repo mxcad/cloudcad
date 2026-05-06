@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { usePermission } from '../../hooks/usePermission';
-import { usersControllerUpdateProfile } from '@/api-sdk';
+import { useProfileUpdate } from '../Profile/hooks/useProfileUpdate';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface ProfileInfoTabProps {
@@ -36,12 +36,12 @@ interface ProfileInfoTabProps {
 export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
   const { isAdmin } = usePermission();
   const { refreshUser } = useAuth();
+  const { updateProfile, loading } = useProfileUpdate();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     username: user?.username || '',
     nickname: user?.nickname || '',
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -70,16 +70,13 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      await usersControllerUpdateProfile({
-        body: {
-          username: formData.username,
-          nickname: formData.nickname,
-        },
+      await updateProfile({
+        username: formData.username,
+        nickname: formData.nickname,
       });
       setSuccess('个人信息更新成功');
       await refreshUser();
@@ -91,8 +88,6 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
           (err as Error).message ||
           '更新失败'
       );
-    } finally {
-      setLoading(false);
     }
   };
 

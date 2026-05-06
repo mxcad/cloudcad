@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
-import { validateField, validateRegisterForm } from '../utils/validation';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
-import { authControllerCheckFieldUniqueness, authControllerSendSmsCode, authControllerRegisterByPhone } from '@/api-sdk';
-import type { RegisterDto } from '@/api-sdk';
+import { useRegisterForm } from './Register/hooks/useRegisterForm';
+import { usePhoneVerification } from './Register/hooks/usePhoneVerification';
 
 // 导入 lucide 图标
 import { User } from 'lucide-react';
@@ -45,7 +44,6 @@ export const Register: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    register: registerUser,
     isAuthenticated,
     loading: authLoading,
   } = useAuth();
@@ -72,53 +70,44 @@ export const Register: React.FC = () => {
   const wechatTempToken = sessionStorage.getItem('wechatTempToken');
   const isWechatRegister = !!wechatTempToken;
 
-  // 解析微信昵称（如果有）
-  let wechatNickname = '';
-  if (isWechatRegister && wechatTempToken) {
-    try {
-      const tokenPart = wechatTempToken.split('.')[1];
-      if (tokenPart) {
-        // JWT payload 使用 Base64url 编码，需要正确处理 UTF-8
-        const base64 = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonStr = decodeURIComponent(
-          atob(base64)
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
-        const payload = JSON.parse(jsonStr);
-        wechatNickname = payload.nickname || '';
-      }
-    } catch (e) {
-      // 忽略解析错误
-    }
-  }
-
-  const [formData, setFormData] = useState<RegisterDto>({
-    email: '',
-    password: '',
-    username: '',
-    nickname: wechatNickname || '',
+  // ── Form hooks ──────────────────────────────────
+  const {
+    register,
+    watch,
+    currentStep,
+    showPassword,
+    setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    focusedField,
+    setFocusedField,
+    loading,
+    error,
+    setError,
+    fieldErrors,
+    setExternalErrors,
+    handleNext,
+    handleBack,
+    handleFormSubmit,
+  } = useRegisterForm({
+    mailEnabled,
+    requireEmailVerification,
+    smsEnabled,
+    requirePhoneVerification,
+    isWechatRegister,
   });
 
-  // 手机号注册相关状态
-  const [phoneForm, setPhoneForm] = useState({
-    phone: '',
-    code: '',
-  });
-  const [countdown, setCountdown] = useState(0);
-  const [sendingCode, setSendingCode] = useState(false);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const {
+    phoneForm,
+    setPhoneForm,
+    countdown,
+    sendingCode,
+    handlePhoneChange,
+    handleSendCode,
+  } = usePhoneVerification({ setFieldErrors: setExternalErrors });
 
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Watch password for strength indicator
+  const passwordValue = watch('password');
 
   // 检查注册开关
   if (!configLoading && !runtimeConfig.allowRegister) {
@@ -182,372 +171,10 @@ export const Register: React.FC = () => {
       // 清除 state，避免刷新后重复填充
       window.history.replaceState(null, '');
     }
-  }, [location.state]);
+  }, [location.state, setPhoneForm]);
 
-  // 清理倒计时
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-    };
-  }, []);
-
-  // 处理倒计时
-  useEffect(() => {
-    if (countdown > 0) {
-      countdownRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) {
-              clearInterval(countdownRef.current);
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (countdownRef.current && countdown <= 0) {
-        clearInterval(countdownRef.current);
-      }
-    };
-  }, [countdown > 0]);
-
-  // 发送短信验证码
-  const handleSendCode = useCallback(async () => {
-    // 验证手机号格式
-    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setFieldErrors((prev) => ({ ...prev, phone: '请输入正确的手机号' }));
-      return;
-    }
-
-    setSendingCode(true);
-    setFieldErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.phone;
-      return newErrors;
-    });
-
-    try {
-      // 先检查手机号是否已被注册（SDK 已解包，result 即内层 data）
-      const checkResult = await authControllerCheckFieldUniqueness();
-      if ((checkResult as { phoneExists?: boolean })?.phoneExists) {
-        setFieldErrors((prev) => ({ ...prev, phone: '该手机号已被注册' }));
-        return;
-      }
-
-      // 手机号可用，发送验证码（SDK 已解包）
-      const { data: response } = await authControllerSendSmsCode();
-      if ((response as any)?.success) {
-        setCountdown(60); // 60秒倒计时
-      } else {
-        setFieldErrors((prev) => ({
-          ...prev,
-          phone: (response as { message?: string })?.message || '发送验证码失败',
-        }));
-      }
-    } catch (err) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        phone:
-          (err as Error & { response?: { data?: { message?: string } } })
-            .response?.data?.message ||
-          (err as Error).message ||
-          '发送验证码失败',
-      }));
-    } finally {
-      setSendingCode(false);
-    }
-  }, [phoneForm.phone]);
-
-  // 手机号输入处理
-  const handlePhoneChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      // 手机号只允许输入数字
-      if (name === 'phone' && value && !/^\d*$/.test(value)) {
-        return;
-      }
-      // 验证码只允许输入数字
-      if (name === 'code' && value && !/^\d*$/.test(value)) {
-        return;
-      }
-      setPhoneForm((prev) => ({ ...prev, [name]: value }));
-      if (fieldErrors[name]) {
-        setFieldErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors[name];
-          return newErrors;
-        });
-      }
-    },
-    [fieldErrors]
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-
-      if (name === 'confirmPassword') {
-        setConfirmPassword(value);
-        if (touched.confirmPassword) {
-          if (value && formData.password !== value) {
-            setFieldErrors((prev) => ({
-              ...prev,
-              confirmPassword: '两次输入的密码不一致',
-            }));
-          } else {
-            setFieldErrors((prev) => {
-              const newErrors = { ...prev };
-              delete newErrors.confirmPassword;
-              return newErrors;
-            });
-          }
-        }
-      } else {
-        setFormData((prev) => ({ ...prev, [name]: value }));
-
-        if (touched[name]) {
-          const fieldError = validateField(
-            name as keyof typeof import('../utils/validation').ValidationRules,
-            value
-          );
-          if (fieldError) {
-            setFieldErrors((prev) => ({ ...prev, [name]: fieldError }));
-          } else {
-            setFieldErrors((prev) => {
-              const newErrors = { ...prev };
-              delete newErrors[name];
-              return newErrors;
-            });
-          }
-        }
-      }
-
-      if (error) setError(null);
-    },
-    [touched, formData.password, error]
-  );
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    setFocusedField(null);
-
-    if (name === 'confirmPassword') {
-      if (value && formData.password !== value) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          confirmPassword: '两次输入的密码不一致',
-        }));
-      } else {
-        setFieldErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors.confirmPassword;
-          return newErrors;
-        });
-      }
-    } else {
-      const fieldError = validateField(
-        name as keyof typeof import('../utils/validation').ValidationRules,
-        value
-      );
-      if (fieldError) {
-        setFieldErrors((prev) => ({ ...prev, [name]: fieldError }));
-      } else {
-        setFieldErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors[name];
-          return newErrors;
-        });
-      }
-    }
-  };
-
-  const validateStep = async (step: number): Promise<boolean> => {
-    if (step === 1) {
-      const errors: Record<string, string> = {};
-      if (!formData.username) errors.username = '请输入用户名';
-
-      // 邮箱验证：必填时检查非空，选填时仅填写了才检查格式
-      if (mailEnabled && requireEmailVerification) {
-        if (!formData.email) {
-          errors.email = '请输入邮箱';
-        } else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-          errors.email = '请输入有效的邮箱地址';
-        }
-      }
-
-      // 手机号验证：必填时检查非空，选填时仅填写了才检查格式
-      if (smsEnabled && requirePhoneVerification) {
-        if (!phoneForm.phone) {
-          errors.phone = '请输入手机号';
-        } else if (phoneForm.phone && !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-          errors.phone = '请输入正确的手机号';
-        }
-        if (!phoneForm.code) {
-          errors.code = '请输入验证码';
-        }
-      }
-
-      // 检查字段唯一性
-      if (formData.username || formData.email || phoneForm.phone) {
-        try {
-          const checkResult = await authControllerCheckFieldUniqueness();
-          const checkData = checkResult as { usernameExists?: boolean; emailExists?: boolean; phoneExists?: boolean };
-          if (checkData.usernameExists) {
-            errors.username = '用户名已被使用';
-          }
-          if (checkData.emailExists) {
-            errors.email = '邮箱已被注册';
-          }
-          if (checkData.phoneExists) {
-            errors.phone = '手机号已被注册';
-          }
-        } catch (checkErr) {
-          console.error('检查字段唯一性失败:', checkErr);
-        }
-      }
-
-      setFieldErrors((prev) => ({ ...prev, ...errors }));
-      return Object.keys(errors).length === 0;
-    }
-    return true;
-  };
-
-  const handleNext = async () => {
-    const isValid = await validateStep(currentStep);
-    if (isValid) {
-      setCurrentStep((prev) => prev + 1);
-    }
-  };
-
-  const handleBack = () => {
-    setCurrentStep((prev) => prev - 1);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('[Register] fieldErrors 提交时:', fieldErrors);
-
-    const dataToValidate = {
-      email: formData.email ?? '',
-      username: formData.username,
-      password: formData.password,
-      confirmPassword,
-      nickname: formData.nickname,
-    };
-    const validationError = validateRegisterForm(dataToValidate, {
-      validateEmail: mailEnabled && requireEmailVerification,
-    });
-
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    // 过滤掉空字符串的错误，只保留有实际内容的错误
-    // 只检查当前启用的字段，忽略不可见/非必填字段的残留错误
-    const relevantFields = ['username', 'password', 'confirmPassword', 'nickname'];
-    if (mailEnabled && requireEmailVerification) relevantFields.push('email');
-    if (smsEnabled && requirePhoneVerification) {
-      relevantFields.push('phone');
-      if (requirePhoneVerification) relevantFields.push('code');
-    }
-    const actualErrors = Object.entries(fieldErrors)
-      .filter(([key, v]) => v && v.trim() && relevantFields.includes(key));
-    console.log('[Register] 实际错误:', actualErrors);
-    if (actualErrors.length > 0) {
-      const errorFields = actualErrors.map(([key]) => {
-        const labels: Record<string, string> = {
-          username: '用户名',
-          password: '密码',
-          confirmPassword: '确认密码',
-          nickname: '昵称',
-          email: '邮箱',
-          phone: '手机号',
-          code: '验证码',
-        };
-        return labels[key] || key;
-      });
-      setError(`请修正以下字段：${errorFields.join('、')}`);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // 如果有预填的手机号和验证码，使用手机号注册
-      if (phoneForm.phone && phoneForm.code && smsEnabled && requirePhoneVerification) {
-        // 如果邮箱也是必填的，需要先填写邮箱
-        if (mailEnabled && requireEmailVerification) {
-          // 跳转到邮箱验证页面，携带手机号信息和邮箱
-          navigate('/verify-email', {
-            state: {
-              email: formData.email,
-              phone: phoneForm.phone,
-              code: phoneForm.code,
-              username: formData.username,
-              password: formData.password,
-              nickname: formData.nickname,
-              message: '请先验证邮箱，完成注册',
-            },
-          });
-          return;
-        }
-
-        // NOTE: authControllerRegisterByPhone SDK type has body?: never;
-        // the backend may read params from session/JWT. Old params were:
-        // { username, password, nickname, phone, code }
-        await authControllerRegisterByPhone();
-        // 手机号注册成功（自动登录），跳转首页
-        if (isWechatRegister) {
-          sessionStorage.removeItem('wechatTempToken');
-        }
-        navigate('/');
-      } else {
-        const needEmail = mailEnabled && requireEmailVerification;
-        const registerData = needEmail
-          ? { ...formData, wechatTempToken }
-          : { ...formData, email: undefined, wechatTempToken };
-        const result = await registerUser(registerData as RegisterDto);
-
-        if (isWechatRegister) {
-          sessionStorage.removeItem('wechatTempToken');
-        }
-
-        // 需要邮箱验证：跳转到验证页面
-        if (result.email) {
-          navigate('/verify-email', {
-            state: { email: result.email, message: result.message },
-          });
-        } else {
-          // 直接注册成功（自动登录），跳转首页
-          navigate('/');
-        }
-      }
-    } catch (err) {
-      const axiosError = err as Error & {
-        response?: {
-          data?: { message?: string };
-          status?: number;
-          statusText?: string;
-        };
-      };
-      setError(
-        axiosError.message ||
-          (axiosError.response?.status === 409
-            ? '用户名或邮箱已被使用'
-            : axiosError.response?.statusText) ||
-          '注册失败，请稍后重试'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Wrap handleNext to pass phoneForm
+  const onNext = () => handleNext(phoneForm);
 
   const getPasswordStrength = (
     password: string
@@ -570,7 +197,7 @@ export const Register: React.FC = () => {
     return { strength: score, label: level.label, color: level.color };
   };
 
-  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordStrength = getPasswordStrength(passwordValue);
 
   return (
     <div
@@ -636,7 +263,7 @@ export const Register: React.FC = () => {
           )}
 
           {/* 表单内容 */}
-          <form className="register-form" onSubmit={handleSubmit}>
+          <form className="register-form" onSubmit={(e) => handleFormSubmit(e, phoneForm, wechatTempToken)}>
             {/* 步骤 1：基本信息 */}
             {currentStep === 1 && (
               <div className="form-step animate-fade-in">
@@ -653,15 +280,12 @@ export const Register: React.FC = () => {
                     />
                     <input
                       id="username"
-                      name="username"
                       type="text"
                       required
                       className="input-field"
                       placeholder="请输入用户名"
-                      value={formData.username}
-                      onChange={handleChange}
+                      {...register('username')}
                       onFocus={() => setFocusedField('username')}
-                      onBlur={handleBlur}
                     />
                     <div className="input-glow" />
                   </div>
@@ -683,14 +307,11 @@ export const Register: React.FC = () => {
                     />
                     <input
                       id="nickname"
-                      name="nickname"
                       type="text"
                       className="input-field"
                       placeholder="请输入昵称（可选）"
-                      value={formData.nickname || ''}
-                      onChange={handleChange}
+                      {...register('nickname')}
                       onFocus={() => setFocusedField('nickname')}
-                      onBlur={handleBlur}
                     />
                     <div className="input-glow" />
                   </div>
@@ -716,16 +337,13 @@ export const Register: React.FC = () => {
                       />
                       <input
                         id="email"
-                        name="email"
                         type="email"
                         autoComplete="email"
                         required={requireEmailVerification}
                         className="input-field"
                         placeholder="请输入邮箱地址"
-                        value={formData.email}
-                        onChange={handleChange}
+                        {...register('email')}
                         onFocus={() => setFocusedField('email')}
-                        onBlur={handleBlur}
                       />
                       <div className="input-glow" />
                     </div>
@@ -830,7 +448,7 @@ export const Register: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={handleNext}
+                  onClick={onNext}
                   className="submit-button"
                 >
                   <span>下一步</span>
@@ -855,16 +473,13 @@ export const Register: React.FC = () => {
                     />
                     <input
                       id="password"
-                      name="password"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       required
                       className="input-field has-toggle"
                       placeholder="至少8位，包含大小写字母、数字和特殊字符"
-                      value={formData.password}
-                      onChange={handleChange}
+                      {...register('password')}
                       onFocus={() => setFocusedField('password')}
-                      onBlur={handleBlur}
                     />
                     <button
                       type="button"
@@ -880,7 +495,7 @@ export const Register: React.FC = () => {
                     </button>
                     <div className="input-glow" />
                   </div>
-                  {formData.password && (
+                  {passwordValue && (
                     <div className="password-strength">
                       <div className="strength-bar">
                         <div
@@ -917,16 +532,13 @@ export const Register: React.FC = () => {
                     />
                     <input
                       id="confirmPassword"
-                      name="confirmPassword"
                       type={showConfirmPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       required
                       className="input-field has-toggle"
                       placeholder="请再次输入密码"
-                      value={confirmPassword}
-                      onChange={handleChange}
+                      {...register('confirmPassword')}
                       onFocus={() => setFocusedField('confirmPassword')}
-                      onBlur={handleBlur}
                     />
                     <button
                       type="button"

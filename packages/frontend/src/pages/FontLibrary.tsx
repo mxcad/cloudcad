@@ -1,4 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { fontsControllerGetFonts, fontsControllerUploadFont, fontsControllerDeleteFont, fontsControllerDownloadFont } from '@/api-sdk';
+import type { FontUploadTarget } from '@/api-sdk';
 import { Trash2 } from 'lucide-react';
 import { Download } from 'lucide-react';
 import { Upload } from 'lucide-react';
@@ -24,7 +26,6 @@ import { usePermission } from '../hooks/usePermission';
 import { useNotification } from '../contexts/NotificationContext';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useFontCRUD } from '../hooks/useFontCRUD';
 
 interface FontLibraryProps {}
 
@@ -53,6 +54,11 @@ export default function FontLibrary(props: FontLibraryProps) {
   useDocumentTitle('字体库');
   const { hasPermission } = usePermission();
   const { showToast, showConfirm } = useNotification();
+
+  // 所有 Hooks 必须在条件返回之前调用
+  const [allFonts, setAllFonts] = useState<FontInfo[]>([]);
+  const [fonts, setFonts] = useState<FontInfo[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // 当前标签页
   const [activeTab, setActiveTab] = useState<'backend' | 'frontend'>('backend');
@@ -87,13 +93,32 @@ export default function FontLibrary(props: FontLibraryProps) {
   const canDeleteFonts = hasPermission(SystemPermission.SYSTEM_FONT_DELETE);
   const canDownloadFonts = hasPermission(SystemPermission.SYSTEM_FONT_DOWNLOAD);
 
-  // 使用 CRUD hook 获取字体数据
-  const { fonts: allFonts, isLoading: loading, uploadFont, deleteFont, downloadFont, reloadFonts } = useFontCRUD({ location: activeTab });
+  // 获取字体列表
+  const fetchFonts = useCallback(async () => {
+    if (!canReadFonts) return;
+    setLoading(true);
+    try {
+      const { data: fontsApiResult } = await fontsControllerGetFonts({ query: { location: activeTab } });
+      let fontsData: any = fontsApiResult;
+      if (fontsData && typeof fontsData === 'object' && !Array.isArray(fontsData) && 'data' in fontsData) {
+        fontsData = (fontsData as any).data || [];
+      }
+
+      console.log('解析后的字体数据:', fontsData, '数量:', Array.isArray(fontsData) ? fontsData.length : 0);
+      setAllFonts(Array.isArray(fontsData) ? fontsData : []);
+    } catch (error) {
+      console.error('获取字体列表失败:', error);
+      setAllFonts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, canReadFonts]);
 
   // 处理筛选、排序
-  const fonts = useMemo(() => {
+  useEffect(() => {
     let filtered = [...allFonts];
 
+    // 筛选
     if (filters.name) {
       filtered = filtered.filter((font) =>
         font.name.toLowerCase().includes(filters.name.toLowerCase())
@@ -117,6 +142,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       filtered = filtered.filter((font) => new Date(font.createdAt) <= end);
     }
 
+    // 排序
     filtered.sort((a, b) => {
       let comparison = 0;
 
@@ -138,8 +164,12 @@ export default function FontLibrary(props: FontLibraryProps) {
       return sortOrder === 'desc' ? -comparison : comparison;
     });
 
-    return filtered;
+    setFonts(filtered);
   }, [allFonts, filters, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchFonts();
+  }, [fetchFonts]);
 
   // 如果没有查看权限，返回无权限提示
   if (!canReadFonts) {
@@ -213,7 +243,8 @@ export default function FontLibrary(props: FontLibraryProps) {
     if (!confirmed) return;
 
     try {
-      await deleteFont(fontName, activeTab);
+      await fontsControllerDeleteFont({ path: { fileName: fontName }, query: { target: activeTab } });
+      await fetchFonts();
       setSelectedFonts(prev => {
         const newSet = new Set(prev);
         newSet.delete(fontName);
@@ -243,10 +274,11 @@ export default function FontLibrary(props: FontLibraryProps) {
     try {
       await Promise.all(
         Array.from(selectedFonts).map((fontName) =>
-          deleteFont(fontName as string, activeTab)
+          fontsControllerDeleteFont({ path: { fileName: fontName as string }, query: { target: activeTab } })
         )
       );
       setSelectedFonts(new Set());
+      await fetchFonts();
       showToast('批量删除成功', 'success');
     } catch (error) {
       console.error('批量删除失败:', error);
@@ -257,7 +289,11 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 下载字体
   const handleDownload = async (fontName: string) => {
     try {
-      const blobData = await downloadFont(fontName, activeTab);
+      const { data: blobData } = await fontsControllerDownloadFont({
+        path: { fileName: fontName },
+        query: { location: activeTab },
+        responseStyle: 'blob' as any,
+      });
       const url = window.URL.createObjectURL(blobData as Blob | MediaSource);
       const link = document.createElement('a');
       link.href = url;
@@ -803,10 +839,9 @@ export default function FontLibrary(props: FontLibraryProps) {
             onClose={() => setShowUploadModal(false)}
             onSuccess={() => {
               setShowUploadModal(false);
-              reloadFonts();
+              fetchFonts();
             }}
             defaultTarget={activeTab}
-            onUpload={uploadFont}
           />
         )}
       </div>
@@ -819,14 +854,12 @@ interface UploadFontModalProps {
   onClose: () => void;
   onSuccess: () => void;
   defaultTarget?: 'backend' | 'frontend' | 'both';
-  onUpload: (file: File, target: 'backend' | 'frontend' | 'both') => Promise<void>;
 }
 
 function UploadFontModal({
   onClose,
   onSuccess,
   defaultTarget = 'both',
-  onUpload,
 }: UploadFontModalProps) {
   const { showToast } = useNotification();
   const [file, setFile] = useState<File | null>(null);
@@ -839,6 +872,7 @@ function UploadFontModal({
   const handleFileChange = (selectedFile: File | null) => {
     if (!selectedFile) return;
 
+    // 验证文件类型
     const validExtensions = [
       '.ttf', '.otf', '.woff', '.woff2', '.eot', '.ttc', '.shx',
     ];
@@ -849,6 +883,7 @@ function UploadFontModal({
       return;
     }
 
+    // 验证文件大小（10MB）
     if (selectedFile.size > 10 * 1024 * 1024) {
       showToast('文件大小不能超过 10MB', 'warning');
       return;
@@ -865,7 +900,10 @@ function UploadFontModal({
 
     setUploading(true);
     try {
-      await onUpload(file, target);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('target', target);
+      await fontsControllerUploadFont({ body: formData as any });
       showToast('上传成功', 'success');
       onSuccess();
     } catch (error) {

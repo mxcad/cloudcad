@@ -24,6 +24,8 @@ export interface UseLoginFormReturn {
   accountForm: ReturnType<typeof useForm<AccountLoginValues>>;
   // Phone form (react-hook-form)
   phoneFormHook: ReturnType<typeof useForm<PhoneLoginValues>>;
+  // Runtime config flags
+  smsEnabled: boolean;
   // Tab
   activeTab: LoginTab;
   setActiveTab: (tab: LoginTab) => void;
@@ -339,6 +341,7 @@ export function useLoginForm(): UseLoginFormReturn {
   return {
     accountForm,
     phoneFormHook,
+    smsEnabled,
     activeTab,
     setActiveTab,
     loading,

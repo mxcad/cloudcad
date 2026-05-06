@@ -6,7 +6,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useDashboardProjects } from '../hooks/useDashboardProjects';
-import { formatFileSize, formatRelativeTime } from '../utils/fileUtils';
+import { formatFileSize } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
@@ -227,62 +227,6 @@ export const Dashboard: React.FC = () => {
     [projectFormData, createProject]
   );
 
-  // 加载真实数据
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // 并行加载多个数据源
-        const [projectsResult, statsResult, personalSpaceResult] = await Promise.all([
-          fileSystemControllerGetProjects({ query: {} } as any),
-          usersControllerGetDashboardStats() as any,
-          fileSystemControllerGetPersonalSpace().catch(() => null) as any, // 私人空间可能不存在
-        ]);
-
-        const projectsRes = projectsResult?.data;
-        const statsRes = statsResult?.data;
-        const personalSpaceRes = personalSpaceResult?.data;
-
-        // 处理项目数据
-        if (projectsRes?.nodes) {
-          const sortedProjects = projectsRes.nodes
-            .filter((p: any) => p.status !== 'DELETED')
-            .sort(
-              (a: any, b: any) =>
-                new Date(b.updatedAt).getTime() -
-                new Date(a.updatedAt).getTime()
-            );
-          setProjects(sortedProjects);
-        }
-
-        // 处理统计数据
-        if (statsRes) {
-          setDashboardStats(statsRes as UserDashboardStatsDto);
-        }
-
-        // 处理个人空间文件
-        if (personalSpaceRes?.id) {
-          const { data: childrenRes } = await fileSystemControllerGetChildren({
-            path: { nodeId: personalSpaceRes.id },
-            query: { limit: 10 },
-          } as any);
-          if (childrenRes?.nodes) {
-            setPersonalFiles(childrenRes.nodes);
-          }
-        }
-      } catch (err) {
-        console.error('加载仪表盘数据失败:', err);
-        setError('加载数据失败，请稍后重试');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
   // 统计数据
   const stats = useMemo(() => {
     if (!dashboardStats) {
@@ -315,7 +259,7 @@ export const Dashboard: React.FC = () => {
   const userName = user?.nickname || user?.username || '用户';
 
   // 最近更新的项目（前5个）
-  const recentProjects = useMemo(() => projects.slice(0, 5), [projects]);
+  const recentProjects = useMemo(() => rawProjects.slice(0, 5), [rawProjects]);
 
   // 最近更新的文件（前5个）
   const recentFiles = useMemo(() => personalFiles.slice(0, 5), [personalFiles]);
@@ -376,7 +320,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* 错误提示 */}
-      {error && (
+      {(error || createError) && (
         <div
           className="flex items-center gap-3 p-4 rounded-xl mb-6"
           style={{
@@ -386,7 +330,7 @@ export const Dashboard: React.FC = () => {
         >
           <AlertCircle size={20} style={{ color: 'var(--error)' }} />
           <span className="text-sm" style={{ color: 'var(--error)' }}>
-            {error}
+            {error || createError}
           </span>
         </div>
       )}
@@ -634,7 +578,7 @@ export const Dashboard: React.FC = () => {
         isOpen={isProjectModalOpen}
         editingProject={null}
         formData={projectFormData}
-        loading={projectCreating}
+        loading={isCreating}
         onClose={() => {
           setIsProjectModalOpen(false);
           setProjectFormData({ name: '', description: '' });

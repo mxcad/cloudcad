@@ -25,8 +25,6 @@ import { Phone } from 'lucide-react';
 import { MessageSquare } from 'lucide-react';
 import { MessageCircle } from 'lucide-react';
 
-type LoginTab = 'account' | 'phone';
-
 interface LocationState {
   from?: string;
   message?: string;
@@ -48,19 +46,44 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    login,
-    loginByPhone,
-    loginWithWechat,
     isAuthenticated,
     loading: authLoading,
     error: authError,
-    setError: setAuthError,
   } = useAuth();
   const { isDark } = useTheme();
   const { config } = useBrandConfig();
   const { config: runtimeConfig } = useRuntimeConfig();
   const appName = config?.title || 'CloudCAD';
   const appLogo = config?.logo || '/logo.png';
+
+  const {
+    accountForm,
+    phoneFormHook,
+    smsEnabled,
+    activeTab,
+    setActiveTab,
+    loading,
+    error,
+    setError,
+    success,
+    setSuccess,
+    focusedField,
+    setFocusedField,
+    showPassword,
+    setShowPassword,
+    countdown,
+    sendingCode,
+    showSupportModal,
+    setShowSupportModal,
+    getAccountLoginLabel,
+    getAccountLoginPlaceholder,
+    handleSendCode,
+    handleAccountSubmit,
+    handlePhoneSubmit,
+    handleWechatLogin,
+  } = useLoginForm();
+
+  const wechatEnabled = runtimeConfig?.wechatEnabled ?? false;
 
   // 处理微信登录回调 Hash
   useEffect(() => {
@@ -104,96 +127,6 @@ export const Login: React.FC = () => {
     }
   }, [navigate]);
 
-  // 短信服务和邮件服务是否启用
-  const smsEnabled = runtimeConfig?.smsEnabled ?? false;
-  const mailEnabled = runtimeConfig?.mailEnabled ?? false;
-  const wechatEnabled = runtimeConfig?.wechatEnabled ?? false;
-
-  // 根据运行时配置动态生成登录方式描述
-  const getAccountLoginLabel = () => {
-    if (smsEnabled && mailEnabled) {
-      return '手机号、邮箱或用户名';
-    }
-    if (smsEnabled) {
-      return '手机号或用户名';
-    }
-    if (mailEnabled) {
-      return '邮箱或用户名';
-    }
-    return '用户名';
-  };
-
-  const getAccountLoginPlaceholder = () => {
-    if (smsEnabled && mailEnabled) {
-      return '请输入手机号、邮箱或用户名';
-    }
-    if (smsEnabled) {
-      return '请输入手机号或用户名';
-    }
-    if (mailEnabled) {
-      return '请输入邮箱或用户名';
-    }
-    return '请输入用户名';
-  };
-
-  // Tab 状态
-  const [activeTab, setActiveTab] = useState<LoginTab>('account');
-
-  // 账号登录表单状态
-  const [formData, setFormData] = useState<LoginDto>({
-    account: '',
-    password: '',
-  });
-
-  // 手机登录表单状态
-  const [phoneForm, setPhoneForm] = useState({
-    phone: '',
-    code: '',
-  });
-
-  // 通用状态
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-
-  // 验证码倒计时
-  const [countdown, setCountdown] = useState(0);
-  const [sendingCode, setSendingCode] = useState(false);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // 清理倒计时
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-    };
-  }, []);
-
-  // 处理倒计时
-  useEffect(() => {
-    if (countdown > 0) {
-      countdownRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) {
-              clearInterval(countdownRef.current);
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (countdownRef.current && countdown <= 0) {
-        clearInterval(countdownRef.current);
-      }
-    };
-  }, [countdown > 0]);
-
   useEffect(() => {
     const state = location.state as LocationState | null;
     if (state?.message) {
@@ -208,180 +141,6 @@ export const Login: React.FC = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate, location]);
-
-  // 账号登录输入处理
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
-      if (error) setError(null);
-    },
-    [error]
-  );
-
-  // 手机登录输入处理
-  const handlePhoneChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      // 手机号只允许输入数字
-      if (name === 'phone' && value && !/^\d*$/.test(value)) {
-        return;
-      }
-      // 验证码只允许输入数字
-      if (name === 'code' && value && !/^\d*$/.test(value)) {
-        return;
-      }
-      setPhoneForm((prev) => ({ ...prev, [name]: value }));
-      if (error) setError(null);
-    },
-    [error]
-  );
-
-  // 发送验证码
-  const handleSendCode = useCallback(async () => {
-    // 验证手机号格式
-    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
-      return;
-    }
-
-    setSendingCode(true);
-    setError(null);
-
-    try {
-      const { data: response } = await authControllerSendSmsCode();
-      if ((response as any)?.success) {
-        setSuccess('验证码已发送');
-        setCountdown(60); // 60秒倒计时
-      } else {
-        setError((response as { message?: string })?.message || '发送验证码失败');
-      }
-    } catch (err) {
-      setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response
-          ?.data?.message ||
-          (err as Error).message ||
-          '发送验证码失败'
-      );
-    } finally {
-      setSendingCode(false);
-    }
-  }, [phoneForm.phone]);
-
-  // 联系客服弹框状态
-  const [showSupportModal, setShowSupportModal] = useState(false);
-
-  // 账号登录提交
-  const handleAccountSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      await login(formData.account, formData.password);
-      navigate('/');
-    } catch (err) {
-      const errorData = (
-        err as Error & {
-          response?: { data?: { code?: string; message?: string; email?: string; phone?: string; tempToken?: string } };
-        }
-      ).response?.data;
-      const errorMessage =
-        errorData?.message || (err as Error).message || '登录失败，请检查账号和密码';
-
-      // 账号已被禁用 -> 显示联系客服弹框
-      if (errorMessage.includes('账号已被禁用')) {
-        setShowSupportModal(true);
-        return;
-      }
-
-      // 邮箱未验证 -> 跳转到邮箱验证页
-      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-        navigate('/verify-email', { state: { email: errorData.email || '' } });
-        return;
-      }
-
-      // 需要绑定邮箱 -> 跳转到绑定邮箱页
-      if (errorData?.code === 'EMAIL_REQUIRED') {
-        navigate('/verify-email', { state: { tempToken: errorData.tempToken, mode: 'bind' } });
-        return;
-      }
-
-      // 手机号未验证 -> 跳转到手机验证页
-      if (errorData?.code === 'PHONE_NOT_VERIFIED') {
-        navigate('/verify-phone', { state: { phone: errorData.phone || '' } });
-        return;
-      }
-
-      // 需要绑定手机号 -> 跳转到绑定手机号页
-      if (errorData?.code === 'PHONE_REQUIRED') {
-        navigate('/verify-phone', { state: { tempToken: errorData.tempToken, mode: 'bind' } });
-        return;
-      }
-
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 手机登录提交
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    // 验证手机号格式
-    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
-      setLoading(false);
-      return;
-    }
-
-    // 验证验证码格式
-    if (!phoneForm.code || !/^\d{6}$/.test(phoneForm.code)) {
-      setError('请输入6位数字验证码');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await loginByPhone(phoneForm.phone, phoneForm.code);
-      navigate('/');
-    } catch (err) {
-      const errorData = (
-        err as Error & {
-          response?: {
-            data?: { code?: string; message?: string; phone?: string };
-          };
-        }
-      ).response?.data;
-      const errorCode = errorData?.code;
-      const errorMessage =
-        errorData?.message || (err as Error).message || '登录失败，请重试';
-
-      // 账号已被禁用 -> 显示联系客服弹框
-      if (errorMessage.includes('账号已被禁用')) {
-        setShowSupportModal(true);
-        return;
-      }
-
-      // 如果是需要注册的提示，跳转到注册页并预填手机号和验证码
-      if (errorCode === 'PHONE_NOT_REGISTERED') {
-        navigate('/register', {
-          state: {
-            prefillPhone: phoneForm.phone,
-            prefillCode: phoneForm.code,
-          },
-        });
-        return;
-      }
-
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="login-page" data-theme={isDark ? 'dark' : 'light'}>
@@ -473,19 +232,21 @@ export const Login: React.FC = () => {
                   />
                   <input
                     id="account"
-                    name="account"
                     type="text"
                     autoComplete="email username tel"
-                    required
                     className="input-field"
                     placeholder={getAccountLoginPlaceholder()}
-                    value={formData.account}
-                    onChange={handleChange}
+                    {...accountForm.register('account', {
+                      onChange: () => { if (error) setError(null); },
+                    })}
                     onFocus={() => setFocusedField('account')}
                     onBlur={() => setFocusedField(null)}
                   />
                   <div className="input-glow" />
                 </div>
+                {accountForm.formState.errors.account && (
+                  <span className="field-error">{accountForm.formState.errors.account.message}</span>
+                )}
               </div>
 
               <div
@@ -501,14 +262,13 @@ export const Login: React.FC = () => {
                   />
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    required
                     className="input-field has-toggle"
                     placeholder="请输入密码"
-                    value={formData.password}
-                    onChange={handleChange}
+                    {...accountForm.register('password', {
+                      onChange: () => { if (error) setError(null); },
+                    })}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -526,6 +286,9 @@ export const Login: React.FC = () => {
                   </button>
                   <div className="input-glow" />
                 </div>
+                {accountForm.formState.errors.password && (
+                  <span className="field-error">{accountForm.formState.errors.password.message}</span>
+                )}
               </div>
 
               <div className="form-options">
@@ -574,20 +337,30 @@ export const Login: React.FC = () => {
                   />
                   <input
                     id="phone"
-                    name="phone"
                     type="tel"
                     autoComplete="tel"
-                    required
                     maxLength={11}
                     className="input-field"
                     placeholder="请输入手机号"
-                    value={phoneForm.phone}
-                    onChange={handlePhoneChange}
+                    {...phoneFormHook.register('phone', {
+                      onChange: (e) => {
+                        // 只允许数字
+                        const { value } = e.target;
+                        if (value && !/^\d*$/.test(value)) {
+                          e.target.value = value.replace(/\D/g, '');
+                          phoneFormHook.setValue('phone', e.target.value);
+                        }
+                        if (error) setError(null);
+                      },
+                    })}
                     onFocus={() => setFocusedField('phone')}
                     onBlur={() => setFocusedField(null)}
                   />
                   <div className="input-glow" />
                 </div>
+                {phoneFormHook.formState.errors.phone && (
+                  <span className="field-error">{phoneFormHook.formState.errors.phone.message}</span>
+                )}
               </div>
 
               <div
@@ -603,15 +376,22 @@ export const Login: React.FC = () => {
                   />
                   <input
                     id="code"
-                    name="code"
                     type="text"
                     autoComplete="one-time-code"
-                    required
                     maxLength={6}
                     className="input-field has-button"
                     placeholder="请输入验证码"
-                    value={phoneForm.code}
-                    onChange={handlePhoneChange}
+                    {...phoneFormHook.register('code', {
+                      onChange: (e) => {
+                        // 只允许数字
+                        const { value } = e.target;
+                        if (value && !/^\d*$/.test(value)) {
+                          e.target.value = value.replace(/\D/g, '');
+                          phoneFormHook.setValue('code', e.target.value);
+                        }
+                        if (error) setError(null);
+                      },
+                    })}
                     onFocus={() => setFocusedField('code')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -622,7 +402,7 @@ export const Login: React.FC = () => {
                     disabled={
                       countdown > 0 ||
                       sendingCode ||
-                      phoneForm.phone.length !== 11
+                      phoneFormHook.watch('phone').length !== 11
                     }
                   >
                     {sendingCode ? (
@@ -635,6 +415,9 @@ export const Login: React.FC = () => {
                   </button>
                   <div className="input-glow" />
                 </div>
+                {phoneFormHook.formState.errors.code && (
+                  <span className="field-error">{phoneFormHook.formState.errors.code.message}</span>
+                )}
               </div>
 
               <button
@@ -678,21 +461,7 @@ export const Login: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={async () => {
-                  try {
-                    setAuthError(null);
-                    await loginWithWechat();
-                  } catch (err) {
-                    const errorMessage = (
-                      err as Error & {
-                        response?: { data?: { message?: string } };
-                      }
-                    ).response?.data?.message ||
-                      (err as Error).message ||
-                      '微信登录失败';
-                    setAuthError(errorMessage);
-                  }
-                }}
+                onClick={handleWechatLogin}
                 className="wechat-login-button"
               >
                 <MessageCircle size={20} />
@@ -968,6 +737,12 @@ export const Login: React.FC = () => {
         }
 
         .alert-icon { flex-shrink: 0; }
+
+        .field-error {
+          font-size: 0.75rem;
+          color: var(--error);
+          margin-top: 0.25rem;
+        }
 
         @keyframes slide-up {
           from { opacity: 0; transform: translateY(-10px); }

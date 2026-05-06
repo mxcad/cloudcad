@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authControllerBindPhoneAndLogin, authControllerSendSmsCode } from '@/api-sdk';
+import { usePhoneVerification } from '../hooks/usePhoneVerification';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -31,6 +31,7 @@ export const PhoneVerification: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyPhoneAndLogin, isAuthenticated } = useAuth();
+  const { bindPhoneAndLogin, sendSmsCode } = usePhoneVerification();
   const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
 
@@ -108,7 +109,7 @@ export const PhoneVerification: React.FC = () => {
     try {
       if (bindMode) {
         // 绑定模式：调用绑定手机号接口，返回 token 后存储并通过刷新更新 AuthContext
-        const response = await authControllerBindPhoneAndLogin();
+        const response = await bindPhoneAndLogin();
         const { accessToken, refreshToken, user: userData } = response as unknown as {
           accessToken: string; refreshToken: string; user: unknown;
         };
@@ -158,7 +159,7 @@ export const PhoneVerification: React.FC = () => {
     setResendSuccess(false);
 
     try {
-      await authControllerSendSmsCode();
+      await sendSmsCode();
       setResendSuccess(true);
       setCodeSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);

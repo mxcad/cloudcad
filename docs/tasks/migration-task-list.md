@@ -194,7 +194,7 @@
 | T2.3 ForgotPassword/ResetPassword | ✅ 完成 | refactor/circular-deps |
 | T2.4 EmailVerification/PhoneVerification | ⬜ 待做 | |
 | T3.1 ProfileInfoTab | ⬜ 待做 | |
-| T3.2 Profile | ⬜ 待做 | |
+| T3.2 Profile | ✅ 完成 | refactor/circular-deps |
 | T3.3 SelectFolderModal | ⬜ 待做 | |
 | T3.4 SaveAsModal | ⬜ 待做 | |
 | T3.5 ProjectRolesModal | ⬜ 待做 | |

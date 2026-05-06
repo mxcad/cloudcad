@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { DescriptionText } from '../ui/TruncateText';
 import { PermissionConfigModal } from '../permission/PermissionAssignment';
-import { rolesControllerGetProjectRolesByProject, rolesControllerCreateProjectRole, rolesControllerUpdateProjectRole, rolesControllerDeleteProjectRole } from '@/api-sdk';
+import { useProjectRoleCRUD } from './hooks/useProjectRoleCRUD';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
 import { useNotification } from '../../contexts/NotificationContext';
 import { ProjectPermission } from '../../constants/permissions';
@@ -44,11 +44,18 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
 }) => {
   const { checkPermission } = useProjectPermission();
   const { showToast } = useNotification();
-  const [roles, setRoles] = useState<ProjectRoleDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const {
+    roles,
+    loading,
+    error: hookError,
+    systemRoles,
+    customRoles,
+    createRole,
+    updateRole,
+    deleteRole,
+    reloadRoles,
+  } = useProjectRoleCRUD(projectId);
   const [canManageRoles, setCanManageRoles] = useState(false);
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
 
   // Tab 切换状态
   const [activeTab, setActiveTab] = useState<'system' | 'custom'>('custom');
@@ -65,22 +72,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<ProjectRoleDto | null>(null);
 
-  const loadRoles = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage('');
-    try {
-      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } }) as any;
-      setRoles((response as ProjectRoleDto[]) || []);
-    } catch (error) {
-      console.error('加载项目角色失败:', error);
-      setErrorMessage('加载项目角色失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
   const loadPermissions = useCallback(async () => {
-    setLoadingPermissions(true);
     try {
       const hasManagePermission = await checkPermission(
         projectId,
@@ -90,17 +82,14 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     } catch (error) {
       console.error('检查角色管理权限失败:', error);
       setCanManageRoles(false);
-    } finally {
-      setLoadingPermissions(false);
     }
   }, [projectId, checkPermission]);
 
   useEffect(() => {
     if (isOpen) {
-      loadRoles();
       loadPermissions();
     }
-  }, [isOpen, loadRoles, loadPermissions]);
+  }, [isOpen, loadPermissions]);
 
   // 创建角色
   const handleCreateRole = () => {
@@ -131,30 +120,22 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     }
 
     setSaving(true);
-    setErrorMessage('');
     try {
       if (editingRole) {
-        await rolesControllerUpdateProjectRole({
-          path: { id: editingRole.id },
-          body: {
-            name: roleName,
-            description: roleDesc,
-            permissions: selectedPerms,
-          },
+        await updateRole(editingRole.id, {
+          name: roleName,
+          description: roleDesc,
+          permissions: selectedPerms,
         });
       } else {
-        await rolesControllerCreateProjectRole({
-          body: {
-            projectId,
-            name: roleName,
-            description: roleDesc,
-            permissions: selectedPerms,
-          },
+        await createRole({
+          name: roleName,
+          description: roleDesc,
+          permissions: selectedPerms,
         });
       }
 
       setConfigModalOpen(false);
-      loadRoles();
     } catch (error) {
       console.error('保存角色失败:', error);
       showToast(
@@ -183,10 +164,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
     if (!roleToDelete) return;
 
     try {
-      await rolesControllerDeleteProjectRole({ path: { id: roleToDelete.id } });
+      await deleteRole(roleToDelete.id);
       setDeleteConfirmOpen(false);
       setRoleToDelete(null);
-      loadRoles();
     } catch (error) {
       console.error('删除角色失败:', error);
       showToast(
@@ -198,10 +178,6 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
       );
     }
   };
-
-  // 分组角色：系统角色和项目自定义角色
-  const systemRoles = roles.filter((r) => r.isSystem);
-  const customRoles = roles.filter((r) => !r.isSystem);
 
   return (
     <>
@@ -255,10 +231,10 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           </div>
 
           {/* 错误提示 */}
-          {errorMessage && (
+          {hookError && (
             <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               <AlertCircle size={16} />
-              {errorMessage}
+              {hookError}
             </div>
           )}
 
