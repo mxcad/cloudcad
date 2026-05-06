@@ -14,9 +14,8 @@ CloudCAD — web-based CAD collaboration platform (online DWG/DXF editing, SVN v
 
 ```
 packages/
-├── backend/          # NestJS API (port 3001) — auth, users, file-system, mxcad, version-control, cache, storage
+├── backend/          # NestJS API (port 3001) — auth, users, file-system, mxcad, version-control, cache, storage, conversion-engine
 ├── frontend/         # React 19 SPA (port 5173) — pages, components, services, hooks, stores
-├── conversion-engine/# MxCAD conversion binary wrapper
 ├── config-service/   # Deployment config center (port 3002)
 ├── server-tasks/     # Sharp image resizing utility
 └── svnVersionTool/   # SVN subprocess wrapper

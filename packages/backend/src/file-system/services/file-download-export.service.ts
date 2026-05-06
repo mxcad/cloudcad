@@ -27,7 +27,7 @@ import * as archiver from 'archiver';
 import { PassThrough } from 'stream';
 
 // 延迟导入 MxCadService，避免循环依赖
-import type { MxCadService } from '../../mxcad/mxcad.service';
+import type { MxCadService } from '../../mxcad/core/mxcad.service';
 
 @Injectable()
 export class FileDownloadExportService {
@@ -66,7 +66,7 @@ export class FileDownloadExportService {
 
   private async getMxCadServiceInstance(): Promise<MxCadService> {
     if (!this.mxCadService) {
-      const { MxCadService } = await import('../../mxcad/mxcad.service');
+      const { MxCadService } = await import('../../mxcad/core/mxcad.service');
       this.mxCadService = this.moduleRef.get(MxCadService, { strict: false });
     }
     return this.mxCadService;

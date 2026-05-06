@@ -1,7 +1,0 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-/** 策略列表注入令牌 */
-export const VERIFICATION_STRATEGIES = 'VERIFICATION_STRATEGIES';
-//# sourceMappingURL=account-verification-strategy.interface.js.map

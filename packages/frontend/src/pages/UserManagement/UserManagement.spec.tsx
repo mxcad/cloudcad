@@ -12,11 +12,6 @@ import * as useUserSearchModule from './hooks/useUserSearch';
 
 vi.mock('./hooks/useUserCRUD');
 vi.mock('./hooks/useUserSearch');
-vi.mock('@/services/usersApi');
-vi.mock('@/services/rolesApi');
-vi.mock('@/services/runtimeConfigApi');
-vi.mock('@/services/projectApi');
-vi.mock('@/services/userCleanupApi');
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ hasPermission: () => true }),
 }));

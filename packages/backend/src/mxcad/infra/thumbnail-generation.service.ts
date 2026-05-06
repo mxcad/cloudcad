@@ -29,7 +29,7 @@ import {
 import {
   I_CONVERSION_SERVICE,
   IConversionService,
-} from '@cloudcad/conversion-engine';
+} from '../../conversion';
 
 /**
  * 缩略图生成结果

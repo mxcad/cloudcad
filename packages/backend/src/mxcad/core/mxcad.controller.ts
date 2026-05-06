@@ -17,7 +17,6 @@ import {
   Head,
   Body,
   UploadedFile,
-  UploadedFiles,
   UseInterceptors,
   HttpStatus,
   HttpCode,
@@ -37,7 +36,7 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response, Request } from 'express';
 
 import {
@@ -53,8 +52,6 @@ import { MxCadService } from './mxcad.service';
 import { FileSystemNode } from '@prisma/client';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
-import { UploadFilesDto } from '../dto/upload-files.dto';
-import { FileExistResponseDto } from '../dto/file-exist-response.dto';
 import { ChunkExistResponseDto } from '../dto/chunk-exist-response.dto';
 import { CheckFileExistDto } from '../dto/check-file-exist.dto';
 import { CheckChunkExistDto } from '../dto/check-chunk-exist.dto';
@@ -62,11 +59,6 @@ import { CheckDuplicateFileDto } from '../dto/check-duplicate-file.dto';
 import { CheckDuplicateFileResponseDto } from '../dto/check-duplicate-file-response.dto';
 import { CheckReferenceResponseDto } from '../dto/check-reference-response.dto';
 import { RefreshExternalReferencesResponseDto } from '../dto/refresh-external-references-response.dto';
-import { UploadFileResponseDto } from '../dto/upload-file-response.dto';
-import { SaveMxwebResponseDto } from '../dto/save-mxweb-response.dto';
-import { SaveMxwebDto } from '../dto/save-mxweb.dto';
-import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
-import { SaveMxwebAsResponseDto } from '../dto/save-mxweb-as-response.dto';
 import { CheckThumbnailResponseDto } from '../dto/check-thumbnail-response.dto';
 import { UploadThumbnailResponseDto } from '../dto/upload-thumbnail-response.dto';
 import { UploadThumbnailDto } from '../dto/upload-thumbnail.dto';
@@ -91,7 +83,6 @@ import {
 } from '../../version-control/interfaces/version-control.interface';
 import { AppConfig } from '../../config/app.config';
 import { FileConversionService } from '../conversion/file-conversion.service';
-import { SaveAsService } from '../save/save-as.service';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -125,7 +116,6 @@ export class MxCadController {
     @Inject(VERSION_CONTROL_TOKEN)
     private readonly versionControlService: IVersionControl,
     private readonly fileConversionService: FileConversionService,
-    private readonly saveAsService: SaveAsService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
     private readonly fileTreeService: FileTreeService
   ) {
@@ -133,99 +123,6 @@ export class MxCadController {
       this.configService.get('mxcad.fileExt', { infer: true }) || '.mxweb';
     const cacheTTLConfig = this.configService.get('cacheTTL', { infer: true });
     this.cacheTTL = cacheTTLConfig.mxcad * 1000; // 转为毫秒
-  }
-
-  /**
-   * 检查分片是否存在
-   */
-  @Post('files/chunkisExist')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({
-    status: 200,
-    description: '检查分片是否存在',
-    type: ChunkExistResponseDto,
-  })
-  async checkChunkExist(
-    @Body() body: CheckChunkExistDto,
-    @Req() request: MxCadRequest
-  ) {
-    this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
-    // 构建上下文
-    const context = await this.buildContextFromRequest(request);
-    const result = await this.mxCadService.checkChunkExist(
-      body.chunk,
-      body.fileHash,
-      body.size,
-      body.chunks,
-      body.filename,
-      context
-    );
-    // 转换为标准格式：ret === 'chunkAlreadyExist' 表示分片已存在
-    return { exists: result.ret === 'chunkAlreadyExist' };
-  }
-
-  /**
-   * 检查文件是否存在
-   */
-  @Post('files/fileisExist')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({
-    status: 200,
-    description: '检查文件是否存在',
-    type: FileExistResponseDto,
-  })
-  async checkFileExist(
-    @Body() body: CheckFileExistDto,
-    @Req() request: MxCadRequest
-  ) {
-    const context = await this.buildContextFromRequest(request);
-    // 添加文件大小到 context
-    context.fileSize = body.fileSize;
-    this.logger.log(
-      `[checkFileExist] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, fileSize=${body.fileSize}, nodeId=${context.nodeId}`
-    );
-    const result = (await this.mxCadService.checkFileExist(
-      body.filename,
-      body.fileHash,
-      context
-    )) as { ret: string; nodeId?: string };
-    // 转换为标准格式：ret === 'fileAlreadyExist' 表示文件已存在（秒传）
-    return {
-      exists: result.ret === 'fileAlreadyExist',
-      nodeId: result.nodeId,
-    };
-  }
-
-  /**
-   * 检查目录中是否存在重复文件（相同文件名和hash）
-   */
-  @Post('files/checkDuplicate')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '检查目录中是否存在重复文件' })
-  @ApiResponse({
-    status: 200,
-    description: '返回重复检查结果',
-    type: CheckDuplicateFileResponseDto,
-  })
-  async checkDuplicateFile(
-    @Body() body: CheckDuplicateFileDto,
-    @Req() request: MxCadRequest
-  ) {
-    this.logger.log(
-      `[checkDuplicateFile] 接收参数: filename=${body.filename}, fileHash=${body.fileHash}, nodeId=${body.nodeId}, currentFileId=${body.currentFileId}`
-    );
-    return this.mxCadService.checkDuplicateFile(
-      body.filename,
-      body.fileHash,
-      body.nodeId,
-      body.currentFileId
-    );
   }
 
   /**
@@ -370,305 +267,6 @@ export class MxCadController {
       message: '刷新成功',
       stats,
     };
-  }
-
-  /**
-   * 上传文件（支持分片）
-   *
-   * 注意：RequireProjectPermissionGuard 现在通过 nodeId → 数据库查询解析项目 ID。
-   * 对于 multipart 请求，客户端需确保 nodeId 可通过 query 参数传递，
-   * 因为 Multer 在 Guard 之后才解析 request.body。
-   */
-  @Post('files/uploadFiles')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
-  @UseInterceptors(AnyFilesInterceptor())
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadFilesDto })
-  @ApiResponse({
-    status: 200,
-    description: '上传文件成功',
-    type: UploadFileResponseDto,
-  })
-  async uploadFile(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body() body: UploadFilesDto,
-    @Req() request: MxCadRequest
-  ) {
-    const file = files && files.length > 0 ? files[0] : null;
-    this.logger.log(
-      `[uploadFile] files count: ${files?.length || 0}, file exists: ${!!file}, file size: ${file?.size}, body: ${JSON.stringify(body)}`
-    );
-
-    // 检查是否为合并请求（没有文件，只有 chunks 信息）
-    const isMergeRequest = !file && body.chunks !== undefined;
-
-    // 合并请求不需要检查 file，但需要检查必要参数
-    if (!isMergeRequest && !file) {
-      throw new BadRequestException('缺少上传文件');
-    }
-
-    if (!body.hash || !body.name || !body.size) {
-      throw new BadRequestException('缺少必要参数: hash, name 或 size');
-    }
-
-    if (body.chunk !== undefined && body.chunks === undefined) {
-      throw new BadRequestException('缺少必要参数: chunks');
-    }
-
-    // 构建上下文 - 从JWT token验证用户身份
-    const context = await this.buildContextFromRequest(request);
-
-    // 优先处理合并请求（没有文件，有 chunks 信息）
-    if (isMergeRequest) {
-      try {
-        // 验证 chunks 参数
-        if (body.chunks === undefined) {
-          throw new BadRequestException('缺少必要参数: chunks');
-        }
-
-        const result = await this.mxCadService.mergeChunksWithPermission(
-          body.hash,
-          body.name,
-          body.size,
-          body.chunks,
-          context,
-          body.srcDwgNodeId // 外部参照上传时的源图纸节点 ID
-        );
-        // 返回完整结果，包含 ret 字段用于判断是否是跳过策略
-        return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
-      } catch (error) {
-        this.mxCadService.logError(`文件合并失败: ${error.message}`, error);
-        throw new InternalServerErrorException(
-          `文件合并失败: ${error.message}`
-        );
-      }
-    }
-
-    if (body.chunk !== undefined) {
-      // 分片上传 - Multer 已在模块配置中正确处理存储位置和文件名
-      this.logger.log(
-        `[uploadFiles] 收到分片上传请求: chunk=${body.chunk}, chunks=${body.chunks}, hash=${body.hash}, filePath=${file?.path}`
-      );
-      try {
-        // 验证 chunks 参数
-        if (body.chunks === undefined) {
-          throw new BadRequestException('缺少必要参数: chunks');
-        }
-
-        // 验证文件已由 Multer 正确保存
-        if (!file) {
-          throw new BadRequestException('缺少上传文件');
-        }
-
-        const result = await this.mxCadService.uploadChunkWithPermission(
-          body.hash,
-          body.name,
-          body.size,
-          body.chunk,
-          body.chunks,
-          context
-        );
-        // 返回完整结果，包含 ret 字段用于判断是否是跳过策略
-        return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
-      } catch (error) {
-        this.mxCadService.logError(`分片文件处理失败: ${error.message}`, error);
-        throw new InternalServerErrorException(
-          `分片文件处理失败: ${error.message}`
-        );
-      }
-    } else {
-      // 完整文件上传（带权限验证）
-      if (!file) {
-        throw new BadRequestException('缺少上传文件');
-      }
-
-      const result = await this.mxCadService.uploadAndConvertFileWithPermission(
-        file.path,
-        body.hash,
-        body.name,
-        body.size,
-        context
-      );
-      // 返回完整结果，包含 ret 字段用于判断是否是跳过策略
-      return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
-    }
-  }
-
-  /**
-   * 保存 mxweb 文件到指定节点
-   * 路由: POST /api/mxcad/savemxweb/:nodeId
-   */
-  @Post('savemxweb/:nodeId')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
-  @RequireProjectPermission(ProjectPermission.CAD_SAVE)
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: SaveMxwebDto })
-  @ApiResponse({
-    status: 200,
-    description: '保存 mxweb 文件到指定节点',
-    type: SaveMxwebResponseDto,
-  })
-  async saveMxwebToNode(
-    @Param('nodeId') nodeId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('commitMessage') commitMessage: string,
-    @Body('expectedTimestamp') expectedTimestamp: string,
-    @Req() request: MxCadRequest
-  ) {
-    this.logger.log(
-      `[saveMxwebToNode] 开始保存: nodeId=${nodeId}, commitMessage=${commitMessage || '(无)'}`
-    );
-
-    // 获取用户信息
-    const userId = request.user?.id;
-    const userName =
-      request.user?.username || request.user?.nickname || request.user?.email;
-
-    // 调用服务保存文件
-    const result = await this.mxCadService.saveMxwebFile(
-      nodeId,
-      file,
-      userId,
-      userName,
-      commitMessage,
-      false,
-      expectedTimestamp
-    );
-
-    if (!result.success) {
-      this.logger.error(`[saveMxwebToNode] 保存失败: ${result.message}`);
-      throw new BadRequestException(result.message);
-    }
-
-    this.logger.log(`[saveMxwebToNode] 保存成功: nodeId=${nodeId}`);
-    return {
-      nodeId,
-      path: result.path,
-    };
-  }
-
-  /**
-   * 保存mxweb文件为新文件（Save As）
-   * 路由: POST /api/mxcad/save-as
-   */
-  @Post('save-as')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: SaveMxwebAsDto })
-  @ApiResponse({
-    status: 200,
-    description: '保存mxweb文件为新文件',
-    type: SaveMxwebAsResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: '请求参数错误',
-  })
-  async saveMxwebAs(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() dto: SaveMxwebAsDto,
-    @Req() request: MxCadRequest
-  ) {
-    this.logger.log(
-      `[saveMxwebAs] 开始保存: targetType=${dto.targetType}, parentId=${dto.targetParentId}, format=${dto.format}`
-    );
-
-    const userId = request.user?.id;
-    const userName =
-      request.user?.username || request.user?.nickname || request.user?.email;
-
-    if (!userId) {
-      throw new UnauthorizedException('用户未登录');
-    }
-
-    if (dto.targetType === 'project' && !dto.projectId) {
-      throw new BadRequestException('保存到项目时必须提供projectId');
-    }
-
-    // ==================== 权限验证 ====================
-    // 1. 验证目标父节点存在
-    const targetParentNode = await this.mxCadService.findNodeByIdWithDeletedAt(
-      dto.targetParentId,
-      { id: true, isFolder: true, personalSpaceKey: true }
-    );
-
-    if (!targetParentNode) {
-      throw new BadRequestException('目标文件夹不存在');
-    }
-
-    if (!targetParentNode.isFolder) {
-      throw new BadRequestException('目标必须是文件夹');
-    }
-
-    // 2. 根据保存类型进行权限验证
-    if (dto.targetType === 'personal') {
-      // 私人空间：验证目标节点是否属于当前用户
-      // 查找目标节点的根节点（私人空间）
-      const rootId = await this.fileTreeService.getProjectId(
-        dto.targetParentId
-      );
-      const rootNode = rootId
-        ? await this.mxCadService.findNodeById(
-            rootId,
-            { personalSpaceKey: true, ownerId: true }
-          )
-        : null;
-
-      // 验证是否为当前用户的私人空间
-      const isUserPersonalSpace =
-        rootNode?.personalSpaceKey === userId || rootNode?.ownerId === userId;
-
-      if (!isUserPersonalSpace) {
-        this.logger.warn(
-          `[saveMxwebAs] 用户 ${userId} 尝试保存到非自己的私人空间: ${dto.targetParentId}`
-        );
-        throw new BadRequestException('您没有权限保存到此位置');
-      }
-    } else {
-      // 项目：验证用户是否有项目的 CAD_SAVE 权限
-      if (dto.projectId) {
-        const hasPermission = await this.permissionService.checkNodePermission(
-          userId,
-          dto.projectId,
-          ProjectPermission.CAD_SAVE
-        );
-
-        if (!hasPermission) {
-          this.logger.warn(
-            `[saveMxwebAs] 用户 ${userId} 没有项目 ${dto.projectId} 的 CAD_SAVE 权限`
-          );
-          throw new BadRequestException('您没有权限保存到此项目');
-        }
-      } else {
-        throw new BadRequestException('保存到项目时必须提供projectId');
-      }
-    }
-    // ==================== 权限验证结束 ====================
-
-    const result = await this.saveAsService.saveMxwebAs({
-      file,
-      targetType: dto.targetType,
-      targetParentId: dto.targetParentId,
-      projectId: dto.projectId,
-      format: dto.format || 'dwg',
-      userId,
-      userName,
-      commitMessage: dto.commitMessage,
-      fileName: dto.fileName,
-    });
-
-    if (!result.success) {
-      this.logger.error(`[saveMxwebAs] 保存失败: ${result.message}`);
-      throw new BadRequestException(result.message);
-    }
-
-    this.logger.log(`[saveMxwebAs] 保存成功: nodeId=${result.nodeId}`);
-    return result;
   }
 
   /**
@@ -1865,97 +1463,6 @@ export class MxCadController {
           message: '访问文件失败',
         });
       }
-    }
-  }
-
-  // ────────────────────────── 缩略图 ──────────────────────────
-
-  /**
-   * 检查缩略图是否存在
-   */
-  @Get('thumbnail/:nodeId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: 200,
-    description: '查询成功',
-    type: CheckThumbnailResponseDto,
-  })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 404, description: '文件不存在' })
-  async checkThumbnail(@Param('nodeId') nodeId: string, @Res() res: Response) {
-    this.logger.log(`[checkThumbnail] 查询缩略图, nodeId: ${nodeId}`);
-    try {
-      const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
-      if (!node || !node.path) {
-        return res.status(404).json({ code: -1, message: '文件不存在或没有 path' });
-      }
-      const result = await this.mxCadService.checkThumbnailExists(nodeId);
-      return res.json({ code: 0, message: 'ok', exists: result.exists });
-    } catch (error) {
-      this.logger.error(`[checkThumbnail] 查询缩略图失败: ${error.message}`, error.stack);
-      return res.status(500).json({ code: -1, message: '查询缩略图失败' });
-    }
-  }
-
-  /**
-   * 上传缩略图
-   */
-  @Post('thumbnail/:nodeId')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadThumbnailDto })
-  @ApiResponse({ status: 200, description: '上传成功', type: UploadThumbnailResponseDto })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 500, description: '上传失败' })
-  async uploadThumbnail(
-    @Param('nodeId') nodeId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response,
-  ) {
-    this.logger.log(`[uploadThumbnail] 上传缩略图, nodeId: ${nodeId}`);
-    if (!file) {
-      return res.status(400).json({ code: -1, message: '缺少文件' });
-    }
-    if (!fs.existsSync(file.path)) {
-      return res.status(500).json({ code: -1, message: '上传的文件不存在' });
-    }
-    try {
-      const node = await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
-      if (!node || !node.path) {
-        return res.status(404).json({ code: -1, message: '文件不存在或没有 path' });
-      }
-      const filesDataPath = this.configService.get('filesDataPath', { infer: true });
-      const nodePathParts = node.path.split('/');
-      const dirParts = nodePathParts.slice(0, -1);
-      const targetDir = path.resolve(filesDataPath, dirParts.join('/'));
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-      const fileExt = path.extname(file.originalname || file.filename).toLowerCase();
-      const extMap = {
-        '.png': 'png', '.jpg': 'jpg', '.jpeg': 'jpg', '.webp': 'webp',
-      };
-      const thumbnailFormat = extMap[fileExt];
-      if (!thumbnailFormat) {
-        return res.status(400).json({
-          code: -1,
-          message: `不支持的图片格式: ${fileExt}，仅支持 ${THUMBNAIL_FORMATS.join(', ')}`,
-        });
-      }
-      const targetFileName = getThumbnailFileName(thumbnailFormat);
-      const targetFilePath = path.join(targetDir, targetFileName);
-      if (fs.existsSync(targetFilePath)) {
-        fs.unlinkSync(targetFilePath);
-      }
-      fs.renameSync(file.path, targetFilePath);
-      this.logger.log(`[uploadThumbnail] 缩略图已上传: ${targetFilePath}`);
-      return res.json({ code: 0, message: '缩略图上传成功', data: { fileName: targetFileName } });
-    } catch (error) {
-      this.logger.error(`[uploadThumbnail] 上传缩略图失败: ${error.message}`, error.stack);
-      return res.status(500).json({ code: -1, message: '上传缩略图失败' });
     }
   }
 

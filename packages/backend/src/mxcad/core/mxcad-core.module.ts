@@ -26,11 +26,13 @@ import { MxcadInfraModule } from '../infra/mxcad-infra.module';
 import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from '../node/mxcad-node.module';
 import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.module';
-import { MxcadFacadeModule } from '../facade/mxcad-facade.module';
 import { MxcadSaveModule } from '../save/mxcad-save.module';
 import { MxCadService } from './mxcad.service';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
 import { MxCadController } from './mxcad.controller';
+import { MxCadRequestContextBuilder } from './mxcad-request-context-builder';
+import { ThumbnailController } from '../infra/thumbnail.controller';
+import { SaveController } from '../save/save.controller';
 
 /**
  * Mxcad 核心子模块
@@ -41,6 +43,7 @@ import { MxCadController } from './mxcad.controller';
  * 包含的服务:
  * - MxCadService: CAD 文件操作主入口
  * - MxcadFileHandlerService: 文件流式传输服务
+ * - MxCadRequestContextBuilder: 请求上下文构建（共享给子控制器）
  * - MxCadController: 所有上传/下载/转换 API
  */
 @Module({
@@ -60,17 +63,18 @@ import { MxCadController } from './mxcad.controller';
     MxcadConversionModule,
     MxcadNodeModule,
     MxcadExternalRefModule,
-    MxcadFacadeModule,
     MxcadSaveModule,
   ],
-  controllers: [MxCadController],
+  controllers: [MxCadController, ThumbnailController, SaveController],
   providers: [
     MxCadService,
     MxcadFileHandlerService,
+    MxCadRequestContextBuilder,
   ],
   exports: [
     MxCadService,
     MxcadFileHandlerService,
+    MxCadRequestContextBuilder,
   ],
 })
 export class MxcadCoreModule {}

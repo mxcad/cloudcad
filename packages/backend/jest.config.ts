@@ -99,6 +99,7 @@ const config: Config = {
 	restoreMocks: true,
 	resetMocks: true,
 	moduleNameMapper: {
+		"^@cloudcad/conversion-engine$": "<rootDir>/src/conversion",
 		"^@/(.*)$": "<rootDir>/src/$1",
 		"^@test/(.*)$": "<rootDir>/src/test/$1",
 	},

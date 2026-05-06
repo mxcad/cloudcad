@@ -1,23 +1,19 @@
 import { AlertCircle } from 'lucide-react';
-import { Shield } from 'lucide-react';
-import { Trash2 } from 'lucide-react';
 import { User } from 'lucide-react';
 import { Search } from 'lucide-react';
 import { ChevronLeft } from 'lucide-react';
 import { ChevronRight } from 'lucide-react';
 import { UserPlus } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
 import { CheckCircle2 } from 'lucide-react';
 import { XCircle } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
-import { RotateCcw } from 'lucide-react';
 import { HardDrive, Save } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { TruncateText } from '@/components/ui/TruncateText';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -26,6 +22,9 @@ import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 import { useUserCRUD } from './hooks/useUserCRUD';
 import { useUserSearch } from './hooks/useUserSearch';
 import { UserTable } from './UserTable';
+import { CreateUserModal } from './UserModals/CreateUserModal';
+import { EditUserModal } from './UserModals/EditUserModal';
+import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
 
 type RoleDto = {
   id: string;
@@ -102,13 +101,13 @@ export const UserManagement = () => {
   const [userQuota, setUserQuota] = useState<number>(10);
   const [defaultQuota, setDefaultQuota] = useState<number>(10);
 
+  const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
   const [cleanupStats, setCleanupStats] = useState<{
     pendingCleanup: number;
     expiryDate: string;
     delayDays: number;
   } | null>(null);
-  const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
-  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -139,6 +138,11 @@ export const UserManagement = () => {
   const showSuccess = (message: string) => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   const handleOpenCreate = () => {
@@ -454,123 +458,41 @@ export const UserManagement = () => {
         />
       </div>
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingUser ? '编辑用户' : '添加新用户'}
-        size="lg"
-        footer={
-          <div className="modal-footer">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={loading}>
-              取消
-            </Button>
-            <Button onClick={handleSubmit} disabled={loading} className="submit-btn">
-              {loading ? <><Loader2 size={18} className="animate-spin" />处理中...</> : editingUser ? '保存修改' : '创建用户'}
-            </Button>
-          </div>
-        }
-      >
-        <form className="user-form">
-          <div className="form-row">
-            <div className={`form-group ${formErrors.username ? 'has-error' : ''}`}>
-              <label className="form-label">用户名 <span className="required">*</span></label>
-              <input
-                type="text"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="form-input"
-              />
-              {formErrors.username && <span className="error-text">{formErrors.username}</span>}
-            </div>
-            <div className={`form-group ${formErrors.email ? 'has-error' : ''}`}>
-              <label className="form-label">邮箱 {mailEnabled && <span className="required">*</span>}</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="form-input"
-              />
-              {formErrors.email && <span className="error-text">{formErrors.email}</span>}
-            </div>
-          </div>
-          <div className="form-row">
-            <div className={`form-group ${formErrors.password ? 'has-error' : ''}`}>
-              <label className="form-label">
-                {editingUser ? '新密码' : '密码'}{!editingUser && <span className="required">*</span>}
-              </label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="form-input"
-              />
-              {formErrors.password && <span className="error-text">{formErrors.password}</span>}
-            </div>
-            <div className="form-group">
-              <label className="form-label">昵称</label>
-              <input
-                type="text"
-                value={formData.nickname}
-                onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                className="form-input"
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">角色 <span className="required">*</span></label>
-            <select
-              value={formData.roleId}
-              onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-              className="form-select"
-            >
-              {roles.map((role: RoleDto) => (
-                <option key={role.id} value={role.id}>
-                  {getRoleDisplayName(role.name, role.isSystem)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </form>
-      </Modal>
+      {editingUser ? (
+        <EditUserModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleSubmit}
+          roles={roles}
+          mailEnabled={mailEnabled}
+          loading={loading}
+          user={editingUser}
+          formData={formData}
+          formErrors={formErrors}
+          onFormChange={handleFormChange}
+        />
+      ) : (
+        <CreateUserModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleSubmit}
+          roles={roles}
+          mailEnabled={mailEnabled}
+          loading={loading}
+          formData={formData}
+          formErrors={formErrors}
+          onFormChange={handleFormChange}
+        />
+      )}
 
-      <Modal
+      <DeleteUserConfirm
         isOpen={deleteConfirmOpen}
         onClose={cancelDelete}
-        title="确认删除用户"
-        footer={
-          <div className="modal-footer">
-            <Button variant="ghost" onClick={cancelDelete} disabled={loading}>取消</Button>
-            <Button onClick={confirmDelete} disabled={loading} className="danger-btn">
-              {loading ? <><Loader2 size={18} className="animate-spin" />删除中...</> : deleteImmediately ? '立即注销' : '确认删除'}
-            </Button>
-          </div>
-        }
-      >
-        <div className="delete-confirm-content">
-          <div className="delete-warning-box">
-            <AlertCircle size={24} />
-            <div>
-              <p className="delete-warning-title">注销用户</p>
-              <p className="delete-warning-text">
-                {deleteImmediately ? '立即注销将彻底删除用户数据，无法恢复！' : '用户注销后将进入30天冷静期，冷静期后数据将自动清理。'}
-              </p>
-            </div>
-          </div>
-          <p className="delete-confirm-text">确定要注销该用户吗？</p>
-          <div className="delete-option">
-            <input
-              type="checkbox"
-              id="delete-immediately"
-              checked={deleteImmediately}
-              onChange={(e) => setDeleteImmediately(e.target.checked)}
-              className="delete-option-checkbox"
-            />
-            <label htmlFor="delete-immediately" className="delete-option-label">
-              立即注销（不等待30天冷静期，直接清理数据）
-            </label>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={confirmDelete}
+        loading={loading}
+        deleteImmediately={deleteImmediately}
+        onDeleteImmediatelyChange={setDeleteImmediately}
+      />
 
       <Modal
         isOpen={quotaModalOpen}

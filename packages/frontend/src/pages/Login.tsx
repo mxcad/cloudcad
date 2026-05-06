@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -7,8 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
-import { authControllerSendSmsCode } from '@/api-sdk';
-import type { LoginDto } from '@/api-sdk';
+import { useLoginForm } from './Login/hooks/useLoginForm';
 
 // 导入 lucide 图标
 import { Mail } from 'lucide-react';

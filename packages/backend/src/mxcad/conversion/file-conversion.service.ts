@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { ProcessRunnerService } from "@cloudcad/conversion-engine";
+import { ProcessRunnerService } from "../../conversion";
 import { Injectable, Logger } from "@nestjs/common";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { ConfigService } from "@nestjs/config";

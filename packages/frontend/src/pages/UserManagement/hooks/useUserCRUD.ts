@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   usersControllerFindAll,
   usersControllerCreate,
@@ -9,114 +9,82 @@ import {
 } from '@/api-sdk';
 import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 
-type RoleDto = {
-  id: string;
-  name: string;
-  description?: string;
-  isSystem: boolean;
-  permissions: string[];
-  createdAt: string;
-  updatedAt: string;
-};
+const USERS_KEY = ['users'] as const;
 
-interface UseUserCRUDReturn {
-  users: UserResponseDto[];
-  loading: boolean;
-  error: string | null;
-  roles: RoleDto[];
-  mailEnabled: boolean;
-  smsEnabled: boolean;
-  createUser: (data: any) => Promise<void>;
-  updateUser: (id: string, data: UpdateUserDto) => Promise<void>;
-  deleteUser: (id: string, immediately?: boolean) => Promise<void>;
-  restoreUser: (id: string) => Promise<void>;
-  loadUsers: () => Promise<void>;
-}
+export function useUserCRUD() {
+  const queryClient = useQueryClient();
 
-export function useUserCRUD(): UseUserCRUDReturn {
-  const [users, setUsers] = useState<UserResponseDto[]>([]);
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mailEnabled, setMailEnabled] = useState(false);
-  const [smsEnabled, setSmsEnabled] = useState(false);
+  const {
+    data: users = [],
+    isLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: USERS_KEY,
+    queryFn: async () => {
+      const result = await usersControllerFindAll({ query: {} });
+      if (result.error) throw result.error;
+      return (result.data as any)?.users || [];
+    },
+  });
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data: response } = await usersControllerFindAll({ query: {} });
-      setUsers((response as any)?.users || []);
-    } catch (err) {
-      setError('加载用户列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const createMutation = useMutation({
+    mutationFn: (data: any) => usersControllerCreate({ body: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
+  });
 
-  const createUser = useCallback(async (data: any) => {
-    setLoading(true);
-    try {
-      await usersControllerCreate({ body: data });
-    } catch (err) {
-      setError('创建用户失败');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserDto }) =>
+      usersControllerUpdate({ path: { id }, body: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
+  });
 
-  const updateUser = useCallback(async (id: string, data: UpdateUserDto) => {
-    setLoading(true);
-    try {
-      await usersControllerUpdate({ path: { id }, body: data });
-    } catch (err) {
-      setError('更新用户失败');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, immediately }: { id: string; immediately?: boolean }) =>
+      immediately
+        ? usersControllerDeleteImmediately({ path: { id } })
+        : usersControllerRemove({ path: { id } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
+  });
 
-  const deleteUser = useCallback(async (id: string, immediately?: boolean) => {
-    setLoading(true);
-    try {
-      if (immediately) {
-        await usersControllerDeleteImmediately({ path: { id } });
-      } else {
-        await usersControllerRemove({ path: { id } });
-      }
-    } catch (err) {
-      setError('删除用户失败');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => usersControllerRestore({ path: { id } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
+  });
 
-  const restoreUser = useCallback(async (id: string) => {
-    setLoading(true);
-    try {
-      await usersControllerRestore({ path: { id } });
-    } catch (err) {
-      setError('恢复用户失败');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const error =
+    queryError
+      ? '加载用户列表失败'
+      : createMutation.isError
+        ? '创建用户失败'
+        : updateMutation.isError
+          ? '更新用户失败'
+          : deleteMutation.isError
+            ? '删除用户失败'
+            : restoreMutation.isError
+              ? '恢复用户失败'
+              : null;
 
   return {
     users,
-    loading,
+    loading: isLoading,
+    isLoading,
     error,
-    roles,
-    mailEnabled,
-    smsEnabled,
-    createUser,
-    updateUser,
-    deleteUser,
-    restoreUser,
-    loadUsers,
+    // TODO: extract to useSystemConfig hook in next slice
+    roles: [] as any[],
+    mailEnabled: false,
+    smsEnabled: false,
+    createUser: async (data: any) => {
+      await createMutation.mutateAsync(data);
+    },
+    updateUser: async (id: string, data: UpdateUserDto) => {
+      await updateMutation.mutateAsync({ id, data });
+    },
+    deleteUser: async (id: string, immediately?: boolean) => {
+      await deleteMutation.mutateAsync({ id, immediately });
+    },
+    restoreUser: async (id: string) => {
+      await restoreMutation.mutateAsync(id);
+    },
+    loadUsers: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
   };
 }

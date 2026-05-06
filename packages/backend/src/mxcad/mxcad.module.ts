@@ -15,9 +15,7 @@ import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
 import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module';
-import { MxcadFacadeModule } from './facade/mxcad-facade.module';
 import { MxcadSaveModule } from './save/mxcad-save.module';
-import { MxcadChunkModule } from './chunk/mxcad-chunk.module';
 import { MxcadUploadModule } from './upload/mxcad-upload.module';
 import { MxcadCoreModule } from './core/mxcad-core.module';
 import { TusModule } from './tus/tus.module';
@@ -34,28 +32,14 @@ import { RolesModule } from '../roles/roles.module';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { AppConfig } from '../config/app.config';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
-import { ConversionModule } from '@cloudcad/conversion-engine';
-import * as path from 'path';
-import * as os from 'os';
-
+import { ConversionModule } from '../conversion';
 @Module({
   imports: [
     DatabaseModule,
     CommonModule,
     ConfigModule,
     RuntimeConfigModule,
-    ConversionModule.forRoot({
-      binPath: (() => {
-        const isLinux = os.platform() === 'linux';
-        const projectRoot = path.join(process.cwd(), '..', '..');
-        return isLinux
-          ? path.join(projectRoot, 'runtime', 'linux', 'mxcad', 'mxcadassembly')
-          : path.join(projectRoot, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe');
-      })(),
-      outputRoot: path.join(process.cwd(), '..', '..', 'data', 'conversion'),
-      maxConcurrency: Math.min(os.cpus().length, 4),
-      defaultTimeoutMs: 120000,
-    }),
+    ConversionModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService<AppConfig>) => ({
@@ -70,10 +54,8 @@ import * as os from 'os';
     MxcadConversionModule,
     MxcadNodeModule,
     MxcadExternalRefModule,
-    MxcadFacadeModule,
     MxcadSaveModule,
     MxcadCoreModule,
-    MxcadChunkModule,
     MxcadUploadModule,
     TusModule,
     forwardRef(() => FileSystemModule),
@@ -93,6 +75,6 @@ import * as os from 'os';
     RequireProjectPermissionGuard,
     // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxcadExceptionFilter
   ],
-  exports: [MxcadConversionModule, MxcadChunkModule, MxcadInfraModule, MxcadUploadModule],
+  exports: [MxcadConversionModule, MxcadInfraModule, MxcadUploadModule],
 })
 export class MxCadModule {}

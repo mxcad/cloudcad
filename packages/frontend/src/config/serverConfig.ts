@@ -18,11 +18,6 @@ interface UploadFileConfigType {
       mimeTypes?: string;
     };
   };
-  fileisExist?: string;
-  chunkisExist?: string;
-  chunked?: boolean;
-  mxfilepath?: string;
-  saveUrl?: string;
   saveDwgUrl?: string;
   printPdfUrl?: string;
   cutDwgUrl?: string;

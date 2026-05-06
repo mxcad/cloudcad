@@ -4,18 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
-import {
-  fileSystemControllerGetProjects,
-  fileSystemControllerCreateProject,
-  fileSystemControllerGetPersonalSpace,
-  fileSystemControllerGetChildren,
-} from '@/api-sdk';
-import { usersControllerGetDashboardStats } from '@/api-sdk';
-import type {
-  ProjectDto,
-  FileSystemNodeDto,
-  UserDashboardStatsDto,
-} from '@/api-sdk';
+import { useDashboardStats } from '../hooks/useDashboardStats';
+import { useDashboardProjects } from '../hooks/useDashboardProjects';
 import { formatFileSize, formatRelativeTime } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
@@ -162,12 +152,25 @@ export const Dashboard: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
 
   // 数据状态
-  const [projects, setProjects] = useState<FileSystemNodeDto[]>([]);
-  const [personalFiles, setPersonalFiles] = useState<FileSystemNodeDto[]>([]);
-  const [dashboardStats, setDashboardStats] =
-    useState<UserDashboardStatsDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: dashboardStats,
+    loading: statsLoading,
+    error: statsError,
+  } = useDashboardStats();
+
+  const {
+    projects: rawProjects,
+    personalFiles,
+    loading: projectsLoading,
+    error: projectsError,
+    createProject,
+    isCreating,
+    createError,
+  } = useDashboardProjects();
+
+  const loading = statsLoading || projectsLoading;
+  const error = statsError || projectsError;
+
   const [greeting, setGreeting] = useState('');
 
   // 项目创建弹框状态
@@ -176,7 +179,6 @@ export const Dashboard: React.FC = () => {
     name: '',
     description: '',
   });
-  const [projectCreating, setProjectCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   // 计算问候语
@@ -205,40 +207,24 @@ export const Dashboard: React.FC = () => {
       e.preventDefault();
       if (!projectFormData.name.trim()) return;
 
-      setProjectCreating(true);
       try {
-        const { data: response } = await fileSystemControllerCreateProject({
-          body: { name: projectFormData.name.trim(), description: projectFormData.description.trim() || undefined },
-        } as any);
+        await createProject({
+          name: projectFormData.name.trim(),
+          description: projectFormData.description.trim() || undefined,
+        });
 
         // 关闭弹框，重置表单
         setIsProjectModalOpen(false);
         setProjectFormData({ name: '', description: '' });
 
         // 显示成功提示
-        setCreateSuccess(response?.name || projectFormData.name);
+        setCreateSuccess(projectFormData.name);
         setTimeout(() => setCreateSuccess(null), 3000);
-
-        // 刷新项目列表
-        const { data: projectsRes } = await fileSystemControllerGetProjects({ query: {} } as any);
-        if (projectsRes?.nodes) {
-          const sortedProjects = projectsRes.nodes
-            .filter((p: any) => p.status !== 'DELETED')
-            .sort(
-              (a: any, b: any) =>
-                new Date(b.updatedAt).getTime() -
-                new Date(a.updatedAt).getTime()
-            );
-          setProjects(sortedProjects);
-        }
       } catch (err) {
         console.error('创建项目失败:', err);
-        setError('创建项目失败，请重试');
-      } finally {
-        setProjectCreating(false);
       }
     },
-    [projectFormData]
+    [projectFormData, createProject]
   );
 
   // 加载真实数据

@@ -5,22 +5,25 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { authControllerSendSmsCode } from '@/api-sdk';
-import type { LoginDto } from '@/api-sdk';
+import {
+  accountLoginSchema,
+  phoneLoginSchema,
+  type AccountLoginValues,
+  type PhoneLoginValues,
+} from './loginFormSchema';
 
 export type LoginTab = 'account' | 'phone';
 
-interface PhoneForm {
-  phone: string;
-  code: string;
-}
-
 export interface UseLoginFormReturn {
-  // Form data
-  formData: LoginDto;
-  phoneForm: PhoneForm;
+  // Account form (react-hook-form)
+  accountForm: ReturnType<typeof useForm<AccountLoginValues>>;
+  // Phone form (react-hook-form)
+  phoneFormHook: ReturnType<typeof useForm<PhoneLoginValues>>;
   // Tab
   activeTab: LoginTab;
   setActiveTab: (tab: LoginTab) => void;
@@ -47,8 +50,6 @@ export interface UseLoginFormReturn {
   getAccountLoginLabel: () => string;
   getAccountLoginPlaceholder: () => string;
   // Handlers
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handlePhoneChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSendCode: () => Promise<void>;
   handleAccountSubmit: (e: React.FormEvent) => Promise<void>;
   handlePhoneSubmit: (e: React.FormEvent) => Promise<void>;
@@ -74,16 +75,22 @@ export function useLoginForm(): UseLoginFormReturn {
   // Tab state
   const [activeTab, setActiveTab] = useState<LoginTab>('account');
 
-  // Account login form state
-  const [formData, setFormData] = useState<LoginDto>({
-    account: '',
-    password: '',
+  // react-hook-form for account login
+  const accountForm = useForm<AccountLoginValues>({
+    resolver: zodResolver(accountLoginSchema),
+    defaultValues: {
+      account: '',
+      password: '',
+    },
   });
 
-  // Phone login form state
-  const [phoneForm, setPhoneForm] = useState<PhoneForm>({
-    phone: '',
-    code: '',
+  // react-hook-form for phone login
+  const phoneFormHook = useForm<PhoneLoginValues>({
+    resolver: zodResolver(phoneLoginSchema),
+    defaultValues: {
+      phone: '',
+      code: '',
+    },
   });
 
   // Shared UI state
@@ -147,33 +154,14 @@ export function useLoginForm(): UseLoginFormReturn {
     return '请输入用户名';
   }, [smsEnabled, mailEnabled]);
 
-  // Account login input handler
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
-      if (error) setError(null);
-    },
-    [error]
-  );
-
-  // Phone login input handler (digits only)
-  const handlePhoneChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      if ((name === 'phone' || name === 'code') && value && !/^\d*$/.test(value)) {
-        return;
-      }
-      setPhoneForm((prev) => ({ ...prev, [name]: value }));
-      if (error) setError(null);
-    },
-    [error]
-  );
-
   // Send SMS code
   const handleSendCode = useCallback(async () => {
-    if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
+    const phoneValue = phoneFormHook.getValues('phone');
+
+    // Validate phone via zod schema manually
+    const result = phoneLoginSchema.shape.phone.safeParse(phoneValue);
+    if (!result.success) {
+      setError(result.error.issues[0]?.message || '请输入正确的手机号');
       return;
     }
 
@@ -200,7 +188,7 @@ export function useLoginForm(): UseLoginFormReturn {
     } finally {
       setSendingCode(false);
     }
-  }, [phoneForm.phone]);
+  }, [phoneFormHook]);
 
   // Account login submit
   const handleAccountSubmit = useCallback(
@@ -209,8 +197,16 @@ export function useLoginForm(): UseLoginFormReturn {
       setLoading(true);
       setError(null);
 
+      const valid = await accountForm.trigger();
+      if (!valid) {
+        setLoading(false);
+        return;
+      }
+
+      const { account, password } = accountForm.getValues();
+
       try {
-        await login(formData.account, formData.password);
+        await login(account, password);
         navigate('/');
       } catch (err: unknown) {
         const errorData = (
@@ -269,7 +265,7 @@ export function useLoginForm(): UseLoginFormReturn {
         setLoading(false);
       }
     },
-    [formData.account, formData.password, login, navigate]
+    [accountForm, login, navigate]
   );
 
   // Phone login submit
@@ -279,20 +275,16 @@ export function useLoginForm(): UseLoginFormReturn {
       setLoading(true);
       setError(null);
 
-      if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-        setError('请输入正确的手机号');
+      const valid = await phoneFormHook.trigger();
+      if (!valid) {
         setLoading(false);
         return;
       }
 
-      if (!phoneForm.code || !/^\d{6}$/.test(phoneForm.code)) {
-        setError('请输入6位数字验证码');
-        setLoading(false);
-        return;
-      }
+      const { phone, code } = phoneFormHook.getValues();
 
       try {
-        await loginByPhone(phoneForm.phone, phoneForm.code);
+        await loginByPhone(phone, code);
         navigate('/');
       } catch (err: unknown) {
         const errorData = (
@@ -314,8 +306,8 @@ export function useLoginForm(): UseLoginFormReturn {
         if (errorCode === 'PHONE_NOT_REGISTERED') {
           navigate('/register', {
             state: {
-              prefillPhone: phoneForm.phone,
-              prefillCode: phoneForm.code,
+              prefillPhone: phone,
+              prefillCode: code,
             },
           });
           return;
@@ -326,7 +318,7 @@ export function useLoginForm(): UseLoginFormReturn {
         setLoading(false);
       }
     },
-    [phoneForm.phone, phoneForm.code, loginByPhone, navigate]
+    [phoneFormHook, loginByPhone, navigate]
   );
 
   // WeChat login
@@ -345,8 +337,8 @@ export function useLoginForm(): UseLoginFormReturn {
   }, [loginWithWechat, setAuthError]);
 
   return {
-    formData,
-    phoneForm,
+    accountForm,
+    phoneFormHook,
     activeTab,
     setActiveTab,
     loading,
@@ -366,8 +358,6 @@ export function useLoginForm(): UseLoginFormReturn {
     setAuthError,
     getAccountLoginLabel,
     getAccountLoginPlaceholder,
-    handleChange,
-    handlePhoneChange,
     handleSendCode,
     handleAccountSubmit,
     handlePhoneSubmit,

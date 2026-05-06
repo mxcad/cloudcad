@@ -14,12 +14,10 @@ import {
   Inject,
   Injectable,
   Logger,
-  forwardRef,
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FileUploadManagerFacadeService } from '../facade/file-upload-manager-facade.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { ExternalReferenceUpdateService } from '../external-ref/external-reference-update.service';
@@ -53,6 +51,8 @@ import {
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
 } from '../infra/thumbnail-utils';
+import { FileConversionUploadService } from '../upload/file-conversion-upload.service';
+import { ExternalRefService } from '../external-ref/external-ref.service';
 
 @Injectable()
 export class MxCadService {
@@ -61,149 +61,18 @@ export class MxCadService {
 
   constructor(
     private readonly configService: ConfigService<AppConfig>,
-    @Inject(forwardRef(() => FileUploadManagerFacadeService))
-    private readonly fileUploadManager: FileUploadManagerFacadeService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileConversionService: FileConversionService,
     private readonly externalReferenceUpdateService: ExternalReferenceUpdateService,
     private readonly storageManager: StorageManager,
     @Inject(VERSION_CONTROL_TOKEN)
     private readonly versionControlService: IVersionControl,
-    private readonly prisma: DatabaseService
+    private readonly prisma: DatabaseService,
+    private readonly fileConversionUploadService: FileConversionUploadService,
+    private readonly externalRefService: ExternalRefService,
   ) {
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
       infer: true,
-    });
-  }
-
-  /**
-   * 检查分片是否存在
-   */
-  async checkChunkExist(
-    chunk: number,
-    fileHash: string,
-    size: number,
-    chunks: number,
-    fileName: string,
-    context?: MxCadContext
-  ): Promise<{ ret: string }> {
-    return this.fileUploadManager.checkChunkExist({
-      hash: fileHash,
-      name: fileName,
-      size,
-      chunk,
-      chunks,
-      context: this.validateContext(context),
-    });
-  }
-
-  /**
-   * 检查文件是否存在
-   */
-  async checkFileExist(
-    filename: string,
-    fileHash: string,
-    context?: MxCadContext
-  ): Promise<{ ret: string }> {
-    return this.fileUploadManager.checkFileExist(
-      filename,
-      fileHash,
-      this.validateContext(context)
-    );
-  }
-
-  /**
-   * 检查目录中是否存在重复文件（相同文件名和hash）
-   * @param filename 文件名
-   * @param fileHash 文件hash
-   * @param nodeId 目标目录节点ID
-   * @param currentFileId 当前文件ID（可选，用于排除当前文件）
-   * @returns 重复文件信息，如果存在
-   */
-  async checkDuplicateFile(
-    filename: string,
-    fileHash: string,
-    nodeId: string,
-    currentFileId?: string
-  ): Promise<{
-    isDuplicate: boolean;
-    existingNodeId?: string;
-    existingFileName?: string;
-  }> {
-    try {
-      // 在目标目录下查找同名同hash的文件
-      const existingFile = await this.prisma.fileSystemNode.findFirst({
-        where: {
-          parentId: nodeId,
-          name: filename,
-          fileHash: fileHash,
-          isFolder: false,
-          deletedAt: null,
-          // 排除当前文件（如果是覆盖保存的情况）
-          ...(currentFileId && { id: { not: currentFileId } }),
-        },
-        select: {
-          id: true,
-          name: true,
-        },
-      });
-
-      if (existingFile) {
-        this.logger.log(
-          `发现重复文件: ${filename} (hash: ${fileHash}), 节点ID: ${existingFile.id}`
-        );
-        return {
-          isDuplicate: true,
-          existingNodeId: existingFile.id,
-          existingFileName: existingFile.name,
-        };
-      }
-
-      return { isDuplicate: false };
-    } catch (error) {
-      this.logger.error(`检查重复文件失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
-  /**
-   * 上传分片文件
-   */
-  async uploadChunk(
-    hash: string,
-    name: string,
-    size: number,
-    chunk: number,
-    chunks: number,
-    context?: MxCadContext
-  ): Promise<{ ret: string; tz?: boolean }> {
-    return this.fileUploadManager.uploadChunk({
-      hash,
-      name,
-      size,
-      chunk,
-      chunks,
-      context: this.validateContext(context),
-    });
-  }
-
-  /**
-   * 上传完整文件并转换
-   */
-  async uploadAndConvertFile(
-    filePath: string,
-    hash: string,
-    name: string,
-    size: number
-  ): Promise<{ ret: string; tz?: boolean }> {
-    // 对于没有上下文的上传，创建一个默认上下文
-    const context = await this.createDefaultContext();
-    return this.fileUploadManager.uploadAndConvertFile({
-      filePath,
-      hash,
-      name,
-      size,
-      context,
     });
   }
 
@@ -299,52 +168,6 @@ export class MxCadService {
   }
 
   /**
-   * 上传分片文件方法
-   * 注意：权限验证已在 Controller 层通过 @RequireProjectPermission 装饰器处理
-   */
-  async uploadChunkWithPermission(
-    hash: string,
-    name: string,
-    size: number,
-    chunk: number,
-    chunks: number,
-    context?: MxCadContext
-  ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    const result = await this.fileUploadManager.uploadChunk({
-      hash,
-      name,
-      size,
-      chunk,
-      chunks,
-      context: this.validateContext(context),
-    });
-    return result;
-  }
-
-  /**
-   * 合并分片文件方法（用于完成请求）
-   * 注意：权限验证已在 Controller 层通过 @RequireProjectPermission 装饰器处理
-   */
-  async mergeChunksWithPermission(
-    hash: string,
-    name: string,
-    size: number,
-    chunks: number,
-    context?: MxCadContext,
-    srcDwgNodeId?: string
-  ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    const result = await this.fileUploadManager.mergeChunksWithPermission({
-      hash,
-      name,
-      size,
-      chunks,
-      context: this.validateContext(context),
-      srcDwgNodeId, // 外部参照上传时的源图纸节点 ID
-    });
-    return result;
-  }
-
-  /**
    * 上传完整文件方法
    * 注意：权限验证已在 Controller 层通过 @RequireProjectPermission 装饰器处理
    */
@@ -355,28 +178,13 @@ export class MxCadService {
     size: number,
     context?: MxCadContext
   ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
-    return this.fileUploadManager.uploadAndConvertFileWithPermission({
+    return this.fileConversionUploadService.uploadAndConvertFileWithPermission({
       filePath,
       hash,
       name,
       size,
       context: this.validateContext(context),
     });
-  }
-
-  /**
-   * 公共日志方法，供其他模块使用
-   */
-  logError(message: string, error?: unknown): void {
-    this.logger.error(message, error);
-  }
-
-  logInfo(message: string): void {
-    this.logger.log(message);
-  }
-
-  logWarn(message: string): void {
-    this.logger.warn(message);
   }
 
   /**
@@ -457,7 +265,7 @@ export class MxCadService {
     srcFilePath: string,
     context: MxCadContext
   ): Promise<void> {
-    return this.fileUploadManager.handleExternalReferenceImage(
+    return this.externalRefService.handleExternalReferenceImage(
       fileHash,
       srcDwgNodeId,
       extRefFileName,
@@ -475,30 +283,12 @@ export class MxCadService {
     extRefFileName: string,
     srcFilePath: string
   ): Promise<void> {
-    return this.fileUploadManager.handleExternalReferenceFile(
+    return this.externalRefService.handleExternalReferenceFile(
       extRefHash,
       srcDwgFileHash,
       extRefFileName,
       srcFilePath
     );
-  }
-
-  /**
-   * 创建默认上下文（用于没有上下文的操作）
-   */
-  private async createDefaultContext(): Promise<any> {
-    // 在测试环境中，返回一个默认的上下文
-    const nodeEnv = this.configService.get('nodeEnv', { infer: true });
-    if (nodeEnv === 'test' || process.env.JEST_WORKER_ID !== undefined) {
-      return {
-        userId: 'test-user-id',
-        username: 'test-user',
-        role: 'USER',
-        nodeId: 'test-node-id',
-      };
-    }
-    // 在生产环境中，抛出异常要求必须提供上下文
-    throw new BadRequestException('必须提供有效的上下文参数');
   }
 
   /**
