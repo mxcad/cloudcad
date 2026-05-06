@@ -7,10 +7,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock api-sdk
 vi.mock('@/api-sdk', () => ({
-  mxCadControllerSaveMxwebToNode: vi.fn(),
+  saveControllerSaveMxwebToNode: vi.fn(),
   fileSystemControllerCheckProjectPermission: vi.fn(),
-  mxCadControllerUploadThumbnail: vi.fn(),
-  mxCadControllerCheckThumbnail: vi.fn(),
+  thumbnailControllerUploadThumbnail: vi.fn(),
+  thumbnailControllerCheckThumbnail: vi.fn(),
 }));
 
 // Mock utils
@@ -45,7 +45,7 @@ import {
   createSaveFormData,
   showSaveConfirmDialog,
 } from '../mxcadSave';
-import { mxCadControllerSaveMxwebToNode } from '@/api-sdk';
+import { saveControllerSaveMxwebToNode } from '@/api-sdk';
 
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
@@ -80,7 +80,7 @@ describe('mxcadSave', () => {
     const mockBlob = new Blob(['saved-data'], { type: 'application/octet-stream' });
 
     it('saves blob to a node with basic parameters', async () => {
-      const mockSave = mxCadControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
+      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       mockSave.mockResolvedValue({ data: { success: true } });
 
       await saveMxwebToNode({
@@ -98,7 +98,7 @@ describe('mxcadSave', () => {
     });
 
     it('includes commitMessage in FormData when provided', async () => {
-      const mockSave = mxCadControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
+      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       mockSave.mockResolvedValue({ data: { success: true } });
 
       await saveMxwebToNode({
@@ -114,7 +114,7 @@ describe('mxcadSave', () => {
     });
 
     it('includes expectedTimestamp when provided (optimistic locking)', async () => {
-      const mockSave = mxCadControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
+      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       mockSave.mockResolvedValue({ data: { success: true } });
 
       await saveMxwebToNode({
@@ -130,7 +130,7 @@ describe('mxcadSave', () => {
     });
 
     it('handles missing optional parameters gracefully', async () => {
-      const mockSave = mxCadControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
+      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       mockSave.mockResolvedValue({ data: { success: true } });
 
       // commitMessage and expectedTimestamp are optional — should not break
@@ -147,7 +147,7 @@ describe('mxcadSave', () => {
     });
 
     it('propagates API errors', async () => {
-      const mockSave = mxCadControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
+      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       const apiError = new Error('Server error: file too large');
       mockSave.mockRejectedValue(apiError);
 

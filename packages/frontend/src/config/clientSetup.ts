@@ -3,14 +3,13 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { client } from './client.gen';
+import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
 
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
 const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
 client.setConfig({
   baseUrl,
-  responseStyle: 'data',
   responseTransformer: async (data: unknown) => {
     if (
       data &&

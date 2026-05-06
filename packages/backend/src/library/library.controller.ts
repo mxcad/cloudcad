@@ -14,7 +14,10 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
+  Patch,
   Param,
+  Body,
   Query,
   Request,
   UseGuards,
@@ -46,12 +49,17 @@ import { FileSystemService } from '../file-system/file-system.service';
 import { FileDownloadHandlerService } from '../file-system/file-download/file-download-handler.service';
 import { MxcadFileHandlerService } from '../mxcad/core/mxcad-file-handler.service';
 import { MxCadService } from '../mxcad/core/mxcad.service';
+import { CreateFolderDto } from '../file-system/dto/create-folder.dto';
+import { MoveNodeDto } from '../file-system/dto/move-node.dto';
+import { CopyNodeDto } from '../file-system/dto/copy-node.dto';
+import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import {
   FileSystemNodeDto,
   NodeListResponseDto,
 } from '../file-system/dto/file-system-response.dto';
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
+import { SaveLibraryNodeDto } from './dto/save-library-node.dto';
 import {
   IPublicLibraryProvider,
   PUBLIC_LIBRARY_PROVIDER_DRAWING,
@@ -59,12 +67,12 @@ import {
 } from './interfaces/public-library-provider.interface';
 
 /**
- * 公共资源库控制器（仅保留只读接口）
+ * 公共资源库控制器
  *
  * 设计思想：
  * - 公共资源库是一个特殊的全局项目，不是某个人的资源库
  * - 读操作：公开访问（无需登录）
- * - 写操作：已废弃，统一走文件管理模块
+ * - 写操作：需要登录 + LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE 权限
  * - 无版本管理、无回收站（删除即永久删除）
  */
 @ApiTags('library', '公共资源库')
@@ -238,10 +246,105 @@ export class LibraryController {
   @ApiResponse({ status: 200, description: '保存成功' })
   async saveDrawingNode(
     @Param('nodeId') nodeId: string,
+    @Body() dto: SaveLibraryNodeDto,
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {
     return this.saveLibraryNode(nodeId, file, req);
+  }
+
+  /**
+   * 创建图纸库文件夹
+   */
+  @Post('drawing/folders')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '创建图纸库文件夹' })
+  @ApiResponse({
+    status: 201,
+    description: '文件夹创建成功',
+    type: FileSystemNodeDto,
+  })
+  async createDrawingFolder(
+    @Body() dto: CreateFolderDto,
+    @Request() req,
+  ) {
+    const userId = req.user.id;
+    const parentId =
+      !dto.parentId || dto.parentId === 'root'
+        ? await this.drawingLibraryProvider.getLibraryId()
+        : dto.parentId;
+    return this.fileSystemService.createFolder(userId, parentId, dto);
+  }
+
+  /**
+   * 删除图纸库节点
+   */
+  @Delete('drawing/nodes/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '删除图纸库节点' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  async deleteDrawingNode(
+    @Param('nodeId') nodeId: string,
+    @Query('permanently') permanently?: boolean,
+  ) {
+    return this.fileSystemService.deleteNode(nodeId, permanently ?? true);
+  }
+
+  /**
+   * 重命名图纸库节点
+   */
+  @Patch('drawing/nodes/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '重命名图纸库节点' })
+  @ApiResponse({ status: 200, description: '重命名成功', type: FileSystemNodeDto })
+  async renameDrawingNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: UpdateNodeDto,
+  ) {
+    return this.fileSystemService.updateNode(nodeId, dto);
+  }
+
+  /**
+   * 移动图纸库节点
+   */
+  @Post('drawing/nodes/:nodeId/move')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '移动图纸库节点' })
+  @ApiResponse({ status: 200, description: '移动成功', type: FileSystemNodeDto })
+  async moveDrawingNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: MoveNodeDto,
+  ) {
+    return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
+  }
+
+  /**
+   * 复制图纸库节点
+   */
+  @Post('drawing/nodes/:nodeId/copy')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '复制图纸库节点' })
+  @ApiResponse({ status: 201, description: '复制成功', type: FileSystemNodeDto })
+  async copyDrawingNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: CopyNodeDto,
+  ) {
+    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
   }
 
   // ========== 图块库接口（只读） ==========
@@ -413,10 +516,105 @@ export class LibraryController {
   @ApiResponse({ status: 200, description: '保存成功' })
   async saveBlockNode(
     @Param('nodeId') nodeId: string,
+    @Body() dto: SaveLibraryNodeDto,
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {
     return this.saveLibraryNode(nodeId, file, req);
+  }
+
+  /**
+   * 创建图块库文件夹
+   */
+  @Post('block/folders')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '创建图块库文件夹' })
+  @ApiResponse({
+    status: 201,
+    description: '文件夹创建成功',
+    type: FileSystemNodeDto,
+  })
+  async createBlockFolder(
+    @Body() dto: CreateFolderDto,
+    @Request() req,
+  ) {
+    const userId = req.user.id;
+    const parentId =
+      !dto.parentId || dto.parentId === 'root'
+        ? await this.blockLibraryProvider.getLibraryId()
+        : dto.parentId;
+    return this.fileSystemService.createFolder(userId, parentId, dto);
+  }
+
+  /**
+   * 删除图块库节点
+   */
+  @Delete('block/nodes/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '删除图块库节点' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  async deleteBlockNode(
+    @Param('nodeId') nodeId: string,
+    @Query('permanently') permanently?: boolean,
+  ) {
+    return this.fileSystemService.deleteNode(nodeId, permanently ?? true);
+  }
+
+  /**
+   * 重命名图块库节点
+   */
+  @Patch('block/nodes/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '重命名图块库节点' })
+  @ApiResponse({ status: 200, description: '重命名成功', type: FileSystemNodeDto })
+  async renameBlockNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: UpdateNodeDto,
+  ) {
+    return this.fileSystemService.updateNode(nodeId, dto);
+  }
+
+  /**
+   * 移动图块库节点
+   */
+  @Post('block/nodes/:nodeId/move')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '移动图块库节点' })
+  @ApiResponse({ status: 200, description: '移动成功', type: FileSystemNodeDto })
+  async moveBlockNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: MoveNodeDto,
+  ) {
+    return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
+  }
+
+  /**
+   * 复制图块库节点
+   */
+  @Post('block/nodes/:nodeId/copy')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '复制图块库节点' })
+  @ApiResponse({ status: 201, description: '复制成功', type: FileSystemNodeDto })
+  async copyBlockNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: CopyNodeDto,
+  ) {
+    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
   }
 
   // ========== 公共方法 ==========

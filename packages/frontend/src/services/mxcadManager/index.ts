@@ -54,13 +54,13 @@ import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
 // ==================== 外部依赖 ====================
 
 import { MxCADView } from 'mxcad-app';
-import { mxCadControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckDuplicateFile, mxCadControllerCheckThumbnail, mxCadControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
+import { saveControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
-import { publicFileApi } from '../publicFileApi';
+import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode, libraryControllerSaveDrawingNode, libraryControllerSaveBlockNode } from '@/api-sdk';
 import { MxFun } from 'mxdraw';
 import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../../utils/hashUtils';
-import { uploadFileWithUppy } from '../../utils/uppyUploadUtils';
+import { uploadFileWithUppy, uploadFilePublic } from '../../utils/uppyUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../../contexts/NotificationContext';
@@ -117,20 +117,7 @@ let pendingImages: PendingImage[] = [];
  * 尝试从 MxCAD SDK 获取修改状态，如果不可用则使用本地跟踪状态
  */
 export function isDocumentModified(): boolean {
-  try {
-    const mxcad = MxCpp.getCurrentMxCAD();
-    // MxCAD SDK 可能提供 isModified 属性
-    if (
-      mxcad &&
-      typeof (mxcad as unknown as { isModified?: boolean }).isModified ===
-        'boolean'
-    ) {
-      return (mxcad as unknown as { isModified: boolean }).isModified;
-    }
-  } catch {
-    // 静默处理：SDK 不支持 isModified 属性
-  }
-  // 回退到本地跟踪状态
+  // 本地跟踪状态
   return documentModified;
 }
 
@@ -625,7 +612,7 @@ async function getProjectId(
     projectId = currentFileInfo.projectId;
   } else if (fileInfo.parentId) {
     try {
-      const rootResponse = await fileSystemControllerGetRootNode({ path: { nodeId: newNodeId } }) as any;
+      const rootResponse = await fileSystemControllerGetRootNode({ path: { nodeId: newNodeId } });
       if (rootResponse.data?.id) {
         projectId = rootResponse.data.id;
       }
@@ -683,7 +670,7 @@ async function waitForFileReady(
   parentId: string;
 } | null> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId } }) as any;
+    const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId } });
     const fileInfo = fileInfoResponse.data;
 
     if (fileInfo.fileHash && fileInfo.path) {
@@ -776,9 +763,8 @@ export async function openLibraryDrawing(
     let finalUpdatedAt = updatedAt;
 
     if (!finalFileName || !finalNodePath) {
-      const { libraryApi } = await import('../libraryApi');
-      const nodeResponse = await libraryApi.getDrawingNode(nodeId);
-      const node = nodeResponse.data as any;
+      const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId } });
+      const node = nodeResponse.data;
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
       finalUpdatedAt = finalUpdatedAt || node.updatedAt;
@@ -862,9 +848,8 @@ export async function openLibraryBlock(
     let finalUpdatedAt = updatedAt;
 
     if (!finalFileName || !finalNodePath) {
-      const { libraryApi } = await import('../libraryApi');
-      const nodeResponse = await libraryApi.getBlockNode(nodeId);
-      const node = nodeResponse.data as any;
+      const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId } });
+      const node = nodeResponse.data;
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
       finalUpdatedAt = finalUpdatedAt || node.updatedAt;
@@ -1022,123 +1007,67 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
 }
 
 /**
- * 使用公开上传服务上传文件（未登录用户）
+ * 使用 TUS 上传文件（未登录用户，匿名上传）
  * @param file 要上传的文件
- * @param noCache 是否无缓存打开（跳过秒传检查，强制重新上传）
+ * @param noCache 是否无缓存打开（强制重新上传）
  */
 async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> {
   try {
     showGlobalLoading('正在计算文件哈希...');
     const hash = await calculateFileHash(file);
-    
-    // 记录是否真正上传了文件（不是秒传）
-    let isFileUploaded = false;
 
-    // 无缓存模式：跳过秒传检查，直接上传
-    if (noCache) {
-      setLoadingMessage('正在上传文件...');
-      await publicFileApi.uploadFile(
-        file,
-        5 * 1024 * 1024, // 5MB 分片
-        (percentage) => {
-          setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
-        },
-        true // 强制上传，跳过秒传
-      );
-      isFileUploaded = true;
-    } else {
-      // 1. 检查秒传
-      setLoadingMessage('检查文件是否存在...');
-      const checkResult = await publicFileApi.checkFile({
-        filename: file.name,
-        fileHash: hash,
-      });
+    // 使用 TUS 上传（匿名）
+    setLoadingMessage('正在上传文件...');
+    const result = await uploadFilePublic({
+      file,
+      hash,
+      onProgress: (percentage) => {
+        setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
+      },
+    });
 
-      if (!checkResult.exist) {
-        // 2. 分片上传
-        setLoadingMessage('正在上传文件...');
-        await publicFileApi.uploadFile(
-          file,
-          5 * 1024 * 1024, // 5MB 分片
-          (percentage) => {
-            setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
-          }
-        );
-        isFileUploaded = true;
-      }
-    }
+    // 发送自定义事件，通知 CADEditorDirect 检查外部参照
+    // 并等待用户完成外部参照操作后再打开文件
+    hideGlobalLoading();
 
-    // 3. 只有在真正上传了文件（不是秒传）时，才检查外部参照
-    if (isFileUploaded) {
-      // 隐藏loading，避免覆盖外部参照弹框
-      hideGlobalLoading();
-      
-      // 发送自定义事件，通知 CADEditorDirect 检查外部参照
-      // 并等待用户完成外部参照操作后再打开文件
-      const event = new CustomEvent('public-file-uploaded', {
-        detail: { 
-          fileHash: hash,
-          fileName: file.name,
-          noCache: noCache,
-          callback: async () => {
-            try {
-              // 用户完成外部参照操作后，打开文件
-              showGlobalLoading('正在打开文件...');
-              const fileUrl = publicFileApi.getFileAccessUrl(hash);
+    const event = new CustomEvent('public-file-uploaded', {
+      detail: {
+        fileHash: result.hash,
+        fileName: result.fileName,
+        noCache: noCache,
+        callback: async () => {
+          try {
+            showGlobalLoading('正在打开文件...');
+            const fileUrl = `/api/v1/public-file/access/${result.hash}/${result.fileName}`;
 
-              // 打开文件
-              await mxcadManager.openFile(fileUrl, noCache);
+            await mxcadManager.openFile(fileUrl, noCache);
 
-              // 设置当前文件名（用于侧边栏显示）
-              setCurrentFileInfo({
-                fileId: '',
-                parentId: null,
-                projectId: null,
-                name: file.name,
-                personalSpaceId: null,
-              });
+            setCurrentFileInfo({
+              fileId: '',
+              parentId: null,
+              projectId: null,
+              name: file.name,
+              personalSpaceId: null,
+            });
 
-              hideGlobalLoading();
-              globalShowToast('文件已打开', 'success');
-            } catch (error) {
-              hideGlobalLoading();
-              const errorMessage = error instanceof Error ? error.message : '文件打开失败';
-              globalShowToast(errorMessage, 'error');
-            }
+            hideGlobalLoading();
+            globalShowToast('文件已打开', 'success');
+          } catch (error) {
+            hideGlobalLoading();
+            const errorMessage = error instanceof Error ? error.message : '文件打开失败';
+            globalShowToast(errorMessage, 'error');
           }
         }
-      });
-      window.dispatchEvent(event);
-      
-      // 注意：这里不再直接打开文件，而是通过事件回调来打开
-      // 文件打开操作会在用户完成外部参照操作后执行
-    } else {
-      // 如果是秒传，直接打开文件
-      setLoadingMessage('正在打开文件...');
-      const fileUrl = publicFileApi.getFileAccessUrl(hash);
-
-      // 打开文件
-      await mxcadManager.openFile(fileUrl, noCache);
-
-      // 设置当前文件名（用于侧边栏显示）
-      setCurrentFileInfo({
-        fileId: '',
-        parentId: null,
-        projectId: null,
-        name: file.name,
-        personalSpaceId: null,
-      });
-
-      hideGlobalLoading();
-      globalShowToast('文件已打开', 'success');
-    }
-      } catch (error) {
-        hideGlobalLoading();
-        const errorMessage =
-          error instanceof Error ? error.message : '文件上传失败';
-        globalShowToast(errorMessage, 'error');
       }
-    }
+    });
+    window.dispatchEvent(event);
+  } catch (error) {
+    hideGlobalLoading();
+    const errorMessage =
+      error instanceof Error ? error.message : '文件上传失败';
+    globalShowToast(errorMessage, 'error');
+  }
+}
 
 /**
  * 处理文件选择后的上传和打开流程（已登录用户）
@@ -1155,8 +1084,8 @@ async function handleFileSelection(
     const hash = await calculateFileHash(file);
 
     // 检查目录中是否存在重复文件
-    const duplicateCheck = await mxCadControllerCheckDuplicateFile({
-      body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId } as any,
+    const duplicateCheck = await mxCadControllerCheckFileExist({
+      body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId },
     });
 
     if (duplicateCheck.data?.isDuplicate && duplicateCheck.data?.existingNodeId) {
@@ -1615,14 +1544,17 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   });
 
   setLoadingMessage('正在上传到服务器...');
-  const formData = new FormData();
-  formData.append('file', savedFile.blob);
-  if (commitMessage) formData.append('commitMessage', commitMessage);
-  if (currentFileInfo?.updatedAt) formData.append('expectedTimestamp', currentFileInfo.updatedAt);
-  await mxCadControllerSaveMxwebToNode({ path: { nodeId: fileId }, body: formData as any });
+  await saveControllerSaveMxwebToNode({
+    path: { nodeId: fileId },
+    body: {
+      file: savedFile.blob,
+      commitMessage,
+      expectedTimestamp: currentFileInfo?.updatedAt,
+    },
+  });
 
   try {
-    const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as any;
+    const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
     const fileInfo = fileInfoResponse.data;
 
     // 保存成功后更新乐观锁时间戳
@@ -1687,12 +1619,11 @@ async function saveLibraryFile() {
   // 如果缺少 nodePath，从 API 获取
   if (!nodePath) {
     try {
-      const { libraryApi } = await import('../../services/libraryApi');
       const nodeResponse =
         libraryKey === 'drawing'
-          ? await libraryApi.getDrawingNode(fileId)
-          : await libraryApi.getBlockNode(fileId);
-      const node = nodeResponse.data as any;
+          ? await libraryControllerGetDrawingNode({ path: { nodeId: fileId } })
+          : await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
+      const node = nodeResponse.data;
       nodePath = node.path;
 
       if (nodePath && currentFileInfo) {
@@ -1754,11 +1685,13 @@ async function saveLibraryFile() {
     setLoadingMessage('正在上传到服务器...');
 
     // 上传到服务器（使用图书馆覆盖保存接口）
-    const { libraryApi } = await import('../../services/libraryApi');
+    const saveFile = new File([savedFile.blob], isDrawing ? 'drawing.mxweb' : 'block.mxweb', {
+      type: 'application/octet-stream',
+    });
     if (isDrawing) {
-      await libraryApi.saveDrawing(fileId, savedFile.blob);
+      await libraryControllerSaveDrawingNode({ path: { nodeId: fileId }, body: { file: saveFile } });
     } else {
-      await libraryApi.saveBlock(fileId, savedFile.blob);
+      await libraryControllerSaveBlockNode({ path: { nodeId: fileId }, body: { file: saveFile } });
     }
 
     // 更新本地缓存 - 使用 node.path 构建正确的 URL
@@ -1835,13 +1768,12 @@ async function getNodeUpdatedAt(
   libraryKey: string
 ): Promise<string | null> {
   try {
-    const { libraryApi } = await import('../../services/libraryApi');
     const response =
       libraryKey === 'drawing'
-        ? await libraryApi.getDrawingNode(nodeId)
-        : await libraryApi.getBlockNode(nodeId);
+        ? await libraryControllerGetDrawingNode({ path: { nodeId: nodeId } })
+        : await libraryControllerGetBlockNode({ path: { nodeId: nodeId } });
     
-    const node = response.data as any;
+    const node = response.data;
     return node?.updatedAt || null;
   } catch (error) {
     handleError(error, 'mxcadManager: getNodeUpdatedAt');
@@ -2110,10 +2042,7 @@ class MxCADInstanceManager {
         return false;
       }
 
-      const formData = new FormData();
-      formData.append('file', blob, 'thumbnail.png');
-
-      await mxCadControllerUploadThumbnail({ path: { nodeId }, body: formData as any });
+      await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: { file: blob } });
       return true;
     } catch (error) {
       handleError(error, 'mxcadManager: uploadThumbnail');
@@ -2186,7 +2115,7 @@ class MxCADInstanceManager {
             return;
           }
 
-          const thumbnailResult = await mxCadControllerCheckThumbnail({ path: { nodeId: fileId } });
+          const thumbnailResult = await thumbnailControllerCheckThumbnail({ path: { nodeId: fileId } });
 
           if (!thumbnailResult?.data?.exists) {
             const imageData = await this.generateThumbnail();
@@ -2242,7 +2171,7 @@ class MxCADInstanceManager {
           const hash = parts[hashIndex];
           // 构建外部参照文件的访问 URL
           if (hash) {
-            return publicFileApi.getFileAccessUrl(hash, fileName);
+            return `/api/v1/public-file/access/${hash}/${fileName}`;
           }
         }
       }
@@ -2672,12 +2601,14 @@ export async function processPendingImages(): Promise<void> {
       const file = new File([blob], img.fileName, { type: blob.type });
 
       // 上传到外部参照目录（带 updatePreloading=true 更新 preloading.json）
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('ext_ref_file', img.fileName);
-      if (currentInfo.fileId) formData.append('nodeId', currentInfo.fileId);
-      formData.append('updatePreloading', 'true');
-      await mxCadControllerUploadExtReferenceImage({ body: formData as any });
+      await mxCadControllerUploadExtReferenceImage({
+        body: {
+          file,
+          ext_ref_file: img.fileName,
+          nodeId: currentInfo.fileId,
+          updatePreloading: true,
+        },
+      });
     } catch (error) {
       handleError(error, 'mxcadManager: processPendingImages');
     }

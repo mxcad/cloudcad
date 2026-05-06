@@ -18,7 +18,7 @@ import {
   authControllerGetWechatAuthUrl,
 } from '@/api-sdk';
 import type { UserDto as UserDtoType } from '@/api-sdk';
-import { setTokenRefreshCallback } from '@/api-sdk/client-setup';
+import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 
 type User = UserDtoType;

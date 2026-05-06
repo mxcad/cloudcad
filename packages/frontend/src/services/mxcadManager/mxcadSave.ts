@@ -16,7 +16,7 @@
  * 提供 mxweb 文件保存到节点的核心逻辑和保存确认 UI。
  */
 
-import { mxCadControllerSaveMxwebToNode } from '@/api-sdk';
+import { saveControllerSaveMxwebToNode } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import type { SaveMxwebParams } from './mxcadTypes';
 
@@ -51,19 +51,13 @@ export function createSaveFormData(
  */
 export async function saveMxwebToNode(params: SaveMxwebParams): Promise<void> {
   try {
-    const formData = createSaveFormData(params.blob, params.nodeId, params.filename);
-
-    if (params.commitMessage) {
-      formData.append('commitMessage', params.commitMessage);
-    }
-
-    if (params.expectedTimestamp) {
-      formData.append('expectedTimestamp', params.expectedTimestamp);
-    }
-
-    await mxCadControllerSaveMxwebToNode({
+    await saveControllerSaveMxwebToNode({
       path: { nodeId: params.nodeId },
-      body: formData,
+      body: {
+        file: params.blob,
+        commitMessage: params.commitMessage,
+        expectedTimestamp: params.expectedTimestamp,
+      },
     });
   } catch (error) {
     handleError(error, 'mxcadSave: saveMxwebToNode');
