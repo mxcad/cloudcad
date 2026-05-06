@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useWechatAuth } from '../../hooks/useWechatAuth';
-import { authControllerBindWechat } from '@/api-sdk';
+import { useWechatBind } from './hooks/useWechatBind';
 import { MessageCircle } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 
@@ -16,11 +16,12 @@ export function WechatDeactivateConfirm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const { bindWechat } = useWechatBind();
 
   const handleSuccess = useCallback(
     async (result: { code?: string; state?: string }) => {
       try {
-        await authControllerBindWechat();
+        await bindWechat({ code: result.code || '', state: result.state || '' });
         setSuccess(true);
         // 清除保存的验证方式
         sessionStorage.removeItem(DEACTIVATE_VERIFICATION_KEY);
@@ -31,7 +32,7 @@ export function WechatDeactivateConfirm({
         setLoading(false);
       }
     },
-    [onConfirm]
+    [onConfirm, bindWechat]
   );
 
   const handleError = useCallback((errorMsg: string) => {

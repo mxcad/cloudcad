@@ -6,7 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { Check } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import { libraryControllerGetDrawingLibrary, libraryControllerGetDrawingChildren, libraryControllerGetBlockLibrary, libraryControllerGetBlockChildren } from '@/api-sdk';
+import { useLibraryFolders } from './hooks/useLibraryFolders';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface LibrarySelectFolderModalProps {
@@ -33,48 +33,7 @@ export const LibrarySelectFolderModal: React.FC<
   const [error, setError] = useState<string | null>(null);
   const [libraryName, setLibraryName] = useState<string>('');
 
-  const getChildrenApi =
-    libraryType === 'drawing'
-      ? libraryControllerGetDrawingChildren
-      : libraryControllerGetBlockChildren;
-
-  const getLibraryApi =
-    libraryType === 'drawing'
-      ? libraryControllerGetDrawingLibrary
-      : libraryControllerGetBlockLibrary;
-
-  const loadChildren = useCallback(
-    async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
-      try {
-        const response = await getChildrenApi({ path: { nodeId }, query: { page: 1, limit: 100 } });
-        let children: FileSystemNode[] = [];
-
-        if (response && (response as any).nodes) {
-          children = (response as any).nodes as unknown as FileSystemNode[];
-        }
-
-        const folders: FolderNode[] = children
-          .filter((child) => {
-            const isFolder = child.isFolder;
-            const isExcluded = child.id === excludeNodeId;
-            return isFolder && !isExcluded && child.id;
-          })
-          .map((folder) => ({
-            ...folder,
-            id: folder.id!,
-            expanded: false,
-            children: [],
-            loading: false,
-            hasChildren: true,
-          }));
-
-        return folders;
-      } catch {
-        return [];
-      }
-    },
-    [getChildrenApi]
-  );
+  const { getLibrary, getChildren } = useLibraryFolders(libraryType);
 
   const loadFolderTree = useCallback(async () => {
     if (!isOpen) return;
@@ -83,10 +42,10 @@ export const LibrarySelectFolderModal: React.FC<
     setError(null);
 
     try {
-      const library = await getLibraryApi() as any as { id: string; name: string };
+      const library = await getLibrary();
       setLibraryName(library.name);
 
-      const rootFolders = await loadChildren(library.id, currentNodeId);
+      const rootFolders = await getChildren(library.id, currentNodeId);
 
       setFolderTree([
         {
@@ -110,7 +69,7 @@ export const LibrarySelectFolderModal: React.FC<
     } finally {
       setLoading(false);
     }
-  }, [isOpen, getLibraryApi, getChildrenApi, loadChildren, currentNodeId]);
+  }, [isOpen, getLibrary, getChildren, currentNodeId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -128,7 +87,7 @@ export const LibrarySelectFolderModal: React.FC<
               return { ...node, expanded: false };
             } else {
               if (!node.children || node.children.length === 0) {
-                loadChildren(nodeId, currentNodeId).then((children) => {
+                getChildren(nodeId, currentNodeId).then((children) => {
                   setFolderTree((prev) =>
                     updateTreeAndSet(prev, nodeId, {
                       ...node,
@@ -171,7 +130,7 @@ export const LibrarySelectFolderModal: React.FC<
 
       setFolderTree((prev) => updateTree(prev));
     },
-    [loadChildren, currentNodeId]
+    [getChildren, currentNodeId]
   );
 
   const handleSelectFolder = useCallback((nodeId: string) => {

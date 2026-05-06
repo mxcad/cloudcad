@@ -191,14 +191,14 @@
 | T1.4 AuditLogPage | ✅ 完成 | refactor/circular-deps |
 | T2.1 Login | ✅ 完成 | refactor/circular-deps |
 | T2.2 Register | ✅ 完成 | refactor/circular-deps |
-| T2.3 ForgotPassword/ResetPassword | ⬜ 待做 | |
+| T2.3 ForgotPassword/ResetPassword | ✅ 完成 | refactor/circular-deps |
 | T2.4 EmailVerification/PhoneVerification | ⬜ 待做 | |
 | T3.1 ProfileInfoTab | ⬜ 待做 | |
 | T3.2 Profile | ⬜ 待做 | |
 | T3.3 SelectFolderModal | ⬜ 待做 | |
 | T3.4 SaveAsModal | ⬜ 待做 | |
 | T3.5 ProjectRolesModal | ⬜ 待做 | |
-| T3.6 LibrarySelectFolderModal | ⬜ 待做 | |
+| T3.6 LibrarySelectFolderModal | ✅ 完成 | refactor/circular-deps |
 | T3.7 SidebarContainer | ⬜ 待做 | |
 | T4.1 FileSystemManager | ⬜ 待做 | |
 | T4.2 LibraryManager | ⬜ 待做 | |
