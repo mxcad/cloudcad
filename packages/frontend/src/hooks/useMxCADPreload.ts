@@ -1,7 +1,7 @@
 /**
  * useMxCADPreload - CAD 引擎预加载 Hook
  *
- * 在非 CAD 页面挂载时，利用浏览器空闲时间预加载 CAD 引擎依赖，
+ * 在非 CAD 页面挂载时，等待页面加载完成后利用浏览器空闲时间预加载 CAD 引擎依赖，
  * 减少进入 /cad-editor 时的白屏时间。
  */
 import { useEffect, useRef } from 'react';
@@ -52,9 +52,42 @@ function isCADRoute(): boolean {
 }
 
 /**
+ * 调度预加载 — 等待页面 load 事件后再用 requestIdleCallback 空闲时执行
+ */
+function scheduleIdlePreload(): void {
+  const doSchedule = () => {
+    if ('requestIdleCallback' in window) {
+      (window as Window).requestIdleCallback(
+        () => {
+          if (!isPreloaded && !preloadPromise) {
+            preloadPromise = preloadCADDependencies();
+          }
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      // 降级方案：延迟 1 秒后开始
+      setTimeout(() => {
+        if (!isPreloaded && !preloadPromise) {
+          preloadPromise = preloadCADDependencies();
+        }
+      }, 1000);
+    }
+  };
+
+  // 如果页面已加载完成，立即调度
+  if (document.readyState === 'complete') {
+    doSchedule();
+  } else {
+    // 等待页面 load 事件后再调度空闲预加载
+    window.addEventListener('load', () => doSchedule(), { once: true });
+  }
+}
+
+/**
  * useMxCADPreload Hook
  *
- * 在非 CAD 页面使用此 hook，浏览器空闲时预加载 CAD 引擎。
+ * 在非 CAD 页面使用此 hook，页面加载完成后在浏览器空闲时预加载 CAD 引擎。
  * 当用户导航到 /cad-editor 时，如果预加载完成，可以立即显示编辑器。
  */
 export function useMxCADPreload() {
@@ -68,28 +101,6 @@ export function useMxCADPreload() {
     if (hasScheduledRef.current) return;
     hasScheduledRef.current = true;
 
-    // 使用 requestIdleCallback 在浏览器空闲时预加载
-    // 如果不支持，则延迟 2 秒后开始
-    const schedulePreload = () => {
-      if ('requestIdleCallback' in window) {
-        (window as Window).requestIdleCallback(
-          () => {
-            if (!isPreloaded && !preloadPromise) {
-              preloadPromise = preloadCADDependencies();
-            }
-          },
-          { timeout: 5000 } // 最多等待 5 秒后强制执行
-        );
-      } else {
-        // 降级方案：延迟 2 秒后开始
-        setTimeout(() => {
-          if (!isPreloaded && !preloadPromise) {
-            preloadPromise = preloadCADDependencies();
-          }
-        }, 2000);
-      }
-    };
-
-    schedulePreload();
+    scheduleIdlePreload();
   }, []);
 }
