@@ -124,14 +124,6 @@ const PermissionRoute: React.FC<{
   return <>{children}</>;
 });
 
-// 无权限页面提示组件
-const NoPermissionPage: React.FC = React.memo(() => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh]">
-    <div className="text-6xl mb-4">🔒</div>
-    <h2 className="text-xl font-semibold text-slate-700 mb-2">访问受限</h2>
-    <p className="text-slate-500">您没有权限访问此页面</p>
-  </div>
-));
 
 // ============================================================================
 // 应用内容组件
