@@ -185,12 +185,12 @@
 | Task | 状态 | 分支 |
 |---|---|---|
 | UserManagement (模板) | ✅ 完成 | refactor/circular-deps |
-| T1.1 RoleManagement | ⬜ 待做 | |
-| T1.2 Dashboard | ⬜ 待做 | |
-| T1.3 FontLibrary | ⬜ 待做 | |
-| T1.4 AuditLogPage | ⬜ 待做 | |
-| T2.1 Login | ⬜ 待做 | |
-| T2.2 Register | ⬜ 待做 | |
+| T1.1 RoleManagement | ✅ 完成 | refactor/circular-deps |
+| T1.2 Dashboard | ✅ 完成 | refactor/circular-deps |
+| T1.3 FontLibrary | ✅ 完成 | refactor/circular-deps |
+| T1.4 AuditLogPage | ✅ 完成 | refactor/circular-deps |
+| T2.1 Login | ✅ 完成 | refactor/circular-deps |
+| T2.2 Register | ✅ 完成 | refactor/circular-deps |
 | T2.3 ForgotPassword/ResetPassword | ⬜ 待做 | |
 | T2.4 EmailVerification/PhoneVerification | ⬜ 待做 | |
 | T3.1 ProfileInfoTab | ⬜ 待做 | |

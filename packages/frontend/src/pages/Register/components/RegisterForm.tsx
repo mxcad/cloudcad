@@ -1,10 +1,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRegisterForm } from '../hooks/useRegisterForm';
-import type { UseRegisterFormReturn } from '../hooks/useRegisterForm';
 import { usePhoneVerification } from '../hooks/usePhoneVerification';
 import { getPasswordStrength } from '../utils/passwordStrength';
-import { handleError } from '@/utils/errorHandler';
 
 import {
   User, Mail, Lock, Sparkles, ArrowRight, ArrowLeft,
@@ -43,18 +41,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     isWechatRegister,
   });
 
-  const phone = usePhoneVerification({ setFieldErrors: form.setFieldErrors });
+  const phone = usePhoneVerification({ setFieldErrors: form.setExternalErrors });
 
   // Pre-fill phone from login redirect
   useEffect(() => {
     if (prefillPhone) {
       phone.setPhoneForm({ phone: prefillPhone, code: prefillCode || '' });
     }
-    // Run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const passwordStrength = getPasswordStrength(form.formData.password);
+  const watchedPassword = form.watch('password');
+  const passwordStrength = getPasswordStrength(watchedPassword || '');
 
   const onNext = () => {
     form.handleNext(phone.phoneForm);
@@ -64,10 +62,23 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     form.handleSubmit(e, phone.phoneForm, wechatTempToken);
   };
 
+  // Helper: spread register props + chain onBlur for focusedField tracking
+  const fieldProps = (name: 'username' | 'nickname' | 'email' | 'password' | 'confirmPassword') => {
+    const registered = form.register(name);
+    return {
+      ...registered,
+      onFocus: () => form.setFocusedField(name),
+      onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+        registered.onBlur(e);
+        form.setFocusedField(null);
+      },
+    };
+  };
+
   return (
     <>
       {/* Step indicator */}
-      <div className="step-indicator">
+      <div className="step-indicator" data-testid="step-indicator">
         <div className={`step ${form.currentStep >= 1 ? 'active' : ''} ${form.currentStep > 1 ? 'completed' : ''}`}>
           <div className="step-number">
             {form.currentStep > 1 ? <CheckCircle size={16} /> : 1}
@@ -103,7 +114,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       <form className="register-form" onSubmit={onSubmit}>
         {/* Step 1: Basic info */}
         {form.currentStep === 1 && (
-          <div className="form-step animate-fade-in">
+          <div className="form-step animate-fade-in" data-testid="step-1">
             {/* Username */}
             <div className={`input-group ${form.focusedField === 'username' ? 'focused' : ''} ${form.fieldErrors.username ? 'error' : ''}`}>
               <label htmlFor="username" className="input-label">
@@ -112,12 +123,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <div className="input-wrapper">
                 <User size={18} className={`input-icon ${form.focusedField === 'username' ? 'active' : ''}`} />
                 <input
-                  id="username" name="username" type="text" required
+                  id="username" type="text" required
                   className="input-field" placeholder="请输入用户名"
-                  value={form.formData.username}
-                  onChange={form.handleChange}
-                  onFocus={() => form.setFocusedField('username')}
-                  onBlur={form.handleBlur}
+                  {...fieldProps('username')}
                 />
                 <div className="input-glow" />
               </div>
@@ -130,12 +138,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <div className="input-wrapper">
                 <Sparkles size={18} className={`input-icon ${form.focusedField === 'nickname' ? 'active' : ''}`} />
                 <input
-                  id="nickname" name="nickname" type="text"
+                  id="nickname" type="text"
                   className="input-field" placeholder="请输入昵称（可选）"
-                  value={form.formData.nickname || ''}
-                  onChange={form.handleChange}
-                  onFocus={() => form.setFocusedField('nickname')}
-                  onBlur={form.handleBlur}
+                  {...fieldProps('nickname')}
                 />
                 <div className="input-glow" />
               </div>
@@ -151,13 +156,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 <div className="input-wrapper">
                   <Mail size={18} className={`input-icon ${form.focusedField === 'email' ? 'active' : ''}`} />
                   <input
-                    id="email" name="email" type="email" autoComplete="email"
+                    id="email" type="email" autoComplete="email"
                     required={requireEmailVerification} className="input-field"
                     placeholder="请输入邮箱地址"
-                    value={form.formData.email}
-                    onChange={form.handleChange}
-                    onFocus={() => form.setFocusedField('email')}
-                    onBlur={form.handleBlur}
+                    {...fieldProps('email')}
                   />
                   <div className="input-glow" />
                 </div>
@@ -223,7 +225,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               </>
             )}
 
-            <button type="button" onClick={onNext} className="submit-button">
+            <button type="button" onClick={onNext} className="submit-button" data-testid="next-button">
               <span>下一步</span>
               <ArrowRight size={18} className="button-arrow" />
             </button>
@@ -232,7 +234,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
         {/* Step 2: Password */}
         {form.currentStep === 2 && (
-          <div className="form-step animate-fade-in">
+          <div className="form-step animate-fade-in" data-testid="step-2">
             {/* Password */}
             <div className={`input-group ${form.focusedField === 'password' ? 'focused' : ''} ${form.fieldErrors.password ? 'error' : ''}`}>
               <label htmlFor="password" className="input-label">
@@ -241,15 +243,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <div className="input-wrapper">
                 <Lock size={18} className={`input-icon ${form.focusedField === 'password' ? 'active' : ''}`} />
                 <input
-                  id="password" name="password"
+                  id="password"
                   type={form.showPassword ? 'text' : 'password'}
                   autoComplete="new-password" required
                   className="input-field has-toggle"
                   placeholder="至少8位，包含大小写字母、数字和特殊字符"
-                  value={form.formData.password}
-                  onChange={form.handleChange}
-                  onFocus={() => form.setFocusedField('password')}
-                  onBlur={form.handleBlur}
+                  {...fieldProps('password')}
                 />
                 <button
                   type="button" className="password-toggle"
@@ -260,7 +259,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 </button>
                 <div className="input-glow" />
               </div>
-              {form.formData.password && (
+              {watchedPassword && (
                 <div className="password-strength">
                   <div className="strength-bar">
                     <div
@@ -287,15 +286,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <div className="input-wrapper">
                 <CheckCircle size={18} className={`input-icon ${form.focusedField === 'confirmPassword' ? 'active' : ''}`} />
                 <input
-                  id="confirmPassword" name="confirmPassword"
+                  id="confirmPassword"
                   type={form.showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password" required
                   className="input-field has-toggle"
                   placeholder="请再次输入密码"
-                  value={form.confirmPassword}
-                  onChange={form.handleChange}
-                  onFocus={() => form.setFocusedField('confirmPassword')}
-                  onBlur={form.handleBlur}
+                  {...fieldProps('confirmPassword')}
                 />
                 <button
                   type="button" className="password-toggle"
@@ -310,7 +306,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
 
             <div className="button-group">
-              <button type="button" onClick={form.handleBack} className="back-button-step">
+              <button type="button" onClick={form.handleBack} className="back-button-step" data-testid="back-button">
                 <ArrowLeft size={18} />
                 <span>返回</span>
               </button>

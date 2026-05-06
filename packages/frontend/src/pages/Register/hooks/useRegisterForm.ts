@@ -1,10 +1,20 @@
 import { useState, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateField, validateRegisterForm } from '@/utils/validation';
-import { handleError } from '@/utils/errorHandler';
 import { authControllerCheckFieldUniqueness, authControllerRegisterByPhone } from '@/api-sdk';
 import type { RegisterDto } from '@/api-sdk';
+import {
+  step1Schema,
+  step2Schema,
+  registerFormSchema,
+  type RegisterFormValues,
+} from './registerFormSchema';
+
+// ──────────────────────────────────────────────
+// Options & return type
+// ──────────────────────────────────────────────
 
 interface UseRegisterFormOptions {
   mailEnabled: boolean;
@@ -14,39 +24,42 @@ interface UseRegisterFormOptions {
   isWechatRegister: boolean;
 }
 
-interface PhoneFormRef {
-  phone: string;
-  code: string;
-}
-
 export interface UseRegisterFormReturn {
-  formData: RegisterDto;
-  setFormData: React.Dispatch<React.SetStateAction<RegisterDto>>;
-  confirmPassword: string;
-  setConfirmPassword: React.Dispatch<React.SetStateAction<string>>;
-  loading: boolean;
-  error: string | null;
-  setError: React.Dispatch<React.SetStateAction<string | null>>;
-  fieldErrors: Record<string, string>;
-  setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  touched: Record<string, boolean>;
-  focusedField: string | null;
-  setFocusedField: React.Dispatch<React.SetStateAction<string | null>>;
+  register: ReturnType<typeof useForm<RegisterFormValues>>['register'];
+  handleSubmit: ReturnType<typeof useForm<RegisterFormValues>>['handleSubmit'];
+  formState: ReturnType<typeof useForm<RegisterFormValues>>['formState'];
+  watch: ReturnType<typeof useForm<RegisterFormValues>>['watch'];
+
+  // Multi-step UI state
   currentStep: number;
   showPassword: boolean;
   setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
   showConfirmPassword: boolean;
   setShowConfirmPassword: React.Dispatch<React.SetStateAction<boolean>>;
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
-  handleNext: (phoneForm: PhoneFormRef) => Promise<void>;
+  focusedField: string | null;
+  setFocusedField: React.Dispatch<React.SetStateAction<string | null>>;
+
+  // Async / submit state
+  loading: boolean;
+  error: string | null;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+
+  fieldErrors: Record<string, string>;
+  setExternalErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+
+  // Actions
+  handleNext: (phoneForm: { phone: string; code: string }) => Promise<void>;
   handleBack: () => void;
-  handleSubmit: (
+  handleFormSubmit: (
     e: React.FormEvent,
-    phoneForm: PhoneFormRef,
+    phoneForm: { phone: string; code: string },
     wechatTempToken: string | null,
   ) => Promise<void>;
 }
+
+// ──────────────────────────────────────────────
+// Hook
+// ──────────────────────────────────────────────
 
 export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFormReturn {
   const {
@@ -58,216 +71,163 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
   } = options;
 
   const navigate = useNavigate();
-  const location = useLocation();
   const { register: registerUser } = useAuth();
 
-  // 微信昵称解析
   const wechatNickname = useWechatNickname(isWechatRegister);
 
-  const [formData, setFormData] = useState<RegisterDto>({
-    email: '',
-    password: '',
-    username: '',
-    nickname: wechatNickname || '',
-  });
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  // ── Local UI state ─────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [externalErrors, setExternalErrors] = useState<Record<string, string>>({});
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-
-      if (name === 'confirmPassword') {
-        setConfirmPassword(value);
-        if (touched.confirmPassword) {
-          if (value && formData.password !== value) {
-            setFieldErrors((prev) => ({
-              ...prev,
-              confirmPassword: '两次输入的密码不一致',
-            }));
-          } else {
-            setFieldErrors((prev) => {
-              const newErrors = { ...prev };
-              delete newErrors.confirmPassword;
-              return newErrors;
-            });
-          }
-        }
-      } else if (name in formData || name === 'email' || name === 'nickname' || name === 'username' || name === 'password') {
-        setFormData((prev) => {
-          // Only update if the field exists in RegisterDto
-          const key = name as keyof RegisterDto;
-          if (key in prev) {
-            return { ...prev, [key]: value };
-          }
-          return prev;
-        });
-
-        if (touched[name]) {
-          const fieldError = validateField(
-            name as keyof typeof import('@/utils/validation').ValidationRules,
-            value,
-          );
-          if (fieldError) {
-            setFieldErrors((prev) => ({ ...prev, [name]: fieldError }));
-          } else {
-            setFieldErrors((prev) => {
-              const newErrors = { ...prev };
-              delete newErrors[name];
-              return newErrors;
-            });
-          }
-        }
-      }
-
-      if (error) setError(null);
+  // ── react-hook-form ────────────────────────────
+  const {
+    register,
+    handleSubmit: rhfHandleSubmit,
+    formState,
+    watch,
+    setError: setFieldError,
+    getValues,
+    trigger,
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: {
+      username: '',
+      nickname: wechatNickname || '',
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
-    [touched, formData.password, error],
-  );
+    mode: 'onTouched',
+  });
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    setFocusedField(null);
+  // ── Combined field errors (zod + external) ─────
+  const fieldErrors: Record<string, string> = { ...externalErrors };
+  if (formState.errors.username) fieldErrors.username = formState.errors.username.message;
+  if (formState.errors.nickname) fieldErrors.nickname = formState.errors.nickname.message;
+  if (formState.errors.email) fieldErrors.email = formState.errors.email.message;
+  if (formState.errors.password) fieldErrors.password = formState.errors.password.message;
+  if (formState.errors.confirmPassword) fieldErrors.confirmPassword = formState.errors.confirmPassword.message;
 
-    if (name === 'confirmPassword') {
-      if (value && formData.password !== value) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          confirmPassword: '两次输入的密码不一致',
-        }));
-      } else {
-        setFieldErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors.confirmPassword;
-          return newErrors;
-        });
-      }
-    } else if (name in formData || name === 'email' || name === 'nickname' || name === 'username' || name === 'password') {
-      const fieldError = validateField(
-        name as keyof typeof import('@/utils/validation').ValidationRules,
-        value,
-      );
-      if (fieldError) {
-        setFieldErrors((prev) => ({ ...prev, [name]: fieldError }));
-      } else {
-        setFieldErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors[name];
-          return newErrors;
-        });
+  // ── Step 1 validation (Zod + async uniqueness) ─
+  const validateStep1 = useCallback(async (): Promise<boolean> => {
+    const values = getValues();
+
+    const step1Result = step1Schema.safeParse({
+      username: values.username,
+      nickname: values.nickname || '',
+      email: values.email || '',
+    });
+
+    const errors: Record<string, string> = {};
+    if (!step1Result.success) {
+      for (const issue of step1Result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!errors[key]) errors[key] = issue.message;
       }
     }
-  };
 
-  const validateStep = async (step: number, phoneForm: PhoneFormRef): Promise<boolean> => {
-    if (step === 1) {
-      const errors: Record<string, string> = {};
-      if (!formData.username) errors.username = '请输入用户名';
+    if (mailEnabled && requireEmailVerification && !values.email) {
+      errors.email = '请输入邮箱';
+    }
 
-      if (mailEnabled && requireEmailVerification) {
-        if (!formData.email) {
-          errors.email = '请输入邮箱';
-        } else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-          errors.email = '请输入有效的邮箱地址';
-        }
+    if (values.username || values.email) {
+      try {
+        const result = await authControllerCheckFieldUniqueness();
+        const checkResult = result as {
+          usernameExists?: boolean;
+          emailExists?: boolean;
+          phoneExists?: boolean;
+        };
+        if (checkResult.usernameExists) errors.username = '用户名已被使用';
+        if (checkResult.emailExists) errors.email = '邮箱已被注册';
+      } catch (err) {
+        console.error('检查字段唯一性失败:', err);
       }
+    }
 
+    setExternalErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [getValues, mailEnabled, requireEmailVerification]);
+
+  // ── Step navigation ────────────────────────────
+  const handleNext = useCallback(
+    async (phoneForm: { phone: string; code: string }) => {
       if (smsEnabled && requirePhoneVerification) {
+        const phoneErrors: Record<string, string> = {};
         if (!phoneForm.phone) {
-          errors.phone = '请输入手机号';
-        } else if (phoneForm.phone && !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-          errors.phone = '请输入正确的手机号';
+          phoneErrors.phone = '请输入手机号';
+        } else if (!/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+          phoneErrors.phone = '请输入正确的手机号';
         }
         if (!phoneForm.code) {
-          errors.code = '请输入验证码';
+          phoneErrors.code = '请输入验证码';
         }
+        if (Object.keys(phoneErrors).length > 0) {
+          setExternalErrors((prev) => ({ ...prev, ...phoneErrors }));
+          return;
+        }
+        setExternalErrors((prev) => {
+          const next = { ...prev };
+          delete next.phone;
+          delete next.code;
+          return next;
+        });
       }
 
-      if (formData.username || formData.email || phoneForm.phone) {
-        try {
-          const checkResult = await authControllerCheckFieldUniqueness({
-            username: formData.username,
-            email: formData.email,
-            phone: phoneForm.phone,
-          });
-          const checkData = checkResult as { usernameExists?: boolean; emailExists?: boolean; phoneExists?: boolean };
-          if (checkData.usernameExists) {
-            errors.username = '用户名已被使用';
-          }
-          if (checkData.emailExists) {
-            errors.email = '邮箱已被注册';
-          }
-          if (checkData.phoneExists) {
-            errors.phone = '手机号已被注册';
-          }
-        } catch (checkErr) {
-          handleError(checkErr, '检查字段唯一性');
-        }
-      }
-
-      setFieldErrors((prev) => ({ ...prev, ...errors }));
-      return Object.keys(errors).length === 0;
-    }
-    return true;
-  };
-
-  const handleNext = useCallback(
-    async (phoneForm: PhoneFormRef) => {
-      const isValid = await validateStep(currentStep, phoneForm);
+      const isValid = await validateStep1();
       if (isValid) {
+        setExternalErrors({});
         setCurrentStep((prev) => prev + 1);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentStep, formData.username, formData.email, mailEnabled, requireEmailVerification, smsEnabled, requirePhoneVerification],
+    [validateStep1, smsEnabled, requirePhoneVerification],
   );
 
   const handleBack = useCallback(() => {
     setCurrentStep((prev) => prev - 1);
   }, []);
 
-  const handleSubmit = useCallback(
+  // ── Final submit ───────────────────────────────
+  const handleFormSubmit = useCallback(
     async (
       e: React.FormEvent,
-      phoneForm: PhoneFormRef,
+      phoneForm: { phone: string; code: string },
       wechatTempToken: string | null,
     ) => {
       e.preventDefault();
 
-      const dataToValidate = {
-        email: formData.email ?? '',
-        username: formData.username,
-        password: formData.password,
-        confirmPassword,
-        nickname: formData.nickname,
-      };
-      const validationError = validateRegisterForm(dataToValidate, {
-        validateEmail: mailEnabled && requireEmailVerification,
+      const values = getValues();
+
+      const step2Result = step2Schema.safeParse({
+        password: values.password,
+        confirmPassword: values.confirmPassword,
       });
 
-      if (validationError) {
-        setError(validationError);
+      if (!step2Result.success) {
+        const step2Errors: Record<string, string> = {};
+        for (const issue of step2Result.error.issues) {
+          const key = issue.path[0] as string;
+          if (!step2Errors[key]) step2Errors[key] = issue.message;
+        }
+        setExternalErrors(step2Errors);
+        const labels: Record<string, string> = {
+          password: '密码',
+          confirmPassword: '确认密码',
+        };
+        const errorFields = Object.keys(step2Errors).map((k) => labels[k] || k);
+        setError(`请修正以下字段：${errorFields.join('、')}`);
         return;
       }
 
-      const relevantFields = ['username', 'password', 'confirmPassword', 'nickname'];
-      if (mailEnabled && requireEmailVerification) relevantFields.push('email');
-      if (smsEnabled && requirePhoneVerification) {
-        relevantFields.push('phone');
-        if (requirePhoneVerification) relevantFields.push('code');
-      }
-      const actualErrors = Object.entries(fieldErrors).filter(
-        ([key, v]) => v && v.trim() && relevantFields.includes(key),
+      const allRelevantErrors = Object.entries(fieldErrors).filter(
+        ([, v]) => v && v.trim(),
       );
-      if (actualErrors.length > 0) {
+      if (allRelevantErrors.length > 0) {
         const labels: Record<string, string> = {
           username: '用户名',
           password: '密码',
@@ -277,7 +237,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
           phone: '手机号',
           code: '验证码',
         };
-        const errorFields = actualErrors.map(([key]) => labels[key] || key);
+        const errorFields = allRelevantErrors.map(([k]) => labels[k] || k);
         setError(`请修正以下字段：${errorFields.join('、')}`);
         return;
       }
@@ -286,37 +246,42 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
       setError(null);
 
       try {
-        if (phoneForm.phone && phoneForm.code && smsEnabled && requirePhoneVerification) {
+        if (
+          phoneForm.phone &&
+          phoneForm.code &&
+          smsEnabled &&
+          requirePhoneVerification
+        ) {
           if (mailEnabled && requireEmailVerification) {
             navigate('/verify-email', {
               state: {
-                email: formData.email,
+                email: values.email,
                 phone: phoneForm.phone,
                 code: phoneForm.code,
-                username: formData.username,
-                password: formData.password,
-                nickname: formData.nickname,
+                username: values.username,
+                password: values.password,
+                nickname: values.nickname,
                 message: '请先验证邮箱，完成注册',
               },
             });
             return;
           }
 
-          await authControllerRegisterByPhone({
-            ...formData,
-            phone: phoneForm.phone,
-            code: phoneForm.code,
-          });
+          await authControllerRegisterByPhone();
           if (isWechatRegister) {
             sessionStorage.removeItem('wechatTempToken');
           }
           navigate('/');
         } else {
           const needEmail = mailEnabled && requireEmailVerification;
-          const registerData = needEmail
-            ? { ...formData, wechatTempToken }
-            : { ...formData, email: undefined, wechatTempToken };
-          const result = await registerUser(registerData as RegisterDto);
+          const registerData: RegisterDto = {
+            username: values.username,
+            password: values.password,
+            nickname: values.nickname || undefined,
+            email: needEmail ? values.email : undefined,
+            wechatTempToken: wechatTempToken || undefined,
+          };
+          const result = await registerUser(registerData);
 
           if (isWechatRegister) {
             sessionStorage.removeItem('wechatTempToken');
@@ -345,42 +310,51 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
               : axiosError.response?.statusText) ||
             '注册失败，请稍后重试',
         );
-        handleError(err, '注册提交');
       } finally {
         setLoading(false);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [formData, confirmPassword, fieldErrors, mailEnabled, requireEmailVerification, smsEnabled, requirePhoneVerification, isWechatRegister, navigate, registerUser],
+    [
+      getValues,
+      fieldErrors,
+      mailEnabled,
+      requireEmailVerification,
+      smsEnabled,
+      requirePhoneVerification,
+      isWechatRegister,
+      navigate,
+      registerUser,
+    ],
   );
 
   return {
-    formData,
-    setFormData,
-    confirmPassword,
-    setConfirmPassword,
-    loading,
-    error,
-    setError,
-    fieldErrors,
-    setFieldErrors,
-    touched,
-    focusedField,
-    setFocusedField,
+    register,
+    handleSubmit: rhfHandleSubmit,
+    formState,
+    watch,
     currentStep,
     showPassword,
     setShowPassword,
     showConfirmPassword,
     setShowConfirmPassword,
-    handleChange,
-    handleBlur,
+    focusedField,
+    setFocusedField,
+    loading,
+    error,
+    setError,
+    fieldErrors,
+    setExternalErrors,
     handleNext,
     handleBack,
-    handleSubmit,
+    handleFormSubmit,
   };
 }
 
-/** Parse WeChat nickname from JWT temp token */
+// ──────────────────────────────────────────────
+// WeChat nickname helper
+// ──────────────────────────────────────────────
+
 function useWechatNickname(isWechatRegister: boolean): string {
   if (!isWechatRegister) return '';
 

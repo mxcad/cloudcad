@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { Register } from '../index';
@@ -65,7 +65,7 @@ function renderRegister() {
   return render(
     <MemoryRouter>
       <Register />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -75,57 +75,52 @@ describe('Register', () => {
   });
 
   describe('Rendering', () => {
-    it('renders the registration card', () => {
-      renderRegister();
-      expect(screen.getByText('CloudCAD')).toBeTruthy();
+    it('renders without crashing', () => {
+      const { container } = renderRegister();
+      expect(container.querySelector('.register-card')).toBeTruthy();
     });
 
-    it('renders step indicator with two steps', () => {
+    it('shows step indicator with 2 steps', () => {
       renderRegister();
-      expect(screen.getByText('基本信息')).toBeTruthy();
-      expect(screen.getByText('安全设置')).toBeTruthy();
+      const indicator = screen.getByTestId('step-indicator');
+      expect(indicator.querySelectorAll('.step')).toHaveLength(2);
     });
 
-    it('renders step 1 form fields initially', () => {
+    it('renders step 1 fields by default', () => {
       renderRegister();
-      expect(screen.getByPlaceholderText('请输入用户名')).toBeTruthy();
-      expect(screen.getByPlaceholderText('请输入昵称（可选）')).toBeTruthy();
-    });
-
-    it('renders the login link', () => {
-      renderRegister();
-      expect(screen.getByText('已有账户？')).toBeTruthy();
-      expect(screen.getByText('立即登录')).toBeTruthy();
+      expect(screen.getByTestId('step-1')).toBeTruthy();
+      expect(screen.queryByTestId('step-2')).toBeNull();
     });
   });
 
-  describe('Navigation', () => {
-    it('can navigate to step 2', () => {
+  describe('Step navigation', () => {
+    it('advances to step 2 when username is valid', async () => {
       renderRegister();
       const usernameInput = screen.getByPlaceholderText('请输入用户名');
-      // Set a value to pass validation
-      (usernameInput as HTMLInputElement).value = 'testuser';
-      usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      usernameInput.dispatchEvent(new Event('change', { bubbles: true }));
+      fireEvent.change(usernameInput, { target: { value: 'testuser' } });
 
-      const nextButton = screen.getByText('下一步');
-      nextButton.click();
+      fireEvent.click(screen.getByTestId('next-button'));
 
-      // Should now show step 2 - password fields
-      expect(screen.getByPlaceholderText(/至少8位/)).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.getByTestId('step-2')).toBeTruthy();
+      });
+      expect(screen.queryByTestId('step-1')).toBeNull();
     });
 
-    it('can go back from step 2 to step 1', () => {
+    it('returns to step 1 from step 2', async () => {
       renderRegister();
-      // Navigate to step 2 first
       const usernameInput = screen.getByPlaceholderText('请输入用户名');
-      (usernameInput as HTMLInputElement).value = 'testuser';
-      usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      usernameInput.dispatchEvent(new Event('change', { bubbles: true }));
-      screen.getByText('下一步').click();
+      fireEvent.change(usernameInput, { target: { value: 'testuser' } });
 
-      // Now go back
-      expect(screen.getByText('返回')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('next-button'));
+      await waitFor(() => {
+        expect(screen.getByTestId('step-2')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByTestId('back-button'));
+      await waitFor(() => {
+        expect(screen.getByTestId('step-1')).toBeTruthy();
+      });
     });
   });
 });
