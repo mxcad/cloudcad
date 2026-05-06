@@ -28,7 +28,6 @@ export { Button } from './Button';
 export { Modal } from './Modal';
 export { Toast } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';
-export { Pagination } from './Pagination';
 export { Tooltip, SimpleTooltip } from './Tooltip';
 export type { TooltipProps, TooltipPosition, TooltipTrigger, SimpleTooltipProps } from './Tooltip';
 
