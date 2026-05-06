@@ -1,6 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
 import { BadRequestException } from "@nestjs/common";
@@ -11,17 +18,12 @@ import { DatabaseService } from "../../database/database.service";
 import { VERSION_CONTROL_TOKEN } from "../../version-control/interfaces/version-control.interface";
 import { FileConversionService } from "../conversion/file-conversion.service";
 import { ExternalReferenceUpdateService } from "../external-ref/external-reference-update.service";
-import { FileUploadManagerFacadeService } from "../facade/file-upload-manager-facade.service";
+import { ExternalRefService } from "../external-ref/external-ref.service";
+import { FileConversionUploadService } from "../upload/file-conversion-upload.service";
 import { FileSystemNodeService } from "../node/filesystem-node.service";
 import { MxCadService } from "./mxcad.service";
 import * as os from 'os';
 import * as path from 'path';
-
-// ---------------------------------------------------------------------------
-// Module-level mocks — must use plain functions (not jest.fn()) because the
-// global jest config has resetMocks: true which clears all jest.fn()
-// implementations between tests.
-// ---------------------------------------------------------------------------
 
 jest.mock("fs", () => {
 	const actual = jest.requireActual("fs");
@@ -56,30 +58,19 @@ jest.mock("../infra/thumbnail-utils", () => ({
 describe("MxCadService", () => {
 	let service: MxCadService;
 
-	const mockFacade = {
-		checkChunkExist: jest.fn(),
-		checkFileExist: jest.fn(),
-		uploadChunk: jest.fn(),
-		uploadAndConvertFile: jest.fn(),
-		mergeChunksWithPermission: jest.fn(),
+	const mockFileConversionUploadService = {
 		uploadAndConvertFileWithPermission: jest.fn(),
-		handleExternalReferenceImage: jest.fn(),
-		handleExternalReferenceFile: jest.fn(),
 	};
 
 	const mockNodeService = {
 		findById: jest.fn(),
 		findByPath: jest.fn(),
 		inferContextForMxCadApp: jest.fn(),
-		getMimeType: jest.fn(),
 	};
 
 	const mockConversionService = {
 		convertFile: jest.fn(),
 		convertFileAsync: jest.fn(),
-		needsConversion: jest.fn(),
-		getConvertedExtension: jest.fn(),
-		convertBinToMxweb: jest.fn(),
 	};
 
 	const mockExtRefUpdateService = {
@@ -88,6 +79,11 @@ describe("MxCadService", () => {
 		getStats: jest.fn(),
 		updateInfo: jest.fn(),
 		updateAfterUpload: jest.fn(),
+	};
+
+	const mockExternalRefService = {
+		handleExternalReferenceImage: jest.fn(),
+		handleExternalReferenceFile: jest.fn(),
 	};
 
 	const mockStorageManager = {
@@ -125,13 +121,14 @@ describe("MxCadService", () => {
 			providers: [
 				MxCadService,
 				{ provide: ConfigService, useValue: mockConfigService },
-				{ provide: FileUploadManagerFacadeService, useValue: mockFacade },
+				{ provide: FileConversionUploadService, useValue: mockFileConversionUploadService },
 				{ provide: FileSystemNodeService, useValue: mockNodeService },
 				{ provide: FileConversionService, useValue: mockConversionService },
 				{
 					provide: ExternalReferenceUpdateService,
 					useValue: mockExtRefUpdateService,
 				},
+				{ provide: ExternalRefService, useValue: mockExternalRefService },
 				{ provide: StorageManager, useValue: mockStorageManager },
 				{ provide: VERSION_CONTROL_TOKEN, useValue: mockVersionControl },
 				{ provide: DatabaseService, useValue: mockPrisma },
@@ -151,161 +148,6 @@ describe("MxCadService", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
-	});
-
-	// ==================== checkChunkExist ====================
-	describe("checkChunkExist", () => {
-		it("delegates to facade with validated context", async () => {
-			mockFacade.checkChunkExist.mockResolvedValue({
-				ret: "chunkAlreadyExist",
-			});
-			const r = await service.checkChunkExist(0, "abc", 100, 2, "f.dwg", {
-				userId: "u1",
-				nodeId: "n1",
-				userRole: "USER",
-			} as any);
-			expect(r.ret).toBe("chunkAlreadyExist");
-			expect(mockFacade.checkChunkExist).toHaveBeenCalledWith(
-				expect.objectContaining({ chunk: 0, hash: "abc", name: "f.dwg" }),
-			);
-		});
-
-		it("creates mock context in test environment when context is null", async () => {
-			mockFacade.checkChunkExist.mockResolvedValue({ ret: "chunkNoExist" });
-			const r = await service.checkChunkExist(0, "abc", 100, 2, "f.dwg");
-			expect(r.ret).toBe("chunkNoExist");
-		});
-	});
-
-	// ==================== checkFileExist ====================
-	describe("checkFileExist", () => {
-		it("delegates to facade", async () => {
-			mockFacade.checkFileExist.mockResolvedValue({ ret: "fileAlreadyExist" });
-			const r = await service.checkFileExist("f.dwg", "abc", {
-				userId: "u1",
-				nodeId: "n1",
-			} as any);
-			expect(r.ret).toBe("fileAlreadyExist");
-		});
-	});
-
-	// ==================== checkDuplicateFile ====================
-	describe("checkDuplicateFile", () => {
-		it("returns isDuplicate=true when existing file found", async () => {
-			mockPrisma.fileSystemNode.findFirst.mockResolvedValue({
-				id: "existing-1",
-				name: "f.dwg",
-			});
-			const r = await service.checkDuplicateFile("f.dwg", "abc", "folder-1");
-			expect(r.isDuplicate).toBe(true);
-			expect(r.existingNodeId).toBe("existing-1");
-		});
-
-		it("returns isDuplicate=false when no duplicate", async () => {
-			mockPrisma.fileSystemNode.findFirst.mockResolvedValue(null);
-			const r = await service.checkDuplicateFile("f.dwg", "abc", "folder-1");
-			expect(r.isDuplicate).toBe(false);
-		});
-
-		it("excludes currentFileId when provided", async () => {
-			mockPrisma.fileSystemNode.findFirst.mockResolvedValue(null);
-			await service.checkDuplicateFile("f.dwg", "abc", "folder-1", "current-1");
-			expect(mockPrisma.fileSystemNode.findFirst).toHaveBeenCalledWith(
-				expect.objectContaining({
-					where: expect.objectContaining({
-						id: { not: "current-1" },
-					}),
-				}),
-			);
-		});
-
-		it("re-throws prisma errors", async () => {
-			mockPrisma.fileSystemNode.findFirst.mockRejectedValue(
-				new Error("DB error"),
-			);
-			await expect(
-				service.checkDuplicateFile("f.dwg", "abc", "f-1"),
-			).rejects.toThrow("DB error");
-		});
-	});
-
-	// ==================== uploadChunk / uploadChunkWithPermission ====================
-	describe("uploadChunk", () => {
-		it("delegates uploadChunk to facade", async () => {
-			mockFacade.uploadChunk.mockResolvedValue({ ret: "ok" });
-			const r = await service.uploadChunk("abc", "f.dwg", 100, 0, 2, {
-				userId: "u1",
-				nodeId: "n1",
-			} as any);
-			expect(r.ret).toBe("ok");
-		});
-
-		it("delegates uploadChunkWithPermission", async () => {
-			mockFacade.uploadChunk.mockResolvedValue({ ret: "ok", nodeId: "n1" });
-			const r = await service.uploadChunkWithPermission(
-				"abc",
-				"f.dwg",
-				100,
-				0,
-				2,
-				{ userId: "u1", nodeId: "n1" } as any,
-			);
-			expect(r.ret).toBe("ok");
-		});
-	});
-
-	// ==================== uploadAndConvertFile ====================
-	describe("uploadAndConvertFile", () => {
-		it("creates default context and delegates", async () => {
-			mockFacade.uploadAndConvertFile.mockResolvedValue({ ret: "ok" });
-			const r = await service.uploadAndConvertFile(
-				path.join(os.tmpdir(), "f.dwg"),
-				"abc",
-				"f.dwg",
-				100,
-			);
-			expect(r.ret).toBe("ok");
-		});
-	});
-
-	// ==================== uploadAndConvertFileWithPermission ====================
-	describe("uploadAndConvertFileWithPermission", () => {
-		it("delegates to facade", async () => {
-			mockFacade.uploadAndConvertFileWithPermission.mockResolvedValue({
-				ret: "ok",
-				nodeId: "n1",
-			});
-			const r = await service.uploadAndConvertFileWithPermission(
-				path.join(os.tmpdir(), "f.dwg"),
-				"abc",
-				"f.dwg",
-				100,
-				{ userId: "u1", nodeId: "n1" } as any,
-			);
-			expect(r.ret).toBe("ok");
-		});
-	});
-
-	// ==================== mergeChunksWithPermission ====================
-	describe("mergeChunksWithPermission", () => {
-		it("delegates to facade with srcDwgNodeId", async () => {
-			mockFacade.mergeChunksWithPermission.mockResolvedValue({
-				ret: "ok",
-				nodeId: "n1",
-			});
-			const r = await service.mergeChunksWithPermission(
-				"abc",
-				"f.dwg",
-				100,
-				2,
-				{ userId: "u1", nodeId: "n1" } as any,
-				"src-1",
-			);
-			expect(r.ret).toBe("ok");
-			expect(mockFacade.mergeChunksWithPermission).toHaveBeenCalledWith(
-				expect.objectContaining({ srcDwgNodeId: "src-1" }),
-			);
-		});
 	});
 
 	// ==================== convertServerFile ====================
@@ -420,6 +262,24 @@ describe("MxCadService", () => {
 		});
 	});
 
+	// ==================== uploadAndConvertFileWithPermission ====================
+	describe("uploadAndConvertFileWithPermission", () => {
+		it("delegates to upload service", async () => {
+			mockFileConversionUploadService.uploadAndConvertFileWithPermission.mockResolvedValue({
+				ret: "ok",
+				nodeId: "n1",
+			});
+			const r = await service.uploadAndConvertFileWithPermission(
+				path.join(os.tmpdir(), "f.dwg"),
+				"abc",
+				"f.dwg",
+				100,
+				{ userId: "u1", nodeId: "n1" } as any,
+			);
+			expect(r.ret).toBe("ok");
+		});
+	});
+
 	// ==================== getFileSystemNodeByPath / getFileSystemNodeByNodeId ====================
 	describe("node queries", () => {
 		it("getFileSystemNodeByPath delegates", async () => {
@@ -482,7 +342,7 @@ describe("MxCadService", () => {
 				path.join(os.tmpdir(), "f.png"),
 				{} as any,
 			);
-			expect(mockFacade.handleExternalReferenceImage).toHaveBeenCalled();
+			expect(mockExternalRefService.handleExternalReferenceImage).toHaveBeenCalled();
 		});
 
 		it("handleExternalReferenceFile delegates", async () => {
@@ -492,7 +352,7 @@ describe("MxCadService", () => {
 				"ref.dwg",
 				path.join(os.tmpdir(), "f.dwg"),
 			);
-			expect(mockFacade.handleExternalReferenceFile).toHaveBeenCalled();
+			expect(mockExternalRefService.handleExternalReferenceFile).toHaveBeenCalled();
 		});
 	});
 
@@ -608,7 +468,6 @@ describe("MxCadService", () => {
 				path: "2026/n1/f.mxweb",
 				fileHash: "abc",
 			});
-			// Override the fs mock to throw on copyFileSync for this test
 			const fs = require("fs");
 			const origCopy = fs.copyFileSync;
 			fs.copyFileSync = () => {
@@ -763,7 +622,7 @@ describe("MxCadService", () => {
 				message: "SVN error",
 			});
 			const r = await service.saveMxwebFile("n1", mockFile, "u1", "User");
-			expect(r.success).toBe(true); // SVN failure should not fail the save
+			expect(r.success).toBe(true);
 		});
 	});
 
@@ -787,7 +646,6 @@ describe("MxCadService", () => {
 				error: "convert error",
 			});
 			await service.generateBinFiles("/abs/path/f.mxweb", "test.dwg");
-			// Should not throw
 		});
 
 		it("handles exceptions without throwing", async () => {
@@ -795,47 +653,6 @@ describe("MxCadService", () => {
 				new Error("Unexpected"),
 			);
 			await service.generateBinFiles("/abs/path/f.mxweb", "test.dwg");
-			// Should not throw — bin failure doesn't break save flow
-		});
-	});
-
-	// ==================== log methods ====================
-	describe("log methods", () => {
-		it("logError/logInfo/logWarn do not throw", () => {
-			expect(() => {
-				service.logError("err msg", new Error("test"));
-				service.logInfo("info");
-				service.logWarn("warn");
-			}).not.toThrow();
-		});
-	});
-
-	// ==================== validateContext (private, tested indirectly) ====================
-	describe("context validation (via uploadChunk)", () => {
-		it("throws when context userId is missing", async () => {
-			await expect(
-				service.uploadChunk("abc", "f.dwg", 100, 0, 2, { nodeId: "n1" } as any),
-			).rejects.toThrow(BadRequestException);
-		});
-
-		it("throws when context nodeId is missing", async () => {
-			await expect(
-				service.uploadChunk("abc", "f.dwg", 100, 0, 2, { userId: "u1" } as any),
-			).rejects.toThrow(BadRequestException);
-		});
-
-		it("fills userRole from role when missing", async () => {
-			mockFacade.uploadChunk.mockResolvedValue({ ret: "ok" });
-			const r = await service.uploadChunk("abc", "f.dwg", 100, 0, 2, {
-				userId: "u1",
-				nodeId: "n1",
-			} as any);
-			expect(r.ret).toBe("ok");
-			expect(mockFacade.uploadChunk).toHaveBeenCalledWith(
-				expect.objectContaining({
-					context: expect.objectContaining({ userRole: "USER" }),
-				}),
-			);
 		});
 	});
 });
