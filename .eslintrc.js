@@ -66,7 +66,7 @@ module.exports = {
         ecmaVersion: 2022,
         sourceType: 'module',
       },
-      plugins: ['@typescript-eslint', 'unused-imports', 'custom-rules'],
+      plugins: ['@typescript-eslint', 'unused-imports'], // 'custom-rules' temporarily disabled
       extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
@@ -82,7 +82,7 @@ module.exports = {
         'no-console': 'off',
         'unused-imports/no-unused-imports': 'error',
         'unused-imports/no-unused-vars': 'off',
-        'custom-rules/no-prisma-enum-in-api-property': 'error',
+        // 'custom-rules/no-prisma-enum-in-api-property': 'error', // disabled until plugin is installed
       },
     },
   ],
