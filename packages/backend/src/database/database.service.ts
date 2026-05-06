@@ -27,6 +27,7 @@ export class DatabaseService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(DatabaseService.name);
+  private readonly slowQueryThresholdMs: number;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
     // 优先使用 DATABASE_URL 环境变量
@@ -48,33 +49,53 @@ export class DatabaseService
     });
 
     const isDev = process.env.NODE_ENV !== 'production';
+    // 慢查询阈值（毫秒），可通过 LOG_SLOW_QUERY_THRESHOLD_MS 环境变量覆盖
+    this.slowQueryThresholdMs = parseInt(
+      process.env.LOG_SLOW_QUERY_THRESHOLD_MS || '500',
+      10,
+    ) || 500;
 
     super({
       log: isDev
         ? [
-            { emit: 'stdout', level: 'query' },
+            // 开发环境：query 事件用于慢查询检测，不通过 stdout 打印全量 SQL
+            { emit: 'event', level: 'query' },
             { emit: 'stdout', level: 'error' },
-            { emit: 'stdout', level: 'info' },
             { emit: 'stdout', level: 'warn' },
+            { emit: 'stdout', level: 'info' },
           ]
         : [
+            // 生产环境：只保留 error + warn
             { emit: 'stdout', level: 'error' },
             { emit: 'stdout', level: 'warn' },
           ],
       adapter,
     });
 
-    this.logger.log(
-      `数据库连接URL: ${databaseUrl.replace(/:[^:@]*@/, ':***@')}`
-    );
+    // 慢查询监听：仅开发环境，超过阈值的 SQL 才打印
+    if (isDev) {
+      this.$on('query', (event) => {
+        if (event.duration >= this.slowQueryThresholdMs) {
+          this.logger.warn(
+            `🐢 慢查询 (${event.duration}ms): ${event.query?.substring(0, 200) || 'N/A'}`,
+          );
+        }
+      });
+    }
+
+    if (isDev) {
+      this.logger.log(
+        `数据库连接URL: ${databaseUrl.replace(/:[^:@]*@/, ':***@')}`
+      );
+    }
   }
 
   async onModuleInit() {
     const startTime = Date.now();
-    this.logger.log('正在连接数据库...');
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (isDev) this.logger.log('正在连接数据库...');
 
     try {
-      // 使用 Promise.race 实现连接超时
       const connectPromise = this.$connect();
       const timeout = this.configService.get('database', {
         infer: true,
@@ -89,7 +110,11 @@ export class DatabaseService
       await Promise.race([connectPromise, timeoutPromise]);
 
       const duration = Date.now() - startTime;
-      this.logger.log(`✅ 数据库连接成功，耗时 ${duration}ms`);
+      if (isDev) {
+        this.logger.log(`✅ 数据库连接成功，耗时 ${duration}ms`);
+      } else {
+        this.logger.log(`数据库连接成功 (${duration}ms)`);
+      }
     } catch (error) {
       this.logger.error('数据库连接失败:', error);
       throw error;
@@ -98,7 +123,9 @@ export class DatabaseService
 
   async onModuleDestroy() {
     await this.$disconnect();
-    this.logger.log('数据库连接已断开');
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log('数据库连接已断开');
+    }
   }
 
   async healthCheck() {

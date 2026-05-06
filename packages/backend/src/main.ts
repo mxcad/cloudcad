@@ -35,7 +35,6 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { spawn } from 'child_process';
-import { TusAuthMiddleware } from './mxcad/tus/tus-auth.middleware';
 
 const logger = new Logger('Bootstrap');
 
@@ -241,15 +240,17 @@ async function bootstrap() {
   // 启动应用
   await app.listen(config.port, '0.0.0.0');
   const totalDuration = Date.now() - bootstrapStartTime;
-  logger.log(`应用已启动，监听端口 ${config.port}`);
-  logger.log(`🎉 后端服务启动完成，总耗时 ${totalDuration}ms`);
-  logger.log('📊 启动阶段性能报告:');
-  logger.log('  - 环境变量加载: 已完成');
-  logger.log('  - Redis 连接: 已完成 (异步)');
-  logger.log('  - 数据库连接: 已完成 (带超时控制)');
-  logger.log('  - 系统初始化: 已完成 (并行优化)');
-  logger.log('  - SVN 初始化: 异步后台执行中');
-  logger.log('  - 缓存预热: 已禁用 (改为懒加载)');
+  logger.log(`应用已启动，监听端口 ${config.port}，总耗时 ${totalDuration}ms`);
+  // 生产环境不打印详细启动报告，开发环境保留
+  if (config.nodeEnv !== 'production') {
+    logger.log('📊 启动阶段性能报告:');
+    logger.log('  - 环境变量加载: 已完成');
+    logger.log('  - Redis 连接: 已完成 (异步)');
+    logger.log('  - 数据库连接: 已完成 (带超时控制)');
+    logger.log('  - 系统初始化: 已完成 (并行优化)');
+    logger.log('  - SVN 初始化: 异步后台执行中');
+    logger.log('  - 缓存预热: 已禁用 (改为懒加载)');
+  }
 }
 
 /**
@@ -258,6 +259,9 @@ async function bootstrap() {
  * - 非阻塞，出错只打日志不影响启动
  */
 function generateSwaggerJson(app: INestApplication, logger: Logger) {
+  // 仅开发环境执行，生产环境跳过
+  if (process.env.NODE_ENV !== 'development') return;
+
   try {
     const config = new DocumentBuilder()
       .setTitle('CloudCAD API')
@@ -273,13 +277,13 @@ function generateSwaggerJson(app: INestApplication, logger: Logger) {
       },
     });
 
-    const outputPath = join(__dirname, '..', '..', '..', 'frontend', 'swagger_json.json');
+    const outputPath = join(__dirname, '..', '..', 'frontend', 'swagger_json.json');
     writeFileSync(outputPath, JSON.stringify(document, null, 2), 'utf8');
     logger.log(`Swagger JSON 已更新: ${outputPath}`);
 
     // 异步触发前端 SDK 重新生成（非阻塞）
-    const sdkBin = join(__dirname, '..', '..', '..', 'frontend', 'node_modules', '@hey-api', 'openapi-ts', 'bin', 'run.js');
-    const frontendDir = join(__dirname, '..', '..', '..', 'frontend');
+    const sdkBin = join(__dirname, '..', '..', 'frontend', 'node_modules', '@hey-api', 'openapi-ts', 'bin', 'run.js');
+    const frontendDir = join(__dirname, '..', '..', 'frontend');
     if (existsSync(sdkBin)) {
       const child = spawn(process.execPath, [sdkBin], { cwd: frontendDir, stdio: 'ignore', detached: true, shell: true });
       child.unref();

@@ -27,6 +27,7 @@
     "**/*.spec.ts",
     "**/*.e2e-spec.ts",
     "test/**/*",
+    "scripts/**/*",
     "jest.config.ts",
     "prisma.config.ts",
     "prisma/seed.ts"

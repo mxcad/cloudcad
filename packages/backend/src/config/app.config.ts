@@ -231,6 +231,8 @@ export interface SvnConfig {
 export interface LogConfig {
   /** 日志级别列表 */
   levels: ('error' | 'warn' | 'log' | 'debug' | 'verbose')[];
+  /** 慢查询阈值（毫秒），超过此阈值的 SQL 会打印日志 */
+  slowQueryThresholdMs: number;
 }
 
 /**

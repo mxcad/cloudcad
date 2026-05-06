@@ -400,6 +400,11 @@ export default (): AppConfig => {
 			process.env.LOG_LEVELS,
 			process.env.NODE_ENV || "development",
 		),
+		// 慢查询阈值（毫秒），超过此阈值的 SQL 会打印日志（仅开发环境生效）
+		slowQueryThresholdMs: parseInt(
+			process.env.LOG_SLOW_QUERY_THRESHOLD_MS || "500",
+			10,
+		) || 500,
 	},
 
 	// 短信配置
@@ -481,10 +486,10 @@ function parseLogLevels(
 			.split(",")
 			.map((l) => l.trim() as "error" | "warn" | "log" | "debug" | "verbose");
 	}
-	// 开发环境默认启用全部级别
+	// 开发环境：error + warn + log（不打印 debug/verbose，减少噪音）
 	if (nodeEnv === "development") {
-		return ["error", "warn", "log", "debug", "verbose"];
+		return ["error", "warn", "log"];
 	}
-	// 生产环境默认只启用基础级别
-	return ["error", "warn", "log"];
+	// 生产环境：只保留 error + warn
+	return ["error", "warn"];
 }
