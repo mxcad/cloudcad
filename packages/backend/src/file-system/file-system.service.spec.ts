@@ -306,13 +306,13 @@ describe('FileSystemService', () => {
     });
     it('batchAddProjectMembers delegates', async () => {
       const members = [{ userId: 'u2', projectRoleId: 'role1' }];
-      await service.batchAddProjectMembers('p1', members);
-      expect(mockProjectMember.batchAddProjectMembers).toHaveBeenCalledWith('p1', members);
+      await service.batchAddProjectMembers('p1', members, 'admin');
+      expect(mockProjectMember.batchAddProjectMembers).toHaveBeenCalledWith('p1', members, 'admin');
     });
     it('batchUpdateProjectMembers delegates', async () => {
       const members = [{ userId: 'u2', projectRoleId: 'role2' }];
-      await service.batchUpdateProjectMembers('p1', members);
-      expect(mockProjectMember.batchUpdateProjectMembers).toHaveBeenCalledWith('p1', members);
+      await service.batchUpdateProjectMembers('p1', members, 'admin');
+      expect(mockProjectMember.batchUpdateProjectMembers).toHaveBeenCalledWith('p1', members, 'admin');
     });
   });
 

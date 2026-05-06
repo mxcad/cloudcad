@@ -478,6 +478,17 @@ export class ProjectMemberService {
         throw new NotFoundException('项目所有者角色不存在');
       }
 
+      const adminRole = await this.prisma.projectRole.findFirst({
+        where: {
+          name: 'PROJECT_ADMIN',
+          isSystem: true,
+        },
+      });
+
+      if (!adminRole) {
+        throw new NotFoundException('PROJECT_ADMIN 角色不存在，请检查系统初始化');
+      }
+
       await this.prisma.$transaction(async (tx) => {
         await tx.projectMember.update({
           where: {
@@ -489,24 +500,15 @@ export class ProjectMemberService {
           data: { projectRoleId: ownerRole.id },
         });
 
-        const adminRole = await tx.projectRole.findFirst({
+        await tx.projectMember.update({
           where: {
-            name: 'PROJECT_ADMIN',
-            isSystem: true,
-          },
-        });
-
-        if (adminRole) {
-          await tx.projectMember.update({
-            where: {
-              projectId_userId: {
-                projectId,
-                userId: currentOwnerId,
-              },
+            projectId_userId: {
+              projectId,
+              userId: currentOwnerId,
             },
-            data: { projectRoleId: adminRole.id },
-          });
-        }
+          },
+          data: { projectRoleId: adminRole.id },
+        });
 
         await tx.fileSystemNode.update({
           where: { id: projectId },
@@ -555,7 +557,8 @@ export class ProjectMemberService {
 
   async batchAddProjectMembers(
     projectId: string,
-    members: Array<{ userId: string; projectRoleId: string }>
+    members: Array<{ userId: string; projectRoleId: string }>,
+    operatorId: string
   ): Promise<{
     message: string;
     addedCount: number;
@@ -586,7 +589,7 @@ export class ProjectMemberService {
             projectId,
             member.userId,
             member.projectRoleId,
-            'system'
+            operatorId
           );
           addedCount++;
         } catch (error) {
@@ -618,7 +621,8 @@ export class ProjectMemberService {
 
   async batchUpdateProjectMembers(
     projectId: string,
-    updates: Array<{ userId: string; projectRoleId: string }>
+    updates: Array<{ userId: string; projectRoleId: string }>,
+    operatorId: string
   ): Promise<{
     message: string;
     updatedCount: number;
@@ -649,7 +653,7 @@ export class ProjectMemberService {
             projectId,
             update.userId,
             update.projectRoleId,
-            'system'
+            operatorId
           );
           updatedCount++;
         } catch (error) {

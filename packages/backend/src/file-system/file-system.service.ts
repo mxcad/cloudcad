@@ -448,9 +448,10 @@ export class FileSystemService {
    */
   async batchAddProjectMembers(
     projectId: string,
-    members: Array<{ userId: string; projectRoleId: string }>
+    members: Array<{ userId: string; projectRoleId: string }>,
+    operatorId: string
   ) {
-    return this.projectMemberService.batchAddProjectMembers(projectId, members);
+    return this.projectMemberService.batchAddProjectMembers(projectId, members, operatorId);
   }
 
   /**
@@ -458,11 +459,13 @@ export class FileSystemService {
    */
   async batchUpdateProjectMembers(
     projectId: string,
-    members: Array<{ userId: string; projectRoleId: string }>
+    members: Array<{ userId: string; projectRoleId: string }>,
+    operatorId: string
   ) {
     return this.projectMemberService.batchUpdateProjectMembers(
       projectId,
-      members
+      members,
+      operatorId
     );
   }
 

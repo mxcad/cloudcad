@@ -11,7 +11,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, Length } from 'class-validator';
+import { IsString, IsOptional, Length, IsIn } from 'class-validator';
+import { ProjectStatus } from '@prisma/client';
 
 export class UpdateNodeDto {
   @ApiProperty({ description: '节点名称', required: false })
@@ -26,8 +27,9 @@ export class UpdateNodeDto {
   @Length(0, 500)
   description?: string;
 
-  @ApiProperty({ description: '状态', required: false })
+  @ApiProperty({ description: '状态', required: false, enum: ProjectStatus })
   @IsOptional()
   @IsString()
+  @IsIn(Object.values(ProjectStatus))
   status?: string;
 }
