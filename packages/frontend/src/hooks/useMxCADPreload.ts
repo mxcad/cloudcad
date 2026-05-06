@@ -44,6 +44,14 @@ export function isMxCADPreloaded(): boolean {
 }
 
 /**
+ * 判断当前路由是否为 CAD 编辑器路由
+ */
+function isCADRoute(): boolean {
+  const { pathname } = window.location;
+  return pathname === '/' || pathname === '/cad-editor' || pathname.startsWith('/cad-editor/');
+}
+
+/**
  * useMxCADPreload Hook
  *
  * 在非 CAD 页面使用此 hook，浏览器空闲时预加载 CAD 引擎。
@@ -53,8 +61,8 @@ export function useMxCADPreload() {
   const hasScheduledRef = useRef(false);
 
   useEffect(() => {
-    // 如果已经预加载完成，跳过
-    if (isPreloaded) return;
+    // CAD 编辑器自身会加载依赖，无需预加载
+    if (isPreloaded || isCADRoute()) return;
 
     // 防止重复调度
     if (hasScheduledRef.current) return;

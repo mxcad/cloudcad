@@ -80,9 +80,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
     const { isAuthenticated, loading } = useAuth();
     const location = useLocation();
 
-    // 在非 CAD 页面预加载 CAD 引擎
-    useMxCADPreload();
-
     // Wait for token validation before deciding — prevents flash-redirect on reload
     if (loading) {
       return (
@@ -162,6 +159,9 @@ function CADEditorRouteGuard() {
 }
 
 function AppContent() {
+  // 所有页面（CAD 编辑器自身除外）预加载 CAD 引擎
+  useMxCADPreload();
+
   return (
     <div className="layout-container">
       {/* 全局加载遮罩 - 覆盖所有内容 */}
