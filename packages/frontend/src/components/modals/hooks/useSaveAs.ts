@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { fileSystemControllerGetProjects, mxCadControllerSaveMxwebAs } from '@/api-sdk';
+import { fileSystemControllerGetProjects, saveControllerSaveMxwebAs } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 
 interface ProjectWithPermission {
@@ -108,7 +108,7 @@ export const useSaveAs = ({
         formData.append('libraryType', libraryType || 'drawing');
         formData.append('fileName', fileName.trim());
 
-        const result = await mxCadControllerSaveMxwebAs({ body: formData as any });
+        const result = await saveControllerSaveMxwebAs({ body: formData as any });
         const saveResult = result.data as SaveAsResult;
 
         return saveResult;
@@ -126,7 +126,7 @@ export const useSaveAs = ({
       formData.append('commitMessage', `Save as: ${fileName}.${format}`);
       formData.append('fileName', fileName.trim());
 
-      const result = await mxCadControllerSaveMxwebAs({ body: formData as any });
+      const result = await saveControllerSaveMxwebAs({ body: formData as any });
       const saveResult = result.data as SaveAsResult;
 
       return saveResult;

@@ -28,14 +28,7 @@ vi.mock('@/api-sdk', () => ({
   mxCadControllerUploadExtReferenceImage: vi.fn(),
   publicFileControllerGetPreloadingData: vi.fn(),
   publicFileControllerCheckExtReference: vi.fn(),
-}));
-
-vi.mock('../services/publicFileApi', () => ({
-  publicFileApi: {
-    getPreloadingData: vi.fn(),
-    checkExtReference: vi.fn(),
-    uploadExtReference: vi.fn(),
-  },
+  publicFileControllerUploadExtReference: vi.fn(),
 }));
 
 describe('useExternalReferenceUpload Integration Tests', () => {
@@ -92,11 +85,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       const { result } = renderHook(() =>
@@ -127,7 +120,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       const { result } = renderHook(() =>
@@ -179,15 +172,15 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       // 模拟部分文件已存在
       vi.mocked(sdk.mxCadControllerCheckExternalReference)
-        .mockResolvedValueOnce({ exists: true } as any) // ref1.dwg 已存在
-        .mockResolvedValueOnce({ exists: false } as any) // ref2.dwg 不存在
-        .mockResolvedValueOnce({ exists: true } as any) // image1.png 已存在
-        .mockResolvedValueOnce({ exists: false } as any); // image2.png 不存在
+        .mockResolvedValueOnce({ data: { exists: true } } as any) // ref1.dwg 已存在
+        .mockResolvedValueOnce({ data: { exists: false } } as any) // ref2.dwg 不存在
+        .mockResolvedValueOnce({ data: { exists: true } } as any) // image1.png 已存在
+        .mockResolvedValueOnce({ data: { exists: false } } as any); // image2.png 不存在
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({
@@ -223,11 +216,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       const { result } = renderHook(() =>
@@ -260,10 +253,12 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       const sdk = await import('@/api-sdk');
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue({
-        tz: false,
-        src_file_md5: testFileHash,
-        images: [],
-        externalReference: [],
+        data: {
+          tz: false,
+          src_file_md5: testFileHash,
+          images: [],
+          externalReference: [],
+        },
       } as any);
 
       const { result } = renderHook(() =>
@@ -293,11 +288,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
@@ -341,11 +336,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       // 没有选择文件时，上传不会执行（不会调用API）
@@ -386,11 +381,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       const { result } = renderHook(() =>
@@ -443,11 +438,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
@@ -491,11 +486,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
@@ -558,11 +553,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       vi.mocked(sdk.mxCadControllerUploadExtReferenceDwg).mockResolvedValue({
@@ -611,11 +606,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       const { result } = renderHook(() =>
@@ -684,11 +679,11 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue({
-        exists: false,
+        data: { exists: false },
       } as any);
 
       const { result } = renderHook(() =>
@@ -717,15 +712,15 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       };
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue(
-        mockPreloadingData as any
+        { data: mockPreloadingData } as any
       );
 
       // 模拟一半存在一半不存在
       vi.mocked(sdk.mxCadControllerCheckExternalReference)
-        .mockResolvedValueOnce({ exists: true } as any) // exist.dwg 已存在
-        .mockResolvedValueOnce({ exists: false } as any) // missing.dwg 不存在
-        .mockResolvedValueOnce({ exists: true } as any) // exist1.png 已存在
-        .mockResolvedValueOnce({ exists: false } as any); // missing1.png 不存在
+        .mockResolvedValueOnce({ data: { exists: true } } as any) // exist.dwg 已存在
+        .mockResolvedValueOnce({ data: { exists: false } } as any) // missing.dwg 不存在
+        .mockResolvedValueOnce({ data: { exists: true } } as any) // exist1.png 已存在
+        .mockResolvedValueOnce({ data: { exists: false } } as any); // missing1.png 不存在
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({

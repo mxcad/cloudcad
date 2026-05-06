@@ -43,7 +43,7 @@ describe('useUserCRUD', () => {
     it('loads users automatically on mount', async () => {
       server.use(
         http.get('/api/v1/users', () => {
-          return HttpResponse.json({ code: 0, data: { users: mockUsers, total: 2 } });
+          return HttpResponse.json({ users: mockUsers, total: 2, page: 1, limit: 20 });
         }),
       );
 
@@ -64,7 +64,7 @@ describe('useUserCRUD', () => {
     it('sets error when user list fetch fails', async () => {
       server.use(
         http.get('/api/v1/users', () => {
-          throw new Error('Network error');
+          return HttpResponse.json(null, { status: 500 });
         }),
       );
 
@@ -87,7 +87,7 @@ describe('useUserCRUD', () => {
         http.get('/api/v1/users', () => {
           requestCount++;
           const users = requestCount === 1 ? mockUsers : [...mockUsers, { id: '3', username: 'charlie', email: 'charlie@example.com', nickname: 'Charlie', status: 'ACTIVE', role: { id: 'r1', name: 'USER', isSystem: true } }];
-          return HttpResponse.json({ code: 0, data: { users, total: users.length } });
+          return HttpResponse.json({ users, total: users.length, page: 1, limit: 20 });
         }),
         http.post('/api/v1/users', () => {
           return HttpResponse.json({ code: 0, data: { id: '3' } });
@@ -114,7 +114,7 @@ describe('useUserCRUD', () => {
       let deleteCalled = false;
       server.use(
         http.get('/api/v1/users', () => {
-          return HttpResponse.json({ code: 0, data: { users: mockUsers, total: 2 } });
+          return HttpResponse.json({ users: mockUsers, total: 2, page: 1, limit: 20 });
         }),
         http.delete('/api/v1/users/:id', ({ params }) => {
           if (params.id === '1') {
@@ -143,7 +143,7 @@ describe('useUserCRUD', () => {
       let hardDeleteCalled = false;
       server.use(
         http.get('/api/v1/users', () => {
-          return HttpResponse.json({ code: 0, data: { users: mockUsers, total: 2 } });
+          return HttpResponse.json({ users: mockUsers, total: 2, page: 1, limit: 20 });
         }),
         http.post('/api/v1/users/:id/delete-immediately', ({ params }) => {
           if (params.id === '1') {
@@ -171,7 +171,7 @@ describe('useUserCRUD', () => {
       let restoreCalled = false;
       server.use(
         http.get('/api/v1/users', () => {
-          return HttpResponse.json({ code: 0, data: { users: mockUsers, total: 2 } });
+          return HttpResponse.json({ users: mockUsers, total: 2, page: 1, limit: 20 });
         }),
         http.post('/api/v1/users/:id/restore', ({ params }) => {
           if (params.id === '2') {

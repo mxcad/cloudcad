@@ -15,10 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetPersonalSpace, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
-// TODO: Replace libraryApi.getDrawingNode/getBlockNode and publicFileApi with SDK when backend adds endpoints or upload logic is migrated
-import { libraryApi } from '../services/libraryApi';
-import { publicFileApi } from '../services/publicFileApi';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetPersonalSpace, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
@@ -80,8 +77,8 @@ export const CADEditorDirect: React.FC = () => {
   const [isActive, setIsActive] = useState(() => {
     return !!fileId || isHomeMode;
   });
-  // 只有打开文件时才需要 loading，主页模式直接显示
-  const [loading, setLoading] = useState(() => !!fileId);
+  // 无论主页还是文件模式，初始都显示 loading，避免侧边栏闪烁
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // 存储当前文件的 hash（用于未登录用户的外部参照上传）
@@ -486,12 +483,15 @@ export const CADEditorDirect: React.FC = () => {
   useEffect(() => {
     if (!fileId || !isActive) return;
 
+    let cancelled = false;
+
     const loadFile = async () => {
       setLoading(true);
       setError(null);
 
       try {
         const { mxcadManager } = await import('../services/mxcadManager');
+        if (cancelled) return;
 
         // 获取文件信息
         let file: {
@@ -508,12 +508,10 @@ export const CADEditorDirect: React.FC = () => {
 
         // 如果 URL 参数指定了 libraryKey，直接使用
         if (libraryKeyParam === 'drawing') {
-          const { libraryApi } = await import('../services/libraryApi');
-          const nodeResponse = await libraryApi.getDrawingNode(fileId);
+          const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
           file = nodeResponse.data as typeof file;
         } else if (libraryKeyParam === 'block') {
-          const { libraryApi } = await import('../services/libraryApi');
-          const nodeResponse = await libraryApi.getBlockNode(fileId);
+          const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
           file = nodeResponse.data as typeof file;
         } else {
           // 项目文件：需要登录
@@ -687,23 +685,35 @@ export const CADEditorDirect: React.FC = () => {
 
         // 按需加载 MxCAD 依赖
         await loadMxCADDependencies();
+        if (cancelled) return;
 
         // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
         await initMxCADConfig(file);
+        if (cancelled) return;
 
         // 初始化 MxCAD 视图，传入 mxweb 文件 URL
         await mxcadManager.initializeMxCADView(mxcadFileUrl);
+        if (cancelled) return;
+
         mxcadManager.showMxCAD(true);
 
         // 初始化主题同步 - 监听 mxcad-app 主题变化
         await initThemeSync();
+        if (cancelled) return;
 
         // 标记为已初始化
         isInitializedRef.current = true;
         loadedFileUrlRef.current = mxcadFileUrl;
         currentFileIdRef.current = fileId;
 
-        setLoading(false);
+        // 等待一帧渲染，确保 CAD canvas 已绘制到屏幕后再隐藏 loading
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+
+        if (!cancelled) {
+          setLoading(false);
+        }
         
         // 检查外部参照
         try {
@@ -725,12 +735,18 @@ export const CADEditorDirect: React.FC = () => {
         }
       } catch (err) {
         console.error('加载文件失败:', err);
-        setError('CAD编辑器初始化失败');
-        setLoading(false);
+        if (!cancelled) {
+          setError('CAD编辑器初始化失败');
+          setLoading(false);
+        }
       }
     };
 
     loadFile();
+
+    return () => {
+      cancelled = true;
+    };
   }, [fileId, isActive, versionParam, navigate, externalReferenceUpload, isAuthenticated]);
   
   // 监听公开文件上传事件，上传完成后检查外部参照
@@ -793,8 +809,6 @@ export const CADEditorDirect: React.FC = () => {
     // 立即标记开始，避免 setTimeout 期间重复触发
     (window as unknown as { [key: string]: boolean })[initKey] = true;
 
-    // 立即显示加载状态，避免先显示空白侧边栏再闪烁到加载动画
-    setLoading(true);
     setError(null);
 
     const timer = setTimeout(async () => {
@@ -827,6 +841,11 @@ export const CADEditorDirect: React.FC = () => {
 
         // 初始化主题同步
         await initThemeSync();
+
+        // 等待一帧渲染，确保 CAD canvas 已绘制到屏幕后再隐藏 loading
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
 
         // 标记已初始化
         isInitializedRef.current = true;

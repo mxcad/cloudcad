@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock api-sdk before importing the module
 vi.mock('@/api-sdk', () => ({
-  mxCadControllerCheckDuplicateFile: vi.fn(),
+  mxCadControllerCheckFileExist: vi.fn(),
 }));
 
 // Mock notification context
@@ -24,7 +24,7 @@ import {
   checkDuplicateFile,
   showDuplicateFileDialog,
 } from '../mxcadCheck';
-import { mxCadControllerCheckDuplicateFile } from '@/api-sdk';
+import { mxCadControllerCheckFileExist } from '@/api-sdk';
 
 describe('mxcadCheck', () => {
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('mxcadCheck', () => {
 
   describe('checkDuplicateFile', () => {
     it('returns false when no duplicate exists', async () => {
-      const mockCheck = mxCadControllerCheckDuplicateFile as ReturnType<typeof vi.fn>;
+      const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({
         data: { isDuplicate: false, existingNodeId: null },
       });
@@ -44,7 +44,7 @@ describe('mxcadCheck', () => {
     });
 
     it('returns true and existingNodeId when duplicate exists', async () => {
-      const mockCheck = mxCadControllerCheckDuplicateFile as ReturnType<typeof vi.fn>;
+      const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({
         data: { isDuplicate: true, existingNodeId: 'existing-node-42' },
       });
@@ -55,7 +55,7 @@ describe('mxcadCheck', () => {
     });
 
     it('handles API errors gracefully by returning isDuplicate=false', async () => {
-      const mockCheck = mxCadControllerCheckDuplicateFile as ReturnType<typeof vi.fn>;
+      const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockRejectedValue(new Error('Network error'));
 
       const result = await checkDuplicateFile('ghi789', 'error.dwg', 'node-3');
@@ -64,7 +64,7 @@ describe('mxcadCheck', () => {
     });
 
     it('handles null response data', async () => {
-      const mockCheck = mxCadControllerCheckDuplicateFile as ReturnType<typeof vi.fn>;
+      const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({ data: null });
 
       const result = await checkDuplicateFile('jkl012', 'nulldata.dwg', 'node-4');
@@ -73,7 +73,7 @@ describe('mxcadCheck', () => {
     });
 
     it('passes correct parameters to the API', async () => {
-      const mockCheck = mxCadControllerCheckDuplicateFile as ReturnType<typeof vi.fn>;
+      const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({
         data: { isDuplicate: false },
       });

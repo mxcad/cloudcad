@@ -6130,134 +6130,6 @@
         ]
       }
     },
-    "/api/v1/public-file/chunk/check": {
-      "post": {
-        "operationId": "PublicFileController_checkChunk",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckChunkDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "返回分片存在状态",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckChunkResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "检查分片是否存在",
-        "tags": [
-          "公开文件服务"
-        ]
-      }
-    },
-    "/api/v1/public-file/file/check": {
-      "post": {
-        "operationId": "PublicFileController_checkFile",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckFileDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "返回文件存在状态",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckFileResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "检查文件是否已存在（秒传检查）",
-        "tags": [
-          "公开文件服务"
-        ]
-      }
-    },
-    "/api/v1/public-file/chunk/upload": {
-      "post": {
-        "operationId": "PublicFileController_uploadChunk",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/UploadChunkDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "上传成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadChunkResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "上传分片",
-        "tags": [
-          "公开文件服务"
-        ]
-      }
-    },
-    "/api/v1/public-file/chunk/merge": {
-      "post": {
-        "operationId": "PublicFileController_mergeChunks",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MergeChunksDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "合并成功，返回文件信息",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MergeCompleteResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "合并分片并获取文件访问信息",
-        "tags": [
-          "公开文件服务"
-        ]
-      }
-    },
     "/api/v1/public-file/access/{hash}/{filename}": {
       "get": {
         "operationId": "PublicFileController_accessFile",
@@ -6756,6 +6628,87 @@
           "library",
           "公共资源库"
         ]
+      },
+      "delete": {
+        "operationId": "LibraryController_deleteDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanently",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      },
+      "patch": {
+        "operationId": "LibraryController_renameDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重命名成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "重命名图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
       }
     },
     "/api/v1/library/drawing/nodes/{nodeId}/download": {
@@ -6833,6 +6786,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveLibraryNodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "保存成功"
@@ -6844,6 +6807,138 @@
           }
         ],
         "summary": "覆盖保存图纸库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/drawing/folders": {
+      "post": {
+        "operationId": "LibraryController_createDrawingFolder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "文件夹创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建图纸库文件夹",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/drawing/nodes/{nodeId}/move": {
+      "post": {
+        "operationId": "LibraryController_moveDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动图纸库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/drawing/nodes/{nodeId}/copy": {
+      "post": {
+        "operationId": "LibraryController_copyDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "复制成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "复制图纸库节点",
         "tags": [
           "library",
           "公共资源库"
@@ -7190,6 +7285,87 @@
           "library",
           "公共资源库"
         ]
+      },
+      "delete": {
+        "operationId": "LibraryController_deleteBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanently",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      },
+      "patch": {
+        "operationId": "LibraryController_renameBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重命名成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "重命名图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
       }
     },
     "/api/v1/library/block/nodes/{nodeId}/download": {
@@ -7267,6 +7443,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveLibraryNodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "保存成功"
@@ -7278,6 +7464,138 @@
           }
         ],
         "summary": "覆盖保存图块库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/block/folders": {
+      "post": {
+        "operationId": "LibraryController_createBlockFolder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "文件夹创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建图块库文件夹",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/block/nodes/{nodeId}/move": {
+      "post": {
+        "operationId": "LibraryController_moveBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动图块库节点",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/block/nodes/{nodeId}/copy": {
+      "post": {
+        "operationId": "LibraryController_copyBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyNodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "复制成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileSystemNodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "复制图块库节点",
         "tags": [
           "library",
           "公共资源库"
@@ -10814,176 +11132,6 @@
           "timestamp"
         ]
       },
-      "CheckChunkDto": {
-        "type": "object",
-        "properties": {
-          "fileHash": {
-            "type": "string",
-            "description": "文件 MD5 哈希值"
-          },
-          "chunk": {
-            "type": "number",
-            "description": "分片索引（从 0 开始）"
-          },
-          "chunks": {
-            "type": "number",
-            "description": "总分片数量"
-          }
-        },
-        "required": [
-          "fileHash",
-          "chunk",
-          "chunks"
-        ]
-      },
-      "CheckChunkResponseDto": {
-        "type": "object",
-        "properties": {
-          "exist": {
-            "type": "boolean",
-            "description": "分片是否存在"
-          }
-        },
-        "required": [
-          "exist"
-        ]
-      },
-      "CheckFileDto": {
-        "type": "object",
-        "properties": {
-          "filename": {
-            "type": "string",
-            "description": "文件名"
-          },
-          "fileHash": {
-            "type": "string",
-            "description": "文件 MD5 哈希"
-          }
-        },
-        "required": [
-          "filename",
-          "fileHash"
-        ]
-      },
-      "CheckFileResponseDto": {
-        "type": "object",
-        "properties": {
-          "exist": {
-            "type": "boolean",
-            "description": "文件是否已存在"
-          },
-          "hash": {
-            "type": "string",
-            "description": "文件哈希"
-          },
-          "fileName": {
-            "type": "string",
-            "description": "原始文件名"
-          }
-        },
-        "required": [
-          "exist"
-        ]
-      },
-      "UploadChunkDto": {
-        "type": "object",
-        "properties": {
-          "hash": {
-            "type": "string",
-            "description": "文件 MD5 哈希值"
-          },
-          "name": {
-            "type": "string",
-            "description": "原始文件名"
-          },
-          "size": {
-            "type": "number",
-            "description": "文件总大小（字节）"
-          },
-          "chunk": {
-            "type": "number",
-            "description": "当前分片索引（从 0 开始）"
-          },
-          "chunks": {
-            "type": "number",
-            "description": "总分片数量"
-          }
-        },
-        "required": [
-          "hash",
-          "name",
-          "size",
-          "chunk",
-          "chunks"
-        ]
-      },
-      "UploadChunkResponseDto": {
-        "type": "object",
-        "properties": {
-          "ret": {
-            "type": "string",
-            "description": "上传结果",
-            "example": "success"
-          },
-          "isLastChunk": {
-            "type": "boolean",
-            "description": "是否为最后一个分片"
-          }
-        },
-        "required": [
-          "ret"
-        ]
-      },
-      "MergeChunksDto": {
-        "type": "object",
-        "properties": {
-          "hash": {
-            "type": "string",
-            "description": "文件 MD5 哈希值"
-          },
-          "name": {
-            "type": "string",
-            "description": "原始文件名"
-          },
-          "size": {
-            "type": "number",
-            "description": "文件总大小（字节）"
-          },
-          "chunks": {
-            "type": "number",
-            "description": "总分片数量"
-          }
-        },
-        "required": [
-          "hash",
-          "name",
-          "size",
-          "chunks"
-        ]
-      },
-      "MergeCompleteResponseDto": {
-        "type": "object",
-        "properties": {
-          "ret": {
-            "type": "string",
-            "description": "操作结果",
-            "example": "success"
-          },
-          "hash": {
-            "type": "string",
-            "description": "文件哈希"
-          },
-          "fileName": {
-            "type": "string",
-            "description": "原始文件名"
-          }
-        },
-        "required": [
-          "ret",
-          "hash",
-          "fileName"
-        ]
-      },
       "UploadExtReferenceDto": {
         "type": "object",
         "properties": {
@@ -11005,6 +11153,19 @@
         "required": [
           "srcFileHash",
           "extRefFile"
+        ]
+      },
+      "SaveLibraryNodeDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "要保存的文件",
+            "format": "binary"
+          }
+        },
+        "required": [
+          "file"
         ]
       },
       "SystemPermission": {

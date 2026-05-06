@@ -5,6 +5,7 @@ import { WechatVerifyModal } from '../../components/WechatVerifyModal';
 import {
   authControllerSendSmsCode,
   authControllerResendVerification,
+  usersControllerDeactivateAccount,
 } from '@/api-sdk';
 
 interface DeactivateForm {
@@ -462,12 +463,13 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
               }
               try {
                 onSetDeactivateLoading(true);
-                const { usersApi } = await import('../../services/usersApi');
-                await usersApi.deactivateAccount({
-                  password: deactivateForm.password || undefined,
-                  phoneCode: deactivateForm.phoneCode || undefined,
-                  emailCode: deactivateForm.emailCode || undefined,
-                  wechatConfirm: deactivateForm.wechatConfirm || undefined,
+                await usersControllerDeactivateAccount({
+                  body: {
+                    password: deactivateForm.password || undefined,
+                    phoneCode: deactivateForm.phoneCode || undefined,
+                    emailCode: deactivateForm.emailCode || undefined,
+                    wechatConfirm: deactivateForm.wechatConfirm || undefined,
+                  },
                 });
                 setTimeout(() => {
                   onLogout();

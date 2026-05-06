@@ -11,8 +11,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference, mxCadControllerUploadExtReferenceImage, mxCadControllerUploadExtReferenceDwg } from '@/api-sdk';
-import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference } from '@/api-sdk';
-import { publicFileApi } from '../services/publicFileApi';
+import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference, publicFileControllerUploadExtReference } from '@/api-sdk';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -413,12 +412,11 @@ export const useExternalReferenceUpload = (
             await mxCadControllerUploadExtReferenceImage({ body: formData as any });
           } else {
             // 图片外部参照：使用公开上传接口（未登录用户）
-            await publicFileApi.uploadExtReference(
-              fileInfo.source,
-              id,
-              fileInfo.name,
-              undefined
-            );
+            const formData = new FormData();
+            formData.append('file', fileInfo.source);
+            formData.append('srcFileHash', id);
+            formData.append('extRefFile', fileInfo.name);
+            await publicFileControllerUploadExtReference({ body: formData as any });
           }
         } else {
           if (isLoggedIn) {
@@ -429,12 +427,11 @@ export const useExternalReferenceUpload = (
             await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as any });
           } else {
             // DWG 外部参照：使用公开上传接口（未登录用户）
-            await publicFileApi.uploadExtReference(
-              fileInfo.source,
-              id,
-              fileInfo.name,
-              undefined
-            );
+            const formData = new FormData();
+            formData.append('file', fileInfo.source);
+            formData.append('srcFileHash', id);
+            formData.append('extRefFile', fileInfo.name);
+            await publicFileControllerUploadExtReference({ body: formData as any });
           }
         }
 

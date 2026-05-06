@@ -12,13 +12,14 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fileSystemControllerGetProjects,
   fileSystemControllerGetTrash,
   fileSystemControllerSearch,
-  fileSystemControllerGetRootNode,
   fileSystemControllerGetNode,
   fileSystemControllerGetChildren,
+  fileSystemControllerGetRootNode,
 } from '@/api-sdk';
 import {
   FileSystemNode,
@@ -28,7 +29,8 @@ import {
 } from '@/types/filesystem';
 import type { ProjectDto } from '@/types/api-client';
 import { PaginationMeta } from '@/components/ui/Pagination';
-import { handleError, isAbortError } from '@/utils/errorHandler';
+import { handleError } from '@/utils/errorHandler';
+import { queryKeys } from '@/lib/queryKeys';
 import type { ProjectFilterType } from '@/types/project';
 
 interface UseFileSystemDataProps {
@@ -63,60 +65,238 @@ export const useFileSystemData = ({
   projectFilter,
 }: UseFileSystemDataProps) => {
   const navigate = useNavigate();
-  const [nodes, setNodes] = useState<FileSystemNode[]>([]);
-  const [currentNode, setCurrentNode] = useState<FileSystemNode | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
-    null
-  );
+  const queryClient = useQueryClient();
 
-  // 回收站视图状态
+  // ── Pagination state (source of truth for query params) ──────────────
+  const [pagination, setPagination] = useState(() => ({
+    page: paginationRef.current.page,
+    limit: paginationRef.current.limit,
+  }));
+
+  // Keep paginationRef in sync for backward compatibility
+  useEffect(() => {
+    paginationRef.current = pagination;
+  }, [pagination, paginationRef]);
+
+  // ── Trash view state (managed here, exposed to parent) ──────────────
   const [isTrashView, setIsTrashView] = useState(false);
   const [isProjectTrashView, setIsProjectTrashView] = useState(false);
   const isProjectTrashViewRef = useRef(isProjectTrashView);
 
-  // 同步 ref 和状态
   useEffect(() => {
     isProjectTrashViewRef.current = isProjectTrashView;
   }, [isProjectTrashView]);
 
-  // 监听路由变化，重置回收站状态
-  // 当用户在项目列表页面和项目内部之间切换时，自动重置相应的回收站视图状态
+  // Reset trash view state on mode change
   useEffect(() => {
     if (isProjectRootMode) {
-      // 返回项目列表时，重置项目内回收站视图状态
       setIsTrashView(false);
     } else {
-      // 进入项目内部时，重置项目回收站视图状态
       setIsProjectTrashView(false);
     }
   }, [isProjectRootMode]);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // ── Derived mode flags for query enabled checks ─────────────────────
+  const isTrash = isTrashView || isProjectTrashView;
+  const hasSearch = !!searchQuery;
 
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+  // Effective node ID for personal-space and folder modes
+  const effectiveNodeId = isPersonalSpaceMode
+    ? urlNodeId || urlProjectId || ''
+    : urlNodeId || urlProjectId || '';
+
+  // ── Query 1: Current node info ─────────────────────────────────────
+  const nodeQuery = useQuery({
+    queryKey: queryKeys.fileSystem.node(effectiveNodeId),
+    queryFn: async () => {
+      const response = await fileSystemControllerGetNode({
+        path: { nodeId: effectiveNodeId },
+      }) as any;
+      return toFileSystemNode(response);
+    },
+    enabled:
+      !!effectiveNodeId && !isProjectRootMode && !isTrash && !hasSearch,
+  });
+
+  // ── Query 2: Children / Projects list ──────────────────────────────
+  const childrenQuery = useQuery({
+    queryKey: isProjectRootMode
+      ? [...queryKeys.fileSystem.children('__projects'), { filter: projectFilter, page: pagination.page, limit: pagination.limit }]
+      : queryKeys.fileSystem.children(effectiveNodeId),
+    queryFn: async () => {
+      if (isProjectRootMode) {
+        const response = await fileSystemControllerGetProjects({
+          query: {
+            filter: projectFilter,
+            page: pagination.page,
+            limit: pagination.limit,
+          } as any,
+        }) as any;
+
+        const projectData = response;
+        if (projectData?.nodes) {
+          return {
+            nodes: projectData.nodes.map(projectToNode),
+            total: projectData.total,
+            page: projectData.page,
+            limit: projectData.limit,
+            totalPages: projectData.totalPages,
+          };
+        }
+
+        // Legacy format: array of ProjectDto
+        const allProjects = (
+          Array.isArray(response) ? response : []
+        ) as ProjectDto[];
+        return {
+          nodes: allProjects.map((p) => projectToNode(p as any)),
+          total: allProjects.length,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(allProjects.length / pagination.limit),
+        };
       }
-    };
-  }, []);
 
-  const buildBreadcrumbsFromNode = useCallback(
-    async (node: FileSystemNode, signal?: AbortSignal) => {
-      const crumbs: BreadcrumbItem[] = [];
+      const response = await fileSystemControllerGetChildren({
+        path: { nodeId: effectiveNodeId },
+        query: {
+          page: pagination.page,
+          limit: pagination.limit,
+          search: searchQuery || undefined,
+        } as any,
+      }) as any;
+
+      const childrenData = (response?.nodes || []).map(toFileSystemNode);
+      if (response?.total !== undefined) {
+        return {
+          nodes: childrenData,
+          total: response.total,
+          page: response.page,
+          limit: response.limit,
+          totalPages: response.totalPages,
+        };
+      }
+      return {
+        nodes: childrenData,
+        total: childrenData.length,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(childrenData.length / pagination.limit),
+      };
+    },
+    enabled:
+      (!!effectiveNodeId && !isTrash && !hasSearch) || isProjectRootMode,
+  });
+
+  // ── Query 3: Search results ────────────────────────────────────────
+  const searchQueryResult = useQuery({
+    queryKey: queryKeys.fileSystem.search({
+      keyword: searchQuery,
+      isProjectRootMode,
+      isPersonalSpaceMode,
+      projectId: isProjectRootMode
+        ? undefined
+        : isPersonalSpaceMode
+          ? (urlNodeId || urlProjectId || '')
+          : urlProjectId,
+      filter: isProjectRootMode ? projectFilter : undefined,
+      page: pagination.page,
+      limit: pagination.limit,
+    }),
+    queryFn: async () => {
+      let searchScope = 'project_files';
+      let searchProjectId: string | undefined;
+      let searchFilter: 'all' | 'owned' | 'joined' = 'all';
+
+      if (isProjectRootMode) {
+        searchScope = 'project';
+        searchFilter = projectFilter || 'all';
+      } else if (isPersonalSpaceMode || urlProjectId) {
+        searchScope = 'project_files';
+        searchProjectId = isPersonalSpaceMode
+          ? (urlNodeId || urlProjectId || '')
+          : urlProjectId;
+      }
+
+      const response = await fileSystemControllerSearch({
+        query: {
+          keyword: searchQuery,
+          scope: searchScope,
+          filter: searchFilter,
+          projectId: searchProjectId,
+          page: pagination.page,
+          limit: pagination.limit,
+        } as any,
+      }) as any;
+
+      const searchData = response;
+      if (searchData?.nodes) {
+        return {
+          nodes: searchData.nodes.map(toFileSystemNode),
+          total: searchData.total,
+          page: searchData.page,
+          limit: searchData.limit,
+          totalPages: searchData.totalPages,
+        };
+      }
+      return {
+        nodes: [],
+        total: 0,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: 0,
+      };
+    },
+    enabled: hasSearch,
+  });
+
+  // ── Query 4: Trash ────────────────────────────────────────────────
+  const trashQuery = useQuery({
+    queryKey: [...queryKeys.fileSystem.trash, { page: pagination.page, limit: pagination.limit }] as const,
+    queryFn: async () => {
+      const response = await fileSystemControllerGetTrash({
+        query: {
+          page: pagination.page,
+          limit: pagination.limit,
+        } as any,
+      }) as any;
+
+      const trashData = response;
+      const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
+
+      if (trashData?.total !== undefined) {
+        return {
+          nodes: trashNodes,
+          total: trashData.total,
+          page: trashData.page,
+          limit: trashData.limit,
+          totalPages: trashData.totalPages,
+        };
+      }
+      return {
+        nodes: trashNodes,
+        total: trashNodes.length,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(trashNodes.length / pagination.limit),
+      };
+    },
+    enabled: isTrash,
+  });
+
+  // ── Query 5: Breadcrumb parents (traverse upward) ──────────────────
+  const [breadcrumbNodes, setBreadcrumbNodes] = useState<
+    { id: string; name: string; isRoot: boolean }[] | null
+  >(null);
+
+  const fetchBreadcrumbs = useCallback(
+    async (node: FileSystemNode) => {
+      const crumbs: { id: string; name: string; isRoot: boolean }[] = [];
       const visited = new Set<string>();
       let traversalNode: FileSystemNode | null = node;
 
       try {
         while (traversalNode && !visited.has(traversalNode.id)) {
-          if (signal?.aborted) {
-            // 抛出 DOMException 以便被正确识别为 AbortError
-            throw new DOMException('The operation was aborted.', 'AbortError');
-          }
-
           visited.add(traversalNode.id);
           crumbs.unshift({
             id: traversalNode.id,
@@ -139,14 +319,9 @@ export const useFileSystemData = ({
           }
         }
 
-        setBreadcrumbs(crumbs);
+        setBreadcrumbNodes(crumbs);
       } catch (err) {
-        // 检测请求取消错误
-        if (isAbortError(err)) {
-          throw err;
-        }
-
-        setBreadcrumbs([
+        setBreadcrumbNodes([
           {
             id: node.id,
             name: node.name,
@@ -158,375 +333,173 @@ export const useFileSystemData = ({
     []
   );
 
-  const loadData = useCallback(async () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    setLoading(true);
-    setError(null);
-    clearSelection();
-    setIsMultiSelectMode(false);
-
-    try {
-      const params: {
-        page: number;
-        limit: number;
-        search?: string;
-      } = {
-        page: paginationRef.current.page,
-        limit: paginationRef.current.limit,
-      };
-
-      if (searchQuery) {
-        params.search = searchQuery;
-      }
-
-      // 如果有搜索关键词，使用统一搜索接口
-      if (searchQuery) {
-        let searchScope: string = 'project_files';
-        let searchProjectId: string | undefined;
-        let searchFilter: 'all' | 'owned' | 'joined' = 'all';
-
-        if (isProjectRootMode) {
-          searchScope = 'project';
-          searchFilter = projectFilter || 'all';
-        } else if (isPersonalSpaceMode || urlProjectId) {
-          searchScope = 'project_files';
-          searchProjectId = isPersonalSpaceMode
-            ? (urlNodeId || urlProjectId || '')
-            : urlProjectId;
-        }
-
-        // TODO: `libraryKey` is not in the SDK query type — passed anyway
-        const searchResponse = await fileSystemControllerSearch({
-          query: {
-            keyword: searchQuery,
-            scope: searchScope,
-            filter: searchFilter,
-            projectId: searchProjectId,
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-          } as any,
-        }) as any;
-
-        const searchData = searchResponse;
-        if (searchData?.nodes) {
-          const searchNodes = searchData.nodes.map(toFileSystemNode);
-          setNodes(searchNodes);
-          setPaginationMeta({
-            total: searchData.total,
-            page: searchData.page,
-            limit: searchData.limit,
-            totalPages: searchData.totalPages,
-          });
-        }
-
-        setLoading(false);
-        return;
-      }
-
-      // 私人空间模式：加载私人空间根目录或子目录
-      if (isPersonalSpaceMode) {
-        const currentNodeId = urlNodeId || urlProjectId || '';
-
-        if (!currentNodeId) {
-          return;
-        }
-
-        if (isTrashView) {
-          // TODO: getTrash has query?: never and does not support projectId filtering — revisit
-          const trashResponse = await fileSystemControllerGetTrash() as any;
-
-          const trashData = trashResponse;
-          const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
-          setNodes(trashNodes);
-
-          if (trashData?.total !== undefined) {
-            setPaginationMeta({
-              total: trashData.total,
-              page: trashData.page,
-              limit: trashData.limit,
-              totalPages: trashData.totalPages,
-            });
-          } else {
-            setPaginationMeta({
-              total: trashNodes.length,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(trashNodes.length / paginationRef.current.limit),
-            });
-          }
-
-          // 设置面包屑
-          setBreadcrumbs([
-            { id: currentNodeId, name: '我的图纸', isRoot: true, isFolder: true },
-            { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
-          ]);
-
-          try {
-            const nodeResponse = await fileSystemControllerGetNode({
-              path: { nodeId: currentNodeId },
-            }) as any;
-            setCurrentNode(toFileSystemNode(nodeResponse));
-          } catch {
-          }
-
-          setLoading(false);
-          return;
-        }
-
-        const [nodeResponse, childrenResponse] = await Promise.all([
-          fileSystemControllerGetNode({
-            path: { nodeId: currentNodeId },
-          }) as any,
-          fileSystemControllerGetChildren({
-            path: { nodeId: currentNodeId },
-            query: {
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              search: searchQuery || undefined,
-            } as any,
-          }) as any,
-        ]);
-
-        const nodeData = toFileSystemNode(nodeResponse);
-        const childrenData = (childrenResponse?.nodes || []).map(toFileSystemNode);
-        setNodes(childrenData);
-        const childrenMeta = childrenResponse;
-        if (childrenMeta?.total !== undefined) {
-          setPaginationMeta({
-            total: childrenMeta.total,
-            page: childrenMeta.page,
-            limit: childrenMeta.limit,
-            totalPages: childrenMeta.totalPages,
-          });
-        } else {
-          setPaginationMeta({
-            total: childrenData.length,
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-            totalPages: Math.ceil(
-              childrenData.length / paginationRef.current.limit
-            ),
-          });
-        }
-
-        setCurrentNode(nodeData);
-        await buildBreadcrumbsFromNode(nodeData, abortController.signal);
-        setLoading(false);
-        return;
-      }
-
-      if (isProjectRootMode) {
-        let response;
-
-        if (isProjectTrashViewRef.current) {
-          response = await fileSystemControllerGetTrash({
-            query: {
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-            },
-          } as any);
-        } else {
-          response = await fileSystemControllerGetProjects({
-            query: {
-              filter: projectFilter,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-            } as any,
-          }) as any;
-        }
-
-        // 处理分页响应
-        // ProjectListResponseDto / SDK unwrapped response contains nodes, total, page, limit, totalPages
-        const projectData = isProjectTrashViewRef.current ? response.data : response;
-        if (projectData?.nodes) {
-          // NodeDto[] 转换为 FileSystemNode[]
-          const projectNodes = projectData.nodes.map(projectToNode);
-          setNodes(projectNodes);
-          setPaginationMeta({
-            total: projectData.total,
-            page: projectData.page,
-            limit: projectData.limit,
-            totalPages: projectData.totalPages,
-          });
-        } else {
-          // 兼容旧格式
-          const responseData = (isProjectTrashViewRef.current ? response.data : response) as unknown;
-          const allProjects = (
-            Array.isArray(responseData) ? responseData : []
-          ) as ProjectDto[];
-          const projectNodes = allProjects.map(p => projectToNode(p as any));
-          setNodes(projectNodes);
-          setPaginationMeta({
-            total: projectNodes.length,
-            page: paginationRef.current.page,
-            limit: paginationRef.current.limit,
-            totalPages: Math.ceil(
-              projectNodes.length / paginationRef.current.limit
-            ),
-          });
-        }
-
-        setCurrentNode(null);
-        setBreadcrumbs([]);
-      } else {
-        // 文件夹模式
-        const currentNodeId = urlNodeId || urlProjectId || '';
-        if (isTrashView) {
-          // 项目内回收站视图：加载项目内已删除的文件和文件夹
-          if (!urlProjectId) {
-            throw new Error('项目ID不存在，无法加载项目回收站');
-          }
-
-          // TODO: getTrash has query?: never and does not support projectId filtering — revisit
-          const trashResponse = await fileSystemControllerGetTrash() as any;
-
-          // ProjectTrashResponseDto 包含 nodes, total, page, limit, totalPages
-          const trashData = trashResponse;
-          const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
-          setNodes(trashNodes);
-          if (trashData?.total !== undefined) {
-            setPaginationMeta({
-              total: trashData.total,
-              page: trashData.page,
-              limit: trashData.limit,
-              totalPages: trashData.totalPages,
-            });
-          } else {
-            setPaginationMeta({
-              total: trashNodes.length,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(
-                trashNodes.length / paginationRef.current.limit
-              ),
-            });
-          }
-
-          const projectResponse = await fileSystemControllerGetNode({
-            path: { nodeId: urlProjectId },
-          }) as any;
-          setCurrentNode(toFileSystemNode(projectResponse));
-
-          const projectData = projectResponse;
-          setBreadcrumbs([
-            {
-              id: projectData.id,
-              name: projectData.name,
-              isRoot: true,
-              isFolder: true,
-            },
-            {
-              id: 'trash',
-              name: '回收站',
-              isRoot: false,
-              isFolder: true,
-            },
-          ]);
-        } else {
-          const [nodeResponse, childrenResponse] = await Promise.all([
-            fileSystemControllerGetNode({
-              path: { nodeId: currentNodeId },
-            }) as any,
-            fileSystemControllerGetChildren({
-              path: { nodeId: currentNodeId },
-              query: {
-                page: paginationRef.current.page,
-                limit: paginationRef.current.limit,
-                search: searchQuery || undefined,
-              } as any,
-            }) as any,
-          ]);
-
-          const nodeData = toFileSystemNode(nodeResponse);
-
-          if (!isPersonalSpaceMode && nodeData.personalSpaceKey) {
-            navigate('/personal-space');
-            setLoading(false);
-            return;
-          }
-
-          if (!isPersonalSpaceMode && personalSpaceId && currentNodeId) {
-            try {
-              const rootNode = await fileSystemControllerGetRootNode({ path: { nodeId: currentNodeId } }) as any;
-              if (rootNode?.personalSpaceKey) {
-                if (urlNodeId) {
-                  navigate(`/personal-space/${urlNodeId}`);
-                } else {
-                  navigate('/personal-space');
-                }
-                setLoading(false);
-                return;
-              }
-            } catch {
-            }
-          }
-
-          // NodeListResponseDto 包含 nodes, total, page, limit, totalPages
-          const childrenData = childrenResponse?.nodes || [];
-          setNodes(childrenData);
-          const childrenMeta = childrenResponse;
-          if (childrenMeta?.total !== undefined) {
-            setPaginationMeta({
-              total: childrenMeta.total,
-              page: childrenMeta.page,
-              limit: childrenMeta.limit,
-              totalPages: childrenMeta.totalPages,
-            });
-          } else {
-            setPaginationMeta({
-              total: childrenData.length,
-              page: paginationRef.current.page,
-              limit: paginationRef.current.limit,
-              totalPages: Math.ceil(
-                childrenData.length / paginationRef.current.limit
-              ),
-            });
-          }
-
-          setCurrentNode(nodeData);
-          await buildBreadcrumbsFromNode(nodeData, abortController.signal);
-        }
-      }
-    } catch (error: unknown) {
-      if (isAbortError(error)) {
-        return;
-      }
-
-      const errorMessage = error instanceof Error ? error.message : '加载数据失败';
-      setError(errorMessage);
-      handleError(error, '加载数据失败');
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
+  // Build breadcrumbs when currentNode changes (normal mode, non-trash)
+  useEffect(() => {
+    if (
+      nodeQuery.data &&
+      !isProjectRootMode &&
+      !isTrash &&
+      !hasSearch
+    ) {
+      fetchBreadcrumbs(nodeQuery.data);
     }
   }, [
-    urlProjectId,
-    urlNodeId,
+    nodeQuery.data,
     isProjectRootMode,
+    isTrash,
+    hasSearch,
+    fetchBreadcrumbs,
+  ]);
+
+  // ── Personal space redirect detection ──────────────────────────────
+  useEffect(() => {
+    if (!nodeQuery.data || isPersonalSpaceMode) return;
+
+    const nodeData = nodeQuery.data;
+
+    if (nodeData.personalSpaceKey) {
+      navigate('/personal-space');
+      return;
+    }
+
+    if (personalSpaceId && effectiveNodeId) {
+      fileSystemControllerGetRootNode({
+        path: { nodeId: effectiveNodeId },
+      })
+        .then((rootNode: any) => {
+          if (rootNode?.personalSpaceKey) {
+            if (urlNodeId) {
+              navigate(`/personal-space/${urlNodeId}`);
+            } else {
+              navigate('/personal-space');
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [
+    nodeQuery.data,
     isPersonalSpaceMode,
     personalSpaceId,
-    isTrashView,
-    searchQuery,
-    showToast,
-    buildBreadcrumbsFromNode,
-    clearSelection,
-    setIsMultiSelectMode,
+    effectiveNodeId,
+    urlNodeId,
     navigate,
-    projectFilter,
   ]);
+
+  // ── Derive current data from active query ──────────────────────────
+  const activeData = (() => {
+    if (hasSearch && searchQueryResult.data) {
+      return searchQueryResult.data;
+    }
+    if (isTrash && trashQuery.data) {
+      return trashQuery.data;
+    }
+    if (childrenQuery.data) {
+      return childrenQuery.data;
+    }
+    return null;
+  })();
+
+  const nodes: FileSystemNode[] = activeData?.nodes || [];
+  const paginationMeta: PaginationMeta | null = activeData
+    ? {
+        total: activeData.total,
+        page: activeData.page,
+        limit: activeData.limit,
+        totalPages: activeData.totalPages,
+      }
+    : null;
+
+  // Breadcrumbs: static for trash/project-root, derived for normal mode
+  const breadcrumbs: BreadcrumbItem[] = (() => {
+    if (isProjectRootMode && !isTrash) return [];
+
+    if (isTrashView && isPersonalSpaceMode) {
+      const nodeId = urlNodeId || urlProjectId || '';
+      return [
+        { id: nodeId, name: '我的图纸', isRoot: true, isFolder: true },
+        { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
+      ];
+    }
+
+    if (isTrash && !isPersonalSpaceMode && isProjectRootMode) {
+      return [];
+    }
+
+    if (isTrash && !isPersonalSpaceMode && !isProjectRootMode && urlProjectId) {
+      if (breadcrumbNodes && breadcrumbNodes.length >= 1) {
+        return [
+          ...breadcrumbNodes.map((n) => ({ ...n, isFolder: true })),
+          { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
+        ];
+      }
+      const projectNode = nodeQuery.data;
+      if (projectNode) {
+        return [
+          {
+            id: projectNode.id,
+            name: projectNode.name,
+            isRoot: true,
+            isFolder: true,
+          },
+          { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
+        ];
+      }
+      return [];
+    }
+
+    // Normal mode: use fetched breadcrumb chain
+    if (breadcrumbNodes) {
+      return breadcrumbNodes.map((n) => ({ ...n, isFolder: true }));
+    }
+    return [];
+  })();
+
+  const loading =
+    (hasSearch && searchQueryResult.isLoading) ||
+    (!hasSearch && isTrash && trashQuery.isLoading) ||
+    (!hasSearch && !isTrash && !isProjectRootMode && nodeQuery.isLoading) ||
+    (!hasSearch && !isTrash && childrenQuery.isLoading);
+
+  const error = hasSearch
+    ? searchQueryResult.error
+    : isTrash
+      ? trashQuery.error
+      : nodeQuery.error || childrenQuery.error;
+
+  // ── Refetch helpers ────────────────────────────────────────────────
+  const refetchAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
+  }, [queryClient]);
+
+  // ── Public API (backward compatible) ───────────────────────────────
+
+  /**
+   * Backward-compatible loader. In the React Query architecture, data is
+   * fetched automatically when query keys change. This method exists so
+   * that the parent (useFileSystem.ts) can still call it imperatively,
+   * e.g. for manual refresh. Internally it simply invalidates all
+   * fileSystem queries.
+   */
+  const loadData = useCallback(async () => {
+    refetchAll();
+  }, [refetchAll]);
+
+  /**
+   * Backward-compatible no-op. Breadcrumbs are now built automatically
+   * via the fetchBreadcrumbs effect when currentNode changes.
+   */
+  const buildBreadcrumbsFromNode = useCallback(
+    async (_node: FileSystemNode, _signal?: AbortSignal) => {},
+    []
+  );
 
   return {
     nodes,
-    currentNode,
+    currentNode: nodeQuery.data ?? null,
     breadcrumbs,
     loading,
-    error,
+    error: error ? (error instanceof Error ? error.message : '加载数据失败') : null,
     paginationMeta,
     isTrashView,
     setIsTrashView,

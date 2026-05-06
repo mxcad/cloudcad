@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { healthApi } from '../services/healthApi';
+import { healthControllerCheck } from '@/api-sdk';
 import { adminApi } from '../services/adminApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
@@ -73,7 +73,7 @@ export const SystemMonitorPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const healthData = await healthApi.getHealth();
+      const healthData = await healthControllerCheck().then(r => r.data);
       if (healthData && healthData.info) {
         const timestamp = new Date().toISOString();
         const databaseInfo = healthData.info.database;

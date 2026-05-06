@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { runtimeConfigApi, RuntimeConfigItem } from '../services/runtimeConfigApi';
+import {
+  runtimeConfigControllerGetAllConfigs,
+  runtimeConfigControllerUpdateConfig,
+  runtimeConfigControllerResetConfig,
+} from '@/api-sdk';
+import type { RuntimeConfigResponseDto, UpdateRuntimeConfigDto } from '@/api-sdk';
 import { useNotification } from '../contexts/NotificationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,6 +30,8 @@ import { Sparkles } from 'lucide-react';
 import { Smartphone } from 'lucide-react';
 import { MessageCircle } from 'lucide-react';
 import { HardDrive } from 'lucide-react';
+
+type RuntimeConfigItem = RuntimeConfigResponseDto;
 
 interface ConfigGroup {
   category: string;
@@ -73,7 +80,7 @@ export const RuntimeConfigPage: React.FC = () => {
   const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
-      const configs = await runtimeConfigApi.getAllConfigs();
+      const configs = await runtimeConfigControllerGetAllConfigs().then(r => r.data);
       setConfigs(configs);
     } catch (error) {
       const message = error instanceof Error ? error.message : '获取配置失败';
@@ -116,7 +123,10 @@ export const RuntimeConfigPage: React.FC = () => {
 
     try {
       setSaving((prev) => new Set(prev).add(key));
-      await runtimeConfigApi.updateConfig(key, value);
+      await runtimeConfigControllerUpdateConfig({
+        path: { key },
+        body: { value } as UpdateRuntimeConfigDto,
+      }).then(r => r.data);
       showToast('配置已保存', 'success');
       setEditedValues((prev) => {
         const next = { ...prev };
@@ -149,7 +159,7 @@ export const RuntimeConfigPage: React.FC = () => {
 
     try {
       setSaving((prev) => new Set(prev).add(key));
-      await runtimeConfigApi.resetConfig(key);
+      await runtimeConfigControllerResetConfig({ path: { key } }).then(r => r.data);
       showToast('已重置为默认值', 'success');
       setEditedValues((prev) => {
         const next = { ...prev };

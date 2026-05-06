@@ -50,6 +50,16 @@ export interface UppyUploadResult {
 }
 
 /**
+ * 匿名上传结果
+ */
+export interface UppyPublicUploadResult {
+  /** 文件哈希值 */
+  hash: string;
+  /** 文件名 */
+  fileName: string;
+}
+
+/**
  * 上传错误
  */
 export class UppyUploadError extends Error {
@@ -175,6 +185,114 @@ export const uploadFileWithUppy = async (
           type: file.type,
           isUseServerExistingFile: false,
           isInstantUpload: false,
+        });
+      } else {
+        const err = result.failed?.[0]?.error;
+        const message =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : '上传失败';
+        reject(new UppyUploadError(message, file.name));
+      }
+      uppy.clear();
+      uppy.close();
+    });
+
+    uppy.on('upload-error', (_file: any, err: any) => {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : '上传失败';
+      reject(
+        new UppyUploadError(
+          `文件 ${file.name} 上传失败: ${message}`,
+          file.name,
+        ),
+      );
+      uppy.clear();
+      uppy.close();
+    });
+
+    uppy.addFile({
+      source: 'local',
+      name: file.name,
+      type: file.type,
+      data: file,
+      meta: { fileHash: hash },
+    });
+
+    uppy.upload();
+  });
+};
+
+/**
+ * 匿名上传文件（未登录用户，Tus 协议）
+ *
+ * @param options 上传配置
+ * @returns 匿名上传结果（hash + fileName）
+ * @throws UppyUploadError 上传失败时抛出
+ */
+export const uploadFilePublic = async (options: {
+  file: File;
+  hash: string;
+  onProgress?: (percentage: number) => void;
+}): Promise<UppyPublicUploadResult> => {
+  const { file, hash, onProgress } = options;
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+
+  return new Promise<UppyPublicUploadResult>((resolve, reject) => {
+    const uppy = new Uppy({
+      debug: false,
+      autoProceed: false,
+      restrictions: {
+        maxFileSize: 500 * 1024 * 1024,
+        maxNumberOfFiles: 1,
+      },
+    });
+
+    uppy.use(Tus, {
+      endpoint: `${apiBaseUrl}/api/v1/files`,
+      chunkSize: 5 * 1024 * 1024,
+      retryDelays: [0, 1000, 3000, 5000],
+      metadata: {
+        filename: file.name,
+        fileHash: hash,
+        fileSize: String(file.size),
+        fileType: file.type,
+      },
+    });
+
+    // 从 Tus 响应头中提取 hash 和 fileName
+    let uploadedHash: string | undefined;
+    let uploadedFileName: string | undefined;
+    uppy.on('upload-success', (_file: any, resp: any) => {
+      const xhr = resp?.body?.xhr;
+      if (xhr) {
+        uploadedHash = xhr.getResponseHeader?.('X-File-Hash') || undefined;
+        uploadedFileName = xhr.getResponseHeader?.('X-File-Name') || undefined;
+      }
+    });
+
+    (uppy as any).on('total-progress', (progress: any) => {
+      if (progress?.bytesTotal > 0) {
+        const percentage = Math.round(
+          (progress.bytesUploaded / progress.bytesTotal) * 100,
+        );
+        onProgress?.(percentage);
+      }
+    });
+
+    uppy.on('complete', (result: any) => {
+      const successful = result.successful?.[0];
+      if (successful) {
+        resolve({
+          hash: uploadedHash || hash,
+          fileName: uploadedFileName || file.name,
         });
       } else {
         const err = result.failed?.[0]?.error;

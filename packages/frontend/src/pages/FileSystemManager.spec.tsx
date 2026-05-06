@@ -17,6 +17,10 @@ vi.mock('@/hooks/file-system');
 vi.mock('@/hooks/useProjectManagement');
 vi.mock('@/contexts/AuthContext');
 vi.mock('@/stores/fileSystemStore');
+vi.mock('@/components/MxCadUppyUploader', () => ({
+  default: vi.fn(() => null),
+  MxCadUppyUploaderRef: {},
+}));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {

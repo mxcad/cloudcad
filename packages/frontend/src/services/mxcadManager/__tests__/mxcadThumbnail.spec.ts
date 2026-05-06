@@ -7,13 +7,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock api-sdk
 vi.mock('@/api-sdk', () => ({
-  mxCadControllerUploadThumbnail: vi.fn(),
-  mxCadControllerCheckThumbnail: vi.fn(),
+  thumbnailControllerUploadThumbnail: vi.fn(),
+  thumbnailControllerCheckThumbnail: vi.fn(),
 }));
 
 // Mock utils
 vi.mock('@/utils/errorHandler', () => ({
   handleError: vi.fn(),
+}));
+
+// Mock mxcad (dynamic import inside generateThumbnail)
+vi.mock('mxcad', () => ({
+  MxCpp: { getCurrentMxCAD: vi.fn() },
+  McGePoint3d: vi.fn(),
 }));
 
 import {
@@ -23,8 +29,8 @@ import {
   dataURLtoBlob,
 } from '../mxcadThumbnail';
 import {
-  mxCadControllerUploadThumbnail,
-  mxCadControllerCheckThumbnail,
+  thumbnailControllerUploadThumbnail,
+  thumbnailControllerCheckThumbnail,
 } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 
@@ -35,7 +41,7 @@ describe('mxcadThumbnail', () => {
 
   describe('checkThumbnail', () => {
     it('returns true when thumbnail exists', async () => {
-      const mockCheck = mxCadControllerCheckThumbnail as ReturnType<typeof vi.fn>;
+      const mockCheck = thumbnailControllerCheckThumbnail as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({ data: { exists: true } });
 
       const result = await checkThumbnail('node-1');
@@ -44,7 +50,7 @@ describe('mxcadThumbnail', () => {
     });
 
     it('returns false when thumbnail does not exist', async () => {
-      const mockCheck = mxCadControllerCheckThumbnail as ReturnType<typeof vi.fn>;
+      const mockCheck = thumbnailControllerCheckThumbnail as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({ data: { exists: false } });
 
       const result = await checkThumbnail('node-2');
@@ -52,7 +58,7 @@ describe('mxcadThumbnail', () => {
     });
 
     it('returns false on API error (safe default)', async () => {
-      const mockCheck = mxCadControllerCheckThumbnail as ReturnType<typeof vi.fn>;
+      const mockCheck = thumbnailControllerCheckThumbnail as ReturnType<typeof vi.fn>;
       mockCheck.mockRejectedValue(new Error('Server unavailable'));
 
       const result = await checkThumbnail('node-3');
@@ -61,7 +67,7 @@ describe('mxcadThumbnail', () => {
     });
 
     it('returns false when response data is null', async () => {
-      const mockCheck = mxCadControllerCheckThumbnail as ReturnType<typeof vi.fn>;
+      const mockCheck = thumbnailControllerCheckThumbnail as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({ data: null });
 
       const result = await checkThumbnail('node-4');
@@ -71,7 +77,7 @@ describe('mxcadThumbnail', () => {
 
   describe('uploadThumbnail', () => {
     it('uploads thumbnail blob successfully', async () => {
-      const mockUpload = mxCadControllerUploadThumbnail as ReturnType<typeof vi.fn>;
+      const mockUpload = thumbnailControllerUploadThumbnail as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ data: { success: true } });
 
       // Create a valid base64 data URL for a tiny PNG
@@ -93,7 +99,7 @@ describe('mxcadThumbnail', () => {
     });
 
     it('returns false on upload API error', async () => {
-      const mockUpload = mxCadControllerUploadThumbnail as ReturnType<typeof vi.fn>;
+      const mockUpload = thumbnailControllerUploadThumbnail as ReturnType<typeof vi.fn>;
       mockUpload.mockRejectedValue(new Error('Upload failed'));
 
       const tinyPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';

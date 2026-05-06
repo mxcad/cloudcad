@@ -80,7 +80,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     selectedFormat: DownloadFormat
   ): string => {
     // 提取文件名（去除扩展名）
-    const nameWithoutExt = originalFileName.replace(/\.[^.]+$/, '');
+    const nameWithoutExt = (originalFileName || '').replace(/\.[^.]+$/, '');
     // 添加对应格式的扩展名
     return `${nameWithoutExt}.${selectedFormat}`;
   };

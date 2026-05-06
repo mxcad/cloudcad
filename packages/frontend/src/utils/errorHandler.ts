@@ -171,6 +171,32 @@ export const isAuthError = (error: unknown): boolean => {
   return false;
 };
 
+import { globalShowToast } from '../contexts/NotificationContext';
+
+/**
+ * 统一 API 错误处理
+ * 替代分散的 handleError + showToast / console.error + showToast 模式
+ * 自动过滤 AbortError（取消请求不显示 toast）
+ *
+ * @example
+ * // 旧模式（两种写法）
+ * const appError = handleError(error, '创建文件夹');
+ * showToast(appError.message, 'error');
+ *
+ * // 新模式（一行）
+ * handleApiError(error, '创建文件夹');
+ */
+export const handleApiError = (
+  error: unknown,
+  context?: string
+): AppError | null => {
+  if (isAbortError(error)) return null;
+
+  const appError = handleError(error, context);
+  globalShowToast(appError.message, 'error');
+  return appError;
+};
+
 /**
  * 检查是否为服务器错误
  * @param error - 错误对象

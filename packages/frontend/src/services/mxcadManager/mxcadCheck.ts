@@ -16,7 +16,7 @@
  * 提供文件唯一性检查和重复文件确认 UI。
  */
 
-import { mxCadControllerCheckDuplicateFile } from '@/api-sdk';
+import { mxCadControllerCheckFileExist } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import type { DuplicateCheckResult } from './mxcadTypes';
 
@@ -35,7 +35,7 @@ export async function checkDuplicateFile(
   nodeId: string
 ): Promise<DuplicateCheckResult> {
   try {
-    const duplicateCheck = await mxCadControllerCheckDuplicateFile({
+    const duplicateCheck = await mxCadControllerCheckFileExist({
       body: { fileHash, filename, nodeId },
     });
 

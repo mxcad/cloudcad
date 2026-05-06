@@ -4,9 +4,20 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-// TODO: Replace write methods (deleteNode, renameNode) and migrate GET calls with SDK when backend adds endpoints
-import { libraryApi } from '../services/libraryApi';
-import { libraryControllerGetDrawingLibrary, libraryControllerGetDrawingChildren, libraryControllerGetDrawingNode, libraryControllerGetBlockLibrary, libraryControllerGetBlockChildren, libraryControllerGetBlockNode } from '@/api-sdk';
+import {
+  libraryControllerGetDrawingLibrary,
+  libraryControllerGetDrawingChildren,
+  libraryControllerGetDrawingNode,
+  libraryControllerDownloadDrawingNode,
+  libraryControllerDeleteDrawingNode,
+  libraryControllerRenameDrawingNode,
+  libraryControllerGetBlockLibrary,
+  libraryControllerGetBlockChildren,
+  libraryControllerGetBlockNode,
+  libraryControllerDownloadBlockNode,
+  libraryControllerDeleteBlockNode,
+  libraryControllerRenameBlockNode,
+} from '@/api-sdk';
 import type { FileSystemNode } from '../types/filesystem';
 import { handleError } from '../utils/errorHandler';
 import { isAbortError } from '../utils/errorHandler';
@@ -123,8 +134,8 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
         if (!libId) {
           const libraryApiMethod =
             libraryType === 'drawing'
-              ? libraryApi.getDrawingLibrary
-              : libraryApi.getBlockLibrary;
+              ? libraryControllerGetDrawingLibrary
+              : libraryControllerGetBlockLibrary;
 
           const libraryResponse = await libraryApiMethod();
           const library = libraryResponse.data as { id: string; name: string };
@@ -135,14 +146,17 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
         // 加载子节点
         const childrenApiMethod =
           libraryType === 'drawing'
-            ? libraryApi.getDrawingChildren
-            : libraryApi.getBlockChildren;
+            ? libraryControllerGetDrawingChildren
+            : libraryControllerGetBlockChildren;
 
         const targetId = folderId || libId;
-        const response = await childrenApiMethod(targetId, {
-          page: 1,
-          limit: 100,
-          search: search || undefined,
+        const response = await childrenApiMethod({
+          path: { nodeId: targetId },
+          query: {
+            page: 1,
+            limit: 100,
+            search: search || undefined,
+          },
         });
 
         const childrenData = response.data as { nodes: FileSystemNode[] };
@@ -249,10 +263,10 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
       try {
         const apiMethod =
           libraryType === 'drawing'
-            ? libraryApi.deleteDrawingNode
-            : libraryApi.deleteBlockNode;
+            ? libraryControllerDeleteDrawingNode
+            : libraryControllerDeleteBlockNode;
 
-        await apiMethod(nodeId, true);
+        await apiMethod({ path: { nodeId }, query: { permanently: true } });
         showToast?.('删除成功', 'success');
         await refresh();
       } catch (err) {
@@ -273,10 +287,10 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
       try {
         const apiMethod =
           libraryType === 'drawing'
-            ? libraryApi.renameDrawingNode
-            : libraryApi.renameBlockNode;
+            ? libraryControllerRenameDrawingNode
+            : libraryControllerRenameBlockNode;
 
-        await apiMethod(nodeId, name);
+        await apiMethod({ path: { nodeId }, body: { name } });
         showToast?.('重命名成功', 'success');
         await refresh();
       } catch (err) {
@@ -298,10 +312,10 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
         // 获取完整节点信息
         const apiMethod =
           libraryType === 'drawing'
-            ? libraryApi.getDrawingNode
-            : libraryApi.getBlockNode;
+            ? libraryControllerGetDrawingNode
+            : libraryControllerGetBlockNode;
 
-        const response = await apiMethod(node.id);
+        const response = await apiMethod({ path: { nodeId: node.id } });
         const fileData = response.data as FileSystemNode;
 
         // 调用回调打开文件
@@ -322,10 +336,10 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
   const downloadNode = useCallback(
     async (node: FileSystemNode) => {
       try {
-        // 使用 libraryApi 下载文件
+        // 使用 SDK 下载文件
         const response = libraryType === 'drawing'
-          ? await libraryApi.downloadDrawingNode(node.id)
-          : await libraryApi.downloadBlockNode(node.id);
+          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id } }, undefined, { responseType: 'blob' })
+          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id } }, undefined, { responseType: 'blob' });
 
         // 处理下载
         const blob = new Blob([response.data as unknown as BlobPart]);

@@ -12,7 +12,12 @@
 
 import { useState, useCallback, useRef } from 'react';
 // NOTE: Upload methods migrated to useUppyUpload via useDirectoryImport's own UploadQueue implementation.
-import { libraryApi } from '../services/libraryApi';
+import {
+  libraryControllerGetDrawingChildren,
+  libraryControllerGetBlockChildren,
+  libraryControllerCreateDrawingFolder,
+  libraryControllerCreateBlockFolder,
+} from '@/api-sdk';
 import {
   uploadFileWithUppy,
   UppyUploadOptions,
@@ -559,10 +564,9 @@ export function useDirectoryImport() {
           if (child.isFolder) {
             // 检查文件夹是否存在
             try {
-              const response = await libraryApi.getChildren(
-                libraryType,
-                currentParentId
-              );
+              const response = libraryType === 'drawing'
+                ? await libraryControllerGetDrawingChildren({ path: { nodeId: currentParentId } })
+                : await libraryControllerGetBlockChildren({ path: { nodeId: currentParentId } });
               const nodeList = response.data?.nodes || [];
               const existingFolder = nodeList.find(
                 (c: FileSystemNodeDto) =>
@@ -657,11 +661,9 @@ export function useDirectoryImport() {
         for (const child of node.children) {
           if (child.isFolder) {
             try {
-              const result = await libraryApi.createFolder(libraryType, {
-                name: child.name,
-                parentId: currentParentId,
-                skipIfExists: true,
-              });
+              const result = libraryType === 'drawing'
+                ? await libraryControllerCreateDrawingFolder({ body: { name: child.name, parentId: currentParentId, skipIfExists: true } })
+                : await libraryControllerCreateBlockFolder({ body: { name: child.name, parentId: currentParentId, skipIfExists: true } });
 
               // result 已是解包后的数据
               const folderData = result as unknown as FileSystemNodeDto;
@@ -677,10 +679,9 @@ export function useDirectoryImport() {
                 await importNode(child, folderData.id);
               } else {
                 // 如果返回数据异常，尝试通过查询获取已存在的文件夹
-                const childrenResponse = await libraryApi.getChildren(
-                  libraryType,
-                  currentParentId
-                );
+                const childrenResponse = libraryType === 'drawing'
+                  ? await libraryControllerGetDrawingChildren({ path: { nodeId: currentParentId } })
+                  : await libraryControllerGetBlockChildren({ path: { nodeId: currentParentId } });
                 const nodeList =
                   (childrenResponse as any).data?.nodes ||
                   (childrenResponse as any).nodes ||
@@ -700,10 +701,9 @@ export function useDirectoryImport() {
             } catch (error) {
               // 文件夹创建失败，尝试查找已存在的文件夹
               try {
-                const childrenResponse = await libraryApi.getChildren(
-                  libraryType,
-                  currentParentId
-                );
+                const childrenResponse = libraryType === 'drawing'
+                  ? await libraryControllerGetDrawingChildren({ path: { nodeId: currentParentId } })
+                  : await libraryControllerGetBlockChildren({ path: { nodeId: currentParentId } });
                 const nodeList =
                   (childrenResponse as any).data?.nodes ||
                   (childrenResponse as any).nodes ||

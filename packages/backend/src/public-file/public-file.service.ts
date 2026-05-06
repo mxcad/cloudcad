@@ -11,15 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
-import {
-  CheckChunkDto,
-  MergeChunksDto,
-  CheckFileDto,
-  CheckChunkResponseDto,
-  UploadChunkResponseDto,
-  MergeCompleteResponseDto,
-  CheckFileResponseDto,
-} from './dto';
 import { PublicFileUploadService } from './services/public-file-upload.service';
 import { FileConversionService } from '../mxcad/conversion/file-conversion.service';
 import * as fs from 'fs';
@@ -28,7 +19,7 @@ import * as crypto from 'crypto';
 
 /**
  * 公开文件服务
- * 提供无需认证的文件上传和访问功能
+ * 提供无需认证的文件访问和外部参照功能
  */
 @Injectable()
 export class PublicFileService {
@@ -38,89 +29,6 @@ export class PublicFileService {
     private readonly uploadService: PublicFileUploadService,
     @Optional() private readonly fileConversionService?: FileConversionService
   ) {}
-
-  /**
-   * 检查分片是否存在
-   */
-  async checkChunk(dto: CheckChunkDto): Promise<CheckChunkResponseDto> {
-    const exist = await this.uploadService.checkChunkExists(dto);
-    return { exist };
-  }
-
-  /**
-   * 保存分片文件到临时目录
-   * 手动处理文件保存，避免 Multer 解析顺序问题
-   */
-  async saveChunk(
-    fileBuffer: Buffer,
-    hash: string,
-    chunkIndex: number
-  ): Promise<void> {
-    const chunkDir = this.uploadService.getChunkTempDirPath(hash);
-    const chunkFilename = `${chunkIndex}_${hash}`;
-    const chunkPath = path.join(chunkDir, chunkFilename);
-
-    // 确保目录存在
-    if (!fs.existsSync(chunkDir)) {
-      fs.mkdirSync(chunkDir, { recursive: true });
-      this.logger.log(`创建分片目录: ${chunkDir}`);
-    }
-
-    // 写入分片文件
-    await fs.promises.writeFile(chunkPath, fileBuffer);
-    this.logger.log(`分片已保存: ${chunkPath}`);
-  }
-
-  /**
-   * 检查文件是否已存在（秒传检查）
-   * 如果文件已存在，返回文件哈希
-   */
-  async checkFile(dto: CheckFileDto): Promise<CheckFileResponseDto> {
-    const { filename, fileHash } = dto;
-    const { exist, mxwebPath } = await this.uploadService.checkFileExist(
-      filename,
-      fileHash
-    );
-
-    if (exist && mxwebPath) {
-      this.logger.log(
-        `[checkFile] 秒传成功: filename=${filename}, hash=${fileHash}`
-      );
-
-      return {
-        exist: true,
-        hash: fileHash,
-        fileName: filename,
-      };
-    }
-
-    return { exist: false };
-  }
-
-  /**
-   * 合并分片并返回文件访问信息
-   */
-  async mergeChunks(dto: MergeChunksDto): Promise<MergeCompleteResponseDto> {
-    const { hash, fileName } = await this.uploadService.mergeChunks(dto);
-
-    return {
-      ret: 'success',
-      hash,
-      fileName,
-    };
-  }
-
-  /**
-   * 根据 hash 在 uploads 目录中查找 mxweb 文件
-   * 查找模式: {hash}.{原扩展名}.mxweb （如 4b298dd48355af1202b532fc4d051658.dwg.mxweb）
-   */
-  async findMxwebFile(hash: string): Promise<string | null> {
-    const files = await this.uploadService.findFilesByPrefix(hash);
-    const mxwebFile = files.find(
-      (f) => f.startsWith(hash) && f.endsWith('.mxweb')
-    );
-    return mxwebFile ? this.uploadService.getFilePath(mxwebFile) : null;
-  }
 
   /**
    * 在 uploads/{hash} 目录下查找指定文件

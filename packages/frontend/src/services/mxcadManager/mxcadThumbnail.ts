@@ -17,7 +17,7 @@
  * generateThumbnail 需要 MxCAD SDK 运行时支持，在单元测试环境中不可用。
  */
 
-import { mxCadControllerCheckThumbnail, mxCadControllerUploadThumbnail } from '@/api-sdk';
+import { thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 
 /**
@@ -27,7 +27,7 @@ import { handleError } from '@/utils/errorHandler';
  */
 export async function checkThumbnail(nodeId: string): Promise<boolean> {
   try {
-    const result = await mxCadControllerCheckThumbnail({ path: { nodeId } });
+    const result = await thumbnailControllerCheckThumbnail({ path: { nodeId } });
     return !!result?.data?.exists;
   } catch (error) {
     handleError(error, 'mxcadThumbnail: checkThumbnail');
@@ -54,7 +54,7 @@ export async function uploadThumbnail(
     const formData = new FormData();
     formData.append('file', blob, 'thumbnail.png');
 
-    await mxCadControllerUploadThumbnail({ path: { nodeId }, body: formData });
+    await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: formData });
     return true;
   } catch (error) {
     handleError(error, 'mxcadThumbnail: uploadThumbnail');

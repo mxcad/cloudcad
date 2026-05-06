@@ -2138,122 +2138,6 @@ export type AdminStatsResponseDto = {
     timestamp: string;
 };
 
-export type CheckChunkDto = {
-    /**
-     * 文件 MD5 哈希值
-     */
-    fileHash: string;
-    /**
-     * 分片索引（从 0 开始）
-     */
-    chunk: number;
-    /**
-     * 总分片数量
-     */
-    chunks: number;
-};
-
-export type CheckChunkResponseDto = {
-    /**
-     * 分片是否存在
-     */
-    exist: boolean;
-};
-
-export type CheckFileDto = {
-    /**
-     * 文件名
-     */
-    filename: string;
-    /**
-     * 文件 MD5 哈希
-     */
-    fileHash: string;
-};
-
-export type CheckFileResponseDto = {
-    /**
-     * 文件是否已存在
-     */
-    exist: boolean;
-    /**
-     * 文件哈希
-     */
-    hash?: string;
-    /**
-     * 原始文件名
-     */
-    fileName?: string;
-};
-
-export type UploadChunkDto = {
-    /**
-     * 文件 MD5 哈希值
-     */
-    hash: string;
-    /**
-     * 原始文件名
-     */
-    name: string;
-    /**
-     * 文件总大小（字节）
-     */
-    size: number;
-    /**
-     * 当前分片索引（从 0 开始）
-     */
-    chunk: number;
-    /**
-     * 总分片数量
-     */
-    chunks: number;
-};
-
-export type UploadChunkResponseDto = {
-    /**
-     * 上传结果
-     */
-    ret: string;
-    /**
-     * 是否为最后一个分片
-     */
-    isLastChunk?: boolean;
-};
-
-export type MergeChunksDto = {
-    /**
-     * 文件 MD5 哈希值
-     */
-    hash: string;
-    /**
-     * 原始文件名
-     */
-    name: string;
-    /**
-     * 文件总大小（字节）
-     */
-    size: number;
-    /**
-     * 总分片数量
-     */
-    chunks: number;
-};
-
-export type MergeCompleteResponseDto = {
-    /**
-     * 操作结果
-     */
-    ret: string;
-    /**
-     * 文件哈希
-     */
-    hash: string;
-    /**
-     * 原始文件名
-     */
-    fileName: string;
-};
-
 export type UploadExtReferenceDto = {
     /**
      * 源图纸文件的哈希值（主图纸文件的 hash）
@@ -2267,6 +2151,13 @@ export type UploadExtReferenceDto = {
      * 文件哈希值（可选，用于秒传检查）
      */
     hash?: string;
+};
+
+export type SaveLibraryNodeDto = {
+    /**
+     * 要保存的文件
+     */
+    file: Blob | File;
 };
 
 /**
@@ -5947,70 +5838,6 @@ export type HealthControllerCheckStorageResponses = {
     200: unknown;
 };
 
-export type PublicFileControllerCheckChunkData = {
-    body: CheckChunkDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/public-file/chunk/check';
-};
-
-export type PublicFileControllerCheckChunkResponses = {
-    /**
-     * 返回分片存在状态
-     */
-    200: CheckChunkResponseDto;
-};
-
-export type PublicFileControllerCheckChunkResponse = PublicFileControllerCheckChunkResponses[keyof PublicFileControllerCheckChunkResponses];
-
-export type PublicFileControllerCheckFileData = {
-    body: CheckFileDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/public-file/file/check';
-};
-
-export type PublicFileControllerCheckFileResponses = {
-    /**
-     * 返回文件存在状态
-     */
-    200: CheckFileResponseDto;
-};
-
-export type PublicFileControllerCheckFileResponse = PublicFileControllerCheckFileResponses[keyof PublicFileControllerCheckFileResponses];
-
-export type PublicFileControllerUploadChunkData = {
-    body: UploadChunkDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/public-file/chunk/upload';
-};
-
-export type PublicFileControllerUploadChunkResponses = {
-    /**
-     * 上传成功
-     */
-    200: UploadChunkResponseDto;
-};
-
-export type PublicFileControllerUploadChunkResponse = PublicFileControllerUploadChunkResponses[keyof PublicFileControllerUploadChunkResponses];
-
-export type PublicFileControllerMergeChunksData = {
-    body: MergeChunksDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/public-file/chunk/merge';
-};
-
-export type PublicFileControllerMergeChunksResponses = {
-    /**
-     * 合并成功，返回文件信息
-     */
-    200: MergeCompleteResponseDto;
-};
-
-export type PublicFileControllerMergeChunksResponse = PublicFileControllerMergeChunksResponses[keyof PublicFileControllerMergeChunksResponses];
-
 export type PublicFileControllerAccessFileData = {
     body?: never;
     path: {
@@ -6258,6 +6085,24 @@ export type LibraryControllerGetDrawingFileResponses = {
 
 export type LibraryControllerGetDrawingFileResponse = LibraryControllerGetDrawingFileResponses[keyof LibraryControllerGetDrawingFileResponses];
 
+export type LibraryControllerDeleteDrawingNodeData = {
+    body?: never;
+    path: {
+        nodeId: string;
+    };
+    query: {
+        permanently: boolean;
+    };
+    url: '/api/v1/library/drawing/nodes/{nodeId}';
+};
+
+export type LibraryControllerDeleteDrawingNodeResponses = {
+    /**
+     * 删除成功
+     */
+    200: unknown;
+};
+
 export type LibraryControllerGetDrawingNodeData = {
     body?: never;
     path: {
@@ -6275,6 +6120,24 @@ export type LibraryControllerGetDrawingNodeResponses = {
 };
 
 export type LibraryControllerGetDrawingNodeResponse = LibraryControllerGetDrawingNodeResponses[keyof LibraryControllerGetDrawingNodeResponses];
+
+export type LibraryControllerRenameDrawingNodeData = {
+    body: UpdateNodeDto;
+    path: {
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/library/drawing/nodes/{nodeId}';
+};
+
+export type LibraryControllerRenameDrawingNodeResponses = {
+    /**
+     * 重命名成功
+     */
+    200: FileSystemNodeDto;
+};
+
+export type LibraryControllerRenameDrawingNodeResponse = LibraryControllerRenameDrawingNodeResponses[keyof LibraryControllerRenameDrawingNodeResponses];
 
 export type LibraryControllerDownloadDrawingNodeData = {
     body?: never;
@@ -6311,7 +6174,7 @@ export type LibraryControllerGetDrawingThumbnailResponses = {
 };
 
 export type LibraryControllerSaveDrawingNodeData = {
-    body?: never;
+    body: SaveLibraryNodeDto;
     path: {
         nodeId: string;
     };
@@ -6325,6 +6188,58 @@ export type LibraryControllerSaveDrawingNodeResponses = {
      */
     200: unknown;
 };
+
+export type LibraryControllerCreateDrawingFolderData = {
+    body: CreateFolderDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/drawing/folders';
+};
+
+export type LibraryControllerCreateDrawingFolderResponses = {
+    /**
+     * 文件夹创建成功
+     */
+    201: FileSystemNodeDto;
+};
+
+export type LibraryControllerCreateDrawingFolderResponse = LibraryControllerCreateDrawingFolderResponses[keyof LibraryControllerCreateDrawingFolderResponses];
+
+export type LibraryControllerMoveDrawingNodeData = {
+    body: MoveNodeDto;
+    path: {
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/library/drawing/nodes/{nodeId}/move';
+};
+
+export type LibraryControllerMoveDrawingNodeResponses = {
+    /**
+     * 移动成功
+     */
+    200: FileSystemNodeDto;
+};
+
+export type LibraryControllerMoveDrawingNodeResponse = LibraryControllerMoveDrawingNodeResponses[keyof LibraryControllerMoveDrawingNodeResponses];
+
+export type LibraryControllerCopyDrawingNodeData = {
+    body: CopyNodeDto;
+    path: {
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/library/drawing/nodes/{nodeId}/copy';
+};
+
+export type LibraryControllerCopyDrawingNodeResponses = {
+    /**
+     * 复制成功
+     */
+    201: FileSystemNodeDto;
+};
+
+export type LibraryControllerCopyDrawingNodeResponse = LibraryControllerCopyDrawingNodeResponses[keyof LibraryControllerCopyDrawingNodeResponses];
 
 export type LibraryControllerGetBlockLibraryData = {
     body?: never;
@@ -6470,6 +6385,24 @@ export type LibraryControllerGetBlockFileResponses = {
 
 export type LibraryControllerGetBlockFileResponse = LibraryControllerGetBlockFileResponses[keyof LibraryControllerGetBlockFileResponses];
 
+export type LibraryControllerDeleteBlockNodeData = {
+    body?: never;
+    path: {
+        nodeId: string;
+    };
+    query: {
+        permanently: boolean;
+    };
+    url: '/api/v1/library/block/nodes/{nodeId}';
+};
+
+export type LibraryControllerDeleteBlockNodeResponses = {
+    /**
+     * 删除成功
+     */
+    200: unknown;
+};
+
 export type LibraryControllerGetBlockNodeData = {
     body?: never;
     path: {
@@ -6487,6 +6420,24 @@ export type LibraryControllerGetBlockNodeResponses = {
 };
 
 export type LibraryControllerGetBlockNodeResponse = LibraryControllerGetBlockNodeResponses[keyof LibraryControllerGetBlockNodeResponses];
+
+export type LibraryControllerRenameBlockNodeData = {
+    body: UpdateNodeDto;
+    path: {
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/library/block/nodes/{nodeId}';
+};
+
+export type LibraryControllerRenameBlockNodeResponses = {
+    /**
+     * 重命名成功
+     */
+    200: FileSystemNodeDto;
+};
+
+export type LibraryControllerRenameBlockNodeResponse = LibraryControllerRenameBlockNodeResponses[keyof LibraryControllerRenameBlockNodeResponses];
 
 export type LibraryControllerDownloadBlockNodeData = {
     body?: never;
@@ -6523,7 +6474,7 @@ export type LibraryControllerGetBlockThumbnailResponses = {
 };
 
 export type LibraryControllerSaveBlockNodeData = {
-    body?: never;
+    body: SaveLibraryNodeDto;
     path: {
         nodeId: string;
     };
@@ -6537,3 +6488,55 @@ export type LibraryControllerSaveBlockNodeResponses = {
      */
     200: unknown;
 };
+
+export type LibraryControllerCreateBlockFolderData = {
+    body: CreateFolderDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/block/folders';
+};
+
+export type LibraryControllerCreateBlockFolderResponses = {
+    /**
+     * 文件夹创建成功
+     */
+    201: FileSystemNodeDto;
+};
+
+export type LibraryControllerCreateBlockFolderResponse = LibraryControllerCreateBlockFolderResponses[keyof LibraryControllerCreateBlockFolderResponses];
+
+export type LibraryControllerMoveBlockNodeData = {
+    body: MoveNodeDto;
+    path: {
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/library/block/nodes/{nodeId}/move';
+};
+
+export type LibraryControllerMoveBlockNodeResponses = {
+    /**
+     * 移动成功
+     */
+    200: FileSystemNodeDto;
+};
+
+export type LibraryControllerMoveBlockNodeResponse = LibraryControllerMoveBlockNodeResponses[keyof LibraryControllerMoveBlockNodeResponses];
+
+export type LibraryControllerCopyBlockNodeData = {
+    body: CopyNodeDto;
+    path: {
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/library/block/nodes/{nodeId}/copy';
+};
+
+export type LibraryControllerCopyBlockNodeResponses = {
+    /**
+     * 复制成功
+     */
+    201: FileSystemNodeDto;
+};
+
+export type LibraryControllerCopyBlockNodeResponse = LibraryControllerCopyBlockNodeResponses[keyof LibraryControllerCopyBlockNodeResponses];

@@ -17,9 +17,18 @@
  */
 
 import { useState, useCallback } from 'react';
-// TODO: Replace write methods (deleteDrawingNode, renameDrawingNode, moveDrawingNode, copyDrawingNode, etc.) with SDK when backend adds endpoints. Downloads can use libraryControllerDownloadDrawingNode/libraryControllerDownloadBlockNode.
-import { libraryApi } from '../../services/libraryApi';
-import { libraryControllerDownloadDrawingNode, libraryControllerDownloadBlockNode } from '@/api-sdk';
+import {
+  libraryControllerDownloadDrawingNode,
+  libraryControllerDownloadBlockNode,
+  libraryControllerDeleteDrawingNode,
+  libraryControllerDeleteBlockNode,
+  libraryControllerRenameDrawingNode,
+  libraryControllerRenameBlockNode,
+  libraryControllerMoveDrawingNode,
+  libraryControllerMoveBlockNode,
+  libraryControllerCopyDrawingNode,
+  libraryControllerCopyBlockNode,
+} from '@/api-sdk';
 import { sanitizeFileName } from '../../utils/fileUtils';
 
 export type LibraryType = 'drawing' | 'block';
@@ -94,8 +103,8 @@ export function useLibraryOperations({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryApi.downloadDrawingNode(nodeId)
-            : await libraryApi.downloadBlockNode(nodeId);
+            ? await libraryControllerDownloadDrawingNode({ path: { nodeId } }, undefined, { responseType: 'blob' })
+            : await libraryControllerDownloadBlockNode({ path: { nodeId } }, undefined, { responseType: 'blob' });
 
         const blob = new Blob([response.data as unknown as BlobPart]);
         const url = window.URL.createObjectURL(blob);
@@ -131,8 +140,8 @@ export function useLibraryOperations({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryApi.downloadDrawingNode(nodeId)
-            : await libraryApi.downloadBlockNode(nodeId);
+            ? await libraryControllerDownloadDrawingNode({ path: { nodeId } }, undefined, { responseType: 'blob' })
+            : await libraryControllerDownloadBlockNode({ path: { nodeId } }, undefined, { responseType: 'blob' });
 
         const blob = new Blob([response.data as unknown as BlobPart]);
         const url = window.URL.createObjectURL(blob);
@@ -165,9 +174,9 @@ export function useLibraryOperations({
           try {
             const apiMethod =
               libraryType === 'drawing'
-                ? libraryApi.deleteDrawingNode
-                : libraryApi.deleteBlockNode;
-            await apiMethod(node.id, true);
+                ? libraryControllerDeleteDrawingNode
+                : libraryControllerDeleteBlockNode;
+            await apiMethod({ path: { nodeId: node.id }, query: { permanently: true } });
             showToast('删除成功', 'success');
             refreshNodes();
           } catch (error) {
@@ -188,9 +197,9 @@ export function useLibraryOperations({
       try {
         const apiMethod =
           libraryType === 'drawing'
-            ? libraryApi.renameDrawingNode
-            : libraryApi.renameBlockNode;
-        await apiMethod(nodeId, newName);
+            ? libraryControllerRenameDrawingNode
+            : libraryControllerRenameBlockNode;
+        await apiMethod({ path: { nodeId }, body: { name: newName } });
         showToast('重命名成功', 'success');
         refreshNodes();
         onComplete?.();
@@ -209,9 +218,9 @@ export function useLibraryOperations({
       try {
         const apiMethod =
           libraryType === 'drawing'
-            ? libraryApi.moveDrawingNode
-            : libraryApi.moveBlockNode;
-        await apiMethod(nodeId, targetParentId);
+            ? libraryControllerMoveDrawingNode
+            : libraryControllerMoveBlockNode;
+        await apiMethod({ path: { nodeId }, body: { targetParentId } });
         showToast('移动成功', 'success');
         refreshNodes();
       } catch (error) {
@@ -229,9 +238,9 @@ export function useLibraryOperations({
       try {
         const apiMethod =
           libraryType === 'drawing'
-            ? libraryApi.copyDrawingNode
-            : libraryApi.copyBlockNode;
-        await apiMethod(nodeId, targetParentId);
+            ? libraryControllerCopyDrawingNode
+            : libraryControllerCopyBlockNode;
+        await apiMethod({ path: { nodeId }, body: { targetParentId } });
         showToast('复制成功', 'success');
         refreshNodes();
       } catch (error) {
@@ -250,9 +259,9 @@ export function useLibraryOperations({
         for (const nodeId of nodeIds) {
           const apiMethod =
             libraryType === 'drawing'
-              ? libraryApi.deleteDrawingNode
-              : libraryApi.deleteBlockNode;
-          await apiMethod(nodeId, true);
+              ? libraryControllerDeleteDrawingNode
+              : libraryControllerDeleteBlockNode;
+          await apiMethod({ path: { nodeId }, query: { permanently: true } });
         }
         showToast(`成功删除 ${nodeIds.length} 个项目`, 'success');
         refreshNodes();
@@ -272,9 +281,9 @@ export function useLibraryOperations({
         for (const nodeId of nodeIds) {
           const apiMethod =
             libraryType === 'drawing'
-              ? libraryApi.moveDrawingNode
-              : libraryApi.moveBlockNode;
-          await apiMethod(nodeId, targetParentId);
+              ? libraryControllerMoveDrawingNode
+              : libraryControllerMoveBlockNode;
+          await apiMethod({ path: { nodeId }, body: { targetParentId } });
         }
         showToast(`成功移动 ${nodeIds.length} 个项目`, 'success');
         refreshNodes();
@@ -294,9 +303,9 @@ export function useLibraryOperations({
         for (const nodeId of nodeIds) {
           const apiMethod =
             libraryType === 'drawing'
-              ? libraryApi.copyDrawingNode
-              : libraryApi.copyBlockNode;
-          await apiMethod(nodeId, targetParentId);
+              ? libraryControllerCopyDrawingNode
+              : libraryControllerCopyBlockNode;
+          await apiMethod({ path: { nodeId }, body: { targetParentId } });
         }
         showToast(`成功复制 ${nodeIds.length} 个项目`, 'success');
         refreshNodes();

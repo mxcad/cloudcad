@@ -27,6 +27,7 @@ import { GlobalTourRenderer } from './components/tour';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { BrandProvider } from './contexts/BrandContext';
+import { useMxCADPreload } from './hooks/useMxCADPreload';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -78,6 +79,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
   ({ children }) => {
     const { isAuthenticated, loading } = useAuth();
     const location = useLocation();
+
+    // 在非 CAD 页面预加载 CAD 引擎
+    useMxCADPreload();
 
     // Wait for token validation before deciding — prevents flash-redirect on reload
     if (loading) {
@@ -146,7 +150,12 @@ function CADEditorRouteGuard() {
   if (!isCADRoute) return null;
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={
+      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+        <div className="animate-spin rounded-full h-8 w-8" style={{ border: '2px solid var(--border-strong)', borderTopColor: 'var(--accent-600)' }} />
+        <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>正在加载 CAD 编辑器...</p>
+      </div>
+    }>
       <CADEditorDirect />
     </Suspense>
   );

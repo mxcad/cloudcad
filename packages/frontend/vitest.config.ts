@@ -19,6 +19,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // mxcad/mxdraw are native SDK packages that can't be resolved in test env
+      'mxcad': path.resolve(__dirname, './src/test/__mocks__/empty.ts'),
+      'mxdraw': path.resolve(__dirname, './src/test/__mocks__/empty.ts'),
     },
   },
 });

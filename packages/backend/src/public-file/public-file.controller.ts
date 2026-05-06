@@ -34,17 +34,7 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { PublicFileService } from './public-file.service';
-import {
-  CheckChunkDto,
-  UploadChunkDto,
-  MergeChunksDto,
-  CheckFileDto,
-  CheckChunkResponseDto,
-  UploadChunkResponseDto,
-  MergeCompleteResponseDto,
-  CheckFileResponseDto,
-  UploadExtReferenceDto,
-} from './dto';
+import { UploadExtReferenceDto } from './dto';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
 
@@ -57,101 +47,6 @@ export class PublicFileController {
   private readonly logger = new Logger(PublicFileController.name);
 
   constructor(private readonly publicFileService: PublicFileService) {}
-
-  /**
-   * 检查分片是否存在
-   * POST /api/public-file/chunk/check
-   */
-  @Post('chunk/check')
-  @Public()
-  @ApiOperation({ summary: '检查分片是否存在' })
-  @ApiResponse({
-    status: 200,
-    description: '返回分片存在状态',
-    type: CheckChunkResponseDto,
-  })
-  async checkChunk(@Body() dto: CheckChunkDto): Promise<CheckChunkResponseDto> {
-    return this.publicFileService.checkChunk(dto);
-  }
-
-  /**
-   * 检查文件是否已存在（秒传检查）
-   * POST /api/public-file/file/check
-   */
-  @Post('file/check')
-  @Public()
-  @ApiOperation({ summary: '检查文件是否已存在（秒传检查）' })
-  @ApiResponse({
-    status: 200,
-    description: '返回文件存在状态',
-    type: CheckFileResponseDto,
-  })
-  async checkFile(@Body() dto: CheckFileDto): Promise<CheckFileResponseDto> {
-    return this.publicFileService.checkFile(dto);
-  }
-
-  /**
-   * 上传分片
-   * POST /api/public-file/chunk/upload
-   * 注意：使用内存存储，然后手动保存到正确的分片目录
-   * 因为 Multer 的 destination 回调在 req.body 解析之前执行
-   */
-  @Post('chunk/upload')
-  @Public()
-  @ApiOperation({ summary: '上传分片' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({
-    status: 200,
-    description: '上传成功',
-    type: UploadChunkResponseDto,
-  })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadChunk(
-    @Body() dto: UploadChunkDto,
-    @UploadedFile() file: Express.Multer.File
-  ): Promise<UploadChunkResponseDto> {
-    if (!file) {
-      throw new BadRequestException('未上传文件');
-    }
-
-    // 验证必要参数
-    if (!dto.hash || dto.chunk === undefined || !dto.chunks) {
-      throw new BadRequestException('缺少必要参数: hash, chunk 或 chunks');
-    }
-
-    // 手动保存分片文件到正确的目录
-    await this.publicFileService.saveChunk(file.buffer, dto.hash, dto.chunk);
-
-    const isLastChunk = dto.chunk + 1 === dto.chunks;
-
-    this.logger.log(
-      `分片上传成功: hash=${dto.hash}, chunk=${dto.chunk}/${dto.chunks - 1}`
-    );
-
-    return {
-      ret: 'success',
-      isLastChunk,
-    };
-  }
-
-  /**
-   * 合并分片并获取文件访问信息
-   * POST /api/public-file/chunk/merge
-   */
-  @Post('chunk/merge')
-  @Public()
-  @ApiOperation({ summary: '合并分片并获取文件访问信息' })
-  @ApiResponse({
-    status: 200,
-    description: '合并成功，返回文件信息',
-    type: MergeCompleteResponseDto,
-  })
-  async mergeChunks(
-    @Body() dto: MergeChunksDto
-  ): Promise<MergeCompleteResponseDto> {
-    this.logger.log(`开始合并分片: hash=${dto.hash}, name=${dto.name}`);
-    return this.publicFileService.mergeChunks(dto);
-  }
 
   /**
    * 通过文件哈希访问目录下的文件

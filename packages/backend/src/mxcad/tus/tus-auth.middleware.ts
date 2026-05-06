@@ -3,16 +3,19 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, NestMiddleware, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request, Response, NextFunction } from 'express';
 import { ExtractJwt } from 'passport-jwt';
 
 /**
- * Tus 认证中间件
+ * Tus 可选认证中间件
  *
- * 为 Tus 上传端点提供 JWT 认证保护。
+ * 为 Tus 上传端点提供可选的 JWT 认证。
+ * - 有 token → 验证 JWT，设置 req.user
+ * - 有 session → 使用 session，设置 req.user
+ * - 都没有 → 允许匿名上传（req.user 为 undefined）
  */
 @Injectable()
 export class TusAuthMiddleware implements NestMiddleware {
@@ -32,38 +35,34 @@ export class TusAuthMiddleware implements NestMiddleware {
     try {
       // 从 Authorization header 提取 token
       const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-      
-      if (!token) {
-        // 尝试从 session 中获取
-        if ((req.session as any)?.userId) {
-          (req as any).user = {
-            id: (req.session as any).userId,
-            role: (req.session as any).userRole,
-            email: (req.session as any).userEmail,
-          };
-          this.logger.debug(`使用 Session 认证: ${(req as any).user.id}`);
-          return next();
-        }
-        
-        this.logger.debug('请求未提供 Token 且无有效 Session');
-        throw new UnauthorizedException('未登录或登录已过期');
+
+      if (token) {
+        // 验证 JWT
+        const secret = this.configService.get('jwt.secret', { infer: true });
+        const payload = this.jwtService.verify(token, { secret });
+        (req as any).user = payload;
+        this.logger.debug(`JWT 认证成功: ${payload.id}`);
+        return next();
       }
 
-      // 验证 JWT
-      const secret = this.configService.get('jwt.secret', { infer: true });
-      const payload = this.jwtService.verify(token, { secret });
-      
-      (req as any).user = payload;
-      this.logger.debug(`JWT 认证成功: ${payload.id}`);
-      
+      // 尝试从 session 中获取
+      if ((req.session as any)?.userId) {
+        (req as any).user = {
+          id: (req.session as any).userId,
+          role: (req.session as any).userRole,
+          email: (req.session as any).userEmail,
+        };
+        this.logger.debug(`使用 Session 认证: ${(req as any).user.id}`);
+        return next();
+      }
+
+      // 匿名用户：不设置 user，继续处理
+      this.logger.debug('匿名上传（无 Token 且无 Session）');
       next();
     } catch (error) {
-      this.logger.error(`Tus 认证失败: ${(error as Error).message}`);
-      res.status(401).json({
-        statusCode: 401,
-        message: '未登录或登录已过期',
-        error: 'Unauthorized'
-      });
+      // Token 存在但无效 → 拒绝请求（不是匿名，是伪造/过期凭证）
+      this.logger.warn(`Token 无效，拒绝上传: ${(error as Error).message}`);
+      res.status(401).json({ message: '无效的认证凭证' });
     }
   }
 }

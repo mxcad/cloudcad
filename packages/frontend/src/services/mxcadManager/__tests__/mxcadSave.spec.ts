@@ -92,12 +92,11 @@ describe('mxcadSave', () => {
       expect(mockSave).toHaveBeenCalledTimes(1);
       const callArgs = mockSave.mock.calls[0][0];
       expect(callArgs.path.nodeId).toBe('node-abc');
-      const body = callArgs.body as FormData;
-      expect(body.get('nodeId')).toBe('node-abc');
-      expect(body.get('name')).toBe('drawing.mxweb');
+      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
+      expect(body.file).toBe(mockBlob);
     });
 
-    it('includes commitMessage in FormData when provided', async () => {
+    it('includes commitMessage when provided', async () => {
       const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       mockSave.mockResolvedValue({ data: { success: true } });
 
@@ -109,8 +108,8 @@ describe('mxcadSave', () => {
       });
 
       const callArgs = mockSave.mock.calls[0][0];
-      const body = callArgs.body as FormData;
-      expect(body.get('commitMessage')).toBe('Fixed layer alignment');
+      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
+      expect(body.commitMessage).toBe('Fixed layer alignment');
     });
 
     it('includes expectedTimestamp when provided (optimistic locking)', async () => {
@@ -125,15 +124,14 @@ describe('mxcadSave', () => {
       });
 
       const callArgs = mockSave.mock.calls[0][0];
-      const body = callArgs.body as FormData;
-      expect(body.get('expectedTimestamp')).toBe('2024-01-15T10:30:00Z');
+      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
+      expect(body.expectedTimestamp).toBe('2024-01-15T10:30:00Z');
     });
 
     it('handles missing optional parameters gracefully', async () => {
       const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
       mockSave.mockResolvedValue({ data: { success: true } });
 
-      // commitMessage and expectedTimestamp are optional — should not break
       await saveMxwebToNode({
         nodeId: 'node-jkl',
         blob: mockBlob,
@@ -141,9 +139,9 @@ describe('mxcadSave', () => {
       });
 
       const callArgs = mockSave.mock.calls[0][0];
-      const body = callArgs.body as FormData;
-      expect(body.get('commitMessage')).toBeNull();
-      expect(body.get('expectedTimestamp')).toBeNull();
+      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
+      expect(body.commitMessage).toBeUndefined();
+      expect(body.expectedTimestamp).toBeUndefined();
     });
 
     it('propagates API errors', async () => {

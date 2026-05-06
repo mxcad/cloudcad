@@ -97,8 +97,7 @@ export function resolveExtReferenceUrl(
     const hashIndex = parts.indexOf('access') + 1;
     if (hashIndex < parts.length && fileName) {
       const hash = parts[hashIndex];
-      const { API_BASE_URL } = require('./publicFileApi');
-      return `${API_BASE_URL}/public-file/access/${hash}/${fileName}`;
+      return `/api/v1/public-file/access/${hash}/${fileName}`;
     }
   }
 
