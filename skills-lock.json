@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "agent-browser": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "skillPath": "skills/agent-browser/SKILL.md",
+      "computedHash": "6f68d01b14796e410746fab39c2d6b36dcfa030dd59eb772f6418e2db949a16c"
+    },
     "caveman": {
       "source": "mattpocock/skills",
       "sourceType": "github",

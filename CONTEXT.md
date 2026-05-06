@@ -86,3 +86,26 @@ CloudCAD 和 mxcad-app 的关系：
 - **"文档"（document）**：曾用来指 CAD 引擎内存中的数据，但这个概念不存在。引擎内存中的就是 mxweb 数据，保存后上传的也是 mxweb 二进制。此词应避免使用。
 - **"文档标题"（document title）**：`useDocumentTitle` 这个 composable 名称有歧义。它可能不是指浏览器标签页标题，而是 CAD 编辑器内显示当前文件名的头部区域。待确认后重命名。
 
+## 限界上下文（Bounded Contexts）
+
+> 见 [docs/ddd/context-map.md](docs/ddd/context-map.md) — DDD 战略设计产出。
+
+| 限界上下文 | 聚合根 | 包含模块 | 职责 |
+|-----------|--------|---------|------|
+| **图纸内容上下文** | DrawingSession | mxcad, storage, conversion | 图纸的编辑、格式转换、二进制存储 |
+| **图纸组织上下文** | FileNode | file-system, version-control | 文件树结构、权限归属、版本历史 |
+
+**通信方式（当前阶段）：** 直接服务调用（NestJS DI 注入）。后续重构为领域事件驱动。
+
+**聚合关键不变:**
+- Drawing 是 FileNode 聚合内的**值对象**，不独立存在
+- 一个 FileNode 有且仅有一种归属（Project / Personal Space / Library）
+- 非 CAD 文件（外部引用中的图片）属于外部引用专项，不纳入 FileNode 体系
+- 支持的图纸格式：DWG、DXF、mxweb（后续可能扩展更多 CAD 格式，但不会是通用文档格式）
+
+## 参考
+
+- [DDD 限界上下文映射图](docs/ddd/context-map.md)
+- [SDD 规格文档](docs/sdd/)
+- [ADR 0001 - 转换引擎合并](docs/adr/0001-merge-conversion-engine-into-backend.md)
+
