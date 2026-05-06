@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback } from 'react';
-import { versionControlApi } from '@/services/versionControlApi';
+import { versionControlControllerGetFileHistory } from '@/api-sdk';
 import { ProjectPermission } from '@/constants/permissions';
 import { handleError } from '@/utils/errorHandler';
 import type { FileSystemNode } from '@/types/filesystem';
@@ -57,15 +57,19 @@ export function useVersionHistory({
       setVersionHistoryError(null);
 
       try {
-        const response = await versionControlApi.getFileHistory(
-          urlProjectId || '',
-          node.path,
-          50
-        );
-        if (response.data?.success) {
-          setVersionHistoryEntries(response.data.entries || []);
+        const result = await versionControlControllerGetFileHistory({
+          query: {
+            projectId: urlProjectId || '',
+            filePath: node.path,
+            limit: 50,
+          },
+        });
+        if (result.error) throw result.error;
+        const data = result.data as any;
+        if (data?.success) {
+          setVersionHistoryEntries(data.entries || []);
         } else {
-          setVersionHistoryError(response.data?.message || '加载版本历史失败');
+          setVersionHistoryError(data?.message || '加载版本历史失败');
         }
       } catch (error: unknown) {
         handleError(error, '版本历史加载失败');

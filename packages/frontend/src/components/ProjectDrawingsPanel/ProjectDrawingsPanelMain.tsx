@@ -24,7 +24,6 @@ import {
   fileSystemControllerUpdateNode,
 } from '@/api-sdk';
 import { libraryControllerGetDrawingAllFiles, libraryControllerGetBlockAllFiles } from '@/api-sdk';
-import { libraryApi } from '@/services/libraryApi';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
@@ -47,7 +46,7 @@ import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { handleError } from '@/utils/errorHandler';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import styles from '@/components/sidebar/sidebar.module.css';
-import type { ProjectFilterType } from '@/services/projectApi';
+import type { ProjectFilterType } from '@/types/project';
 
 import type { LibraryType, BreadcrumbItem, ProjectDrawingsPanelProps } from './types';
 import { PAGE_SIZE, isDrawingFile, API_BASE } from './constants';
@@ -366,7 +365,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const resourceItems: ResourceItem[] = useMemo(() => {
     if (isLibraryMode) {
       const files = nodes.filter((n) => !n.isFolder);
-      const getThumb = (nodeId: string) => libraryType === 'drawing' ? libraryApi.getDrawingThumbnailUrl(nodeId) : libraryApi.getBlockThumbnailUrl(nodeId);
+      const getThumb = (nodeId: string) => {
+        const base = `${window.location.origin}/api/v1/library/${libraryType === 'drawing' ? 'drawing' : 'block'}`;
+        return `${base}/nodes/${nodeId}/thumbnail`;
+      };
       const items = files.map((node) => ({
         id: node.id, name: node.name, type: 'file' as const,
         thumbnailUrl: getThumb(node.id), updatedAt: node.updatedAt, size: node.size,

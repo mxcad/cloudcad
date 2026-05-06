@@ -8,7 +8,7 @@ import { FolderOpen } from 'lucide-react';
 import type { FileSystemNode } from '@/types/filesystem';
 import { FileItem } from '@/components/FileItem';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
-import type { ProjectFilterType } from '@/services/projectApi';
+import type { ProjectFilterType } from '@/types/project';
 import styles from '@/components/sidebar/sidebar.module.css';
 
 interface ProjectListViewProps {

@@ -39,7 +39,7 @@ import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { DownloadFormatModal } from '@/components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { isAbortError, handleError } from '@/utils/errorHandler';
-import type { ProjectFilterType } from '@/services/projectApi';
+import type { ProjectFilterType } from '@/types/project';
 
 import { FileSystemHeader } from './FileSystemHeader';
 import { FileSystemContent } from './FileSystemContent';

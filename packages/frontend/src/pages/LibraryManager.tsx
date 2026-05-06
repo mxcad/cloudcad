@@ -23,8 +23,8 @@ import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryOperations } from '../hooks/library/useLibraryOperations';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
-// TODO: Replace write methods (deleteDrawingNode, deleteBlockNode) with SDK when backend adds endpoints
-import { libraryApi } from '../services/libraryApi';
+// TODO: Replace with SDK when backend adds delete endpoints
+import { deleteDrawingNode, deleteBlockNode } from '../utils/libraryApi';
 import {
   fileSystemControllerGetStorageQuota,
   fileSystemControllerUpdateStorageQuota,
@@ -944,8 +944,8 @@ export const LibraryManager: React.FC = () => {
                           for (const nodeId of nodeIds) {
                             const apiMethod =
                               libraryType === 'drawing'
-                                ? libraryApi.deleteDrawingNode
-                                : libraryApi.deleteBlockNode;
+                                ? deleteDrawingNode
+                                : deleteBlockNode;
                             await apiMethod(nodeId, true);
                           }
                           showToast(`成功删除 ${count} 个项目`, 'success');

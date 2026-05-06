@@ -35,7 +35,7 @@ import { useFileSystemNavigation } from './useFileSystemNavigation';
 import { useFileSystemSearch } from './useFileSystemSearch';
 import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
-import type { ProjectFilterType } from '@/services/projectApi';
+import type { ProjectFilterType } from '@/types/project';
 
 interface UseFileSystemOptions {
   mode?: 'project' | 'personal-space';

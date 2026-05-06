@@ -20,8 +20,6 @@ import {
   fileSystemControllerGetNode,
   fileSystemControllerGetChildren,
 } from '@/api-sdk';
-// @deprecated — legacy import kept for getDeleted (no SDK mapping)
-import { projectApi } from '@/services/projectApi';
 import {
   FileSystemNode,
   BreadcrumbItem,
@@ -31,7 +29,7 @@ import {
 import type { ProjectDto } from '@/types/api-client';
 import { PaginationMeta } from '@/components/ui/Pagination';
 import { handleError, isAbortError } from '@/utils/errorHandler';
-import type { ProjectFilterType } from '@/services/projectApi';
+import type { ProjectFilterType } from '@/types/project';
 
 interface UseFileSystemDataProps {
   urlProjectId: string | undefined;
@@ -327,16 +325,12 @@ export const useFileSystemData = ({
         let response;
 
         if (isProjectTrashViewRef.current) {
-          // TODO: Replace with SDK when backend adds getDeletedProjects endpoint
-          response = await projectApi.getDeleted(
-            {
+          response = await fileSystemControllerGetTrash({
+            query: {
               page: paginationRef.current.page,
               limit: paginationRef.current.limit,
             },
-            {
-              signal: abortController.signal,
-            }
-          );
+          } as any);
         } else {
           response = await fileSystemControllerGetProjects({
             query: {

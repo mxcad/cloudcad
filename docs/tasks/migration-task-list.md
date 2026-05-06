@@ -192,15 +192,45 @@
 | T2.1 Login | ✅ 完成 | refactor/circular-deps |
 | T2.2 Register | ✅ 完成 | refactor/circular-deps |
 | T2.3 ForgotPassword/ResetPassword | ✅ 完成 | refactor/circular-deps |
-| T2.4 EmailVerification/PhoneVerification | ⬜ 待做 | |
-| T3.1 ProfileInfoTab | ⬜ 待做 | |
+| T2.4 EmailVerification/PhoneVerification | ✅ 完成 | refactor/circular-deps |
+| T3.1 ProfileInfoTab | ✅ 完成 | refactor/circular-deps |
 | T3.2 Profile | ✅ 完成 | refactor/circular-deps |
-| T3.3 SelectFolderModal | ⬜ 待做 | |
-| T3.4 SaveAsModal | ⬜ 待做 | |
-| T3.5 ProjectRolesModal | ⬜ 待做 | |
+| T3.3 SelectFolderModal | ✅ 完成 | refactor/circular-deps |
+| T3.4 SaveAsModal | ✅ 完成 | refactor/circular-deps |
+| T3.5 ProjectRolesModal | ✅ 完成 | refactor/circular-deps |
 | T3.6 LibrarySelectFolderModal | ✅ 完成 | refactor/circular-deps |
-| T3.7 SidebarContainer | ⬜ 待做 | |
-| T4.1 FileSystemManager | ⬜ 待做 | |
-| T4.2 LibraryManager | ⬜ 待做 | |
-| T4.3 CADEditorDirect | ⬜ 待做 | |
-| T5.1-5.3 清理 services | ⬜ 待做 | |
+| T3.7 SidebarContainer | ✅ 完成 | refactor/circular-deps |
+| T4.1 FileSystemManager | ✅ 完成 | refactor/circular-deps |
+| T4.2 LibraryManager | ✅ 完成 | refactor/circular-deps |
+| T4.3 CADEditorDirect | ✅ 完成 | refactor/circular-deps |
+| T5.1-5.3 清理 services | ⚠️ 部分完成 | refactor/circular-deps |
+
+## 阻塞项
+
+### libraryApi 无法完全移除
+`src/services/libraryApi.ts` 被以下 hook 深度使用：
+- `useLibrary.ts` — 图纸库/图块库 CRUD
+- `useLibraryOperations.ts` — 下载、删除、重命名、移动、复制
+- `useLibraryPanel.ts` — 面板数据加载
+- `useDirectoryImport.ts` — 批量导入
+- `useSaveAs.ts` — 另存为
+
+**原因**: SDK (`sdk.gen.ts`) 缺少图书馆写操作端点：
+- `deleteDrawingNode` / `deleteBlockNode`
+- `renameDrawingNode` / `renameBlockNode`
+- `moveDrawingNode` / `moveBlockNode`
+- `copyDrawingNode` / `copyBlockNode`
+- `createDrawingFolder` / `createBlockFolder`
+- `saveDrawingAs` / `saveBlockAs`
+
+**解决方案**: 后端添加对应的 library CRUD 端点后，SDK 会自动生成，届时可移除 `libraryApi`。
+
+### 测试文件中的 @/services 引用
+以下测试文件仍 mock `@/services` 模块：
+- `useFileSystemCRUD.spec.ts` — mock `projectApi`, `nodeApi`, `projectTrashApi`, `trashApi`
+- `useFileSystemData.spec.tsx` — mock `projectApi`
+- `FileSystemManager.spec.tsx` — mock `projectApi`, `versionControlApi`
+- `useProjectPermission.spec.ts` — mock `projectPermissionApi`
+- `mxcadSave.spec.ts` — mock `filesApi`
+
+测试 mock 需要在服务文件实际删除后更新为 mock `@/api-sdk`。

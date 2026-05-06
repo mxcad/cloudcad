@@ -10,6 +10,8 @@ import { SystemPermission, type Permission } from '@/constants/permissions';
 import {
   fileSystemControllerGetNode,
   fileSystemControllerGetRootNode,
+  libraryControllerGetDrawingNode,
+  libraryControllerGetBlockNode,
 } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import { parseCADEditorRoute } from '../cadEditorUtils';
@@ -114,13 +116,17 @@ export function useFileLoader(options: UseFileLoaderOptions) {
       let file: FileInfo | undefined;
 
       if (libraryKeyParam === 'drawing') {
-        const { libraryApi } = await import('@/services/libraryApi');
-        const nodeResponse = await libraryApi.getDrawingNode(fileId);
-        file = nodeResponse.data as FileInfo;
+        const result = await libraryControllerGetDrawingNode({
+          path: { nodeId: fileId },
+        });
+        if (result.error) throw result.error;
+        file = result.data as FileInfo;
       } else if (libraryKeyParam === 'block') {
-        const { libraryApi } = await import('@/services/libraryApi');
-        const nodeResponse = await libraryApi.getBlockNode(fileId);
-        file = nodeResponse.data as FileInfo;
+        const result = await libraryControllerGetBlockNode({
+          path: { nodeId: fileId },
+        });
+        if (result.error) throw result.error;
+        file = result.data as FileInfo;
       } else {
         try {
           const { data: fileNode } = (await fileSystemControllerGetNode({

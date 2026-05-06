@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../../components/ui/Button';
 import { RefreshIcon } from '../../components/FileIcons';
-import type { ProjectFilterType } from '@/services/projectApi'; // @deprecated keep local type
+import type { ProjectFilterType } from '@/types/project';
 
 interface ProjectFilterTabsProps {
   isProjectTrashView: boolean;
