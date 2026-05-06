@@ -3,7 +3,7 @@
 // All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
 
-import { ProcessRunnerService } from "@cloudcad/conversion-engine";
+import { ProcessRunnerService } from "../../conversion";
 import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { FileConversionService } from "./file-conversion.service";

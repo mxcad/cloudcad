@@ -219,7 +219,7 @@ jest.mock("bcryptjs", () => ({
 // Mock conversion engine to avoid ProcessRunnerService DI issues in tests
 // Mock conversion engine to avoid ProcessRunnerService DI issues in tests
 // Mock conversion engine to avoid ProcessRunnerService DI issues in tests
-jest.mock("@cloudcad/conversion-engine", () => {
+jest.mock("../conversion", () => {
 	class MockProcessRunnerService {
 		run = jest.fn();
 		stop = jest.fn();

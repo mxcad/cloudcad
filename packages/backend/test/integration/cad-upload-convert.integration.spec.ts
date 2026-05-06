@@ -15,7 +15,7 @@ import { ExternalRefService } from '../../../src/mxcad/external-ref/external-ref
 import { ExternalReferenceUpdateService } from '../../../src/mxcad/external-ref/external-reference-update.service';
 import { MxUploadReturn } from '../../../src/mxcad/enums/mxcad-return.enum';
 import { VERSION_CONTROL_TOKEN, IVersionControl } from '../../../src/version-control/interfaces/version-control.interface';
-import { ProcessRunnerService } from '@cloudcad/conversion-engine';
+import { ProcessRunnerService } from '../../src/conversion';
 import { PrismaService } from '../../../src/database/database.service';
 import { FileTreeService } from '../../../src/file-system/file-tree/file-tree.service';
 

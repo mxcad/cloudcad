@@ -17,7 +17,6 @@ import { CommonModule } from '../../common/common.module';
 import { FileSystemModule } from '../../file-system/file-system.module';
 import { FilePermissionModule } from '../../file-system/file-permission/file-permission.module';
 import { VersionControlModule } from '../../version-control/version-control.module';
-import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from '../node/mxcad-node.module';
 import { SaveAsService } from './save-as.service';
 
@@ -25,7 +24,7 @@ import { SaveAsService } from './save-as.service';
  * Mxcad 另存为子模块
  *
  * 职责: 提供 CAD 文件的另存为功能。
- * 将 mxweb 文件转换为 dwg/dxf 格式并保存到目标位置。
+ * 将 mxweb 文件保存到目标位置（不转换格式，转换仅在下载/导出时执行）。
  *
  * 包含的服务:
  * - SaveAsService: CAD 另存为主服务
@@ -38,7 +37,6 @@ import { SaveAsService } from './save-as.service';
     FileSystemModule,
     FilePermissionModule,
     VersionControlModule,
-    MxcadConversionModule,
     MxcadNodeModule,
   ],
   providers: [SaveAsService],

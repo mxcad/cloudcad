@@ -14,7 +14,6 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { FileSystemService as MainFileSystemService } from '../../file-system/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
-import { FileConversionService } from '../conversion/file-conversion.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
@@ -28,7 +27,7 @@ import { DatabaseService } from '../../database/database.service';
 
 export interface SaveMxwebAsOptions {
   file: Express.Multer.File;
-  targetType: 'personal' | 'project';
+  targetType: 'personal' | 'project' | 'library';
   targetParentId: string;
   projectId: string | undefined;
   format: 'dwg' | 'dxf';
@@ -36,6 +35,7 @@ export interface SaveMxwebAsOptions {
   userName: string;
   commitMessage?: string;
   fileName?: string;
+  libraryType?: 'drawing' | 'block';
 }
 
 export interface SaveMxwebAsResult {
@@ -56,7 +56,6 @@ export class SaveAsService {
     private readonly fileSystemServiceMain: MainFileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly storageManager: StorageManager,
-    private readonly fileConversionService: FileConversionService,
     private readonly permissionService: FileSystemPermissionService,
     @Inject(VERSION_CONTROL_TOKEN)
     private readonly versionControlService: IVersionControl,
@@ -69,12 +68,14 @@ export class SaveAsService {
       targetType,
       targetParentId,
       projectId,
-      format,
+      format: userFormat,
       userId,
       userName,
       commitMessage,
       fileName: userFileName,
     } = options;
+
+    const format = targetType === 'library' ? 'mxweb' : userFormat;
 
     try {
       this.logger.log(
@@ -104,12 +105,10 @@ export class SaveAsService {
       }
 
       // ========== 同名文件处理 ==========
-      // 生成初始文件名
       const baseFileName = userFileName
         ? `${userFileName}.${format}`
         : `untitled.${format}`;
 
-      // 检查同名文件并生成唯一文件名
       const uniqueFileName = await this.generateUniqueFileName(
         targetParentId,
         baseFileName
@@ -141,64 +140,29 @@ export class SaveAsService {
         `[SaveAs] 新节点创建成功: ${newNodeId}, 文件名: ${finalFileName}`
       );
 
-      // 不传入文件名，让 relativePath 返回目录路径，后续拼接 mxweb 文件名
       const storageInfo =
         await this.storageManager.allocateNodeStorage(newNodeId);
       const nodeDirectory = storageInfo.nodeDirectoryPath;
 
+      // 统一存储为 mxweb，不做格式转换（转换仅在下载/导出时按需执行）
       const mxwebFileName = `${newNodeId}.${format}.mxweb`;
       const mxwebTargetPath = path.join(nodeDirectory, mxwebFileName);
       await fsPromises.copyFile(file.path, mxwebTargetPath);
       this.logger.log(`[SaveAs] mxweb文件保存成功: ${mxwebTargetPath}`);
 
-      const convertedFileName = `${newNodeId}.${format}`;
-      const convertedTargetPath = path.join(nodeDirectory, convertedFileName);
-
-      const { isOk, ret } = await this.fileConversionService.convertFile({
-        srcPath: mxwebTargetPath,
-        fileHash: '',
-        createPreloadingData: true,
-        outname: convertedFileName,
-      });
-
-      const code = ret.code as number | string;
-      const isSuccess = isOk && (code === 0 || code === '0' || code === 'ok');
-
-      if (!isSuccess) {
-        this.logger.error(
-          `[SaveAs] 文件转换失败: ${ret?.message || '未知错误'}, code=${code}`
-        );
-        return { success: false, message: ret?.message || '文件转换失败' };
-      }
-
-      this.logger.log(`[SaveAs] 文件转换成功: ${convertedTargetPath}`);
-
-      // 计算转换后文件的 MD5 hash
-      const fileBuffer = await fsPromises.readFile(convertedTargetPath);
+      const fileBuffer = await fsPromises.readFile(mxwebTargetPath);
       const hashSum = crypto.createHash('md5');
       hashSum.update(fileBuffer);
       const fileHash = hashSum.digest('hex');
+      const stats = fs.statSync(mxwebTargetPath);
 
-      const node = await this.fileSystemNodeService.findById(newNodeId);
-      if (node) {
-        const stats = fs.statSync(convertedTargetPath);
-        // path 应指向 mxweb 文件，而不是目录或 dwg 文件
-        const nodePathWithFile = `${storageInfo.nodeDirectoryRelativePath}/${mxwebFileName}`;
-        await this.fileSystemServiceMain.updateNodePath(
-          newNodeId,
-          nodePathWithFile
-        );
-        await this.prisma.fileSystemNode.update({
-          where: { id: newNodeId },
-          data: {
-            size: stats.size,
-            fileHash: fileHash,
-          },
-        });
-        this.logger.log(
-          `[SaveAs] 节点更新成功: nodeId=${newNodeId}, fileHash=${fileHash}`
-        );
-      }
+      const nodePathWithFile = `${storageInfo.nodeDirectoryRelativePath}/${mxwebFileName}`;
+      await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
+      await this.prisma.fileSystemNode.update({
+        where: { id: newNodeId },
+        data: { size: stats.size, fileHash },
+      });
+      this.logger.log(`[SaveAs] 文件保存成功: nodeId=${newNodeId}, fileHash=${fileHash}`);
 
       // SVN 提交需要使用绝对路径
       // nodeDirectory 已经是绝对路径（如 D:\...\filesData\202604\nodeId）

@@ -6,7 +6,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThumbnailGenerationService } from './thumbnail-generation.service';
 import { ConfigService } from '@nestjs/config';
-import { I_CONVERSION_SERVICE, IConversionService } from '@cloudcad/conversion-engine';
+import { I_CONVERSION_SERVICE, IConversionService } from '../../conversion';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';

@@ -50,7 +50,7 @@ for (const name of svnNames) {
 
 jest.mock('@cloudcad/svn-version-tool', () => svnMockObj);
 
-jest.mock('@cloudcad/conversion-engine', () => ({
+jest.mock('../../src/conversion', () => ({
   ProcessRunnerService: jest.fn(),
 }));
 
