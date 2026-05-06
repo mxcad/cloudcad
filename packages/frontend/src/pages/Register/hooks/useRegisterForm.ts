@@ -193,7 +193,11 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
       if (formData.username || formData.email || phoneForm.phone) {
         try {
-          const checkResult = await authControllerCheckFieldUniqueness();
+          const checkResult = await authControllerCheckFieldUniqueness({
+            username: formData.username,
+            email: formData.email,
+            phone: phoneForm.phone,
+          });
           const checkData = checkResult as { usernameExists?: boolean; emailExists?: boolean; phoneExists?: boolean };
           if (checkData.usernameExists) {
             errors.username = '用户名已被使用';
@@ -298,7 +302,11 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
             return;
           }
 
-          await authControllerRegisterByPhone();
+          await authControllerRegisterByPhone({
+            ...formData,
+            phone: phoneForm.phone,
+            code: phoneForm.code,
+          });
           if (isWechatRegister) {
             sessionStorage.removeItem('wechatTempToken');
           }
