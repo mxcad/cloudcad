@@ -49,11 +49,6 @@ export class DatabaseService
     });
 
     const isDev = process.env.NODE_ENV !== 'production';
-    // 慢查询阈值（毫秒），可通过 LOG_SLOW_QUERY_THRESHOLD_MS 环境变量覆盖
-    this.slowQueryThresholdMs = parseInt(
-      process.env.LOG_SLOW_QUERY_THRESHOLD_MS || '500',
-      10,
-    ) || 500;
 
     super({
       log: isDev
@@ -71,6 +66,12 @@ export class DatabaseService
           ],
       adapter,
     });
+
+    // 慢查询阈值（毫秒），可通过 LOG_SLOW_QUERY_THRESHOLD_MS 环境变量覆盖
+    this.slowQueryThresholdMs = parseInt(
+      process.env.LOG_SLOW_QUERY_THRESHOLD_MS || '500',
+      10,
+    ) || 500;
 
     // 慢查询监听：仅开发环境，超过阈值的 SQL 才打印
     if (isDev) {

@@ -168,13 +168,13 @@ export const Login: React.FC = () => {
           {/* 账号登录表单 */}
           {form.activeTab === 'account' && (
             <AccountLoginForm
-              formData={form.formData}
+              formData={form.accountForm.watch()}
               loading={form.loading}
               showPassword={form.showPassword}
               focusedField={form.focusedField}
               getAccountLoginLabel={form.getAccountLoginLabel}
               getAccountLoginPlaceholder={form.getAccountLoginPlaceholder}
-              onChange={form.handleChange}
+              onChange={(e) => form.accountForm.setValue(e.target.name as 'account' | 'password', e.target.value)}
               onFocus={form.setFocusedField}
               onBlur={() => form.setFocusedField(null)}
               onTogglePassword={() => form.setShowPassword(!form.showPassword)}
@@ -186,12 +186,12 @@ export const Login: React.FC = () => {
           {/* 手机登录表单 */}
           {form.activeTab === 'phone' && (
             <PhoneLoginForm
-              phoneForm={form.phoneForm}
+              phoneForm={form.phoneFormHook.watch()}
               loading={form.loading}
               countdown={form.countdown}
               sendingCode={form.sendingCode}
               focusedField={form.focusedField}
-              onChange={form.handlePhoneChange}
+              onChange={(e) => form.phoneFormHook.setValue(e.target.name as 'phone' | 'code', e.target.value)}
               onFocus={form.setFocusedField}
               onBlur={() => form.setFocusedField(null)}
               onSendCode={form.handleSendCode}

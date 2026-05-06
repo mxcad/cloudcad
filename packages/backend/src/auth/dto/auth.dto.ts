@@ -246,3 +246,30 @@ export class AuthApiResponseDto extends ApiResponseDto<AuthResponseDto> {
   })
   declare data: AuthResponseDto;
 }
+
+export class CheckFieldUniquenessDto {
+  @ApiPropertyOptional({
+    description: '用户名',
+    example: 'username',
+  })
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiPropertyOptional({
+    description: '邮箱',
+    example: 'user@example.com',
+    format: 'email',
+  })
+  @IsOptional()
+  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  email?: string;
+
+  @ApiPropertyOptional({
+    description: '手机号',
+    example: '13800138000',
+  })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+}
