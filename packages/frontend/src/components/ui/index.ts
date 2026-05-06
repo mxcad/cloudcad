@@ -25,7 +25,6 @@ export {
 export type { TruncateTextProps, TruncateMode } from './TruncateText';
 
 export { Button } from './Button';
-export { Modal } from './Modal';
 export { Toast } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';
 export { Tooltip, SimpleTooltip } from './Tooltip';
