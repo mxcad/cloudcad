@@ -120,7 +120,7 @@ export class MxCadController {
     private readonly fileTreeService: FileTreeService
   ) {
     this.mxCadFileExt =
-      this.configService.get('mxcad.fileExt', { infer: true }) || '.mxweb';
+      this.configService.get('conversion.fileExt', { infer: true }) || '.mxweb';
     const cacheTTLConfig = this.configService.get('cacheTTL', { infer: true });
     this.cacheTTL = cacheTTLConfig.mxcad * 1000; // 转为毫秒
   }

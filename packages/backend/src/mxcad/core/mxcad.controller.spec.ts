@@ -47,7 +47,7 @@ describe("MxCadController", () => {
 
 	const mockConfigService = {
 		get: jest.fn((key: string) => {
-			if (key === "mxcad.fileExt") return ".mxweb";
+			if (key === "conversion.fileExt") return ".mxweb";
 			if (key === "cacheTTL") return { mxcad: 300 };
 			if (key === "filesDataPath") return "/fake/filesData";
 			return undefined;
@@ -81,7 +81,7 @@ describe("MxCadController", () => {
 	beforeEach(async () => {
 		jest.clearAllMocks();
 		mockConfigService.get.mockImplementation((key: string) => {
-			if (key === "mxcad.fileExt") return ".mxweb";
+			if (key === "conversion.fileExt") return ".mxweb";
 			if (key === "cacheTTL") return { mxcad: 300 };
 			if (key === "filesDataPath") return "/fake/filesData";
 			return undefined;

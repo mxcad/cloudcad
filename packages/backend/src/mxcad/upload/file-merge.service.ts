@@ -84,7 +84,7 @@ export class FileMergeService {
       this.configService.get('mxcadUploadPath') || '../../uploads';
     this.filesDataPath =
       this.configService.get('filesDataPath') || '../../filesData';
-    this.mxcadFileExt = this.configService.get('mxcad.fileExt') || '.mxweb';
+    this.mxcadFileExt = this.configService.get('conversion.fileExt') || '.mxweb';
   }
 
   async mergeConvertFile(options: MergeOptions): Promise<MergeResult> {
