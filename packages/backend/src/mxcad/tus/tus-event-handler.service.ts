@@ -52,7 +52,7 @@ export class TusEventHandler {
     metadata: Record<string, string>,
     userId?: string,
     userRole?: string
-  ): Promise<void> {
+  ): Promise<{ nodeId?: string }> {
     const filename = metadata.filename || 'unknown';
     const fileHash = metadata.fileHash;
     const nodeId = metadata.nodeId;
@@ -76,7 +76,7 @@ export class TusEventHandler {
 
       if (!fs.existsSync(actualFilePath)) {
         this.logger.error(`上传文件不存在: ${actualFilePath}`);
-        return;
+        return {};
       }
 
       this.logger.log(`上传文件路径: ${actualFilePath}`);
@@ -93,7 +93,7 @@ export class TusEventHandler {
 
       if (!userId || !nodeId) {
         this.logger.warn('缺少 userId 或 nodeId，无法继续处理文件转换和节点创建');
-        return;
+        return {};
       }
 
       // 检查文件是否已存在（秒传逻辑）
@@ -114,7 +114,7 @@ export class TusEventHandler {
 
         if (existResult.ret === 'kFileAlreadyExist') {
           this.logger.log(`文件已存在，直接返回节点 ID: ${existResult.nodeId}`);
-          return;
+          return { nodeId: existResult.nodeId };
         }
       }
 
@@ -156,11 +156,14 @@ export class TusEventHandler {
         this.logger.warn(`临时文件清理失败: ${(cleanError as Error).message}`);
       }
 
+      return { nodeId: mergeResult.nodeId };
+
     } catch (error) {
       this.logger.error(
         `处理上传完成事件失败: uploadId=${uploadId}, error=${(error as Error).message}`,
         (error as Error).stack,
       );
+      return {};
     }
   }
 }

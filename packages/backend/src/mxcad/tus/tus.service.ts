@@ -49,13 +49,17 @@ export class TusService {
 
 					try {
 						const user = (req as any).user || {};
-						await this.tusEventHandler.handleUploadFinish(
+						const result = await this.tusEventHandler.handleUploadFinish(
 							upload.id,
 							"",
 							upload.metadata || {},
 							user.id,
 							user.role,
 						);
+
+						if (result?.nodeId) {
+							return { headers: { "X-Node-Id": result.nodeId } };
+						}
 					} catch (error) {
 						logger.error(
 							`处理上传完成事件失败: ${(error as Error).message}`,

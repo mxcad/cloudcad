@@ -31,6 +31,15 @@ describe("MxCadController", () => {
 		checkExternalReferenceExists: jest.fn(),
 		getExternalReferenceStats: jest.fn(),
 		updateExternalReferenceInfo: jest.fn(),
+		checkFileExist: jest.fn(),
+		findUserById: jest.fn().mockResolvedValue({
+			id: "user-1",
+			email: "test@test.com",
+			username: "testuser",
+			nickname: "Test",
+			roleId: "role-1",
+			status: "ACTIVE",
+		}),
 	};
 
 	const mockPrisma = {
@@ -62,8 +71,8 @@ describe("MxCadController", () => {
 
 	const mockFileSystemPermission = { getNodeAccessRole: jest.fn() };
 	const mockFileTreeService = {
-		getProjectId: jest.fn(),
-		getLibraryKey: jest.fn(),
+		getProjectId: jest.fn().mockResolvedValue("project-1"),
+		getLibraryKey: jest.fn().mockResolvedValue(null),
 	};
 	const mockPermissionService = {
 		checkNodePermission: jest.fn(),
@@ -80,6 +89,16 @@ describe("MxCadController", () => {
 
 	beforeEach(async () => {
 		jest.clearAllMocks();
+		mockJwtService.verify.mockReturnValue({ sub: "user-1", role: "ADMIN" });
+		mockMxCadService.findUserById.mockResolvedValue({
+			id: "user-1",
+			email: "test@test.com",
+			username: "testuser",
+			nickname: "Test",
+			roleId: "role-1",
+			status: "ACTIVE",
+		});
+		mockFileTreeService.getLibraryKey.mockResolvedValue(null);
 		mockConfigService.get.mockImplementation((key: string) => {
 			if (key === "conversion.fileExt") return ".mxweb";
 			if (key === "cacheTTL") return { mxcad: 300 };
@@ -165,6 +184,47 @@ describe("MxCadController", () => {
 			mockMxCadService.updateExternalReferenceInfo.mockResolvedValue(undefined);
 			const result = await controller.refreshExternalReferences("node-1");
 			expect(result.code).toBe(0);
+		});
+	});
+
+	// ==================== checkFileExist ====================
+	describe("checkFileExist", () => {
+		const mockRequest = {
+			headers: { authorization: "Bearer test-token" },
+			user: { id: "user-1", role: "ADMIN" },
+			body: { nodeId: "folder-1" },
+		} as any;
+
+		it("should return exists=true with nodeId when file exists", async () => {
+			mockMxCadService.checkFileExist.mockResolvedValue({
+				ret: "fileAlreadyExist",
+				nodeId: "node-abc",
+			});
+
+			const result = await controller.checkFileExist(
+				{ filename: "test.dwg", fileHash: "abc123", nodeId: "folder-1", fileSize: 1024 },
+				mockRequest,
+			);
+
+			expect(result).toEqual({ exists: true, nodeId: "node-abc" });
+			expect(mockMxCadService.checkFileExist).toHaveBeenCalledWith(
+				"test.dwg",
+				"abc123",
+				expect.objectContaining({ nodeId: "folder-1", fileSize: 1024 }),
+			);
+		});
+
+		it("should return exists=false when file does not exist", async () => {
+			mockMxCadService.checkFileExist.mockResolvedValue({
+				ret: "kConvertFileError",
+			});
+
+			const result = await controller.checkFileExist(
+				{ filename: "new.dwg", fileHash: "def456", nodeId: "folder-1", fileSize: 2048 },
+				mockRequest,
+			);
+
+			expect(result).toEqual({ exists: false, nodeId: undefined });
 		});
 	});
 

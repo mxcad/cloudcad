@@ -188,6 +188,21 @@ export class MxCadService {
   }
 
   /**
+   * 检查文件是否已存在（秒传）
+   */
+  async checkFileExist(
+    filename: string,
+    fileHash: string,
+    context?: MxCadContext,
+  ): Promise<{ ret: string; nodeId?: string }> {
+    return this.fileConversionUploadService.checkFileExist(
+      filename,
+      fileHash,
+      context,
+    );
+  }
+
+  /**
    * 验证和标准化上下文
    */
   private validateContext(context?: MxCadContext): MxCadContext {

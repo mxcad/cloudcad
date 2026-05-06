@@ -146,11 +146,20 @@ export const useUppyUpload = () => {
       }
     });
 
+    // 从 Tus 响应头中提取 nodeId
+    let uploadedNodeId: string | undefined;
+    uppy.on('upload-success', (_file: any, resp: any) => {
+      const xhr = resp?.body?.xhr;
+      if (xhr) {
+        uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
+      }
+    });
+
     // 上传完成事件
     uppy.on('complete', (result: any) => {
       if (result.successful && result.successful.length > 0) {
         const file = result.successful[0];
-        
+
         // 构建成功回调参数
         const successParam: LoadFileParam = {
           file: file.data as File,
@@ -159,9 +168,10 @@ export const useUppyUpload = () => {
           size: file.size,
           type: file.type,
           hash: file.meta?.fileHash || '',
-          isUseServerExistingFile: false, // Uppy 没有直接支持，需额外处理
+          isUseServerExistingFile: false,
           isInstantUpload: false,
-          nodeId: config.nodeId,
+          // uploadedNodeId 来自 Tus 响应头 X-Node-Id；上传失败时 fallback 到目标文件夹 nodeId
+          nodeId: uploadedNodeId || config.nodeId,
         };
 
         config.onSuccess?.(successParam);

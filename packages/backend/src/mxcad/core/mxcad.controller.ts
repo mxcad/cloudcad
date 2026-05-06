@@ -54,6 +54,7 @@ import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
 import { ChunkExistResponseDto } from '../dto/chunk-exist-response.dto';
 import { CheckFileExistDto } from '../dto/check-file-exist.dto';
+import { FileExistResponseDto } from '../dto/file-exist-response.dto';
 import { CheckChunkExistDto } from '../dto/check-chunk-exist.dto';
 import { CheckDuplicateFileDto } from '../dto/check-duplicate-file.dto';
 import { CheckDuplicateFileResponseDto } from '../dto/check-duplicate-file-response.dto';
@@ -123,6 +124,35 @@ export class MxCadController {
       this.configService.get('conversion.fileExt', { infer: true }) || '.mxweb';
     const cacheTTLConfig = this.configService.get('cacheTTL', { infer: true });
     this.cacheTTL = cacheTTLConfig.mxcad * 1000; // 转为毫秒
+  }
+
+  /**
+   * 检查文件是否存在（秒传）
+   */
+  @Post('files/fileisExist')
+  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({
+    status: 200,
+    description: '检查文件是否存在',
+    type: FileExistResponseDto,
+  })
+  async checkFileExist(
+    @Body() body: CheckFileExistDto,
+    @Req() request: MxCadRequest,
+  ) {
+    const context = await this.buildContextFromRequest(request);
+    context.fileSize = body.fileSize;
+    const result = (await this.mxCadService.checkFileExist(
+      body.filename,
+      body.fileHash,
+      context,
+    )) as { ret: string; nodeId?: string };
+    return {
+      exists: result.ret === 'fileAlreadyExist',
+      nodeId: result.nodeId,
+    };
   }
 
   /**
