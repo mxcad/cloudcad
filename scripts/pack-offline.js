@@ -620,11 +620,9 @@ function getDeployIncludeList(platform) {
     { src: 'cloudcad.bat', dest: 'cloudcad.bat' },
     { src: 'cloudcad.sh', dest: 'cloudcad.sh' },
     { src: 'start.bat', dest: 'start.bat' },
-    { src: 'start.ps1', dest: 'start.ps1' },
     { src: 'start.sh', dest: 'start.sh' },
     // 停止脚本
     { src: 'stop.bat', dest: 'stop.bat' },
-    { src: 'stop.ps1', dest: 'stop.ps1' },
     { src: 'stop.sh', dest: 'stop.sh' },
     // 部署说明文档
     { src: '部署说明.txt', dest: '部署说明.txt' },

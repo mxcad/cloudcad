@@ -195,103 +195,9 @@ ${extraEnv}exec "$PROJECT_ROOT/${relativeNodePath}" "$PROJECT_ROOT/${relativeScr
 `;
 }
 
-// ==================== PowerShell 包装脚本 ====================
-
-/**
- * 创建 PowerShell 包装脚本（直接执行命令）
- * @param {string} command 命令名
- * @param {string} targetPath 目标路径（绝对路径）
- * @param {string} scriptDir 脚本所在目录（相对于项目根目录）
- */
-function createWindowsPs1Wrapper(command, targetPath, scriptDir) {
-  const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
-  // 生成正确的回退路径，如 "..\..\"
-  const backPath =
-    backLevels > 0 ? Array(backLevels).fill('..').join('\\') : '';
-  const relativeTarget = path
-    .relative(PROJECT_ROOT, targetPath)
-    .replace(/\\/g, '\\');
-  const relativeNodeDir = path
-    .relative(PROJECT_ROOT, OFFLINE_NODE_DIR)
-    .replace(/\\/g, '\\');
-
-  return `# Auto-generated wrapper for ${command}
-# This script uses offline Node.js from CloudCAD runtime
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = if ("${backPath}") { Join-Path $ScriptDir "${backPath}" } else { $ScriptDir }
-$NodeDir = Join-Path $ProjectRoot "${relativeNodeDir}"
-$TargetPath = Join-Path $ProjectRoot "${relativeTarget}"
-
-$env:PATH = "$NodeDir;$env:PATH"
-& $TargetPath @Args
-`;
-}
-
-/**
- * 创建 PowerShell 包装脚本（需要 node 执行）
- * @param {string} command 命令名
- * @param {string} nodePath node.exe 路径（绝对路径）
- * @param {string} scriptPath 脚本路径（绝对路径）
- * @param {string} scriptDir 脚本所在目录（相对于项目根目录）
- */
-function createWindowsPs1NodeWrapper(command, nodePath, scriptPath, scriptDir) {
-  const backLevels = scriptDir.split(path.sep).filter(Boolean).length;
-  // 生成正确的回退路径，如 "..\..\"
-  const backPath =
-    backLevels > 0 ? Array(backLevels).fill('..').join('\\') : '';
-  const relativeNodeExe = path
-    .relative(PROJECT_ROOT, nodePath)
-    .replace(/\\/g, '\\');
-  const relativeScriptPath = path
-    .relative(PROJECT_ROOT, scriptPath)
-    .replace(/\\/g, '\\');
-
-  // pnpm 需要禁用 Corepack，避免从网络下载
-  const extraEnv =
-    command === 'pnpm'
-      ? `$env:COREPACK_ENABLE = "0"\n$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"\n`
-      : '';
-
-  return `# Auto-generated wrapper for ${command}
-# This script uses offline Node.js from CloudCAD runtime
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = if ("${backPath}") { Join-Path $ScriptDir "${backPath}" } else { $ScriptDir }
-$NodePath = Join-Path $ProjectRoot "${relativeNodeExe}"
-$ScriptPath = Join-Path $ProjectRoot "${relativeScriptPath}"
-
-${extraEnv}& $NodePath $ScriptPath @Args
-`;
-}
-
-/**
- * 创建 PM2 专用 PowerShell 包装脚本
- * 注意：$env:PATH 只在此脚本会话中有效，不会污染用户系统
- */
-function createWindowsPs1Pm2Wrapper() {
-  return `# CloudCAD offline pm2 entry
-# PATH change is scoped to this PowerShell session only
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$env:PM2_HOME = Join-Path $ScriptDir "data\\pm2"
-$env:PATH = "$(Join-Path $ScriptDir 'runtime\\windows\\node');$env:PATH"
-$NodePath = Join-Path $ScriptDir "runtime\\windows\\node\\node.exe"
-$Pm2Path = Join-Path $ScriptDir "runtime\\windows\\node\\node_modules\\pm2\\bin\\pm2"
-
-& $NodePath $Pm2Path @Args
-`;
-}
-
 /**
  * 创建 Git Bash 兼容的 shell 包装脚本
- * 在 Windows 上，除了 .cmd 和 .ps1，额外生成无扩展名的 shell 脚本供 Git Bash 使用
+ * 在 Windows 上，除了 .cmd，额外生成无扩展名的 shell 脚本供 Git Bash 使用
  * @param {string} dir 脚本所在目录（绝对路径）
  * @returns {number} 创建的脚本数量
  */
@@ -548,7 +454,6 @@ function ensureDir(dir) {
 
 /**
  * 在指定目录创建包装脚本（直接执行）
- * Windows 上同时生成 .cmd 和 .ps1 文件
  * @param {string} dir 脚本所在目录（绝对路径）
  * @param {string} command 命令名
  * @param {string} targetPath 目标路径（绝对路径）
@@ -563,12 +468,6 @@ function createWrapper(dir, command, targetPath) {
     const cmdContent = createWindowsCmdWrapper(command, targetPath, scriptDir);
     fs.writeFileSync(cmdPath, cmdContent, { encoding: 'utf8' });
     log(`创建包装脚本: ${cmdPath}`);
-
-    // 生成 .ps1 文件（PowerShell 兼容）
-    const ps1Path = path.join(dir, `${command}.ps1`);
-    const ps1Content = createWindowsPs1Wrapper(command, targetPath, scriptDir);
-    fs.writeFileSync(ps1Path, ps1Content, { encoding: 'utf8' });
-    log(`创建包装脚本: ${ps1Path}`);
   } else {
     const wrapperPath = path.join(dir, command);
     const content = createLinuxShellWrapper(command, targetPath, scriptDir);
@@ -580,7 +479,6 @@ function createWrapper(dir, command, targetPath) {
 
 /**
  * 在指定目录创建需要 node 执行的包装脚本
- * Windows 上同时生成 .cmd 和 .ps1 文件
  * @param {string} dir 脚本所在目录（绝对路径）
  * @param {string} command 命令名
  * @param {string} scriptPath 脚本路径（绝对路径）
@@ -600,17 +498,6 @@ function createNodeWrapper(dir, command, scriptPath) {
     );
     fs.writeFileSync(cmdPath, cmdContent, { encoding: 'utf8' });
     log(`创建 node 包装脚本: ${cmdPath}`);
-
-    // 生成 .ps1 文件（PowerShell 兼容）
-    const ps1Path = path.join(dir, `${command}.ps1`);
-    const ps1Content = createWindowsPs1NodeWrapper(
-      command,
-      OFFLINE_NODE_EXE,
-      scriptPath,
-      scriptDir
-    );
-    fs.writeFileSync(ps1Path, ps1Content, { encoding: 'utf8' });
-    log(`创建 node 包装脚本: ${ps1Path}`);
   } else {
     const wrapperPath = path.join(dir, command);
     const content = createLinuxNodeWrapper(
@@ -1014,12 +901,11 @@ exec "\$basedir/${nodeRelPath}" "\$basedir/${targetRelPath}" "\$@"
 
 /**
  * 设置离线 node 目录中的包装脚本
- * 同时生成 .cmd 和 .ps1 文件，兼容 CMD 和 PowerShell
  */
 function setupOfflineNodeDir() {
   let count = 0;
 
-  // pnpm - 同时生成 .cmd 和 .ps1
+  // pnpm
   const pnpmJs = findPnpmJs();
   if (pnpmJs) {
     createNodeWrapper(OFFLINE_NODE_DIR, 'pnpm', pnpmJs);
@@ -1034,7 +920,6 @@ function setupOfflineNodeDir() {
 
 /**
  * 在项目根目录创建入口脚本（用户直接运行命令时优先命中）
- * 同时生成 .cmd 和 .ps1 文件，兼容 CMD 和 PowerShell
  */
 function setupProjectRoot() {
   let count = 0;
@@ -1065,22 +950,6 @@ REM Only effective in project directory, does not affect system Node.js
 `;
     fs.writeFileSync(nodeCmdPath, nodeCmdContent, { encoding: 'utf8' });
     log(`创建根目录入口脚本: ${nodeCmdPath}`);
-    count++;
-
-    // .ps1 文件
-    const nodePs1Path = path.join(PROJECT_ROOT, 'node.ps1');
-    const nodePs1Content = `# CloudCAD offline Node.js entry
-# Only effective in project directory, does not affect system Node.js
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$NodePath = Join-Path $ScriptDir "${relativeNodeExe}"
-
-& $NodePath @Args
-`;
-    fs.writeFileSync(nodePs1Path, nodePs1Content, { encoding: 'utf8' });
-    log(`创建根目录入口脚本: ${nodePs1Path}`);
     count++;
   } else {
     const nodeCmdPath = path.join(PROJECT_ROOT, 'node');
@@ -1119,23 +988,6 @@ set "PATH=%~dp0${relativeNodeDir};%PATH%"
 `;
       fs.writeFileSync(npmCmdPath, npmCmdContent, { encoding: 'utf8' });
       log(`创建根目录入口脚本: ${npmCmdPath}`);
-      count++;
-
-      // .ps1 文件
-      const npmPs1Path = path.join(PROJECT_ROOT, 'npm.ps1');
-      const npmPs1Content = `# CloudCAD offline npm entry
-# Only effective in project directory, does not affect system npm
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$env:PATH = "$ScriptDir\\${relativeNodeDir};$env:PATH"
-$NpmPath = Join-Path $ScriptDir "${relativeNpmPath}"
-
-& $NpmPath @Args
-`;
-      fs.writeFileSync(npmPs1Path, npmPs1Content, { encoding: 'utf8' });
-      log(`创建根目录入口脚本: ${npmPs1Path}`);
       count++;
     } else {
       const npmCmdPath = path.join(PROJECT_ROOT, 'npm');
@@ -1177,23 +1029,6 @@ set "PATH=%~dp0${relativeNodeDir};%PATH%"
       fs.writeFileSync(npxCmdPath, npxCmdContent, { encoding: 'utf8' });
       log(`创建根目录入口脚本: ${npxCmdPath}`);
       count++;
-
-      // .ps1 文件
-      const npxPs1Path = path.join(PROJECT_ROOT, 'npx.ps1');
-      const npxPs1Content = `# CloudCAD offline npx entry
-# Only effective in project directory, does not affect system npx
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$env:PATH = "$ScriptDir\\${relativeNodeDir};$env:PATH"
-$NpxPath = Join-Path $ScriptDir "${relativeNpxPath}"
-
-& $NpxPath @Args
-`;
-      fs.writeFileSync(npxPs1Path, npxPs1Content, { encoding: 'utf8' });
-      log(`创建根目录入口脚本: ${npxPs1Path}`);
-      count++;
     } else {
       const npxCmdPath = path.join(PROJECT_ROOT, 'npx');
       const npxContent = `#!/bin/bash
@@ -1228,26 +1063,6 @@ set "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
       fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
       log(`创建根目录入口脚本: ${pnpmCmdPath}`);
       count++;
-
-      // .ps1 文件
-      const pnpmPs1Path = path.join(PROJECT_ROOT, 'pnpm.ps1');
-      const pnpmPs1Content = `# CloudCAD offline pnpm entry
-# Only effective in project directory, does not affect system pnpm
-# Disable Corepack to use local pnpm and avoid network download
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$NodePath = Join-Path $ScriptDir "${relativeNodeExe}"
-$PnpmPath = Join-Path $ScriptDir "${relativePnpmJs}"
-
-$env:COREPACK_ENABLE = "0"
-$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
-& $NodePath $PnpmPath @Args
-`;
-      fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
-      log(`创建根目录入口脚本: ${pnpmPs1Path}`);
-      count++;
     } else {
       const pnpmCmdPath = path.join(PROJECT_ROOT, 'pnpm');
       const pnpmContent = `#!/bin/bash
@@ -1272,13 +1087,6 @@ exec "$SCRIPT_DIR/${path.relative(PROJECT_ROOT, OFFLINE_NODE_EXE)}" "$SCRIPT_DIR
       const pm2CmdContent = createWindowsPm2Wrapper();
       fs.writeFileSync(pm2CmdPath, pm2CmdContent, { encoding: 'utf8' });
       log(`创建根目录入口脚本: ${pm2CmdPath}`);
-      count++;
-
-      // .ps1 文件
-      const pm2Ps1Path = path.join(PROJECT_ROOT, 'pm2.ps1');
-      const pm2Ps1Content = createWindowsPs1Pm2Wrapper();
-      fs.writeFileSync(pm2Ps1Path, pm2Ps1Content, { encoding: 'utf8' });
-      log(`创建根目录入口脚本: ${pm2Ps1Path}`);
       count++;
     } else {
       const pm2CmdPath = path.join(PROJECT_ROOT, 'pm2');
@@ -1324,7 +1132,6 @@ function setupPackageDirs() {
 
 /**
  * 在指定目录创建入口脚本
- * 同时生成 .cmd 和 .ps1 文件，兼容 CMD 和 PowerShell
  * @param {string} targetDir 目标目录（绝对路径）
  */
 function createEntryScriptsInDir(targetDir) {
@@ -1357,23 +1164,6 @@ REM Only effective in project directory, does not affect system Node.js
 `;
     fs.writeFileSync(nodeCmdPath, nodeCmdContent, { encoding: 'utf8' });
     log(`创建子目录入口脚本: ${nodeCmdPath}`);
-    count++;
-
-    // .ps1 文件
-    const nodePs1Path = path.join(targetDir, 'node.ps1');
-    const nodePs1Content = `# CloudCAD offline Node.js entry
-# Only effective in project directory, does not affect system Node.js
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = Join-Path $ScriptDir "${backPath}"
-$NodePath = Join-Path $ProjectRoot "${rootRelativeNodeExe}"
-
-& $NodePath @Args
-`;
-    fs.writeFileSync(nodePs1Path, nodePs1Content, { encoding: 'utf8' });
-    log(`创建子目录入口脚本: ${nodePs1Path}`);
     count++;
   } else {
     const nodeCmdPath = path.join(targetDir, 'node');
@@ -1413,24 +1203,6 @@ set "PATH=%~dp0${backPath}\\${rootRelativeNodeDir};%PATH%"
 `;
       fs.writeFileSync(npmCmdPath, npmCmdContent, { encoding: 'utf8' });
       log(`创建子目录入口脚本: ${npmCmdPath}`);
-      count++;
-
-      // .ps1 文件
-      const npmPs1Path = path.join(targetDir, 'npm.ps1');
-      const npmPs1Content = `# CloudCAD offline npm entry
-# Only effective in project directory, does not affect system npm
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = Join-Path $ScriptDir "${backPath}"
-$env:PATH = "$ProjectRoot\\${rootRelativeNodeDir};$env:PATH"
-$NpmPath = Join-Path $ProjectRoot "${rootRelativeNpmPath}"
-
-& $NpmPath @Args
-`;
-      fs.writeFileSync(npmPs1Path, npmPs1Content, { encoding: 'utf8' });
-      log(`创建子目录入口脚本: ${npmPs1Path}`);
       count++;
     } else {
       const npmCmdPath = path.join(targetDir, 'npm');
@@ -1473,24 +1245,6 @@ set "PATH=%~dp0${backPath}\\${rootRelativeNodeDir};%PATH%"
       fs.writeFileSync(npxCmdPath, npxCmdContent, { encoding: 'utf8' });
       log(`创建子目录入口脚本: ${npxCmdPath}`);
       count++;
-
-      // .ps1 文件
-      const npxPs1Path = path.join(targetDir, 'npx.ps1');
-      const npxPs1Content = `# CloudCAD offline npx entry
-# Only effective in project directory, does not affect system npx
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = Join-Path $ScriptDir "${backPath}"
-$env:PATH = "$ProjectRoot\\${rootRelativeNodeDir};$env:PATH"
-$NpxPath = Join-Path $ProjectRoot "${rootRelativeNpxPath}"
-
-& $NpxPath @Args
-`;
-      fs.writeFileSync(npxPs1Path, npxPs1Content, { encoding: 'utf8' });
-      log(`创建子目录入口脚本: ${npxPs1Path}`);
-      count++;
     } else {
       const npxCmdPath = path.join(targetDir, 'npx');
       const npxContent = `#!/bin/bash
@@ -1531,27 +1285,6 @@ exec "$PROJECT_ROOT/${rootRelativeNpxPath}" "$@"
       fs.writeFileSync(pnpmCmdPath, pnpmCmdContent, { encoding: 'utf8' });
       log(`创建子目录入口脚本: ${pnpmCmdPath}`);
       count++;
-
-      // .ps1 文件
-      const pnpmPs1Path = path.join(targetDir, 'pnpm.ps1');
-      const pnpmPs1Content = `# CloudCAD offline pnpm entry
-        # Only effective in project directory, does not affect system pnpm
-        # Disable Corepack to use local pnpm and avoid network download
-        
-        param([Parameter(ValueFromRemainingArguments)]$Args)
-        
-        $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-        $ProjectRoot = Join-Path $ScriptDir "${backPath}"
-        $NodePath = Join-Path $ProjectRoot "${rootRelativeNodeExe}"
-        $PnpmPath = Join-Path $ProjectRoot "${rootRelativePnpmJs}"
-        
-        $env:COREPACK_ENABLE = "0"
-        $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
-        & $NodePath $PnpmPath @Args
-        `;
-      fs.writeFileSync(pnpmPs1Path, pnpmPs1Content, { encoding: 'utf8' });
-      log(`创建子目录入口脚本: ${pnpmPs1Path}`);
-      count++;
     } else {
       const pnpmCmdPath = path.join(targetDir, 'pnpm');
       const pnpmContent = `#!/bin/bash
@@ -1590,25 +1323,6 @@ endlocal
 `;
       fs.writeFileSync(pm2CmdPath, pm2CmdContent, { encoding: 'utf8' });
       log(`创建子目录入口脚本: ${pm2CmdPath}`);
-      count++;
-
-      // .ps1 文件
-      const pm2Ps1Path = path.join(targetDir, 'pm2.ps1');
-      const pm2Ps1Content = `# CloudCAD offline pm2 entry
-# PM2_HOME is set locally and won't affect system pm2
-
-param([Parameter(ValueFromRemainingArguments)]$Args)
-
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjectRoot = Join-Path $ScriptDir "${backPath}"
-$env:PM2_HOME = Join-Path $ProjectRoot "data\\pm2"
-$NodePath = Join-Path $ProjectRoot "${rootRelativeNodeExe}"
-$Pm2Path = Join-Path $ProjectRoot "${rootRelativePm2Js}"
-
-& $NodePath $Pm2Path @Args
-`;
-      fs.writeFileSync(pm2Ps1Path, pm2Ps1Content, { encoding: 'utf8' });
-      log(`创建子目录入口脚本: ${pm2Ps1Path}`);
       count++;
     } else {
       const pm2CmdPath = path.join(targetDir, 'pm2');
