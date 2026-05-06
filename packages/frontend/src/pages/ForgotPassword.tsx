@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authControllerForgotPassword } from '@/api-sdk';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordValues,
+} from './ForgotPassword/forgotPasswordSchema';
+import { useForgotPassword } from './ForgotPassword/useForgotPassword';
 
 // Lucide 图标
 import { Mail } from 'lucide-react';
@@ -42,60 +48,62 @@ export const ForgotPassword: React.FC = () => {
   const appLogo = brandConfig?.logo || '/logo.png';
 
   const [contactType, setContactType] = useState<'email' | 'phone'>('email');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const forgotPassword = useForgotPassword();
   const [success, setSuccess] = useState(false);
+  const [successContact, setSuccessContact] = useState('');
   const [supportInfo, setSupportInfo] = useState<{
     supportEmail?: string;
     supportPhone?: string;
   } | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const {
+    register,
+    handleSubmit: rhfSubmit,
+    setValue,
+  } = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      contactType: 'email',
+      email: '',
+      phone: '',
+    },
+  });
 
-    try {
-      const response = await authControllerForgotPassword({
-        body: {
-          email: contactType === 'email' ? email : undefined,
-          phone: contactType === 'phone' ? phone : undefined,
-          validateContact: '',
-        },
-      });
-      const data = response as unknown as { mailEnabled: boolean; smsEnabled: boolean; supportEmail?: string | null; supportPhone?: string | null };
+  const onSubmit = async (data: ForgotPasswordValues) => {
+    const result = await forgotPassword.submit({
+      email: data.contactType === 'email' ? data.email : undefined,
+      phone: data.contactType === 'phone' ? data.phone : undefined,
+    });
 
-      if (data.mailEnabled === false && data.smsEnabled === false) {
-        setSupportInfo({
-          supportEmail: data.supportEmail ?? undefined,
-          supportPhone: data.supportPhone ?? undefined,
-        });
-      } else {
-        setSuccess(true);
-      }
-    } catch (err) {
-      const errorMessage = (
-        (err as Error & { response?: { data?: { message?: string } } }).response
-          ?.data?.message ||
-          (err as Error).message ||
-          '发送验证码失败，请稍后重试'
-      );
-
-      // 账号已被禁用 -> 显示联系客服信息
-      if (errorMessage.includes('账号已被禁用')) {
+    if (!result) {
+      if (forgotPassword.error?.includes('账号已被禁用')) {
         setSupportInfo({
           supportEmail: 'support@cloudcad.com',
           supportPhone: '400-123-4567',
         });
-      } else {
-        setError(errorMessage);
+        forgotPassword.setError(null);
       }
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    if (result.mailEnabled === false && result.smsEnabled === false) {
+      setSupportInfo({
+        supportEmail: result.supportEmail ?? undefined,
+        supportPhone: result.supportPhone ?? undefined,
+      });
+    } else {
+      setSuccessContact(
+        data.contactType === 'email' ? data.email : data.phone
+      );
+      setSuccess(true);
+    }
+  };
+
+  const switchContactType = (type: 'email' | 'phone') => {
+    setContactType(type);
+    setValue('contactType', type);
+    setError(null);
   };
 
   // 邮件服务未启用 - 客服联系页面
@@ -233,7 +241,7 @@ export const ForgotPassword: React.FC = () => {
               <p className="success-subtitle">
                 我们已向{' '}
                 <span className="success-email">
-                  {contactType === 'email' ? email : phone}
+                  {successContact}
                 </span>{' '}
                 发送了验证码
               </p>
@@ -252,8 +260,8 @@ export const ForgotPassword: React.FC = () => {
                   onClick={() =>
                     navigate('/reset-password', {
                       state: {
-                        email: contactType === 'email' ? email : undefined,
-                        phone: contactType === 'phone' ? phone : undefined,
+                        email: contactType === 'email' ? successContact : undefined,
+                        phone: contactType === 'phone' ? successContact : undefined,
                       },
                     })
                   }
@@ -362,7 +370,7 @@ export const ForgotPassword: React.FC = () => {
             <button
               type="button"
               className={`toggle-btn ${contactType === 'email' ? 'active' : ''}`}
-              onClick={() => setContactType('email')}
+              onClick={() => switchContactType('email')}
             >
               <Mail size={16} />
               <span>邮箱</span>
@@ -370,7 +378,7 @@ export const ForgotPassword: React.FC = () => {
             <button
               type="button"
               className={`toggle-btn ${contactType === 'phone' ? 'active' : ''}`}
-              onClick={() => setContactType('phone')}
+              onClick={() => switchContactType('phone')}
             >
               <Phone size={16} />
               <span>手机号</span>
@@ -400,15 +408,15 @@ export const ForgotPassword: React.FC = () => {
           </div>
 
           {/* 错误提示 */}
-          {error && (
+          {forgotPassword.error && (
             <div className="alert alert-error">
               <AlertCircle size={18} className="alert-icon" />
-              <span>{error}</span>
+              <span>{forgotPassword.error}</span>
             </div>
           )}
 
           {/* 表单 */}
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={rhfSubmit(onSubmit)}>
             {contactType === 'email' ? (
               <div className="input-group">
                 <label htmlFor="email" className="input-label">
@@ -418,14 +426,11 @@ export const ForgotPassword: React.FC = () => {
                   <Mail size={18} className="input-icon" />
                   <input
                     id="email"
-                    name="email"
                     type="email"
                     autoComplete="email"
-                    required
                     className="input-field"
                     placeholder="请输入邮箱地址"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    {...register('email')}
                   />
                   <div className="input-glow" />
                 </div>
@@ -439,22 +444,19 @@ export const ForgotPassword: React.FC = () => {
                   <Phone size={18} className="input-icon" />
                   <input
                     id="phone"
-                    name="phone"
                     type="tel"
                     autoComplete="tel"
-                    required
                     className="input-field"
                     placeholder="请输入手机号码"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    {...register('phone')}
                   />
                   <div className="input-glow" />
                 </div>
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
+            <button type="submit" disabled={forgotPassword.loading} className="submit-button">
+              {forgotPassword.loading ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
                   <span>发送中...</span>

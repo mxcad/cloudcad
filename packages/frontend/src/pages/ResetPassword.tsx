@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { authControllerResetPassword } from '@/api-sdk';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import {
+  resetPasswordSchema,
+  type ResetPasswordValues,
+} from './ResetPassword/resetPasswordSchema';
+import { useResetPassword } from './ResetPassword/useResetPassword';
 
 // Lucide 图标
 import { Mail } from 'lucide-react';
@@ -53,68 +59,39 @@ export const ResetPassword: React.FC = () => {
   const phoneFromState = (location.state as LocationState)?.phone || '';
   const contactType = emailFromState ? 'email' : 'phone';
 
-  const [formData, setFormData] = useState({
-    email: emailFromState,
-    phone: phoneFromState,
-    code: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const resetPassword = useResetPassword();
   const [success, setSuccess] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(null);
-  };
+  const {
+    register,
+    handleSubmit: rhfSubmit,
+  } = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      code: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const onSubmit = async (data: ResetPasswordValues) => {
+    const ok = await resetPassword.submit({
+      email: emailFromState || undefined,
+      phone: phoneFromState || undefined,
+      code: data.code,
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
+    });
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError('两次输入的密码不一致');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.newPassword.length < 6) {
-      setError('密码至少需要6个字符');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await authControllerResetPassword({
-        body: {
-          email: formData.email || undefined,
-          phone: formData.phone || undefined,
-          code: formData.code,
-          newPassword: formData.newPassword,
-          confirmPassword: formData.confirmPassword,
-          validateContact: '',
-        },
-      });
+    if (ok) {
       setSuccess(true);
       setTimeout(() => {
         navigate('/login', {
           state: { message: '密码重置成功，请使用新密码登录' },
         });
       }, 2000);
-    } catch (err) {
-      setError(
-        (err as Error & { response?: { data?: { message?: string } } }).response
-          ?.data?.message ||
-          (err as Error).message ||
-          '重置密码失败，请检查验证码'
-      );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -185,15 +162,15 @@ export const ResetPassword: React.FC = () => {
           </div>
 
           {/* 错误提示 */}
-          {error && (
+          {resetPassword.error && (
             <div className="alert alert-error">
               <AlertCircle size={18} className="alert-icon" />
-              <span>{error}</span>
+              <span>{resetPassword.error}</span>
             </div>
           )}
 
           {/* 表单 */}
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={rhfSubmit(onSubmit)}>
             {contactType === 'email' ? (
               <div className="input-group">
                 <label htmlFor="email" className="input-label">
@@ -203,14 +180,11 @@ export const ResetPassword: React.FC = () => {
                   <Mail size={18} className="input-icon" />
                   <input
                     id="email"
-                    name="email"
                     type="email"
                     autoComplete="email"
-                    required
                     className="input-field"
                     placeholder="请输入邮箱地址"
-                    value={formData.email}
-                    onChange={handleChange}
+                    value={emailFromState}
                     readOnly
                   />
                   <div className="input-glow" />
@@ -225,14 +199,11 @@ export const ResetPassword: React.FC = () => {
                   <Phone size={18} className="input-icon" />
                   <input
                     id="phone"
-                    name="phone"
                     type="tel"
                     autoComplete="tel"
-                    required
                     className="input-field"
                     placeholder="请输入手机号码"
-                    value={formData.phone}
-                    onChange={handleChange}
+                    value={phoneFromState}
                     readOnly
                   />
                   <div className="input-glow" />
@@ -248,14 +219,11 @@ export const ResetPassword: React.FC = () => {
                 <KeyRound size={18} className="input-icon" />
                 <input
                   id="code"
-                  name="code"
                   type="text"
-                  required
                   maxLength={6}
                   className="input-field"
                   placeholder="请输入6位验证码"
-                  value={formData.code}
-                  onChange={handleChange}
+                  {...register('code')}
                 />
                 <div className="input-glow" />
               </div>
@@ -269,14 +237,11 @@ export const ResetPassword: React.FC = () => {
                 <Lock size={18} className="input-icon" />
                 <input
                   id="newPassword"
-                  name="newPassword"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  required
                   className="input-field"
-                  placeholder="新密码（至少6个字符）"
-                  value={formData.newPassword}
-                  onChange={handleChange}
+                  placeholder="新密码（至少8个字符）"
+                  {...register('newPassword')}
                 />
                 <button
                   type="button"
@@ -297,14 +262,11 @@ export const ResetPassword: React.FC = () => {
                 <Lock size={18} className="input-icon" />
                 <input
                   id="confirmPassword"
-                  name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  required
                   className="input-field"
                   placeholder="请再次输入新密码"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
+                  {...register('confirmPassword')}
                 />
                 <button
                   type="button"
@@ -321,8 +283,8 @@ export const ResetPassword: React.FC = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
+            <button type="submit" disabled={resetPassword.loading} className="submit-button">
+              {resetPassword.loading ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
                   <span>重置中...</span>
